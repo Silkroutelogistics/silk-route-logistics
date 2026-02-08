@@ -38,7 +38,7 @@ export async function registerCarrier(req: Request, res: Response) {
     include: { carrierProfile: true },
   });
 
-  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   res.status(201).json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     carrierProfile: user.carrierProfile,

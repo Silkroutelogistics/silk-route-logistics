@@ -21,7 +21,7 @@ export async function register(req: Request, res: Response) {
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
 
-  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   res.status(201).json({ user, token });
 }
 
@@ -39,7 +39,7 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
-  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     token,
@@ -51,8 +51,8 @@ export async function getProfile(req: AuthRequest, res: Response) {
     where: { id: req.user!.id },
     select: {
       id: true, email: true, firstName: true, lastName: true,
-      company: true, role: true, phone: true, mcNumber: true,
-      dotNumber: true, isVerified: true, createdAt: true,
+      company: true, role: true, phone: true, isVerified: true, createdAt: true,
+      carrierProfile: { select: { mcNumber: true, dotNumber: true } },
     },
   });
   res.json(user);

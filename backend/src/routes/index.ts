@@ -8,6 +8,13 @@ import tenderRoutes from "./tenders";
 import messageRoutes from "./messages";
 import notificationRoutes from "./notifications";
 import integrationRoutes from "./integrations";
+import shipmentRoutes from "./shipments";
+import customerRoutes from "./customers";
+import driverRoutes from "./drivers";
+import equipmentRoutes from "./equipment";
+import sopRoutes from "./sops";
+import accountingRoutes from "./accounting";
+import pdfRoutes from "./pdf";
 
 const router = Router();
 
@@ -20,5 +27,12 @@ router.use("/", tenderRoutes);
 router.use("/messages", messageRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/integrations", integrationRoutes);
+router.use("/shipments", shipmentRoutes);
+router.use("/customers", customerRoutes);
+router.use("/drivers", driverRoutes);
+router.use("/equipment", equipmentRoutes);
+router.use("/sops", sopRoutes);
+router.use("/accounting", accountingRoutes);
+router.use("/pdf", pdfRoutes);
 
 export default router;
