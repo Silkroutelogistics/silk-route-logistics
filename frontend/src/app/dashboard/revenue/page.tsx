@@ -69,8 +69,8 @@ export default function RevenuePage() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <XAxis dataKey="period" axisLine={false} tickLine={false} />
-              <YAxis axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+              <YAxis axisLine={false} tickLine={false} tickFormatter={(v: any) => `$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: any) => `$${v.toLocaleString()}`} />
               <Bar dataKey="revenue" fill="#D4A843" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
