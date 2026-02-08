@@ -25,7 +25,7 @@ export default function RevenuePage() {
     const label = period === "weekly"
       ? `${d.getMonth() + 1}/${d.getDate()}`
       : d.toLocaleString("default", { month: "short" });
-    const existing = acc.find((a) => a.period === label);
+    const existing = acc.find((a) => String(a.period) === label);
     if (existing) existing.revenue += inv.amount;
     else acc.push({ period: label, revenue: inv.amount });
     return acc;
