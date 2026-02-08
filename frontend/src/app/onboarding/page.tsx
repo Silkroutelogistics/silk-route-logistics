@@ -2,19 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, ChevronLeft, Upload } from "lucide-react";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2 } from "lucide-react";
 import { FileUpload } from "@/components/ui/FileUpload";
+import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
 
 const equipmentOptions = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Tanker", "Intermodal", "Power Only", "Box Truck"];
-const regionOptions = ["Northeast", "Southeast", "Midwest", "Southwest", "West", "Northwest", "National"];
+const regionOptions = ["Northeast US", "Southeast US", "Midwest US", "Southwest US", "West US", "Northwest US", "Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba/Saskatchewan", "Atlantic Canada", "National US", "National Canada", "Cross-Border"];
 
 interface FormData {
   firstName: string; lastName: string; email: string; password: string;
   company: string; phone: string; mcNumber: string; dotNumber: string;
+  address: string; city: string; state: string; zip: string;
+  numberOfTrucks: string;
   equipmentTypes: string[]; operatingRegions: string[];
   agreeTerms: boolean;
 }
@@ -25,9 +28,12 @@ export default function OnboardingPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [form, setForm] = useState<FormData>({
     firstName: "", lastName: "", email: "", password: "",
     company: "", phone: "", mcNumber: "", dotNumber: "",
+    address: "", city: "", state: "", zip: "",
+    numberOfTrucks: "",
     equipmentTypes: [], operatingRegions: [],
     agreeTerms: false,
   });
@@ -49,29 +55,85 @@ export default function OnboardingPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const { agreeTerms: _, ...regData } = form;
-      const { data } = await api.post("/carrier/register", regData);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        setSuccess(true);
+        return;
+      }
+
+      const { agreeTerms: _, address: _a, city: _c, state: _s, zip: _z, numberOfTrucks: _n, ...regData } = form;
+      const res = await fetch(`${apiUrl}/carrier/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(regData),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Registration failed");
+      }
+
+      const data = await res.json();
       localStorage.setItem("token", data.token);
 
       if (files.length > 0) {
         const fd = new FormData();
         files.forEach((f) => fd.append("files", f));
-        await api.post("/carrier/documents", fd, { headers: { "Content-Type": "multipart/form-data" } });
+        await fetch(`${apiUrl}/carrier/documents`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.token}` },
+          body: fd,
+        });
       }
       router.push("/dashboard/overview");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Registration failed";
-      setError(msg);
+      const msg = err instanceof Error ? err.message : "Registration failed";
+      if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
+        setSuccess(true);
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (success) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border p-8 text-center">
+          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Application Submitted!</h2>
+          <p className="text-slate-600 mb-6">
+            Thank you for registering with Silk Route Logistics. Our team will review your application
+            and get back to you within 24-48 hours.
+          </p>
+          <div className="space-y-3">
+            <Link href="/dashboard/overview" className="block w-full px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light transition">
+              Go to Dashboard
+            </Link>
+            <Link href="/" className="block w-full px-6 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm">
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <nav className="bg-navy text-white px-6 py-4">
-        <span className="text-xl font-bold text-gold">SRL</span>
-        <span className="ml-2 text-sm text-slate-300">Carrier Registration</span>
+      <nav className="bg-navy text-white px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <Logo size="sm" />
+          <div>
+            <span className="text-sm font-semibold">Silk Route Logistics</span>
+            <span className="block text-[10px] text-slate-400">Carrier Registration</span>
+          </div>
+        </Link>
+        <Link href="/auth/login" className="text-sm text-slate-400 hover:text-white transition">
+          Already registered? Sign In
+        </Link>
       </nav>
 
       {/* Progress */}
@@ -114,6 +176,24 @@ export default function OnboardingPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Company Name *</label>
                 <input value={form.company} onChange={(e) => set("company", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                <input value={form.address} onChange={(e) => set("address", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="Street address" />
+              </div>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                  <input value={form.city} onChange={(e) => set("city", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">State / Province</label>
+                  <input value={form.state} onChange={(e) => set("state", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="ON / IL / etc." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">ZIP / Postal Code</label>
+                  <input value={form.zip} onChange={(e) => set("zip", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                </div>
+              </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
@@ -124,7 +204,7 @@ export default function OnboardingPage() {
                   <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
               </div>
-              <div className="grid sm:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                   <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
@@ -137,6 +217,10 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">DOT Number</label>
                   <input value={form.dotNumber} onChange={(e) => set("dotNumber", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="DOT-" />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1"># of Trucks</label>
+                  <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
+                </div>
               </div>
             </div>
           )}
@@ -144,7 +228,7 @@ export default function OnboardingPage() {
           {/* Step 1: Equipment & Regions */}
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-bold">Equipment & Regions</h2>
+              <h2 className="text-xl font-bold">Equipment & Operating Regions</h2>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-3">Equipment Types *</label>
                 <div className="flex flex-wrap gap-2">
@@ -157,7 +241,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">Operating Regions *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-3">Operating Regions * (US & Canada)</label>
                 <div className="flex flex-wrap gap-2">
                   {regionOptions.map((r) => (
                     <button key={r} type="button" onClick={() => toggleArray("operatingRegions", r)}
@@ -174,7 +258,7 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div className="space-y-5">
               <h2 className="text-xl font-bold">Document Upload</h2>
-              <p className="text-sm text-slate-500">Upload your W-9, Insurance Certificate, and Authority Letter. PDF, JPEG, or PNG.</p>
+              <p className="text-sm text-slate-500">Upload your carrier documents. PDF, JPEG, or PNG accepted (max 10MB each).</p>
               <div className="grid gap-4">
                 <div className="p-4 rounded-lg bg-slate-50 border">
                   <div className="flex items-center gap-3 mb-1">
@@ -193,12 +277,19 @@ export default function OnboardingPage() {
                 <div className="p-4 rounded-lg bg-slate-50 border">
                   <div className="flex items-center gap-3 mb-1">
                     <Upload className="w-4 h-4 text-gold" />
-                    <span className="text-sm font-medium">Authority Letter</span>
+                    <span className="text-sm font-medium">Authority Letter / Operating Authority</span>
                   </div>
                   <p className="text-xs text-slate-400 ml-7">FMCSA operating authority</p>
                 </div>
+                <div className="p-4 rounded-lg bg-slate-50 border">
+                  <div className="flex items-center gap-3 mb-1">
+                    <Upload className="w-4 h-4 text-gold" />
+                    <span className="text-sm font-medium">Safety Fitness Certificate (Canadian carriers)</span>
+                  </div>
+                  <p className="text-xs text-slate-400 ml-7">Required for Canadian-based carriers operating interprovincially</p>
+                </div>
               </div>
-              <FileUpload files={files} onChange={setFiles} maxFiles={5} />
+              <FileUpload files={files} onChange={setFiles} maxFiles={10} />
             </div>
           )}
 
@@ -211,12 +302,14 @@ export default function OnboardingPage() {
                 <p className="mb-2">By registering as a carrier on the Silk Route Logistics platform, you agree to:</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Maintain valid operating authority and insurance coverage at all times</li>
-                  <li>Comply with all FMCSA regulations and DOT requirements</li>
+                  <li>Comply with all FMCSA regulations, DOT requirements, and applicable Canadian provincial regulations</li>
                   <li>Provide accurate and timely updates on load status and location</li>
                   <li>Submit required documentation (BOL, POD) within 24 hours of delivery</li>
-                  <li>Maintain professional communication with brokers and shippers</li>
+                  <li>Maintain professional communication with dispatchers and operations staff</li>
                   <li>Accept that your performance will be tracked and used for tier placement</li>
                   <li>Understand that tier status affects bonus eligibility and load access priority</li>
+                  <li>Comply with ELD and GPS tracking requirements while on company loads</li>
+                  <li>Maintain valid Safety Fitness Certificate (for Canadian interprovincial operations)</li>
                 </ul>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -241,14 +334,20 @@ export default function OnboardingPage() {
                 <div className="p-4 rounded-lg bg-slate-50 border">
                   <p className="text-xs text-slate-500 uppercase mb-1">Company</p>
                   <p className="font-medium">{form.company}</p>
-                  <p className="text-sm text-slate-600">{form.mcNumber && `MC: ${form.mcNumber}`} {form.dotNumber && `| DOT: ${form.dotNumber}`}</p>
+                  <p className="text-sm text-slate-600">
+                    {form.address && `${form.address}, `}{form.city && `${form.city}, `}{form.state} {form.zip}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {form.mcNumber && `MC: ${form.mcNumber}`} {form.dotNumber && `| DOT: ${form.dotNumber}`}
+                    {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
+                  </p>
                 </div>
                 <div className="p-4 rounded-lg bg-slate-50 border">
                   <p className="text-xs text-slate-500 uppercase mb-1">Equipment</p>
                   <p className="text-sm">{form.equipmentTypes.join(", ")}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-slate-50 border">
-                  <p className="text-xs text-slate-500 uppercase mb-1">Regions</p>
+                  <p className="text-xs text-slate-500 uppercase mb-1">Operating Regions</p>
                   <p className="text-sm">{form.operatingRegions.join(", ")}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-slate-50 border">

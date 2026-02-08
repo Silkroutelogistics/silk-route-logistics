@@ -1,92 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useAuthStore } from "@/hooks/useAuthStore";
-
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  company: z.string().optional(),
-  role: z.enum(["CARRIER", "BROKER", "SHIPPER"]),
-  mcNumber: z.string().optional(),
-});
-
-type RegisterForm = z.infer<typeof registerSchema>;
+import { Logo } from "@/components/ui/Logo";
 
 export default function RegisterPage() {
-  const { registerUser, isLoading, error } = useAuthStore();
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { role: "CARRIER" },
-  });
-
-  const onSubmit = (data: RegisterForm) => registerUser(data);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border p-8">
-        <h1 className="text-2xl font-bold text-center mb-6">Create Account</h1>
+      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border p-8 text-center">
+        <Link href="/" className="inline-flex items-center gap-2 mb-6">
+          <Logo size="lg" />
+        </Link>
+        <h1 className="text-2xl font-bold mb-2">Join Silk Route Logistics</h1>
+        <p className="text-slate-500 text-sm mb-8">
+          Choose how you&apos;d like to get started with our platform.
+        </p>
 
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
+        <div className="space-y-4">
+          <Link href="/onboarding"
+            className="block w-full px-6 py-4 bg-gold text-navy font-semibold rounded-xl hover:bg-gold-light transition text-left">
+            <p className="text-lg font-bold">Carrier Registration</p>
+            <p className="text-sm opacity-80 mt-1">Register your fleet and start hauling with us</p>
+          </Link>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-              <input {...register("firstName")} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-              {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
-              <input {...register("lastName")} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-              {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>}
-            </div>
-          </div>
+          <Link href="/auth/login"
+            className="block w-full px-6 py-4 border-2 border-slate-200 rounded-xl hover:border-gold/30 transition text-left">
+            <p className="text-lg font-bold text-slate-800">Employee Login</p>
+            <p className="text-sm text-slate-500 mt-1">Internal staff — dispatch, operations, accounting</p>
+          </Link>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input {...register("email")} type="email" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input {...register("password")} type="password" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
-            <input {...register("company")} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">I am a...</label>
-            <select {...register("role")} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="CARRIER">Carrier</option>
-              <option value="BROKER">Broker</option>
-              <option value="SHIPPER">Shipper</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">MC Number (optional)</label>
-            <input {...register("mcNumber")} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-
-          <button type="submit" disabled={isLoading} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
-            {isLoading ? "Creating account..." : "Create Account"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-slate-500 mt-6">
-          Already have an account?{" "}
-          <Link href="/auth/login" className="text-blue-600 hover:underline">Sign in</Link>
+        <p className="text-sm text-slate-500 mt-8">
+          Already registered?{" "}
+          <Link href="/auth/login" className="text-gold font-medium hover:underline">Sign in</Link>
         </p>
       </div>
     </div>

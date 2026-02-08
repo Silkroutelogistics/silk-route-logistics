@@ -15,11 +15,16 @@ enum UserRole {
   SHIPPER
   FACTOR
   ADMIN
+  DISPATCH
+  OPERATIONS
+  ACCOUNTING
 }
 
 enum LoadStatus {
   POSTED
   BOOKED
+  DISPATCHED
+  PICKED_UP
   IN_TRANSIT
   DELIVERED
   COMPLETED
@@ -83,6 +88,31 @@ enum IntegrationStatus {
   ERROR
 }
 
+enum ShipmentStatus {
+  PENDING
+  BOOKED
+  DISPATCHED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum DriverStatus {
+  AVAILABLE
+  ON_ROUTE
+  OFF_DUTY
+  SLEEPER
+  INACTIVE
+}
+
+enum EquipmentStatus {
+  ACTIVE
+  IN_SHOP
+  OUT_OF_SERVICE
+}
+
 // ─── Models ──────────────────────────────────────────
 
 model User {
@@ -126,6 +156,11 @@ model CarrierProfile {
   w9Uploaded            Boolean          @default(false)
   insuranceCertUploaded Boolean          @default(false)
   authorityDocUploaded  Boolean          @default(false)
+  address               String?
+  city                  String?
+  state                 String?
+  zip                   String?
+  numberOfTrucks        Int?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
@@ -313,4 +348,144 @@ model Notification {
 
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+// ─── New Models for Asset-Based Carrier Operations ───
+
+model Shipment {
+  id              String         @id @default(cuid())
+  shipmentNumber  String         @unique @default(cuid())
+  proNumber       String?        @unique
+  bolNumber       String?
+  status          ShipmentStatus @default(PENDING)
+
+  originCity      String
+  originState     String
+  originZip       String
+  destCity        String
+  destState       String
+  destZip         String
+
+  weight          Float?
+  pieces          Int?
+  commodity       String?
+  equipmentType   String
+  rate            Float
+  distance        Float?
+  specialInstructions String?
+
+  pickupDate      DateTime
+  deliveryDate    DateTime
+  actualPickup    DateTime?
+  actualDelivery  DateTime?
+
+  customerId      String?
+  customer        Customer?  @relation(fields: [customerId], references: [id])
+  driverId        String?
+  driver          Driver?    @relation(fields: [driverId], references: [id])
+  equipmentId     String?
+  equipment       Equipment? @relation(fields: [equipmentId], references: [id])
+
+  lastLocation    String?
+  lastLocationAt  DateTime?
+  eta             DateTime?
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([status])
+  @@index([customerId])
+  @@index([driverId])
+  @@map("shipments")
+}
+
+model Customer {
+  id              String    @id @default(cuid())
+  name            String
+  contactName     String?
+  email           String?
+  phone           String?
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+  status          String    @default("Active")
+  rating          Int       @default(0)
+  notes           String?
+  creditLimit     Float?
+  paymentTerms    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  shipments       Shipment[]
+
+  @@map("customers")
+}
+
+model SOP {
+  id          String   @id @default(cuid())
+  title       String
+  category    String
+  version     String
+  author      String
+  description String?
+  content     String?
+  fileUrl     String?
+  pages       Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("sops")
+}
+
+model Driver {
+  id              String       @id @default(cuid())
+  firstName       String
+  lastName        String
+  phone           String?
+  email           String?
+  licenseType     String
+  licenseNumber   String?
+  licenseExpiry   DateTime?
+  status          DriverStatus @default(AVAILABLE)
+  currentLocation String?
+  hireDate        DateTime?
+  safetyScore     Float        @default(100)
+  violations      Int          @default(0)
+
+  hosDrivingUsed  Float        @default(0)
+  hosOnDutyUsed   Float        @default(0)
+  hosCycleUsed    Float        @default(0)
+  hosCycleLimit   Float        @default(70)
+
+  assignedEquipmentId String?  @unique
+  assignedEquipment   Equipment? @relation("DriverEquipment", fields: [assignedEquipmentId], references: [id])
+
+  shipments       Shipment[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("drivers")
+}
+
+model Equipment {
+  id              String          @id @default(cuid())
+  unitNumber      String          @unique
+  type            String
+  year            Int?
+  make            String?
+  model           String?
+  vin             String?         @unique
+  status          EquipmentStatus @default(ACTIVE)
+  mileage         Int             @default(0)
+  nextServiceDate DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  assignedDriver  Driver?         @relation("DriverEquipment")
+  shipments       Shipment[]
+
+  @@map("equipment")
 }
