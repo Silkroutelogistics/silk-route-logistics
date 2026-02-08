@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────
+
+enum UserRole {
+  CARRIER
+  BROKER
+  SHIPPER
+  FACTOR
+  ADMIN
+}
+
+enum LoadStatus {
+  POSTED
+  BOOKED
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  FUNDED
+  PAID
+  REJECTED
+}
+
+enum CarrierTier {
+  PLATINUM
+  GOLD
+  SILVER
+  BRONZE
+}
+
+enum OnboardingStatus {
+  PENDING
+  DOCUMENTS_SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ScorecardPeriod {
+  WEEKLY
+  MONTHLY
+}
+
+enum BonusType {
+  PERFORMANCE
+  REFERRAL
+  VOLUME
+  TIER
+}
+
+enum BonusStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum TenderStatus {
+  OFFERED
+  ACCEPTED
+  COUNTERED
+  DECLINED
+  EXPIRED
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+// ─── Models ──────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  company       String?
+  role          UserRole
+  phone         String?
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  carrierProfile  CarrierProfile?
+  loadsPosted     Load[]          @relation("LoadPoster")
+  loadsCarried    Load[]          @relation("LoadCarrier")
+  invoices        Invoice[]
+  documents       Document[]
+  sentMessages    Message[]       @relation("MessageSender")
+  receivedMessages Message[]      @relation("MessageReceiver")
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+model CarrierProfile {
+  id                    String           @id @default(cuid())
+  userId                String           @unique
+  user                  User             @relation(fields: [userId], references: [id])
+  mcNumber              String?          @unique
+  dotNumber             String?          @unique
+  insuranceExpiry       DateTime?
+  safetyScore           Float?
+  tier                  CarrierTier      @default(BRONZE)
+  equipmentTypes        String[]
+  operatingRegions      String[]
+  onboardingStatus      OnboardingStatus @default(PENDING)
+  approvedAt            DateTime?
+  w9Uploaded            Boolean          @default(false)
+  insuranceCertUploaded Boolean          @default(false)
+  authorityDocUploaded  Boolean          @default(false)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  scorecards  CarrierScorecard[]
+  bonuses     CarrierBonus[]
+  tenders     LoadTender[]
+
+  @@map("carrier_profiles")
+}
+
+model CarrierScorecard {
+  id                          String          @id @default(cuid())
+  carrierId                   String
+  carrier                     CarrierProfile  @relation(fields: [carrierId], references: [id])
+  period                      ScorecardPeriod
+  onTimePickupPct             Float           @default(0)
+  onTimeDeliveryPct           Float           @default(0)
+  communicationScore          Float           @default(0)
+  claimRatio                  Float           @default(0)
+  documentSubmissionTimeliness Float          @default(0)
+  acceptanceRate              Float           @default(0)
+  gpsCompliancePct            Float           @default(0)
+  overallScore                Float           @default(0)
+  tierAtTime                  CarrierTier
+  bonusEarned                 Float           @default(0)
+  calculatedAt                DateTime        @default(now())
+
+  @@index([carrierId, period])
+  @@map("carrier_scorecards")
+}
+
+model CarrierBonus {
+  id          String      @id @default(cuid())
+  carrierId   String
+  carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
+  type        BonusType
+  amount      Float
+  period      String?
+  status      BonusStatus @default(PENDING)
+  description String?
+  createdAt   DateTime    @default(now())
+
+  @@index([carrierId])
+  @@map("carrier_bonuses")
+}
+
+model BrokerIntegration {
+  id              String            @id @default(cuid())
+  name            String
+  provider        String            @unique
+  apiEndpoint     String?
+  apiKeyEncrypted String?
+  status          IntegrationStatus @default(INACTIVE)
+  lastSyncAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("broker_integrations")
+}
+
+model Load {
+  id              String     @id @default(cuid())
+  referenceNumber String     @unique @default(cuid())
+  status          LoadStatus @default(POSTED)
+
+  originCity      String
+  originState     String
+  originZip       String
+  destCity        String
+  destState       String
+  destZip         String
+
+  weight          Float?
+  equipmentType   String
+  commodity       String?
+  rate            Float
+  distance        Float?
+  notes           String?
+
+  pickupDate      DateTime
+  deliveryDate    DateTime
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  posterId        String
+  poster          User       @relation("LoadPoster", fields: [posterId], references: [id])
+  carrierId       String?
+  carrier         User?      @relation("LoadCarrier", fields: [carrierId], references: [id])
+  invoices        Invoice[]
+  documents       Document[]
+  tenders         LoadTender[]
+  messages        Message[]
+
+  @@index([status])
+  @@index([originState])
+  @@index([destState])
+  @@map("loads")
+}
+
+model LoadTender {
+  id          String       @id @default(cuid())
+  loadId      String
+  load        Load         @relation(fields: [loadId], references: [id])
+  carrierId   String
+  carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
+  status      TenderStatus @default(OFFERED)
+  offeredRate Float
+  counterRate Float?
+  respondedAt DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+
+  @@index([carrierId, status])
+  @@map("load_tenders")
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  status          InvoiceStatus @default(DRAFT)
+  amount          Float
+  factoringFee    Float?
+  advanceRate     Float?
+  advanceAmount   Float?
+  dueDate         DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  loadId          String
+  load            Load          @relation(fields: [loadId], references: [id])
+  documents       Document[]
+
+  @@index([status])
+  @@map("invoices")
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  fileName    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  loadId      String?
+  load        Load?    @relation(fields: [loadId], references: [id])
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@map("documents")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  loadId     String?
+  load       Load?    @relation(fields: [loadId], references: [id])
+  content    String
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, readAt])
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  readAt    DateTime?
+  actionUrl String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
