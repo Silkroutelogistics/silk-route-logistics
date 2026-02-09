@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
-import { isCarrier } from "@/lib/roles";
+import { isAdmin, isCarrier } from "@/lib/roles";
 
 const employeeNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
@@ -36,11 +36,34 @@ const carrierNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
+// Admin gets all pages — employee nav + carrier-only pages
+const adminNav = [
+  { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/finance", label: "Financial Analytics", icon: PieChart },
+  { href: "/dashboard/crm", label: "CRM", icon: Users },
+  { href: "/dashboard/sops", label: "SOP Library", icon: BookOpen },
+  { href: "/dashboard/drivers", label: "Driver Management", icon: UserCheck },
+  { href: "/dashboard/loads", label: "Load Board", icon: Truck },
+  { href: "/dashboard/scorecard", label: "Carrier Scorecards", icon: BarChart3 },
+  { href: "/dashboard/revenue", label: "Carrier Revenue", icon: TrendingUp },
+  { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
+  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+];
+
+function getNav(role: string | undefined) {
+  if (isAdmin(role)) return adminNav;
+  if (isCarrier(role)) return carrierNav;
+  return employeeNav;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const carrier = isCarrier(user?.role);
-  const navItems = carrier ? carrierNav : employeeNav;
+  const navItems = getNav(user?.role);
 
   return (
     <aside className="w-64 bg-navy flex flex-col min-h-screen">
@@ -63,7 +86,7 @@ export function Sidebar() {
         </div>
       )}
 
-      <nav className="flex-1 px-3 py-3 space-y-1">
+      <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;

@@ -33,15 +33,15 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: "admin@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Wasih", lastName: "Admin", company: "Silk Route Logistics",
+      firstName: "Wasih", lastName: "Haider", company: "Silk Route Logistics",
       role: UserRole.ADMIN, isVerified: true,
     },
   });
 
   const broker = await prisma.user.create({
     data: {
-      email: "broker@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Jane", lastName: "Mitchell", company: "Silk Route Logistics",
+      email: "whaider@silkroutelogistics.ai", passwordHash: hash,
+      firstName: "Whaider", lastName: "Haider", company: "Silk Route Logistics",
       role: UserRole.BROKER, isVerified: true, phone: "(269) 555-0101",
     },
   });
@@ -62,10 +62,10 @@ async function main() {
     },
   });
 
-  // Carrier 1: Platinum owner-operator, 1 truck, dry van
+  // Carrier 1: Platinum owner-operator, 1 truck, dry van (primary carrier demo account)
   const carrier1 = await prisma.user.create({
     data: {
-      email: "platinum@silkroutelogistics.ai", passwordHash: hash,
+      email: "srl@silkroutelogistics.ai", passwordHash: hash,
       firstName: "Mike", lastName: "Henderson", company: "Henderson Trucking",
       role: UserRole.CARRIER, isVerified: true, phone: "(616) 555-1001",
     },
@@ -567,11 +567,11 @@ async function main() {
 
   await prisma.sOP.createMany({
     data: [
-      { title: "Reefer Load Procedures", category: "Operations", version: "2.1", author: "Jane Mitchell", description: "Standard operating procedure for temperature-controlled freight.", pages: 8 },
+      { title: "Reefer Load Procedures", category: "Operations", version: "2.1", author: "Whaider Haider", description: "Standard operating procedure for temperature-controlled freight.", pages: 8 },
       { title: "Car Hauling Safety Checklist", category: "Safety", version: "1.0", author: "Marcus Rivera", description: "Pre-trip and loading safety checklist for auto transport.", pages: 4 },
-      { title: "Customer Onboarding Process", category: "Sales", version: "1.3", author: "Wasih Admin", description: "Steps for onboarding new Midwest shipper accounts.", pages: 6 },
+      { title: "Customer Onboarding Process", category: "Sales", version: "1.3", author: "Wasih Haider", description: "Steps for onboarding new Midwest shipper accounts.", pages: 6 },
       { title: "Carrier Vetting & Compliance", category: "Compliance", version: "3.0", author: "Priya Sharma", description: "FMCSA verification, insurance, and authority checks.", pages: 12 },
-      { title: "Claims & Dispute Resolution", category: "Operations", version: "1.1", author: "Jane Mitchell", description: "Process for handling freight claims and carrier disputes.", pages: 5 },
+      { title: "Claims & Dispute Resolution", category: "Operations", version: "1.1", author: "Whaider Haider", description: "Process for handling freight claims and carrier disputes.", pages: 5 },
     ],
   });
 
@@ -641,6 +641,11 @@ Seed complete:
   SOPs:       5
   Messages:   7
   Notifications: 12
+
+  Demo Logins (password: password123):
+    admin@silkroutelogistics.ai    → Admin (full access: employee + carrier views)
+    whaider@silkroutelogistics.ai  → Employee/Broker (employee features only)
+    srl@silkroutelogistics.ai      → Carrier (carrier features only)
   `);
 }
 
