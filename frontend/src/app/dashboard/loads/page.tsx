@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
-import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users } from "lucide-react";
+import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight } from "lucide-react";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 
 interface Load {
@@ -71,6 +71,41 @@ export default function LoadsPage() {
     enabled: !!loadDetail && loadDetail.status === "POSTED" && canCreate,
   });
 
+  const queryClient = useQueryClient();
+  const [showTender, setShowTender] = useState(false);
+  const [tenderCarrierId, setTenderCarrierId] = useState("");
+  const [tenderRate, setTenderRate] = useState("");
+
+  const updateStatus = useMutation({
+    mutationFn: ({ loadId, status }: { loadId: string; status: string }) =>
+      api.patch(`/loads/${loadId}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+    },
+  });
+
+  const createTender = useMutation({
+    mutationFn: ({ loadId, carrierId, offeredRate }: { loadId: string; carrierId: string; offeredRate: number }) =>
+      api.post(`/loads/${loadId}/tenders`, { carrierId, offeredRate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      setShowTender(false);
+      setTenderCarrierId("");
+      setTenderRate("");
+    },
+  });
+
+  const NEXT_STATUS: Record<string, string> = {
+    POSTED: "BOOKED", BOOKED: "DISPATCHED", DISPATCHED: "PICKED_UP",
+    PICKED_UP: "IN_TRANSIT", IN_TRANSIT: "DELIVERED", DELIVERED: "COMPLETED",
+  };
+
+  const STATUS_ACTIONS: Record<string, string> = {
+    POSTED: "Book Load", BOOKED: "Dispatch", DISPATCHED: "Mark Picked Up",
+    PICKED_UP: "Mark In Transit", IN_TRANSIT: "Mark Delivered", DELIVERED: "Complete",
+  };
+
   const downloadPdf = async (loadId: string, refNum: string) => {
     const res = await api.get(`/pdf/rate-confirmation/${loadId}`, { responseType: "blob" });
     const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -92,9 +127,23 @@ export default function LoadsPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            {canCreate && load.status === "POSTED" && (
+              <button onClick={() => setShowTender(true)} className="flex items-center gap-2 px-4 py-2 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
+                <Send className="w-4 h-4" /> Tender to Carrier
+              </button>
+            )}
+            {canCreate && NEXT_STATUS[load.status] && (
+              <button
+                onClick={() => updateStatus.mutate({ loadId: load.id, status: NEXT_STATUS[load.status] })}
+                disabled={updateStatus.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm hover:bg-blue-500/30 disabled:opacity-50"
+              >
+                <ChevronRight className="w-4 h-4" /> {STATUS_ACTIONS[load.status]}
+              </button>
+            )}
             {["BOOKED", "DISPATCHED", "IN_TRANSIT", "DELIVERED", "COMPLETED"].includes(load.status) && (
               <button onClick={() => downloadPdf(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20">
-                <Download className="w-4 h-4" /> Rate Confirmation
+                <Download className="w-4 h-4" /> Rate Conf
               </button>
             )}
           </div>
@@ -235,19 +284,78 @@ export default function LoadsPage() {
                         <p className="text-sm text-white">{c.company}</p>
                         <p className="text-xs text-slate-500">{c.equipmentTypes.join(", ")}</p>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        c.tier === "PLATINUM" ? "bg-purple-500/20 text-purple-400" :
-                        c.tier === "GOLD" ? "bg-yellow-500/20 text-yellow-400" :
-                        c.tier === "SILVER" ? "bg-slate-400/20 text-slate-300" :
-                        "bg-orange-500/20 text-orange-400"
-                      }`}>{c.tier}</span>
+                      <button
+                        onClick={() => { setTenderCarrierId(c.carrierId); setTenderRate(String(load.rate)); setShowTender(true); }}
+                        className="px-2 py-1 bg-gold/20 text-gold rounded text-xs hover:bg-gold/30"
+                      >
+                        Quick Tender
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Status Pipeline */}
+            <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h2 className="text-sm font-medium text-slate-400 mb-3">Load Pipeline</h2>
+              <div className="space-y-0">
+                {["POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED"].map((st, i, arr) => {
+                  const statusList = ["POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
+                  const currentIdx = statusList.indexOf(load.status);
+                  const done = i <= currentIdx;
+                  const active = i === currentIdx;
+                  return (
+                    <div key={st} className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${done ? (active ? "bg-gold" : "bg-green-500") : "bg-slate-700"}`} />
+                      {i < arr.length - 1 && <div className={`w-0.5 h-4 ml-1 -my-1 ${done ? "bg-green-500/30" : "bg-slate-800"}`} />}
+                      <span className={`text-xs ${done ? (active ? "text-gold font-medium" : "text-green-400") : "text-slate-600"}`}>
+                        {st.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Tender Modal */}
+        {showTender && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">Tender Load to Carrier</h2>
+                <button onClick={() => setShowTender(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <p className="text-sm text-slate-400">{load.referenceNumber} — {load.originCity}, {load.originState} → {load.destCity}, {load.destState}</p>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Select Carrier</label>
+                <select value={tenderCarrierId} onChange={(e) => setTenderCarrierId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                  <option value="" className="bg-[#0f172a]">Choose a carrier...</option>
+                  {suggestedCarriers?.carriers?.map((c) => (
+                    <option key={c.carrierId} value={c.carrierId} className="bg-[#0f172a]">
+                      {c.company} ({c.tier})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Offered Rate ($)</label>
+                <input type="number" value={tenderRate} onChange={(e) => setTenderRate(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+              </div>
+              <button
+                onClick={() => createTender.mutate({ loadId: load.id, carrierId: tenderCarrierId, offeredRate: parseFloat(tenderRate) })}
+                disabled={!tenderCarrierId || !tenderRate || createTender.isPending}
+                className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50"
+              >
+                Send Tender
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

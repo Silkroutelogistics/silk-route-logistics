@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 const periods = [
   { key: "weekly", label: "Weekly" },
@@ -32,22 +31,22 @@ export default function RevenuePage() {
   }, []) || [];
 
   const stats = [
-    { label: "Total Revenue", value: `$${(data?.totalRevenue || 0).toLocaleString()}` },
-    { label: "Avg Per Load", value: `$${Math.round(data?.avgPerLoad || 0).toLocaleString()}` },
-    { label: "Total Bonuses", value: `$${(data?.totalBonuses || 0).toLocaleString()}` },
-    { label: "Loads Completed", value: data?.loadCount || 0 },
+    { label: "Total Revenue", value: `$${(data?.totalRevenue || 0).toLocaleString()}`, color: "text-green-400" },
+    { label: "Avg Per Load", value: `$${Math.round(data?.avgPerLoad || 0).toLocaleString()}`, color: "text-blue-400" },
+    { label: "Total Bonuses", value: `$${(data?.totalBonuses || 0).toLocaleString()}`, color: "text-gold" },
+    { label: "Loads Completed", value: data?.loadCount || 0, color: "text-white" },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Revenue</h1>
-        <div className="flex bg-slate-100 rounded-lg p-1">
+        <h1 className="text-2xl font-bold text-white">Revenue</h1>
+        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           {periods.map((p) => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={cn("px-4 py-1.5 rounded-md text-sm font-medium transition",
-                period === p.key ? "bg-white shadow-sm text-navy" : "text-slate-500 hover:text-slate-700"
-              )}>{p.label}</button>
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                period === p.key ? "bg-gold text-navy" : "text-slate-400 hover:text-white"
+              }`}>{p.label}</button>
           ))}
         </div>
       </div>
@@ -55,63 +54,63 @@ export default function RevenuePage() {
       {/* Stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border p-5">
-            <p className="text-sm text-slate-500">{s.label}</p>
-            <p className="text-2xl font-bold mt-1">{s.value}</p>
+          <div key={s.label} className="bg-white/5 rounded-xl border border-white/10 p-5">
+            <p className="text-sm text-slate-400">{s.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Chart */}
-      <div className="bg-white rounded-xl border p-6">
-        <h2 className="font-semibold mb-4">Revenue by Period</h2>
+      <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+        <h2 className="font-semibold text-white mb-4">Revenue by Period</h2>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
-              <XAxis dataKey="period" axisLine={false} tickLine={false} />
-              <YAxis axisLine={false} tickLine={false} tickFormatter={(v: any) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: any) => `$${v.toLocaleString()}`} />
+              <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 12 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", color: "#fff" }} formatter={(v: number | undefined) => v != null ? `$${v.toLocaleString()}` : ""} />
               <Bar dataKey="revenue" fill="#D4A843" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-slate-400 text-sm text-center py-12">No revenue data for this period</p>
+          <p className="text-slate-500 text-sm text-center py-12">No revenue data for this period</p>
         )}
       </div>
 
       {/* Breakdown Table */}
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-5 py-4 border-b">
-          <h2 className="font-semibold">Revenue Breakdown</h2>
+      <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/10">
+          <h2 className="font-semibold text-white">Revenue Breakdown</h2>
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
+          <thead className="border-b border-white/10">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Invoice</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Route</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Amount</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-600">Date</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-400">Invoice</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-400">Route</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-400">Amount</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-400">Status</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-400">Date</th>
             </tr>
           </thead>
           <tbody>
             {data?.invoices?.map((inv: { id: string; invoiceNumber: string; amount: number; status: string; createdAt: string; load?: { originCity: string; originState: string; destCity: string; destState: string } }) => (
-              <tr key={inv.id} className="border-b last:border-0">
-                <td className="px-4 py-3 font-medium">{inv.invoiceNumber}</td>
-                <td className="px-4 py-3 text-slate-600">{inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}</td>
-                <td className="px-4 py-3 font-medium">${inv.amount.toLocaleString()}</td>
+              <tr key={inv.id} className="border-b border-white/5 last:border-0">
+                <td className="px-4 py-3 font-medium text-white font-mono text-xs">{inv.invoiceNumber}</td>
+                <td className="px-4 py-3 text-slate-400">{inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}</td>
+                <td className="px-4 py-3 font-medium text-gold">${inv.amount.toLocaleString()}</td>
                 <td className="px-4 py-3">
-                  <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium",
-                    inv.status === "PAID" ? "bg-green-50 text-green-700" :
-                    inv.status === "FUNDED" ? "bg-blue-50 text-blue-700" :
-                    "bg-yellow-50 text-yellow-700"
-                  )}>{inv.status}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    inv.status === "PAID" ? "bg-green-500/20 text-green-400" :
+                    inv.status === "FUNDED" ? "bg-blue-500/20 text-blue-400" :
+                    "bg-yellow-500/20 text-yellow-400"
+                  }`}>{inv.status}</span>
                 </td>
                 <td className="px-4 py-3 text-slate-500">{new Date(inv.createdAt).toLocaleDateString()}</td>
               </tr>
             ))}
             {!data?.invoices?.length && (
-              <tr><td colSpan={5} className="text-center py-8 text-slate-400">No invoices for this period</td></tr>
+              <tr><td colSpan={5} className="text-center py-8 text-slate-500">No invoices for this period</td></tr>
             )}
           </tbody>
         </table>

@@ -14,18 +14,20 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { isAdmin, isCarrier } from "@/lib/roles";
 import { api } from "@/lib/api";
 
+// AE/Broker workflow: Customers → Loads → Carriers → Dispatch/Track → Finance → Comms
 const employeeNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/crm", label: "Customers", icon: Users },
   { href: "/dashboard/loads", label: "Load Board", icon: Truck },
-  { href: "/dashboard/market", label: "Market Trends", icon: Activity },
-  { href: "/dashboard/finance", label: "Financial Analytics", icon: PieChart },
-  { href: "/dashboard/crm", label: "CRM", icon: Users },
-  { href: "/dashboard/sops", label: "SOP Library", icon: BookOpen },
-  { href: "/dashboard/drivers", label: "Driver Management", icon: UserCheck },
-  { href: "/dashboard/edi", label: "EDI", icon: Zap },
-  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
+  { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+  { href: "/dashboard/finance", label: "Finance", icon: PieChart },
+  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/market", label: "Market Trends", icon: Activity },
+  { href: "/dashboard/drivers", label: "Drivers", icon: Truck },
+  { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
+  { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -35,27 +37,30 @@ const carrierNav = [
   { href: "/dashboard/scorecard", label: "Scorecard", icon: BarChart3 },
   { href: "/dashboard/revenue", label: "Revenue", icon: TrendingUp },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/factoring", label: "Factoring", icon: DollarSign },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-// Admin gets all pages — employee nav + carrier-only pages
+// Admin gets full access to everything
 const adminNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/crm", label: "Customers", icon: Users },
   { href: "/dashboard/loads", label: "Load Board", icon: Truck },
+  { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
+  { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+  { href: "/dashboard/finance", label: "Finance", icon: PieChart },
+  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
   { href: "/dashboard/market", label: "Market Trends", icon: Activity },
-  { href: "/dashboard/finance", label: "Financial Analytics", icon: PieChart },
-  { href: "/dashboard/crm", label: "CRM", icon: Users },
-  { href: "/dashboard/sops", label: "SOP Library", icon: BookOpen },
-  { href: "/dashboard/drivers", label: "Driver Management", icon: UserCheck },
+  { href: "/dashboard/drivers", label: "Drivers", icon: Truck },
+  { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/scorecard", label: "Carrier Scorecards", icon: BarChart3 },
   { href: "/dashboard/revenue", label: "Carrier Revenue", icon: TrendingUp },
   { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
-  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
-  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+  { href: "/dashboard/factoring", label: "Factoring", icon: DollarSign },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
