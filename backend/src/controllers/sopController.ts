@@ -5,7 +5,7 @@ import { createSOPSchema, updateSOPSchema, sopQuerySchema } from "../validators/
 
 export async function createSOP(req: AuthRequest, res: Response) {
   const data = createSOPSchema.parse(req.body);
-  const sop = await prisma.sOP.create({ data });
+  const sop = await prisma.sOP.create({ data: data as any });
   res.status(201).json(sop);
 }
 

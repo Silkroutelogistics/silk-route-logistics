@@ -20,7 +20,7 @@ export async function createShipment(req: AuthRequest, res: Response) {
   const data = createShipmentSchema.parse(req.body);
   const shipmentNumber = await nextShipmentNumber();
   const shipment = await prisma.shipment.create({
-    data: { ...data, shipmentNumber },
+    data: { ...data, shipmentNumber } as any,
     include: { customer: true, driver: true, equipment: true },
   });
   res.status(201).json(shipment);

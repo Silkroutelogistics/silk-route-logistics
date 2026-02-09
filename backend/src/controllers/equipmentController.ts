@@ -5,7 +5,7 @@ import { createEquipmentSchema, updateEquipmentSchema, equipmentQuerySchema } fr
 
 export async function createEquipment(req: AuthRequest, res: Response) {
   const data = createEquipmentSchema.parse(req.body);
-  const equipment = await prisma.equipment.create({ data, include: { assignedDriver: true } });
+  const equipment = await prisma.equipment.create({ data: data as any, include: { assignedDriver: true } });
   res.status(201).json(equipment);
 }
 

@@ -1,6 +1,8 @@
 import PDFDocument from "pdfkit";
-import path from "path";
-import fs from "fs";
+import * as path from "path";
+import * as fs from "fs";
+
+type PDFDoc = InstanceType<typeof PDFDocument>;
 
 const COMPANY = {
   name: "Silk Route Logistics Inc.",
@@ -14,7 +16,7 @@ const COMPANY = {
 const LOGO_PATH = path.resolve(__dirname, "../../assets/logo.png");
 const hasLogo = fs.existsSync(LOGO_PATH);
 
-function addHeader(doc: PDFKit.PDFDocument, title: string) {
+function addHeader(doc: PDFDoc, title: string) {
   if (hasLogo) {
     doc.image(LOGO_PATH, 50, 40, { width: 60 });
   }
@@ -30,7 +32,7 @@ function addHeader(doc: PDFKit.PDFDocument, title: string) {
   doc.moveDown(1.5);
 }
 
-function addFooter(doc: PDFKit.PDFDocument) {
+function addFooter(doc: PDFDoc) {
   const y = doc.page.height - 60;
   doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
   doc.fontSize(7).fillColor("#999999");
@@ -38,7 +40,7 @@ function addFooter(doc: PDFKit.PDFDocument) {
   doc.text(`${COMPANY.phone} | ${COMPANY.email} | ${COMPANY.website}`, 50, y + 18, { align: "center" });
 }
 
-function labelValue(doc: PDFKit.PDFDocument, label: string, value: string, x: number, y: number) {
+function labelValue(doc: PDFDoc, label: string, value: string, x: number, y: number) {
   doc.fontSize(8).fillColor("#888888").text(label, x, y);
   doc.fontSize(10).fillColor("#1E1E2F").text(value || "—", x, y + 12);
 }
@@ -55,7 +57,7 @@ interface ShipmentData {
   equipment?: { unitNumber: string; type: string } | null;
 }
 
-export function generateBOL(shipment: ShipmentData): PDFKit.PDFDocument {
+export function generateBOL(shipment: ShipmentData): PDFDoc {
   const doc = new PDFDocument({ margin: 50, size: "LETTER" });
 
   addHeader(doc, "BILL OF LADING");
@@ -166,7 +168,7 @@ interface LoadData {
   carrier?: { id: string; firstName: string; lastName: string; company?: string | null; phone?: string | null; carrierProfile?: { mcNumber?: string | null } | null } | null;
 }
 
-export function generateRateConfirmation(load: LoadData): PDFKit.PDFDocument {
+export function generateRateConfirmation(load: LoadData): PDFDoc {
   const doc = new PDFDocument({ margin: 50, size: "LETTER" });
 
   addHeader(doc, "RATE CONFIRMATION");
@@ -263,7 +265,7 @@ interface InvoiceData {
   user: { firstName: string; lastName: string; company?: string | null };
 }
 
-export function generateInvoicePDF(invoice: InvoiceData): PDFKit.PDFDocument {
+export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   const doc = new PDFDocument({ margin: 50, size: "LETTER" });
 
   addHeader(doc, "INVOICE");

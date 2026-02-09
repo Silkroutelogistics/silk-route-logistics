@@ -5,7 +5,7 @@ import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from 
 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
-  const customer = await prisma.customer.create({ data });
+  const customer = await prisma.customer.create({ data: data as any });
   res.status(201).json(customer);
 }
 

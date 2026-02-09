@@ -6,7 +6,7 @@ import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../va
 export async function createLoad(req: AuthRequest, res: Response) {
   const data = createLoadSchema.parse(req.body);
   const load = await prisma.load.create({
-    data: { ...data, posterId: req.user!.id },
+    data: { ...data, posterId: req.user!.id } as any,
   });
   res.status(201).json(load);
 }

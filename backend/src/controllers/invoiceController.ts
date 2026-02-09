@@ -13,7 +13,7 @@ export async function createInvoice(req: AuthRequest, res: Response) {
       ...data,
       invoiceNumber: `INV-${invoiceCounter}`,
       userId: req.user!.id,
-    },
+    } as any,
     include: { load: true },
   });
   res.status(201).json(invoice);

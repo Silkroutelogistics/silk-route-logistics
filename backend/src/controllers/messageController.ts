@@ -6,7 +6,7 @@ import { sendMessageSchema } from "../validators/message";
 export async function sendMessage(req: AuthRequest, res: Response) {
   const data = sendMessageSchema.parse(req.body);
   const message = await prisma.message.create({
-    data: { senderId: req.user!.id, ...data },
+    data: { senderId: req.user!.id, ...data } as any,
     include: { sender: { select: { id: true, firstName: true, lastName: true } } },
   });
   res.status(201).json(message);

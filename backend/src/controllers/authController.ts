@@ -17,7 +17,7 @@ export async function register(req: Request, res: Response) {
   const passwordHash = await bcrypt.hash(data.password, 10);
   const { password: _, ...userData } = data;
   const user = await prisma.user.create({
-    data: { ...userData, passwordHash },
+    data: { ...userData, passwordHash } as any,
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
 

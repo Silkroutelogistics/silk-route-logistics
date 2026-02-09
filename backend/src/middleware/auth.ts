@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
 
-export interface AuthRequest extends Request<Record<string, string>> {
+export interface AuthRequest extends Request<any, any, any, any> {
   user?: {
     id: string;
     email: string;

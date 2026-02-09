@@ -5,7 +5,7 @@ import { createDriverSchema, updateDriverSchema, updateDriverHOSSchema, assignEq
 
 export async function createDriver(req: AuthRequest, res: Response) {
   const data = createDriverSchema.parse(req.body);
-  const driver = await prisma.driver.create({ data, include: { assignedEquipment: true } });
+  const driver = await prisma.driver.create({ data: data as any, include: { assignedEquipment: true } });
   res.status(201).json(driver);
 }
 
