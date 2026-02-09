@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post("/", authorize("BROKER", "SHIPPER", "ADMIN"), createLoad);
+router.post("/", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), createLoad);
 router.get("/", getLoads);
 router.get("/:id", getLoadById);
 router.patch("/:id/status", updateLoadStatus);

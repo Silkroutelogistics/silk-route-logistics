@@ -6,10 +6,10 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post("/send-tender/:loadId", authorize("ADMIN", "BROKER"), sendTender204);
-router.post("/receive-response", authorize("ADMIN", "BROKER"), receiveResponse990);
-router.post("/send-status/:loadId", authorize("ADMIN", "BROKER", "DISPATCH"), sendStatus214);
-router.post("/send-invoice/:invoiceId", authorize("ADMIN", "BROKER", "ACCOUNTING"), sendInvoice210);
+router.post("/send-tender/:loadId", authorize("ADMIN", "CEO", "BROKER"), sendTender204);
+router.post("/receive-response", authorize("ADMIN", "CEO", "BROKER"), receiveResponse990);
+router.post("/send-status/:loadId", authorize("ADMIN", "CEO", "BROKER", "DISPATCH"), sendStatus214);
+router.post("/send-invoice/:invoiceId", authorize("ADMIN", "CEO", "BROKER", "ACCOUNTING"), sendInvoice210);
 router.get("/transactions", getTransactions);
 router.get("/transactions/:id", getTransactionById);
 

@@ -7,14 +7,14 @@ import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
 router.use(authenticate);
-router.use(authorize("ADMIN", "BROKER", "OPERATIONS", "ACCOUNTING"));
+router.use(authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"));
 
 router.post("/", createCustomer);
 router.get("/", getCustomers);
 router.get("/stats", getCustomerStats);
 router.get("/:id", getCustomerById);
 router.patch("/:id", updateCustomer);
-router.delete("/:id", authorize("ADMIN"), deleteCustomer);
+router.delete("/:id", authorize("ADMIN", "CEO"), deleteCustomer);
 
 // Customer contacts
 router.get("/:id/contacts", getCustomerContacts);

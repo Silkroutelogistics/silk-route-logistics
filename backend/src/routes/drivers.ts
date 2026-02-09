@@ -4,7 +4,7 @@ import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
 router.use(authenticate);
-router.use(authorize("ADMIN", "DISPATCH", "OPERATIONS", "BROKER"));
+router.use(authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS", "BROKER"));
 
 router.post("/", createDriver);
 router.get("/", getDrivers);
@@ -15,6 +15,6 @@ router.patch("/:id/hos", updateDriverHOS);
 router.patch("/:id/assign-equipment", assignEquipment);
 router.patch("/:id/assign-truck", assignTruck);
 router.patch("/:id/assign-trailer", assignTrailer);
-router.delete("/:id", authorize("ADMIN"), deleteDriver);
+router.delete("/:id", authorize("ADMIN", "CEO"), deleteDriver);
 
 export default router;

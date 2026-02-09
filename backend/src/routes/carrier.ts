@@ -21,6 +21,6 @@ router.get("/revenue", getRevenue);
 router.get("/bonuses", getBonuses);
 
 // Admin only
-router.post("/verify/:id", authorize("ADMIN"), verifyCarrier);
+router.post("/verify/:id", authorize("ADMIN", "CEO"), verifyCarrier);
 
 export default router;

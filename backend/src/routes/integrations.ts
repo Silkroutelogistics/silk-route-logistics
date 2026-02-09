@@ -7,6 +7,6 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/", getIntegrations);
-router.post("/sync/:provider", authorize("ADMIN", "BROKER"), triggerSync);
+router.post("/sync/:provider", authorize("ADMIN", "CEO", "BROKER"), triggerSync);
 
 export default router;

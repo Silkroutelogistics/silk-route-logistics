@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post("/loads/:id/tender", authorize("BROKER", "SHIPPER", "ADMIN"), createTender);
+router.post("/loads/:id/tender", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), createTender);
 router.post("/tenders/:id/accept", acceptTender);
 router.post("/tenders/:id/counter", counterTender);
 router.post("/tenders/:id/decline", declineTender);
