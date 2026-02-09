@@ -44,7 +44,7 @@ export default function RevenuePage() {
         <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           {periods.map((p) => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
                 period === p.key ? "bg-gold text-navy" : "text-slate-400 hover:text-white"
               }`}>{p.label}</button>
           ))}

@@ -30,6 +30,7 @@ export const createLoadSchema = z.object({
   pickupDate: z.string().transform((s) => new Date(s)),
   deliveryDate: z.string().transform((s) => new Date(s)),
   status: z.enum(["DRAFT", "POSTED"]).optional(),
+  customerId: z.string().optional(),
 });
 
 export const updateLoadStatusSchema = z.object({

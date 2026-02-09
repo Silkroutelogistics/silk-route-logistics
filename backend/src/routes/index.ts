@@ -21,6 +21,7 @@ import fleetRoutes from "./fleet";
 import complianceRoutes from "./compliance";
 import auditRoutes from "./audit";
 import eldRoutes from "./eld";
+import fmcsaRoutes from "./fmcsa";
 
 const router = Router();
 
@@ -46,5 +47,6 @@ router.use("/fleet", fleetRoutes);
 router.use("/compliance", complianceRoutes);
 router.use("/audit", auditRoutes);
 router.use("/eld", eldRoutes);
+router.use("/fmcsa", fmcsaRoutes);
 
 export default router;

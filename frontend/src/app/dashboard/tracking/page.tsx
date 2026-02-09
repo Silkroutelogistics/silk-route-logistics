@@ -124,11 +124,11 @@ export default function TrackingPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit">
         <button onClick={() => setTab("shipments")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition ${tab === "shipments" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "shipments" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
           <Package className="w-3.5 h-3.5" /> Shipments ({data?.total || 0})
         </button>
         <button onClick={() => setTab("eld")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition ${tab === "eld" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "eld" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
           <Signal className="w-3.5 h-3.5" /> ELD Monitor
         </button>
       </div>

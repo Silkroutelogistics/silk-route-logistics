@@ -7,11 +7,12 @@ import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
-  Shield, Package, ClipboardList, Menu, X,
+  Shield, Package, ClipboardList, Menu, X, ClipboardEdit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { useViewMode } from "@/hooks/useViewMode";
 import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
 import { api } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -45,31 +46,39 @@ const carrierNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-const adminNav = [
+// AE View — Account Executive / Broker workflow
+const aeViewNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/crm", label: "Customers", icon: Users },
+  { href: "/dashboard/crm", label: "CRM", icon: Users },
+  { href: "/dashboard/orders", label: "Order Builder", icon: ClipboardEdit },
   { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
   { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
-  { href: "/dashboard/fleet", label: "Fleet", icon: Truck },
-  { href: "/dashboard/drivers", label: "Drivers", icon: Users },
-  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
-  { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/market", label: "Market Intel", icon: Activity },
-  { href: "/dashboard/compliance", label: "Compliance", icon: Shield },
-  { href: "/dashboard/scorecard", label: "Carrier Scorecards", icon: BarChart3 },
-  { href: "/dashboard/revenue", label: "Carrier Revenue", icon: TrendingUp },
-  { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
-  { href: "/dashboard/factoring", label: "Factoring", icon: DollarSign },
+  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-function getNav(role: string | undefined) {
-  if (isAdmin(role)) return adminNav;
+// Carrier View — Carrier operations workflow
+const carrierViewNav = [
+  { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/loads", label: "Assigned Loads", icon: Package },
+  { href: "/dashboard/fleet", label: "Fleet", icon: Truck },
+  { href: "/dashboard/drivers", label: "Drivers", icon: Users },
+  { href: "/dashboard/scorecard", label: "Scorecard", icon: BarChart3 },
+  { href: "/dashboard/revenue", label: "Revenue", icon: TrendingUp },
+  { href: "/dashboard/violations", label: "DOT / Compliance", icon: Shield },
+  { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+];
+
+function getNav(role: string | undefined, viewMode: "ae" | "carrier") {
+  if (isAdmin(role)) return viewMode === "ae" ? aeViewNav : carrierViewNav;
   if (isCarrier(role)) return carrierNav;
   return employeeNav;
 }
@@ -77,9 +86,11 @@ function getNav(role: string | undefined) {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { viewMode, setViewMode } = useViewMode();
   const carrier = isCarrier(user?.role);
+  const admin = isAdmin(user?.role);
   const ceo = isCeo(user?.role);
-  const navItems = getNav(user?.role);
+  const navItems = getNav(user?.role, viewMode);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close sidebar on route change
@@ -94,6 +105,35 @@ export function Sidebar() {
     enabled: !!user,
   });
   const unreadCount = unreadData?.count || 0;
+
+  const viewToggle = admin ? (
+    <div className="px-5 py-3 border-b border-white/10">
+      <div className="flex items-center bg-white/5 rounded-lg p-1">
+        <button
+          onClick={() => setViewMode("ae")}
+          className={cn(
+            "flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
+            viewMode === "ae"
+              ? "bg-gold text-navy shadow-sm"
+              : "text-slate-400 hover:text-white"
+          )}
+        >
+          AE View
+        </button>
+        <button
+          onClick={() => setViewMode("carrier")}
+          className={cn(
+            "flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
+            viewMode === "carrier"
+              ? "bg-gold text-navy shadow-sm"
+              : "text-slate-400 hover:text-white"
+          )}
+        >
+          Carrier View
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   const sidebarContent = (
     <>
@@ -127,6 +167,8 @@ export function Sidebar() {
           </div>
         </div>
       )}
+
+      {viewToggle}
 
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {

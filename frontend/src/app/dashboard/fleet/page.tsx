@@ -166,11 +166,11 @@ export default function FleetPage() {
       {/* Tab Switcher */}
       <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit">
         <button onClick={() => { setTab("trucks"); setSearch(""); setStatusFilter(""); setTypeFilter(""); }}
-          className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === "trucks" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`px-5 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "trucks" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
           Trucks ({overview?.totalTrucks || 0})
         </button>
         <button onClick={() => { setTab("trailers"); setSearch(""); setStatusFilter(""); setTypeFilter(""); }}
-          className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === "trailers" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`px-5 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "trailers" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
           Trailers ({overview?.totalTrailers || 0})
         </button>
       </div>

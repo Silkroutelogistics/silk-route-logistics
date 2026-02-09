@@ -113,6 +113,13 @@ export default function LoadsPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  const downloadBol = async (loadId: string, refNum: string) => {
+    const res = await api.get(`/pdf/bol-load/${loadId}`, { responseType: "blob" });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a = document.createElement("a"); a.href = url; a.download = `BOL-${refNum}.pdf`; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   // Detail overlay view
   if (selectedLoadId && loadDetail) {
     const load = loadDetail;
@@ -141,6 +148,9 @@ export default function LoadsPage() {
                 <ChevronRight className="w-4 h-4" /> {STATUS_ACTIONS[load.status]}
               </button>
             )}
+            <button onClick={() => downloadBol(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm hover:bg-gold/30">
+              <Download className="w-4 h-4" /> BOL
+            </button>
             {["BOOKED", "DISPATCHED", "IN_TRANSIT", "DELIVERED", "COMPLETED"].includes(load.status) && (
               <button onClick={() => downloadPdf(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20">
                 <Download className="w-4 h-4" /> Rate Conf

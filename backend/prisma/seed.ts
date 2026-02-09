@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, CarrierTier, LoadStatus } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -29,823 +29,611 @@ async function main() {
   await prisma.user.deleteMany();
 
   const hash = await bcrypt.hash("password123", 10);
-  const now = Date.now();
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
 
-  // ═══════════════════════════════════════════════
-  // USERS
-  // ═══════════════════════════════════════════════
-
-  const admin = await prisma.user.create({
+  // Single admin account
+  await prisma.user.create({
     data: {
-      email: "admin@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Wasih", lastName: "Haider", company: "Silk Route Logistics",
-      role: UserRole.ADMIN, isVerified: true,
+      email: "admin@silkroutelogistics.ai",
+      passwordHash: hash,
+      firstName: "Wasih",
+      lastName: "Haider",
+      company: "Silk Route Logistics",
+      role: UserRole.ADMIN,
+      isVerified: true,
+      phone: "(269) 555-0100",
     },
   });
 
-  const broker = await prisma.user.create({
+  // Account Executive — Noor
+  await prisma.user.create({
     data: {
-      email: "whaider@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Whaider", lastName: "Haider", company: "Silk Route Logistics",
-      role: UserRole.BROKER, isVerified: true, phone: "(269) 555-0101",
+      email: "noor@silkroutelogistics.ai",
+      passwordHash: hash,
+      firstName: "Noor",
+      lastName: "Ahmed",
+      company: "Silk Route Logistics",
+      role: UserRole.BROKER,
+      isVerified: true,
+      phone: "(269) 555-0101",
     },
   });
 
-  const dispatch = await prisma.user.create({
+  // Carrier account with profile
+  const carrierUser = await prisma.user.create({
     data: {
-      email: "dispatch@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Marcus", lastName: "Rivera", company: "Silk Route Logistics",
-      role: UserRole.DISPATCH, isVerified: true, phone: "(269) 555-0102",
+      email: "carrier@silkroutelogistics.ai",
+      passwordHash: hash,
+      firstName: "SRL",
+      lastName: "Carrier",
+      company: "SRL Transport LLC",
+      role: UserRole.CARRIER,
+      isVerified: true,
+      phone: "(269) 555-0200",
     },
   });
 
-  const accounting = await prisma.user.create({
+  await prisma.carrierProfile.create({
     data: {
-      email: "accounting@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Priya", lastName: "Sharma", company: "Silk Route Logistics",
-      role: UserRole.ACCOUNTING, isVerified: true,
-    },
-  });
-
-  const operations = await prisma.user.create({
-    data: {
-      email: "operations@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Carlos", lastName: "Rivera", company: "Silk Route Logistics",
-      role: UserRole.OPERATIONS, isVerified: true,
-    },
-  });
-
-  const ceo = await prisma.user.create({
-    data: {
-      email: "ceo@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Wasih", lastName: "Haider", company: "Silk Route Logistics",
-      role: "CEO" as UserRole, isVerified: true, phone: "(269) 555-0100",
-    },
-  });
-
-  // Carrier 1: Platinum owner-operator, 1 truck, dry van (primary carrier demo account)
-  const carrier1 = await prisma.user.create({
-    data: {
-      email: "srl@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Mike", lastName: "Henderson", company: "Henderson Trucking",
-      role: UserRole.CARRIER, isVerified: true, phone: "(616) 555-1001",
-    },
-  });
-
-  // Carrier 2: Gold, small reefer fleet
-  const carrier2 = await prisma.user.create({
-    data: {
-      email: "gold@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Sarah", lastName: "Kowalski", company: "Kowalski Cold Freight",
-      role: UserRole.CARRIER, isVerified: true, phone: "(312) 555-2002",
-    },
-  });
-
-  // Carrier 3: Silver, car hauler
-  const carrier3 = await prisma.user.create({
-    data: {
-      email: "silver@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Carlos", lastName: "Ramirez", company: "Ramirez Auto Transport",
-      role: UserRole.CARRIER, isVerified: true, phone: "(313) 555-3003",
-    },
-  });
-
-  // Carrier 4: Bronze, new owner-operator
-  const carrier4 = await prisma.user.create({
-    data: {
-      email: "bronze@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Tom", lastName: "Novak", company: "Novak Hauling LLC",
-      role: UserRole.CARRIER, isVerified: true, phone: "(517) 555-4004",
-    },
-  });
-
-  // Carrier 5: Gold, flatbed specialist
-  const carrier5 = await prisma.user.create({
-    data: {
-      email: "flatbed@silkroutelogistics.ai", passwordHash: hash,
-      firstName: "Darryl", lastName: "Washington", company: "Great Lakes Flatbed",
-      role: UserRole.CARRIER, isVerified: true, phone: "(419) 555-5005",
+      userId: carrierUser.id,
+      mcNumber: "MC-1234567",
+      dotNumber: "3456789",
+      tier: "PLATINUM",
+      equipmentTypes: ["Dry Van", "Reefer", "Flatbed"],
+      operatingRegions: ["Midwest", "Northeast", "Southeast", "Southwest", "West Coast", "South Central"],
+      onboardingStatus: "APPROVED",
+      approvedAt: new Date(),
+      w9Uploaded: true,
+      insuranceCertUploaded: true,
+      authorityDocUploaded: true,
+      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      safetyScore: 98,
+      address: "1000 Logistics Pkwy",
+      city: "Kalamazoo",
+      state: "MI",
+      zip: "49001",
+      numberOfTrucks: 25,
     },
   });
 
   // ═══════════════════════════════════════════════
-  // CARRIER PROFILES
-  // ═══════════════════════════════════════════════
-
-  const cp1 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrier1.id, mcNumber: "MC-891201", dotNumber: "DOT-3401201",
-      insuranceExpiry: new Date("2027-06-15"), safetyScore: 99,
-      tier: CarrierTier.PLATINUM,
-      equipmentTypes: ["Dry Van"],
-      operatingRegions: ["Michigan", "Indiana", "Ohio", "Illinois"],
-      onboardingStatus: "APPROVED", approvedAt: new Date("2025-03-10"),
-      w9Uploaded: true, insuranceCertUploaded: true, authorityDocUploaded: true,
-      numberOfTrucks: 1, address: "2847 Division Ave S", city: "Grand Rapids", state: "MI", zip: "49548",
-    },
-  });
-
-  const cp2 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrier2.id, mcNumber: "MC-891202", dotNumber: "DOT-3401202",
-      insuranceExpiry: new Date("2027-03-20"), safetyScore: 96,
-      tier: CarrierTier.GOLD,
-      equipmentTypes: ["Reefer", "Dry Van"],
-      operatingRegions: ["Michigan", "Illinois", "Wisconsin", "Minnesota", "Indiana"],
-      onboardingStatus: "APPROVED", approvedAt: new Date("2025-05-01"),
-      w9Uploaded: true, insuranceCertUploaded: true, authorityDocUploaded: true,
-      numberOfTrucks: 3, address: "1580 W Fullerton Ave", city: "Chicago", state: "IL", zip: "60614",
-    },
-  });
-
-  const cp3 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrier3.id, mcNumber: "MC-891203", dotNumber: "DOT-3401203",
-      insuranceExpiry: new Date("2026-11-01"), safetyScore: 92,
-      tier: CarrierTier.SILVER,
-      equipmentTypes: ["Car Hauler", "Step Deck"],
-      operatingRegions: ["Michigan", "Ohio", "Indiana", "Pennsylvania"],
-      onboardingStatus: "APPROVED", approvedAt: new Date("2025-08-15"),
-      w9Uploaded: true, insuranceCertUploaded: true, authorityDocUploaded: true,
-      numberOfTrucks: 2, address: "14320 Michigan Ave", city: "Dearborn", state: "MI", zip: "48126",
-    },
-  });
-
-  const cp4 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrier4.id, mcNumber: "MC-891204", dotNumber: "DOT-3401204",
-      insuranceExpiry: new Date("2026-09-01"), safetyScore: 82,
-      tier: CarrierTier.BRONZE,
-      equipmentTypes: ["Dry Van"],
-      operatingRegions: ["Michigan", "Indiana"],
-      onboardingStatus: "APPROVED", approvedAt: new Date("2025-12-01"),
-      w9Uploaded: true, insuranceCertUploaded: true, authorityDocUploaded: false,
-      numberOfTrucks: 1, address: "518 E Grand River Ave", city: "Lansing", state: "MI", zip: "48906",
-    },
-  });
-
-  const cp5 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrier5.id, mcNumber: "MC-891205", dotNumber: "DOT-3401205",
-      insuranceExpiry: new Date("2027-01-15"), safetyScore: 95,
-      tier: CarrierTier.GOLD,
-      equipmentTypes: ["Flatbed", "Step Deck"],
-      operatingRegions: ["Ohio", "Michigan", "Indiana", "Kentucky"],
-      onboardingStatus: "APPROVED", approvedAt: new Date("2025-06-20"),
-      w9Uploaded: true, insuranceCertUploaded: true, authorityDocUploaded: true,
-      numberOfTrucks: 2, address: "1200 Front St", city: "Toledo", state: "OH", zip: "43605",
-    },
-  });
-
-  // ═══════════════════════════════════════════════
-  // SCORECARDS (last 4 weeks per carrier)
-  // ═══════════════════════════════════════════════
-
-  const scorecardData = [
-    { carrierId: cp1.id, tier: CarrierTier.PLATINUM, scores: [
-      { otp: 99, otd: 99, comm: 98, claim: 0.5, doc: 99, accept: 97, gps: 99, week: 0 },
-      { otp: 98, otd: 99, comm: 97, claim: 0.8, doc: 98, accept: 96, gps: 98, week: 1 },
-      { otp: 99, otd: 98, comm: 99, claim: 0.3, doc: 99, accept: 98, gps: 99, week: 2 },
-      { otp: 97, otd: 99, comm: 98, claim: 0.6, doc: 97, accept: 95, gps: 98, week: 3 },
-    ]},
-    { carrierId: cp2.id, tier: CarrierTier.GOLD, scores: [
-      { otp: 96, otd: 97, comm: 94, claim: 1.5, doc: 95, accept: 93, gps: 96, week: 0 },
-      { otp: 95, otd: 96, comm: 95, claim: 1.8, doc: 94, accept: 92, gps: 95, week: 1 },
-      { otp: 97, otd: 95, comm: 93, claim: 2.0, doc: 96, accept: 94, gps: 97, week: 2 },
-      { otp: 94, otd: 96, comm: 96, claim: 1.2, doc: 93, accept: 91, gps: 94, week: 3 },
-    ]},
-    { carrierId: cp3.id, tier: CarrierTier.SILVER, scores: [
-      { otp: 93, otd: 91, comm: 90, claim: 3, doc: 88, accept: 85, gps: 90, week: 0 },
-      { otp: 91, otd: 90, comm: 88, claim: 3.5, doc: 87, accept: 83, gps: 88, week: 1 },
-    ]},
-    { carrierId: cp4.id, tier: CarrierTier.BRONZE, scores: [
-      { otp: 85, otd: 82, comm: 80, claim: 5, doc: 78, accept: 75, gps: 80, week: 0 },
-      { otp: 82, otd: 80, comm: 78, claim: 6, doc: 75, accept: 72, gps: 78, week: 1 },
-    ]},
-    { carrierId: cp5.id, tier: CarrierTier.GOLD, scores: [
-      { otp: 95, otd: 96, comm: 94, claim: 1.0, doc: 96, accept: 94, gps: 95, week: 0 },
-      { otp: 96, otd: 95, comm: 95, claim: 1.2, doc: 95, accept: 93, gps: 96, week: 1 },
-    ]},
-  ];
-
-  for (const carrier of scorecardData) {
-    for (const s of carrier.scores) {
-      const overall =
-        s.otp * 0.2 + s.otd * 0.2 + s.comm * 0.1 + (100 - s.claim) * 0.15 +
-        s.doc * 0.1 + s.accept * 0.1 + s.gps * 0.15;
-      await prisma.carrierScorecard.create({
-        data: {
-          carrierId: carrier.carrierId, period: "WEEKLY",
-          onTimePickupPct: s.otp, onTimeDeliveryPct: s.otd,
-          communicationScore: s.comm, claimRatio: s.claim,
-          documentSubmissionTimeliness: s.doc, acceptanceRate: s.accept,
-          gpsCompliancePct: s.gps,
-          overallScore: Math.round(overall * 100) / 100,
-          tierAtTime: carrier.tier,
-          bonusEarned: carrier.tier === "PLATINUM" ? 150 : carrier.tier === "GOLD" ? 75 : 0,
-          calculatedAt: new Date(now - s.week * weekMs),
-        },
-      });
-    }
-  }
-
-  // ═══════════════════════════════════════════════
-  // BONUSES
-  // ═══════════════════════════════════════════════
-
-  await prisma.carrierBonus.createMany({
-    data: [
-      { carrierId: cp1.id, type: "PERFORMANCE", amount: 450, period: "2026-01", status: "PAID", description: "Platinum tier monthly bonus" },
-      { carrierId: cp1.id, type: "PERFORMANCE", amount: 150, period: "2026-W06", status: "PENDING", description: "Weekly performance bonus" },
-      { carrierId: cp1.id, type: "REFERRAL", amount: 200, status: "APPROVED", description: "Referred Kowalski Cold Freight" },
-      { carrierId: cp2.id, type: "PERFORMANCE", amount: 225, period: "2026-01", status: "PAID", description: "Gold tier monthly bonus" },
-      { carrierId: cp2.id, type: "VOLUME", amount: 100, period: "2026-01", status: "APPROVED", description: "15+ loads milestone" },
-      { carrierId: cp5.id, type: "PERFORMANCE", amount: 75, period: "2026-W06", status: "PENDING", description: "Weekly performance bonus" },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // LOADS (Midwest lanes)
-  // ═══════════════════════════════════════════════
-
-  const loads = await Promise.all([
-    // Load 1: COMPLETED — Kalamazoo to Chicago, dry van
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-001", status: LoadStatus.COMPLETED,
-        originCity: "Kalamazoo", originState: "MI", originZip: "49008",
-        destCity: "Chicago", destState: "IL", destZip: "60601",
-        weight: 38000, equipmentType: "Dry Van", commodity: "Auto Parts",
-        rate: 1800, distance: 145, posterId: broker.id, carrierId: carrier1.id,
-        pickupDate: new Date("2026-01-15"), deliveryDate: new Date("2026-01-15"),
-      },
-    }),
-    // Load 2: IN_TRANSIT — Grand Rapids to Indianapolis, reefer (CPG)
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-002", status: LoadStatus.IN_TRANSIT,
-        originCity: "Grand Rapids", originState: "MI", originZip: "49503",
-        destCity: "Indianapolis", destState: "IN", destZip: "46204",
-        weight: 42000, equipmentType: "Reefer", commodity: "Frozen Foods (CPG)",
-        rate: 2800, distance: 260, posterId: broker.id, carrierId: carrier2.id,
-        pickupDate: new Date("2026-02-07"), deliveryDate: new Date("2026-02-08"),
-      },
-    }),
-    // Load 3: POSTED — Detroit to Columbus, needs tendering
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-003", status: LoadStatus.POSTED,
-        originCity: "Detroit", originState: "MI", originZip: "48201",
-        destCity: "Columbus", destState: "OH", destZip: "43215",
-        weight: 35000, equipmentType: "Dry Van", commodity: "Consumer Electronics",
-        rate: 1600, distance: 200, posterId: broker.id,
-        pickupDate: new Date("2026-02-10"), deliveryDate: new Date("2026-02-10"),
-      },
-    }),
-    // Load 4: POSTED — Kalamazoo to Milwaukee, reefer, needs tendering
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-004", status: LoadStatus.POSTED,
-        originCity: "Kalamazoo", originState: "MI", originZip: "49008",
-        destCity: "Milwaukee", destState: "WI", destZip: "53202",
-        weight: 40000, equipmentType: "Reefer", commodity: "Dairy Products",
-        rate: 2100, distance: 195, posterId: broker.id,
-        pickupDate: new Date("2026-02-11"), deliveryDate: new Date("2026-02-11"),
-      },
-    }),
-    // Load 5: BOOKED — Detroit to Toledo, car hauler
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-005", status: LoadStatus.BOOKED,
-        originCity: "Detroit", originState: "MI", originZip: "48201",
-        destCity: "Toledo", destState: "OH", destZip: "43605",
-        weight: 28000, equipmentType: "Car Hauler", commodity: "Vehicles (6 units)",
-        rate: 1400, distance: 62, posterId: broker.id, carrierId: carrier3.id,
-        pickupDate: new Date("2026-02-09"), deliveryDate: new Date("2026-02-09"),
-      },
-    }),
-    // Load 6: DELIVERED — Grand Rapids to Chicago, dry van
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-006", status: LoadStatus.DELIVERED,
-        originCity: "Grand Rapids", originState: "MI", originZip: "49503",
-        destCity: "Chicago", destState: "IL", destZip: "60601",
-        weight: 44000, equipmentType: "Dry Van", commodity: "Office Furniture",
-        rate: 1950, distance: 180, posterId: broker.id, carrierId: carrier1.id,
-        pickupDate: new Date("2026-02-05"), deliveryDate: new Date("2026-02-05"),
-      },
-    }),
-    // Load 7: POSTED — Toledo to Fort Wayne, flatbed, needs tendering
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-007", status: LoadStatus.POSTED,
-        originCity: "Toledo", originState: "OH", originZip: "43605",
-        destCity: "Fort Wayne", destState: "IN", destZip: "46802",
-        weight: 45000, equipmentType: "Flatbed", commodity: "Steel Coils",
-        rate: 1700, distance: 118, posterId: broker.id,
-        pickupDate: new Date("2026-02-12"), deliveryDate: new Date("2026-02-12"),
-      },
-    }),
-    // Load 8: DISPATCHED — Kalamazoo to Detroit, reefer
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-008", status: LoadStatus.DISPATCHED,
-        originCity: "Kalamazoo", originState: "MI", originZip: "49008",
-        destCity: "Detroit", destState: "MI", destZip: "48201",
-        weight: 36000, equipmentType: "Reefer", commodity: "Fresh Produce",
-        rate: 1500, distance: 150, posterId: broker.id, carrierId: carrier2.id,
-        pickupDate: new Date("2026-02-08"), deliveryDate: new Date("2026-02-08"),
-      },
-    }),
-    // Load 9: COMPLETED — Lansing to Chicago
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-009", status: LoadStatus.COMPLETED,
-        originCity: "Lansing", originState: "MI", originZip: "48906",
-        destCity: "Chicago", destState: "IL", destZip: "60601",
-        weight: 38000, equipmentType: "Dry Van", commodity: "Paper Products",
-        rate: 1650, distance: 210, posterId: broker.id, carrierId: carrier4.id,
-        pickupDate: new Date("2026-01-28"), deliveryDate: new Date("2026-01-29"),
-      },
-    }),
-    // Load 10: POSTED — Minneapolis to Kalamazoo, needs tendering
-    prisma.load.create({
-      data: {
-        referenceNumber: "SRL-2026-010", status: LoadStatus.POSTED,
-        originCity: "Minneapolis", originState: "MN", originZip: "55401",
-        destCity: "Kalamazoo", destState: "MI", destZip: "49008",
-        weight: 30000, equipmentType: "Dry Van", commodity: "Retail Goods (CPG)",
-        rate: 2600, distance: 490, posterId: broker.id,
-        pickupDate: new Date("2026-02-13"), deliveryDate: new Date("2026-02-14"),
-      },
-    }),
-  ]);
-
-  // ═══════════════════════════════════════════════
-  // ADDITIONAL LOADS (Multi-Region for Market Trends)
-  // ═══════════════════════════════════════════════
-
-  const regionalLoads = await Promise.all([
-    // SOUTHEAST
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-011", status: LoadStatus.COMPLETED, originCity: "Atlanta", originState: "GA", originZip: "30301", destCity: "Nashville", destState: "TN", destZip: "37201", weight: 36000, equipmentType: "Dry Van", commodity: "Consumer Goods", rate: 1400, distance: 250, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-10"), deliveryDate: new Date("2026-01-10") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-012", status: LoadStatus.COMPLETED, originCity: "Charlotte", originState: "NC", originZip: "28201", destCity: "Atlanta", destState: "GA", destZip: "30301", weight: 40000, equipmentType: "Reefer", commodity: "Beverages", rate: 1600, distance: 245, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-12"), deliveryDate: new Date("2026-01-12") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-013", status: LoadStatus.COMPLETED, originCity: "Jacksonville", originState: "FL", originZip: "32099", destCity: "Savannah", destState: "GA", destZip: "31401", weight: 32000, equipmentType: "Flatbed", commodity: "Lumber", rate: 950, distance: 140, posterId: broker.id, carrierId: carrier5.id, pickupDate: new Date("2026-01-18"), deliveryDate: new Date("2026-01-18") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-014", status: LoadStatus.DELIVERED, originCity: "Nashville", originState: "TN", originZip: "37201", destCity: "Birmingham", destState: "AL", destZip: "35201", weight: 38000, equipmentType: "Dry Van", commodity: "Auto Parts", rate: 1100, distance: 190, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-25"), deliveryDate: new Date("2026-01-25") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-015", status: LoadStatus.POSTED, originCity: "Miami", originState: "FL", originZip: "33101", destCity: "Tampa", destState: "FL", destZip: "33601", weight: 35000, equipmentType: "Reefer", commodity: "Seafood", rate: 1200, distance: 280, posterId: broker.id, pickupDate: new Date("2026-02-14"), deliveryDate: new Date("2026-02-14") } }),
-
-    // NORTHEAST
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-016", status: LoadStatus.COMPLETED, originCity: "Newark", originState: "NJ", originZip: "07102", destCity: "Boston", destState: "MA", destZip: "02101", weight: 28000, equipmentType: "Dry Van", commodity: "Retail Merchandise", rate: 1800, distance: 215, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-08"), deliveryDate: new Date("2026-01-08") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-017", status: LoadStatus.COMPLETED, originCity: "Philadelphia", originState: "PA", originZip: "19101", destCity: "New York", destState: "NY", destZip: "10001", weight: 30000, equipmentType: "Dry Van", commodity: "Paper Products", rate: 850, distance: 95, posterId: broker.id, carrierId: carrier4.id, pickupDate: new Date("2026-01-14"), deliveryDate: new Date("2026-01-14") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-018", status: LoadStatus.DELIVERED, originCity: "Hartford", originState: "CT", originZip: "06101", destCity: "Newark", destState: "NJ", destZip: "07102", weight: 25000, equipmentType: "Reefer", commodity: "Pharmaceuticals", rate: 1300, distance: 120, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-22"), deliveryDate: new Date("2026-01-22") } }),
-
-    // SOUTH CENTRAL
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-019", status: LoadStatus.COMPLETED, originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Dallas", destState: "TX", destZip: "75201", weight: 42000, equipmentType: "Flatbed", commodity: "Oil Equipment", rate: 1500, distance: 240, posterId: broker.id, carrierId: carrier5.id, pickupDate: new Date("2026-01-05"), deliveryDate: new Date("2026-01-05") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-020", status: LoadStatus.COMPLETED, originCity: "Dallas", originState: "TX", originZip: "75201", destCity: "Oklahoma City", destState: "OK", destZip: "73101", weight: 35000, equipmentType: "Dry Van", commodity: "Electronics", rate: 1200, distance: 205, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-11"), deliveryDate: new Date("2026-01-11") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-021", status: LoadStatus.COMPLETED, originCity: "San Antonio", originState: "TX", originZip: "78201", destCity: "Houston", destState: "TX", destZip: "77001", weight: 40000, equipmentType: "Reefer", commodity: "Fresh Produce", rate: 1100, distance: 200, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-20"), deliveryDate: new Date("2026-01-20") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-022", status: LoadStatus.POSTED, originCity: "Little Rock", originState: "AR", originZip: "72201", destCity: "New Orleans", destState: "LA", destZip: "70112", weight: 34000, equipmentType: "Dry Van", commodity: "Building Materials", rate: 1350, distance: 380, posterId: broker.id, pickupDate: new Date("2026-02-15"), deliveryDate: new Date("2026-02-16") } }),
-
-    // WEST
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-023", status: LoadStatus.COMPLETED, originCity: "Los Angeles", originState: "CA", originZip: "90001", destCity: "Phoenix", destState: "AZ", destZip: "85001", weight: 38000, equipmentType: "Dry Van", commodity: "CPG - Household", rate: 2200, distance: 370, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-06"), deliveryDate: new Date("2026-01-06") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-024", status: LoadStatus.COMPLETED, originCity: "Seattle", originState: "WA", originZip: "98101", destCity: "Portland", destState: "OR", destZip: "97201", weight: 30000, equipmentType: "Reefer", commodity: "Fresh Fish", rate: 1100, distance: 175, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-13"), deliveryDate: new Date("2026-01-13") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-025", status: LoadStatus.COMPLETED, originCity: "Denver", originState: "CO", originZip: "80201", destCity: "Las Vegas", destState: "NV", destZip: "89101", weight: 35000, equipmentType: "Flatbed", commodity: "Construction Steel", rate: 2800, distance: 750, posterId: broker.id, carrierId: carrier5.id, pickupDate: new Date("2026-01-19"), deliveryDate: new Date("2026-01-20") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-026", status: LoadStatus.DELIVERED, originCity: "San Francisco", originState: "CA", originZip: "94102", destCity: "Los Angeles", destState: "CA", destZip: "90001", weight: 28000, equipmentType: "Dry Van", commodity: "Tech Equipment", rate: 1600, distance: 380, posterId: broker.id, carrierId: carrier4.id, pickupDate: new Date("2026-01-28"), deliveryDate: new Date("2026-01-28") } }),
-
-    // UPPER MIDWEST
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-027", status: LoadStatus.COMPLETED, originCity: "Des Moines", originState: "IA", originZip: "50301", destCity: "Omaha", destState: "NE", destZip: "68101", weight: 40000, equipmentType: "Reefer", commodity: "Meat Products", rate: 950, distance: 140, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-09"), deliveryDate: new Date("2026-01-09") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-028", status: LoadStatus.COMPLETED, originCity: "Kansas City", originState: "MO", originZip: "64101", destCity: "St. Louis", destState: "MO", destZip: "63101", weight: 36000, equipmentType: "Dry Van", commodity: "Packaged Foods", rate: 800, distance: 250, posterId: broker.id, carrierId: carrier4.id, pickupDate: new Date("2026-01-16"), deliveryDate: new Date("2026-01-16") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-029", status: LoadStatus.COMPLETED, originCity: "Minneapolis", originState: "MN", originZip: "55401", destCity: "Fargo", destState: "ND", destZip: "58102", weight: 32000, equipmentType: "Dry Van", commodity: "Agricultural Parts", rate: 1300, distance: 235, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-24"), deliveryDate: new Date("2026-01-24") } }),
-    prisma.load.create({ data: { referenceNumber: "SRL-2026-030", status: LoadStatus.POSTED, originCity: "Sioux Falls", originState: "SD", originZip: "57101", destCity: "Des Moines", destState: "IA", destZip: "50301", weight: 38000, equipmentType: "Reefer", commodity: "Dairy", rate: 1050, distance: 260, posterId: broker.id, pickupDate: new Date("2026-02-13"), deliveryDate: new Date("2026-02-13") } }),
-  ]);
-
-  // ═══════════════════════════════════════════════
-  // LOAD TENDERS
-  // ═══════════════════════════════════════════════
-
-  await prisma.loadTender.createMany({
-    data: [
-      // Load 3 (Detroit→Columbus): Tendered to Henderson, awaiting response
-      { loadId: loads[2].id, carrierId: cp1.id, status: "OFFERED", offeredRate: 1600, expiresAt: new Date(now + 2 * 24 * 60 * 60 * 1000) },
-      // Load 4 (Kalamazoo→Milwaukee): Tendered to Kowalski, awaiting response
-      { loadId: loads[3].id, carrierId: cp2.id, status: "OFFERED", offeredRate: 2100, expiresAt: new Date(now + 24 * 60 * 60 * 1000) },
-      // Load 7 (Toledo→Fort Wayne): Tendered to Great Lakes Flatbed, they countered
-      { loadId: loads[6].id, carrierId: cp5.id, status: "COUNTERED", offeredRate: 1700, counterRate: 1850, respondedAt: new Date(now - 2 * 60 * 60 * 1000), expiresAt: new Date(now + 24 * 60 * 60 * 1000) },
-      // Load 10 (Minneapolis→Kalamazoo): Tendered to Henderson, awaiting
-      { loadId: loads[9].id, carrierId: cp1.id, status: "OFFERED", offeredRate: 2600, expiresAt: new Date(now + 3 * 24 * 60 * 60 * 1000) },
-      // Load 10: Also tendered to Novak
-      { loadId: loads[9].id, carrierId: cp4.id, status: "OFFERED", offeredRate: 2600, expiresAt: new Date(now + 3 * 24 * 60 * 60 * 1000) },
-      // Load 1 (completed): Was accepted by Henderson
-      { loadId: loads[0].id, carrierId: cp1.id, status: "ACCEPTED", offeredRate: 1800, respondedAt: new Date("2026-01-14"), expiresAt: new Date("2026-01-15") },
-      // Load 5 (booked): Accepted by Ramirez Auto
-      { loadId: loads[4].id, carrierId: cp3.id, status: "ACCEPTED", offeredRate: 1400, respondedAt: new Date("2026-02-07"), expiresAt: new Date("2026-02-08") },
-      // Load 2 (in transit): Accepted by Kowalski
-      { loadId: loads[1].id, carrierId: cp2.id, status: "ACCEPTED", offeredRate: 2800, respondedAt: new Date("2026-02-06"), expiresAt: new Date("2026-02-07") },
-      // Load 3: Also tendered to Novak, he declined
-      { loadId: loads[2].id, carrierId: cp4.id, status: "DECLINED", offeredRate: 1600, respondedAt: new Date(now - 6 * 60 * 60 * 1000), expiresAt: new Date(now + 24 * 60 * 60 * 1000) },
-      // Old expired tender
-      { loadId: loads[6].id, carrierId: cp1.id, status: "EXPIRED", offeredRate: 1650, expiresAt: new Date(now - 24 * 60 * 60 * 1000) },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // INVOICES
-  // ═══════════════════════════════════════════════
-
-  await prisma.invoice.createMany({
-    data: [
-      { invoiceNumber: "INV-1001", status: "PAID", amount: 1800, factoringFee: 54, advanceRate: 97, advanceAmount: 1746, userId: carrier1.id, loadId: loads[0].id, paidAt: new Date("2026-01-18") },
-      { invoiceNumber: "INV-1002", status: "SUBMITTED", amount: 2800, userId: carrier2.id, loadId: loads[1].id },
-      { invoiceNumber: "INV-1003", status: "PAID", amount: 1950, factoringFee: 58.5, advanceRate: 97, advanceAmount: 1891.5, userId: carrier1.id, loadId: loads[5].id, paidAt: new Date("2026-02-07") },
-      { invoiceNumber: "INV-1004", status: "SUBMITTED", amount: 1500, userId: carrier2.id, loadId: loads[7].id },
-      { invoiceNumber: "INV-1005", status: "PAID", amount: 1650, userId: carrier4.id, loadId: loads[8].id, paidAt: new Date("2026-02-02") },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // CUSTOMERS (Midwest shippers)
-  // ═══════════════════════════════════════════════
-
-  const cust1 = await prisma.customer.create({
-    data: {
-      name: "Great Lakes Manufacturing", contactName: "Robert Chen", email: "rchen@greatlakesmfg.com",
-      phone: "(269) 555-8001", address: "1200 Industrial Blvd", city: "Kalamazoo", state: "MI", zip: "49001",
-      status: "Active", rating: 5, paymentTerms: "Net 30", creditLimit: 50000,
-      notes: "Long-term customer. Auto parts and machinery components. Prefers AM pickups.",
-    },
-  });
-
-  const cust2 = await prisma.customer.create({
-    data: {
-      name: "Midwest Fresh Foods Co.", contactName: "Lisa Park", email: "lpark@midwestfresh.com",
-      phone: "(616) 555-8002", address: "890 Market St", city: "Grand Rapids", state: "MI", zip: "49503",
-      status: "Active", rating: 4, paymentTerms: "Net 15", creditLimit: 75000,
-      notes: "CPG customer. Frozen and refrigerated goods. Requires reefer with temp monitoring.",
-    },
-  });
-
-  const cust3 = await prisma.customer.create({
-    data: {
-      name: "Motor City Auto Group", contactName: "Derek Williams", email: "dwilliams@motorcityauto.com",
-      phone: "(313) 555-8003", address: "4500 Michigan Ave", city: "Detroit", state: "MI", zip: "48210",
-      status: "Active", rating: 4, paymentTerms: "Net 30", creditLimit: 40000,
-      notes: "Auto dealership group. Regular car hauling needs. Detroit and surrounding metro.",
-    },
-  });
-
-  const cust4 = await prisma.customer.create({
-    data: {
-      name: "Heartland CPG Distributors", contactName: "Amanda Foster", email: "afoster@heartlandcpg.com",
-      phone: "(312) 555-8004", address: "2200 N Elston Ave", city: "Chicago", state: "IL", zip: "60614",
-      status: "Active", rating: 5, paymentTerms: "Net 30", creditLimit: 100000,
-      notes: "Major CPG distributor. High volume. Retail delivery to Walmart, Meijer, Kroger.",
-    },
-  });
-
-  // ═══════════════════════════════════════════════
-  // DRIVERS
-  // ═══════════════════════════════════════════════
-
-  const driver1 = await prisma.driver.create({
-    data: {
-      firstName: "Jake", lastName: "Morrison", phone: "(269) 555-9001", email: "jake@silkroutelogistics.ai",
-      licenseType: "CDL-A", licenseNumber: "MI-CDL-4421", licenseExpiry: new Date("2028-03-15"),
-      status: "ON_ROUTE", currentLocation: "Battle Creek, MI", hireDate: new Date("2025-06-01"),
-      safetyScore: 98, violations: 0,
-      hosDrivingUsed: 6.5, hosOnDutyUsed: 9.0, hosCycleUsed: 45, hosCycleLimit: 70,
-    },
-  });
-
-  const driver2 = await prisma.driver.create({
-    data: {
-      firstName: "Maria", lastName: "Santos", phone: "(269) 555-9002", email: "maria@silkroutelogistics.ai",
-      licenseType: "CDL-A", licenseNumber: "MI-CDL-4422", licenseExpiry: new Date("2027-11-20"),
-      status: "AVAILABLE", currentLocation: "Kalamazoo, MI", hireDate: new Date("2025-08-15"),
-      safetyScore: 95, violations: 1,
-      hosDrivingUsed: 0, hosOnDutyUsed: 0, hosCycleUsed: 20, hosCycleLimit: 70,
-    },
-  });
-
-  const driver3 = await prisma.driver.create({
-    data: {
-      firstName: "Kevin", lastName: "O'Brien", phone: "(269) 555-9003",
-      licenseType: "CDL-A", licenseNumber: "MI-CDL-4423", licenseExpiry: new Date("2027-06-30"),
-      status: "OFF_DUTY", currentLocation: "Portage, MI", hireDate: new Date("2025-10-01"),
-      safetyScore: 92, violations: 0,
-      hosDrivingUsed: 0, hosOnDutyUsed: 0, hosCycleUsed: 55, hosCycleLimit: 70,
-    },
-  });
-
-  // ═══════════════════════════════════════════════
-  // EQUIPMENT (SRL's own + leased)
-  // ═══════════════════════════════════════════════
-
-  const equip1 = await prisma.equipment.create({
-    data: {
-      unitNumber: "SRL-001", type: "Dry Van", year: 2023, make: "Freightliner", model: "Cascadia",
-      vin: "1FUJGLDR5XSAA0001", status: "ACTIVE", mileage: 85000,
-      nextServiceDate: new Date("2026-03-01"),
-    },
-  });
-
-  const equip2 = await prisma.equipment.create({
-    data: {
-      unitNumber: "SRL-T01", type: "53' Dry Van Trailer", year: 2022, make: "Great Dane", model: "Champion",
-      vin: "1GRAA0623NW100001", status: "ACTIVE", mileage: 120000,
-      nextServiceDate: new Date("2026-04-15"),
-    },
-  });
-
-  const equip3 = await prisma.equipment.create({
-    data: {
-      unitNumber: "SRL-T02", type: "53' Reefer Trailer", year: 2024, make: "Utility", model: "3000R",
-      vin: "1UYVS2530RM100001", status: "ACTIVE", mileage: 35000,
-      nextServiceDate: new Date("2026-06-01"),
-    },
-  });
-
-  // Assign equipment to drivers
-  await prisma.driver.update({ where: { id: driver1.id }, data: { assignedEquipmentId: equip1.id } });
-
-  // ═══════════════════════════════════════════════
-  // SHIPMENTS (for tracking page)
-  // ═══════════════════════════════════════════════
-
-  await prisma.shipment.createMany({
-    data: [
-      {
-        shipmentNumber: "SHP-2026-001", proNumber: "PRO-88201", bolNumber: "BOL-55001",
-        status: "IN_TRANSIT",
-        originCity: "Kalamazoo", originState: "MI", originZip: "49008",
-        destCity: "Chicago", destState: "IL", destZip: "60601",
-        weight: 38000, pieces: 24, commodity: "Auto Parts", equipmentType: "Dry Van",
-        rate: 1800, distance: 145, specialInstructions: "Dock delivery. Call 30 min before arrival.",
-        pickupDate: new Date("2026-02-08T06:00:00"), deliveryDate: new Date("2026-02-08T14:00:00"),
-        actualPickup: new Date("2026-02-08T06:15:00"),
-        customerId: cust1.id, driverId: driver1.id, equipmentId: equip1.id,
-        lastLocation: "Battle Creek, MI", lastLocationAt: new Date(now - 2 * 60 * 60 * 1000),
-        eta: new Date("2026-02-08T13:30:00"),
-      },
-      {
-        shipmentNumber: "SHP-2026-002", proNumber: "PRO-88202", bolNumber: "BOL-55002",
-        status: "DISPATCHED",
-        originCity: "Grand Rapids", originState: "MI", originZip: "49503",
-        destCity: "Indianapolis", destState: "IN", destZip: "46204",
-        weight: 42000, pieces: 18, commodity: "Frozen Foods (CPG)", equipmentType: "Reefer",
-        rate: 2800, distance: 260, specialInstructions: "Maintain 0°F. Receiver checks temp on arrival.",
-        pickupDate: new Date("2026-02-09T07:00:00"), deliveryDate: new Date("2026-02-09T16:00:00"),
-        customerId: cust2.id, driverId: driver2.id, equipmentId: equip3.id,
-      },
-      {
-        shipmentNumber: "SHP-2026-003", proNumber: "PRO-88203", bolNumber: "BOL-55003",
-        status: "DELIVERED",
-        originCity: "Detroit", originState: "MI", originZip: "48210",
-        destCity: "Toledo", destState: "OH", destZip: "43605",
-        weight: 28000, pieces: 6, commodity: "Vehicles", equipmentType: "Car Hauler",
-        rate: 1400, distance: 62,
-        pickupDate: new Date("2026-02-06T08:00:00"), deliveryDate: new Date("2026-02-06T11:00:00"),
-        actualPickup: new Date("2026-02-06T08:10:00"), actualDelivery: new Date("2026-02-06T10:45:00"),
-        customerId: cust3.id, lastLocation: "Toledo, OH", lastLocationAt: new Date("2026-02-06T10:45:00"),
-      },
-      {
-        shipmentNumber: "SHP-2026-004", proNumber: "PRO-88204",
-        status: "PENDING",
-        originCity: "Chicago", originState: "IL", originZip: "60614",
-        destCity: "Kalamazoo", destState: "MI", destZip: "49008",
-        weight: 30000, pieces: 40, commodity: "CPG - Retail Goods", equipmentType: "Dry Van",
-        rate: 1600, distance: 145,
-        pickupDate: new Date("2026-02-10T06:00:00"), deliveryDate: new Date("2026-02-10T12:00:00"),
-        customerId: cust4.id,
-      },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // SOPs
+  // INDUSTRY-STANDARD SOPs
   // ═══════════════════════════════════════════════
 
   await prisma.sOP.createMany({
     data: [
-      { title: "Reefer Load Procedures", category: "Operations", version: "2.1", author: "Whaider Haider", description: "Standard operating procedure for temperature-controlled freight.", pages: 8 },
-      { title: "Car Hauling Safety Checklist", category: "Safety", version: "1.0", author: "Marcus Rivera", description: "Pre-trip and loading safety checklist for auto transport.", pages: 4 },
-      { title: "Customer Onboarding Process", category: "Sales", version: "1.3", author: "Wasih Haider", description: "Steps for onboarding new Midwest shipper accounts.", pages: 6 },
-      { title: "Carrier Vetting & Compliance", category: "Compliance", version: "3.0", author: "Priya Sharma", description: "FMCSA verification, insurance, and authority checks.", pages: 12 },
-      { title: "Claims & Dispute Resolution", category: "Operations", version: "1.1", author: "Whaider Haider", description: "Process for handling freight claims and carrier disputes.", pages: 5 },
+      // ── OPERATIONS ──────────────────────────────
+      {
+        title: "Standard Freight Operations Manual",
+        category: "operations",
+        version: "3.0",
+        author: "Wasih Haider",
+        pages: 24,
+        description: "Comprehensive guide covering end-to-end freight brokerage operations including load booking, dispatch, tracking, delivery confirmation, and post-delivery processes.",
+        content: `1. LOAD LIFECYCLE MANAGEMENT
+1.1 Load Entry & Validation — All loads must include: origin/destination with full address, pickup/delivery windows (date + 2-hour window), equipment type, weight, commodity description, rate, and shipper contact.
+1.2 Load Posting — Posted loads appear on the Load Board within 30 seconds. Reference numbers follow SRL-YYYYMMDD-XXXX format. All posted loads require minimum $1M cargo insurance.
+1.3 Carrier Assignment — Tender loads to qualified carriers matching equipment type, region, and tier requirements. Platinum/Gold carriers receive priority. Tender expiry: 24 hours standard, 4 hours for urgent.
+1.4 Dispatch — Confirm driver name, phone, truck/trailer numbers. Send dispatch confirmation to shipper within 1 hour of booking. Verify driver has BOL copy and delivery instructions.
+1.5 In-Transit Monitoring — GPS check-ins every 2 hours minimum. Proactive ETA updates to shipper at: pickup, midpoint, and 2 hours before delivery. Escalation for 30+ min late: notify AE → Dispatch Manager.
+1.6 Delivery & POD — Driver must obtain signed POD (Proof of Delivery) at destination. POD uploaded within 4 hours of delivery. Any exceptions (shortages, damage, refusal) documented immediately.
+1.7 Load Completion — Status updated to COMPLETED after POD verification. Invoice generated within 24 hours. Carrier performance scored within 48 hours.
+
+2. RATE MANAGEMENT
+2.1 Spot Rates — Check DAT/Truckstop for lane averages. Markup: 12-18% standard, 8-12% for contract shippers.
+2.2 Contract Rates — Reviewed quarterly. Mini-bid process for lanes >10 loads/month. Rate lock periods: 30/60/90 days.
+2.3 Accessorial Charges — Detention: $75/hr after 2-hour free time. Lumper: pass-through + $25 admin fee. TONU: $350 flat. Layover: $350/day.
+
+3. EXCEPTION HANDLING
+3.1 Service Failures — Late pickup/delivery: document cause, notify customer immediately, file carrier scorecard deduction.
+3.2 Claims Process — Report within 24 hours. Carrier liable per Carmack Amendment. SRL claim deductible: $250. Maximum claim: lesser of invoice value or $100,000.
+3.3 Load Cancellations — Shipper cancel >24hrs: no charge. <24hrs: $150 admin fee. <2hrs/at pickup: full TONU.
+
+4. DOCUMENT RETENTION
+BOLs, PODs, rate confirmations: 7 years. Carrier packets: duration of relationship + 3 years. Compliance records: per FMCSA requirements.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Quarterly | Owner: Operations Manager`,
+      },
+      {
+        title: "Temperature-Controlled Freight Procedures",
+        category: "operations",
+        version: "2.1",
+        author: "Wasih Haider",
+        pages: 12,
+        description: "SOPs for handling refrigerated (reefer) and frozen freight, including pre-cool requirements, continuous temp monitoring, and chain-of-custody documentation per FDA FSMA regulations.",
+        content: `1. EQUIPMENT REQUIREMENTS
+1.1 All reefer units must be 2019 or newer with functioning data loggers (Carrier/Thermo King).
+1.2 Pre-cool verification: unit must reach target temp ≥2 hours before pickup. Driver provides pre-cool printout.
+1.3 Fuel level: minimum 75% at pickup for loads >300 miles.
+
+2. TEMPERATURE CLASSIFICATIONS
+- Frozen: -10°F to 0°F (ice cream, frozen meals, seafood)
+- Deep Frozen: -20°F to -10°F (specialty items)
+- Refrigerated: 33°F to 40°F (fresh produce, dairy, meat)
+- Cool: 45°F to 55°F (chocolate, pharmaceuticals, wine)
+- Controlled Room Temp: 59°F to 77°F (certain pharma, cosmetics)
+
+3. MONITORING & COMPLIANCE
+3.1 Continuous temp logging every 15 minutes (FDA FSMA requirement).
+3.2 Driver check: verify temp display every fuel stop, minimum every 4 hours.
+3.3 Alarm thresholds: ±3°F from target → driver notification. ±5°F → dispatch + shipper alert.
+3.4 Receiver temp check at delivery — must be within ±2°F of BOL specification.
+
+4. REJECTION PROTOCOL
+If receiver rejects load due to temp: driver does NOT leave facility. Contact dispatch immediately. Document: photos of temp readout, receiver signature on rejection form, download reefer data log.
+
+5. DOCUMENTATION
+BOL must state: commodity, required temp range, pre-cool temp at loading, continuous monitoring printout attached to POD.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Semi-annually | Regulatory basis: FDA 21 CFR Part 1, Subpart O (FSMA)`,
+      },
+      {
+        title: "Hazmat Freight Handling Protocol",
+        category: "operations",
+        version: "1.4",
+        author: "Wasih Haider",
+        pages: 16,
+        description: "Procedures for booking, tendering, and monitoring hazardous materials shipments in compliance with 49 CFR Parts 171-180, including placarding, driver certification, and routing requirements.",
+        content: `1. PRE-BOOKING VERIFICATION
+1.1 Confirm hazmat class, UN number, proper shipping name, packing group.
+1.2 Verify carrier has hazmat authority (MC authority + hazmat endorsement).
+1.3 Driver must have current CDL with HME (Hazmat Endorsement) — verify expiry date.
+1.4 Confirm insurance: minimum $5M combined single limit for most hazmat classes.
+
+2. HAZMAT CLASSES
+- Class 1: Explosives (not accepted)
+- Class 2: Gases (2.1 flammable, 2.2 non-flammable, 2.3 toxic)
+- Class 3: Flammable Liquids (most common — paints, adhesives, fuels)
+- Class 4: Flammable Solids
+- Class 5: Oxidizers & Organic Peroxides
+- Class 6: Toxic & Infectious Substances
+- Class 7: Radioactive (not accepted)
+- Class 8: Corrosives (batteries, acids)
+- Class 9: Miscellaneous (lithium batteries, dry ice, magnetized material)
+
+3. PLACARDING REQUIREMENTS (49 CFR 172.504)
+Driver responsible for proper placards. Broker verifies placard type matches BOL hazmat class. Four-sided placarding required for >1,001 lbs of single hazmat class.
+
+4. ROUTING
+Highway Routing (49 CFR 397): avoid tunnels, densely populated areas. Use FMCSA Hazmat Route Registry. Driver must have printed route plan.
+
+5. EMERGENCY
+Carrier must have 24/7 emergency contact. CHEMTREC: 1-800-424-9300. Incident: call 911, then dispatch, then shipper.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Regulatory basis: 49 CFR 171-180 | Owner: Compliance Officer`,
+      },
+      {
+        title: "Flatbed & Oversized Load Procedures",
+        category: "operations",
+        version: "1.2",
+        author: "Wasih Haider",
+        pages: 10,
+        description: "Load securement standards for flatbed, step deck, and lowboy shipments per FMCSA 49 CFR Part 393, including tarping requirements, chain/strap specifications, and oversize/overweight permit coordination.",
+        content: `1. LOAD SECUREMENT (49 CFR 393.100-136)
+1.1 Minimum working load limit (WLL): aggregate must equal 50% of cargo weight.
+1.2 Tie-down requirements: minimum 2 tie-downs for <5ft articles, +1 for each additional 10ft.
+1.3 Chain grades: Grade 70+ for direct tie-down. Grade 43+ for indirect (choker).
+1.4 Strap condition: no cuts, burns, or knots. Replace at 10% WLL reduction.
+
+2. TARPING
+2.1 Lumber, steel coils (customer request): full tarp coverage, smoke tarp acceptable for steel.
+2.2 Tarping upcharge: $50-150 depending on commodity and coverage requirement.
+2.3 Driver confirms tarp condition and securement before departure.
+
+3. OVERSIZED LOADS (>8'6" wide, >13'6" high, >53' long, >80,000 lbs)
+3.1 Permit coordination: broker obtains permits 48+ hours in advance via state DOT portals.
+3.2 Escort/pilot car requirements vary by state — verify for each state in route.
+3.3 Travel restrictions: typically sunrise to sunset, no weekends/holidays for >12' wide.
+
+4. STEP DECK / LOWBOY SPECIFICS
+Step deck: max height 10' on well, 8'6" on deck. Lowboy: confirm bridge clearances for entire route. RGN (Removable Gooseneck): required for non-drive-on cargo.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Regulatory basis: 49 CFR 393 | Owner: Operations Manager`,
+      },
+
+      // ── SAFETY ──────────────────────────────────
+      {
+        title: "Driver Safety & Pre-Trip Inspection Manual",
+        category: "safety",
+        version: "2.0",
+        author: "Wasih Haider",
+        pages: 14,
+        description: "Pre-trip/post-trip inspection checklist, accident procedures, CSA score management, and Hours of Service compliance per FMCSA regulations (49 CFR 395-396).",
+        content: `1. PRE-TRIP INSPECTION (49 CFR 396.13)
+1.1 REQUIRED BEFORE EVERY TRIP — driver must inspect and document:
+□ Engine compartment: oil, coolant, belts, hoses, leaks
+□ Cab: mirrors, windshield (no cracks >3/4"), wipers, horn, gauges
+□ Lights: headlights, taillights, brake lights, turn signals, clearance lights, reflectors
+□ Tires: minimum 4/32" tread (steer), 2/32" (drive/trailer). No bulges, cuts, or exposed cord. Proper inflation (±5 PSI of sidewall rating)
+□ Brakes: pushrod stroke within limits, no air leaks, slack adjusters
+□ Coupling: fifth wheel locked, kingpin engaged, airlines connected, no air leaks
+□ Trailer: doors secure, seals intact, load secured
+□ Safety equipment: fire extinguisher (ABC rated, charged), reflective triangles (3), spare fuses
+
+1.2 Deficiencies found → repair before departure. If safety-critical, vehicle is OUT OF SERVICE until repaired.
+
+2. HOURS OF SERVICE (49 CFR 395)
+- 11-hour driving limit after 10 consecutive hours off duty
+- 14-hour on-duty window (non-extendable)
+- 30-minute break required after 8 hours driving
+- 60/70-hour weekly limit (7/8-day rolling period)
+- 34-hour restart: must include two 1:00-5:00 AM periods
+- ELD required — no paper logs except for exemptions (short-haul <150 air-miles)
+
+3. ACCIDENT PROCEDURE
+3.1 Stop. Secure scene. Call 911. Check for injuries.
+3.2 Do NOT admit fault. Exchange info: other driver license, insurance, plate numbers, witnesses.
+3.3 Photos: all vehicles (all angles), road conditions, traffic signs, injuries, cargo damage.
+3.4 Contact dispatch within 15 minutes: (269) 555-0102.
+3.5 Drug/alcohol post-accident testing required if: fatality, OR tow-away + citation, OR injury requiring medical transport + citation.
+
+4. CSA (Compliance, Safety, Accountability)
+Monitored BASIC categories: Unsafe Driving, HOS, Vehicle Maintenance, Controlled Substances, Hazmat, Driver Fitness, Crash Indicator. Target: all BASICs below intervention threshold.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Annually | Regulatory basis: 49 CFR 390-399`,
+      },
+      {
+        title: "Workplace Safety & OSHA Compliance",
+        category: "safety",
+        version: "1.1",
+        author: "Wasih Haider",
+        pages: 8,
+        description: "Office and warehouse safety procedures, ergonomics, fire evacuation plan, incident reporting, and OSHA recordkeeping requirements for a freight brokerage environment.",
+        content: `1. GENERAL WORKPLACE SAFETY
+1.1 Maintain clear walkways and emergency exits at all times.
+1.2 Report all unsafe conditions to management immediately.
+1.3 No horseplay, intoxication, or weapons on company premises.
+1.4 PPE required in warehouse areas: steel-toe shoes, high-vis vest.
+
+2. ERGONOMICS (Office Staff)
+2.1 Monitor at eye level, 20-26 inches from face.
+2.2 Chair: feet flat on floor, thighs parallel, lumbar support.
+2.3 Keyboard: elbows at 90°, wrists neutral (no flexion/extension).
+2.4 20-20-20 rule: every 20 minutes, look 20 feet away for 20 seconds.
+2.5 Stretch breaks every 60 minutes.
+
+3. FIRE SAFETY
+3.1 Know all exits (posted evacuation maps at each exit).
+3.2 Fire extinguisher locations: kitchen, server room, each exit hallway.
+3.3 Evacuation: RACE — Rescue, Alarm, Contain, Evacuate. Assembly point: front parking lot by flagpole.
+3.4 Fire drills: quarterly. Fire extinguisher inspection: monthly (tag check), annually (professional service).
+
+4. INCIDENT REPORTING
+4.1 ALL workplace injuries/illnesses reported within 24 hours — no exceptions.
+4.2 OSHA 300 Log maintained by HR. Severe injuries (hospitalization, amputation, eye loss): OSHA notified within 24 hours. Fatality: within 8 hours.
+4.3 Near-miss reports encouraged — no disciplinary action for reporting.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Regulatory basis: OSHA 29 CFR 1910 | Owner: HR Manager`,
+      },
+      {
+        title: "Cargo Claims & Loss Prevention",
+        category: "safety",
+        version: "1.3",
+        author: "Wasih Haider",
+        pages: 10,
+        description: "Claims investigation workflow, Carmack Amendment liability framework, loss prevention best practices, and carrier chargeback procedures for freight damage, shortage, and theft.",
+        content: `1. CLAIMS FILING TIMELINE
+1.1 Shipper/receiver must report damage/shortage within 24 hours of delivery.
+1.2 Written claim with documentation submitted within 9 months of delivery (Carmack statute).
+1.3 Carrier has 30 days to acknowledge, 120 days to resolve.
+
+2. DOCUMENTATION REQUIRED
+□ Original BOL (signed, with notations if applicable)
+□ Delivery receipt / POD (with exception notes)
+□ Photographs of damaged freight (minimum 10 photos: overview + detail)
+□ Commercial invoice showing value of goods
+□ Repair estimate or replacement cost documentation
+□ Carrier inspection report (if applicable)
+
+3. LIABILITY FRAMEWORK (Carmack Amendment, 49 USC §14706)
+3.1 Carrier is strictly liable for loss/damage during transport unless:
+    - Act of God, public enemy, shipper's fault, inherent vice, or public authority
+3.2 Released value: if BOL states released value, carrier liability is limited to that amount.
+3.3 SRL policy: carriers must carry minimum $100K cargo insurance. Loads >$100K require excess coverage.
+
+4. LOSS PREVENTION
+4.1 High-value loads (>$50K): GPS tracking required, no-stop policy, team drivers preferred.
+4.2 Theft hotspots: truck stops within 200 miles of origin, especially in CA, FL, TX, GA, NJ.
+4.3 Double-brokering prevention: verify carrier MC# active on FMCSA, no "double broker" language in carrier agreement. Direct communication with assigned driver.
+4.4 Seal integrity: numbered seals applied at origin, verified at delivery. Seal number on BOL.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Annually | Owner: Claims Manager`,
+      },
+
+      // ── COMPLIANCE ──────────────────────────────
+      {
+        title: "Carrier Vetting & FMCSA Compliance",
+        category: "compliance",
+        version: "3.0",
+        author: "Wasih Haider",
+        pages: 18,
+        description: "Carrier onboarding verification procedures: FMCSA authority validation, insurance verification, safety rating assessment, CSA score review, and ongoing monitoring requirements.",
+        content: `1. CARRIER ONBOARDING REQUIREMENTS
+Before any load is tendered, the carrier must have on file:
+□ Active MC/DOT authority verified via FMCSA SAFER (mobile.fmcsa.dot.gov)
+□ Operating status: AUTHORIZED (reject NOT AUTHORIZED, OUT OF SERVICE)
+□ Insurance: $1M auto liability, $100K cargo (minimum). Certificates of Insurance (COI) with SRL as certificate holder.
+□ W-9 (tax ID verification)
+□ Signed Carrier-Broker Agreement (includes payment terms, indemnification, insurance requirements)
+□ Safety Rating: SATISFACTORY or UNRATED acceptable. CONDITIONAL — case-by-case review. UNSATISFACTORY — rejected.
+
+2. FMCSA VERIFICATION CHECKS
+2.1 SAFER System: verify legal name, DBA, DOT#, MC#, operating status, insurance on file.
+2.2 CSA Scores: review all 7 BASICs. Flag carriers with scores above 50th percentile in Unsafe Driving or HOS Compliance.
+2.3 Inspection history: review last 24 months. OOS (Out-of-Service) rate >25% = rejected.
+2.4 Crash history: fatal crashes in last 12 months = management review required.
+
+3. ONGOING MONITORING
+3.1 Insurance certificates: re-verified every 90 days. Auto-alert 30 days before expiry.
+3.2 Authority status: weekly automated check against FMCSA database.
+3.3 CSA scores: monthly review for active carriers.
+3.4 Carrier scorecard: weekly internal scoring (on-time, communication, claims, documentation).
+
+4. TIER QUALIFICATION
+- Platinum (98+): priority tendering, 3% rate premium, weekly performance bonus
+- Gold (95-97.9): standard priority, 1% rate premium
+- Silver (90-94.9): standard tendering, no premium
+- Bronze (<90): probationary, limited to 2 loads/week, quarterly review
+
+5. DEACTIVATION TRIGGERS
+- MC authority revoked or suspended
+- Insurance lapse >24 hours
+- OOS order from FMCSA
+- 2+ valid cargo claims in 90 days
+- Scorecard below 75 for 4 consecutive weeks
+- Double-brokering violation (immediate, permanent)
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Quarterly | Regulatory basis: 49 CFR 387, FMCSA SAFER`,
+      },
+      {
+        title: "DOT Audit Preparation & Records Retention",
+        category: "compliance",
+        version: "1.0",
+        author: "Wasih Haider",
+        pages: 12,
+        description: "Preparation checklist for FMCSA compliance reviews and DOT audits, including required records, retention periods, and corrective action procedures per 49 CFR 371 (broker regulations).",
+        content: `1. FMCSA BROKER REQUIREMENTS (49 CFR 371)
+1.1 Broker authority (MC number) must be active and displayed.
+1.2 Surety bond or trust fund: $75,000 minimum (BMC-84 bond or BMC-85 trust).
+1.3 Process agent (BOC-3): must be on file and current in every state of operation.
+1.4 Record of each transaction: maintain for minimum 3 years.
+
+2. REQUIRED RECORDS
+For each transaction, maintain:
+□ Name and address of consignor (shipper), consignee, and carrier
+□ Bill of lading or receipt
+□ Copy of contract or rate confirmation
+□ Proof of carrier's authority and insurance at time of dispatch
+□ Record of any claims filed
+□ Gross compensation received
+
+3. RETENTION SCHEDULE
+- Transaction records: 3 years minimum
+- Carrier agreements: duration + 3 years
+- Insurance certificates: 5 years
+- Claims records: 7 years
+- Financial records: 7 years (IRS requirement)
+- Employee records: duration of employment + 5 years
+
+4. AUDIT PREPARATION CHECKLIST
+□ Verify BMC-84 bond is active and $75K+
+□ BOC-3 current in all operating states
+□ All carrier files complete (authority, insurance, W-9, agreement)
+□ Sample 20 recent transactions — verify all records present
+□ Review any open claims — ensure documented and within timeline
+□ Confirm website displays MC number and DOT number
+□ Employee roster with roles and qualifications current
+
+5. CORRECTIVE ACTIONS
+If deficiencies found: respond to FMCSA within 15 business days with corrective action plan. Implement and document corrections within 60 days. Follow-up audit may occur within 12 months.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Regulatory basis: 49 CFR 371, 49 CFR 387 | Owner: Compliance Officer`,
+      },
+
+      // ── FINANCE ─────────────────────────────────
+      {
+        title: "Accounts Receivable & Invoicing Procedures",
+        category: "finance",
+        version: "2.0",
+        author: "Wasih Haider",
+        pages: 10,
+        description: "End-to-end invoicing workflow from load completion to payment collection, including customer credit terms, aging management, and collections escalation procedures.",
+        content: `1. INVOICING WORKFLOW
+1.1 Invoice generated within 24 hours of POD receipt.
+1.2 Invoice must include: invoice number, date, load reference, origin/destination, pickup/delivery dates, line-haul rate, accessorial charges, total amount due, payment terms, remit-to address.
+1.3 Attachments: signed BOL, POD, rate confirmation.
+1.4 Delivery: email to customer AP contact + upload to customer portal (if applicable).
+
+2. PAYMENT TERMS
+- Standard: Net 30
+- Preferred customers (>$50K/month volume): Net 45
+- New customers (<90 days): Net 15 or prepay (credit review pending)
+- Quick Pay option: 2% discount for payment within 5 days
+
+3. CREDIT MANAGEMENT
+3.1 New customer credit application required before first load.
+3.2 Credit check: D&B, trade references (minimum 3), bank reference.
+3.3 Credit limits: set based on score — reviewed quarterly.
+3.4 Credit hold: automatic at 120% of credit limit. No new loads until AR brought current.
+
+4. AGING & COLLECTIONS
+- 0-30 days: standard monitoring
+- 31-45 days: automated reminder email
+- 46-60 days: phone call from AR specialist
+- 61-90 days: demand letter, credit hold, escalation to AE
+- 91+ days: collections agency or legal action. Write-off requires VP approval.
+
+5. CARRIER PAYMENTS
+5.1 Standard: Net 30 from invoice receipt.
+5.2 Quick Pay (factoring): 97% within 24 hours of approved invoice.
+5.3 Deductions: document and communicate before payment. Never deduct without written carrier agreement.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Annually | Owner: Controller`,
+      },
+      {
+        title: "Factoring & Quick Pay Program",
+        category: "finance",
+        version: "1.2",
+        author: "Wasih Haider",
+        pages: 6,
+        description: "Quick Pay factoring program terms, advance rates by carrier tier, fee schedules, and reconciliation procedures for accelerated carrier payment processing.",
+        content: `1. PROGRAM OVERVIEW
+Silk Route Logistics offers Quick Pay factoring to approved carriers, providing accelerated payment (24-48 hours) at a discount from the invoice face value.
+
+2. ADVANCE RATES & FEES BY TIER
+- Platinum carriers: 97% advance rate, 3% factoring fee
+- Gold carriers: 96% advance rate, 4% factoring fee
+- Silver carriers: 95% advance rate, 5% factoring fee
+- Bronze carriers: 93% advance rate, 7% factoring fee
+
+3. ELIGIBILITY
+3.1 Carrier must be onboarded and approved (APPROVED status).
+3.2 Clean delivery — no open claims or disputes on the load.
+3.3 Complete documentation: signed POD, BOL, rate confirmation.
+3.4 Invoice submitted through SRL portal (not email/fax).
+
+4. PROCESS
+4.1 Carrier submits invoice with POD via portal.
+4.2 AR team verifies: POD matches BOL, no exceptions noted, rate matches confirmation.
+4.3 Approved invoices funded next business day via ACH.
+4.4 Remainder (holdback) released upon customer payment, minus fees.
+
+5. RECONCILIATION
+Monthly statement sent to carrier showing: invoices factored, advance amounts, fees withheld, holdback releases, net payments.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Owner: Accounting Manager`,
+      },
+
+      // ── HR ──────────────────────────────────────
+      {
+        title: "Employee Onboarding & Training Program",
+        category: "hr",
+        version: "2.0",
+        author: "Wasih Haider",
+        pages: 14,
+        description: "New hire onboarding process for all SRL roles including brokers, dispatchers, and operations staff. Covers orientation, TMS training, mentorship program, and 30-60-90 day performance milestones.",
+        content: `1. PRE-START (Before Day 1)
+1.1 Offer letter signed, background check cleared.
+1.2 IT provisions: email account, TMS login, phone/headset, dual monitors.
+1.3 Workspace prepared with SOP binder, company handbook, role-specific materials.
+1.4 Mentor assigned (same role, 6+ months tenure).
+
+2. WEEK 1: ORIENTATION
+Day 1: Company overview, mission, org chart, HR paperwork (I-9, W-4, benefits enrollment).
+Day 2: TMS platform training — navigating loads, customers, carriers, messaging.
+Day 3: Industry fundamentals — freight modes, equipment types, lane geography, rate structures.
+Day 4: Role-specific shadowing with mentor. Observe live customer/carrier calls.
+Day 5: Practice scenarios in sandbox environment. End-of-week quiz (80% to pass).
+
+3. WEEKS 2-4: GUIDED PRACTICE
+2.1 Handle tasks under mentor supervision (increasing autonomy each week).
+2.2 Broker trainees: book 5 loads with mentor oversight, attend carrier calls.
+2.3 Dispatch trainees: dispatch 10 loads, handle 2 check-call cycles, process 5 PODs.
+2.4 Weekly 1:1 with manager — review progress, questions, feedback.
+
+4. 30-60-90 DAY MILESTONES
+Day 30: Independent on core tasks, pass TMS proficiency test, handle routine customer inquiries.
+Day 60: Full workload at 75% capacity. Know all SOPs for role. Build book of 10+ carrier relationships.
+Day 90: Full performance capacity. Eligible for incentive program. Formal performance review.
+
+5. ONGOING DEVELOPMENT
+Monthly team training sessions. Annual industry conference attendance (TIA, TMSA). Quarterly role certification renewal.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Owner: HR Director`,
+      },
+      {
+        title: "Code of Conduct & Ethics Policy",
+        category: "hr",
+        version: "1.1",
+        author: "Wasih Haider",
+        pages: 8,
+        description: "Professional conduct standards, anti-harassment policy, conflict of interest disclosure, confidentiality requirements, and disciplinary procedures for all SRL employees.",
+        content: `1. PROFESSIONAL CONDUCT
+1.1 Treat all customers, carriers, colleagues, and vendors with respect and professionalism.
+1.2 Represent SRL honestly in all business dealings. No false claims about service capabilities or capacity.
+1.3 Respond to all communications within 4 business hours.
+1.4 Dress code: business casual (Mon-Thu), casual Friday. Client meetings: business professional.
+
+2. ANTI-HARASSMENT & NON-DISCRIMINATION
+2.1 Zero tolerance for harassment based on race, color, religion, sex, national origin, age, disability, sexual orientation, gender identity, or any protected class.
+2.2 Report incidents to HR or anonymous ethics hotline. No retaliation for good-faith reports.
+2.3 Investigation initiated within 48 hours of report. Confidentiality maintained to extent possible.
+
+3. CONFLICTS OF INTEREST
+3.1 Disclose any financial interest in customer, carrier, or vendor companies.
+3.2 No kickbacks, bribes, or undisclosed payments from any business partner.
+3.3 Do not accept gifts >$50 value from carriers or customers without management approval.
+3.4 No personal use of SRL carrier relationships for non-company freight.
+
+4. CONFIDENTIALITY
+4.1 Customer rates, carrier rates, and margin information are strictly confidential.
+4.2 Do not share customer shipping data, volumes, or contact information externally.
+4.3 Non-disclosure agreement signed at hire, surviving 2 years post-employment.
+4.4 Non-compete: 12 months, 100-mile radius from any SRL office.
+
+5. DISCIPLINARY PROCESS
+Verbal warning → Written warning → Final written warning → Termination.
+Severity exceptions: theft, fraud, harassment, intoxication, violence = immediate termination.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Owner: HR Director`,
+      },
+
+      // ── SALES ───────────────────────────────────
+      {
+        title: "Customer Onboarding & CRM Process",
+        category: "sales",
+        version: "1.3",
+        author: "Wasih Haider",
+        pages: 10,
+        description: "End-to-end shipper acquisition process from lead generation through first load, including credit application, lane analysis, rate quoting, and account setup in the CRM system.",
+        content: `1. LEAD QUALIFICATION
+1.1 Target profiles: manufacturers, distributors, CPG companies with 10+ FTL shipments/month.
+1.2 Qualify: freight volume, primary lanes, equipment needs, current broker/carrier relationships, payment history.
+1.3 Lead scoring: A (50+ loads/month), B (20-49), C (10-19), D (<10 — monitor for growth).
+
+2. PROPOSAL & PRICING
+2.1 Request 30-day shipping history (origin/destination pairs, volumes, current rates).
+2.2 Run lane analysis: DAT/Truckstop benchmarks, SRL carrier network capacity, margin targets.
+2.3 Proposal includes: rate sheet by lane, service guarantees (on-time %, communication SLAs), technology offerings (real-time tracking, EDI, TMS integration).
+
+3. ACCOUNT SETUP
+3.1 Signed shipper-broker agreement (standard terms or customer-negotiated).
+3.2 Credit application processed within 48 hours.
+3.3 CRM entry: company info, contacts (shipping, AP, management), special requirements.
+3.4 Shipping instructions documented: dock hours, appointment requirements, special handling, preferred carriers.
+3.5 EDI setup (if applicable): 204/990/214/210 transaction set mapping, testing, go-live.
+
+4. FIRST LOAD PROTOCOL
+4.1 AE personally manages first 5 loads — no delegation.
+4.2 Assign highest-tier available carrier for first load.
+4.3 Proactive updates every 2 hours to customer.
+4.4 Post-delivery call within 4 hours: satisfaction check, feedback, second load opportunity.
+
+5. ONGOING ACCOUNT MANAGEMENT
+Weekly: volume review, open issue follow-up.
+Monthly: performance report (on-time %, claims, savings).
+Quarterly: business review meeting with customer stakeholders.
+Annual: contract renewal / rate review, growth strategy discussion.
+
+Last revised: ${new Date().toISOString().split("T")[0]} | Owner: VP Sales`,
+      },
     ],
   });
-
-  // ═══════════════════════════════════════════════
-  // MESSAGES
-  // ═══════════════════════════════════════════════
-
-  await prisma.message.createMany({
-    data: [
-      // Broker (whaider@) ↔ Carrier 1 (srl@) — Henderson Trucking
-      { senderId: broker.id, receiverId: carrier1.id, content: "Mike, I have a Minneapolis to Kalamazoo load coming up. 30K lbs dry van, $2,600. Interested?", createdAt: new Date(now - 24 * 60 * 60 * 1000) },
-      { senderId: carrier1.id, receiverId: broker.id, content: "That's a good lane for me. Send the tender, I'll review.", createdAt: new Date(now - 24 * 60 * 60 * 1000 + 15 * 60 * 1000) },
-      { senderId: broker.id, receiverId: carrier1.id, content: "Tender sent. Also, great work on the Kalamazoo-Chicago run last week — on time and no issues.", createdAt: new Date(now - 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
-      { senderId: carrier1.id, receiverId: broker.id, content: "Thanks Whaider. That lane works perfectly with my schedule. Happy to run it weekly.", createdAt: new Date(now - 24 * 60 * 60 * 1000 + 45 * 60 * 1000) },
-
-      // Broker (whaider@) ↔ Carrier 2 (gold@) — Kowalski Cold Freight
-      { senderId: broker.id, receiverId: carrier2.id, loadId: loads[1].id, content: "Sarah, the Grand Rapids reefer load is confirmed for tomorrow. Pickup at Midwest Fresh Foods, dock 4, 7 AM.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000) },
-      { senderId: carrier2.id, receiverId: broker.id, loadId: loads[1].id, content: "Got it. What temp does the receiver need?", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
-      { senderId: broker.id, receiverId: carrier2.id, loadId: loads[1].id, content: "0°F for frozen. They'll check on arrival. Call me if any issues.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000) },
-      { senderId: carrier2.id, receiverId: broker.id, content: "Also — I have capacity for a Kalamazoo to Milwaukee reefer run next week. Let me know if anything comes up.", createdAt: new Date(now - 12 * 60 * 60 * 1000) },
-
-      // Broker (whaider@) ↔ Carrier 3 (silver@) — Ramirez Auto Transport
-      { senderId: broker.id, receiverId: carrier3.id, content: "Carlos, Motor City Auto Group needs 6 vehicles moved Detroit to Toledo on the 9th. Can you handle it?", createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000) },
-      { senderId: carrier3.id, receiverId: broker.id, content: "Absolutely. My open hauler can take 7. Send the details.", createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000 + 20 * 60 * 1000) },
-
-      // Admin (admin@) ↔ Broker (whaider@) — internal SRL communication
-      { senderId: admin.id, receiverId: broker.id, content: "Whaider, the new carrier Novak Hauling is approved. They're based in Lansing, MI — dry van only. Add them to the rotation.", createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000) },
-      { senderId: broker.id, receiverId: admin.id, content: "Got it, Wasih. I already tendered them the Detroit-Columbus load. They have good rates.", createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
-      { senderId: admin.id, receiverId: broker.id, content: "Good. Also please review the Great Lakes Flatbed counter on the Toledo-Fort Wayne steel load. They want $1,850 vs our $1,700.", createdAt: new Date(now - 8 * 60 * 60 * 1000) },
-
-      // Dispatch (dispatch@) ↔ Broker (whaider@)
-      { senderId: dispatch.id, receiverId: broker.id, content: "Whaider, Jake Morrison is 2 hours out from Chicago on SHP-2026-001. The receiver at the warehouse confirmed dock 7.", createdAt: new Date(now - 3 * 60 * 60 * 1000) },
-      { senderId: broker.id, receiverId: dispatch.id, content: "Perfect. Once that delivers, see if he can deadhead to Milwaukee for the Kalamazoo-Milwaukee pickup tomorrow.", createdAt: new Date(now - 3 * 60 * 60 * 1000 + 10 * 60 * 1000) },
-
-      // Accounting (accounting@) ↔ Broker (whaider@)
-      { senderId: accounting.id, receiverId: broker.id, content: "Whaider, INV-1002 from Kowalski Cold Freight is $2,800 for the GR-Indy reefer load. Should I process?", createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000) },
-      { senderId: broker.id, receiverId: accounting.id, content: "Yes, Priya. Confirmed — that matches the tender rate. Go ahead and approve.", createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000 + 15 * 60 * 1000) },
-
-      // Admin (admin@) ↔ Dispatch (dispatch@)
-      { senderId: admin.id, receiverId: dispatch.id, content: "Marcus, can you check on driver availability for next week? We have 4 loads that need covering.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000) },
-      { senderId: dispatch.id, receiverId: admin.id, content: "Will do. Jake and Maria are both available after Tuesday. Kevin is off until Thursday.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 20 * 60 * 1000) },
-
-      // Admin (admin@) ↔ Carrier 1 (srl@) — direct executive contact
-      { senderId: admin.id, receiverId: carrier1.id, content: "Mike, thanks for maintaining Platinum status. Your on-time rate is exceptional. We're sending you a $150 weekly bonus.", createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000) },
-      { senderId: carrier1.id, receiverId: admin.id, content: "Thank you Wasih! The Silk Route partnership has been great. Looking forward to more lanes.", createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000) },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // NOTIFICATIONS
-  // ═══════════════════════════════════════════════
-
-  await prisma.notification.createMany({
-    data: [
-      // Admin notifications
-      { userId: admin.id, type: "SYSTEM", title: "New Carrier Application", message: "Novak Hauling LLC has completed onboarding. Review and approve.", actionUrl: "/dashboard/settings" },
-      { userId: admin.id, type: "TENDER", title: "Counter Offer Received", message: "Great Lakes Flatbed countered Toledo→Fort Wayne at $1,850 (offered $1,700).", actionUrl: "/dashboard/loads" },
-      // Broker notifications
-      { userId: broker.id, type: "TENDER", title: "Tender Declined", message: "Novak Hauling declined Detroit→Columbus load (SRL-2026-003).", actionUrl: "/dashboard/loads" },
-      { userId: broker.id, type: "LOAD", title: "Load Delivered", message: "SRL-2026-006 Grand Rapids→Chicago delivered on time.", actionUrl: "/dashboard/loads" },
-      // Carrier notifications
-      { userId: carrier1.id, type: "TENDER", title: "New Load Tender", message: "Minneapolis→Kalamazoo, $2,600, Dry Van. Review and accept.", actionUrl: "/dashboard/loads" },
-      { userId: carrier1.id, type: "PAYMENT", title: "Payment Received", message: "Invoice INV-1003 paid. $1,891.50 deposited.", actionUrl: "/dashboard/invoices", readAt: new Date() },
-      { userId: carrier1.id, type: "SCORECARD", title: "Weekly Scorecard", message: "Your score is 98.7%. Platinum tier maintained!", actionUrl: "/dashboard/scorecard" },
-      { userId: carrier1.id, type: "BONUS", title: "Bonus Earned", message: "You earned a $150 weekly performance bonus.", actionUrl: "/dashboard/revenue" },
-      { userId: carrier2.id, type: "TENDER", title: "New Load Tender", message: "Kalamazoo→Milwaukee, $2,100, Reefer. Review and accept.", actionUrl: "/dashboard/loads" },
-      { userId: carrier2.id, type: "SCORECARD", title: "Weekly Scorecard", message: "Your score is 95.4%. Gold tier maintained!", actionUrl: "/dashboard/scorecard" },
-      { userId: carrier3.id, type: "LOAD", title: "Load Booked", message: "Detroit→Toledo car haul confirmed for Feb 9.", actionUrl: "/dashboard/loads" },
-      { userId: carrier4.id, type: "ONBOARDING", title: "Complete Your Profile", message: "Upload your authority document to complete onboarding.", actionUrl: "/dashboard/settings" },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // BROKER INTEGRATIONS
-  // ═══════════════════════════════════════════════
-
-  await prisma.brokerIntegration.createMany({
-    data: [
-      { name: "McLeod Software", provider: "mcleod", status: "INACTIVE" },
-      { name: "DAT Freight & Analytics", provider: "dat", status: "INACTIVE", apiEndpoint: "https://api.dat.com/v3" },
-      { name: "Truckstop / ITS", provider: "truckstop", status: "INACTIVE", apiEndpoint: "https://api.truckstop.com/v2" },
-      { name: "Motive (KeepTruckin) ELD", provider: "motive", status: "INACTIVE", apiEndpoint: "https://api.gomotive.com/v1" },
-      { name: "Samsara ELD", provider: "samsara", status: "INACTIVE", apiEndpoint: "https://api.samsara.com/v1" },
-      { name: "Omnitracs ELD", provider: "omnitracs", status: "INACTIVE" },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // TRUCKS
-  // ═══════════════════════════════════════════════
-
-  await prisma.truck.createMany({
-    data: [
-      {
-        unitNumber: "TRK-001", type: "SLEEPER", year: 2023, make: "Freightliner", model: "Cascadia",
-        vin: "1FUJGLDR5XLAB1234", licensePlate: "TRK1234", licensePlateState: "MI",
-        fuelType: "Diesel", ownershipType: "COMPANY", status: "ACTIVE", mileage: 48500,
-        registrationExpiry: new Date("2027-04-15"), insuranceExpiry: new Date("2026-12-01"),
-        nextServiceDate: new Date("2026-03-15"), nextServiceMileage: 55000,
-        lastInspectionDate: new Date("2025-11-20"), nextInspectionDate: new Date("2026-05-20"),
-      },
-      {
-        unitNumber: "TRK-002", type: "SLEEPER", year: 2022, make: "Kenworth", model: "T680",
-        vin: "1XKYDP9X2NJ123456", licensePlate: "TRK5678", licensePlateState: "MI",
-        fuelType: "Diesel", ownershipType: "COMPANY", status: "ACTIVE", mileage: 92300,
-        registrationExpiry: new Date("2026-08-10"), insuranceExpiry: new Date("2026-12-01"),
-        nextServiceDate: new Date("2026-02-28"), nextServiceMileage: 95000,
-        lastInspectionDate: new Date("2025-09-01"), nextInspectionDate: new Date("2026-03-01"),
-      },
-      {
-        unitNumber: "TRK-003", type: "DAY_CAB", year: 2021, make: "Peterbilt", model: "579",
-        vin: "1XPWD40X1ED234567", licensePlate: "TRK9012", licensePlateState: "MI",
-        fuelType: "Diesel", ownershipType: "COMPANY", status: "IN_SHOP", mileage: 145200,
-        registrationExpiry: new Date("2026-06-30"), insuranceExpiry: new Date("2026-12-01"),
-        lastInspectionDate: new Date("2025-08-15"), nextInspectionDate: new Date("2026-02-15"),
-      },
-      {
-        unitNumber: "TRK-004", type: "SLEEPER", year: 2024, make: "Volvo", model: "VNL 860",
-        vin: "4V4NC9EH3RN345678", licensePlate: "TRK3456", licensePlateState: "MI",
-        fuelType: "Diesel", ownershipType: "LEASED", status: "ACTIVE", mileage: 12800,
-        registrationExpiry: new Date("2027-12-31"), insuranceExpiry: new Date("2027-06-15"),
-        nextServiceDate: new Date("2026-06-01"), nextServiceMileage: 25000,
-        lastInspectionDate: new Date("2025-12-01"), nextInspectionDate: new Date("2026-06-01"),
-      },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // TRAILERS
-  // ═══════════════════════════════════════════════
-
-  await prisma.trailer.createMany({
-    data: [
-      {
-        unitNumber: "TRL-001", type: "DRY_VAN", year: 2022, make: "Great Dane", model: "Everest SS",
-        length: 53, capacity: 45000, ownershipType: "COMPANY", status: "ACTIVE",
-        registrationExpiry: new Date("2027-03-15"),
-        lastInspectionDate: new Date("2025-10-01"), nextInspectionDate: new Date("2026-04-01"),
-      },
-      {
-        unitNumber: "TRL-002", type: "REEFER", year: 2023, make: "Utility", model: "4000D-X",
-        length: 53, capacity: 44000, ownershipType: "COMPANY", status: "ACTIVE",
-        registrationExpiry: new Date("2027-06-20"),
-        reeferUnit: true, reeferModel: "Carrier X4 7300",
-        lastInspectionDate: new Date("2025-11-15"), nextInspectionDate: new Date("2026-05-15"),
-      },
-      {
-        unitNumber: "TRL-003", type: "FLATBED", year: 2021, make: "Fontaine", model: "Infinity",
-        length: 48, capacity: 48000, ownershipType: "COMPANY", status: "ACTIVE",
-        registrationExpiry: new Date("2026-09-30"),
-        lastInspectionDate: new Date("2025-07-01"), nextInspectionDate: new Date("2026-01-01"),
-      },
-      {
-        unitNumber: "TRL-004", type: "DRY_VAN", year: 2020, make: "Wabash", model: "DuraPlate",
-        length: 53, capacity: 44000, ownershipType: "COMPANY", status: "IN_SHOP",
-        registrationExpiry: new Date("2026-04-15"),
-        lastInspectionDate: new Date("2025-06-15"), nextInspectionDate: new Date("2025-12-15"),
-      },
-      {
-        unitNumber: "TRL-005", type: "STEP_DECK", year: 2022, make: "Fontaine", model: "Revolution",
-        length: 53, capacity: 43000, ownershipType: "LEASED", status: "ACTIVE",
-        registrationExpiry: new Date("2027-01-31"),
-        lastInspectionDate: new Date("2025-09-20"), nextInspectionDate: new Date("2026-03-20"),
-      },
-    ],
-  });
-
-  // ═══════════════════════════════════════════════
-  // CUSTOMER CONTACTS
-  // ═══════════════════════════════════════════════
-
-  const customers = await prisma.customer.findMany();
-  for (const cust of customers) {
-    await prisma.customerContact.create({
-      data: {
-        customerId: cust.id,
-        name: cust.contactName || cust.name,
-        email: cust.email || undefined,
-        phone: cust.phone || undefined,
-        isPrimary: true,
-        title: "Logistics Manager",
-      },
-    });
-  }
 
   console.log(`
 Seed complete:
-  Users:       11 (6 internal + 5 carriers) — all @silkroutelogistics.ai
-  Carriers:    5 profiles (Platinum, 2× Gold, Silver, Bronze)
-  Loads:       30 (across 6 regions: Great Lakes, Southeast, Northeast, South Central, West, Upper Midwest)
-  Tenders:     10 (4 OFFERED, 3 ACCEPTED, 1 COUNTERED, 1 DECLINED, 1 EXPIRED)
-  Invoices:    5
-  Customers:   4 Midwest shippers
-  Drivers:     3
-  Equipment:   3 (1 tractor + 2 trailers)
-  Shipments:   4
-  SOPs:        5
-  Messages:    22 (across 8 conversation threads — broker, admin, dispatch, accounting, carriers)
-  Notifications: 12
-
-  Trucks:      4 (3 sleeper + 1 day cab)
-  Trailers:    5 (2 dry van + 1 reefer + 1 flatbed + 1 step deck)
-  Integrations: 6 (DAT, Truckstop, Motive, Samsara, Omnitracs, McLeod)
-
-  Demo Logins (password: password123):
-    ceo@silkroutelogistics.ai         → CEO (full executive dashboard)
-    admin@silkroutelogistics.ai       → Admin (full access)
-    whaider@silkroutelogistics.ai     → Broker / AE (employee features)
-    dispatch@silkroutelogistics.ai    → Dispatch
-    operations@silkroutelogistics.ai  → Operations
-    accounting@silkroutelogistics.ai  → Accounting
-    srl@silkroutelogistics.ai         → Carrier: Henderson Trucking (Platinum)
-    gold@silkroutelogistics.ai        → Carrier: Kowalski Cold Freight (Gold)
-    silver@silkroutelogistics.ai      → Carrier: Ramirez Auto Transport (Silver)
-    bronze@silkroutelogistics.ai      → Carrier: Novak Hauling (Bronze)
-    flatbed@silkroutelogistics.ai     → Carrier: Great Lakes Flatbed (Gold)
+  Users: 3
+    - admin@silkroutelogistics.ai (ADMIN) — password123
+    - noor@silkroutelogistics.ai (BROKER / Account Executive) — password123
+    - carrier@silkroutelogistics.ai (CARRIER / SRL Transport LLC) — password123
+  Carrier Profile: SRL Transport LLC (MC-1234567, DOT 3456789, Platinum tier)
+  SOPs: 13 industry-standard documents across 6 categories
+    - Operations: 4 (Freight Ops, Reefer, Hazmat, Flatbed)
+    - Safety: 3 (Driver Safety, Workplace OSHA, Claims)
+    - Compliance: 2 (Carrier Vetting, DOT Audit)
+    - Finance: 2 (AR/Invoicing, Factoring)
+    - HR: 2 (Onboarding, Code of Conduct)
+    - Sales: 1 (Customer Onboarding)
+  Everything else: empty — build from the UI
   `);
 }
 

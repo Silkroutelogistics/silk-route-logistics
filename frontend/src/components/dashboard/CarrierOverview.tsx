@@ -6,12 +6,14 @@ import { Truck, DollarSign, TrendingUp, BarChart3, ChevronRight, Bell } from "lu
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { isAdmin } from "@/lib/roles";
 import { TierBadge } from "@/components/ui/TierBadge";
+import { CarrierSetupWizard } from "@/components/dashboard/CarrierSetupWizard";
 
 export function CarrierOverview() {
   const { user } = useAuthStore();
 
-  const { data: dashboard } = useQuery({
+  const { data: dashboard, error: dashError, refetch } = useQuery({
     queryKey: ["carrier-dashboard"],
     queryFn: () => api.get("/carrier/dashboard").then((r) => r.data),
   });
@@ -42,6 +44,11 @@ export function CarrierOverview() {
     { label: "View Scorecard", href: "/dashboard/scorecard" },
     { label: "Submit Invoice", href: "/dashboard/invoices" },
   ];
+
+  // Admin in carrier view without a carrier profile — show setup wizard
+  if (isAdmin(user?.role) && dashError) {
+    return <CarrierSetupWizard onComplete={() => refetch()} />;
+  }
 
   return (
     <div className="p-6 space-y-6">

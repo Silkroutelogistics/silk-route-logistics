@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { generateBOL, generateRateConfirmation, generateInvoicePDF } from "../services/pdfService";
+import { generateBOL, generateBOLFromLoad, generateRateConfirmation, generateInvoicePDF } from "../services/pdfService";
 
 export async function downloadBOL(req: AuthRequest, res: Response) {
   const shipment = await prisma.shipment.findUnique({
@@ -61,6 +61,27 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
 
   const doc = generateInvoicePDF(invoice);
   const filename = `${invoice.invoiceNumber}.pdf`;
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  doc.pipe(res);
+}
+
+export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
+  const load = await prisma.load.findUnique({
+    where: { id: req.params.loadId },
+    include: {
+      customer: true,
+      carrier: {
+        select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true } } },
+      },
+    },
+  });
+
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  const doc = generateBOLFromLoad(load);
+  const filename = `BOL-${load.referenceNumber}.pdf`;
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

@@ -137,7 +137,7 @@ export default function MarketTrendsPage() {
           { key: "integrations" as Tab, label: "Data Sources", icon: <Database className="w-3.5 h-3.5" /> },
         ]).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition ${tab === t.key ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === t.key ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
             {t.icon} {t.label}
           </button>
         ))}

@@ -287,6 +287,68 @@ export async function getBonuses(req: AuthRequest, res: Response) {
   res.json(bonuses);
 }
 
+/** Setup carrier profile for admin user (for carrier view) */
+export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) {
+  const { mcNumber, dotNumber, equipmentTypes, operatingRegions, address, city, state, zip, numberOfTrucks, company } = req.body;
+
+  // Check if profile already exists
+  const existing = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
+  if (existing) {
+    // Update existing profile
+    const updated = await prisma.carrierProfile.update({
+      where: { id: existing.id },
+      data: {
+        ...(mcNumber && { mcNumber }),
+        ...(dotNumber && { dotNumber }),
+        ...(equipmentTypes && { equipmentTypes }),
+        ...(operatingRegions && { operatingRegions }),
+        ...(address && { address }),
+        ...(city && { city }),
+        ...(state && { state }),
+        ...(zip && { zip }),
+        ...(numberOfTrucks && { numberOfTrucks: parseInt(numberOfTrucks) }),
+        onboardingStatus: "APPROVED",
+        approvedAt: existing.approvedAt || new Date(),
+        w9Uploaded: true,
+        insuranceCertUploaded: true,
+        authorityDocUploaded: true,
+      },
+    });
+    res.json(updated);
+    return;
+  }
+
+  // Update company name on user if provided
+  if (company) {
+    await prisma.user.update({ where: { id: req.user!.id }, data: { company } });
+  }
+
+  const profile = await prisma.carrierProfile.create({
+    data: {
+      userId: req.user!.id,
+      mcNumber: mcNumber || "",
+      dotNumber: dotNumber || "",
+      equipmentTypes: equipmentTypes || [],
+      operatingRegions: operatingRegions || [],
+      address: address || "",
+      city: city || "",
+      state: state || "",
+      zip: zip || "",
+      numberOfTrucks: numberOfTrucks ? parseInt(numberOfTrucks) : 1,
+      onboardingStatus: "APPROVED",
+      approvedAt: new Date(),
+      w9Uploaded: true,
+      insuranceCertUploaded: true,
+      authorityDocUploaded: true,
+      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      safetyScore: 100,
+      tier: "PLATINUM",
+    },
+  });
+
+  res.status(201).json(profile);
+}
+
 /** Get all carriers with performance data for admin/broker view */
 export async function getAllCarriers(req: AuthRequest, res: Response) {
   const carriers = await prisma.carrierProfile.findMany({
