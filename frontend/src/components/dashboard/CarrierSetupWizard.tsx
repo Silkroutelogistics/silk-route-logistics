@@ -6,11 +6,9 @@ import { api } from "@/lib/api";
 import { Truck, CheckCircle } from "lucide-react";
 
 const EQUIPMENT_OPTIONS = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Tanker", "Lowboy", "Conestoga"];
-const REGION_OPTIONS = [
-  "Michigan", "Indiana", "Ohio", "Illinois", "Wisconsin", "Minnesota", "Iowa",
-  "Pennsylvania", "New York", "Texas", "California", "Florida", "Georgia",
-  "Tennessee", "Kentucky", "Missouri", "North Carolina", "Virginia",
-];
+const US_REGION_OPTIONS = ["Great Lakes", "Upper Midwest", "Southeast", "Northeast", "South Central", "West"];
+const CA_REGION_OPTIONS = ["Eastern Canada", "Western Canada", "Central Canada"];
+const REGION_OPTIONS = [...US_REGION_OPTIONS, ...CA_REGION_OPTIONS, "Cross-Border"];
 
 export function CarrierSetupWizard({ onComplete }: { onComplete: () => void }) {
   const queryClient = useQueryClient();

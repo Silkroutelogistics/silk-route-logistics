@@ -85,6 +85,15 @@ export default function LoadsPage() {
     },
   });
 
+  const carrierUpdateStatus = useMutation({
+    mutationFn: ({ loadId, status }: { loadId: string; status: string }) =>
+      api.patch(`/loads/${loadId}/carrier-status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+    },
+  });
+
   const createTender = useMutation({
     mutationFn: ({ loadId, carrierId, offeredRate }: { loadId: string; carrierId: string; offeredRate: number }) =>
       api.post(`/loads/${loadId}/tenders`, { carrierId, offeredRate }),
@@ -147,6 +156,31 @@ export default function LoadsPage() {
               >
                 <ChevronRight className="w-4 h-4" /> {STATUS_ACTIONS[load.status]}
               </button>
+            )}
+            {isCarrier(user?.role) && load.carrier?.firstName === user?.firstName && (
+              <>
+                {["BOOKED", "DISPATCHED"].includes(load.status) && (
+                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "PICKED_UP" })}
+                    disabled={carrierUpdateStatus.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm hover:bg-yellow-500/30 disabled:opacity-50">
+                    <Truck className="w-4 h-4" /> Mark Picked Up
+                  </button>
+                )}
+                {load.status === "PICKED_UP" && (
+                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "IN_TRANSIT" })}
+                    disabled={carrierUpdateStatus.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm hover:bg-cyan-500/30 disabled:opacity-50">
+                    <MapPin className="w-4 h-4" /> Mark In Transit
+                  </button>
+                )}
+                {load.status === "IN_TRANSIT" && (
+                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "DELIVERED" })}
+                    disabled={carrierUpdateStatus.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 disabled:opacity-50">
+                    <Package className="w-4 h-4" /> Mark Delivered
+                  </button>
+                )}
+              </>
             )}
             <button onClick={() => downloadBol(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm hover:bg-gold/30">
               <Download className="w-4 h-4" /> BOL

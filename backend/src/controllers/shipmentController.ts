@@ -5,7 +5,7 @@ import { createShipmentSchema, updateShipmentStatusSchema, updateShipmentLocatio
 
 let shipmentCounter = 0;
 
-async function nextShipmentNumber(): Promise<string> {
+export async function nextShipmentNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const last = await prisma.shipment.findFirst({ orderBy: { createdAt: "desc" }, select: { shipmentNumber: true } });
   if (last?.shipmentNumber) {

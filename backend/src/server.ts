@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { env } from "./config/env";
 import routes from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
+import { startSchedulers } from "./services/schedulerService";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use(errorHandler);
 
 app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
+  startSchedulers();
 });
 
 export default app;

@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
+import { autoGenerateInvoice } from "../services/invoiceService";
 
 function generateRefNumber(): string {
   const d = new Date();
@@ -104,35 +105,84 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     data: { status, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },
   });
 
-  // Auto-notify when load is delivered → prompt invoice creation
+  // Sync linked shipment status
+  const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
+  if (linkedShipment) {
+    const shipmentUpdate: Record<string, unknown> = { status };
+    if (status === "PICKED_UP") shipmentUpdate.actualPickup = new Date();
+    if (status === "DELIVERED") shipmentUpdate.actualDelivery = new Date();
+    await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
+  }
+
+  // Auto-generate invoice and notify when delivered
   if (status === "DELIVERED") {
-    const notifications = [];
-    if (load.carrierId) {
-      notifications.push(prisma.notification.create({
-        data: {
-          userId: load.carrierId,
-          type: "INVOICE",
-          title: "Load Delivered — Create Invoice",
-          message: `Load ${load.referenceNumber} has been delivered. Submit an invoice to get paid.`,
-          actionUrl: "/dashboard/invoices",
-        },
-      }));
-    }
+    await autoGenerateInvoice(load.id);
+
     if (load.posterId) {
-      notifications.push(prisma.notification.create({
+      await prisma.notification.create({
         data: {
           userId: load.posterId,
           type: "LOAD_UPDATE",
           title: "Load Delivered",
-          message: `Load ${load.referenceNumber} has been delivered successfully.`,
+          message: `Load ${load.referenceNumber} has been delivered successfully. Invoice auto-generated.`,
           actionUrl: "/dashboard/loads",
         },
-      }));
+      });
     }
-    await Promise.all(notifications);
   }
 
   res.json(load);
+}
+
+export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
+  const { status } = updateLoadStatusSchema.parse(req.body);
+  const allowedStatuses = ["PICKED_UP", "IN_TRANSIT", "DELIVERED"];
+  if (!allowedStatuses.includes(status)) {
+    res.status(400).json({ error: "Carriers can only update to: PICKED_UP, IN_TRANSIT, DELIVERED" });
+    return;
+  }
+
+  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+  if (load.carrierId !== req.user!.id) {
+    res.status(403).json({ error: "Not authorized — this load is not assigned to you" });
+    return;
+  }
+
+  const updated = await prisma.load.update({
+    where: { id: req.params.id },
+    data: { status },
+  });
+
+  // Sync linked shipment
+  const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
+  if (linkedShipment) {
+    const shipmentUpdate: Record<string, unknown> = { status };
+    if (status === "PICKED_UP") shipmentUpdate.actualPickup = new Date();
+    if (status === "IN_TRANSIT") shipmentUpdate.lastLocationAt = new Date();
+    if (status === "DELIVERED") shipmentUpdate.actualDelivery = new Date();
+    await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
+  }
+
+  // Notify broker
+  if (load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD_UPDATE",
+        title: `Load ${status.replace("_", " ")}`,
+        message: `Carrier updated load ${load.referenceNumber} to ${status}.`,
+        actionUrl: "/dashboard/tracking",
+      },
+    });
+  }
+
+  // If delivered, trigger auto-invoice
+  if (status === "DELIVERED") {
+    await autoGenerateInvoice(load.id);
+  }
+
+  res.json(updated);
 }
 
 export async function deleteLoad(req: AuthRequest, res: Response) {

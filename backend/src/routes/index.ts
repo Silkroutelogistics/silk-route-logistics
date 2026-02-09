@@ -22,10 +22,12 @@ import complianceRoutes from "./compliance";
 import auditRoutes from "./audit";
 import eldRoutes from "./eld";
 import fmcsaRoutes from "./fmcsa";
+import chatRoutes from "./chat";
 
 const router = Router();
 
 router.use("/auth", authRoutes);
+router.use("/chat", chatRoutes);
 router.use("/loads", loadRoutes);
 router.use("/invoices", invoiceRoutes);
 router.use("/documents", documentRoutes);

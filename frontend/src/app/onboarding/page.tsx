@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
 
 const equipmentOptions = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Tanker", "Intermodal", "Power Only", "Box Truck"];
-const regionOptions = ["Northeast US", "Southeast US", "Midwest US", "Southwest US", "West US", "Northwest US", "Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba/Saskatchewan", "Atlantic Canada", "National US", "National Canada", "Cross-Border"];
+const regionOptions = ["Great Lakes", "Upper Midwest", "Southeast", "Northeast", "South Central", "West", "Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
 
 interface FormData {
   firstName: string; lastName: string; email: string; password: string;

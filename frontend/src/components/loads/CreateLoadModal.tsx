@@ -14,6 +14,7 @@ const US_STATES = [
   "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
   "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
+const CA_PROVINCES = ["AB","BC","MB","NB","NL","NT","NS","NU","ON","PE","QC","SK","YT"];
 
 interface Props { open: boolean; onClose: () => void; }
 
@@ -101,14 +102,14 @@ export function CreateLoadModal({ open, onClose }: Props) {
               <h3 className="text-sm font-medium text-slate-300">Origin</h3>
               <div className="grid grid-cols-3 gap-3">
                 <Input label="City" value={form.originCity} onChange={(v) => update("originCity", v)} />
-                <Select label="State" value={form.originState} onChange={(v) => update("originState", v)} options={US_STATES} />
-                <Input label="Zip" value={form.originZip} onChange={(v) => update("originZip", v)} />
+                <StateSelect label="State/Province" value={form.originState} onChange={(v) => update("originState", v)} />
+                <Input label="Zip/Postal" value={form.originZip} onChange={(v) => update("originZip", v)} />
               </div>
               <h3 className="text-sm font-medium text-slate-300 mt-4">Destination</h3>
               <div className="grid grid-cols-3 gap-3">
                 <Input label="City" value={form.destCity} onChange={(v) => update("destCity", v)} />
-                <Select label="State" value={form.destState} onChange={(v) => update("destState", v)} options={US_STATES} />
-                <Input label="Zip" value={form.destZip} onChange={(v) => update("destZip", v)} />
+                <StateSelect label="State/Province" value={form.destState} onChange={(v) => update("destState", v)} />
+                <Input label="Zip/Postal" value={form.destZip} onChange={(v) => update("destZip", v)} />
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
                 <Input label="Pickup Date" value={form.pickupDate} onChange={(v) => update("pickupDate", v)} type="date" />
@@ -264,6 +265,24 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
       </div>
       <span className="text-xs text-slate-400">{label}</span>
     </label>
+  );
+}
+
+function StateSelect({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50">
+        <option value="" className="bg-navy">Select...</option>
+        <optgroup label="US States">
+          {US_STATES.map((s) => <option key={s} value={s} className="bg-navy">{s}</option>)}
+        </optgroup>
+        <optgroup label="Canadian Provinces">
+          {CA_PROVINCES.map((p) => <option key={p} value={p} className="bg-navy">{p}</option>)}
+        </optgroup>
+      </select>
+    </div>
   );
 }
 

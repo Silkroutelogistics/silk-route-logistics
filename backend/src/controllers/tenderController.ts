@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createTenderSchema, counterTenderSchema } from "../validators/tender";
+import { nextShipmentNumber } from "./shipmentController";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -33,6 +34,10 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
 
+  // Fetch full load details for shipment creation
+  const load = await prisma.load.findUnique({ where: { id: tender.loadId } });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
   const [updated] = await Promise.all([
     prisma.loadTender.update({
       where: { id: tender.id },
@@ -48,6 +53,45 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       data: { status: "DECLINED" },
     }),
   ]);
+
+  // Auto-create Shipment linked to this load
+  const shipmentNumber = await nextShipmentNumber();
+  await prisma.shipment.create({
+    data: {
+      shipmentNumber,
+      loadId: load.id,
+      status: "BOOKED",
+      originCity: load.originCity,
+      originState: load.originState,
+      originZip: load.originZip,
+      destCity: load.destCity,
+      destState: load.destState,
+      destZip: load.destZip,
+      equipmentType: load.equipmentType,
+      commodity: load.commodity,
+      weight: load.weight,
+      pieces: load.pieces,
+      rate: tender.offeredRate,
+      distance: load.distance,
+      specialInstructions: load.specialInstructions,
+      customerId: load.customerId,
+      pickupDate: load.pickupDate,
+      deliveryDate: load.deliveryDate,
+    },
+  });
+
+  // Notify the broker/poster that tender was accepted
+  if (load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD_UPDATE",
+        title: "Tender Accepted",
+        message: `Carrier accepted tender for load ${load.referenceNumber}. Shipment created for tracking.`,
+        actionUrl: "/dashboard/tracking",
+      },
+    });
+  }
 
   res.json(updated);
 }

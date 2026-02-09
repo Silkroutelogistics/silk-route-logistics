@@ -318,11 +318,13 @@ model Load {
   tenders         LoadTender[]
   messages        Message[]
   ediTransactions EDITransaction[]
+  shipments       Shipment[]
 
   @@index([status])
   @@index([originState])
   @@index([destState])
   @@index([customerId])
+  @@index([carrierId])
   @@map("loads")
 }
 
@@ -656,6 +658,9 @@ model Shipment {
   equipmentId     String?
   equipment       Equipment? @relation(fields: [equipmentId], references: [id])
 
+  loadId          String?
+  load            Load?      @relation(fields: [loadId], references: [id])
+
   lastLocation    String?
   lastLocationAt  DateTime?
   eta             DateTime?
@@ -666,6 +671,7 @@ model Shipment {
   @@index([status])
   @@index([customerId])
   @@index([driverId])
+  @@index([loadId])
   @@map("shipments")
 }
 

@@ -1,0 +1,113 @@
+import nodemailer from "nodemailer";
+
+const transporter = process.env.SMTP_USER
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+  : null;
+
+async function sendEmail(to: string, subject: string, html: string) {
+  if (transporter) {
+    await transporter.sendMail({
+      from: `"Silk Route Logistics" <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[Email] Sent to ${to}: ${subject}`);
+  } else {
+    console.log(`[Email][NoSMTP] To: ${to} | Subject: ${subject}`);
+  }
+}
+
+const brandHeader = `
+  <div style="background:#0f172a;padding:24px;text-align:center;border-bottom:3px solid #d4a574">
+    <h1 style="color:#d4a574;margin:0;font-family:Georgia,serif">Silk Route Logistics</h1>
+  </div>`;
+
+const brandFooter = `
+  <div style="background:#1e293b;padding:16px;text-align:center;color:#94a3b8;font-size:12px">
+    <p style="margin:0">Silk Route Logistics &bull; silkroutelogistics.ai</p>
+  </div>`;
+
+function wrap(body: string) {
+  return `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
+    ${brandHeader}
+    <div style="padding:24px">${body}</div>
+    ${brandFooter}
+  </div>`;
+}
+
+export async function sendPreTracingEmail(
+  carrierEmail: string,
+  carrierName: string,
+  loadRef: string,
+  origin: string,
+  dest: string,
+  pickupDate: Date,
+  hoursUntilPickup: number,
+) {
+  const timeLabel = hoursUntilPickup <= 24 ? "24 hours" : "48 hours";
+  const html = wrap(`
+    <h2 style="color:#0f172a">Pre-Tracing Update Required</h2>
+    <p>Hi ${carrierName},</p>
+    <p>Your pickup for load <strong>${loadRef}</strong> is in approximately <strong>${timeLabel}</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Origin</td><td style="padding:8px;border:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Destination</td><td style="padding:8px;border:1px solid #e2e8f0">${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Pickup Date</td><td style="padding:8px;border:1px solid #e2e8f0">${pickupDate.toLocaleDateString()}</td></tr>
+    </table>
+    <p><strong>Are you on time for pickup?</strong> Please log in to update your status.</p>
+    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Update Status</a>
+  `);
+
+  await sendEmail(carrierEmail, `Pre-Tracing: Load ${loadRef} pickup in ${timeLabel}`, html);
+}
+
+export async function sendAutoInvoiceEmail(
+  carrierEmail: string,
+  carrierName: string,
+  loadRef: string,
+  invoiceNumber: string,
+  amount: number,
+) {
+  const html = wrap(`
+    <h2 style="color:#0f172a">Invoice Auto-Generated</h2>
+    <p>Hi ${carrierName},</p>
+    <p>Load <strong>${loadRef}</strong> has been delivered. An invoice has been automatically generated:</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Invoice #</td><td style="padding:8px;border:1px solid #e2e8f0">${invoiceNumber}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Amount</td><td style="padding:8px;border:1px solid #e2e8f0">$${amount.toLocaleString()}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Due Date</td><td style="padding:8px;border:1px solid #e2e8f0">Net 30</td></tr>
+    </table>
+    <a href="https://silkroutelogistics.ai/dashboard/invoices" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Invoice</a>
+  `);
+
+  await sendEmail(carrierEmail, `Invoice ${invoiceNumber} generated for load ${loadRef}`, html);
+}
+
+export async function sendLateAlertEmail(
+  brokerEmail: string,
+  brokerName: string,
+  loadRef: string,
+  shipmentNumber: string,
+  lastLocation: string | null,
+  hoursSinceUpdate: number,
+) {
+  const html = wrap(`
+    <h2 style="color:#dc2626">Late Alert</h2>
+    <p>Hi ${brokerName},</p>
+    <p>Shipment <strong>${shipmentNumber}</strong> (Load ${loadRef}) has not reported movement in <strong>${Math.round(hoursSinceUpdate)} hours</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Last Known Location</td><td style="padding:8px;border:1px solid #e2e8f0">${lastLocation || "Unknown"}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Hours Since Update</td><td style="padding:8px;border:1px solid #e2e8f0">${Math.round(hoursSinceUpdate)}h</td></tr>
+    </table>
+    <p>Please contact the carrier immediately to confirm load status.</p>
+    <a href="https://silkroutelogistics.ai/dashboard/tracking" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Track & Trace</a>
+  `);
+
+  await sendEmail(brokerEmail, `LATE ALERT: Shipment ${shipmentNumber} - No movement in ${Math.round(hoursSinceUpdate)}h`, html);
+}

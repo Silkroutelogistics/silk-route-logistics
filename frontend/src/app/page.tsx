@@ -10,6 +10,7 @@ import {
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useCountUp } from "@/hooks/useCountUp";
+import { MarcoPolo } from "@/components/MarcoPolo";
 
 const services = [
   { icon: Truck, title: "Full Truckload (FTL)", desc: "Dedicated dry van capacity across the Midwest and beyond. Real-time tracking, guaranteed pickup, and reliable delivery windows for your supply chain." },
@@ -392,6 +393,7 @@ export default function Home() {
           <p className="text-sm text-slate-500 text-center">&copy; 2026 Silk Route Logistics Inc. All rights reserved.</p>
         </div>
       </footer>
+      <MarcoPolo isAuthenticated={false} darkMode={false} />
     </main>
   );
 }
