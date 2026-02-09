@@ -132,11 +132,15 @@ export default function Home() {
 
       {/* ── Hero ─────────────────────────────────── */}
       <section className="relative overflow-hidden bg-navy">
-        {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-          backgroundSize: "40px 40px",
+        {/* North America network map background */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: "url('/hero-map.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center 40%",
+          backgroundRepeat: "no-repeat",
         }} />
+        {/* Gradient overlay to keep text readable on left */}
+        <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/90 to-navy/40" />
 
         <div className="relative max-w-7xl mx-auto px-6 md:px-12 pt-20 pb-24 md:pt-28 md:pb-32">
           <div className="max-w-3xl">

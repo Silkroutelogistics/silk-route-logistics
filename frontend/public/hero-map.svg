@@ -1,0 +1,290 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none">
+  <defs>
+    <!-- Glow filter for nodes -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glowLarge" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Gradient for connection lines -->
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4A843" stop-opacity="0.1"/>
+      <stop offset="50%" stop-color="#D4A843" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#D4A843" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="lineGradV" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D4A843" stop-opacity="0.1"/>
+      <stop offset="50%" stop-color="#D4A843" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#D4A843" stop-opacity="0.1"/>
+    </linearGradient>
+    <!-- Radial gradient for the Midwest highlight -->
+    <radialGradient id="midwestGlow" cx="50%" cy="45%" r="25%">
+      <stop offset="0%" stop-color="#D4A843" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#D4A843" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Midwest glow region -->
+  <ellipse cx="620" cy="340" rx="250" ry="180" fill="url(#midwestGlow)"/>
+
+  <!-- ═══ Simplified North America outline ═══ -->
+  <!-- Continental US outline - simplified -->
+  <path d="
+    M 180 200
+    C 190 190, 210 185, 230 180
+    L 260 175 L 290 172 L 330 170 L 370 168
+    C 390 168, 420 170, 450 172
+    L 490 175 L 530 178 L 570 180 L 610 175
+    C 650 172, 690 170, 730 172
+    L 770 178 L 800 185 L 830 195 L 860 200
+    C 880 205, 895 215, 905 225
+    L 910 235 L 918 248 L 920 260
+    C 920 275, 915 285, 910 295
+    L 900 310 L 895 325 L 892 340
+    C 890 355, 895 370, 898 385
+    L 900 400 L 898 415 L 892 430
+    C 885 445, 878 458, 870 468
+    L 858 478 L 845 485 L 830 490
+    C 810 495, 790 498, 770 500
+    L 740 505 L 710 510 L 690 518
+    C 675 525, 660 530, 650 535
+    L 635 540 L 620 542
+    C 605 542, 588 540, 575 538
+    L 555 535 L 530 530 L 500 525
+    C 475 520, 450 518, 430 520
+    L 405 525 L 380 530 L 355 538
+    C 340 542, 325 545, 310 540
+    L 290 528 L 270 520 L 248 510
+    C 230 500, 215 488, 205 475
+    L 195 458 L 188 440 L 185 420
+    C 182 400, 180 380, 178 360
+    L 177 340 L 178 315 L 180 290
+    C 182 265, 183 240, 182 220
+    Z
+  " stroke="rgba(255,255,255,0.08)" stroke-width="1.5" fill="rgba(255,255,255,0.02)"/>
+
+  <!-- Canada outline - very faded -->
+  <path d="
+    M 180 200 L 182 180 L 190 155 L 210 135 L 240 120
+    C 270 108, 310 100, 360 95
+    L 420 92 L 480 90 L 540 88 L 600 86
+    C 650 85, 700 86, 750 90
+    L 790 95 L 820 102 L 850 115
+    C 870 125, 885 140, 895 158
+    L 905 178 L 910 198 L 918 218 L 920 235
+    L 910 235 L 905 225 L 895 215 L 880 205
+    L 860 200 L 830 195 L 800 185 L 770 178
+    L 730 172 L 690 170 L 650 172 L 610 175
+    L 570 180 L 530 178 L 490 175 L 450 172
+    C 420 170, 390 168, 370 168
+    L 330 170 L 290 172 L 260 175 L 230 180
+    C 210 185, 190 190, 180 200
+  " stroke="rgba(255,255,255,0.04)" stroke-width="1" fill="rgba(255,255,255,0.01)"/>
+
+  <!-- Mexico outline - faded -->
+  <path d="
+    M 310 540 L 320 555 L 325 572 L 328 590
+    C 330 608, 340 625, 355 640
+    L 370 650 L 388 656 L 400 660
+    C 415 662, 430 655, 440 645
+    L 448 630 L 455 612 L 460 595
+    C 465 580, 472 568, 480 558
+    L 495 545 L 510 538 L 530 530
+    L 500 525 L 475 520 L 450 518
+    L 430 520 L 405 525 L 380 530
+    L 355 538 L 340 542 L 325 545
+    Z
+  " stroke="rgba(255,255,255,0.04)" stroke-width="1" fill="rgba(255,255,255,0.01)"/>
+
+  <!-- Great Lakes - subtle -->
+  <ellipse cx="580" cy="270" rx="30" ry="18" fill="rgba(100,160,255,0.06)" stroke="rgba(100,160,255,0.1)" stroke-width="0.8"/>
+  <ellipse cx="640" cy="285" rx="25" ry="14" fill="rgba(100,160,255,0.06)" stroke="rgba(100,160,255,0.1)" stroke-width="0.8"/>
+  <ellipse cx="605" cy="300" rx="20" ry="10" fill="rgba(100,160,255,0.06)" stroke="rgba(100,160,255,0.1)" stroke-width="0.8"/>
+  <ellipse cx="560" cy="295" rx="16" ry="12" fill="rgba(100,160,255,0.06)" stroke="rgba(100,160,255,0.1)" stroke-width="0.8"/>
+  <ellipse cx="530" cy="310" rx="18" ry="10" fill="rgba(100,160,255,0.06)" stroke="rgba(100,160,255,0.1)" stroke-width="0.8"/>
+
+  <!-- ═══ Network Connection Lines ═══ -->
+
+  <!-- Major freight corridors - curved lines -->
+  <!-- Kalamazoo hub connections (center of Midwest operations) -->
+
+  <!-- Kalamazoo → Chicago -->
+  <path d="M 595 340 Q 560 330 520 345" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="6 4" opacity="0.7">
+    <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="3s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Kalamazoo → Detroit -->
+  <path d="M 595 340 Q 625 320 650 310" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="6 4" opacity="0.7">
+    <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2.5s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Kalamazoo → Indianapolis -->
+  <path d="M 595 340 Q 585 370 575 395" stroke="url(#lineGradV)" stroke-width="2" stroke-dasharray="6 4" opacity="0.6">
+    <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="3.2s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Kalamazoo → Grand Rapids -->
+  <path d="M 595 340 Q 575 325 565 315" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.5">
+    <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="2s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Kalamazoo → Columbus -->
+  <path d="M 595 340 Q 635 360 665 375" stroke="url(#lineGrad)" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.5">
+    <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="3.5s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Kalamazoo → Milwaukee -->
+  <path d="M 595 340 Q 555 320 530 310" stroke="url(#lineGrad)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.5">
+    <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="2.8s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Kalamazoo → Minneapolis -->
+  <path d="M 595 340 Q 530 290 470 270" stroke="url(#lineGrad)" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.4">
+    <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="4s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Chicago → Minneapolis -->
+  <path d="M 520 345 Q 490 310 470 270" stroke="#D4A843" stroke-width="1" stroke-dasharray="6 5" opacity="0.25">
+    <animate attributeName="stroke-dashoffset" from="0" to="-22" dur="5s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Chicago → St. Louis -->
+  <path d="M 520 345 Q 510 385 490 420" stroke="#D4A843" stroke-width="1" stroke-dasharray="6 5" opacity="0.25">
+    <animate attributeName="stroke-dashoffset" from="0" to="-22" dur="4.5s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Detroit → Cleveland → NYC corridor -->
+  <path d="M 650 310 Q 700 310 730 305 Q 780 290 830 265" stroke="#D4A843" stroke-width="1" stroke-dasharray="8 6" opacity="0.2">
+    <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="5s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Chicago → Dallas/South -->
+  <path d="M 520 345 Q 480 420 450 500" stroke="#D4A843" stroke-width="1" stroke-dasharray="8 6" opacity="0.15">
+    <animate attributeName="stroke-dashoffset" from="0" to="-28" dur="6s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Indianapolis → Nashville/South -->
+  <path d="M 575 395 Q 580 430 590 470" stroke="#D4A843" stroke-width="1" stroke-dasharray="6 5" opacity="0.2">
+    <animate attributeName="stroke-dashoffset" from="0" to="-22" dur="4s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Columbus → East Coast -->
+  <path d="M 665 375 Q 730 360 790 340" stroke="#D4A843" stroke-width="1" stroke-dasharray="6 5" opacity="0.2">
+    <animate attributeName="stroke-dashoffset" from="0" to="-22" dur="4.2s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- ═══ City Nodes ═══ -->
+
+  <!-- Kalamazoo (HQ) - largest, brightest -->
+  <circle cx="595" cy="340" r="8" fill="#D4A843" opacity="0.3" filter="url(#glowLarge)">
+    <animate attributeName="r" values="8;12;8" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.5;0.3" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="595" cy="340" r="5" fill="#D4A843" opacity="0.8"/>
+  <circle cx="595" cy="340" r="2.5" fill="#FFFFFF" opacity="0.9"/>
+  <text x="595" y="360" text-anchor="middle" fill="#D4A843" font-size="9" font-family="sans-serif" font-weight="600" opacity="0.7">KALAMAZOO</text>
+
+  <!-- Chicago -->
+  <circle cx="520" cy="345" r="5" fill="#D4A843" opacity="0.2" filter="url(#glow)">
+    <animate attributeName="r" values="5;8;5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="520" cy="345" r="3.5" fill="#D4A843" opacity="0.6"/>
+  <circle cx="520" cy="345" r="1.5" fill="#FFFFFF" opacity="0.8"/>
+  <text x="508" y="340" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="8" font-family="sans-serif">Chicago</text>
+
+  <!-- Detroit -->
+  <circle cx="650" cy="310" r="5" fill="#D4A843" opacity="0.2" filter="url(#glow)">
+    <animate attributeName="r" values="5;8;5" dur="3.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="650" cy="310" r="3.5" fill="#D4A843" opacity="0.6"/>
+  <circle cx="650" cy="310" r="1.5" fill="#FFFFFF" opacity="0.8"/>
+  <text x="662" y="305" fill="rgba(255,255,255,0.4)" font-size="8" font-family="sans-serif">Detroit</text>
+
+  <!-- Indianapolis -->
+  <circle cx="575" cy="395" r="4" fill="#D4A843" opacity="0.2" filter="url(#glow)">
+    <animate attributeName="r" values="4;7;4" dur="4.2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="575" cy="395" r="3" fill="#D4A843" opacity="0.5"/>
+  <circle cx="575" cy="395" r="1.5" fill="#FFFFFF" opacity="0.7"/>
+  <text x="575" y="412" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="7.5" font-family="sans-serif">Indianapolis</text>
+
+  <!-- Grand Rapids -->
+  <circle cx="565" cy="315" r="3" fill="#D4A843" opacity="0.2" filter="url(#glow)">
+    <animate attributeName="r" values="3;5;3" dur="3.8s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="565" cy="315" r="2.5" fill="#D4A843" opacity="0.5"/>
+  <circle cx="565" cy="315" r="1.2" fill="#FFFFFF" opacity="0.7"/>
+  <text x="552" y="310" text-anchor="end" fill="rgba(255,255,255,0.3)" font-size="7" font-family="sans-serif">Grand Rapids</text>
+
+  <!-- Columbus -->
+  <circle cx="665" cy="375" r="3.5" fill="#D4A843" opacity="0.2" filter="url(#glow)">
+    <animate attributeName="r" values="3.5;6;3.5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="665" cy="375" r="2.5" fill="#D4A843" opacity="0.5"/>
+  <circle cx="665" cy="375" r="1.2" fill="#FFFFFF" opacity="0.7"/>
+  <text x="678" y="372" fill="rgba(255,255,255,0.3)" font-size="7" font-family="sans-serif">Columbus</text>
+
+  <!-- Milwaukee -->
+  <circle cx="530" cy="310" r="3" fill="#D4A843" opacity="0.2" filter="url(#glow)">
+    <animate attributeName="r" values="3;5;3" dur="3.6s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="530" cy="310" r="2.5" fill="#D4A843" opacity="0.5"/>
+  <circle cx="530" cy="310" r="1.2" fill="#FFFFFF" opacity="0.7"/>
+  <text x="530" y="302" text-anchor="middle" fill="rgba(255,255,255,0.3)" font-size="7" font-family="sans-serif">Milwaukee</text>
+
+  <!-- Minneapolis -->
+  <circle cx="470" cy="270" r="3.5" fill="#D4A843" opacity="0.15" filter="url(#glow)">
+    <animate attributeName="r" values="3.5;6;3.5" dur="4.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="470" cy="270" r="2.5" fill="#D4A843" opacity="0.4"/>
+  <circle cx="470" cy="270" r="1.2" fill="#FFFFFF" opacity="0.6"/>
+  <text x="470" y="262" text-anchor="middle" fill="rgba(255,255,255,0.25)" font-size="7" font-family="sans-serif">Minneapolis</text>
+
+  <!-- St. Louis -->
+  <circle cx="490" cy="420" r="3" fill="#D4A843" opacity="0.15" filter="url(#glow)"/>
+  <circle cx="490" cy="420" r="2" fill="#D4A843" opacity="0.4"/>
+  <circle cx="490" cy="420" r="1" fill="#FFFFFF" opacity="0.6"/>
+  <text x="490" y="434" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="7" font-family="sans-serif">St. Louis</text>
+
+  <!-- Cleveland -->
+  <circle cx="700" cy="310" r="2.5" fill="#D4A843" opacity="0.15" filter="url(#glow)"/>
+  <circle cx="700" cy="310" r="2" fill="#D4A843" opacity="0.4"/>
+  <circle cx="700" cy="310" r="1" fill="#FFFFFF" opacity="0.6"/>
+  <text x="700" y="302" text-anchor="middle" fill="rgba(255,255,255,0.25)" font-size="7" font-family="sans-serif">Cleveland</text>
+
+  <!-- Distant cities (very subtle) -->
+  <!-- NYC -->
+  <circle cx="830" cy="265" r="2" fill="#D4A843" opacity="0.15"/>
+  <circle cx="830" cy="265" r="1" fill="#FFFFFF" opacity="0.4"/>
+
+  <!-- Nashville -->
+  <circle cx="590" cy="470" r="2" fill="#D4A843" opacity="0.1"/>
+  <circle cx="590" cy="470" r="1" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- Dallas -->
+  <circle cx="450" cy="500" r="2" fill="#D4A843" opacity="0.1"/>
+  <circle cx="450" cy="500" r="1" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- Pittsburgh -->
+  <circle cx="730" cy="335" r="2" fill="#D4A843" opacity="0.12"/>
+  <circle cx="730" cy="335" r="1" fill="#FFFFFF" opacity="0.4"/>
+
+  <!-- ═══ Decorative grid lines (very subtle) ═══ -->
+  <line x1="0" y1="200" x2="1200" y2="200" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="0" y1="300" x2="1200" y2="300" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="0" y1="400" x2="1200" y2="400" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="0" y1="500" x2="1200" y2="500" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="300" y1="0" x2="300" y2="800" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="500" y1="0" x2="500" y2="800" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="700" y1="0" x2="700" y2="800" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+  <line x1="900" y1="0" x2="900" y2="800" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
+</svg>
