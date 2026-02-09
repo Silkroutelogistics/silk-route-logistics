@@ -25,7 +25,10 @@ export async function getCustomers(req: AuthRequest, res: Response) {
   const [customers, total] = await Promise.all([
     prisma.customer.findMany({
       where,
-      include: { _count: { select: { shipments: true } } },
+      include: {
+        _count: { select: { shipments: true } },
+        contacts: { orderBy: { isPrimary: "desc" }, take: 5 },
+      },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
       orderBy: { createdAt: "desc" },
@@ -56,6 +59,7 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
     where: { id: req.params.id },
     include: {
       shipments: { orderBy: { createdAt: "desc" }, take: 10, include: { driver: true } },
+      contacts: { orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }] },
     },
   });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }

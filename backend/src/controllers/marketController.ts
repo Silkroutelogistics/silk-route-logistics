@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { laneQuerySchema, trendQuerySchema, capacityQuerySchema, REGIONS, getStatesForRegion } from "../validators/market";
+import { getLaneBenchmarks, getRegionIntelligence, getIntegrationStatuses, getNationalRateIndex } from "../services/marketDataService";
 
 export async function getLanes(req: AuthRequest, res: Response) {
   const query = laneQuerySchema.parse(req.query);
@@ -167,4 +168,33 @@ export async function getCapacity(req: AuthRequest, res: Response) {
   }));
 
   res.json({ carriers: result, total: result.length });
+}
+
+// ─── Market Intelligence Endpoints ──────────────────────
+
+export async function getBenchmarks(req: AuthRequest, res: Response) {
+  const { originState, destState, equipmentType, distance } = req.query;
+  const benchmarks = await getLaneBenchmarks(
+    (originState as string) || "MI",
+    (destState as string) || "OH",
+    (equipmentType as string) || "Dry Van",
+    parseInt(distance as string) || 500
+  );
+  res.json(benchmarks);
+}
+
+export async function getIntelligence(req: AuthRequest, res: Response) {
+  const region = (req.query.region as string) || "GREAT_LAKES";
+  const intel = await getRegionIntelligence(region);
+  res.json(intel);
+}
+
+export async function getIntegrations(req: AuthRequest, res: Response) {
+  const statuses = await getIntegrationStatuses();
+  res.json(statuses);
+}
+
+export async function getRateIndex(req: AuthRequest, res: Response) {
+  const index = getNationalRateIndex();
+  res.json(index);
 }
