@@ -18,6 +18,7 @@ enum UserRole {
   DISPATCH
   OPERATIONS
   ACCOUNTING
+  CEO
 }
 
 enum LoadStatus {
@@ -114,7 +115,53 @@ enum EquipmentStatus {
   OUT_OF_SERVICE
 }
 
-// ─── Models ──────────────────────────────────────────
+enum TruckType {
+  DAY_CAB
+  SLEEPER
+  STRAIGHT
+  BOX_TRUCK
+}
+
+enum TrailerType {
+  DRY_VAN
+  REEFER
+  FLATBED
+  STEP_DECK
+  LOWBOY
+  TANKER
+  CAR_HAULER
+  CONESTOGA
+  POWER_ONLY
+}
+
+enum OwnershipType {
+  COMPANY
+  LEASED
+  OWNER_OPERATOR
+}
+
+enum AssetStatus {
+  ACTIVE
+  IN_SHOP
+  OUT_OF_SERVICE
+  SOLD
+}
+
+enum CustomerType {
+  SHIPPER
+  CONSIGNEE
+  BOTH
+}
+
+enum CreditStatus {
+  NOT_CHECKED
+  APPROVED
+  CONDITIONAL
+  DENIED
+  PENDING_REVIEW
+}
+
+// ─── Core Models ──────────────────────────────────────────
 
 model User {
   id            String    @id @default(cuid())
@@ -137,9 +184,12 @@ model User {
   sentMessages    Message[]       @relation("MessageSender")
   receivedMessages Message[]      @relation("MessageReceiver")
   notifications   Notification[]
+  auditLogs       AuditLog[]
 
   @@map("users")
 }
+
+// ─── Carrier Models ──────────────────────────────────────
 
 model CarrierProfile {
   id                    String           @id @default(cuid())
@@ -208,19 +258,7 @@ model CarrierBonus {
   @@map("carrier_bonuses")
 }
 
-model BrokerIntegration {
-  id              String            @id @default(cuid())
-  name            String
-  provider        String            @unique
-  apiEndpoint     String?
-  apiKeyEncrypted String?
-  status          IntegrationStatus @default(INACTIVE)
-  lastSyncAt      DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@map("broker_integrations")
-}
+// ─── Load & Tender Models ──────────────────────────────────
 
 model Load {
   id              String     @id @default(cuid())
@@ -256,6 +294,16 @@ model Load {
   width           Float?
   height          Float?
 
+  // Asset assignment (for company-owned fleet)
+  truckId         String?
+  truck           Truck?     @relation(fields: [truckId], references: [id])
+  trailerId       String?
+  trailer         Trailer?   @relation(fields: [trailerId], references: [id])
+  driverId        String?
+  driver          Driver?    @relation(fields: [driverId], references: [id])
+  customerId      String?
+  customer        Customer?  @relation(fields: [customerId], references: [id])
+
   pickupDate      DateTime
   deliveryDate    DateTime
   createdAt       DateTime   @default(now())
@@ -274,6 +322,7 @@ model Load {
   @@index([status])
   @@index([originState])
   @@index([destState])
+  @@index([customerId])
   @@map("loads")
 }
 
@@ -293,6 +342,8 @@ model LoadTender {
   @@index([carrierId, status])
   @@map("load_tenders")
 }
+
+// ─── Finance Models ──────────────────────────────────
 
 model Invoice {
   id              String        @id @default(cuid())
@@ -314,8 +365,11 @@ model Invoice {
   documents       Document[]
 
   @@index([status])
+  @@index([userId, status])
   @@map("invoices")
 }
+
+// ─── Document & Communication Models ──────────────────
 
 model Document {
   id          String   @id @default(cuid())
@@ -367,7 +421,206 @@ model Notification {
   @@map("notifications")
 }
 
-// ─── New Models for Asset-Based Carrier Operations ───
+// ─── Customer / Shipper Models ──────────────────────────
+
+model Customer {
+  id              String       @id @default(cuid())
+  name            String
+  type            CustomerType @default(SHIPPER)
+  contactName     String?
+  email           String?
+  phone           String?
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+  status          String       @default("Active")
+  rating          Int          @default(0)
+  notes           String?
+
+  // Financial
+  creditLimit     Float?
+  creditStatus    CreditStatus @default(NOT_CHECKED)
+  creditCheckDate DateTime?
+  paymentTerms    String?      @default("Net 30")
+  taxId           String?
+  annualRevenue   Float?
+
+  // Business
+  mcNumber        String?
+  industryType    String?
+  avgLoadsPerMonth Int?
+  preferredEquipment String[]
+  onboardingStatus OnboardingStatus @default(PENDING)
+  contractUrl     String?
+
+  // Billing
+  billingAddress  String?
+  billingCity     String?
+  billingState    String?
+  billingZip      String?
+  billingEmail    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  shipments       Shipment[]
+  loads           Load[]
+  contacts        CustomerContact[]
+
+  @@map("customers")
+}
+
+model CustomerContact {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name       String
+  title      String?
+  email      String?
+  phone      String?
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@map("customer_contacts")
+}
+
+// ─── Fleet / Asset Models ──────────────────────────
+
+model Truck {
+  id                  String        @id @default(cuid())
+  unitNumber          String        @unique
+  type                TruckType     @default(SLEEPER)
+  year                Int?
+  make                String?
+  model               String?
+  vin                 String?       @unique
+  licensePlate        String?
+  licensePlateState   String?
+  color               String?
+  fuelType            String?       @default("Diesel")
+  ownershipType       OwnershipType @default(COMPANY)
+  status              AssetStatus   @default(ACTIVE)
+  mileage             Int           @default(0)
+
+  // Compliance
+  registrationExpiry  DateTime?
+  lastInspectionDate  DateTime?
+  nextInspectionDate  DateTime?
+  insuranceExpiry     DateTime?
+  ifta                Boolean       @default(false)
+  iftaExpiry          DateTime?
+
+  // Service
+  lastServiceDate     DateTime?
+  nextServiceDate     DateTime?
+  nextServiceMileage  Int?
+
+  // Assignment
+  assignedDriverId    String?       @unique
+  assignedDriver      Driver?       @relation("TruckDriver")
+
+  loads               Load[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@map("trucks")
+}
+
+model Trailer {
+  id                  String        @id @default(cuid())
+  unitNumber          String        @unique
+  type                TrailerType   @default(DRY_VAN)
+  year                Int?
+  make                String?
+  model               String?
+  vin                 String?       @unique
+  licensePlate        String?
+  licensePlateState   String?
+  length              Int?          // feet
+  capacity            Int?          // lbs
+  ownershipType       OwnershipType @default(COMPANY)
+  status              AssetStatus   @default(ACTIVE)
+
+  // Compliance
+  registrationExpiry  DateTime?
+  lastInspectionDate  DateTime?
+  nextInspectionDate  DateTime?
+
+  // Reefer-specific
+  reeferUnit          Boolean       @default(false)
+  reeferModel         String?
+  reeferHours         Int?
+
+  // Assignment
+  assignedDriverId    String?       @unique
+  assignedDriver      Driver?       @relation("TrailerDriver")
+
+  loads               Load[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@map("trailers")
+}
+
+model Driver {
+  id              String       @id @default(cuid())
+  firstName       String
+  lastName        String
+  phone           String?
+  email           String?
+  dateOfBirth     DateTime?
+  licenseType     String
+  licenseNumber   String?
+  licenseState    String?
+  licenseExpiry   DateTime?
+  status          DriverStatus @default(AVAILABLE)
+  currentLocation String?
+  hireDate        DateTime?
+  terminationDate DateTime?
+  safetyScore     Float        @default(100)
+  violations      Int          @default(0)
+
+  // Compliance
+  medicalCardExpiry DateTime?
+  drugTestDate      DateTime?
+  endorsements      String[]      // HAZMAT, TANKER, DOUBLES, etc.
+  twicCard          Boolean       @default(false)
+  twicExpiry        DateTime?
+  backgroundCheckDate DateTime?
+  mvrDate           DateTime?     // Motor Vehicle Record check
+
+  // Emergency contact
+  emergencyContactName  String?
+  emergencyContactPhone String?
+
+  // HOS (Hours of Service)
+  hosDrivingUsed  Float        @default(0)
+  hosOnDutyUsed   Float        @default(0)
+  hosCycleUsed    Float        @default(0)
+  hosCycleLimit   Float        @default(70)
+
+  // Fleet assignment
+  assignedTruckId     String?  @unique
+  assignedTruck       Truck?   @relation("TruckDriver", fields: [assignedTruckId], references: [id])
+  assignedTrailerId   String?  @unique
+  assignedTrailer     Trailer? @relation("TrailerDriver", fields: [assignedTrailerId], references: [id])
+
+  // Legacy equipment relation (kept for backward compat with Shipment)
+  assignedEquipmentId String?  @unique
+  assignedEquipment   Equipment? @relation("DriverEquipment", fields: [assignedEquipmentId], references: [id])
+
+  shipments       Shipment[]
+  loads           Load[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("drivers")
+}
+
+// ─── Shipment (legacy/external) ──────────────────────────
 
 model Shipment {
   id              String         @id @default(cuid())
@@ -416,76 +669,7 @@ model Shipment {
   @@map("shipments")
 }
 
-model Customer {
-  id              String    @id @default(cuid())
-  name            String
-  contactName     String?
-  email           String?
-  phone           String?
-  address         String?
-  city            String?
-  state           String?
-  zip             String?
-  status          String    @default("Active")
-  rating          Int       @default(0)
-  notes           String?
-  creditLimit     Float?
-  paymentTerms    String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  shipments       Shipment[]
-
-  @@map("customers")
-}
-
-model SOP {
-  id          String   @id @default(cuid())
-  title       String
-  category    String
-  version     String
-  author      String
-  description String?
-  content     String?
-  fileUrl     String?
-  pages       Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([category])
-  @@map("sops")
-}
-
-model Driver {
-  id              String       @id @default(cuid())
-  firstName       String
-  lastName        String
-  phone           String?
-  email           String?
-  licenseType     String
-  licenseNumber   String?
-  licenseExpiry   DateTime?
-  status          DriverStatus @default(AVAILABLE)
-  currentLocation String?
-  hireDate        DateTime?
-  safetyScore     Float        @default(100)
-  violations      Int          @default(0)
-
-  hosDrivingUsed  Float        @default(0)
-  hosOnDutyUsed   Float        @default(0)
-  hosCycleUsed    Float        @default(0)
-  hosCycleLimit   Float        @default(70)
-
-  assignedEquipmentId String?  @unique
-  assignedEquipment   Equipment? @relation("DriverEquipment", fields: [assignedEquipmentId], references: [id])
-
-  shipments       Shipment[]
-
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  @@map("drivers")
-}
+// ─── Legacy Equipment (kept for backward compatibility) ───
 
 model Equipment {
   id              String          @id @default(cuid())
@@ -507,6 +691,42 @@ model Equipment {
   @@map("equipment")
 }
 
+// ─── SOP ──────────────────────────────────────────
+
+model SOP {
+  id          String   @id @default(cuid())
+  title       String
+  category    String
+  version     String
+  author      String
+  description String?
+  content     String?
+  fileUrl     String?
+  pages       Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("sops")
+}
+
+// ─── Integration & EDI ──────────────────────────────────
+
+model BrokerIntegration {
+  id              String            @id @default(cuid())
+  name            String
+  provider        String            @unique
+  apiEndpoint     String?
+  apiKeyEncrypted String?
+  status          IntegrationStatus @default(INACTIVE)
+  config          String?           // JSON config (rate sources, ELD provider settings)
+  lastSyncAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("broker_integrations")
+}
+
 model EDITransaction {
   id              String   @id @default(cuid())
   transactionSet  String
@@ -523,4 +743,43 @@ model EDITransaction {
   @@index([transactionSet, status])
   @@index([loadId])
   @@map("edi_transactions")
+}
+
+// ─── Audit & Compliance ──────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // CREATE, UPDATE, DELETE, LOGIN, EXPORT, etc.
+  entity     String   // Load, Customer, Invoice, etc.
+  entityId   String?
+  changes    String?  // JSON diff of before/after
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model ComplianceAlert {
+  id          String   @id @default(cuid())
+  type        String   // LICENSE_EXPIRY, INSURANCE_EXPIRY, MEDICAL_CARD, INSPECTION_DUE, etc.
+  entityType  String   // Driver, Truck, Trailer, CarrierProfile
+  entityId    String
+  entityName  String   // Human-readable name for display
+  expiryDate  DateTime
+  status      String   @default("ACTIVE") // ACTIVE, RESOLVED, DISMISSED
+  severity    String   @default("WARNING") // CRITICAL, WARNING, INFO
+  notifiedAt  DateTime?
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([status, severity])
+  @@index([entityType, entityId])
+  @@index([expiryDate])
+  @@map("compliance_alerts")
 }

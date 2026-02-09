@@ -7,25 +7,27 @@ import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
+  Shield, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
-import { isAdmin, isCarrier } from "@/lib/roles";
+import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
 import { api } from "@/lib/api";
 
 // AE/Broker workflow: Customers → Loads → Carriers → Dispatch/Track → Finance → Comms
 const employeeNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/crm", label: "Customers", icon: Users },
-  { href: "/dashboard/loads", label: "Load Board", icon: Truck },
+  { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
   { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/fleet", label: "Fleet", icon: Truck },
+  { href: "/dashboard/drivers", label: "Drivers", icon: Users },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
-  { href: "/dashboard/market", label: "Market Trends", icon: Activity },
-  { href: "/dashboard/drivers", label: "Drivers", icon: Truck },
+  { href: "/dashboard/market", label: "Market Intel", icon: Activity },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
@@ -33,7 +35,7 @@ const employeeNav = [
 
 const carrierNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/loads", label: "Load Board", icon: Truck },
+  { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/scorecard", label: "Scorecard", icon: BarChart3 },
   { href: "/dashboard/revenue", label: "Revenue", icon: TrendingUp },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
@@ -43,24 +45,26 @@ const carrierNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-// Admin gets full access to everything
+// CEO/Admin: Full access — everything organized by workflow
 const adminNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/crm", label: "Customers", icon: Users },
-  { href: "/dashboard/loads", label: "Load Board", icon: Truck },
+  { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
   { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/fleet", label: "Fleet", icon: Truck },
+  { href: "/dashboard/drivers", label: "Drivers", icon: Users },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
-  { href: "/dashboard/market", label: "Market Trends", icon: Activity },
-  { href: "/dashboard/drivers", label: "Drivers", icon: Truck },
-  { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
-  { href: "/dashboard/edi", label: "EDI", icon: Zap },
+  { href: "/dashboard/market", label: "Market Intel", icon: Activity },
+  { href: "/dashboard/compliance", label: "Compliance", icon: Shield },
   { href: "/dashboard/scorecard", label: "Carrier Scorecards", icon: BarChart3 },
   { href: "/dashboard/revenue", label: "Carrier Revenue", icon: TrendingUp },
   { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
   { href: "/dashboard/factoring", label: "Factoring", icon: DollarSign },
+  { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
+  { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -74,6 +78,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const carrier = isCarrier(user?.role);
+  const ceo = isCeo(user?.role);
   const navItems = getNav(user?.role);
 
   const { data: unreadData } = useQuery({
@@ -103,7 +108,9 @@ export function Sidebar() {
               <p className="text-sm text-white font-medium truncate">
                 {user.firstName} {user.lastName}
               </p>
-              <p className="text-xs text-slate-500 capitalize">{user.role?.toLowerCase()}</p>
+              <p className="text-xs text-slate-500 capitalize">
+                {ceo ? "Chief Executive Officer" : user.role?.toLowerCase()}
+              </p>
             </div>
             {unreadCount > 0 && (
               <div className="flex items-center gap-1 px-2 py-0.5 bg-gold/20 rounded-full">
@@ -115,14 +122,14 @@ export function Sidebar() {
         </div>
       )}
 
-      <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;
           return (
             <Link key={item.href} href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition",
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition",
                 active ? "bg-gold/10 text-gold font-medium" : "text-slate-400 hover:text-white hover:bg-white/5"
               )}
             >

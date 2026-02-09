@@ -17,6 +17,9 @@ import accountingRoutes from "./accounting";
 import pdfRoutes from "./pdf";
 import marketRoutes from "./market";
 import ediRoutes from "./edi";
+import fleetRoutes from "./fleet";
+import complianceRoutes from "./compliance";
+import auditRoutes from "./audit";
 
 const router = Router();
 
@@ -38,5 +41,8 @@ router.use("/accounting", accountingRoutes);
 router.use("/pdf", pdfRoutes);
 router.use("/market", marketRoutes);
 router.use("/edi", ediRoutes);
+router.use("/fleet", fleetRoutes);
+router.use("/compliance", complianceRoutes);
+router.use("/audit", auditRoutes);
 
 export default router;

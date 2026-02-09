@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
+import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
 
 export async function createCustomer(req: AuthRequest, res: Response) {
@@ -98,4 +99,101 @@ export async function updateCustomer(req: AuthRequest, res: Response) {
 export async function deleteCustomer(req: AuthRequest, res: Response) {
   await prisma.customer.delete({ where: { id: req.params.id } });
   res.status(204).send();
+}
+
+// ─── Customer Contacts ──────────────────────────────────
+
+const createContactSchema = z.object({
+  name: z.string().min(1),
+  title: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  isPrimary: z.boolean().optional(),
+});
+
+const updateContactSchema = createContactSchema.partial();
+
+const updateCreditSchema = z.object({
+  creditStatus: z.enum(["NOT_CHECKED", "APPROVED", "CONDITIONAL", "DENIED", "PENDING_REVIEW"]).optional(),
+  creditLimit: z.number().positive().optional(),
+  creditCheckDate: z.string().transform((s) => new Date(s)).optional(),
+});
+
+export async function getCustomerContacts(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const contacts = await prisma.customerContact.findMany({
+    where: { customerId: req.params.id },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(contacts);
+}
+
+export async function addCustomerContact(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const data = createContactSchema.parse(req.body);
+
+  // If this contact is primary, unset other primary contacts for this customer
+  if (data.isPrimary) {
+    await prisma.customerContact.updateMany({
+      where: { customerId: req.params.id, isPrimary: true },
+      data: { isPrimary: false },
+    });
+  }
+
+  const contact = await prisma.customerContact.create({
+    data: {
+      ...data,
+      customer: { connect: { id: req.params.id } },
+    } as any,
+  });
+  res.status(201).json(contact);
+}
+
+export async function updateCustomerContact(req: AuthRequest, res: Response) {
+  const contact = await prisma.customerContact.findFirst({
+    where: { id: req.params.cid, customerId: req.params.id },
+  });
+  if (!contact) { res.status(404).json({ error: "Contact not found" }); return; }
+
+  const data = updateContactSchema.parse(req.body);
+
+  // If setting as primary, unset other primary contacts
+  if (data.isPrimary) {
+    await prisma.customerContact.updateMany({
+      where: { customerId: req.params.id, isPrimary: true, id: { not: req.params.cid } },
+      data: { isPrimary: false },
+    });
+  }
+
+  const updated = await prisma.customerContact.update({
+    where: { id: req.params.cid },
+    data,
+  });
+  res.json(updated);
+}
+
+export async function deleteCustomerContact(req: AuthRequest, res: Response) {
+  const contact = await prisma.customerContact.findFirst({
+    where: { id: req.params.cid, customerId: req.params.id },
+  });
+  if (!contact) { res.status(404).json({ error: "Contact not found" }); return; }
+
+  await prisma.customerContact.delete({ where: { id: req.params.cid } });
+  res.status(204).send();
+}
+
+export async function updateCustomerCredit(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const data = updateCreditSchema.parse(req.body);
+  const updated = await prisma.customer.update({
+    where: { id: req.params.id },
+    data,
+  });
+  res.json(updated);
 }

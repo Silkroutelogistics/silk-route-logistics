@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createDriver, getDrivers, getDriverById, getDriverStats, updateDriver, updateDriverHOS, assignEquipment, deleteDriver } from "../controllers/driverController";
+import { createDriver, getDrivers, getDriverById, getDriverStats, updateDriver, updateDriverHOS, assignEquipment, assignTruck, assignTrailer, deleteDriver } from "../controllers/driverController";
 import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
@@ -13,6 +13,8 @@ router.get("/:id", getDriverById);
 router.patch("/:id", updateDriver);
 router.patch("/:id/hos", updateDriverHOS);
 router.patch("/:id/assign-equipment", assignEquipment);
+router.patch("/:id/assign-truck", assignTruck);
+router.patch("/:id/assign-trailer", assignTrailer);
 router.delete("/:id", authorize("ADMIN"), deleteDriver);
 
 export default router;

@@ -5,6 +5,9 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Clean existing data
+  await prisma.complianceAlert.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.customerContact.deleteMany();
   await prisma.eDITransaction.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.message.deleteMany();
@@ -20,6 +23,8 @@ async function main() {
   await prisma.customer.deleteMany();
   await prisma.driver.deleteMany();
   await prisma.equipment.deleteMany();
+  await prisma.truck.deleteMany();
+  await prisma.trailer.deleteMany();
   await prisma.sOP.deleteMany();
   await prisma.user.deleteMany();
 
@@ -68,6 +73,14 @@ async function main() {
       email: "operations@silkroutelogistics.ai", passwordHash: hash,
       firstName: "Carlos", lastName: "Rivera", company: "Silk Route Logistics",
       role: UserRole.OPERATIONS, isVerified: true,
+    },
+  });
+
+  const ceo = await prisma.user.create({
+    data: {
+      email: "ceo@silkroutelogistics.ai", passwordHash: hash,
+      firstName: "Wasih", lastName: "Haider", company: "Silk Route Logistics",
+      role: "CEO" as UserRole, isVerified: true, phone: "(269) 555-0100",
     },
   });
 
@@ -696,14 +709,115 @@ async function main() {
   await prisma.brokerIntegration.createMany({
     data: [
       { name: "McLeod Software", provider: "mcleod", status: "INACTIVE" },
-      { name: "DAT Freight & Analytics", provider: "dat", status: "INACTIVE" },
-      { name: "Turvo", provider: "turvo", status: "INACTIVE" },
+      { name: "DAT Freight & Analytics", provider: "dat", status: "INACTIVE", apiEndpoint: "https://api.dat.com/v3" },
+      { name: "Truckstop / ITS", provider: "truckstop", status: "INACTIVE", apiEndpoint: "https://api.truckstop.com/v2" },
+      { name: "Motive (KeepTruckin) ELD", provider: "motive", status: "INACTIVE", apiEndpoint: "https://api.gomotive.com/v1" },
+      { name: "Samsara ELD", provider: "samsara", status: "INACTIVE", apiEndpoint: "https://api.samsara.com/v1" },
+      { name: "Omnitracs ELD", provider: "omnitracs", status: "INACTIVE" },
     ],
   });
 
+  // ═══════════════════════════════════════════════
+  // TRUCKS
+  // ═══════════════════════════════════════════════
+
+  await prisma.truck.createMany({
+    data: [
+      {
+        unitNumber: "TRK-001", type: "SLEEPER", year: 2023, make: "Freightliner", model: "Cascadia",
+        vin: "1FUJGLDR5XLAB1234", licensePlate: "TRK1234", licensePlateState: "MI",
+        fuelType: "Diesel", ownershipType: "COMPANY", status: "ACTIVE", mileage: 48500,
+        registrationExpiry: new Date("2027-04-15"), insuranceExpiry: new Date("2026-12-01"),
+        nextServiceDate: new Date("2026-03-15"), nextServiceMileage: 55000,
+        lastInspectionDate: new Date("2025-11-20"), nextInspectionDate: new Date("2026-05-20"),
+      },
+      {
+        unitNumber: "TRK-002", type: "SLEEPER", year: 2022, make: "Kenworth", model: "T680",
+        vin: "1XKYDP9X2NJ123456", licensePlate: "TRK5678", licensePlateState: "MI",
+        fuelType: "Diesel", ownershipType: "COMPANY", status: "ACTIVE", mileage: 92300,
+        registrationExpiry: new Date("2026-08-10"), insuranceExpiry: new Date("2026-12-01"),
+        nextServiceDate: new Date("2026-02-28"), nextServiceMileage: 95000,
+        lastInspectionDate: new Date("2025-09-01"), nextInspectionDate: new Date("2026-03-01"),
+      },
+      {
+        unitNumber: "TRK-003", type: "DAY_CAB", year: 2021, make: "Peterbilt", model: "579",
+        vin: "1XPWD40X1ED234567", licensePlate: "TRK9012", licensePlateState: "MI",
+        fuelType: "Diesel", ownershipType: "COMPANY", status: "IN_SHOP", mileage: 145200,
+        registrationExpiry: new Date("2026-06-30"), insuranceExpiry: new Date("2026-12-01"),
+        lastInspectionDate: new Date("2025-08-15"), nextInspectionDate: new Date("2026-02-15"),
+      },
+      {
+        unitNumber: "TRK-004", type: "SLEEPER", year: 2024, make: "Volvo", model: "VNL 860",
+        vin: "4V4NC9EH3RN345678", licensePlate: "TRK3456", licensePlateState: "MI",
+        fuelType: "Diesel", ownershipType: "LEASED", status: "ACTIVE", mileage: 12800,
+        registrationExpiry: new Date("2027-12-31"), insuranceExpiry: new Date("2027-06-15"),
+        nextServiceDate: new Date("2026-06-01"), nextServiceMileage: 25000,
+        lastInspectionDate: new Date("2025-12-01"), nextInspectionDate: new Date("2026-06-01"),
+      },
+    ],
+  });
+
+  // ═══════════════════════════════════════════════
+  // TRAILERS
+  // ═══════════════════════════════════════════════
+
+  await prisma.trailer.createMany({
+    data: [
+      {
+        unitNumber: "TRL-001", type: "DRY_VAN", year: 2022, make: "Great Dane", model: "Everest SS",
+        length: 53, capacity: 45000, ownershipType: "COMPANY", status: "ACTIVE",
+        registrationExpiry: new Date("2027-03-15"),
+        lastInspectionDate: new Date("2025-10-01"), nextInspectionDate: new Date("2026-04-01"),
+      },
+      {
+        unitNumber: "TRL-002", type: "REEFER", year: 2023, make: "Utility", model: "4000D-X",
+        length: 53, capacity: 44000, ownershipType: "COMPANY", status: "ACTIVE",
+        registrationExpiry: new Date("2027-06-20"),
+        reeferUnit: true, reeferModel: "Carrier X4 7300",
+        lastInspectionDate: new Date("2025-11-15"), nextInspectionDate: new Date("2026-05-15"),
+      },
+      {
+        unitNumber: "TRL-003", type: "FLATBED", year: 2021, make: "Fontaine", model: "Infinity",
+        length: 48, capacity: 48000, ownershipType: "COMPANY", status: "ACTIVE",
+        registrationExpiry: new Date("2026-09-30"),
+        lastInspectionDate: new Date("2025-07-01"), nextInspectionDate: new Date("2026-01-01"),
+      },
+      {
+        unitNumber: "TRL-004", type: "DRY_VAN", year: 2020, make: "Wabash", model: "DuraPlate",
+        length: 53, capacity: 44000, ownershipType: "COMPANY", status: "IN_SHOP",
+        registrationExpiry: new Date("2026-04-15"),
+        lastInspectionDate: new Date("2025-06-15"), nextInspectionDate: new Date("2025-12-15"),
+      },
+      {
+        unitNumber: "TRL-005", type: "STEP_DECK", year: 2022, make: "Fontaine", model: "Revolution",
+        length: 53, capacity: 43000, ownershipType: "LEASED", status: "ACTIVE",
+        registrationExpiry: new Date("2027-01-31"),
+        lastInspectionDate: new Date("2025-09-20"), nextInspectionDate: new Date("2026-03-20"),
+      },
+    ],
+  });
+
+  // ═══════════════════════════════════════════════
+  // CUSTOMER CONTACTS
+  // ═══════════════════════════════════════════════
+
+  const customers = await prisma.customer.findMany();
+  for (const cust of customers) {
+    await prisma.customerContact.create({
+      data: {
+        customerId: cust.id,
+        name: cust.contactName || cust.name,
+        email: cust.email || undefined,
+        phone: cust.phone || undefined,
+        isPrimary: true,
+        title: "Logistics Manager",
+      },
+    });
+  }
+
   console.log(`
 Seed complete:
-  Users:       10 (5 internal + 5 carriers) — all @silkroutelogistics.ai
+  Users:       11 (6 internal + 5 carriers) — all @silkroutelogistics.ai
   Carriers:    5 profiles (Platinum, 2× Gold, Silver, Bronze)
   Loads:       30 (across 6 regions: Great Lakes, Southeast, Northeast, South Central, West, Upper Midwest)
   Tenders:     10 (4 OFFERED, 3 ACCEPTED, 1 COUNTERED, 1 DECLINED, 1 EXPIRED)
@@ -716,9 +830,14 @@ Seed complete:
   Messages:    22 (across 8 conversation threads — broker, admin, dispatch, accounting, carriers)
   Notifications: 12
 
+  Trucks:      4 (3 sleeper + 1 day cab)
+  Trailers:    5 (2 dry van + 1 reefer + 1 flatbed + 1 step deck)
+  Integrations: 6 (DAT, Truckstop, Motive, Samsara, Omnitracs, McLeod)
+
   Demo Logins (password: password123):
+    ceo@silkroutelogistics.ai         → CEO (full executive dashboard)
     admin@silkroutelogistics.ai       → Admin (full access)
-    whaider@silkroutelogistics.ai     → Broker (employee features)
+    whaider@silkroutelogistics.ai     → Broker / AE (employee features)
     dispatch@silkroutelogistics.ai    → Dispatch
     operations@silkroutelogistics.ai  → Operations
     accounting@silkroutelogistics.ai  → Accounting
