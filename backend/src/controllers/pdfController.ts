@@ -31,6 +31,11 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
 
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
+  const isPoster = load.posterId === req.user!.id;
+  const isAssignedCarrier = load.carrierId === req.user!.id;
+  const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
+  if (!isPoster && !isAssignedCarrier && !isEmployee) { res.status(403).json({ error: "Not authorized" }); return; }
+
   const doc = generateRateConfirmation(load);
   const filename = `RC-${load.referenceNumber}.pdf`;
 
@@ -49,6 +54,10 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
   });
 
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+
+  const isOwner = req.user!.id === invoice.userId;
+  const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
+  if (!isOwner && !isEmployee) { res.status(403).json({ error: "Not authorized" }); return; }
 
   const doc = generateInvoicePDF(invoice);
   const filename = `${invoice.invoiceNumber}.pdf`;

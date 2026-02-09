@@ -86,6 +86,19 @@ export async function getLoadById(req: AuthRequest, res: Response) {
 
 export async function updateLoadStatus(req: AuthRequest, res: Response) {
   const { status } = updateLoadStatusSchema.parse(req.body);
+
+  // Authorization: check user can update this load
+  const existing = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!existing) { res.status(404).json({ error: "Load not found" }); return; }
+
+  const isPoster = existing.posterId === req.user!.id;
+  const isAssignedCarrier = existing.carrierId === req.user!.id;
+  const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
+  if (!isPoster && !isAssignedCarrier && !isEmployee) {
+    res.status(403).json({ error: "Not authorized to update this load" });
+    return;
+  }
+
   const load = await prisma.load.update({
     where: { id: req.params.id },
     data: { status, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },

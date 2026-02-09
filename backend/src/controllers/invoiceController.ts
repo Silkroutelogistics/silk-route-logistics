@@ -42,6 +42,15 @@ export async function getInvoiceById(req: AuthRequest, res: Response) {
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
+
+  // Ownership check: user must own the invoice or be ADMIN/BROKER/OPERATIONS
+  const isOwner = invoice.userId === req.user!.id;
+  const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
+  if (!isOwner && !isEmployee) {
+    res.status(403).json({ error: "Not authorized" });
+    return;
+  }
+
   res.json(invoice);
 }
 
