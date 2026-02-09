@@ -90,6 +90,35 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     where: { id: req.params.id },
     data: { status, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },
   });
+
+  // Auto-notify when load is delivered → prompt invoice creation
+  if (status === "DELIVERED") {
+    const notifications = [];
+    if (load.carrierId) {
+      notifications.push(prisma.notification.create({
+        data: {
+          userId: load.carrierId,
+          type: "INVOICE",
+          title: "Load Delivered — Create Invoice",
+          message: `Load ${load.referenceNumber} has been delivered. Submit an invoice to get paid.`,
+          actionUrl: "/dashboard/invoices",
+        },
+      }));
+    }
+    if (load.posterId) {
+      notifications.push(prisma.notification.create({
+        data: {
+          userId: load.posterId,
+          type: "LOAD_UPDATE",
+          title: "Load Delivered",
+          message: `Load ${load.referenceNumber} has been delivered successfully.`,
+          actionUrl: "/dashboard/loads",
+        },
+      }));
+    }
+    await Promise.all(notifications);
+  }
+
   res.json(load);
 }
 

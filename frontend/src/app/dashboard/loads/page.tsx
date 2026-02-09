@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
-import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X } from "lucide-react";
+import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users } from "lucide-react";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 
 interface Load {
@@ -61,6 +61,14 @@ export default function LoadsPage() {
     queryKey: ["load", selectedLoadId],
     queryFn: () => api.get<Load>(`/loads/${selectedLoadId}`).then((r) => r.data),
     enabled: !!selectedLoadId,
+  });
+
+  const { data: suggestedCarriers } = useQuery({
+    queryKey: ["suggested-carriers", loadDetail?.equipmentType],
+    queryFn: () => api.get<{ carriers: { carrierId: string; company: string; tier: string; equipmentTypes: string[]; safetyScore: number | null }[]; total: number }>(
+      `/market/capacity?equipmentType=${encodeURIComponent(loadDetail?.equipmentType || "")}`
+    ).then((r) => r.data),
+    enabled: !!loadDetail && loadDetail.status === "POSTED" && canCreate,
   });
 
   const downloadPdf = async (loadId: string, refNum: string) => {
@@ -211,6 +219,29 @@ export default function LoadsPage() {
                       className="flex items-center gap-2 text-sm text-slate-300 hover:text-gold">
                       <FileText className="w-4 h-4" /> {doc.fileName}
                     </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {load.status === "POSTED" && canCreate && suggestedCarriers && suggestedCarriers.carriers.length > 0 && (
+              <div className="bg-white/5 rounded-xl border border-gold/20 p-6">
+                <h2 className="text-sm font-medium text-gold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Suggested Carriers</h2>
+                <p className="text-xs text-slate-500 mb-3">{suggestedCarriers.total} carriers match this equipment type</p>
+                <div className="space-y-2">
+                  {suggestedCarriers.carriers.slice(0, 5).map((c) => (
+                    <div key={c.carrierId} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-sm text-white">{c.company}</p>
+                        <p className="text-xs text-slate-500">{c.equipmentTypes.join(", ")}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        c.tier === "PLATINUM" ? "bg-purple-500/20 text-purple-400" :
+                        c.tier === "GOLD" ? "bg-yellow-500/20 text-yellow-400" :
+                        c.tier === "SILVER" ? "bg-slate-400/20 text-slate-300" :
+                        "bg-orange-500/20 text-orange-400"
+                      }`}>{c.tier}</span>
+                    </div>
                   ))}
                 </div>
               </div>

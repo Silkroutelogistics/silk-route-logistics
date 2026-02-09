@@ -67,7 +67,7 @@ export async function counterTender(req: AuthRequest, res: Response) {
 }
 
 export async function declineTender(req: AuthRequest, res: Response) {
-  const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
+  const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true, load: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
 
@@ -75,6 +75,23 @@ export async function declineTender(req: AuthRequest, res: Response) {
     where: { id: tender.id },
     data: { status: "DECLINED", respondedAt: new Date() },
   });
+
+  // Check if all tenders for this load are now declined
+  const remainingActive = await prisma.loadTender.count({
+    where: { loadId: tender.loadId, status: { in: ["OFFERED", "COUNTERED"] } },
+  });
+
+  if (remainingActive === 0 && tender.load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: tender.load.posterId,
+        type: "LOAD_UPDATE",
+        title: "All Tenders Declined",
+        message: `All carriers have declined load ${tender.load.referenceNumber}. Consider reposting or adjusting the rate.`,
+        actionUrl: "/dashboard/loads",
+      },
+    });
+  }
 
   res.json(updated);
 }

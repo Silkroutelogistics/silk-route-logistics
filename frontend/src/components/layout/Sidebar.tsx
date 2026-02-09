@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen,
-  MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity,
+  MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isAdmin, isCarrier } from "@/lib/roles";
+import { api } from "@/lib/api";
 
 const employeeNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
@@ -69,6 +71,14 @@ export function Sidebar() {
   const carrier = isCarrier(user?.role);
   const navItems = getNav(user?.role);
 
+  const { data: unreadData } = useQuery({
+    queryKey: ["unread-count"],
+    queryFn: () => api.get<{ count: number }>("/notifications/unread-count").then((r) => r.data),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+  const unreadCount = unreadData?.count || 0;
+
   return (
     <aside className="w-64 bg-navy flex flex-col min-h-screen">
       <div className="px-5 py-5 border-b border-white/10">
@@ -83,10 +93,20 @@ export function Sidebar() {
 
       {user && (
         <div className="px-5 py-3 border-b border-white/10">
-          <p className="text-sm text-white font-medium truncate">
-            {user.firstName} {user.lastName}
-          </p>
-          <p className="text-xs text-slate-500 capitalize">{user.role?.toLowerCase()}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-white font-medium truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-xs text-slate-500 capitalize">{user.role?.toLowerCase()}</p>
+            </div>
+            {unreadCount > 0 && (
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-gold/20 rounded-full">
+                <Bell className="w-3 h-3 text-gold" />
+                <span className="text-[10px] font-bold text-gold">{unreadCount > 99 ? "99+" : unreadCount}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

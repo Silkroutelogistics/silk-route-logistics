@@ -26,3 +26,10 @@ export async function markAllRead(req: AuthRequest, res: Response) {
   });
   res.json({ success: true });
 }
+
+export async function getUnreadCount(req: AuthRequest, res: Response) {
+  const count = await prisma.notification.count({
+    where: { userId: req.user!.id, readAt: null },
+  });
+  res.json({ count });
+}

@@ -63,6 +63,14 @@ async function main() {
     },
   });
 
+  const operations = await prisma.user.create({
+    data: {
+      email: "operations@silkroutelogistics.ai", passwordHash: hash,
+      firstName: "Carlos", lastName: "Rivera", company: "Silk Route Logistics",
+      role: UserRole.OPERATIONS, isVerified: true,
+    },
+  });
+
   // Carrier 1: Platinum owner-operator, 1 truck, dry van (primary carrier demo account)
   const carrier1 = await prisma.user.create({
     data: {
@@ -695,7 +703,7 @@ async function main() {
 
   console.log(`
 Seed complete:
-  Users:       9 (4 internal + 5 carriers) — all @silkroutelogistics.ai
+  Users:       10 (5 internal + 5 carriers) — all @silkroutelogistics.ai
   Carriers:    5 profiles (Platinum, 2× Gold, Silver, Bronze)
   Loads:       30 (across 6 regions: Great Lakes, Southeast, Northeast, South Central, West, Upper Midwest)
   Tenders:     10 (4 OFFERED, 3 ACCEPTED, 1 COUNTERED, 1 DECLINED, 1 EXPIRED)
@@ -712,6 +720,7 @@ Seed complete:
     admin@silkroutelogistics.ai       → Admin (full access)
     whaider@silkroutelogistics.ai     → Broker (employee features)
     dispatch@silkroutelogistics.ai    → Dispatch
+    operations@silkroutelogistics.ai  → Operations
     accounting@silkroutelogistics.ai  → Accounting
     srl@silkroutelogistics.ai         → Carrier: Henderson Trucking (Platinum)
     gold@silkroutelogistics.ai        → Carrier: Kowalski Cold Freight (Gold)
