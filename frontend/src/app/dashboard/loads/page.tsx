@@ -3,105 +3,320 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import type { Load } from "@shared/types";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { isCarrier } from "@/lib/roles";
+import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X } from "lucide-react";
+import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 
-const statusColors: Record<string, string> = {
-  POSTED: "bg-blue-50 text-blue-700",
-  BOOKED: "bg-purple-50 text-purple-700",
-  IN_TRANSIT: "bg-amber-50 text-amber-700",
-  DELIVERED: "bg-green-50 text-green-700",
-  COMPLETED: "bg-slate-100 text-slate-600",
-  CANCELLED: "bg-red-50 text-red-700",
+interface Load {
+  id: string; referenceNumber: string; status: string;
+  originCity: string; originState: string; originZip?: string; destCity: string; destState: string; destZip?: string;
+  weight: number | null; equipmentType: string; commodity: string | null;
+  rate: number; distance: number | null; pickupDate: string; deliveryDate?: string; createdAt: string;
+  pieces?: number; freightClass?: string; hazmat?: boolean; tempMin?: number; tempMax?: number;
+  customsRequired?: boolean; bondType?: string; accessorials?: string[]; specialInstructions?: string;
+  contactName?: string; contactPhone?: string;
+  poster?: { company: string | null; firstName: string; lastName: string; phone?: string };
+  carrier?: { company: string | null; firstName: string; lastName: string; phone?: string } | null;
+  tenders?: { id: string; status: string; offeredRate: number; counterRate: number | null; createdAt: string; carrier: { user: { company: string | null; firstName: string; lastName: string } } }[];
+  documents?: { id: string; fileName: string; fileUrl: string }[];
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  DRAFT: "bg-slate-500/20 text-slate-400", POSTED: "bg-blue-500/20 text-blue-400",
+  BOOKED: "bg-purple-500/20 text-purple-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
+  PICKED_UP: "bg-yellow-500/20 text-yellow-400", IN_TRANSIT: "bg-cyan-500/20 text-cyan-400",
+  DELIVERED: "bg-green-500/20 text-green-400", COMPLETED: "bg-emerald-500/20 text-emerald-400",
+  CANCELLED: "bg-red-500/20 text-red-400",
+};
+
+const TENDER_COLORS: Record<string, string> = {
+  OFFERED: "bg-blue-500/20 text-blue-400", ACCEPTED: "bg-green-500/20 text-green-400",
+  COUNTERED: "bg-yellow-500/20 text-yellow-400", DECLINED: "bg-red-500/20 text-red-400",
+  EXPIRED: "bg-slate-500/20 text-slate-400",
 };
 
 export default function LoadsPage() {
-  const [filters, setFilters] = useState({ originState: "", destState: "", equipmentType: "", status: "" });
+  const { user } = useAuthStore();
+  const canCreate = !isCarrier(user?.role);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
+  const [filters, setFilters] = useState({ originState: "", destState: "", equipmentType: "", status: "", search: "" });
+  const [page, setPage] = useState(1);
 
   const query = new URLSearchParams();
+  if (filters.status) query.set("status", filters.status);
   if (filters.originState) query.set("originState", filters.originState);
   if (filters.destState) query.set("destState", filters.destState);
   if (filters.equipmentType) query.set("equipmentType", filters.equipmentType);
-  if (filters.status) query.set("status", filters.status);
+  if (filters.search) query.set("search", filters.search);
+  query.set("page", String(page));
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["loads", filters],
-    queryFn: () => api.get<{ loads: Load[]; total: number }>(`/loads?${query.toString()}`).then((r) => r.data),
+  const { data } = useQuery({
+    queryKey: ["loads", filters, page],
+    queryFn: () => api.get<{ loads: Load[]; total: number; totalPages: number }>(`/loads?${query.toString()}`).then((r) => r.data),
   });
 
+  const { data: loadDetail } = useQuery({
+    queryKey: ["load", selectedLoadId],
+    queryFn: () => api.get<Load>(`/loads/${selectedLoadId}`).then((r) => r.data),
+    enabled: !!selectedLoadId,
+  });
+
+  const downloadPdf = async (loadId: string, refNum: string) => {
+    const res = await api.get(`/pdf/rate-confirmation/${loadId}`, { responseType: "blob" });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a = document.createElement("a"); a.href = url; a.download = `RateConf-${refNum}.pdf`; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Detail overlay view
+  if (selectedLoadId && loadDetail) {
+    const load = loadDetail;
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <button onClick={() => setSelectedLoadId(null)} className="text-slate-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></button>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-white">{load.referenceNumber}</h1>
+              <span className={`px-3 py-1 rounded text-sm font-medium ${STATUS_COLORS[load.status] || ""}`}>{load.status.replace(/_/g, " ")}</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {["BOOKED", "DISPATCHED", "IN_TRANSIT", "DELIVERED", "COMPLETED"].includes(load.status) && (
+              <button onClick={() => downloadPdf(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20">
+                <Download className="w-4 h-4" /> Rate Confirmation
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Route */}
+            <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h2 className="text-sm font-medium text-slate-400 mb-4">Route Information</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <div className="flex items-center gap-2 text-gold mb-1"><MapPin className="w-4 h-4" /> Origin</div>
+                  <p className="text-white font-medium">{load.originCity}, {load.originState} {load.originZip || ""}</p>
+                  <p className="text-sm text-slate-400 mt-1 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Pickup: {new Date(load.pickupDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 text-gold mb-1"><MapPin className="w-4 h-4" /> Destination</div>
+                  <p className="text-white font-medium">{load.destCity}, {load.destState} {load.destZip || ""}</p>
+                  {load.deliveryDate && <p className="text-sm text-slate-400 mt-1 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Delivery: {new Date(load.deliveryDate).toLocaleDateString()}</p>}
+                </div>
+              </div>
+              {load.distance && <p className="text-sm text-slate-400 mt-4">Distance: {load.distance} miles</p>}
+            </div>
+
+            {/* Freight Details */}
+            <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h2 className="text-sm font-medium text-slate-400 mb-4">Freight Details</h2>
+              <div className="grid md:grid-cols-3 gap-4">
+                <Detail icon={<Truck className="w-4 h-4" />} label="Equipment" value={load.equipmentType} />
+                <Detail icon={<Package className="w-4 h-4" />} label="Commodity" value={load.commodity || "—"} />
+                <Detail label="Weight" value={load.weight ? `${load.weight.toLocaleString()} lbs` : "—"} />
+                {load.pieces && <Detail label="Pieces" value={String(load.pieces)} />}
+                {load.freightClass && <Detail label="Freight Class" value={load.freightClass} />}
+                {load.hazmat && <Detail icon={<Shield className="w-4 h-4 text-red-400" />} label="Hazmat" value="Yes" />}
+                {load.tempMin != null && <Detail icon={<Thermometer className="w-4 h-4" />} label="Temperature" value={`${load.tempMin}°F - ${load.tempMax}°F`} />}
+                {load.customsRequired && <Detail label="Customs" value={`Required — ${load.bondType || "TBD"}`} />}
+              </div>
+              {load.accessorials && load.accessorials.length > 0 && (
+                <div className="mt-4">
+                  <span className="text-xs text-slate-400">Accessorials: </span>
+                  {load.accessorials.map((a) => <span key={a} className="inline-block px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300 mr-1 mb-1">{a}</span>)}
+                </div>
+              )}
+              {load.specialInstructions && (
+                <div className="mt-4 p-3 bg-white/5 rounded-lg">
+                  <span className="text-xs text-slate-400">Special Instructions</span>
+                  <p className="text-sm text-white mt-1">{load.specialInstructions}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Tender History */}
+            {load.tenders && load.tenders.length > 0 && (
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                <h2 className="text-sm font-medium text-slate-400 mb-4">Tender History</h2>
+                <div className="space-y-3">
+                  {load.tenders.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="text-white text-sm">{t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}</p>
+                        <p className="text-xs text-slate-400">{new Date(t.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right flex items-center gap-3">
+                        <div>
+                          <p className="text-sm text-white">${t.offeredRate.toLocaleString()}</p>
+                          {t.counterRate && <p className="text-xs text-yellow-400">Counter: ${t.counterRate.toLocaleString()}</p>}
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${TENDER_COLORS[t.status] || ""}`}>{t.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+              <h2 className="text-sm font-medium text-slate-400 mb-3">Pricing</h2>
+              <div className="flex items-center gap-2 text-gold mb-1">
+                <DollarSign className="w-5 h-5" />
+                <span className="text-3xl font-bold">{load.rate.toLocaleString()}</span>
+              </div>
+              {load.distance && <p className="text-sm text-slate-400">${(load.rate / load.distance).toFixed(2)}/mile</p>}
+            </div>
+
+            {(load.contactName || load.poster) && (
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                <h2 className="text-sm font-medium text-slate-400 mb-3">Contact</h2>
+                {load.contactName && (
+                  <div className="mb-2">
+                    <p className="text-white text-sm">{load.contactName}</p>
+                    {load.contactPhone && <p className="text-sm text-slate-400 flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {load.contactPhone}</p>}
+                  </div>
+                )}
+                {load.poster && (
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-xs text-slate-500">Posted by</p>
+                    <p className="text-sm text-white">{load.poster.company || `${load.poster.firstName} ${load.poster.lastName}`}</p>
+                    {load.poster.phone && <p className="text-xs text-slate-400">{load.poster.phone}</p>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {load.carrier && (
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                <h2 className="text-sm font-medium text-slate-400 mb-3">Assigned Carrier</h2>
+                <p className="text-white">{load.carrier.company || `${load.carrier.firstName} ${load.carrier.lastName}`}</p>
+                {load.carrier.phone && <p className="text-sm text-slate-400">{load.carrier.phone}</p>}
+              </div>
+            )}
+
+            {load.documents && load.documents.length > 0 && (
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                <h2 className="text-sm font-medium text-slate-400 mb-3">Documents</h2>
+                <div className="space-y-2">
+                  {load.documents.map((doc) => (
+                    <a key={doc.id} href={doc.fileUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 text-sm text-slate-300 hover:text-gold">
+                      <FileText className="w-4 h-4" /> {doc.fileName}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // List view
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Load Board</h1>
-        <span className="text-sm text-slate-500">{data?.total || 0} loads</span>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Load Board</h1>
+          <p className="text-slate-400 text-sm mt-1">{data?.total || 0} loads available</p>
+        </div>
+        {canCreate && (
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
+            <Plus className="w-4 h-4" /> Create Load
+          </button>
+        )}
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border p-4">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <input placeholder="Origin State (e.g. GA)" value={filters.originState}
-            onChange={(e) => setFilters((p) => ({ ...p, originState: e.target.value.toUpperCase().slice(0, 2) }))}
-            className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-          <input placeholder="Dest State (e.g. FL)" value={filters.destState}
-            onChange={(e) => setFilters((p) => ({ ...p, destState: e.target.value.toUpperCase().slice(0, 2) }))}
-            className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-          <select value={filters.equipmentType}
-            onChange={(e) => setFilters((p) => ({ ...p, equipmentType: e.target.value }))}
-            className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none">
-            <option value="">All Equipment</option>
-            <option value="Dry Van">Dry Van</option><option value="Reefer">Reefer</option>
-            <option value="Flatbed">Flatbed</option><option value="Step Deck">Step Deck</option>
-          </select>
-          <select value={filters.status}
-            onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}
-            className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none">
-            <option value="">All Statuses</option>
-            <option value="POSTED">Posted</option><option value="BOOKED">Booked</option>
-            <option value="IN_TRANSIT">In Transit</option><option value="DELIVERED">Delivered</option>
-          </select>
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <input placeholder="Search loads..." value={filters.search} onChange={(e) => { setFilters((f) => ({ ...f, search: e.target.value })); setPage(1); }}
+            className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
+        <select value={filters.status} onChange={(e) => { setFilters((f) => ({ ...f, status: e.target.value })); setPage(1); }}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+          <option value="" className="bg-[#0f172a]">All Statuses</option>
+          {["DRAFT", "POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED"].map((s) =>
+            <option key={s} value={s} className="bg-[#0f172a]">{s.replace(/_/g, " ")}</option>
+          )}
+        </select>
+        <select value={filters.equipmentType} onChange={(e) => { setFilters((f) => ({ ...f, equipmentType: e.target.value })); setPage(1); }}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+          <option value="" className="bg-[#0f172a]">All Equipment</option>
+          {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
+        </select>
       </div>
 
-      {/* Loads */}
-      {isLoading ? (
-        <p className="text-slate-400 text-center py-12">Loading loads...</p>
-      ) : (
-        <div className="space-y-3">
-          {data?.loads.map((load) => (
-            <div key={load.id} className="bg-white rounded-xl border p-5 hover:shadow-sm transition">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm text-slate-400">{load.referenceNumber}</span>
-                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", statusColors[load.status] || "")}>{load.status}</span>
-                  </div>
-                  <p className="font-semibold">
-                    {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
-                  </p>
-                  <div className="flex flex-wrap gap-4 mt-2 text-sm text-slate-500">
-                    <span>{load.equipmentType}</span>
-                    {load.weight && <span>{load.weight.toLocaleString()} lbs</span>}
-                    {load.distance && <span>{load.distance} mi</span>}
-                    <span>Pickup: {new Date(load.pickupDate).toLocaleDateString()}</span>
-                  </div>
-                  {load.poster && (
-                    <p className="text-xs text-slate-400 mt-1">Posted by {load.poster.company || `${load.poster.firstName} ${load.poster.lastName}`}</p>
-                  )}
+      {/* Load Cards */}
+      <div className="space-y-3">
+        {data?.loads?.map((load) => (
+          <button key={load.id} onClick={() => setSelectedLoadId(load.id)}
+            className="block w-full text-left bg-white/5 rounded-xl border border-white/10 p-5 hover:border-gold/30 transition">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-mono text-sm text-slate-300">{load.referenceNumber}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[load.status] || "bg-white/10 text-white"}`}>
+                    {load.status.replace(/_/g, " ")}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-navy">${load.rate.toLocaleString()}</p>
-                  {load.distance && <p className="text-xs text-slate-400">${(load.rate / load.distance).toFixed(2)}/mi</p>}
+                <div className="flex items-center gap-2 text-white">
+                  <MapPin className="w-4 h-4 text-gold shrink-0" />
+                  <span className="font-medium">{load.originCity}, {load.originState}</span>
+                  <span className="text-slate-500">&rarr;</span>
+                  <span className="font-medium">{load.destCity}, {load.destState}</span>
+                </div>
+                <div className="flex flex-wrap gap-4 mt-2 text-sm text-slate-400">
+                  <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> {load.equipmentType}</span>
+                  {load.weight && <span>{load.weight.toLocaleString()} lbs</span>}
+                  {load.distance && <span>{load.distance} mi</span>}
+                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(load.pickupDate).toLocaleDateString()}</span>
+                  {load.poster && <span>Posted by {load.poster.company || `${load.poster.firstName} ${load.poster.lastName}`}</span>}
                 </div>
               </div>
+              <div className="text-right">
+                <div className="flex items-center gap-1 text-gold">
+                  <DollarSign className="w-4 h-4" />
+                  <span className="text-xl font-bold">{load.rate.toLocaleString()}</span>
+                </div>
+                {load.distance && <p className="text-xs text-slate-500 mt-1">${(load.rate / load.distance).toFixed(2)}/mi</p>}
+              </div>
             </div>
-          ))}
-          {data?.loads.length === 0 && (
-            <div className="bg-white rounded-xl border p-12 text-center text-slate-400">
-              No loads match your filters
-            </div>
-          )}
+          </button>
+        ))}
+        {(!data?.loads || data.loads.length === 0) && (
+          <div className="text-center py-12 text-slate-500">No loads found matching your criteria</div>
+        )}
+      </div>
+
+      {data && data.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm bg-white/5 rounded-lg text-slate-400 disabled:opacity-30">Prev</button>
+          <span className="text-sm text-slate-400">Page {page} of {data.totalPages}</span>
+          <button onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page === data.totalPages} className="px-3 py-1.5 text-sm bg-white/5 rounded-lg text-slate-400 disabled:opacity-30">Next</button>
         </div>
       )}
+
+      <CreateLoadModal open={showCreate} onClose={() => setShowCreate(false)} />
+    </div>
+  );
+}
+
+function Detail({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">{icon}{label}</div>
+      <p className="text-sm text-white">{value}</p>
     </div>
   );
 }

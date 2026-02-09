@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Clean existing data
+  await prisma.eDITransaction.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.message.deleteMany();
   await prisma.loadTender.deleteMany();
@@ -361,6 +362,42 @@ async function main() {
   ]);
 
   // ═══════════════════════════════════════════════
+  // ADDITIONAL LOADS (Multi-Region for Market Trends)
+  // ═══════════════════════════════════════════════
+
+  const regionalLoads = await Promise.all([
+    // SOUTHEAST
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-011", status: LoadStatus.COMPLETED, originCity: "Atlanta", originState: "GA", originZip: "30301", destCity: "Nashville", destState: "TN", destZip: "37201", weight: 36000, equipmentType: "Dry Van", commodity: "Consumer Goods", rate: 1400, distance: 250, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-10"), deliveryDate: new Date("2026-01-10") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-012", status: LoadStatus.COMPLETED, originCity: "Charlotte", originState: "NC", originZip: "28201", destCity: "Atlanta", destState: "GA", destZip: "30301", weight: 40000, equipmentType: "Reefer", commodity: "Beverages", rate: 1600, distance: 245, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-12"), deliveryDate: new Date("2026-01-12") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-013", status: LoadStatus.COMPLETED, originCity: "Jacksonville", originState: "FL", originZip: "32099", destCity: "Savannah", destState: "GA", destZip: "31401", weight: 32000, equipmentType: "Flatbed", commodity: "Lumber", rate: 950, distance: 140, posterId: broker.id, carrierId: carrier5.id, pickupDate: new Date("2026-01-18"), deliveryDate: new Date("2026-01-18") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-014", status: LoadStatus.DELIVERED, originCity: "Nashville", originState: "TN", originZip: "37201", destCity: "Birmingham", destState: "AL", destZip: "35201", weight: 38000, equipmentType: "Dry Van", commodity: "Auto Parts", rate: 1100, distance: 190, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-25"), deliveryDate: new Date("2026-01-25") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-015", status: LoadStatus.POSTED, originCity: "Miami", originState: "FL", originZip: "33101", destCity: "Tampa", destState: "FL", destZip: "33601", weight: 35000, equipmentType: "Reefer", commodity: "Seafood", rate: 1200, distance: 280, posterId: broker.id, pickupDate: new Date("2026-02-14"), deliveryDate: new Date("2026-02-14") } }),
+
+    // NORTHEAST
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-016", status: LoadStatus.COMPLETED, originCity: "Newark", originState: "NJ", originZip: "07102", destCity: "Boston", destState: "MA", destZip: "02101", weight: 28000, equipmentType: "Dry Van", commodity: "Retail Merchandise", rate: 1800, distance: 215, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-08"), deliveryDate: new Date("2026-01-08") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-017", status: LoadStatus.COMPLETED, originCity: "Philadelphia", originState: "PA", originZip: "19101", destCity: "New York", destState: "NY", destZip: "10001", weight: 30000, equipmentType: "Dry Van", commodity: "Paper Products", rate: 850, distance: 95, posterId: broker.id, carrierId: carrier4.id, pickupDate: new Date("2026-01-14"), deliveryDate: new Date("2026-01-14") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-018", status: LoadStatus.DELIVERED, originCity: "Hartford", originState: "CT", originZip: "06101", destCity: "Newark", destState: "NJ", destZip: "07102", weight: 25000, equipmentType: "Reefer", commodity: "Pharmaceuticals", rate: 1300, distance: 120, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-22"), deliveryDate: new Date("2026-01-22") } }),
+
+    // SOUTH CENTRAL
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-019", status: LoadStatus.COMPLETED, originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Dallas", destState: "TX", destZip: "75201", weight: 42000, equipmentType: "Flatbed", commodity: "Oil Equipment", rate: 1500, distance: 240, posterId: broker.id, carrierId: carrier5.id, pickupDate: new Date("2026-01-05"), deliveryDate: new Date("2026-01-05") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-020", status: LoadStatus.COMPLETED, originCity: "Dallas", originState: "TX", originZip: "75201", destCity: "Oklahoma City", destState: "OK", destZip: "73101", weight: 35000, equipmentType: "Dry Van", commodity: "Electronics", rate: 1200, distance: 205, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-11"), deliveryDate: new Date("2026-01-11") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-021", status: LoadStatus.COMPLETED, originCity: "San Antonio", originState: "TX", originZip: "78201", destCity: "Houston", destState: "TX", destZip: "77001", weight: 40000, equipmentType: "Reefer", commodity: "Fresh Produce", rate: 1100, distance: 200, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-20"), deliveryDate: new Date("2026-01-20") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-022", status: LoadStatus.POSTED, originCity: "Little Rock", originState: "AR", originZip: "72201", destCity: "New Orleans", destState: "LA", destZip: "70112", weight: 34000, equipmentType: "Dry Van", commodity: "Building Materials", rate: 1350, distance: 380, posterId: broker.id, pickupDate: new Date("2026-02-15"), deliveryDate: new Date("2026-02-16") } }),
+
+    // WEST
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-023", status: LoadStatus.COMPLETED, originCity: "Los Angeles", originState: "CA", originZip: "90001", destCity: "Phoenix", destState: "AZ", destZip: "85001", weight: 38000, equipmentType: "Dry Van", commodity: "CPG - Household", rate: 2200, distance: 370, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-06"), deliveryDate: new Date("2026-01-06") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-024", status: LoadStatus.COMPLETED, originCity: "Seattle", originState: "WA", originZip: "98101", destCity: "Portland", destState: "OR", destZip: "97201", weight: 30000, equipmentType: "Reefer", commodity: "Fresh Fish", rate: 1100, distance: 175, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-13"), deliveryDate: new Date("2026-01-13") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-025", status: LoadStatus.COMPLETED, originCity: "Denver", originState: "CO", originZip: "80201", destCity: "Las Vegas", destState: "NV", destZip: "89101", weight: 35000, equipmentType: "Flatbed", commodity: "Construction Steel", rate: 2800, distance: 750, posterId: broker.id, carrierId: carrier5.id, pickupDate: new Date("2026-01-19"), deliveryDate: new Date("2026-01-20") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-026", status: LoadStatus.DELIVERED, originCity: "San Francisco", originState: "CA", originZip: "94102", destCity: "Los Angeles", destState: "CA", destZip: "90001", weight: 28000, equipmentType: "Dry Van", commodity: "Tech Equipment", rate: 1600, distance: 380, posterId: broker.id, carrierId: carrier4.id, pickupDate: new Date("2026-01-28"), deliveryDate: new Date("2026-01-28") } }),
+
+    // UPPER MIDWEST
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-027", status: LoadStatus.COMPLETED, originCity: "Des Moines", originState: "IA", originZip: "50301", destCity: "Omaha", destState: "NE", destZip: "68101", weight: 40000, equipmentType: "Reefer", commodity: "Meat Products", rate: 950, distance: 140, posterId: broker.id, carrierId: carrier2.id, pickupDate: new Date("2026-01-09"), deliveryDate: new Date("2026-01-09") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-028", status: LoadStatus.COMPLETED, originCity: "Kansas City", originState: "MO", originZip: "64101", destCity: "St. Louis", destState: "MO", destZip: "63101", weight: 36000, equipmentType: "Dry Van", commodity: "Packaged Foods", rate: 800, distance: 250, posterId: broker.id, carrierId: carrier4.id, pickupDate: new Date("2026-01-16"), deliveryDate: new Date("2026-01-16") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-029", status: LoadStatus.COMPLETED, originCity: "Minneapolis", originState: "MN", originZip: "55401", destCity: "Fargo", destState: "ND", destZip: "58102", weight: 32000, equipmentType: "Dry Van", commodity: "Agricultural Parts", rate: 1300, distance: 235, posterId: broker.id, carrierId: carrier1.id, pickupDate: new Date("2026-01-24"), deliveryDate: new Date("2026-01-24") } }),
+    prisma.load.create({ data: { referenceNumber: "SRL-2026-030", status: LoadStatus.POSTED, originCity: "Sioux Falls", originState: "SD", originZip: "57101", destCity: "Des Moines", destState: "IA", destZip: "50301", weight: 38000, equipmentType: "Reefer", commodity: "Dairy", rate: 1050, distance: 260, posterId: broker.id, pickupDate: new Date("2026-02-13"), deliveryDate: new Date("2026-02-13") } }),
+  ]);
+
+  // ═══════════════════════════════════════════════
   // LOAD TENDERS
   // ═══════════════════════════════════════════════
 
@@ -581,13 +618,42 @@ async function main() {
 
   await prisma.message.createMany({
     data: [
-      { senderId: broker.id, receiverId: carrier2.id, loadId: loads[1].id, content: "Sarah, the Grand Rapids reefer load is confirmed for tomorrow. Pickup at Midwest Fresh Foods, dock 4, 7 AM.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000) },
-      { senderId: carrier2.id, receiverId: broker.id, loadId: loads[1].id, content: "Got it Jane. What temp does the receiver need?", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
-      { senderId: broker.id, receiverId: carrier2.id, loadId: loads[1].id, content: "0°F for frozen. They'll check on arrival. Call me if any issues.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000) },
+      // Broker (whaider@) ↔ Carrier 1 (srl@) — Henderson Trucking
       { senderId: broker.id, receiverId: carrier1.id, content: "Mike, I have a Minneapolis to Kalamazoo load coming up. 30K lbs dry van, $2,600. Interested?", createdAt: new Date(now - 24 * 60 * 60 * 1000) },
       { senderId: carrier1.id, receiverId: broker.id, content: "That's a good lane for me. Send the tender, I'll review.", createdAt: new Date(now - 24 * 60 * 60 * 1000 + 15 * 60 * 1000) },
+      { senderId: broker.id, receiverId: carrier1.id, content: "Tender sent. Also, great work on the Kalamazoo-Chicago run last week — on time and no issues.", createdAt: new Date(now - 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
+      { senderId: carrier1.id, receiverId: broker.id, content: "Thanks Whaider. That lane works perfectly with my schedule. Happy to run it weekly.", createdAt: new Date(now - 24 * 60 * 60 * 1000 + 45 * 60 * 1000) },
+
+      // Broker (whaider@) ↔ Carrier 2 (gold@) — Kowalski Cold Freight
+      { senderId: broker.id, receiverId: carrier2.id, loadId: loads[1].id, content: "Sarah, the Grand Rapids reefer load is confirmed for tomorrow. Pickup at Midwest Fresh Foods, dock 4, 7 AM.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000) },
+      { senderId: carrier2.id, receiverId: broker.id, loadId: loads[1].id, content: "Got it. What temp does the receiver need?", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
+      { senderId: broker.id, receiverId: carrier2.id, loadId: loads[1].id, content: "0°F for frozen. They'll check on arrival. Call me if any issues.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000) },
+      { senderId: carrier2.id, receiverId: broker.id, content: "Also — I have capacity for a Kalamazoo to Milwaukee reefer run next week. Let me know if anything comes up.", createdAt: new Date(now - 12 * 60 * 60 * 1000) },
+
+      // Broker (whaider@) ↔ Carrier 3 (silver@) — Ramirez Auto Transport
       { senderId: broker.id, receiverId: carrier3.id, content: "Carlos, Motor City Auto Group needs 6 vehicles moved Detroit to Toledo on the 9th. Can you handle it?", createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000) },
       { senderId: carrier3.id, receiverId: broker.id, content: "Absolutely. My open hauler can take 7. Send the details.", createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000 + 20 * 60 * 1000) },
+
+      // Admin (admin@) ↔ Broker (whaider@) — internal SRL communication
+      { senderId: admin.id, receiverId: broker.id, content: "Whaider, the new carrier Novak Hauling is approved. They're based in Lansing, MI — dry van only. Add them to the rotation.", createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000) },
+      { senderId: broker.id, receiverId: admin.id, content: "Got it, Wasih. I already tendered them the Detroit-Columbus load. They have good rates.", createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000) },
+      { senderId: admin.id, receiverId: broker.id, content: "Good. Also please review the Great Lakes Flatbed counter on the Toledo-Fort Wayne steel load. They want $1,850 vs our $1,700.", createdAt: new Date(now - 8 * 60 * 60 * 1000) },
+
+      // Dispatch (dispatch@) ↔ Broker (whaider@)
+      { senderId: dispatch.id, receiverId: broker.id, content: "Whaider, Jake Morrison is 2 hours out from Chicago on SHP-2026-001. The receiver at the warehouse confirmed dock 7.", createdAt: new Date(now - 3 * 60 * 60 * 1000) },
+      { senderId: broker.id, receiverId: dispatch.id, content: "Perfect. Once that delivers, see if he can deadhead to Milwaukee for the Kalamazoo-Milwaukee pickup tomorrow.", createdAt: new Date(now - 3 * 60 * 60 * 1000 + 10 * 60 * 1000) },
+
+      // Accounting (accounting@) ↔ Broker (whaider@)
+      { senderId: accounting.id, receiverId: broker.id, content: "Whaider, INV-1002 from Kowalski Cold Freight is $2,800 for the GR-Indy reefer load. Should I process?", createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000) },
+      { senderId: broker.id, receiverId: accounting.id, content: "Yes, Priya. Confirmed — that matches the tender rate. Go ahead and approve.", createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000 + 15 * 60 * 1000) },
+
+      // Admin (admin@) ↔ Dispatch (dispatch@)
+      { senderId: admin.id, receiverId: dispatch.id, content: "Marcus, can you check on driver availability for next week? We have 4 loads that need covering.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000) },
+      { senderId: dispatch.id, receiverId: admin.id, content: "Will do. Jake and Maria are both available after Tuesday. Kevin is off until Thursday.", createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000 + 20 * 60 * 1000) },
+
+      // Admin (admin@) ↔ Carrier 1 (srl@) — direct executive contact
+      { senderId: admin.id, receiverId: carrier1.id, content: "Mike, thanks for maintaining Platinum status. Your on-time rate is exceptional. We're sending you a $150 weekly bonus.", createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000) },
+      { senderId: carrier1.id, receiverId: admin.id, content: "Thank you Wasih! The Silk Route partnership has been great. Looking forward to more lanes.", createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000) },
     ],
   });
 
@@ -629,23 +695,29 @@ async function main() {
 
   console.log(`
 Seed complete:
-  Users:      9 (4 internal + 5 carriers)
-  Carriers:   5 profiles (Platinum, 2x Gold, Silver, Bronze)
-  Loads:      10 (4 POSTED needing tendering, 1 BOOKED, 1 DISPATCHED, 1 IN_TRANSIT, 1 DELIVERED, 2 COMPLETED)
-  Tenders:    10 (4 OFFERED, 3 ACCEPTED, 1 COUNTERED, 1 DECLINED, 1 EXPIRED)
-  Invoices:   5
-  Customers:  4 Midwest shippers
-  Drivers:    3
-  Equipment:  3 (1 tractor + 2 trailers)
-  Shipments:  4
-  SOPs:       5
-  Messages:   7
+  Users:       9 (4 internal + 5 carriers) — all @silkroutelogistics.ai
+  Carriers:    5 profiles (Platinum, 2× Gold, Silver, Bronze)
+  Loads:       30 (across 6 regions: Great Lakes, Southeast, Northeast, South Central, West, Upper Midwest)
+  Tenders:     10 (4 OFFERED, 3 ACCEPTED, 1 COUNTERED, 1 DECLINED, 1 EXPIRED)
+  Invoices:    5
+  Customers:   4 Midwest shippers
+  Drivers:     3
+  Equipment:   3 (1 tractor + 2 trailers)
+  Shipments:   4
+  SOPs:        5
+  Messages:    22 (across 8 conversation threads — broker, admin, dispatch, accounting, carriers)
   Notifications: 12
 
   Demo Logins (password: password123):
-    admin@silkroutelogistics.ai    → Admin (full access: employee + carrier views)
-    whaider@silkroutelogistics.ai  → Employee/Broker (employee features only)
-    srl@silkroutelogistics.ai      → Carrier (carrier features only)
+    admin@silkroutelogistics.ai       → Admin (full access)
+    whaider@silkroutelogistics.ai     → Broker (employee features)
+    dispatch@silkroutelogistics.ai    → Dispatch
+    accounting@silkroutelogistics.ai  → Accounting
+    srl@silkroutelogistics.ai         → Carrier: Henderson Trucking (Platinum)
+    gold@silkroutelogistics.ai        → Carrier: Kowalski Cold Freight (Gold)
+    silver@silkroutelogistics.ai      → Carrier: Ramirez Auto Transport (Silver)
+    bronze@silkroutelogistics.ai      → Carrier: Novak Hauling (Bronze)
+    flatbed@silkroutelogistics.ai     → Carrier: Great Lakes Flatbed (Gold)
   `);
 }
 

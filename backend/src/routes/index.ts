@@ -15,6 +15,8 @@ import equipmentRoutes from "./equipment";
 import sopRoutes from "./sops";
 import accountingRoutes from "./accounting";
 import pdfRoutes from "./pdf";
+import marketRoutes from "./market";
+import ediRoutes from "./edi";
 
 const router = Router();
 
@@ -34,5 +36,7 @@ router.use("/equipment", equipmentRoutes);
 router.use("/sops", sopRoutes);
 router.use("/accounting", accountingRoutes);
 router.use("/pdf", pdfRoutes);
+router.use("/market", marketRoutes);
+router.use("/edi", ediRoutes);
 
 export default router;

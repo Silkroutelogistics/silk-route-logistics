@@ -2,7 +2,7 @@ export type UserRole = "ADMIN" | "BROKER" | "CARRIER" | "DISPATCH" | "OPERATIONS
 
 export const EMPLOYEE_ROLES: UserRole[] = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"];
 export const CARRIER_ONLY_ROUTES = ["scorecard", "revenue", "documents", "factoring"];
-export const EMPLOYEE_ONLY_ROUTES = ["tracking", "finance", "crm", "sops", "drivers"];
+export const EMPLOYEE_ONLY_ROUTES = ["tracking", "finance", "crm", "sops", "drivers", "market", "edi"];
 
 export function isAdmin(role: string | undefined): boolean {
   return role === "ADMIN";

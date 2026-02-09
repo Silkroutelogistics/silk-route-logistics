@@ -21,6 +21,7 @@ enum UserRole {
 }
 
 enum LoadStatus {
+  DRAFT
   POSTED
   BOOKED
   DISPATCHED
@@ -234,11 +235,26 @@ model Load {
   destZip         String
 
   weight          Float?
+  pieces          Int?
   equipmentType   String
   commodity       String?
   rate            Float
   distance        Float?
   notes           String?
+
+  freightClass    String?
+  hazmat          Boolean    @default(false)
+  tempMin         Float?
+  tempMax         Float?
+  customsRequired Boolean    @default(false)
+  bondType        String?
+  accessorials    String[]
+  specialInstructions String?
+  contactName     String?
+  contactPhone    String?
+  length          Float?
+  width           Float?
+  height          Float?
 
   pickupDate      DateTime
   deliveryDate    DateTime
@@ -253,6 +269,7 @@ model Load {
   documents       Document[]
   tenders         LoadTender[]
   messages        Message[]
+  ediTransactions EDITransaction[]
 
   @@index([status])
   @@index([originState])
@@ -488,4 +505,22 @@ model Equipment {
   shipments       Shipment[]
 
   @@map("equipment")
+}
+
+model EDITransaction {
+  id              String   @id @default(cuid())
+  transactionSet  String
+  direction       String
+  loadId          String?
+  load            Load?    @relation(fields: [loadId], references: [id])
+  carrierId       String?
+  rawPayload      String
+  status          String   @default("PENDING")
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  processedAt     DateTime?
+
+  @@index([transactionSet, status])
+  @@index([loadId])
+  @@map("edi_transactions")
 }

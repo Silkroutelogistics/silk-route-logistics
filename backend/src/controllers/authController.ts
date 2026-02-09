@@ -52,8 +52,42 @@ export async function getProfile(req: AuthRequest, res: Response) {
     select: {
       id: true, email: true, firstName: true, lastName: true,
       company: true, role: true, phone: true, isVerified: true, createdAt: true,
-      carrierProfile: { select: { mcNumber: true, dotNumber: true } },
+      carrierProfile: { select: { mcNumber: true, dotNumber: true, tier: true } },
     },
   });
   res.json(user);
+}
+
+export async function updateProfile(req: AuthRequest, res: Response) {
+  const { firstName, lastName, phone, company } = req.body;
+  const data: Record<string, string> = {};
+  if (firstName) data.firstName = firstName;
+  if (lastName) data.lastName = lastName;
+  if (phone !== undefined) data.phone = phone;
+  if (company !== undefined) data.company = company;
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.id },
+    data,
+    select: { id: true, email: true, firstName: true, lastName: true, company: true, role: true, phone: true },
+  });
+  res.json(user);
+}
+
+export async function changePassword(req: AuthRequest, res: Response) {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword || newPassword.length < 8) {
+    res.status(400).json({ error: "New password must be at least 8 characters" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) { res.status(401).json({ error: "Current password is incorrect" }); return; }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: req.user!.id }, data: { passwordHash } });
+  res.json({ message: "Password updated successfully" });
 }

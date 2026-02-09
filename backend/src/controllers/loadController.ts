@@ -3,10 +3,22 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 
+function generateRefNumber(): string {
+  const d = new Date();
+  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  const rand = String(Math.floor(1000 + Math.random() * 9000));
+  return `SRL-${date}-${rand}`;
+}
+
 export async function createLoad(req: AuthRequest, res: Response) {
   const data = createLoadSchema.parse(req.body);
   const load = await prisma.load.create({
-    data: { ...data, posterId: req.user!.id } as any,
+    data: {
+      ...data,
+      referenceNumber: generateRefNumber(),
+      status: data.status || "POSTED",
+      posterId: req.user!.id,
+    } as any,
   });
   res.status(201).json(load);
 }
@@ -24,11 +36,22 @@ export async function getLoads(req: AuthRequest, res: Response) {
     if (query.minRate) (where.rate as Record<string, number>).gte = query.minRate;
     if (query.maxRate) (where.rate as Record<string, number>).lte = query.maxRate;
   }
+  if (query.search) {
+    where.OR = [
+      { referenceNumber: { contains: query.search, mode: "insensitive" } },
+      { commodity: { contains: query.search, mode: "insensitive" } },
+      { originCity: { contains: query.search, mode: "insensitive" } },
+      { destCity: { contains: query.search, mode: "insensitive" } },
+    ];
+  }
 
   const [loads, total] = await Promise.all([
     prisma.load.findMany({
       where,
-      include: { poster: { select: { id: true, company: true, firstName: true, lastName: true } } },
+      include: {
+        poster: { select: { id: true, company: true, firstName: true, lastName: true } },
+        carrier: { select: { id: true, company: true, firstName: true, lastName: true } },
+      },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
       orderBy: { createdAt: "desc" },
@@ -45,6 +68,12 @@ export async function getLoadById(req: AuthRequest, res: Response) {
     include: {
       poster: { select: { id: true, company: true, firstName: true, lastName: true, phone: true } },
       carrier: { select: { id: true, company: true, firstName: true, lastName: true, phone: true } },
+      tenders: {
+        include: { carrier: { include: { user: { select: { company: true, firstName: true, lastName: true } } } } },
+        orderBy: { createdAt: "desc" },
+      },
+      documents: true,
+      messages: { include: { sender: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "asc" } },
     },
   });
 

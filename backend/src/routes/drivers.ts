@@ -4,7 +4,7 @@ import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
 router.use(authenticate);
-router.use(authorize("ADMIN", "DISPATCH", "OPERATIONS"));
+router.use(authorize("ADMIN", "DISPATCH", "OPERATIONS", "BROKER"));
 
 router.post("/", createDriver);
 router.get("/", getDrivers);
