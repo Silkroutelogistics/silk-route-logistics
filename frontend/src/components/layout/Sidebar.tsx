@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
-  Shield, Package,
+  Shield, Package, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -65,6 +65,7 @@ const adminNav = [
   { href: "/dashboard/factoring", label: "Factoring", icon: DollarSign },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
+  { href: "/dashboard/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

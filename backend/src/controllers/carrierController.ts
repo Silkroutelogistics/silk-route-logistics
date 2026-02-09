@@ -286,3 +286,131 @@ export async function getBonuses(req: AuthRequest, res: Response) {
 
   res.json(bonuses);
 }
+
+/** Get all carriers with performance data for admin/broker view */
+export async function getAllCarriers(req: AuthRequest, res: Response) {
+  const carriers = await prisma.carrierProfile.findMany({
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true, email: true, company: true, phone: true } },
+      scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
+      tenders: { select: { status: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const results = await Promise.all(
+    carriers.map(async (c) => {
+      const completedLoads = await prisma.load.count({
+        where: { carrierId: c.userId, status: { in: ["DELIVERED", "COMPLETED"] } },
+      });
+      const activeLoads = await prisma.load.count({
+        where: { carrierId: c.userId, status: { in: ["BOOKED", "IN_TRANSIT", "PICKED_UP"] } },
+      });
+      const totalRevenue = await prisma.invoice.aggregate({
+        where: { userId: c.userId, status: { in: ["FUNDED", "PAID"] } },
+        _sum: { amount: true },
+      });
+      const latestScorecard = c.scorecards[0] || null;
+      const tendersAccepted = c.tenders.filter((t) => t.status === "ACCEPTED").length;
+      const tendersDeclined = c.tenders.filter((t) => t.status === "DECLINED").length;
+      const tendersTotal = c.tenders.length;
+
+      return {
+        id: c.id,
+        userId: c.userId,
+        company: c.user.company || `${c.user.firstName} ${c.user.lastName}`,
+        contactName: `${c.user.firstName} ${c.user.lastName}`,
+        email: c.user.email,
+        phone: c.user.phone,
+        mcNumber: c.mcNumber,
+        dotNumber: c.dotNumber,
+        tier: c.tier,
+        equipmentTypes: c.equipmentTypes,
+        operatingRegions: c.operatingRegions,
+        safetyScore: c.safetyScore,
+        numberOfTrucks: c.numberOfTrucks,
+        onboardingStatus: c.onboardingStatus,
+        insuranceExpiry: c.insuranceExpiry,
+        w9Uploaded: c.w9Uploaded,
+        insuranceCertUploaded: c.insuranceCertUploaded,
+        authorityDocUploaded: c.authorityDocUploaded,
+        approvedAt: c.approvedAt,
+        address: c.address,
+        city: c.city,
+        state: c.state,
+        zip: c.zip,
+        completedLoads,
+        activeLoads,
+        totalRevenue: totalRevenue._sum.amount || 0,
+        tendersAccepted,
+        tendersDeclined,
+        tendersTotal,
+        acceptanceRate: tendersTotal > 0 ? Math.round((tendersAccepted / tendersTotal) * 100) : 0,
+        performance: latestScorecard
+          ? {
+              overallScore: latestScorecard.overallScore,
+              onTimePickup: latestScorecard.onTimePickupPct,
+              onTimeDelivery: latestScorecard.onTimeDeliveryPct,
+              communication: latestScorecard.communicationScore,
+              claimRatio: latestScorecard.claimRatio,
+              docTimeliness: latestScorecard.documentSubmissionTimeliness,
+            }
+          : null,
+        createdAt: c.createdAt,
+      };
+    })
+  );
+
+  res.json({ carriers: results, total: results.length });
+}
+
+/** Get single carrier detail */
+export async function getCarrierDetail(req: AuthRequest, res: Response) {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true, email: true, company: true, phone: true } },
+      scorecards: { orderBy: { calculatedAt: "desc" }, take: 6 },
+      tenders: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: { load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true } } },
+      },
+    },
+  });
+
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const loads = await prisma.load.findMany({
+    where: { carrierId: carrier.userId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true, referenceNumber: true, originCity: true, originState: true,
+      destCity: true, destState: true, rate: true, status: true, pickupDate: true, deliveryDate: true,
+    },
+  });
+
+  res.json({ carrier, loads });
+}
+
+/** Update carrier profile (admin) */
+export async function updateCarrier(req: AuthRequest, res: Response) {
+  const { safetyScore, tier, numberOfTrucks, insuranceExpiry, onboardingStatus } = req.body;
+  const data: Record<string, unknown> = {};
+  if (safetyScore !== undefined) data.safetyScore = parseFloat(safetyScore);
+  if (tier !== undefined) data.tier = tier;
+  if (numberOfTrucks !== undefined) data.numberOfTrucks = parseInt(numberOfTrucks);
+  if (insuranceExpiry !== undefined) data.insuranceExpiry = new Date(insuranceExpiry);
+  if (onboardingStatus !== undefined) data.onboardingStatus = onboardingStatus;
+
+  const updated = await prisma.carrierProfile.update({
+    where: { id: req.params.id },
+    data,
+  });
+
+  res.json(updated);
+}

@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   registerCarrier, uploadCarrierDocuments, getOnboardingStatus, verifyCarrier,
   getDashboard, getScorecard, getRevenue, getBonuses,
+  getAllCarriers, getCarrierDetail, updateCarrier,
 } from "../controllers/carrierController";
 import { authenticate, authorize } from "../middleware/auth";
 import { upload } from "../config/upload";
@@ -19,6 +20,11 @@ router.get("/dashboard", getDashboard);
 router.get("/scorecard", getScorecard);
 router.get("/revenue", getRevenue);
 router.get("/bonuses", getBonuses);
+
+// Admin / Employee view
+router.get("/all", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getAllCarriers);
+router.get("/:id/detail", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
+router.patch("/:id", authorize("ADMIN", "CEO"), updateCarrier);
 
 // Admin only
 router.post("/verify/:id", authorize("ADMIN", "CEO"), verifyCarrier);
