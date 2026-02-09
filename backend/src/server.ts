@@ -33,7 +33,7 @@ app.use("/api", routes);
 // Error handling
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
+app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
 

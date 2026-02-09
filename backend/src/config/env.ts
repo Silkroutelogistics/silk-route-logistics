@@ -9,7 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string(),
   JWT_EXPIRES_IN: z.string().default("7d"),
-  CORS_ORIGIN: z.string().default("http://localhost:3000,https://silkroutelogistics.ai"),
+  CORS_ORIGIN: z.string().default("http://localhost:3000,https://silkroutelogistics.ai,https://www.silkroutelogistics.ai"),
   MAX_FILE_SIZE: z.coerce.number().default(10485760),
   UPLOAD_DIR: z.string().default("./uploads"),
 });
