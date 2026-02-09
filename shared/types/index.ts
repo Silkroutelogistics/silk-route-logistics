@@ -1,5 +1,5 @@
 // ─── User ────────────────────────────────────────────
-export type UserRole = "CARRIER" | "BROKER" | "SHIPPER" | "FACTOR" | "ADMIN";
+export type UserRole = "CARRIER" | "BROKER" | "SHIPPER" | "FACTOR" | "ADMIN" | "DISPATCH" | "OPERATIONS" | "ACCOUNTING" | "CEO";
 
 export interface User {
   id: string;
@@ -17,7 +17,7 @@ export interface User {
 }
 
 // ─── Load ────────────────────────────────────────────
-export type LoadStatus = "POSTED" | "BOOKED" | "IN_TRANSIT" | "DELIVERED" | "COMPLETED" | "CANCELLED";
+export type LoadStatus = "DRAFT" | "POSTED" | "BOOKED" | "DISPATCHED" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "COMPLETED" | "CANCELLED";
 
 export interface Load {
   id: string;
@@ -41,6 +41,7 @@ export interface Load {
   poster?: Pick<User, "id" | "company" | "firstName" | "lastName">;
   carrierId?: string;
   carrier?: Pick<User, "id" | "company" | "firstName" | "lastName">;
+  customerId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +79,20 @@ export interface Document {
   invoiceId?: string;
   createdAt: string;
 }
+
+// ─── Carrier ─────────────────────────────────────────
+export type CarrierTier = "PLATINUM" | "GOLD" | "SILVER" | "BRONZE";
+export type OnboardingStatus = "PENDING" | "DOCUMENTS_UPLOADED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
+export type TenderStatus = "OFFERED" | "ACCEPTED" | "COUNTERED" | "DECLINED" | "EXPIRED";
+
+// ─── Fleet ───────────────────────────────────────────
+export type TruckType = "SLEEPER" | "DAY_CAB" | "STRAIGHT" | "BOX";
+export type TrailerType = "DRY_VAN" | "REEFER" | "FLATBED" | "STEP_DECK" | "LOWBOY" | "TANKER" | "HOPPER" | "CONTAINER" | "CONESTOGA";
+export type AssetStatus = "ACTIVE" | "IN_SHOP" | "OUT_OF_SERVICE" | "AVAILABLE";
+export type DriverStatus = "AVAILABLE" | "ON_ROUTE" | "OFF_DUTY" | "ON_BREAK" | "INACTIVE";
+
+// ─── Shipment ────────────────────────────────────────
+export type ShipmentStatus = "PENDING" | "DISPATCHED" | "IN_TRANSIT" | "AT_PICKUP" | "AT_DELIVERY" | "DELIVERED" | "COMPLETED" | "CANCELLED";
 
 // ─── API Responses ───────────────────────────────────
 export interface PaginatedResponse<T> {

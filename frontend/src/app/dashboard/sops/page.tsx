@@ -157,7 +157,7 @@ export default function SOPsPage() {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Create SOP</h2>
               <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -167,10 +167,10 @@ export default function SOPsPage() {
             <div className="grid grid-cols-3 gap-3">
               <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                 className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                <option value="operations" className="bg-[#0f172a]">Operations</option>
-                <option value="safety" className="bg-[#0f172a]">Safety</option>
-                <option value="finance" className="bg-[#0f172a]">Finance</option>
-                <option value="hr" className="bg-[#0f172a]">HR</option>
+                <option value="operations" className="bg-navy">Operations</option>
+                <option value="safety" className="bg-navy">Safety</option>
+                <option value="finance" className="bg-navy">Finance</option>
+                <option value="hr" className="bg-navy">HR</option>
               </select>
               <input value={form.version} onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))} placeholder="Version"
                 className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white" />

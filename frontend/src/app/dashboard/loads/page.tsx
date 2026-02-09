@@ -323,7 +323,7 @@ export default function LoadsPage() {
         {/* Tender Modal */}
         {showTender && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+            <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Tender Load to Carrier</h2>
                 <button onClick={() => setShowTender(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -333,9 +333,9 @@ export default function LoadsPage() {
                 <label className="block text-xs text-slate-400 mb-1">Select Carrier</label>
                 <select value={tenderCarrierId} onChange={(e) => setTenderCarrierId(e.target.value)}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                  <option value="" className="bg-[#0f172a]">Choose a carrier...</option>
+                  <option value="" className="bg-navy">Choose a carrier...</option>
                   {suggestedCarriers?.carriers?.map((c) => (
-                    <option key={c.carrierId} value={c.carrierId} className="bg-[#0f172a]">
+                    <option key={c.carrierId} value={c.carrierId} className="bg-navy">
                       {c.company} ({c.tier})
                     </option>
                   ))}
@@ -384,15 +384,15 @@ export default function LoadsPage() {
         </div>
         <select value={filters.status} onChange={(e) => { setFilters((f) => ({ ...f, status: e.target.value })); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Statuses</option>
+          <option value="" className="bg-navy">All Statuses</option>
           {["DRAFT", "POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED"].map((s) =>
-            <option key={s} value={s} className="bg-[#0f172a]">{s.replace(/_/g, " ")}</option>
+            <option key={s} value={s} className="bg-navy">{s.replace(/_/g, " ")}</option>
           )}
         </select>
         <select value={filters.equipmentType} onChange={(e) => { setFilters((f) => ({ ...f, equipmentType: e.target.value })); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Equipment</option>
-          {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
+          <option value="" className="bg-navy">All Equipment</option>
+          {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => <option key={t} value={t} className="bg-navy">{t}</option>)}
         </select>
       </div>
 

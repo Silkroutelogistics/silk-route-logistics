@@ -18,3 +18,12 @@ html {
   --color-silver: #94A3B8;
   --color-bronze: #D97706;
 }
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(1rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}

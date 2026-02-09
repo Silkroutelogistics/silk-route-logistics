@@ -3,15 +3,17 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createInvoiceSchema, submitForFactoringSchema } from "../validators/invoice";
 
-let invoiceCounter = 1000;
-
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
-  invoiceCounter++;
+  const lastInvoice = await prisma.invoice.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: { invoiceNumber: true },
+  });
+  const lastNum = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
   const invoice = await prisma.invoice.create({
     data: {
       ...data,
-      invoiceNumber: `INV-${invoiceCounter}`,
+      invoiceNumber: `INV-${lastNum + 1}`,
       userId: req.user!.id,
     } as any,
     include: { load: true },

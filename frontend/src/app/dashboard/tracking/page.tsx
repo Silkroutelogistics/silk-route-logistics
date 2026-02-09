@@ -144,9 +144,9 @@ export default function TrackingPage() {
             </div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-              <option value="" className="bg-[#0f172a]">All Statuses</option>
-              {statusSteps.map(s => <option key={s} value={s} className="bg-[#0f172a]">{statusLabels[s]}</option>)}
-              <option value="COMPLETED" className="bg-[#0f172a]">Completed</option>
+              <option value="" className="bg-navy">All Statuses</option>
+              {statusSteps.map(s => <option key={s} value={s} className="bg-navy">{statusLabels[s]}</option>)}
+              <option value="COMPLETED" className="bg-navy">Completed</option>
             </select>
           </div>
 

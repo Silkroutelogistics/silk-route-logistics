@@ -200,16 +200,16 @@ export default function AuditLogPage() {
         </div>
         <select value={actionFilter} onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Actions</option>
+          <option value="" className="bg-navy">All Actions</option>
           {uniqueActions.map((a) => (
-            <option key={a} value={a} className="bg-[#0f172a]">{a}</option>
+            <option key={a} value={a} className="bg-navy">{a}</option>
           ))}
         </select>
         <select value={entityFilter} onChange={(e) => { setEntityFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Entities</option>
+          <option value="" className="bg-navy">All Entities</option>
           {uniqueEntities.map((e) => (
-            <option key={e} value={e} className="bg-[#0f172a]">{e}</option>
+            <option key={e} value={e} className="bg-navy">{e}</option>
           ))}
         </select>
       </div>

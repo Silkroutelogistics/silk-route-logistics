@@ -184,16 +184,16 @@ export default function FleetPage() {
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Statuses</option>
-          <option value="ACTIVE" className="bg-[#0f172a]">Active</option>
-          <option value="IN_SHOP" className="bg-[#0f172a]">In Shop</option>
-          <option value="OUT_OF_SERVICE" className="bg-[#0f172a]">Out of Service</option>
+          <option value="" className="bg-navy">All Statuses</option>
+          <option value="ACTIVE" className="bg-navy">Active</option>
+          <option value="IN_SHOP" className="bg-navy">In Shop</option>
+          <option value="OUT_OF_SERVICE" className="bg-navy">Out of Service</option>
         </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Types</option>
+          <option value="" className="bg-navy">All Types</option>
           {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
-            <option key={t} value={t} className="bg-[#0f172a]">{t.replace(/_/g, " ")}</option>
+            <option key={t} value={t} className="bg-navy">{t.replace(/_/g, " ")}</option>
           ))}
         </select>
       </div>
@@ -309,7 +309,7 @@ export default function FleetPage() {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Add {tab === "trucks" ? "Truck" : "Trailer"}</h2>
               <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -321,7 +321,7 @@ export default function FleetPage() {
                 <select value={form.type || ""} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
                   {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
-                    <option key={t} value={t} className="bg-[#0f172a]">{t.replace(/_/g, " ")}</option>
+                    <option key={t} value={t} className="bg-navy">{t.replace(/_/g, " ")}</option>
                   ))}
                 </select>
               </div>
@@ -346,9 +346,9 @@ export default function FleetPage() {
                 <label className="block text-xs text-slate-400 mb-1">Ownership</label>
                 <select value={form.ownershipType || "COMPANY"} onChange={e => setForm(f => ({ ...f, ownershipType: e.target.value }))}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                  <option value="COMPANY" className="bg-[#0f172a]">Company</option>
-                  <option value="LEASED" className="bg-[#0f172a]">Leased</option>
-                  <option value="OWNER_OPERATOR" className="bg-[#0f172a]">Owner Operator</option>
+                  <option value="COMPANY" className="bg-navy">Company</option>
+                  <option value="LEASED" className="bg-navy">Leased</option>
+                  <option value="OWNER_OPERATOR" className="bg-navy">Owner Operator</option>
                 </select>
               </div>
             </div>

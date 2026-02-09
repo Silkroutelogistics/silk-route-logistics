@@ -341,7 +341,7 @@ export default function DriversPage() {
       {/* Add Driver Modal */}
       {showAddDriver && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Add Driver</h2>
               <button onClick={() => setShowAddDriver(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -364,7 +364,7 @@ export default function DriversPage() {
                 <label className="block text-xs text-slate-400 mb-1">License Type</label>
                 <select value={driverForm.licenseType} onChange={(e) => setDriverForm((f) => ({ ...f, licenseType: e.target.value }))}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                  {["CDL-A", "CDL-B", "CDL-C"].map(t => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
+                  {["CDL-A", "CDL-B", "CDL-C"].map(t => <option key={t} value={t} className="bg-navy">{t}</option>)}
                 </select>
               </div>
               <Input label="License Number" value={driverForm.licenseNumber} onChange={(v) => setDriverForm((f) => ({ ...f, licenseNumber: v }))} />
@@ -414,7 +414,7 @@ export default function DriversPage() {
       {/* Assign Truck/Trailer Modal */}
       {assignModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">
                 Assign {assignModal.type === "truck" ? "Truck" : "Trailer"}

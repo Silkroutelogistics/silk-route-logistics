@@ -60,12 +60,12 @@ export default function EDIPage() {
       <div className="flex gap-3">
         <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          {TRANSACTION_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-[#0f172a]">{t.label}</option>)}
+          {TRANSACTION_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-navy">{t.label}</option>)}
         </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Statuses</option>
-          {["PENDING", "SENT", "RECEIVED", "ACKNOWLEDGED", "ERROR"].map((s) => <option key={s} value={s} className="bg-[#0f172a]">{s}</option>)}
+          <option value="" className="bg-navy">All Statuses</option>
+          {["PENDING", "SENT", "RECEIVED", "ACKNOWLEDGED", "ERROR"].map((s) => <option key={s} value={s} className="bg-navy">{s}</option>)}
         </select>
       </div>
 

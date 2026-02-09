@@ -17,9 +17,9 @@ cd ..
 echo ">> Building frontend..."
 cd frontend
 npm run build
-echo ">> Frontend built to .next/"
+echo ">> Frontend built to out/ (static export)"
 
 cd ..
 echo "=== Build complete ==="
 echo "Backend: run 'node backend/dist/server.js'"
-echo "Frontend: run 'cd frontend && npm start'"
+echo "Frontend: deploy frontend/out/ to Cloudflare Pages"

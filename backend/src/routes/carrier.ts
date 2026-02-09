@@ -6,6 +6,7 @@ import {
 } from "../controllers/carrierController";
 import { authenticate, authorize } from "../middleware/auth";
 import { upload } from "../config/upload";
+import { auditLog } from "../middleware/audit";
 
 const router = Router();
 
@@ -24,9 +25,9 @@ router.get("/bonuses", getBonuses);
 // Admin / Employee view
 router.get("/all", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getAllCarriers);
 router.get("/:id/detail", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
-router.patch("/:id", authorize("ADMIN", "CEO"), updateCarrier);
+router.patch("/:id", authorize("ADMIN", "CEO"), auditLog("UPDATE", "Carrier"), updateCarrier);
 
 // Admin only
-router.post("/verify/:id", authorize("ADMIN", "CEO"), verifyCarrier);
+router.post("/verify/:id", authorize("ADMIN", "CEO"), auditLog("VERIFY", "Carrier"), verifyCarrier);
 
 export default router;

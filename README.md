@@ -1,43 +1,45 @@
 # Silk Route Logistics
 
-Freight factoring and load marketplace platform. Connects carriers, brokers, and shippers to post loads, book freight, and get invoices funded.
+Asset-based carrier management and freight brokerage platform. Connects carriers, brokers, shippers, and dispatchers to manage loads, track fleets, handle invoicing/factoring, and monitor compliance — all from a unified dark-themed dashboard.
 
 ## Tech Stack
 
-- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS 4, TanStack Query, Zustand
-- **Backend:** Node.js, Express, TypeScript, Prisma ORM
-- **Database:** PostgreSQL (Neon)
-- **Auth:** JWT with bcrypt password hashing
-- **Deployment:** Cloudflare Pages (frontend) + Cloudflare Workers (backend)
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS 4, TanStack Query, Zustand, Recharts
+- **Backend:** Node.js, Express, TypeScript, Prisma ORM, Zod validation
+- **Database:** PostgreSQL (Neon serverless)
+- **Auth:** JWT with bcrypt password hashing, role-based access control (9 roles)
+- **PDF:** pdfkit for BOL, Rate Confirmation, Invoice generation
+- **Deployment:** Cloudflare Pages (frontend static export) + Render (backend)
+- **CI:** GitHub Actions (lint + typecheck + build on push/PR)
 
 ## Project Structure
 
 ```
 silk-route-logistics/
+├── .github/workflows/     # CI pipeline
 ├── backend/
-│   ├── prisma/              # Database schema & migrations
-│   │   ├── schema.prisma
-│   │   └── seed.ts
+│   ├── prisma/            # Schema (18 models), migrations, seed
 │   └── src/
-│       ├── config/          # Environment, database & upload config
-│       ├── controllers/     # Route handlers
-│       ├── middleware/       # Auth, error handling
-│       ├── routes/          # Express route definitions
-│       ├── validators/      # Zod request schemas
-│       └── server.ts        # App entry point
+│       ├── config/        # Environment, database, upload config
+│       ├── controllers/   # Route handlers (13 controllers)
+│       ├── middleware/     # Auth, error handling, audit logging
+│       ├── routes/        # Express routes (22 route files, ~120 endpoints)
+│       ├── services/      # ELD, EDI, FMCSA, Market, PDF, Tier services
+│       ├── validators/    # Zod request schemas (14 validators)
+│       └── server.ts      # App entry point
 ├── frontend/
 │   └── src/
-│       ├── app/             # Next.js App Router pages
-│       │   ├── auth/        # Login & register
-│       │   └── dashboard/   # Protected dashboard pages
-│       ├── components/      # React components (UI, layout, invoices)
-│       ├── hooks/           # Custom hooks & stores
-│       ├── lib/             # API client & utilities
-│       └── types/           # Frontend-specific types
-├── shared/
-│   └── types/               # Shared TypeScript interfaces
-├── package.json             # Root workspace scripts
-└── tsconfig.base.json       # Shared TS config
+│       ├── app/           # Next.js App Router (24 pages)
+│       │   ├── auth/      # Login & register
+│       │   ├── dashboard/ # 20 protected dashboard pages
+│       │   └── onboarding # 5-step carrier registration
+│       ├── components/    # Shared UI, layout, auth, modals
+│       ├── hooks/         # Auth store, role guard, utilities
+│       └── lib/           # API client, roles, utils
+├── shared/types/          # Shared TypeScript interfaces
+├── render.yaml            # Render deployment blueprint
+├── deploy.sh              # Build script
+└── package.json           # Root monorepo scripts
 ```
 
 ## Local Development
@@ -45,7 +47,7 @@ silk-route-logistics/
 ### 1. Clone & install
 
 ```bash
-git clone <repo-url> silk-route-logistics
+git clone https://github.com/Silkroutelogistics/silk-route-logistics.git
 cd silk-route-logistics
 npm run install:all
 ```
@@ -82,109 +84,125 @@ This starts both servers concurrently:
 - **Backend API:** http://localhost:4000
 - **Health check:** http://localhost:4000/health
 
-## Seed Accounts
+## Demo Accounts
 
-| Email                  | Password      | Role    |
-|------------------------|---------------|---------|
-| admin@silkroute.com    | password123   | Admin   |
-| broker@example.com     | password123   | Broker  |
-| carrier@example.com    | password123   | Carrier |
+All accounts use password: `password123`
 
-## API Endpoints
+| Email | Role | Access |
+|-------|------|--------|
+| `admin@silkroutelogistics.ai` | ADMIN | Full platform access |
+| `ceo@silkroutelogistics.ai` | CEO | Executive dashboard + full access |
+| `whaider@silkroutelogistics.ai` | BROKER | Load board, carriers, CRM, finance |
+| `dispatch@silkroutelogistics.ai` | DISPATCH | Tracking, fleet, drivers, loads |
+| `ops@silkroutelogistics.ai` | OPERATIONS | Fleet, compliance, drivers |
+| `accounting@silkroutelogistics.ai` | ACCOUNTING | Invoices, finance, factoring |
+| `srl@silkroutelogistics.ai` | CARRIER (Platinum) | Load board, scorecard, revenue, invoices |
+| `gold@silkroutelogistics.ai` | CARRIER (Gold) | Same as above |
+| `silver@silkroutelogistics.ai` | CARRIER (Silver) | Same as above |
+| `bronze@silkroutelogistics.ai` | CARRIER (Bronze) | Same as above |
+| `flatbed@silkroutelogistics.ai` | CARRIER | Same as above |
 
-### Auth
-- `POST /api/auth/register` — Create account
-- `POST /api/auth/login` — Sign in
-- `GET  /api/auth/profile` — Get current user (auth required)
+## Dashboard Pages (20)
 
-### Loads
-- `POST   /api/loads` — Post a load (broker/shipper)
-- `GET    /api/loads` — Search loads (query params: status, originState, destState, equipmentType, minRate, maxRate, page, limit)
-- `GET    /api/loads/:id` — Load details
-- `PATCH  /api/loads/:id/status` — Update load status
-- `DELETE /api/loads/:id` — Delete a load
+| Page | Route | Description |
+|------|-------|-------------|
+| Overview | `/dashboard/overview` | Role-based: CEO metrics, employee quick actions, carrier stats |
+| Load Board | `/dashboard/loads` | Create/manage loads, tender to carriers, status pipeline |
+| Carriers | `/dashboard/carriers` | Carrier pool, tier filtering, approve/reject, performance |
+| Tracking | `/dashboard/tracking` | Shipment tracking, ELD monitor, GPS locations |
+| Fleet | `/dashboard/fleet` | Trucks & trailers CRUD, maintenance, assignments |
+| Drivers | `/dashboard/drivers` | Driver management, HOS, compliance, fleet assignment |
+| CRM | `/dashboard/crm` | Customer management, contacts, credit status |
+| Messages | `/dashboard/messages` | Real-time messaging between users |
+| Finance | `/dashboard/finance` | Revenue/expenses charts, AR/AP management |
+| Invoices | `/dashboard/invoices` | Invoice CRUD, AR aging, CSV export, status workflow |
+| Market Intel | `/dashboard/market` | Lane analytics, rate trends, market intelligence |
+| Compliance | `/dashboard/compliance` | Compliance scanning, alerts, expiration tracking |
+| Scorecard | `/dashboard/scorecard` | Carrier KPIs, tier progress, score history |
+| Revenue | `/dashboard/revenue` | Carrier revenue breakdown with charts |
+| Documents | `/dashboard/documents` | Document vault with upload, search, categorization |
+| Factoring | `/dashboard/factoring` | Quick Pay / freight factoring calculator |
+| SOPs | `/dashboard/sops` | SOP library with PDF preview |
+| EDI | `/dashboard/edi` | EDI 204/990/214/210 transaction log |
+| Audit Log | `/dashboard/audit` | System audit log with stats and filtering |
+| Settings | `/dashboard/settings` | Profile, password, notifications, docs |
 
-### Invoices
-- `POST /api/invoices` — Create invoice
-- `GET  /api/invoices` — List user invoices
-- `GET  /api/invoices/:id` — Invoice details
-- `POST /api/invoices/:id/factor` — Submit for factoring
+## API Endpoints (~120 total)
 
-### Documents
-- `POST   /api/documents` — Upload files (multipart, max 5 files: PDF/JPEG/PNG)
-- `GET    /api/documents` — List documents (query: loadId, invoiceId)
-- `DELETE /api/documents/:id` — Delete a document
+### Auth (`/api/auth`)
+- `POST /register` — Create account
+- `POST /login` — Sign in (rate-limited: 10/15min)
+- `GET /profile` — Get current user
+- `PATCH /profile` — Update profile
+- `PATCH /password` — Change password
+- `POST /refresh` — Refresh JWT token
+- `POST /logout` — Logout
 
-## Deployment to Cloudflare
+### Loads (`/api/loads`)
+- `POST /` — Create load
+- `GET /` — Search loads (status, state, equipment, rate range, pagination)
+- `GET /:id` — Load details with tenders, documents, messages
+- `PATCH /:id/status` — Update status
+- `DELETE /:id` — Delete load
 
-### Prerequisites
+### Tenders (`/api/`)
+- `POST /loads/:id/tender` — Create tender
+- `POST /tenders/:id/accept` — Accept (auto-books load)
+- `POST /tenders/:id/counter` — Counter-offer
+- `POST /tenders/:id/decline` — Decline
+- `GET /carrier/tenders` — Carrier's tenders
 
-- [Cloudflare account](https://dash.cloudflare.com)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed (`npm i -g wrangler`)
-- PostgreSQL database (e.g., [Neon](https://neon.tech))
-- Domain configured: `silkroutelogistics.ai`
+### Invoices (`/api/invoices`)
+- Full CRUD + factoring + stats + status workflow
+
+### Carrier (`/api/carrier`)
+- Registration, onboarding, dashboard, scorecard, revenue, bonuses, admin management
+
+### Fleet (`/api/fleet`)
+- Trucks & trailers CRUD, stats, driver assignment, fleet overview
+
+### Drivers (`/api/drivers`)
+- Full CRUD, HOS, truck/trailer assignment, stats
+
+### Customers (`/api/customers`)
+- Full CRUD, contacts management, credit status
+
+### Also: Messages, Notifications, Documents, Shipments, SOPs, EDI, Market, Compliance, Audit, Accounting, PDF, ELD, Integrations
+
+## Deployment
 
 ### Frontend (Cloudflare Pages)
 
-1. Connect your GitHub repo in the Cloudflare Pages dashboard
-2. Configure the build:
+1. Connect GitHub repo in Cloudflare Pages dashboard
+2. Build settings:
    - **Build command:** `cd frontend && npm install && npm run build`
-   - **Build output directory:** `frontend/.next`
+   - **Build output directory:** `frontend/out`
    - **Root directory:** `/`
-3. Set environment variables in Cloudflare Pages settings:
+3. Environment variables:
    ```
    NEXT_PUBLIC_API_URL=https://api.silkroutelogistics.ai/api
-   NEXT_PUBLIC_APP_NAME=Silk Route Logistics
-   ```
-4. Set custom domain to `silkroutelogistics.ai`
-
-### Backend (Cloudflare Workers / VPS)
-
-Since the backend uses Express + file uploads, deploy to a VPS or container service:
-
-1. Build the backend:
-   ```bash
-   cd backend && npm run build
    ```
 
-2. Set production environment variables on your host:
-   ```
-   NODE_ENV=production
-   PORT=4000
-   DATABASE_URL=<your-neon-connection-string>
-   JWT_SECRET=<strong-random-secret>
-   CORS_ORIGIN=https://silkroutelogistics.ai
-   UPLOAD_DIR=./uploads
-   ```
+### Backend (Render)
 
-3. Run migrations against production database:
-   ```bash
-   npx prisma migrate deploy
-   ```
+Configured via `render.yaml` Blueprint, or manually:
 
-4. Start the server:
-   ```bash
-   node dist/server.js
-   ```
+1. Build: `npm install && npx prisma generate && npm run build`
+2. Start: `npx prisma migrate deploy && node dist/server.js`
+3. Environment variables: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `PORT=4000`
 
-5. Set up a reverse proxy (nginx/caddy) to point `api.silkroutelogistics.ai` to port 4000 with SSL.
+### DNS (Cloudflare)
 
-### DNS Configuration
-
-In Cloudflare DNS, add:
-
-| Type  | Name  | Content              |
-|-------|-------|----------------------|
-| CNAME | @     | your-pages-url       |
-| A     | api   | your-server-ip       |
+| Type | Name | Content |
+|------|------|---------|
+| CNAME | @ | your-pages-url |
+| A/CNAME | api | your-render-url |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start both frontend & backend |
-| `npm run dev:backend` | Start backend only |
-| `npm run dev:frontend` | Start frontend only |
 | `npm run build` | Build both projects |
 | `npm run db:migrate` | Run Prisma migrations |
 | `npm run db:seed` | Seed the database |

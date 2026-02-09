@@ -82,7 +82,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">Create Load — Step {step} of 4</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -249,8 +249,8 @@ function Select({ label, value, onChange, options }: { label: string; value: str
       <label className="block text-xs text-slate-400 mb-1">{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50">
-        <option value="" className="bg-[#0f172a]">Select...</option>
-        {options.filter(Boolean).map((o) => <option key={o} value={o} className="bg-[#0f172a]">{o}</option>)}
+        <option value="" className="bg-navy">Select...</option>
+        {options.filter(Boolean).map((o) => <option key={o} value={o} className="bg-navy">{o}</option>)}
       </select>
     </div>
   );

@@ -7,15 +7,15 @@ import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
-  Shield, Package, ClipboardList,
+  Shield, Package, ClipboardList, Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
 import { api } from "@/lib/api";
+import { useState, useEffect } from "react";
 
-// AE/Broker workflow: Customers → Loads → Carriers → Dispatch/Track → Finance → Comms
 const employeeNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/crm", label: "Customers", icon: Users },
@@ -45,7 +45,6 @@ const carrierNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-// CEO/Admin: Full access — everything organized by workflow
 const adminNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/crm", label: "Customers", icon: Users },
@@ -81,6 +80,12 @@ export function Sidebar() {
   const carrier = isCarrier(user?.role);
   const ceo = isCeo(user?.role);
   const navItems = getNav(user?.role);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const { data: unreadData } = useQuery({
     queryKey: ["unread-count"],
@@ -90,8 +95,8 @@ export function Sidebar() {
   });
   const unreadCount = unreadData?.count || 0;
 
-  return (
-    <aside className="w-64 bg-navy flex flex-col min-h-screen">
+  const sidebarContent = (
+    <>
       <div className="px-5 py-5 border-b border-white/10">
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
@@ -156,6 +161,46 @@ export function Sidebar() {
           <LogOut className="w-4 h-4" /> Sign Out
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile header bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-navy border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <Logo size="sm" />
+          <span className="text-sm font-semibold text-white">Silk Route</span>
+        </Link>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2 text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - hidden on mobile unless open */}
+      <aside
+        className={cn(
+          "w-64 bg-navy flex flex-col min-h-screen shrink-0 transition-transform duration-200",
+          "fixed lg:sticky top-0 z-50 lg:z-auto",
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Spacer for mobile top bar */}
+      <div className="lg:hidden h-14 shrink-0" />
+    </>
   );
 }

@@ -305,7 +305,7 @@ export default function CRMPage() {
       {/* Create Customer Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Add Customer</h2>
               <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -319,7 +319,7 @@ export default function CRMPage() {
                 <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
                   {["SHIPPER", "BROKER", "MANUFACTURER", "DISTRIBUTOR", "RETAILER", "GOVERNMENT", "OTHER"].map(t =>
-                    <option key={t} value={t} className="bg-[#0f172a]">{t}</option>
+                    <option key={t} value={t} className="bg-navy">{t}</option>
                   )}
                 </select>
               </div>
@@ -350,7 +350,7 @@ export default function CRMPage() {
                 <select value={form.paymentTerms} onChange={(e) => setForm((f) => ({ ...f, paymentTerms: e.target.value }))}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
                   {["Net 15", "Net 30", "Net 45", "Net 60", "COD", "Prepaid"].map(t =>
-                    <option key={t} value={t} className="bg-[#0f172a]">{t}</option>
+                    <option key={t} value={t} className="bg-navy">{t}</option>
                   )}
                 </select>
               </div>
@@ -370,7 +370,7 @@ export default function CRMPage() {
       {/* Add Contact Modal */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Add Contact</h2>
               <button onClick={() => setShowContactModal(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -397,7 +397,7 @@ export default function CRMPage() {
       {/* Update Credit Modal */}
       {showCreditModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Update Credit Status</h2>
               <button onClick={() => setShowCreditModal(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -407,7 +407,7 @@ export default function CRMPage() {
               <select value={creditForm.creditStatus} onChange={(e) => setCreditForm((f) => ({ ...f, creditStatus: e.target.value }))}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
                 {["NOT_CHECKED", "PENDING_REVIEW", "APPROVED", "CONDITIONAL", "DENIED"].map(s =>
-                  <option key={s} value={s} className="bg-[#0f172a]">{s.replace("_", " ")}</option>
+                  <option key={s} value={s} className="bg-navy">{s.replace("_", " ")}</option>
                 )}
               </select>
             </div>

@@ -228,16 +228,16 @@ export default function CarrierPoolPage() {
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Statuses</option>
+          <option value="" className="bg-navy">All Statuses</option>
           {["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((s) => (
-            <option key={s} value={s} className="bg-[#0f172a]">{s.replace(/_/g, " ")}</option>
+            <option key={s} value={s} className="bg-navy">{s.replace(/_/g, " ")}</option>
           ))}
         </select>
         <select value={equipFilter} onChange={(e) => setEquipFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a]">All Equipment</option>
+          <option value="" className="bg-navy">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"].map((t) => (
-            <option key={t} value={t} className="bg-[#0f172a]">{t}</option>
+            <option key={t} value={t} className="bg-navy">{t}</option>
           ))}
         </select>
       </div>
@@ -435,7 +435,7 @@ export default function CarrierPoolPage() {
                 <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
                   {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => (
-                    <option key={t} value={t} className="bg-[#0f172a]">{t}</option>
+                    <option key={t} value={t} className="bg-navy">{t}</option>
                   ))}
                 </select>
               </div>

@@ -74,6 +74,17 @@ export async function updateProfile(req: AuthRequest, res: Response) {
   res.json(user);
 }
 
+export async function refreshToken(req: AuthRequest, res: Response) {
+  const token = jwt.sign({ userId: req.user!.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  res.json({ token });
+}
+
+export async function logout(_req: AuthRequest, res: Response) {
+  // Client-side token removal is primary mechanism
+  // This endpoint exists for future token blacklisting if needed
+  res.json({ message: "Logged out successfully" });
+}
+
 export async function changePassword(req: AuthRequest, res: Response) {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword || newPassword.length < 8) {
