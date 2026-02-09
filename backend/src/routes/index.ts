@@ -20,6 +20,7 @@ import ediRoutes from "./edi";
 import fleetRoutes from "./fleet";
 import complianceRoutes from "./compliance";
 import auditRoutes from "./audit";
+import eldRoutes from "./eld";
 
 const router = Router();
 
@@ -44,5 +45,6 @@ router.use("/edi", ediRoutes);
 router.use("/fleet", fleetRoutes);
 router.use("/compliance", complianceRoutes);
 router.use("/audit", auditRoutes);
+router.use("/eld", eldRoutes);
 
 export default router;
