@@ -7,6 +7,9 @@
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts"
@@ -42,7 +45,11 @@
     "prisma": "^6.3.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
+    "@vitest/coverage-v8": "^3.0.5",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

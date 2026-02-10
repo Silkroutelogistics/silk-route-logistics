@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +16,6 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { login, isLoading, error } = useAuthStore();
-  const [showForgot, setShowForgot] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
@@ -53,19 +51,13 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-sm font-medium text-slate-700">Password</label>
-              <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-gold hover:underline">
+              <Link href="/auth/forgot-password" className="text-xs text-gold hover:underline">
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <input {...register("password")} type="password" autoComplete="current-password" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
           </div>
-
-          {showForgot && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              Please contact <a href="mailto:admin@silkroutelogistics.ai" className="font-semibold underline">admin@silkroutelogistics.ai</a> to reset your password.
-            </div>
-          )}
 
           <button type="submit" disabled={isLoading} className="w-full py-2.5 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light disabled:opacity-50 transition">
             {isLoading ? "Signing in..." : "Sign In"}

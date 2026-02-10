@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, login, getProfile, updateProfile, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword } from "../controllers/authController";
+import { register, login, getProfile, updateProfile, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword } from "../controllers/authController";
 import { authenticate } from "../middleware/auth";
 
 const router = Router();
@@ -9,6 +9,8 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { e
 
 router.post("/register", register);
 router.post("/login", loginLimiter, login);
+router.post("/forgot-password", loginLimiter, forgotPassword);
+router.post("/reset-password", resetPassword);
 router.post("/verify-otp", handleVerifyOtp);
 router.post("/resend-otp", handleResendOtp);
 router.post("/force-change-password", authenticate, forceChangePassword);

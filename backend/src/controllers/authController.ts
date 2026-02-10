@@ -5,8 +5,8 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { registerSchema, loginSchema } from "../validators/auth";
 import { AuthRequest } from "../middleware/auth";
-import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt } from "../services/otpService";
-import { sendOtpEmail } from "../services/emailService";
+import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt, createPasswordResetToken, verifyPasswordResetToken } from "../services/otpService";
+import { sendOtpEmail, sendPasswordResetEmail } from "../services/emailService";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 
@@ -246,4 +246,59 @@ export async function changePassword(req: AuthRequest, res: Response) {
     data: { passwordHash, passwordChangedAt: new Date() },
   });
   res.json({ message: "Password updated successfully" });
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+
+  // Always return generic message to prevent user enumeration
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user) {
+    const token = await createPasswordResetToken(user.id);
+    const frontendUrl = env.CORS_ORIGIN.split(",")[0].trim();
+    const resetUrl = `${frontendUrl}/auth/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
+    sendPasswordResetEmail(user.email, user.firstName, resetUrl).catch((err) =>
+      console.error("[Password Reset Email] Failed:", err.message),
+    );
+  }
+
+  res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  const { token, email, newPassword } = req.body;
+  if (!token || !email || !newPassword) {
+    res.status(400).json({ error: "Token, email, and new password are required" });
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "New password must be at least 8 characters" });
+    return;
+  }
+
+  const userId = await verifyPasswordResetToken(token);
+  if (!userId) {
+    res.status(400).json({ error: "Invalid or expired reset link" });
+    return;
+  }
+
+  // Verify the token belongs to the email provided
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || user.email !== email) {
+    res.status(400).json({ error: "Invalid or expired reset link" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash, passwordChangedAt: new Date() },
+  });
+
+  res.json({ message: "Password has been reset successfully. You can now log in." });
 }

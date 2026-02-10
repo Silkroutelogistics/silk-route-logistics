@@ -132,6 +132,21 @@ export async function sendOtpEmail(email: string, firstName: string, code: strin
   await sendEmail(email, `Your SRL Verification Code: ${code}`, html);
 }
 
+export async function sendPasswordResetEmail(email: string, firstName: string, resetUrl: string) {
+  const html = wrap(`
+    <h2 style="color:#0f172a">Reset Your Password</h2>
+    <p>Hi ${firstName},</p>
+    <p>We received a request to reset your password. Click the button below to choose a new one:</p>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${resetUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Reset Password</a>
+    </div>
+    <p style="color:#64748b;font-size:14px">This link expires in <strong>30 minutes</strong>. If you didn't request this, you can safely ignore this email.</p>
+    <p style="color:#94a3b8;font-size:12px;margin-top:16px;word-break:break-all">Or copy this link: ${resetUrl}</p>
+  `);
+
+  await sendEmail(email, "Reset your password — Silk Route Logistics", html);
+}
+
 export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {
   const urgency = daysLeft <= 2 ? "#dc2626" : daysLeft <= 7 ? "#f59e0b" : "#3b82f6";
   const html = wrap(`

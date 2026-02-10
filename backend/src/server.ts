@@ -17,7 +17,7 @@ app.set("trust proxy", 1);
 app.use(helmet());
 const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 
 // Body parsing
 app.use(express.json());
