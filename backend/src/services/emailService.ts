@@ -1,23 +1,44 @@
 import nodemailer from "nodemailer";
 
-const transporter = process.env.SMTP_USER
+// Log SMTP config at startup (mask password)
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS;
+const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+const smtpPort = parseInt(process.env.SMTP_PORT || "587");
+
+console.log(`[Email] SMTP config: host=${smtpHost}, port=${smtpPort}, user=${smtpUser || "NOT SET"}, pass=${smtpPass ? smtpPass.slice(0, 4) + "****" : "NOT SET"}`);
+
+const transporter = smtpUser
   ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT || "587"),
+      host: smtpHost,
+      port: smtpPort,
       secure: false,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      auth: { user: smtpUser, pass: smtpPass },
     })
   : null;
 
+if (transporter) {
+  transporter.verify().then(() => {
+    console.log("[Email] SMTP connection verified successfully");
+  }).catch((err) => {
+    console.error("[Email] SMTP verification FAILED:", err.message);
+  });
+}
+
 async function sendEmail(to: string, subject: string, html: string) {
   if (transporter) {
-    await transporter.sendMail({
-      from: `"Silk Route Logistics" <${process.env.SMTP_USER}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log(`[Email] Sent to ${to}: ${subject}`);
+    try {
+      const info = await transporter.sendMail({
+        from: `"Silk Route Logistics" <${smtpUser}>`,
+        to,
+        subject,
+        html,
+      });
+      console.log(`[Email] Sent to ${to}: ${subject} (messageId: ${info.messageId})`);
+    } catch (err: any) {
+      console.error(`[Email] FAILED to send to ${to}: ${err.message}`);
+      throw err;
+    }
   } else {
     console.log(`[Email][NoSMTP] To: ${to} | Subject: ${subject}`);
   }

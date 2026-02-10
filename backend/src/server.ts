@@ -28,7 +28,17 @@ app.use("/uploads", express.static(path.resolve(env.UPLOAD_DIR)));
 
 // Health check
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    smtp: {
+      configured: !!process.env.SMTP_USER,
+      host: process.env.SMTP_HOST || "not set",
+      port: process.env.SMTP_PORT || "not set",
+      user: process.env.SMTP_USER || "not set",
+      passSet: !!process.env.SMTP_PASS,
+    },
+  });
 });
 
 // API routes
