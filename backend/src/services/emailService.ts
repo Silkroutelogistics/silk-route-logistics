@@ -14,6 +14,7 @@ const transporter = smtpUser
       port: smtpPort,
       secure: false,
       auth: { user: smtpUser, pass: smtpPass },
+      family: 4, // Force IPv4 — Render doesn't support IPv6 to Gmail
     })
   : null;
 
