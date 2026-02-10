@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { X, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Check, MapPin } from "lucide-react";
 
 const EQUIPMENT_TYPES = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"];
 const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "100", "110", "125", "150", "175", "200", "250", "300", "400", "500"];
@@ -100,12 +100,20 @@ export function CreateLoadModal({ open, onClose }: Props) {
           {step === 1 && (
             <>
               <h3 className="text-sm font-medium text-slate-300">Origin</h3>
+              <AddressAutocomplete
+                label="Search address..."
+                onSelect={(addr) => { update("originCity", addr.city); update("originState", addr.state); update("originZip", addr.zip); }}
+              />
               <div className="grid grid-cols-3 gap-3">
                 <Input label="City" value={form.originCity} onChange={(v) => update("originCity", v)} />
                 <StateSelect label="State/Province" value={form.originState} onChange={(v) => update("originState", v)} />
                 <Input label="Zip/Postal" value={form.originZip} onChange={(v) => update("originZip", v)} />
               </div>
               <h3 className="text-sm font-medium text-slate-300 mt-4">Destination</h3>
+              <AddressAutocomplete
+                label="Search address..."
+                onSelect={(addr) => { update("destCity", addr.city); update("destState", addr.state); update("destZip", addr.zip); }}
+              />
               <div className="grid grid-cols-3 gap-3">
                 <Input label="City" value={form.destCity} onChange={(v) => update("destCity", v)} />
                 <StateSelect label="State/Province" value={form.destState} onChange={(v) => update("destState", v)} />
@@ -282,6 +290,90 @@ function StateSelect({ label, value, onChange }: { label: string; value: string;
           {CA_PROVINCES.map((p) => <option key={p} value={p} className="bg-navy">{p}</option>)}
         </optgroup>
       </select>
+    </div>
+  );
+}
+
+interface AddressResult { city: string; state: string; zip: string; display: string; }
+
+function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (addr: AddressResult) => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<AddressResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setShowDropdown(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 3) { setResults([]); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=us,ca`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const data = await res.json();
+      const parsed: AddressResult[] = data
+        .filter((r: any) => r.address && (r.address.city || r.address.town || r.address.village || r.address.county))
+        .map((r: any) => {
+          const a = r.address;
+          const city = a.city || a.town || a.village || a.county || "";
+          const state = a["ISO3166-2-lvl4"]?.split("-")[1] || a.state_code || a.state || "";
+          const zip = a.postcode || "";
+          return { city, state: state.toUpperCase().slice(0, 2), zip, display: r.display_name };
+        });
+      setResults(parsed);
+      setShowDropdown(parsed.length > 0);
+    } catch { setResults([]); }
+    setLoading(false);
+  }, []);
+
+  const handleChange = (val: string) => {
+    setQuery(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(val), 350);
+  };
+
+  const handleSelect = (addr: AddressResult) => {
+    onSelect(addr);
+    setQuery(addr.display.split(",").slice(0, 2).join(",").trim());
+    setShowDropdown(false);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div className="relative">
+        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gold" />
+        <input
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={() => results.length > 0 && setShowDropdown(true)}
+          placeholder={label}
+          className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50"
+        />
+        {loading && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />}
+      </div>
+      {showDropdown && results.length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+          {results.map((r, i) => (
+            <button key={i} onClick={() => handleSelect(r)}
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition truncate">
+              <span className="text-gold font-medium">{r.city}, {r.state}</span>
+              {r.zip && <span className="text-slate-500"> {r.zip}</span>}
+              <span className="text-slate-600 block text-xs truncate">{r.display}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

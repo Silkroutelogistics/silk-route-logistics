@@ -34,7 +34,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: data.user, token: data.token, isLoading: false });
       window.location.href = "/dashboard/overview";
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Login failed";
+      const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
+      let message = axiosErr?.response?.data?.error || "Login failed";
+      if (axiosErr?.code === "ECONNABORTED") message = "Server is starting up — please try again in a few seconds.";
+      if (axiosErr?.code === "ERR_NETWORK") message = "Cannot reach server. Please check your connection or try again shortly.";
       set({ error: message, isLoading: false });
     }
   },

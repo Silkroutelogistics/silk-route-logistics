@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Compass, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Ship, Loader2 } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,10 +20,11 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [provider, setProvider] = useState<string>("Claude AI");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const base = apiBase || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const base = apiBase || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
   useEffect(() => {
     if (open && inputRef.current) inputRef.current.focus();
@@ -43,7 +44,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
     setLoading(true);
 
     try {
-      const endpoint = isAuthenticated ? `${base}/api/chat` : `${base}/api/chat/public`;
+      const endpoint = isAuthenticated ? `${base}/chat` : `${base}/chat/public`;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (isAuthenticated && token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -55,6 +56,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
 
       const data = await res.json();
       const reply = data.reply || data.error || "Something went wrong. Please try again.";
+      if (data.provider) setProvider(data.provider === "gemini" ? "Gemini AI" : "Claude AI");
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch {
       setMessages((m) => [...m, { role: "assistant", content: "Unable to reach Marco Polo. Please check your connection." }]);
@@ -85,7 +87,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
           className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#d4a574] text-[#0f172a] shadow-lg shadow-[#d4a574]/20 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer group"
           title="Chat with Marco Polo"
         >
-          <Compass className="w-7 h-7" />
+          <Ship className="w-7 h-7" />
           <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0f172a]" />
         </button>
       )}
@@ -97,7 +99,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
           <div className={`${headerBg} px-4 py-3 flex items-center justify-between shrink-0`}>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#d4a574]/20 flex items-center justify-center">
-                <Compass className="w-5 h-5 text-[#d4a574]" />
+                <Ship className="w-5 h-5 text-[#d4a574]" />
               </div>
               <div>
                 <h3 className="text-white font-semibold text-sm">Marco Polo</h3>
@@ -114,7 +116,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
             {messages.length === 0 && (
               <div className="text-center py-6 space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-[#d4a574]/10 flex items-center justify-center">
-                  <Compass className="w-8 h-8 text-[#d4a574]" />
+                  <Ship className="w-8 h-8 text-[#d4a574]" />
                 </div>
                 <div>
                   <p className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>Welcome! I&apos;m Marco Polo</p>
@@ -172,7 +174,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
               </button>
             </div>
             <p className={`text-[10px] ${textMuted} text-center mt-1.5`}>
-              Powered by Claude AI &bull; Silk Route Logistics
+              Powered by {provider} &bull; Silk Route Logistics
             </p>
           </div>
         </div>
