@@ -12,17 +12,22 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
+  tempToken: string | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ pendingOtp: true; email: string } | false>;
+  verifyOtp: (email: string, code: string) => Promise<{ success: true; passwordExpired?: boolean } | false>;
+  resendOtp: (email: string) => Promise<boolean>;
+  forceChangePassword: (newPassword: string) => Promise<boolean>;
   registerUser: (data: Record<string, unknown>) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
+  tempToken: null,
   isLoading: false,
   error: null,
 
@@ -30,15 +35,71 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await api.post("/auth/login", { email, password });
+      if (data.pendingOtp) {
+        set({ isLoading: false });
+        return { pendingOtp: true as const, email: data.email };
+      }
+      // Fallback (shouldn't happen with OTP flow)
       localStorage.setItem("token", data.token);
       set({ user: data.user, token: data.token, isLoading: false });
-      window.location.href = "/dashboard/overview";
+      return false;
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
       let message = axiosErr?.response?.data?.error || "Login failed";
       if (axiosErr?.code === "ECONNABORTED") message = "Server is starting up — please try again in a few seconds.";
       if (axiosErr?.code === "ERR_NETWORK") message = "Cannot reach server. Please check your connection or try again shortly.";
       set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  verifyOtp: async (email, code) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await api.post("/auth/verify-otp", { email, code });
+
+      if (data.passwordExpired) {
+        set({ tempToken: data.tempToken, isLoading: false });
+        return { success: true as const, passwordExpired: true };
+      }
+
+      localStorage.setItem("token", data.token);
+      set({ user: data.user, token: data.token, isLoading: false });
+      return { success: true as const };
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Verification failed";
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  resendOtp: async (email) => {
+    set({ error: null });
+    try {
+      await api.post("/auth/resend-otp", { email });
+      return true;
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to resend code";
+      set({ error: message });
+      return false;
+    }
+  },
+
+  forceChangePassword: async (newPassword) => {
+    set({ isLoading: true, error: null });
+    try {
+      const tempToken = get().tempToken;
+      const { data } = await api.post("/auth/force-change-password", { newPassword }, {
+        headers: { Authorization: `Bearer ${tempToken}` },
+      });
+
+      localStorage.setItem("token", data.token);
+      set({ user: data.user, token: data.token, tempToken: null, isLoading: false });
+      return true;
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Password change failed";
+      set({ error: message, isLoading: false });
+      return false;
     }
   },
 
@@ -57,7 +118,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem("token");
-    set({ user: null, token: null });
+    set({ user: null, token: null, tempToken: null });
     window.location.href = "/auth/login";
   },
 

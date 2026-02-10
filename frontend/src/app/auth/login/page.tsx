@@ -22,7 +22,13 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginForm) => login(data.email, data.password);
+  const onSubmit = async (data: LoginForm) => {
+    const result = await login(data.email, data.password);
+    if (result && result.pendingOtp) {
+      sessionStorage.setItem("otpEmail", result.email);
+      window.location.href = "/auth/verify-otp";
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">

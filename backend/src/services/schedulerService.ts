@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { prisma } from "../config/database";
-import { sendPreTracingEmail, sendLateAlertEmail } from "./emailService";
+import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder } from "./emailService";
 
 /**
  * Pre-tracing: runs every hour.
@@ -150,6 +150,72 @@ async function runLateDetection() {
   }
 }
 
+const PASSWORD_EXPIRY_DAYS = 60;
+
+/**
+ * Password expiry reminders: runs daily at 9 AM.
+ * Sends emails at 14, 7, and 2 days before password expiry.
+ */
+async function runPasswordExpiryReminder() {
+  const now = new Date();
+  const reminderWindows = [14, 7, 2]; // days before expiry
+
+  for (const daysLeft of reminderWindows) {
+    // Find users whose password will expire in exactly `daysLeft` days (within a 24h window)
+    const targetDaysAgo = PASSWORD_EXPIRY_DAYS - daysLeft;
+    const windowStart = new Date(now.getTime() - (targetDaysAgo + 1) * 24 * 60 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() - targetDaysAgo * 24 * 60 * 60 * 1000);
+
+    // Users with passwordChangedAt in the window
+    const usersWithPwChange = await prisma.user.findMany({
+      where: {
+        passwordChangedAt: { gte: windowStart, lt: windowEnd },
+      },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    // Users with passwordChangedAt IS NULL — use createdAt as fallback
+    const usersNullPwChange = await prisma.user.findMany({
+      where: {
+        passwordChangedAt: null,
+        createdAt: { gte: windowStart, lt: windowEnd },
+      },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    const users = [...usersWithPwChange, ...usersNullPwChange];
+
+    for (const user of users) {
+      // Dedup: check if reminder already sent in last 24h
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const alreadySent = await prisma.notification.findFirst({
+        where: {
+          userId: user.id,
+          type: "PASSWORD_EXPIRY",
+          createdAt: { gte: oneDayAgo },
+        },
+      });
+      if (alreadySent) continue;
+
+      // In-app notification
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: "PASSWORD_EXPIRY",
+          title: `Password expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`,
+          message: `Your password will expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}. Please change it in Settings to avoid being locked out.`,
+          actionUrl: "/dashboard/settings",
+        },
+      });
+
+      // Email
+      await sendPasswordExpiryReminder(user.email, user.firstName, daysLeft);
+
+      console.log(`[PasswordExpiry] Sent ${daysLeft}-day reminder to ${user.email}`);
+    }
+  }
+}
+
 export function startSchedulers() {
   // Pre-tracing: every hour at :00
   cron.schedule("0 * * * *", async () => {
@@ -163,5 +229,11 @@ export function startSchedulers() {
     try { await runLateDetection(); } catch (e) { console.error("[LateDetection] Error:", e); }
   });
 
-  console.log("[Scheduler] Pre-tracing (hourly) and late detection (30min) started");
+  // Password expiry reminders: daily at 9:00 AM
+  cron.schedule("0 9 * * *", async () => {
+    console.log("[Scheduler] Running password expiry reminder check...");
+    try { await runPasswordExpiryReminder(); } catch (e) { console.error("[PasswordExpiry] Error:", e); }
+  });
+
+  console.log("[Scheduler] Pre-tracing (hourly), late detection (30min), password expiry (daily 9AM) started");
 }

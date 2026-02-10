@@ -185,6 +185,8 @@ model User {
   receivedMessages Message[]      @relation("MessageReceiver")
   notifications   Notification[]
   auditLogs       AuditLog[]
+  passwordChangedAt DateTime?
+  otpCodes        OtpCode[]
 
   @@map("users")
 }
@@ -788,4 +790,19 @@ model ComplianceAlert {
   @@index([entityType, entityId])
   @@index([expiryDate])
   @@map("compliance_alerts")
+}
+
+// ─── OTP Codes ──────────────────────────────────────────
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, used])
+  @@map("otp_codes")
 }

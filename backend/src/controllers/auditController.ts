@@ -78,3 +78,38 @@ export async function getAuditStats(req: AuthRequest, res: Response) {
     timeline: Object.entries(timeline).map(([date, count]) => ({ date, count })),
   });
 }
+
+const loginActivityQuerySchema = z.object({
+  userId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(25),
+});
+
+export async function getLoginActivity(req: AuthRequest, res: Response) {
+  const query = loginActivityQuerySchema.parse(req.query);
+  const where: Record<string, unknown> = { action: "LOGIN", entity: "Session" };
+
+  if (query.userId) where.userId = query.userId;
+  if (query.startDate || query.endDate) {
+    where.createdAt = {};
+    if (query.startDate) (where.createdAt as Record<string, Date>).gte = new Date(query.startDate);
+    if (query.endDate) (where.createdAt as Record<string, Date>).lte = new Date(query.endDate);
+  }
+
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true, role: true } },
+      },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+
+  res.json({ logs, total, page: query.page, totalPages: Math.ceil(total / query.limit) });
+}

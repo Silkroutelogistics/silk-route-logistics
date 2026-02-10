@@ -111,3 +111,31 @@ export async function sendLateAlertEmail(
 
   await sendEmail(brokerEmail, `LATE ALERT: Shipment ${shipmentNumber} - No movement in ${Math.round(hoursSinceUpdate)}h`, html);
 }
+
+export async function sendOtpEmail(email: string, firstName: string, code: string) {
+  const html = wrap(`
+    <h2 style="color:#0f172a">Your Verification Code</h2>
+    <p>Hi ${firstName},</p>
+    <p>Use the following code to complete your sign-in:</p>
+    <div style="text-align:center;margin:24px 0">
+      <div style="display:inline-block;background:#f1f5f9;border:2px solid #d4a574;border-radius:12px;padding:16px 32px;letter-spacing:12px;font-size:36px;font-family:'Courier New',monospace;font-weight:bold;color:#0f172a">${code}</div>
+    </div>
+    <p style="color:#64748b;font-size:14px">This code expires in <strong>5 minutes</strong>. If you didn't request this, please ignore this email.</p>
+  `);
+
+  await sendEmail(email, `Your SRL Verification Code: ${code}`, html);
+}
+
+export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {
+  const urgency = daysLeft <= 2 ? "#dc2626" : daysLeft <= 7 ? "#f59e0b" : "#3b82f6";
+  const html = wrap(`
+    <h2 style="color:${urgency}">Password Expiring Soon</h2>
+    <p>Hi ${firstName},</p>
+    <p>Your Silk Route Logistics password will expire in <strong style="color:${urgency}">${daysLeft} day${daysLeft !== 1 ? "s" : ""}</strong>.</p>
+    <p>Please update your password before it expires to avoid being locked out.</p>
+    <a href="https://silkroutelogistics.ai/dashboard/settings" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Change Password</a>
+    <p style="color:#64748b;font-size:13px;margin-top:16px">If your password expires, you'll be prompted to create a new one at your next login.</p>
+  `);
+
+  await sendEmail(email, `Password expires in ${daysLeft} days — Silk Route Logistics`, html);
+}

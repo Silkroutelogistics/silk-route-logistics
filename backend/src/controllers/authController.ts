@@ -5,6 +5,10 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { registerSchema, loginSchema } from "../validators/auth";
 import { AuthRequest } from "../middleware/auth";
+import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt } from "../services/otpService";
+import { sendOtpEmail } from "../services/emailService";
+
+const PASSWORD_EXPIRY_DAYS = 60;
 
 export async function register(req: Request, res: Response) {
   const data = registerSchema.parse(req.body);
@@ -17,7 +21,7 @@ export async function register(req: Request, res: Response) {
   const passwordHash = await bcrypt.hash(data.password, 10);
   const { password: _, ...userData } = data;
   const user = await prisma.user.create({
-    data: { ...userData, passwordHash } as any,
+    data: { ...userData, passwordHash, passwordChangedAt: new Date() } as any,
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
 
@@ -39,11 +43,148 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
+  // Send OTP instead of issuing JWT
+  const code = await createOtp(user.id);
+  await sendOtpEmail(user.email, user.firstName, code);
+
+  res.json({ pendingOtp: true, email: user.email });
+}
+
+export async function handleVerifyOtp(req: Request, res: Response) {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    res.status(400).json({ error: "Email and code are required" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  const isValid = await verifyOtpCode(user.id, code);
+  if (!isValid) {
+    res.status(401).json({ error: "Invalid or expired code" });
+    return;
+  }
+
+  // Check password expiry
+  const baseDate = user.passwordChangedAt || user.createdAt;
+  const daysSinceChange = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (daysSinceChange >= PASSWORD_EXPIRY_DAYS) {
+    // Issue a short-lived temp token for force-change only
+    const tempToken = jwt.sign(
+      { userId: user.id, purpose: "force-change-password" },
+      env.JWT_SECRET,
+      { expiresIn: "10m" } as jwt.SignOptions,
+    );
+    res.json({ passwordExpired: true, tempToken });
+    return;
+  }
+
+  // Issue full JWT + audit log
+  const ipAddress = req.headers["x-forwarded-for"] as string || req.ip || "";
+  const userAgent = req.headers["user-agent"] || "";
+
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: "LOGIN",
+      entity: "Session",
+      ipAddress: typeof ipAddress === "string" ? ipAddress : String(ipAddress),
+      userAgent,
+    },
+  });
+
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     token,
   });
+}
+
+export async function handleResendOtp(req: Request, res: Response) {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    // Don't reveal whether user exists
+    res.json({ message: "If an account exists, a new code has been sent" });
+    return;
+  }
+
+  // Rate limit: last OTP must be at least 60s ago
+  const lastCreated = await getLastOtpCreatedAt(user.id);
+  if (lastCreated && Date.now() - lastCreated.getTime() < 60 * 1000) {
+    res.status(429).json({ error: "Please wait before requesting a new code" });
+    return;
+  }
+
+  const code = await createOtp(user.id);
+  await sendOtpEmail(user.email, user.firstName, code);
+
+  res.json({ message: "Code sent" });
+}
+
+export async function forceChangePassword(req: AuthRequest, res: Response) {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 8) {
+    res.status(400).json({ error: "New password must be at least 8 characters" });
+    return;
+  }
+
+  // Verify this is a force-change-password token
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    const token = header.split(" ")[1];
+    try {
+      const payload = jwt.verify(token, env.JWT_SECRET) as { userId: string; purpose?: string };
+      if (payload.purpose !== "force-change-password") {
+        res.status(403).json({ error: "Invalid token for this operation" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { passwordHash, passwordChangedAt: new Date() },
+  });
+
+  // Issue full JWT
+  const ipAddress = req.headers["x-forwarded-for"] as string || req.ip || "";
+  const userAgent = req.headers["user-agent"] || "";
+
+  const fullToken = jwt.sign({ userId: req.user!.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+
+  await prisma.auditLog.create({
+    data: {
+      userId: req.user!.id,
+      action: "LOGIN",
+      entity: "Session",
+      changes: "Password changed (expired)",
+      ipAddress: typeof ipAddress === "string" ? ipAddress : String(ipAddress),
+      userAgent,
+    },
+  });
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { id: true, email: true, firstName: true, lastName: true, role: true },
+  });
+
+  res.json({ user, token: fullToken });
 }
 
 export async function getProfile(req: AuthRequest, res: Response) {
@@ -80,8 +221,6 @@ export async function refreshToken(req: AuthRequest, res: Response) {
 }
 
 export async function logout(_req: AuthRequest, res: Response) {
-  // Client-side token removal is primary mechanism
-  // This endpoint exists for future token blacklisting if needed
   res.json({ message: "Logged out successfully" });
 }
 
@@ -99,6 +238,9 @@ export async function changePassword(req: AuthRequest, res: Response) {
   if (!valid) { res.status(401).json({ error: "Current password is incorrect" }); return; }
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: req.user!.id }, data: { passwordHash } });
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { passwordHash, passwordChangedAt: new Date() },
+  });
   res.json({ message: "Password updated successfully" });
 }

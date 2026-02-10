@@ -23,7 +23,13 @@ export default function CarrierLoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginForm) => login(data.email, data.password);
+  const onSubmit = async (data: LoginForm) => {
+    const result = await login(data.email, data.password);
+    if (result && result.pendingOtp) {
+      sessionStorage.setItem("otpEmail", result.email);
+      window.location.href = "/auth/verify-otp";
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0f172a] px-4">
