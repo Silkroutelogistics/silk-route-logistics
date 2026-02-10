@@ -20,7 +20,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<string>("Claude AI");
+  const [provider, setProvider] = useState<string>("Gemini AI");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
