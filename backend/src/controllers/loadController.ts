@@ -1,8 +1,10 @@
 import { Response } from "express";
+import { z } from "zod";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
+import { calculateDrivingDistance } from "../services/distanceService";
 
 function generateRefNumber(): string {
   const d = new Date();
@@ -198,4 +200,28 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
 
   await prisma.load.delete({ where: { id: req.params.id } });
   res.status(204).send();
+}
+
+const distanceQuerySchema = z.object({
+  originCity: z.string().min(1),
+  originState: z.string().length(2),
+  originZip: z.string().min(3).max(10),
+  destCity: z.string().min(1),
+  destState: z.string().length(2),
+  destZip: z.string().min(3).max(10),
+});
+
+export async function getDistance(req: AuthRequest, res: Response) {
+  const query = distanceQuerySchema.parse(req.query);
+  const origin = `${query.originCity}, ${query.originState} ${query.originZip}`;
+  const destination = `${query.destCity}, ${query.destState} ${query.destZip}`;
+
+  const result = await calculateDrivingDistance(origin, destination);
+
+  if (result.error && !result.distanceMiles) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+
+  res.json({ distanceMiles: result.distanceMiles, durationMinutes: result.durationMinutes });
 }

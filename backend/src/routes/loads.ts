@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createLoad, getLoads, getLoadById, updateLoadStatus, deleteLoad, carrierUpdateStatus } from "../controllers/loadController";
+import { createLoad, getLoads, getLoadById, updateLoadStatus, deleteLoad, carrierUpdateStatus, getDistance } from "../controllers/loadController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 
@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get("/distance", getDistance);
 router.post("/", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), auditLog("CREATE", "Load"), createLoad);
 router.get("/", getLoads);
 router.get("/:id", getLoadById);

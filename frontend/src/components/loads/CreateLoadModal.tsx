@@ -33,7 +33,34 @@ export function CreateLoadModal({ open, onClose }: Props) {
     contactName: "", contactPhone: "",
   });
 
+  const [distanceLoading, setDistanceLoading] = useState(false);
+  const [distanceAuto, setDistanceAuto] = useState(false);
+  const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const update = (field: string, value: string | boolean | string[]) => setForm((f) => ({ ...f, [field]: value }));
+
+  // Auto-calculate distance when both addresses are complete
+  useEffect(() => {
+    const { originCity, originState, originZip, destCity, destState, destZip } = form;
+    if (!originCity || !originState || !originZip || !destCity || !destState || !destZip) return;
+
+    if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current);
+    distanceTimerRef.current = setTimeout(async () => {
+      setDistanceLoading(true);
+      try {
+        const res = await api.get("/loads/distance", { params: { originCity, originState, originZip, destCity, destState, destZip } });
+        if (res.data.distanceMiles) {
+          setForm((f) => ({ ...f, distance: String(res.data.distanceMiles) }));
+          setDistanceAuto(true);
+        }
+      } catch {
+        // Silent fail — user can enter distance manually
+      }
+      setDistanceLoading(false);
+    }, 500);
+
+    return () => { if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current); };
+  }, [form.originCity, form.originState, form.originZip, form.destCity, form.destState, form.destZip]);
 
   const toggleAccessorial = (a: string) => {
     setForm((f) => ({
@@ -122,7 +149,11 @@ export function CreateLoadModal({ open, onClose }: Props) {
               <div className="grid grid-cols-3 gap-3 mt-4">
                 <Input label="Pickup Date" value={form.pickupDate} onChange={(v) => update("pickupDate", v)} type="date" />
                 <Input label="Delivery Date" value={form.deliveryDate} onChange={(v) => update("deliveryDate", v)} type="date" />
-                <Input label="Distance (mi)" value={form.distance} onChange={(v) => update("distance", v)} type="number" />
+                <div className="relative">
+                  <Input label="Distance (mi)" value={form.distance} onChange={(v) => { update("distance", v); setDistanceAuto(false); }} type="number" />
+                  {distanceLoading && <div className="absolute right-3 top-7 w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />}
+                  {distanceAuto && form.distance && !distanceLoading && <span className="absolute right-3 top-7 text-[10px] text-green-400 font-medium">Auto</span>}
+                </div>
               </div>
             </>
           )}
