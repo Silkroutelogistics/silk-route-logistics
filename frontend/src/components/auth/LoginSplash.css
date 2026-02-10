@@ -1,0 +1,173 @@
+/* ── LoginSplash Animations ─────────────────────────── */
+
+/* Route line draws itself via stroke-dashoffset */
+@keyframes draw-route {
+  from { stroke-dashoffset: 1200; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Truck drives along route path (CSS offset-path fallback below) */
+@keyframes truck-drive {
+  0%   { offset-distance: 0%; opacity: 0; }
+  3%   { opacity: 1; }
+  97%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* Fallback for browsers without offset-path */
+@keyframes truck-drive-fallback {
+  0%   { left: 5%; top: 45%; opacity: 0; }
+  5%   { opacity: 1; }
+  25%  { left: 25%; top: 38%; }
+  50%  { left: 50%; top: 42%; }
+  75%  { left: 72%; top: 36%; }
+  95%  { opacity: 1; }
+  100% { left: 90%; top: 40%; opacity: 0; }
+}
+
+/* City dot pop-in */
+@keyframes node-appear {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.3); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Gold pulse on supply chain icons */
+@keyframes node-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 165, 116, 0.4); }
+  50%      { box-shadow: 0 0 12px 4px rgba(212, 165, 116, 0.2); }
+}
+
+/* Quote text fade-in */
+@keyframes quote-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Progress bar fill */
+@keyframes progress-fill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* Splash container fade-out */
+@keyframes splash-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Welcome text fade-in */
+@keyframes welcome-fade-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo glow pulse */
+@keyframes logo-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(212, 165, 116, 0.3)); }
+  50%      { filter: drop-shadow(0 0 20px rgba(212, 165, 116, 0.6)); }
+}
+
+/* ── Applied Classes ─────────────────────────────────── */
+
+.splash-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  overflow: hidden;
+}
+
+.splash-container.fade-out {
+  animation: splash-fade-out 0.4s ease-out forwards;
+}
+
+.splash-route-line {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: draw-route 2.5s ease-in-out forwards;
+}
+
+.splash-city-dot {
+  opacity: 0;
+  transform: scale(0);
+  animation: node-appear 0.4s ease-out forwards;
+}
+
+.splash-truck {
+  position: absolute;
+  offset-path: path("M80,200 C200,160 350,220 500,180 C600,160 700,200 820,170");
+  offset-rotate: auto;
+  animation: truck-drive 3.5s ease-in-out forwards;
+}
+
+/* Fallback if offset-path not supported */
+@supports not (offset-path: path("M0,0")) {
+  .splash-truck {
+    offset-path: none;
+    animation: truck-drive-fallback 3.5s ease-in-out forwards;
+  }
+}
+
+.splash-pipeline-node {
+  opacity: 0;
+  transform: scale(0);
+  animation: node-appear 0.4s ease-out forwards;
+}
+
+.splash-pipeline-node.active {
+  animation: node-appear 0.4s ease-out forwards, node-pulse 1.5s ease-in-out 0.4s infinite;
+}
+
+.splash-welcome {
+  animation: welcome-fade-in 0.5s ease-out forwards;
+}
+
+.splash-quote {
+  opacity: 0;
+  animation: quote-fade-in 0.6s ease-out forwards;
+}
+
+.splash-logo {
+  animation: logo-glow 2s ease-in-out infinite;
+}
+
+.splash-progress-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #d4a574, #f0d4a8, #d4a574);
+  animation: progress-fill 3.5s linear forwards;
+  border-radius: 2px;
+}
+
+/* Stagger delays for city dots */
+.splash-city-dot:nth-child(1) { animation-delay: 0.4s; }
+.splash-city-dot:nth-child(2) { animation-delay: 0.7s; }
+.splash-city-dot:nth-child(3) { animation-delay: 1.0s; }
+.splash-city-dot:nth-child(4) { animation-delay: 1.3s; }
+.splash-city-dot:nth-child(5) { animation-delay: 1.6s; }
+.splash-city-dot:nth-child(6) { animation-delay: 1.9s; }
+.splash-city-dot:nth-child(7) { animation-delay: 2.2s; }
+
+/* Stagger delays for pipeline nodes */
+.splash-pipeline-node:nth-child(1) { animation-delay: 0.4s; }
+.splash-pipeline-node:nth-child(2) { animation-delay: 0.9s; }
+.splash-pipeline-node:nth-child(3) { animation-delay: 1.4s; }
+.splash-pipeline-node:nth-child(4) { animation-delay: 1.9s; }
+.splash-pipeline-node:nth-child(5) { animation-delay: 2.4s; }
+
+/* Pipeline connector lines */
+.splash-pipeline-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #d4a574, transparent);
+  opacity: 0;
+  animation: quote-fade-in 0.3s ease-out forwards;
+}
+
+.splash-pipeline-line:nth-child(2) { animation-delay: 0.65s; }
+.splash-pipeline-line:nth-child(4) { animation-delay: 1.15s; }
+.splash-pipeline-line:nth-child(6) { animation-delay: 1.65s; }
+.splash-pipeline-line:nth-child(8) { animation-delay: 2.15s; }

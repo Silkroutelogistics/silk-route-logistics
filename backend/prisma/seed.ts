@@ -33,9 +33,9 @@ async function main() {
   // Single admin account
   await prisma.user.create({
     data: {
-      email: "admin@silkroutelogistics.ai",
+      email: "whaider@silkroutelogistics.ai",
       passwordHash: hash,
-      firstName: "Wasih",
+      firstName: "Wasi",
       lastName: "Haider",
       company: "Silk Route Logistics",
       role: UserRole.ADMIN,

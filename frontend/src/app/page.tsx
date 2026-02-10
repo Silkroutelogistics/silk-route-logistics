@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Truck, Snowflake, Car, ShoppingCart,
   Shield, BarChart3, Users, Award, Zap, MapPin, Phone, Mail,
-  ChevronRight, Menu, X, CheckCircle2, Star,
+  ChevronRight, Menu, X, CheckCircle2, Star, Briefcase,
 } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -90,8 +90,13 @@ export default function Home() {
               </Link>
             ) : (
               <>
-                <Link href="/auth/login" className="px-4 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm transition">
-                  Sign In
+                <Link href="/auth/login" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm transition">
+                  <Briefcase className="w-4 h-4" />
+                  Employee Login
+                </Link>
+                <Link href="/auth/carrier-login" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm transition">
+                  <Truck className="w-4 h-4" />
+                  Carrier Login
                 </Link>
                 <Link href="/onboarding" className="px-5 py-2.5 rounded-lg bg-gold text-white font-semibold text-sm hover:bg-gold-light transition">
                   Get Started
@@ -115,15 +120,24 @@ export default function Home() {
                 {l.label}
               </button>
             ))}
-            <div className="pt-3 border-t flex gap-3">
+            <div className="pt-3 border-t space-y-2">
               {token ? (
-                <Link href="/dashboard/overview" className="flex-1 text-center px-4 py-2.5 rounded-lg bg-gold text-white font-semibold text-sm">
+                <Link href="/dashboard/overview" className="block w-full text-center px-4 py-2.5 rounded-lg bg-gold text-white font-semibold text-sm">
                   Dashboard
                 </Link>
               ) : (
                 <>
-                  <Link href="/auth/login" className="flex-1 text-center px-4 py-2.5 rounded-lg border text-sm">Sign In</Link>
-                  <Link href="/onboarding" className="flex-1 text-center px-4 py-2.5 rounded-lg bg-gold text-white font-semibold text-sm">Get Started</Link>
+                  <div className="flex gap-3">
+                    <Link href="/auth/login" className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm">
+                      <Briefcase className="w-4 h-4" />
+                      Employee
+                    </Link>
+                    <Link href="/auth/carrier-login" className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm">
+                      <Truck className="w-4 h-4" />
+                      Carrier
+                    </Link>
+                  </div>
+                  <Link href="/onboarding" className="block w-full text-center px-4 py-2.5 rounded-lg bg-gold text-white font-semibold text-sm">Get Started</Link>
                 </>
               )}
             </div>
