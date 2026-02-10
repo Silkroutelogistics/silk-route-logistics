@@ -1,47 +1,31 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-// Log SMTP config at startup (mask password)
-const smtpUser = process.env.SMTP_USER;
-const smtpPass = process.env.SMTP_PASS;
-const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-const smtpPort = parseInt(process.env.SMTP_PORT || "587");
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const fromEmail = process.env.EMAIL_FROM || "noreply@silkroutelogistics.ai";
 
-console.log(`[Email] SMTP config: host=${smtpHost}, port=${smtpPort}, user=${smtpUser || "NOT SET"}, pass=${smtpPass ? smtpPass.slice(0, 4) + "****" : "NOT SET"}`);
-
-const transporter = smtpUser
-  ? nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: false,
-      auth: { user: smtpUser, pass: smtpPass },
-      family: 4, // Force IPv4 — Render doesn't support IPv6 to Gmail
-    })
-  : null;
-
-if (transporter) {
-  transporter.verify().then(() => {
-    console.log("[Email] SMTP connection verified successfully");
-  }).catch((err) => {
-    console.error("[Email] SMTP verification FAILED:", err.message);
-  });
-}
+console.log(`[Email] Resend configured: ${!!resend}, from: ${fromEmail}`);
 
 async function sendEmail(to: string, subject: string, html: string) {
-  if (transporter) {
+  if (resend) {
     try {
-      const info = await transporter.sendMail({
-        from: `"Silk Route Logistics" <${smtpUser}>`,
+      const { data, error } = await resend.emails.send({
+        from: `Silk Route Logistics <${fromEmail}>`,
         to,
         subject,
         html,
       });
-      console.log(`[Email] Sent to ${to}: ${subject} (messageId: ${info.messageId})`);
+      if (error) {
+        console.error(`[Email] Resend error to ${to}: ${error.message}`);
+        throw new Error(error.message);
+      }
+      console.log(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
     } catch (err: any) {
       console.error(`[Email] FAILED to send to ${to}: ${err.message}`);
       throw err;
     }
   } else {
-    console.log(`[Email][NoSMTP] To: ${to} | Subject: ${subject}`);
+    console.log(`[Email][NoAPI] To: ${to} | Subject: ${subject}`);
   }
 }
 
