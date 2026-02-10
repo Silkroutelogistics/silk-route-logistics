@@ -1,16 +1,7 @@
 import { Response } from "express";
-import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-
-// AI Provider: set AI_PROVIDER=gemini to use Gemini, defaults to claude
-const AI_PROVIDER = (process.env.AI_PROVIDER || "claude").toLowerCase();
-
-// Claude setup
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
 
 // Gemini setup
 const gemini = process.env.GEMINI_API_KEY
@@ -18,16 +9,7 @@ const gemini = process.env.GEMINI_API_KEY
   : null;
 
 function isConfigured(): boolean {
-  return !!anthropic || !!gemini;
-}
-
-// Errors worth falling back on: credit exhaustion, rate limits, auth failures, server errors
-function shouldFallback(error: unknown): boolean {
-  if (error && typeof error === "object" && "status" in error) {
-    const status = (error as { status: number }).status;
-    return [401, 402, 403, 429, 500, 502, 503, 529].includes(status);
-  }
-  return false;
+  return !!gemini;
 }
 
 const SYSTEM_PROMPT = `You are Marco Polo, the AI assistant for Silk Route Logistics (SRL) — a full-service freight brokerage and logistics platform.
@@ -71,17 +53,6 @@ interface ChatMessage {
   content: string;
 }
 
-async function callClaude(messages: ChatMessage[], systemPrompt: string): Promise<string> {
-  if (!anthropic) throw new Error("Claude not configured");
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 500,
-    system: systemPrompt,
-    messages,
-  });
-  return response.content[0].type === "text" ? response.content[0].text : "I couldn't generate a response.";
-}
-
 async function callGemini(messages: ChatMessage[], systemPrompt: string): Promise<string> {
   if (!gemini) throw new Error("Gemini not configured");
   const model = gemini.getGenerativeModel({
@@ -89,7 +60,6 @@ async function callGemini(messages: ChatMessage[], systemPrompt: string): Promis
     systemInstruction: systemPrompt,
   });
 
-  // Build Gemini conversation history
   const history = messages.slice(0, -1).map((m) => ({
     role: m.role === "assistant" ? "model" as const : "user" as const,
     parts: [{ text: m.content }],
@@ -99,41 +69,6 @@ async function callGemini(messages: ChatMessage[], systemPrompt: string): Promis
   const lastMessage = messages[messages.length - 1].content;
   const result = await chat.sendMessage(lastMessage);
   return result.response.text();
-}
-
-interface AIResponse {
-  text: string;
-  provider: "claude" | "gemini";
-}
-
-async function callAI(messages: ChatMessage[], systemPrompt: string): Promise<AIResponse> {
-  const primary = AI_PROVIDER === "gemini"
-    ? { call: callGemini, name: "gemini" as const }
-    : { call: callClaude, name: "claude" as const };
-
-  const fallback = AI_PROVIDER === "gemini"
-    ? anthropic ? { call: callClaude, name: "claude" as const } : null
-    : gemini ? { call: callGemini, name: "gemini" as const } : null;
-
-  // Try primary provider
-  try {
-    const text = await primary.call(messages, systemPrompt);
-    return { text, provider: primary.name };
-  } catch (primaryError) {
-    // If no fallback available or error isn't fallback-worthy, rethrow
-    if (!fallback || !shouldFallback(primaryError)) throw primaryError;
-
-    console.warn(`[MarcoPolo] ${primary.name} failed (${(primaryError as { status?: number }).status || "unknown"}), falling back to ${fallback.name}`);
-
-    try {
-      const text = await fallback.call(messages, systemPrompt);
-      return { text, provider: fallback.name };
-    } catch (fallbackError) {
-      // Both providers failed — throw the original error
-      console.error(`[MarcoPolo] Fallback ${fallback.name} also failed:`, fallbackError);
-      throw primaryError;
-    }
-  }
 }
 
 async function buildUserContext(userId: string, email: string, role: string): Promise<string> {
@@ -215,8 +150,8 @@ export async function chat(req: AuthRequest, res: Response) {
     }
 
     const messages = buildMessages(message, history);
-    const { text: reply, provider } = await callAI(messages, SYSTEM_PROMPT + userContext);
-    res.json({ reply, provider });
+    const reply = await callGemini(messages, SYSTEM_PROMPT + userContext);
+    res.json({ reply, provider: "gemini" });
   } catch (error: unknown) {
     console.error("[MarcoPolo] Chat error:", error);
     const errMsg = error instanceof Error ? error.message : "Unknown error";
@@ -241,8 +176,8 @@ export async function publicChat(req: AuthRequest, res: Response) {
   try {
     const messages = buildMessages(message, history);
     const systemPrompt = SYSTEM_PROMPT + "\n\nThis is a public visitor on the SRL website. They are not logged in. Help them learn about SRL's services, pricing model, carrier onboarding, and freight solutions. Encourage them to sign up or log in for full features.";
-    const { text: reply, provider } = await callAI(messages, systemPrompt);
-    res.json({ reply, provider });
+    const reply = await callGemini(messages, systemPrompt);
+    res.json({ reply, provider: "gemini" });
   } catch (error: unknown) {
     console.error("[MarcoPolo] Public chat error:", error);
     const errMsg = error instanceof Error ? error.message : "Unknown error";
