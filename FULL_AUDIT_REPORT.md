@@ -1,6 +1,6 @@
 # Silk Route Logistics — Full Project Audit Report
 
-**Date**: February 10, 2026
+**Date**: February 10, 2026 (updated Feb 10, 2026)
 **Auditor**: Claude Opus 4.6
 **Scope**: Complete project audit from first commit to production
 
@@ -28,6 +28,10 @@ silk-route-logistics/
 │   ├── .npmrc
 │   ├── package.json
 │   ├── tsconfig.json
+│   ├── vitest.config.ts              # Test configuration
+│   ├── __tests__/                    # Vitest test suite (30 tests)
+│   │   ├── setup.ts                  # Global mocks (Prisma, env)
+│   │   └── unit/                     # Unit tests (services, middleware, controllers)
 │   ├── assets/logo.png
 │   ├── prisma/
 │   │   ├── schema.prisma            # 20 models, 15 enums
@@ -84,7 +88,7 @@ silk-route-logistics/
 │   │   ├── app/
 │   │   │   ├── layout.tsx, page.tsx, globals.css, providers.tsx, not-found.tsx
 │   │   │   ├── onboarding/page.tsx
-│   │   │   ├── auth/ (5 pages: login, carrier-login, register, verify-otp, force-password-change)
+│   │   │   ├── auth/ (7 pages: login, carrier-login, register, verify-otp, force-password-change, forgot-password, reset-password)
 │   │   │   └── dashboard/ (22 pages + layout + error boundary)
 │   │   ├── components/
 │   │   │   ├── MarcoPolo.tsx         # AI chatbot widget
@@ -177,7 +181,7 @@ silk-route-logistics/
 
 | Route | Mount Point | Auth | Status |
 |-------|-------------|------|--------|
-| Auth | `/api/auth` | Mixed | **WORKING** |
+| Auth | `/api/auth` | Mixed | **WORKING** — includes forgot-password + reset-password endpoints |
 | Chat (Marco Polo) | `/api/chat` | Public + Auth | **WORKING** |
 | Loads | `/api/loads` | Auth | **WORKING** |
 | Invoices | `/api/invoices` | Auth | **WORKING** |
@@ -237,7 +241,7 @@ silk-route-logistics/
 | `cors` | server.ts |
 | `dotenv` | env.ts |
 | `express` | server.ts (core framework) |
-| `express-rate-limit` | server.ts, auth.ts routes |
+| `express-rate-limit` | server.ts, auth.ts, chat.ts routes |
 | `helmet` | server.ts (security headers) |
 | `jsonwebtoken` | auth middleware, authController |
 | `multer` | upload.ts (file uploads) |
@@ -254,7 +258,7 @@ silk-route-logistics/
 |--------|--------|
 | AI Provider | **Gemini-only** (`gemini-2.0-flash`) |
 | Anthropic/Claude | **REMOVED** from code entirely |
-| Public endpoint | `POST /api/chat/public` — no auth, no user context |
+| Public endpoint | `POST /api/chat/public` — no auth, no user context, rate-limited (20 req/15min) |
 | Auth endpoint | `POST /api/chat` — JWT required, includes user's loads/shipments/invoices |
 | System prompt | Comprehensive logistics assistant personality |
 | History support | Last 10 messages maintained |
@@ -269,7 +273,7 @@ silk-route-logistics/
 | Provider | **Resend HTTP API** (migrated from nodemailer SMTP) |
 | Configured in prod | **YES** (health endpoint confirms) |
 | From address | `noreply@silkroutelogistics.ai` |
-| Templates | OTP code, pre-tracing, auto-invoice, late alert, password expiry |
+| Templates | OTP code, pre-tracing, auto-invoice, late alert, password expiry, password reset |
 | Fallback | Console logging if no API key |
 | Status | **WORKING** |
 
@@ -282,6 +286,7 @@ silk-route-logistics/
 | Models | 20 models, 15 enums |
 | Password storage | bcrypt (10 rounds) |
 | Auth flow | Email+Password → OTP email → JWT (7-day) |
+| Password reset | Email-based: forgot-password → token email → reset-password |
 | OTP | 6-digit, 5-minute expiry, rate-limited resend (60s) |
 | Password policy | 60-day expiry, forced change on expiry |
 | Roles | CARRIER, BROKER, SHIPPER, FACTOR, ADMIN, DISPATCH, OPERATIONS, ACCOUNTING, CEO |
@@ -312,6 +317,8 @@ All jobs use distributed database locks (`SchedulerLock` table) to prevent dupli
 | Carrier Login | `/auth/carrier-login` | **WORKING** |
 | Register | `/auth/register` | **WORKING** |
 | Verify OTP | `/auth/verify-otp` | **WORKING** |
+| Forgot Password | `/auth/forgot-password` | **WORKING** |
+| Reset Password | `/auth/reset-password` | **WORKING** |
 | Force Password Change | `/auth/force-password-change` | **WORKING** |
 | Onboarding | `/onboarding` | **WORKING** |
 | Dashboard Overview | `/dashboard/overview` | **WORKING** |
@@ -339,7 +346,7 @@ All jobs use distributed database locks (`SchedulerLock` table) to prevent dupli
 
 **No broken imports or missing files detected.**
 
-All 27 dashboard pages + 5 auth pages + home + onboarding + not-found = **34 pages total**.
+All 27 dashboard pages + 7 auth pages + home + onboarding + not-found = **36 pages total**.
 
 ### 4.2 Frontend → Backend URL
 
@@ -392,6 +399,9 @@ All dependencies actively used:
 | `curl https://silkroutelogistics.ai` | **HTTP 200** — Frontend live |
 | `curl https://api.silkroutelogistics.ai/health` | **HTTP 200** — `{"status":"ok","email":{"provider":"resend","configured":true}}` |
 | `curl -X POST https://api.silkroutelogistics.ai/api/chat/public` with message | **HTTP 200** — Gemini response in ~2s, `{"provider":"gemini"}` |
+| `curl -X POST .../api/auth/forgot-password` | **HTTP 200** — generic "if account exists" message (anti-enumeration) |
+| `curl -X POST .../api/auth/reset-password` with invalid token | **HTTP 400** — `"Invalid or expired reset link"` |
+| `npm test` (backend) | **30/30 tests passing** (Vitest) |
 
 ### 5.2 Required Render Environment Variables
 
@@ -420,6 +430,7 @@ All dependencies actively used:
 | User Registration | **WORKING** | Email + password + role |
 | Employee Login (OTP 2FA) | **WORKING** | Email → password → OTP → JWT |
 | Carrier Login (OTP 2FA) | **WORKING** | Same flow, different UI |
+| Password Reset (Email) | **WORKING** | Forgot-password → token email → reset form |
 | Password Expiry (60-day) | **WORKING** | Force-change flow implemented |
 | Role-Based Access Control | **WORKING** | 9 roles, per-route authorization |
 | Audit Logging | **WORKING** | Login events tracked with IP/UA |
@@ -483,49 +494,56 @@ All dependencies actively used:
 
 ### CRITICAL (Fix Immediately)
 
-| # | Issue | File | Action |
-|---|-------|------|--------|
-| 1 | **API keys in local .env files** | `backend/.env`, `backend/.env.production` | These files are gitignored (safe), but contain real keys. Rotate `ANTHROPIC_API_KEY` since it's no longer used. Remove dead vars `AI_PROVIDER` and `ANTHROPIC_API_KEY` from local files. |
+| # | Issue | Status | Action |
+|---|-------|--------|--------|
+| 1 | **API keys in local .env files** | **OPEN** — manual task | Rotate `ANTHROPIC_API_KEY` in Anthropic dashboard since it's no longer used. Remove dead vars `AI_PROVIDER` and `ANTHROPIC_API_KEY` from local .env files. |
 
 ### HIGH (Fix Soon)
 
-| # | Issue | File | Action |
-|---|-------|------|--------|
-| 2 | **`.env.production` API URL mismatch** | `frontend/.env.production` | File has `silk-route-logistics.onrender.com` but production should use `api.silkroutelogistics.ai`. Update to custom domain. |
-| 3 | **Tender routes mounted at root** | `backend/src/routes/index.ts:35` | **VERIFIED OK** — intentional multi-prefix mounting. No fix needed. |
-| 4 | **MarcoPolo default provider label** | `frontend/src/components/MarcoPolo.tsx:23` | `useState("Claude AI")` — should be `"Gemini AI"` since Claude was removed |
+| # | Issue | Status | Action |
+|---|-------|--------|--------|
+| 2 | **`.env.production` API URL mismatch** | **RESOLVED** `7c29ee8` | Updated to `api.silkroutelogistics.ai` custom domain. |
+| 3 | **Tender routes mounted at root** | **VERIFIED OK** | Intentional multi-prefix mounting. No fix needed. |
+| 4 | **MarcoPolo default provider label** | **RESOLVED** `7c29ee8` | Default label changed from `"Claude AI"` to `"Gemini AI"`. |
 
 ### MEDIUM (Improve When Possible)
 
-| # | Issue | File | Action |
-|---|-------|------|--------|
-| 5 | **Global rate limit too aggressive** | `backend/src/server.ts:20` | 100 req/15min per IP may block legitimate dashboard usage. Consider raising to 300+ or applying per-route. |
-| 6 | **No password reset flow** | `backend/src/controllers/authController.ts` | "Forgot password" just shows "contact admin" message. Implement email-based reset. |
-| 7 | **ELD integration is simulated** | `backend/src/services/eldService.ts` | Currently returns fake GPS/HOS data. Connect to real ELD provider when ready. |
-| 8 | **No test suite** | Entire project | Zero test files. Add at minimum: auth flow tests, chat endpoint tests, load lifecycle tests. |
+| # | Issue | Status | Action |
+|---|-------|--------|--------|
+| 5 | **Global rate limit too aggressive** | **RESOLVED** `c9a2731` | Raised from 100 to 300 req/15min. Added dedicated `publicChatLimiter` (20 req/15min) on `/chat/public` to prevent Gemini API abuse. |
+| 6 | **No password reset flow** | **RESOLVED** `c9a2731` | Full email-based password reset: `POST /auth/forgot-password` + `POST /auth/reset-password` endpoints, branded reset email, frontend forgot-password + reset-password pages. Anti-enumeration (generic responses). |
+| 7 | **ELD integration is simulated** | **OPEN** — business decision | Currently returns fake GPS/HOS data. Connect to real ELD provider when ready. |
+| 8 | **No test suite** | **RESOLVED** `c9a2731` | Added Vitest with 30 unit tests across 4 files: otpService (8), auth middleware (6), authController (13), chatController (3). Scripts: `npm test`, `npm run test:watch`, `npm run test:coverage`. |
 
 ### LOW (Cleanup)
 
-| # | Issue | File | Action |
-|---|-------|------|--------|
-| 9 | **`nul` file in root** | `./nul` | Delete this empty Windows artifact |
-| 10 | **Dead env vars in .env.example** | — | `AI_PROVIDER` and `ANTHROPIC_API_KEY` were removed from code but still referenced in older comments. Clean up. |
-| 11 | **Stale `dist/` directory locally** | `backend/dist/` | Missing newer controllers. Run `npm run build` to regenerate or delete. |
-| 12 | **`frontend/.env.local` has maintenance mode on** | `frontend/.env.local` | `NEXT_PUBLIC_MAINTENANCE_MODE=true` — only affects local dev but may confuse developers |
+| # | Issue | Status | Action |
+|---|-------|--------|--------|
+| 9 | **`nul` file in root** | LOW | Delete this empty Windows artifact |
+| 10 | **Dead env vars in .env.example** | **RESOLVED** `1dbb3a5` | Cleaned up dead `AI_PROVIDER` and `ANTHROPIC_API_KEY` references. |
+| 11 | **Stale `dist/` directory locally** | LOW | Missing newer controllers. Run `npm run build` to regenerate or delete. |
+| 12 | **`frontend/.env.local` has maintenance mode on** | **RESOLVED** `2f89099` | Maintenance mode disabled. |
 
 ---
 
 ## 8. PRIORITY ORDER FOR FIXES
 
-1. **Update `frontend/.env.production`** API URL to custom domain → prevents Cloudflare builds from using wrong URL
-2. **Fix MarcoPolo default provider label** → cosmetic but visible to users
-3. **Verify tender route mounting** → potential API routing issue
-4. **Clean up dead env vars** from local files and rotate unused API keys
-5. **Delete `nul` file** → housekeeping
-6. **Consider raising global rate limit** → prevents blocking dashboard users
-7. **Add basic test suite** → long-term project health
-8. **Implement password reset flow** → user experience improvement
-9. **Connect real ELD provider** → when business is ready
+1. ~~**Update `frontend/.env.production`** API URL to custom domain~~ — **DONE** `7c29ee8`
+2. ~~**Fix MarcoPolo default provider label**~~ — **DONE** `7c29ee8`
+3. ~~**Verify tender route mounting**~~ — **VERIFIED OK** (intentional)
+4. ~~**Clean up dead env vars**~~ — **DONE** `1dbb3a5` (code refs removed; rotate Anthropic key manually)
+5. **Delete `nul` file** → housekeeping (still open)
+6. ~~**Raise global rate limit**~~ — **DONE** `c9a2731` (300 global + 20/15min public chat)
+7. ~~**Add basic test suite**~~ — **DONE** `c9a2731` (30 Vitest unit tests)
+8. ~~**Implement password reset flow**~~ — **DONE** `c9a2731` (full email-based reset)
+9. **Connect real ELD provider** → when business is ready (still open)
+
+### Remaining Open Items
+| # | Item | Priority |
+|---|------|----------|
+| 1 | Rotate unused Anthropic API key in dashboard | CRITICAL (manual) |
+| 5 | Delete `nul` file in project root | LOW |
+| 7 | Connect real ELD provider | MEDIUM (business decision) |
 
 ---
 
@@ -559,7 +577,7 @@ All dependencies actively used:
 
 **Tech Stack**: Next.js 15 (static) + Express + Prisma + PostgreSQL + Tailwind 4 + Zustand + React Query
 
-**Total**: 34 frontend pages, 24 API route groups, 11 services, 20 database models, 4 automated cron jobs
+**Total**: 36 frontend pages, 24 API route groups, 11 services, 20 database models, 4 automated cron jobs, 30 unit tests
 
 ---
 
