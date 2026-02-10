@@ -33,8 +33,8 @@ app.get("/health", (_req, res) => {
     timestamp: new Date().toISOString(),
     email: {
       provider: "resend",
-      configured: !!process.env.RESEND_API_KEY,
-      from: process.env.EMAIL_FROM || "noreply@silkroutelogistics.ai",
+      configured: !!env.RESEND_API_KEY,
+      from: env.EMAIL_FROM,
     },
   });
 });

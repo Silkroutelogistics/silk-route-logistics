@@ -13,6 +13,10 @@ const envSchema = z.object({
   MAX_FILE_SIZE: z.coerce.number().default(10485760),
   UPLOAD_DIR: z.string().default("./uploads"),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("noreply@silkroutelogistics.ai"),
+  FMCSA_WEB_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

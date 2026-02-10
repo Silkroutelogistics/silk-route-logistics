@@ -1,11 +1,12 @@
 import { Response } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "../config/database";
+import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 
 // Gemini setup
-const gemini = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const gemini = env.GEMINI_API_KEY
+  ? new GoogleGenerativeAI(env.GEMINI_API_KEY)
   : null;
 
 function isConfigured(): boolean {

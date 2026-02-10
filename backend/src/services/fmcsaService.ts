@@ -7,6 +7,8 @@
  * https://mobile.fmcsa.dot.gov/QCDevsite/
  */
 
+import { env } from "../config/env";
+
 interface FMCSACarrierResult {
   verified: boolean;
   legalName: string | null;
@@ -69,7 +71,7 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
   }
 
   // Try with web key if configured
-  const webKey = process.env.FMCSA_WEB_KEY;
+  const webKey = env.FMCSA_WEB_KEY;
   if (webKey) {
     try {
       const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}?webKey=${webKey}`;

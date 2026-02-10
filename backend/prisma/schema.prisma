@@ -806,3 +806,14 @@ model OtpCode {
   @@index([userId, used])
   @@map("otp_codes")
 }
+
+// ─── Scheduler Locks (prevents duplicate cron runs on multi-instance) ───
+
+model SchedulerLock {
+  id        String   @id
+  lockedAt  DateTime @default(now())
+  lockedBy  String   // instance identifier
+  expiresAt DateTime
+
+  @@map("scheduler_locks")
+}

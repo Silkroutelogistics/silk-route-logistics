@@ -1,8 +1,8 @@
 import { Resend } from "resend";
+import { env } from "../config/env";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
-const fromEmail = process.env.EMAIL_FROM || "noreply@silkroutelogistics.ai";
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
+const fromEmail = env.EMAIL_FROM;
 
 console.log(`[Email] Resend configured: ${!!resend}, from: ${fromEmail}`);
 

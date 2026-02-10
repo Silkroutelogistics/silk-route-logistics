@@ -1,6 +1,38 @@
+import crypto from "crypto";
 import cron from "node-cron";
 import { prisma } from "../config/database";
 import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder } from "./emailService";
+
+const INSTANCE_ID = crypto.randomUUID();
+
+/**
+ * Database-based distributed lock.
+ * Only one instance can acquire a lock for a given job within the TTL window.
+ */
+async function acquireLock(jobName: string, ttlMs: number): Promise<boolean> {
+  const now = new Date();
+  try {
+    // Delete expired locks first
+    await prisma.schedulerLock.deleteMany({
+      where: { id: jobName, expiresAt: { lt: now } },
+    });
+    // Try to create a new lock (fails if another instance holds it)
+    await prisma.schedulerLock.create({
+      data: { id: jobName, lockedBy: INSTANCE_ID, expiresAt: new Date(now.getTime() + ttlMs) },
+    });
+    return true;
+  } catch {
+    return false; // Lock held by another instance
+  }
+}
+
+async function releaseLock(jobName: string) {
+  try {
+    await prisma.schedulerLock.delete({ where: { id: jobName, lockedBy: INSTANCE_ID } });
+  } catch {
+    // Already released or expired
+  }
+}
 
 /**
  * Pre-tracing: runs every hour.
@@ -216,24 +248,62 @@ async function runPasswordExpiryReminder() {
   }
 }
 
+/**
+ * OTP cleanup: runs daily at 3 AM.
+ * Deletes expired and used OTP codes older than 24 hours.
+ */
+async function runOtpCleanup() {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const result = await prisma.otpCode.deleteMany({
+    where: {
+      OR: [
+        { expiresAt: { lt: oneDayAgo } },
+        { used: true, createdAt: { lt: oneDayAgo } },
+      ],
+    },
+  });
+  if (result.count > 0) {
+    console.log(`[OtpCleanup] Purged ${result.count} expired/used OTP codes`);
+  }
+}
+
+/** Wrapper that acquires a distributed lock before running a job. */
+async function withLock(jobName: string, ttlMs: number, fn: () => Promise<void>) {
+  if (!(await acquireLock(jobName, ttlMs))) {
+    console.log(`[Scheduler] Skipping ${jobName} — another instance holds the lock`);
+    return;
+  }
+  try {
+    await fn();
+  } finally {
+    await releaseLock(jobName);
+  }
+}
+
 export function startSchedulers() {
   // Pre-tracing: every hour at :00
   cron.schedule("0 * * * *", async () => {
     console.log("[Scheduler] Running pre-tracing check...");
-    try { await runPreTracing(); } catch (e) { console.error("[PreTracing] Error:", e); }
+    await withLock("pre-tracing", 5 * 60 * 1000, runPreTracing);
   });
 
   // Late detection: every 30 minutes at :00 and :30
   cron.schedule("0,30 * * * *", async () => {
     console.log("[Scheduler] Running late detection check...");
-    try { await runLateDetection(); } catch (e) { console.error("[LateDetection] Error:", e); }
+    await withLock("late-detection", 5 * 60 * 1000, runLateDetection);
   });
 
   // Password expiry reminders: daily at 9:00 AM
   cron.schedule("0 9 * * *", async () => {
     console.log("[Scheduler] Running password expiry reminder check...");
-    try { await runPasswordExpiryReminder(); } catch (e) { console.error("[PasswordExpiry] Error:", e); }
+    await withLock("password-expiry", 10 * 60 * 1000, runPasswordExpiryReminder);
   });
 
-  console.log("[Scheduler] Pre-tracing (hourly), late detection (30min), password expiry (daily 9AM) started");
+  // OTP cleanup: daily at 3:00 AM
+  cron.schedule("0 3 * * *", async () => {
+    console.log("[Scheduler] Running OTP cleanup...");
+    await withLock("otp-cleanup", 5 * 60 * 1000, runOtpCleanup);
+  });
+
+  console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);
 }
