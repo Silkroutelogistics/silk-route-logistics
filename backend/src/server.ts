@@ -10,6 +10,9 @@ import { startSchedulers } from "./services/schedulerService";
 
 const app = express();
 
+// Trust proxy (Render uses reverse proxy)
+app.set("trust proxy", 1);
+
 // Security middleware
 app.use(helmet());
 const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());

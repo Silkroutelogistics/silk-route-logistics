@@ -45,7 +45,10 @@ export async function login(req: Request, res: Response) {
 
   // Send OTP instead of issuing JWT
   const code = await createOtp(user.id);
-  await sendOtpEmail(user.email, user.firstName, code);
+  // Fire-and-forget email send so SMTP issues don't block the response
+  sendOtpEmail(user.email, user.firstName, code).catch((err) =>
+    console.error("[OTP Email] Failed to send:", err.message),
+  );
 
   res.json({ pendingOtp: true, email: user.email });
 }
