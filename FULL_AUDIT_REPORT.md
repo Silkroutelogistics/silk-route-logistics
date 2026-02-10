@@ -519,7 +519,7 @@ All dependencies actively used:
 
 | # | Issue | Status | Action |
 |---|-------|--------|--------|
-| 9 | **`nul` file in root** | LOW | Delete this empty Windows artifact |
+| 9 | **`nul` file in root** | **RESOLVED** `aa55531` | File did not exist locally (Windows reserved name). Added `nul` to `.gitignore` to prevent future commits. |
 | 10 | **Dead env vars in .env.example** | **RESOLVED** `1dbb3a5` | Cleaned up dead `AI_PROVIDER` and `ANTHROPIC_API_KEY` references. |
 | 11 | **Stale `dist/` directory locally** | LOW | Missing newer controllers. Run `npm run build` to regenerate or delete. |
 | 12 | **`frontend/.env.local` has maintenance mode on** | **RESOLVED** `2f89099` | Maintenance mode disabled. |
@@ -542,7 +542,6 @@ All dependencies actively used:
 | # | Item | Priority |
 |---|------|----------|
 | 1 | Rotate unused Anthropic API key in dashboard | CRITICAL (manual) |
-| 5 | Delete `nul` file in project root | LOW |
 | 7 | Connect real ELD provider | MEDIUM (business decision) |
 
 ---
