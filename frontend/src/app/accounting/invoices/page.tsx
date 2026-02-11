@@ -18,7 +18,7 @@ interface Invoice {
   accessorialsAmount: number | null;
   status: string;
   dueDate: string;
-  paidDate: string | null;
+  paidAt: string | null;
   paidAmount: number | null;
   createdAt: string;
   load: {
@@ -27,8 +27,9 @@ interface Invoice {
     originState: string;
     destCity: string;
     destState: string;
-    poster: { company: string | null; firstName: string; lastName: string };
+    customer?: { id: string; name: string } | null;
   };
+  user?: { id: string; firstName: string; lastName: string; company?: string | null };
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -133,7 +134,7 @@ export default function InvoicesPage() {
                   <tr key={inv.id} className="hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelectedInvoice(inv)}>
                     <td className="px-5 py-3 text-sm text-white font-medium">{inv.invoiceNumber}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{inv.load.referenceNumber}</td>
-                    <td className="px-5 py-3 text-sm text-slate-300">{inv.load.poster.company || `${inv.load.poster.firstName} ${inv.load.poster.lastName}`}</td>
+                    <td className="px-5 py-3 text-sm text-slate-300">{inv.load.customer?.name || inv.user?.company || `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() || "—"}</td>
                     <td className="px-5 py-3 text-sm text-white font-medium">{fmt(inv.amount)}</td>
                     <td className="px-5 py-3 text-sm">
                       <span className={isOverdue ? "text-red-400" : "text-slate-300"}>
@@ -209,7 +210,7 @@ export default function InvoicesPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Customer</span>
-                  <span className="text-sm text-white">{selectedInvoice.load.poster.company || `${selectedInvoice.load.poster.firstName} ${selectedInvoice.load.poster.lastName}`}</span>
+                  <span className="text-sm text-white">{selectedInvoice.load.customer?.name || selectedInvoice.user?.company || `${selectedInvoice.user?.firstName || ""} ${selectedInvoice.user?.lastName || ""}`.trim() || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Route</span>
@@ -252,10 +253,10 @@ export default function InvoicesPage() {
                   <span className="text-xs text-slate-500">Created</span>
                   <span className="text-sm text-white">{new Date(selectedInvoice.createdAt).toLocaleDateString()}</span>
                 </div>
-                {selectedInvoice.paidDate && (
+                {selectedInvoice.paidAt && (
                   <div className="flex justify-between">
                     <span className="text-xs text-slate-500">Paid Date</span>
-                    <span className="text-sm text-green-400">{new Date(selectedInvoice.paidDate).toLocaleDateString()}</span>
+                    <span className="text-sm text-green-400">{new Date(selectedInvoice.paidAt).toLocaleDateString()}</span>
                   </div>
                 )}
                 {selectedInvoice.paidAmount !== null && (

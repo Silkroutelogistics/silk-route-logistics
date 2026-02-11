@@ -40,19 +40,19 @@ export default function AccountingDashboard() {
       const res = await api.get("/accounting/dashboard");
       const d = res.data;
       return {
-        totalRevenue: d.mtdRevenue ?? 0,
+        totalRevenue: d.revenueMTD ?? 0,
         totalExpenses: d.apDue ?? 0,
-        netProfit: (d.mtdRevenue ?? 0) - (d.apDue ?? 0),
+        netProfit: (d.revenueMTD ?? 0) - (d.apDue ?? 0),
         marginPercent: d.avgMarginPercent ?? 0,
         outstandingAR: d.arOutstanding ?? 0,
         outstandingAP: d.apDue ?? 0,
-        overdueInvoices: d.overdueCount ?? 0,
-        avgDSO: d.avgDso ?? 0,
-        quickPayVolume: d.qpDisbursed ?? 0,
-        quickPayFees: d.qpRevenue ?? 0,
+        overdueInvoices: d.alerts?.overdueInvoices ?? 0,
+        avgDSO: 0,
+        quickPayVolume: d.qpRevenueMTD ?? 0,
+        quickPayFees: d.qpRevenueMTD ?? 0,
         fundBalance: d.cashBalance ?? 0,
         pendingApprovals: d.pendingApprovals ?? 0,
-        openDisputes: d.openDisputes ?? 0,
+        openDisputes: d.alerts?.openDisputes ?? 0,
         recentInvoices: d.recentInvoices ?? [],
         recentPayments: d.recentPayments ?? [],
       } as DashboardData;

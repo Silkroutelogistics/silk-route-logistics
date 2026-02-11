@@ -8,15 +8,21 @@ import { RotateCcw, Search, X, ChevronLeft, ChevronRight, Plus, MessageSquare, A
 interface Dispute {
   id: string;
   disputeNumber: string;
-  type: string;
+  disputeType: string;
   status: string;
-  amount: number;
+  disputedAmount: number;
   description: string;
-  resolution: string | null;
+  resolutionNotes: string | null;
   createdAt: string;
   resolvedAt: string | null;
-  load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string };
-  raisedBy: { firstName: string; lastName: string; company: string | null };
+  carrierPayment: {
+    paymentNumber: string;
+    netAmount: number;
+    status: string;
+    carrier: { id: string; firstName: string; lastName: string; company: string | null };
+    load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string };
+  };
+  filedBy: { id: string; firstName: string; lastName: string };
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -126,10 +132,10 @@ export default function DisputesPage() {
               data.disputes.map(d => (
                 <tr key={d.id} className="hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelected(d)}>
                   <td className="px-5 py-3 text-sm text-white font-medium">{d.disputeNumber}</td>
-                  <td className="px-5 py-3 text-sm text-slate-300">{d.load.referenceNumber}</td>
-                  <td className="px-5 py-3 text-sm text-slate-300">{TYPE_LABELS[d.type] || d.type}</td>
-                  <td className="px-5 py-3 text-sm text-slate-300">{d.raisedBy.company || `${d.raisedBy.firstName} ${d.raisedBy.lastName}`}</td>
-                  <td className="px-5 py-3 text-sm text-white font-medium">{fmt(d.amount)}</td>
+                  <td className="px-5 py-3 text-sm text-slate-300">{d.carrierPayment?.load?.referenceNumber || "—"}</td>
+                  <td className="px-5 py-3 text-sm text-slate-300">{TYPE_LABELS[d.disputeType] || d.disputeType}</td>
+                  <td className="px-5 py-3 text-sm text-slate-300">{d.filedBy ? `${d.filedBy.firstName} ${d.filedBy.lastName}` : "—"}</td>
+                  <td className="px-5 py-3 text-sm text-white font-medium">{fmt(d.disputedAmount)}</td>
                   <td className="px-5 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[d.status]}`}>{d.status.replace("_", " ")}</span></td>
                   <td className="px-5 py-3 text-xs text-slate-400">{new Date(d.createdAt).toLocaleDateString()}</td>
                 </tr>
@@ -204,19 +210,19 @@ export default function DisputesPage() {
             <div className="p-6 space-y-6">
               <div className="space-y-3">
                 <div className="flex justify-between"><span className="text-xs text-slate-500">Status</span><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[selected.status]}`}>{selected.status.replace("_", " ")}</span></div>
-                <div className="flex justify-between"><span className="text-xs text-slate-500">Type</span><span className="text-sm text-white">{TYPE_LABELS[selected.type]}</span></div>
-                <div className="flex justify-between"><span className="text-xs text-slate-500">Amount</span><span className="text-sm text-[#C8963E] font-bold">{fmt(selected.amount)}</span></div>
-                <div className="flex justify-between"><span className="text-xs text-slate-500">Load</span><span className="text-sm text-white">{selected.load.referenceNumber}</span></div>
-                <div className="flex justify-between"><span className="text-xs text-slate-500">Raised By</span><span className="text-sm text-white">{selected.raisedBy.company || `${selected.raisedBy.firstName} ${selected.raisedBy.lastName}`}</span></div>
+                <div className="flex justify-between"><span className="text-xs text-slate-500">Type</span><span className="text-sm text-white">{TYPE_LABELS[selected.disputeType] || selected.disputeType}</span></div>
+                <div className="flex justify-between"><span className="text-xs text-slate-500">Amount</span><span className="text-sm text-[#C8963E] font-bold">{fmt(selected.disputedAmount)}</span></div>
+                <div className="flex justify-between"><span className="text-xs text-slate-500">Load</span><span className="text-sm text-white">{selected.carrierPayment?.load?.referenceNumber || "—"}</span></div>
+                <div className="flex justify-between"><span className="text-xs text-slate-500">Filed By</span><span className="text-sm text-white">{selected.filedBy ? `${selected.filedBy.firstName} ${selected.filedBy.lastName}` : "—"}</span></div>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
                 <h3 className="text-xs text-slate-500 font-medium mb-2">DESCRIPTION</h3>
                 <p className="text-sm text-slate-300">{selected.description}</p>
               </div>
-              {selected.resolution && (
+              {selected.resolutionNotes && (
                 <div className="bg-green-500/5 border border-green-500/10 rounded-xl p-4">
                   <h3 className="text-xs text-green-400 font-medium mb-2">RESOLUTION</h3>
-                  <p className="text-sm text-slate-300">{selected.resolution}</p>
+                  <p className="text-sm text-slate-300">{selected.resolutionNotes}</p>
                 </div>
               )}
               {selected.status === "OPEN" || selected.status === "UNDER_REVIEW" ? (

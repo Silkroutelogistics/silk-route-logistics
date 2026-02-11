@@ -10,13 +10,17 @@ interface QuickPayRequest {
   paymentNumber: string;
   loadId: string;
   amount: number;
-  quickPayFee: number;
+  quickPayFeeAmount: number;
   netAmount: number;
   paymentTier: string;
   status: string;
-  requestedAt: string;
+  createdAt: string;
+  slaHours: number;
+  slaDeadline: string;
+  hoursRemaining: number;
+  isOverdue: boolean;
   load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string };
-  carrier: { user: { company: string | null; firstName: string; lastName: string }; srcppTier: string | null };
+  carrier: { id: string; company: string | null; firstName: string; lastName: string };
 }
 
 const TIER_INFO: Record<string, { label: string; fee: string; days: string; color: string }> = {
@@ -35,7 +39,7 @@ export default function QuickPayQueuePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["quick-pay-queue", page],
-    queryFn: () => api.get<{ requests: QuickPayRequest[]; total: number; totalPages: number; totalFees: number }>(`/accounting/payments/queue?page=${page}`).then(r => r.data),
+    queryFn: () => api.get<{ queue: QuickPayRequest[]; total: number; totalPages: number }>(`/accounting/payments/queue?page=${page}`).then(r => r.data),
   });
 
   const processMutation = useMutation({
@@ -54,8 +58,8 @@ export default function QuickPayQueuePage() {
         </div>
         {data && (
           <div className="text-right">
-            <p className="text-xs text-slate-400">Total Pending Fees</p>
-            <p className="text-lg font-bold text-[#C8963E]">{fmt(data.totalFees)}</p>
+            <p className="text-xs text-slate-400">Queue Total</p>
+            <p className="text-lg font-bold text-[#C8963E]">{data.total} requests</p>
           </div>
         )}
       </div>
@@ -90,22 +94,21 @@ export default function QuickPayQueuePage() {
           <tbody className="divide-y divide-white/5">
             {isLoading ? (
               [...Array(5)].map((_, i) => <tr key={i}><td colSpan={9} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
-            ) : data?.requests?.length ? (
-              data.requests.map(req => {
+            ) : data?.queue?.length ? (
+              data.queue.map(req => {
                 const tierInfo = TIER_INFO[req.paymentTier] || TIER_INFO.FLASH;
                 return (
                   <tr key={req.id} className="hover:bg-white/[0.02]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{req.paymentNumber}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{req.load.referenceNumber}</td>
                     <td className="px-5 py-3">
-                      <p className="text-sm text-slate-300">{req.carrier.user.company || `${req.carrier.user.firstName} ${req.carrier.user.lastName}`}</p>
-                      {req.carrier.srcppTier && <p className="text-[10px] text-[#C8963E]">{req.carrier.srcppTier} Tier</p>}
+                      <p className="text-sm text-slate-300">{req.carrier.company || `${req.carrier.firstName} ${req.carrier.lastName}`}</p>
                     </td>
                     <td className="px-5 py-3"><span className={`text-xs font-bold ${tierInfo.color}`}>{tierInfo.label}</span></td>
                     <td className="px-5 py-3 text-sm text-white">{fmt(req.amount)}</td>
-                    <td className="px-5 py-3 text-sm text-yellow-400">-{fmt(req.quickPayFee)}</td>
+                    <td className="px-5 py-3 text-sm text-yellow-400">-{fmt(req.quickPayFeeAmount)}</td>
                     <td className="px-5 py-3 text-sm text-green-400 font-medium">{fmt(req.netAmount)}</td>
-                    <td className="px-5 py-3 text-xs text-slate-400">{new Date(req.requestedAt).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-xs text-slate-400">{new Date(req.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3 text-right">
                       <button
                         onClick={() => processMutation.mutate(req.id)}

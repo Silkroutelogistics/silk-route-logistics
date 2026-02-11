@@ -7,14 +7,15 @@ import { CreditCard, Search, Shield, AlertTriangle, TrendingUp, Edit3, X, Save }
 
 interface ShipperCredit {
   id: string;
-  shipperId: string;
+  customerId: string;
   creditLimit: number;
-  currentBalance: number;
+  currentUtilized: number;
   creditGrade: string;
   paymentTerms: string;
   avgDaysToPay: number | null;
-  lastReviewDate: string | null;
-  shipper: { company: string | null; firstName: string; lastName: string; email: string };
+  utilizationPercent: number;
+  availableCredit: number;
+  customer: { id: string; name: string; contactName?: string | null; email?: string | null; phone?: string | null; status?: string };
 }
 
 const GRADE_COLORS: Record<string, string> = {
@@ -91,13 +92,13 @@ export default function CreditLimitsPage() {
               [...Array(3)].map((_, i) => <tr key={i}><td colSpan={8} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
             ) : data?.credits?.length ? (
               data.credits.map(credit => {
-                const utilization = credit.creditLimit > 0 ? (credit.currentBalance / credit.creditLimit) * 100 : 0;
+                const utilization = credit.utilizationPercent ?? (credit.creditLimit > 0 ? (credit.currentUtilized / credit.creditLimit) * 100 : 0);
                 const isEditing = editing === credit.id;
                 return (
                   <tr key={credit.id} className="hover:bg-white/[0.02]">
                     <td className="px-5 py-3">
-                      <p className="text-sm text-white font-medium">{credit.shipper.company || `${credit.shipper.firstName} ${credit.shipper.lastName}`}</p>
-                      <p className="text-[10px] text-slate-500">{credit.shipper.email}</p>
+                      <p className="text-sm text-white font-medium">{credit.customer.name || credit.customer.contactName || "—"}</p>
+                      <p className="text-[10px] text-slate-500">{credit.customer.email || ""}</p>
                     </td>
                     <td className="px-5 py-3">
                       {isEditing ? (
@@ -115,7 +116,7 @@ export default function CreditLimitsPage() {
                         <span className="text-sm text-white">{fmt(credit.creditLimit)}</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-sm text-white">{fmt(credit.currentBalance)}</td>
+                    <td className="px-5 py-3 text-sm text-white">{fmt(credit.currentUtilized)}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-white/5 rounded-full overflow-hidden">

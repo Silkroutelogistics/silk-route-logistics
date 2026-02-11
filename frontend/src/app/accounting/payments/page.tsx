@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
-  Search, DollarSign, ChevronLeft, ChevronRight, X, Download,
-  CheckCircle2, XCircle, Clock, FileText, Truck,
+  Search, ChevronLeft, ChevronRight, X,
+  CheckCircle2,
 } from "lucide-react";
 
 interface CarrierPayment {
@@ -14,17 +14,13 @@ interface CarrierPayment {
   loadId: string;
   carrierId: string;
   amount: number;
-  quickPayFee: number | null;
+  quickPayFeeAmount: number | null;
   netAmount: number | null;
   paymentTier: string | null;
   status: string;
   approvedAt: string | null;
   paidAt: string | null;
   scheduledDate: string | null;
-  bolReceived: boolean;
-  podReceived: boolean;
-  rateConSigned: boolean;
-  carrierInvoiceReceived: boolean;
   load: {
     referenceNumber: string;
     originCity: string;
@@ -32,9 +28,7 @@ interface CarrierPayment {
     destCity: string;
     destState: string;
   };
-  carrier: {
-    user: { company: string | null; firstName: string; lastName: string };
-  };
+  carrier: { id: string; company: string | null; firstName: string; lastName: string };
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -118,7 +112,6 @@ export default function CarrierPaymentsPage() {
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Carrier</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Amount</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Tier</th>
-              <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Docs</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Status</th>
               <th className="text-right text-xs text-slate-500 font-medium px-5 py-3">Actions</th>
             </tr>
@@ -126,32 +119,23 @@ export default function CarrierPaymentsPage() {
           <tbody className="divide-y divide-white/5">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
-                <tr key={i}><td colSpan={8} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={7} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>
               ))
             ) : data?.payments?.length ? (
               data.payments.map((pay) => {
-                const docsComplete = pay.bolReceived && pay.podReceived && pay.rateConSigned;
                 return (
                   <tr key={pay.id} className="hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelected(pay)}>
                     <td className="px-5 py-3 text-sm text-white font-medium">{pay.paymentNumber}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{pay.load.referenceNumber}</td>
-                    <td className="px-5 py-3 text-sm text-slate-300">{pay.carrier.user.company || `${pay.carrier.user.firstName} ${pay.carrier.user.lastName}`}</td>
+                    <td className="px-5 py-3 text-sm text-slate-300">{pay.carrier.company || `${pay.carrier.firstName} ${pay.carrier.lastName}`}</td>
                     <td className="px-5 py-3">
                       <p className="text-sm text-white font-medium">{fmt(pay.amount)}</p>
-                      {pay.quickPayFee ? <p className="text-[10px] text-yellow-400">-{fmt(pay.quickPayFee)} fee</p> : null}
+                      {pay.quickPayFeeAmount ? <p className="text-[10px] text-yellow-400">-{fmt(pay.quickPayFeeAmount)} fee</p> : null}
                     </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs font-medium ${TIER_COLORS[pay.paymentTier || "STANDARD"]}`}>
                         {pay.paymentTier || "STANDARD"}
                       </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className={`w-2 h-2 rounded-full ${pay.bolReceived ? "bg-green-400" : "bg-slate-600"}`} title="BOL" />
-                        <span className={`w-2 h-2 rounded-full ${pay.podReceived ? "bg-green-400" : "bg-slate-600"}`} title="POD" />
-                        <span className={`w-2 h-2 rounded-full ${pay.rateConSigned ? "bg-green-400" : "bg-slate-600"}`} title="Rate Con" />
-                        <span className={`w-2 h-2 rounded-full ${pay.carrierInvoiceReceived ? "bg-green-400" : "bg-slate-600"}`} title="Invoice" />
-                      </div>
                     </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[pay.status]}`}>{pay.status}</span>
@@ -171,7 +155,7 @@ export default function CarrierPaymentsPage() {
                 );
               })
             ) : (
-              <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-slate-500">No carrier payments found</td></tr>
+              <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-500">No carrier payments found</td></tr>
             )}
           </tbody>
         </table>
@@ -205,32 +189,15 @@ export default function CarrierPaymentsPage() {
               <div className="space-y-3">
                 <div className="flex justify-between"><span className="text-xs text-slate-500">Status</span><span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[selected.status]}`}>{selected.status}</span></div>
                 <div className="flex justify-between"><span className="text-xs text-slate-500">Load</span><span className="text-sm text-white">{selected.load.referenceNumber}</span></div>
-                <div className="flex justify-between"><span className="text-xs text-slate-500">Carrier</span><span className="text-sm text-white">{selected.carrier.user.company || `${selected.carrier.user.firstName} ${selected.carrier.user.lastName}`}</span></div>
+                <div className="flex justify-between"><span className="text-xs text-slate-500">Carrier</span><span className="text-sm text-white">{selected.carrier.company || `${selected.carrier.firstName} ${selected.carrier.lastName}`}</span></div>
                 <div className="flex justify-between"><span className="text-xs text-slate-500">Route</span><span className="text-sm text-white">{selected.load.originCity}, {selected.load.originState} → {selected.load.destCity}, {selected.load.destState}</span></div>
               </div>
 
               <div className="bg-white/5 rounded-xl p-4 space-y-2">
                 <h3 className="text-xs text-slate-500 font-medium mb-3">PAYMENT DETAILS</h3>
                 <div className="flex justify-between"><span className="text-sm text-slate-300">Gross Amount</span><span className="text-sm text-white">{fmt(selected.amount)}</span></div>
-                {selected.quickPayFee && <div className="flex justify-between"><span className="text-sm text-slate-300">Quick Pay Fee</span><span className="text-sm text-yellow-400">-{fmt(selected.quickPayFee)}</span></div>}
+                {selected.quickPayFeeAmount ? <div className="flex justify-between"><span className="text-sm text-slate-300">Quick Pay Fee</span><span className="text-sm text-yellow-400">-{fmt(selected.quickPayFeeAmount)}</span></div> : null}
                 <div className="flex justify-between pt-2 border-t border-white/10"><span className="text-sm text-white font-medium">Net Amount</span><span className="text-sm text-[#C8963E] font-bold">{fmt(selected.netAmount || selected.amount)}</span></div>
-              </div>
-
-              <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="text-xs text-slate-500 font-medium mb-3">DOCUMENT CHECKLIST</h3>
-                <div className="space-y-2">
-                  {[
-                    { label: "Bill of Lading (BOL)", done: selected.bolReceived },
-                    { label: "Proof of Delivery (POD)", done: selected.podReceived },
-                    { label: "Signed Rate Confirmation", done: selected.rateConSigned },
-                    { label: "Carrier Invoice", done: selected.carrierInvoiceReceived },
-                  ].map(d => (
-                    <div key={d.label} className="flex items-center gap-2">
-                      {d.done ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-slate-600" />}
-                      <span className={`text-sm ${d.done ? "text-white" : "text-slate-500"}`}>{d.label}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               <div className="flex gap-2">

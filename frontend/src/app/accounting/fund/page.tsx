@@ -10,16 +10,15 @@ interface FundData {
   totalDeposits: number;
   totalWithdrawals: number;
   totalQuickPayFees: number;
-  monthlyIncome: number;
   transactions: {
     id: string;
-    type: string;
+    transactionType: string;
     amount: number;
     description: string;
-    balanceAfter: number;
+    runningBalance: number;
     createdAt: string;
   }[];
-  totalTransactions: number;
+  total: number;
   totalPages: number;
 }
 
@@ -48,7 +47,17 @@ export default function FundBalancePage() {
         api.get("/accounting/fund/balance"),
         api.get(`/accounting/fund/transactions?page=${page}`),
       ]);
-      return { ...balRes.data, ...txRes.data } as FundData;
+      const bal = balRes.data;
+      const byType = bal.byType || {};
+      return {
+        balance: bal.currentBalance ?? 0,
+        totalDeposits: byType.DEPOSIT?.total ?? 0,
+        totalWithdrawals: byType.QUICK_PAY_DISBURSEMENT?.total ?? byType.WITHDRAWAL?.total ?? 0,
+        totalQuickPayFees: byType.QUICK_PAY_FEE?.total ?? 0,
+        transactions: txRes.data.transactions ?? [],
+        total: txRes.data.total ?? 0,
+        totalPages: txRes.data.totalPages ?? 1,
+      } as FundData;
     },
   });
 
@@ -113,7 +122,7 @@ export default function FundBalancePage() {
             [...Array(5)].map((_, i) => <div key={i} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></div>)
           ) : data?.transactions?.length ? (
             data.transactions.map(tx => {
-              const info = TYPE_COLORS[tx.type] || { color: "text-slate-400", icon: "up" as const };
+              const info = TYPE_COLORS[tx.transactionType] || { color: "text-slate-400", icon: "up" as const };
               return (
                 <div key={tx.id} className="px-5 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -122,14 +131,14 @@ export default function FundBalancePage() {
                     </div>
                     <div>
                       <p className="text-sm text-white">{tx.description}</p>
-                      <p className="text-[10px] text-slate-500">{tx.type.replace(/_/g, " ")} • {new Date(tx.createdAt).toLocaleString()}</p>
+                      <p className="text-[10px] text-slate-500">{tx.transactionType.replace(/_/g, " ")} • {new Date(tx.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-medium ${info.icon === "up" ? "text-green-400" : "text-red-400"}`}>
                       {info.icon === "up" ? "+" : "-"}{fmt(Math.abs(tx.amount))}
                     </p>
-                    <p className="text-[10px] text-slate-500">Bal: {fmt(tx.balanceAfter)}</p>
+                    <p className="text-[10px] text-slate-500">Bal: {fmt(tx.runningBalance)}</p>
                   </div>
                 </div>
               );

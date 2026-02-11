@@ -62,6 +62,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
     }
   };
 
+  const [distanceError, setDistanceError] = useState("");
+
   // Auto-calculate distance when both addresses are complete
   useEffect(() => {
     const { originCity, originState, originZip, destCity, destState, destZip } = form;
@@ -70,13 +72,18 @@ export function CreateLoadModal({ open, onClose }: Props) {
     if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current);
     distanceTimerRef.current = setTimeout(async () => {
       setDistanceLoading(true);
+      setDistanceError("");
       try {
         const res = await api.get("/loads/distance", { params: { originCity, originState, originZip, destCity, destState, destZip } });
         if (res.data.distanceMiles) {
           setForm((f) => ({ ...f, distance: String(res.data.distanceMiles) }));
           setDistanceAuto(true);
+        } else {
+          setDistanceError("Could not calculate");
         }
-      } catch { /* user can enter manually */ }
+      } catch {
+        setDistanceError("Auto-calc failed");
+      }
       setDistanceLoading(false);
     }, 500);
 
@@ -251,9 +258,10 @@ export function CreateLoadModal({ open, onClose }: Props) {
                 <Input label="Pickup Date" value={form.pickupDate} onChange={(v) => update("pickupDate", v)} type="date" required error={attempted[1] ? errors.pickupDate : undefined} min={new Date().toISOString().split("T")[0]} />
                 <Input label="Delivery Date" value={form.deliveryDate} onChange={(v) => update("deliveryDate", v)} type="date" required error={attempted[1] ? errors.deliveryDate : undefined} min={form.pickupDate || new Date().toISOString().split("T")[0]} />
                 <div className="relative">
-                  <Input label="Distance (mi)" value={form.distance} onChange={(v) => { update("distance", v); setDistanceAuto(false); }} type="number" />
+                  <Input label="Distance (mi)" value={form.distance} onChange={(v) => { update("distance", v); setDistanceAuto(false); setDistanceError(""); }} type="number" />
                   {distanceLoading && <div className="absolute right-3 top-7 w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />}
                   {distanceAuto && form.distance && !distanceLoading && <span className="absolute right-3 top-7 text-[10px] text-green-400 font-medium">Auto</span>}
+                  {distanceError && !distanceLoading && !distanceAuto && <span className="absolute right-3 top-7 text-[10px] text-amber-400">{distanceError}</span>}
                 </div>
               </div>
             </>

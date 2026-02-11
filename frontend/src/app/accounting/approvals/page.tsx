@@ -3,22 +3,18 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CheckCircle2, XCircle, Clock, DollarSign, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PendingApproval {
   id: string;
   paymentNumber: string;
   amount: number;
-  quickPayFee: number | null;
+  quickPayFeeAmount: number | null;
   netAmount: number | null;
   paymentTier: string | null;
-  bolReceived: boolean;
-  podReceived: boolean;
-  rateConSigned: boolean;
-  carrierInvoiceReceived: boolean;
   createdAt: string;
-  load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; deliveryDate: string | null };
-  carrier: { user: { company: string | null; firstName: string; lastName: string } };
+  load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string };
+  carrier: { id: string; company: string | null; firstName: string; lastName: string };
 }
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -29,7 +25,7 @@ export default function ApprovalsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["pending-approvals", page],
-    queryFn: () => api.get<{ approvals: PendingApproval[]; total: number; totalPages: number; totalAmount: number }>(`/accounting/payments?status=PENDING&page=${page}`).then(r => r.data),
+    queryFn: () => api.get<{ payments: PendingApproval[]; total: number; totalPages: number }>(`/accounting/payments?status=PENDING&page=${page}`).then(r => r.data),
   });
 
   const approveMutation = useMutation({
@@ -50,15 +46,9 @@ export default function ApprovalsPage() {
           <p className="text-sm text-slate-400 mt-1">Review and approve carrier payment settlements</p>
         </div>
         {data && (
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Pending Approvals</p>
-              <p className="text-lg font-bold text-[#C8963E]">{data.total}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Total Amount</p>
-              <p className="text-lg font-bold text-white">{fmt(data.totalAmount)}</p>
-            </div>
+          <div className="text-right">
+            <p className="text-xs text-slate-400">Pending Approvals</p>
+            <p className="text-lg font-bold text-[#C8963E]">{data.total}</p>
           </div>
         )}
       </div>
@@ -66,11 +56,8 @@ export default function ApprovalsPage() {
       <div className="space-y-3">
         {isLoading ? (
           [...Array(3)].map((_, i) => <div key={i} className="h-28 bg-white/5 rounded-xl animate-pulse" />)
-        ) : data?.approvals?.length ? (
-          data.approvals.map(item => {
-            const docsComplete = item.bolReceived && item.podReceived && item.rateConSigned;
-            const docCount = [item.bolReceived, item.podReceived, item.rateConSigned, item.carrierInvoiceReceived].filter(Boolean).length;
-            return (
+        ) : data?.payments?.length ? (
+          data.payments.map(item => (
               <div key={item.id} className="bg-white/5 border border-white/5 rounded-xl p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -83,36 +70,20 @@ export default function ApprovalsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span>{item.carrier.user.company || `${item.carrier.user.firstName} ${item.carrier.user.lastName}`}</span>
+                      <span>{item.carrier.company || `${item.carrier.firstName} ${item.carrier.lastName}`}</span>
                       <span>{item.load.originCity}, {item.load.originState} → {item.load.destCity}, {item.load.destState}</span>
-                      {item.load.deliveryDate && <span>Delivered: {new Date(item.load.deliveryDate).toLocaleDateString()}</span>}
                     </div>
                   </div>
 
                   <div className="text-right ml-6">
                     <p className="text-lg font-bold text-white">{fmt(item.amount)}</p>
-                    {item.quickPayFee ? (
-                      <p className="text-xs text-yellow-400">Fee: -{fmt(item.quickPayFee)} → Net: {fmt(item.netAmount || item.amount)}</p>
+                    {item.quickPayFeeAmount ? (
+                      <p className="text-xs text-yellow-400">Fee: -{fmt(item.quickPayFeeAmount)} → Net: {fmt(item.netAmount || item.amount)}</p>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-500">Documents ({docCount}/4):</span>
-                    {[
-                      { label: "BOL", done: item.bolReceived },
-                      { label: "POD", done: item.podReceived },
-                      { label: "Rate Con", done: item.rateConSigned },
-                      { label: "Invoice", done: item.carrierInvoiceReceived },
-                    ].map(d => (
-                      <span key={d.label} className={`text-[10px] px-2 py-0.5 rounded-full ${d.done ? "bg-green-500/10 text-green-400" : "bg-slate-500/10 text-slate-500"}`}>
-                        {d.label}
-                      </span>
-                    ))}
-                    {!docsComplete && <span className="text-[10px] text-orange-400">(Incomplete docs)</span>}
-                  </div>
-
+                <div className="flex items-center justify-end mt-4 pt-3 border-t border-white/5">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => rejectMutation.mutate({ id: item.id, reason: "Rejected by accounting" })}
@@ -131,8 +102,7 @@ export default function ApprovalsPage() {
                   </div>
                 </div>
               </div>
-            );
-          })
+          ))
         ) : (
           <div className="bg-white/5 border border-white/5 rounded-xl p-12 text-center">
             <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-3" />
