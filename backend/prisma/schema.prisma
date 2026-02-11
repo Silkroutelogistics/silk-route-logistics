@@ -24,13 +24,21 @@ enum UserRole {
 enum LoadStatus {
   DRAFT
   POSTED
+  TENDERED
+  CONFIRMED
   BOOKED
   DISPATCHED
-  PICKED_UP
+  AT_PICKUP
+  LOADED
   IN_TRANSIT
+  AT_DELIVERY
   DELIVERED
+  POD_RECEIVED
+  INVOICED
   COMPLETED
+  TONU
   CANCELLED
+  PICKED_UP // legacy alias – kept for backward compat
 }
 
 enum InvoiceStatus {
@@ -185,8 +193,10 @@ model User {
   receivedMessages Message[]      @relation("MessageReceiver")
   notifications   Notification[]
   auditLogs       AuditLog[]
-  passwordChangedAt DateTime?
-  otpCodes        OtpCode[]
+  passwordChangedAt    DateTime?
+  otpCodes             OtpCode[]
+  rateConfirmations    RateConfirmation[] @relation("RateConfCreator")
+  checkCalls           CheckCall[]        @relation("CheckCallUser")
 
   @@map("users")
 }
@@ -317,10 +327,12 @@ model Load {
   carrier         User?      @relation("LoadCarrier", fields: [carrierId], references: [id])
   invoices        Invoice[]
   documents       Document[]
-  tenders         LoadTender[]
-  messages        Message[]
-  ediTransactions EDITransaction[]
-  shipments       Shipment[]
+  tenders            LoadTender[]
+  messages           Message[]
+  ediTransactions    EDITransaction[]
+  shipments          Shipment[]
+  rateConfirmations  RateConfirmation[]
+  checkCalls         CheckCall[]
 
   @@index([status])
   @@index([originState])
@@ -345,6 +357,56 @@ model LoadTender {
 
   @@index([carrierId, status])
   @@map("load_tenders")
+}
+
+// ─── Rate Confirmation ──────────────────────────────────
+
+model RateConfirmation {
+  id              String   @id @default(cuid())
+  loadId          String
+  load            Load     @relation(fields: [loadId], references: [id])
+  formData        Json     // Full 10-section form data
+  status          String   @default("DRAFT") // DRAFT, SENT, SIGNED, VOID
+  sentAt          DateTime?
+  signedAt        DateTime?
+
+  // Indexed financial columns (denormalized from formData for queries)
+  carrierRate     Float?
+  fuelSurcharge   Float?
+  accessorialTotal Float?
+  totalCharges    Float?
+
+  createdById     String
+  createdBy       User     @relation("RateConfCreator", fields: [createdById], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([loadId])
+  @@index([status])
+  @@index([totalCharges])
+  @@map("rate_confirmations")
+}
+
+// ─── Check Call (Track & Trace) ──────────────────────────
+
+model CheckCall {
+  id          String   @id @default(cuid())
+  loadId      String
+  load        Load     @relation(fields: [loadId], references: [id])
+  status      String   // CHECKED_IN, AT_PICKUP, LOADED, IN_TRANSIT, AT_DELIVERY, DELIVERED, ISSUE
+  location    String?
+  city        String?
+  state       String?
+  notes       String?
+  contactedBy String?  // Name of person who made the call
+  method      String?  // PHONE, EMAIL, ELD, GPS, CARRIER_UPDATE
+  calledById  String?
+  calledBy    User?    @relation("CheckCallUser", fields: [calledById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([loadId, createdAt])
+  @@map("check_calls")
 }
 
 // ─── Finance Models ──────────────────────────────────

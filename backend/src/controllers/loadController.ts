@@ -138,9 +138,9 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
 
 export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   const { status } = updateLoadStatusSchema.parse(req.body);
-  const allowedStatuses = ["PICKED_UP", "IN_TRANSIT", "DELIVERED"];
+  const allowedStatuses = ["AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
   if (!allowedStatuses.includes(status)) {
-    res.status(400).json({ error: "Carriers can only update to: PICKED_UP, IN_TRANSIT, DELIVERED" });
+    res.status(400).json({ error: "Carriers can only update to: AT_PICKUP, LOADED, PICKED_UP, IN_TRANSIT, AT_DELIVERY, DELIVERED" });
     return;
   }
 
@@ -159,10 +159,16 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   // Sync linked shipment
   const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
   if (linkedShipment) {
-    const shipmentUpdate: Record<string, unknown> = { status };
-    if (status === "PICKED_UP") shipmentUpdate.actualPickup = new Date();
+    // Map load statuses to shipment statuses
+    const loadToShipmentStatus: Record<string, string> = {
+      AT_PICKUP: "PICKED_UP", LOADED: "PICKED_UP", PICKED_UP: "PICKED_UP",
+      IN_TRANSIT: "IN_TRANSIT", AT_DELIVERY: "DELIVERED", DELIVERED: "DELIVERED",
+    };
+    const mappedStatus = loadToShipmentStatus[status] || status;
+    const shipmentUpdate: Record<string, unknown> = { status: mappedStatus };
+    if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) shipmentUpdate.actualPickup = new Date();
     if (status === "IN_TRANSIT") shipmentUpdate.lastLocationAt = new Date();
-    if (status === "DELIVERED") shipmentUpdate.actualDelivery = new Date();
+    if (["AT_DELIVERY", "DELIVERED"].includes(status)) shipmentUpdate.actualDelivery = new Date();
     await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
   }
 

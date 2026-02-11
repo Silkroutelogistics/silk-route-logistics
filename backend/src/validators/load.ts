@@ -29,12 +29,16 @@ export const createLoadSchema = z.object({
   height: z.number().positive().optional(),
   pickupDate: z.string().transform((s) => new Date(s)),
   deliveryDate: z.string().transform((s) => new Date(s)),
-  status: z.enum(["DRAFT", "POSTED"]).optional(),
+  status: z.enum(["DRAFT", "POSTED", "TENDERED"]).optional(),
   customerId: z.string().optional(),
 });
 
 export const updateLoadStatusSchema = z.object({
-  status: z.enum(["DRAFT", "POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED"]),
+  status: z.enum([
+    "DRAFT", "POSTED", "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED",
+    "AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY",
+    "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "TONU", "CANCELLED",
+  ]),
 });
 
 export const loadQuerySchema = z.object({

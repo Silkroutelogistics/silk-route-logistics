@@ -6,7 +6,13 @@ const fromEmail = env.EMAIL_FROM;
 
 console.log(`[Email] Resend configured: ${!!resend}, from: ${fromEmail}`);
 
-async function sendEmail(to: string, subject: string, html: string) {
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
+async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[]) {
   if (resend) {
     try {
       const { data, error } = await resend.emails.send({
@@ -14,6 +20,11 @@ async function sendEmail(to: string, subject: string, html: string) {
         to,
         subject,
         html,
+        attachments: attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          content_type: a.contentType || "application/pdf",
+        })),
       });
       if (error) {
         console.error(`[Email] Resend error to ${to}: ${error.message}`);
@@ -25,7 +36,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       throw err;
     }
   } else {
-    console.log(`[Email][NoAPI] To: ${to} | Subject: ${subject}`);
+    console.log(`[Email][NoAPI] To: ${to} | Subject: ${subject}${attachments ? ` | ${attachments.length} attachment(s)` : ""}`);
   }
 }
 
@@ -145,6 +156,34 @@ export async function sendPasswordResetEmail(email: string, firstName: string, r
   `);
 
   await sendEmail(email, "Reset your password — Silk Route Logistics", html);
+}
+
+export async function sendRateConfirmationEmail(
+  carrierEmail: string,
+  carrierName: string,
+  loadRef: string,
+  pdfBuffer: Buffer,
+  customMessage?: string,
+) {
+  const html = wrap(`
+    <h2 style="color:#0f172a">Rate Confirmation — Load ${loadRef}</h2>
+    <p>Hi ${carrierName},</p>
+    ${customMessage ? `<p>${customMessage}</p>` : ""}
+    <p>Please find the attached Rate Confirmation for load <strong>${loadRef}</strong>.</p>
+    <p>Review the details and sign the document to confirm acceptance of this load.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Load Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${loadRef}</td></tr>
+    </table>
+    <p>If you have any questions, please contact your dispatcher or reply to this email.</p>
+    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>
+  `);
+
+  await sendEmail(
+    carrierEmail,
+    `Rate Confirmation: Load ${loadRef} — Silk Route Logistics`,
+    html,
+    [{ filename: `RC-${loadRef}.pdf`, content: pdfBuffer }],
+  );
 }
 
 export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {

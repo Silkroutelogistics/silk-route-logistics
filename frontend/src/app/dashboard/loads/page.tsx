@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
-import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight } from "lucide-react";
+import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight, ClipboardCheck } from "lucide-react";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
+import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 
 interface Load {
   id: string; referenceNumber: string; status: string;
@@ -24,10 +25,14 @@ interface Load {
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-500/20 text-slate-400", POSTED: "bg-blue-500/20 text-blue-400",
-  BOOKED: "bg-purple-500/20 text-purple-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
+  TENDERED: "bg-indigo-500/20 text-indigo-400", CONFIRMED: "bg-purple-500/20 text-purple-400",
+  BOOKED: "bg-violet-500/20 text-violet-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
+  AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-yellow-500/20 text-yellow-400",
   PICKED_UP: "bg-yellow-500/20 text-yellow-400", IN_TRANSIT: "bg-cyan-500/20 text-cyan-400",
-  DELIVERED: "bg-green-500/20 text-green-400", COMPLETED: "bg-emerald-500/20 text-emerald-400",
-  CANCELLED: "bg-red-500/20 text-red-400",
+  AT_DELIVERY: "bg-teal-500/20 text-teal-400", DELIVERED: "bg-green-500/20 text-green-400",
+  POD_RECEIVED: "bg-emerald-500/20 text-emerald-400", INVOICED: "bg-lime-500/20 text-lime-400",
+  COMPLETED: "bg-emerald-500/20 text-emerald-400",
+  TONU: "bg-red-500/20 text-red-400", CANCELLED: "bg-red-500/20 text-red-400",
 };
 
 const TENDER_COLORS: Record<string, string> = {
@@ -73,6 +78,7 @@ export default function LoadsPage() {
 
   const queryClient = useQueryClient();
   const [showTender, setShowTender] = useState(false);
+  const [showRateConf, setShowRateConf] = useState(false);
   const [tenderCarrierId, setTenderCarrierId] = useState("");
   const [tenderRate, setTenderRate] = useState("");
 
@@ -106,13 +112,19 @@ export default function LoadsPage() {
   });
 
   const NEXT_STATUS: Record<string, string> = {
-    POSTED: "BOOKED", BOOKED: "DISPATCHED", DISPATCHED: "PICKED_UP",
-    PICKED_UP: "IN_TRANSIT", IN_TRANSIT: "DELIVERED", DELIVERED: "COMPLETED",
+    POSTED: "TENDERED", TENDERED: "CONFIRMED", CONFIRMED: "BOOKED",
+    BOOKED: "DISPATCHED", DISPATCHED: "AT_PICKUP", AT_PICKUP: "LOADED",
+    LOADED: "IN_TRANSIT", PICKED_UP: "IN_TRANSIT", IN_TRANSIT: "AT_DELIVERY",
+    AT_DELIVERY: "DELIVERED", DELIVERED: "POD_RECEIVED",
+    POD_RECEIVED: "INVOICED", INVOICED: "COMPLETED",
   };
 
   const STATUS_ACTIONS: Record<string, string> = {
-    POSTED: "Book Load", BOOKED: "Dispatch", DISPATCHED: "Mark Picked Up",
-    PICKED_UP: "Mark In Transit", IN_TRANSIT: "Mark Delivered", DELIVERED: "Complete",
+    POSTED: "Tender", TENDERED: "Confirm", CONFIRMED: "Book Load",
+    BOOKED: "Dispatch", DISPATCHED: "At Pickup", AT_PICKUP: "Mark Loaded",
+    LOADED: "In Transit", PICKED_UP: "In Transit", IN_TRANSIT: "At Delivery",
+    AT_DELIVERY: "Mark Delivered", DELIVERED: "POD Received",
+    POD_RECEIVED: "Mark Invoiced", INVOICED: "Complete",
   };
 
   const downloadPdf = async (loadId: string, refNum: string) => {
@@ -160,20 +172,34 @@ export default function LoadsPage() {
             {isCarrier(user?.role) && load.carrier?.firstName === user?.firstName && (
               <>
                 {["BOOKED", "DISPATCHED"].includes(load.status) && (
-                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "PICKED_UP" })}
+                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "AT_PICKUP" })}
                     disabled={carrierUpdateStatus.isPending}
-                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm hover:bg-yellow-500/30 disabled:opacity-50">
-                    <Truck className="w-4 h-4" /> Mark Picked Up
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm hover:bg-amber-500/30 disabled:opacity-50">
+                    <MapPin className="w-4 h-4" /> At Pickup
                   </button>
                 )}
-                {load.status === "PICKED_UP" && (
+                {load.status === "AT_PICKUP" && (
+                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "LOADED" })}
+                    disabled={carrierUpdateStatus.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm hover:bg-yellow-500/30 disabled:opacity-50">
+                    <Truck className="w-4 h-4" /> Mark Loaded
+                  </button>
+                )}
+                {["LOADED", "PICKED_UP"].includes(load.status) && (
                   <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "IN_TRANSIT" })}
                     disabled={carrierUpdateStatus.isPending}
                     className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm hover:bg-cyan-500/30 disabled:opacity-50">
-                    <MapPin className="w-4 h-4" /> Mark In Transit
+                    <Truck className="w-4 h-4" /> In Transit
                   </button>
                 )}
                 {load.status === "IN_TRANSIT" && (
+                  <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "AT_DELIVERY" })}
+                    disabled={carrierUpdateStatus.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-teal-500/20 text-teal-400 rounded-lg text-sm hover:bg-teal-500/30 disabled:opacity-50">
+                    <MapPin className="w-4 h-4" /> At Delivery
+                  </button>
+                )}
+                {load.status === "AT_DELIVERY" && (
                   <button onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status: "DELIVERED" })}
                     disabled={carrierUpdateStatus.isPending}
                     className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 disabled:opacity-50">
@@ -182,12 +208,17 @@ export default function LoadsPage() {
                 )}
               </>
             )}
+            {canCreate && !["DRAFT", "CANCELLED", "TONU"].includes(load.status) && (
+              <button onClick={() => setShowRateConf(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 text-indigo-400 rounded-lg text-sm hover:bg-indigo-500/30">
+                <ClipboardCheck className="w-4 h-4" /> Rate Confirmation
+              </button>
+            )}
             <button onClick={() => downloadBol(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-gold/20 text-gold rounded-lg text-sm hover:bg-gold/30">
               <Download className="w-4 h-4" /> BOL
             </button>
-            {["BOOKED", "DISPATCHED", "IN_TRANSIT", "DELIVERED", "COMPLETED"].includes(load.status) && (
+            {["BOOKED", "CONFIRMED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(load.status) && (
               <button onClick={() => downloadPdf(load.id, load.referenceNumber)} className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20">
-                <Download className="w-4 h-4" /> Rate Conf
+                <Download className="w-4 h-4" /> Rate Conf PDF
               </button>
             )}
           </div>
@@ -344,9 +375,10 @@ export default function LoadsPage() {
             <div className="bg-white/5 rounded-xl border border-white/10 p-6">
               <h2 className="text-sm font-medium text-slate-400 mb-3">Load Pipeline</h2>
               <div className="space-y-0">
-                {["POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED"].map((st, i, arr) => {
-                  const statusList = ["POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
-                  const currentIdx = statusList.indexOf(load.status);
+                {["POSTED", "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].map((st, i, arr) => {
+                  const statusList = ["POSTED", "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"];
+                  const mappedStatus = load.status === "PICKED_UP" ? "LOADED" : load.status;
+                  const currentIdx = statusList.indexOf(mappedStatus);
                   const done = i <= currentIdx;
                   const active = i === currentIdx;
                   return (
@@ -400,6 +432,12 @@ export default function LoadsPage() {
             </div>
           </div>
         )}
+
+        <RateConfirmationModal
+          open={showRateConf}
+          onClose={() => setShowRateConf(false)}
+          load={showRateConf ? load : null}
+        />
       </div>
     );
   }
@@ -429,7 +467,7 @@ export default function LoadsPage() {
         <select value={filters.status} onChange={(e) => { setFilters((f) => ({ ...f, status: e.target.value })); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
           <option value="" className="bg-navy">All Statuses</option>
-          {["DRAFT", "POSTED", "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED"].map((s) =>
+          {["DRAFT", "POSTED", "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "TONU", "CANCELLED"].map((s) =>
             <option key={s} value={s} className="bg-navy">{s.replace(/_/g, " ")}</option>
           )}
         </select>

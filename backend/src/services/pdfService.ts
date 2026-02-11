@@ -369,6 +369,226 @@ export function generateRateConfirmation(load: LoadData): PDFDoc {
   return doc;
 }
 
+// ─── Enhanced Multi-Page Rate Confirmation ───────────────────
+
+interface EnhancedRCLoadData {
+  referenceNumber: string;
+  originCity: string; originState: string; originZip: string;
+  destCity: string; destState: string; destZip: string;
+  weight?: number | null; pieces?: number | null; equipmentType: string; commodity?: string | null;
+  rate: number; distance?: number | null;
+  pickupDate: Date; deliveryDate: Date;
+  notes?: string | null; specialInstructions?: string | null;
+  carrier?: { firstName: string; lastName: string; company?: string | null; phone?: string | null; carrierProfile?: { mcNumber?: string | null; dotNumber?: string | null } | null } | null;
+  customer?: { name: string; contactName?: string | null; address?: string | null; city?: string | null; state?: string | null; zip?: string | null; phone?: string | null; email?: string | null } | null;
+}
+
+function sectionTitle(doc: PDFDoc, title: string, y: number): number {
+  doc.fontSize(11).fillColor("#D4A843").text(title, 50, y);
+  doc.moveTo(50, y + 15).lineTo(560, y + 15).strokeColor("#D4A843").lineWidth(0.5).stroke();
+  return y + 22;
+}
+
+function checkPageBreak(doc: PDFDoc, y: number, needed: number): number {
+  if (y + needed > doc.page.height - 80) {
+    addFooter(doc);
+    doc.addPage();
+    addHeader(doc, "RATE CONFIRMATION (cont.)");
+    return 155;
+  }
+  return y;
+}
+
+export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
+  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+  const fd = formData || {};
+
+  // Page 1
+  addHeader(doc, "RATE CONFIRMATION");
+
+  let y = 155;
+
+  // Reference & Date
+  labelValue(doc, "Reference Number", fd.referenceNumber || load.referenceNumber, 50, y);
+  labelValue(doc, "Load Number", fd.loadNumber || load.referenceNumber, 250, y);
+  labelValue(doc, "Date", new Date().toLocaleDateString(), 450, y);
+
+  y += 40;
+  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 10;
+
+  // Section 2 — Shipper / Origin
+  y = sectionTitle(doc, "SHIPPER / ORIGIN", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(fd.shipperName || load.customer?.name || "—", 50, y);
+  if (fd.shipperAddress || load.customer?.address) doc.text(fd.shipperAddress || load.customer?.address || "", 50, y + 14);
+  const shipperCSZ = fd.shipperCity || load.customer?.city
+    ? `${fd.shipperCity || load.customer?.city || ""}, ${fd.shipperState || load.customer?.state || ""} ${fd.shipperZip || load.customer?.zip || ""}`
+    : `${load.originCity}, ${load.originState} ${load.originZip}`;
+  doc.text(shipperCSZ, 50, y + 28);
+  if (fd.shipperContact) labelValue(doc, "Contact", fd.shipperContact, 310, y);
+  if (fd.shipperPhone || load.customer?.phone) labelValue(doc, "Phone", fd.shipperPhone || load.customer?.phone || "", 310, y + 20);
+  if (fd.shipperRefNumber) labelValue(doc, "Ref #", fd.shipperRefNumber, 450, y);
+
+  y += 60;
+
+  // Section 3 — Consignee / Destination
+  y = checkPageBreak(doc, y, 80);
+  y = sectionTitle(doc, "CONSIGNEE / DESTINATION", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(fd.consigneeName || "—", 50, y);
+  if (fd.consigneeAddress) doc.text(fd.consigneeAddress, 50, y + 14);
+  const consigneeCSZ = fd.consigneeCity
+    ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`
+    : `${load.destCity}, ${load.destState} ${load.destZip}`;
+  doc.text(consigneeCSZ, 50, y + 28);
+  if (fd.consigneeContact) labelValue(doc, "Contact", fd.consigneeContact, 310, y);
+  if (fd.consigneePhone) labelValue(doc, "Phone", fd.consigneePhone, 310, y + 20);
+  if (fd.consigneeRefNumber) labelValue(doc, "Ref #", fd.consigneeRefNumber, 450, y);
+
+  y += 60;
+
+  // Section 4 — Carrier Information
+  y = checkPageBreak(doc, y, 100);
+  y = sectionTitle(doc, "CARRIER INFORMATION", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  const carrierName = fd.carrierName || load.carrier?.company || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}` : "—");
+  doc.text(carrierName, 50, y);
+  if (fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber) {
+    doc.text(`MC#: ${fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber}`, 50, y + 14);
+  }
+  if (fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber) {
+    doc.text(`DOT#: ${fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber}`, 200, y + 14);
+  }
+  if (fd.carrierAddress) doc.text(fd.carrierAddress, 50, y + 28);
+  if (fd.carrierCity) doc.text(`${fd.carrierCity}, ${fd.carrierState || ""} ${fd.carrierZip || ""}`, 50, y + 42);
+
+  if (fd.carrierContact || load.carrier?.phone) labelValue(doc, "Contact", fd.carrierContact || "", 310, y);
+  if (fd.carrierPhone || load.carrier?.phone) labelValue(doc, "Phone", fd.carrierPhone || load.carrier?.phone || "", 310, y + 20);
+  if (fd.driverName) labelValue(doc, "Driver", fd.driverName, 310, y + 40);
+  if (fd.truckNumber) labelValue(doc, "Truck #", fd.truckNumber, 450, y + 40);
+  if (fd.trailerNumber) labelValue(doc, "Trailer #", fd.trailerNumber, 450, y + 60);
+
+  y += 85;
+
+  // Section 5 — Equipment & Commodity
+  y = checkPageBreak(doc, y, 60);
+  y = sectionTitle(doc, "EQUIPMENT & COMMODITY", y);
+  labelValue(doc, "Equipment", fd.equipmentType || load.equipmentType, 50, y);
+  labelValue(doc, "Commodity", fd.commodity || load.commodity || "General Freight", 200, y);
+  labelValue(doc, "Weight", load.weight ? `${load.weight.toLocaleString()} lbs` : (fd.weight ? `${fd.weight} lbs` : "—"), 380, y);
+  y += 25;
+  if (fd.pieces || load.pieces) labelValue(doc, "Pieces", String(fd.pieces || load.pieces), 50, y);
+  if (fd.dims) labelValue(doc, "Dimensions", fd.dims, 200, y);
+  if (fd.hazmat) labelValue(doc, "Hazmat", "Yes", 380, y);
+  if (fd.tempRequirements) labelValue(doc, "Temp Req", fd.tempRequirements, 450, y);
+
+  y += 35;
+
+  // Section 6 — Dates & Times
+  y = checkPageBreak(doc, y, 50);
+  y = sectionTitle(doc, "DATES & TIMES", y);
+  labelValue(doc, "Pickup Date", fd.pickupDate || load.pickupDate.toLocaleDateString(), 50, y);
+  labelValue(doc, "Pickup Window", fd.pickupTimeWindow || "—", 200, y);
+  labelValue(doc, "Delivery Date", fd.deliveryDate || load.deliveryDate.toLocaleDateString(), 350, y);
+  labelValue(doc, "Delivery Window", fd.deliveryTimeWindow || "—", 500, y);
+
+  y += 35;
+
+  // Section 7 — Rates & Charges
+  y = checkPageBreak(doc, y, 120);
+  y = sectionTitle(doc, "RATES & CHARGES", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+
+  const linehaul = fd.lineHaulRate ?? load.rate;
+  doc.text("Line Haul Rate:", 50, y); doc.text(`$${Number(linehaul).toLocaleString()}`, 250, y);
+  y += 16;
+
+  if (fd.fuelSurcharge) {
+    doc.text("Fuel Surcharge:", 50, y); doc.text(`$${Number(fd.fuelSurcharge).toLocaleString()}`, 250, y);
+    y += 16;
+  }
+
+  if (fd.detentionRate) {
+    doc.text("Detention Rate:", 50, y); doc.text(`$${Number(fd.detentionRate).toLocaleString()}/hr`, 250, y);
+    y += 16;
+  }
+
+  if (fd.accessorials && Array.isArray(fd.accessorials)) {
+    for (const acc of fd.accessorials) {
+      doc.text(`${acc.description}:`, 50, y); doc.text(`$${Number(acc.amount).toLocaleString()}`, 250, y);
+      y += 16;
+    }
+  }
+
+  y += 4;
+  doc.moveTo(50, y).lineTo(350, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 8;
+  const total = fd.totalCharges ?? linehaul;
+  doc.fontSize(13).fillColor("#1E1E2F").text("TOTAL:", 50, y);
+  doc.text(`$${Number(total).toLocaleString()}`, 250, y);
+  y += 20;
+
+  if (fd.paymentTerms) {
+    doc.fontSize(9).fillColor("#888888").text(`Payment Terms: ${fd.paymentTerms}`, 50, y);
+    y += 16;
+  }
+
+  // Section 8 — Special Instructions
+  const instructions = fd.specialInstructions || load.specialInstructions || load.notes;
+  if (instructions || fd.pickupInstructions || fd.deliveryInstructions) {
+    y = checkPageBreak(doc, y, 80);
+    y = sectionTitle(doc, "SPECIAL INSTRUCTIONS", y);
+    doc.fontSize(9).fillColor("#1E1E2F");
+    if (instructions) { doc.text(instructions, 50, y, { width: 510 }); y += doc.heightOfString(instructions, { width: 510 }) + 8; }
+    if (fd.pickupInstructions) { doc.text(`Pickup: ${fd.pickupInstructions}`, 50, y, { width: 510 }); y += 16; }
+    if (fd.deliveryInstructions) { doc.text(`Delivery: ${fd.deliveryInstructions}`, 50, y, { width: 510 }); y += 16; }
+    if (fd.appointmentRequired) { doc.fillColor("#dc2626").text("** APPOINTMENT REQUIRED **", 50, y); y += 16; }
+  }
+
+  // Section 9 — Terms & Conditions
+  y = checkPageBreak(doc, y, 100);
+  y = sectionTitle(doc, "TERMS & CONDITIONS", y);
+  doc.fontSize(7).fillColor("#666666");
+  const defaultTerms = "Carrier agrees to transport the above-described shipment under the terms and conditions set forth herein. " +
+    "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit. " +
+    "Carrier shall comply with all applicable federal, state, and local laws and regulations. " +
+    "This rate confirmation, when signed by both parties, constitutes a binding contract.";
+  const terms = fd.customTerms || defaultTerms;
+  doc.text(terms, 50, y, { width: 510 });
+  y += doc.heightOfString(terms, { width: 510 }) + 15;
+
+  // Section 10 — Signatures
+  y = checkPageBreak(doc, y, 100);
+  y = sectionTitle(doc, "SIGNATURES", y);
+  y += 5;
+
+  doc.fontSize(8).fillColor("#888888");
+  doc.text("Authorized by Broker", 50, y);
+  doc.text("Accepted by Carrier", 310, y);
+  y += 15;
+
+  if (fd.brokerSignature) {
+    doc.fontSize(12).fillColor("#1E1E2F").text(fd.brokerSignature, 50, y);
+  }
+  if (fd.carrierSignature) {
+    doc.fontSize(12).fillColor("#1E1E2F").text(fd.carrierSignature, 310, y);
+  }
+
+  y += 20;
+  doc.moveTo(50, y).lineTo(250, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
+  doc.moveTo(310, y).lineTo(550, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
+  y += 5;
+
+  doc.fontSize(7).fillColor("#888888");
+  doc.text(fd.brokerSignDate || "Date: _______________", 50, y);
+  doc.text(fd.carrierSignDate || "Date: _______________", 310, y);
+
+  addFooter(doc);
+  doc.end();
+  return doc;
+}
+
 interface InvoiceData {
   invoiceNumber: string; amount: number; status: string;
   factoringFee?: number | null; advanceAmount?: number | null;

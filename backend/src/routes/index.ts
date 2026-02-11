@@ -23,6 +23,8 @@ import auditRoutes from "./audit";
 import eldRoutes from "./eld";
 import fmcsaRoutes from "./fmcsa";
 import chatRoutes from "./chat";
+import rateConfirmationRoutes from "./rateConfirmations";
+import checkCallRoutes from "./checkCalls";
 
 const router = Router();
 
@@ -50,5 +52,7 @@ router.use("/compliance", complianceRoutes);
 router.use("/audit", auditRoutes);
 router.use("/eld", eldRoutes);
 router.use("/fmcsa", fmcsaRoutes);
+router.use("/rate-confirmations", rateConfirmationRoutes);
+router.use("/check-calls", checkCallRoutes);
 
 export default router;
