@@ -51,6 +51,7 @@ export default function LoadsPage() {
 
   const query = new URLSearchParams();
   if (filters.status) query.set("status", filters.status);
+  else query.set("activeOnly", "true");
   if (filters.originState) query.set("originState", filters.originState);
   if (filters.destState) query.set("destState", filters.destState);
   if (filters.equipmentType) query.set("equipmentType", filters.equipmentType);

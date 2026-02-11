@@ -30,7 +30,11 @@ export async function getLoads(req: AuthRequest, res: Response) {
   const query = loadQuerySchema.parse(req.query);
   const where: Record<string, unknown> = {};
 
-  if (query.status) where.status = query.status;
+  if (query.status) {
+    where.status = query.status;
+  } else if (query.activeOnly) {
+    where.status = { notIn: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "TONU", "CANCELLED"] };
+  }
   if (query.originState) where.originState = query.originState;
   if (query.destState) where.destState = query.destState;
   if (query.equipmentType) where.equipmentType = query.equipmentType;

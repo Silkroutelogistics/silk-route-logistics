@@ -43,6 +43,7 @@ export const updateLoadStatusSchema = z.object({
 
 export const loadQuerySchema = z.object({
   status: z.string().optional(),
+  activeOnly: z.coerce.boolean().optional(),
   originState: z.string().optional(),
   destState: z.string().optional(),
   equipmentType: z.string().optional(),

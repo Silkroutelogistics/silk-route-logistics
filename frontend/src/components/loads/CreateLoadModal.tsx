@@ -47,7 +47,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
     temperatureControlled: false, tempMin: "", tempMax: "", tempContinuousMonitoring: false,
     customsRequired: false,
     rate: "", accessorials: [] as string[], specialInstructions: "",
-    contactName: "", contactPhone: "",
+    contactName: "", contactPhone: "", contactEmail: "",
   });
 
   const [distanceLoading, setDistanceLoading] = useState(false);
@@ -141,9 +141,14 @@ export function CreateLoadModal({ open, onClose }: Props) {
       if (form.specialInstructions) payload.specialInstructions = form.specialInstructions;
       if (form.contactName) payload.contactName = form.contactName;
       if (form.contactPhone) payload.contactPhone = form.contactPhone;
+      if (form.contactEmail) payload.contactEmail = form.contactEmail;
       return api.post("/loads", payload);
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["loads"] }); onClose(); setStep(1); },
+    onError: (err: unknown) => {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to create load";
+      setErrors({ submit: message });
+    },
   });
 
   const ratePerMile = form.rate && form.distance ? (parseFloat(form.rate) / parseFloat(form.distance)).toFixed(2) : "--";
@@ -159,7 +164,9 @@ export function CreateLoadModal({ open, onClose }: Props) {
       if (!form.destState) errs.destState = "Required";
       if (!form.destZip) errs.destZip = "Required";
       if (!form.pickupDate) errs.pickupDate = "Required";
+      else if (form.pickupDate < new Date().toISOString().split("T")[0]) errs.pickupDate = "Cannot be in the past";
       if (!form.deliveryDate) errs.deliveryDate = "Required";
+      else if (form.deliveryDate < form.pickupDate) errs.deliveryDate = "Must be after pickup";
     } else if (s === 2) {
       if (!form.equipmentType) errs.equipmentType = "Required";
       if (!form.commodity) errs.commodity = "Required";
@@ -241,8 +248,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
                 <Input label="Zip/Postal" value={form.destZip} onChange={(v) => update("destZip", v)} required error={attempted[1] ? errors.destZip : undefined} />
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
-                <Input label="Pickup Date" value={form.pickupDate} onChange={(v) => update("pickupDate", v)} type="date" required error={attempted[1] ? errors.pickupDate : undefined} />
-                <Input label="Delivery Date" value={form.deliveryDate} onChange={(v) => update("deliveryDate", v)} type="date" required error={attempted[1] ? errors.deliveryDate : undefined} />
+                <Input label="Pickup Date" value={form.pickupDate} onChange={(v) => update("pickupDate", v)} type="date" required error={attempted[1] ? errors.pickupDate : undefined} min={new Date().toISOString().split("T")[0]} />
+                <Input label="Delivery Date" value={form.deliveryDate} onChange={(v) => update("deliveryDate", v)} type="date" required error={attempted[1] ? errors.deliveryDate : undefined} min={form.pickupDate || new Date().toISOString().split("T")[0]} />
                 <div className="relative">
                   <Input label="Distance (mi)" value={form.distance} onChange={(v) => { update("distance", v); setDistanceAuto(false); }} type="number" />
                   {distanceLoading && <div className="absolute right-3 top-7 w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />}
@@ -390,9 +397,10 @@ export function CreateLoadModal({ open, onClose }: Props) {
                 <textarea value={form.specialInstructions} onChange={(e) => update("specialInstructions", e.target.value)}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-h-[80px] focus:outline-none focus:border-gold/50" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Input label="Shipper Contact" value={form.contactName} onChange={(v) => update("contactName", v)} placeholder="Name" required error={attempted[3] ? errors.contactName : undefined} />
                 <Input label="Phone" value={form.contactPhone} onChange={(v) => update("contactPhone", v)} placeholder="(xxx) xxx-xxxx" required error={attempted[3] ? errors.contactPhone : undefined} />
+                <Input label="Email" value={form.contactEmail} onChange={(v) => update("contactEmail", v)} placeholder="email@example.com" />
               </div>
             </>
           )}
@@ -400,6 +408,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
           {step === 4 && (
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-gold">Review Load Details</h3>
+              {errors.submit && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">{errors.submit}</div>}
 
               {/* Route Details */}
               <div className="bg-white/5 rounded-lg p-4 space-y-2 text-sm">
@@ -442,7 +451,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
                 <Row label="Rate" value={`$${parseFloat(form.rate || "0").toLocaleString()} (${ratePerMile}/mi)`} />
                 {form.accessorials.length > 0 && <Row label="Accessorials" value={form.accessorials.join(", ")} />}
                 {form.specialInstructions && <Row label="Instructions" value={form.specialInstructions} />}
-                {form.contactName && <Row label="Contact" value={`${form.contactName} ${form.contactPhone}`} />}
+                {form.contactName && <Row label="Contact" value={`${form.contactName} ${form.contactPhone}${form.contactEmail ? ` — ${form.contactEmail}` : ""}`} />}
               </div>
             </div>
           )}
@@ -465,12 +474,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
                 </button>
               </>
             ) : (
-              <button onClick={handleNext} disabled={!canProceed && attempted[step]}
-                className={`flex items-center gap-1 px-5 py-2 text-sm font-medium rounded-lg transition ${
-                  canProceed
-                    ? "bg-gold text-navy hover:bg-gold/90"
-                    : "bg-gold/50 text-navy/50 cursor-not-allowed opacity-50"
-                }`}>
+              <button onClick={handleNext}
+                className="flex items-center gap-1 px-5 py-2 text-sm font-medium rounded-lg transition bg-gold text-navy hover:bg-gold/90">
                 Next <ChevronRight className="w-4 h-4" />
               </button>
             )}
@@ -481,8 +486,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
   );
 }
 
-function Input({ label, value, onChange, type = "text", placeholder, required, error }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean; error?: string;
+function Input({ label, value, onChange, type = "text", placeholder, required, error, min }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean; error?: string; min?: string;
 }) {
   return (
     <div>
@@ -490,7 +495,7 @@ function Input({ label, value, onChange, type = "text", placeholder, required, e
         {label}
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} min={min}
         className={`w-full px-3 py-2 bg-white/5 border rounded-lg text-white text-sm focus:outline-none focus:border-gold/50 ${error ? "border-red-500/50" : "border-white/10"}`} />
       {error && <p className="text-red-400 text-[10px] mt-0.5">{error}</p>}
     </div>
@@ -518,16 +523,18 @@ function Select({ label, value, onChange, options, required, error }: {
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex items-center gap-2 cursor-pointer group"
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange(!checked); }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onChange(!checked); } }}
+      className="flex items-center gap-2 cursor-pointer group select-none"
     >
       <div className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${checked ? "bg-green-500" : "bg-slate-600"}`}>
         <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all duration-200 shadow-sm ${checked ? "left-[18px]" : "left-[3px]"}`} />
       </div>
       <span className={`text-xs transition ${checked ? "text-white" : "text-slate-400 group-hover:text-slate-300"}`}>{label}</span>
-    </button>
+    </div>
   );
 }
 

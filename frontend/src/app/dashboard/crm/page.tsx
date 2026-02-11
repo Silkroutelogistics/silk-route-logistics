@@ -205,7 +205,7 @@ export default function CRMPage() {
                         {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {c.email}</span>}
                         {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {c.phone}</span>}
                         {c.city && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {c.city}, {c.state}</span>}
-                        {c.mcNumber && <span className="text-slate-500">MC# {c.mcNumber}</span>}
+                        {c.type === "BROKER" && c.mcNumber && <span className="text-slate-500">MC# {c.mcNumber}</span>}
                         {c.industryType && <span className="text-slate-500">{c.industryType}</span>}
                       </div>
                     </div>
@@ -236,7 +236,7 @@ export default function CRMPage() {
                     <InfoRow label="Customer Type" value={c.type || "—"} />
                     <InfoRow label="Annual Revenue" value={c.annualRevenue ? `$${(c.annualRevenue / 1000).toFixed(0)}K` : "—"} />
                     <InfoRow label="Industry" value={c.industryType || "—"} />
-                    <InfoRow label="MC Number" value={c.mcNumber || "—"} />
+                    {c.type === "BROKER" && <InfoRow label="MC Number" value={c.mcNumber || "—"} />}
                   </div>
                   {c.billingAddress && (
                     <div><span className="text-xs text-slate-500">Billing Address</span><p className="text-sm text-slate-300">{c.billingAddress}</p></div>
@@ -330,7 +330,9 @@ export default function CRMPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <FInput label="Phone" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
-              <FInput label="MC Number" value={form.mcNumber} onChange={(v) => setForm((f) => ({ ...f, mcNumber: v }))} placeholder="e.g. MC-123456" />
+              {form.type === "BROKER" && (
+                <FInput label="MC Number" value={form.mcNumber} onChange={(v) => setForm((f) => ({ ...f, mcNumber: v }))} placeholder="e.g. MC-123456" />
+              )}
             </div>
 
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider pt-2">Address & Billing</p>
