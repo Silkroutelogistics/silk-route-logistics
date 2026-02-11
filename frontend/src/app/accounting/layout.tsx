@@ -120,7 +120,12 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-white truncate">{user?.firstName} {user?.lastName}</p>
-              <p className="text-[10px] text-slate-500 truncate">{user?.role}</p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {user?.role === "BROKER" ? "Account Executive"
+                  : user?.role === "ADMIN" ? "Administrator"
+                  : user?.role === "CEO" ? "Chief Executive Officer"
+                  : user?.role?.toLowerCase()}
+              </p>
             </div>
             <button onClick={logout} className="text-slate-500 hover:text-red-400 transition">
               <LogOut className="w-3.5 h-3.5" />

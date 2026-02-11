@@ -169,8 +169,15 @@ export function Sidebar() {
               <p className="text-sm text-white font-medium truncate">
                 {user.firstName} {user.lastName}
               </p>
-              <p className="text-xs text-slate-500 capitalize">
-                {ceo ? "Chief Executive Officer" : user.role?.toLowerCase()}
+              <p className="text-xs text-slate-500">
+                {ceo ? "Chief Executive Officer"
+                  : user.role === "BROKER" ? "Account Executive"
+                  : user.role === "ADMIN" ? "Administrator"
+                  : user.role === "DISPATCH" ? "Dispatch"
+                  : user.role === "OPERATIONS" ? "Operations"
+                  : user.role === "ACCOUNTING" ? "Accounting"
+                  : user.role === "CARRIER" ? "Carrier"
+                  : user.role?.toLowerCase()}
               </p>
             </div>
             {unreadCount > 0 && (
