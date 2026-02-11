@@ -28,7 +28,7 @@ async function main() {
   await prisma.sOP.deleteMany();
   await prisma.user.deleteMany();
 
-  const hash = await bcrypt.hash("password123", 10);
+  const hash = await bcrypt.hash("W3lcome2SRL26!!", 12);
 
   // Single admin account
   await prisma.user.create({
