@@ -4,16 +4,19 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 
-// Gemini setup
+// Anthropic setup (primary)
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+
+// Gemini setup (fallback)
 const gemini = env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(env.GEMINI_API_KEY)
   : null;
 
 function isConfigured(): boolean {
-  return !!gemini;
+  return !!ANTHROPIC_API_KEY || !!gemini;
 }
 
-const SYSTEM_PROMPT = `You are Marco Polo, the AI assistant for Silk Route Logistics (SRL) — a full-service freight brokerage and logistics platform.
+const SYSTEM_PROMPT = `You are Marco Polo, the AI assistant for Silk Route Logistics (SRL) — a full-service freight brokerage and logistics platform based in Kalamazoo, Michigan.
 
 Your personality:
 - Professional, knowledgeable, and efficient
@@ -29,14 +32,16 @@ What you can help with:
 - Freight industry best practices
 - Rate guidance and market insights
 - Carrier onboarding and compliance questions
+- Accounting and payment questions
 - General logistics Q&A
 
 SRL Platform features you know about:
 - Load Board: Create, post, and manage freight loads
 - Track & Trace: Real-time shipment tracking with ELD integration
-- Tender System: Send and manage carrier tenders
-- Invoice & Factoring: Auto-generated invoices, factoring support
-- Carrier Scorecard: Performance metrics and tier system (Platinum/Gold/Silver/Bronze)
+- Tender System: Send and manage carrier tenders with 10-section rate confirmations
+- Invoice & Factoring: Auto-generated invoices, Quick Pay program, factoring fund
+- Carrier Scorecard: Performance metrics and SRCPP tier system (Platinum/Gold/Silver/Bronze)
+- Accounting Console: Full AR/AP, margin analysis, fund management
 - Market Intelligence: Lane rates, capacity data, trends
 - Compliance: FMCSA integration, document management
 - EDI: Electronic Data Interchange (204/990/214/210)
@@ -52,6 +57,33 @@ Keep responses under 150 words unless the user asks for detailed explanation.`;
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+async function callAnthropic(messages: ChatMessage[], systemPrompt: string): Promise<string> {
+  if (!ANTHROPIC_API_KEY) throw new Error("Anthropic not configured");
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Anthropic API error ${response.status}: ${errorBody}`);
+  }
+
+  const data: any = await response.json();
+  return data.content?.[0]?.text || "I apologize, I couldn't generate a response.";
 }
 
 async function callGemini(messages: ChatMessage[], systemPrompt: string): Promise<string> {
@@ -70,6 +102,31 @@ async function callGemini(messages: ChatMessage[], systemPrompt: string): Promis
   const lastMessage = messages[messages.length - 1].content;
   const result = await chat.sendMessage(lastMessage);
   return result.response.text();
+}
+
+async function callAI(messages: ChatMessage[], systemPrompt: string): Promise<{ reply: string; provider: string }> {
+  // Try Anthropic first (primary)
+  if (ANTHROPIC_API_KEY) {
+    try {
+      const reply = await callAnthropic(messages, systemPrompt);
+      return { reply, provider: "anthropic" };
+    } catch (err: any) {
+      console.error("[MarcoPolo] Anthropic failed, falling back to Gemini:", err.message);
+    }
+  }
+
+  // Fall back to Gemini
+  if (gemini) {
+    try {
+      const reply = await callGemini(messages, systemPrompt);
+      return { reply, provider: "gemini" };
+    } catch (err: any) {
+      console.error("[MarcoPolo] Gemini also failed:", err.message);
+      throw err;
+    }
+  }
+
+  throw new Error("No AI provider configured");
 }
 
 async function buildUserContext(userId: string, email: string, role: string): Promise<string> {
@@ -151,8 +208,8 @@ export async function chat(req: AuthRequest, res: Response) {
     }
 
     const messages = buildMessages(message, history);
-    const reply = await callGemini(messages, SYSTEM_PROMPT + userContext);
-    res.json({ reply, provider: "gemini" });
+    const { reply, provider } = await callAI(messages, SYSTEM_PROMPT + userContext);
+    res.json({ reply, provider });
   } catch (error: unknown) {
     console.error("[MarcoPolo] Chat error:", error);
     const errMsg = error instanceof Error ? error.message : "Unknown error";
@@ -177,8 +234,8 @@ export async function publicChat(req: AuthRequest, res: Response) {
   try {
     const messages = buildMessages(message, history);
     const systemPrompt = SYSTEM_PROMPT + "\n\nThis is a public visitor on the SRL website. They are not logged in. Help them learn about SRL's services, pricing model, carrier onboarding, and freight solutions. Encourage them to sign up or log in for full features.";
-    const reply = await callGemini(messages, systemPrompt);
-    res.json({ reply, provider: "gemini" });
+    const { reply, provider } = await callAI(messages, systemPrompt);
+    res.json({ reply, provider });
   } catch (error: unknown) {
     console.error("[MarcoPolo] Public chat error:", error);
     const errMsg = error instanceof Error ? error.message : "Unknown error";

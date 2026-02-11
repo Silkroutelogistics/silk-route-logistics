@@ -19,10 +19,13 @@ enum UserRole {
   OPERATIONS
   ACCOUNTING
   CEO
+  AE
+  READONLY
 }
 
 enum LoadStatus {
   DRAFT
+  PLANNED
   POSTED
   TENDERED
   CONFIRMED
@@ -38,17 +41,21 @@ enum LoadStatus {
   COMPLETED
   TONU
   CANCELLED
-  PICKED_UP // legacy alias – kept for backward compat
+  PICKED_UP // legacy alias
 }
 
 enum InvoiceStatus {
   DRAFT
   SUBMITTED
+  SENT
+  PARTIAL
   UNDER_REVIEW
   APPROVED
   FUNDED
   PAID
+  OVERDUE
   REJECTED
+  VOID
 }
 
 enum CarrierTier {
@@ -56,6 +63,7 @@ enum CarrierTier {
   GOLD
   SILVER
   BRONZE
+  NONE
 }
 
 enum OnboardingStatus {
@@ -103,18 +111,35 @@ enum LineItemType {
 
 enum CarrierPayStatus {
   PENDING
-  SCHEDULED
+  PREPARED
+  SUBMITTED
+  APPROVED
   PROCESSING
   PAID
+  DISPUTED
   VOID
+  ON_HOLD
+  SCHEDULED
+  REJECTED
 }
 
 enum PaymentMethod {
   ACH
   CHECK
   WIRE
+  ZELLE
   QUICKPAY
   FACTORING
+  OTHER
+}
+
+enum PaymentTier {
+  FLASH
+  EXPRESS
+  PRIORITY
+  PARTNER
+  ELITE
+  STANDARD
 }
 
 enum SettlementPeriod {
@@ -151,6 +176,8 @@ enum DriverStatus {
   OFF_DUTY
   SLEEPER
   INACTIVE
+  ACTIVE
+  TERMINATED
 }
 
 enum EquipmentStatus {
@@ -176,6 +203,7 @@ enum TrailerType {
   CAR_HAULER
   CONESTOGA
   POWER_ONLY
+  CONTAINER
 }
 
 enum OwnershipType {
@@ -189,6 +217,7 @@ enum AssetStatus {
   IN_SHOP
   OUT_OF_SERVICE
   SOLD
+  MAINTENANCE
 }
 
 enum CustomerType {
@@ -205,6 +234,155 @@ enum CreditStatus {
   PENDING_REVIEW
 }
 
+enum CreditGrade {
+  A
+  B
+  C
+  D
+}
+
+enum ShipperPaymentTerms {
+  NET15
+  NET30
+  NET60
+  COD
+}
+
+enum CarrierApplicationStatus {
+  NEW
+  REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum ShipperStatus {
+  NEW
+  CONTACTED
+  ACTIVE
+  DECLINED
+  SUSPENDED
+}
+
+enum DisputeType {
+  SHORT_PAY
+  WRONG_AMOUNT
+  MISSING_ACCESSORIAL
+  UNAUTHORIZED_DEDUCTION
+  LATE_PAYMENT
+  DOCUMENTATION
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  INVESTIGATING
+  PROPOSED
+  APPROVED
+  DENIED
+  CLOSED
+}
+
+enum FactoringTransactionType {
+  INITIAL_DEPOSIT
+  CARRIER_PAYMENT_OUT
+  SHIPPER_PAYMENT_IN
+  QP_FEE_EARNED
+  ADJUSTMENT
+  WITHDRAWAL
+}
+
+enum ReconciliationStatus {
+  IN_PROGRESS
+  RECONCILED
+  DISCREPANCY
+}
+
+enum LogType {
+  API_CALL
+  ERROR
+  AUTH
+  PAYMENT
+  STATUS_CHANGE
+  CRON_JOB
+  INTEGRATION
+  ALERT
+}
+
+enum LogSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  APPROVE
+  REJECT
+  LOGIN
+  EXPORT
+}
+
+enum NotificationType {
+  CARRIER_APPLICATION
+  LOAD_TENDERED
+  LOAD_UPDATE
+  PAYMENT_PENDING
+  PAYMENT_APPROVED
+  INVOICE_OVERDUE
+  FUND_ALERT
+  CREDIT_LIMIT
+  SRCPP_UPGRADE
+  DISPUTE_FILED
+  POD_RECEIVED
+  SYSTEM_ERROR
+  GENERAL
+}
+
+enum ShipmentType {
+  DOMESTIC
+  CROSS_BORDER
+}
+
+enum RateType {
+  FLAT
+  PER_MILE
+}
+
+enum FuelSurchargeType {
+  FLAT
+  PERCENTAGE
+}
+
+enum AssignmentType {
+  COMPANY_DRIVER
+  PARTNER_CARRIER
+}
+
+enum CarrierPaymentMethod {
+  QUICK_PAY
+  STANDARD
+  FACTORING
+}
+
+enum CheckCallDriverStatus {
+  ON_SCHEDULE
+  DELAYED_WEATHER
+  DELAYED_MECHANICAL
+  DELAYED_SHIPPER
+  DELAYED_RECEIVER
+  STOPPED_REST
+  AT_PICKUP
+  AT_DELIVERY
+  LOADED
+  EMPTY
+  OTHER
+}
+
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
@@ -217,6 +395,8 @@ model User {
   role          UserRole
   phone         String?
   isVerified    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -235,40 +415,95 @@ model User {
   checkCalls           CheckCall[]        @relation("CheckCallUser")
   carrierPays          CarrierPay[]       @relation("CarrierPayments")
   settlements          Settlement[]       @relation("CarrierSettlements")
+  statusUpdates        Load[]             @relation("StatusUpdater")
+  tenderedLoads        Load[]             @relation("TenderCreator")
+  systemLogs           SystemLog[]
+  auditTrails          AuditTrail[]       @relation("AuditPerformer")
 
+  // Accounting relations
+  preparedPayments   CarrierPay[]       @relation("PaymentPreparer")
+  approvedPayments   CarrierPay[]       @relation("PaymentApprover")
+  rejectedPayments   CarrierPay[]       @relation("PaymentRejecter")
+  createdInvoices    Invoice[]          @relation("InvoiceCreator")
+  filedDisputes      PaymentDispute[]   @relation("DisputeFiler")
+  resolvedDisputes   PaymentDispute[]   @relation("DisputeResolver")
+  factoringEntries   FactoringFund[]    @relation("FactoringCreator")
+  reconciliations    BankReconciliation[] @relation("ReconciliationUser")
+
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
 // ─── Carrier Models ──────────────────────────────────────
 
 model CarrierProfile {
-  id                    String           @id @default(cuid())
-  userId                String           @unique
-  user                  User             @relation(fields: [userId], references: [id])
-  mcNumber              String?          @unique
-  dotNumber             String?          @unique
+  id                    String                  @id @default(cuid())
+  userId                String                  @unique
+  user                  User                    @relation(fields: [userId], references: [id])
+  mcNumber              String?                 @unique
+  dotNumber             String?                 @unique
+  companyName           String?
+  contactName           String?
+  contactPhone          String?
+  contactEmail          String?
   insuranceExpiry       DateTime?
   safetyScore           Float?
-  tier                  CarrierTier      @default(BRONZE)
+  tier                  CarrierTier             @default(BRONZE)
   equipmentTypes        String[]
   operatingRegions      String[]
-  onboardingStatus      OnboardingStatus @default(PENDING)
+  preferredLanes        Json?
+  onboardingStatus      OnboardingStatus        @default(PENDING)
+  status                CarrierApplicationStatus @default(NEW)
   approvedAt            DateTime?
-  w9Uploaded            Boolean          @default(false)
-  insuranceCertUploaded Boolean          @default(false)
-  authorityDocUploaded  Boolean          @default(false)
+  w9Uploaded            Boolean                 @default(false)
+  w9Url                 String?
+  insuranceCertUploaded Boolean                 @default(false)
+  coiUrl                String?
+  authorityDocUploaded  Boolean                 @default(false)
+  authorityLetterUrl    String?
   address               String?
   city                  String?
   state                 String?
   zip                   String?
   numberOfTrucks        Int?
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  numberOfDrivers       Int?
+
+  // Insurance details
+  insuranceCompany       String?
+  insurancePolicyNumber  String?
+  cargoInsuranceAmount   Float?
+  autoLiabilityAmount    Float?
+  generalLiabilityAmount Float?
+
+  // Payment preferences
+  paymentPreference     PaymentTier?
+  eldProvider           String?
+
+  // SRCPP Loyalty
+  srcppTier             CarrierTier             @default(NONE)
+  srcppTotalLoads       Int                     @default(0)
+  srcppTotalMiles       Float                   @default(0)
+  srcppJoinedDate       DateTime?
+
+  // FMCSA
+  safetyRating          String?
+  fmcsaBasicScores      Json?
+  fmcsaAuthorityStatus  String?
+  fmcsaLastChecked      DateTime?
+
+  notes                 String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
 
   scorecards  CarrierScorecard[]
   bonuses     CarrierBonus[]
   tenders     LoadTender[]
 
+  @@index([mcNumber])
+  @@index([dotNumber])
+  @@index([status])
+  @@index([srcppTier])
   @@map("carrier_profiles")
 }
 
@@ -313,38 +548,152 @@ model CarrierBonus {
 model Load {
   id              String     @id @default(cuid())
   referenceNumber String     @unique @default(cuid())
+  loadNumber      String?    @unique
   status          LoadStatus @default(POSTED)
 
+  // Route
+  originCompany   String?
+  originAddress   String?
   originCity      String
   originState     String
   originZip       String
+  originContactName  String?
+  originContactPhone String?
+  destCompany     String?
+  destAddress     String?
   destCity        String
   destState       String
   destZip         String
+  destContactName  String?
+  destContactPhone String?
+  distance        Float?
 
+  // Schedule
+  pickupDate      DateTime
+  pickupTimeStart String?
+  pickupTimeEnd   String?
+  deliveryDate    DateTime
+  deliveryTimeStart String?
+  deliveryTimeEnd String?
+  actualPickupDatetime  DateTime?
+  actualDeliveryDatetime DateTime?
+
+  // Freight
   weight          Float?
   pieces          Int?
+  pallets         Int?
   equipmentType   String
+  trailerLength   String?
   commodity       String?
-  rate            Float
-  distance        Float?
-  notes           String?
-
   freightClass    String?
+  dimensionsLength Float?
+  dimensionsWidth  Float?
+  dimensionsHeight Float?
+  stackable       Boolean    @default(true)
+
+  // Hazmat
   hazmat          Boolean    @default(false)
+  hazmatUnNumber  String?
+  hazmatClass     String?
+  hazmatEmergencyContact String?
+  hazmatPlacardRequired Boolean @default(false)
+
+  // Temperature
+  temperatureControlled Boolean @default(false)
   tempMin         Float?
   tempMax         Float?
+  tempContinuousMonitoring Boolean @default(false)
+
+  // Customs / Cross-border
   customsRequired Boolean    @default(false)
+  shipmentType    ShipmentType @default(DOMESTIC)
+  borderCrossingPoint String?
+  customsBrokerName   String?
+  customsBrokerPhone  String?
   bondType        String?
-  accessorials    String[]
+  parsPapsNumber  String?
+
+  // Shipper info
+  shipperReference String?
+  shipperPoNumber  String?
+  pickupNumber     String?
+  pickupInstructions String?
+  pickupHours      String?
+  loadingType      String?
+  deliveryReference String?
+  deliveryAppointment String?
+  deliveryInstructions String?
+  deliveryHours    String?
+  unloadingType    String?
+
+  // Multi-stop
+  isMultiStop     Boolean    @default(false)
+  stops           Json?
+  extraStopPay    Float      @default(0)
+
+  // Assignment
+  assignmentType  AssignmentType?
+  carrierDispatcherName String?
+  carrierDispatcherPhone String?
+  driverName      String?
+  driverPhone     String?
+  truckNumber     String?
+  trailerNumber   String?
+
+  // Financials
+  rate            Float
+  customerRate    Float?
+  carrierRate     Float?
+  rateType        RateType   @default(FLAT)
+  fuelSurcharge   Float      @default(0)
+  fuelSurchargeType FuelSurchargeType @default(FLAT)
+  accessorials    Json?
+  totalCarrierPay Float?
+  grossMargin     Float?
+  marginPercent   Float?
+  revenuePerMile  Float?
+  costPerMile     Float?
+  marginPerMile   Float?
+
+  // Status tracking
+  statusUpdatedAt DateTime?
+  statusUpdatedById String?
+  statusUpdatedBy User?      @relation("StatusUpdater", fields: [statusUpdatedById], references: [id])
+
+  // Documents
+  rateConfirmationPdfUrl String?
+  bolUrl          String?
+  podUrl          String?
+  podSigned       Boolean    @default(false)
+  podReceivedAt   DateTime?
+
+  // Tender
+  tenderedAt      DateTime?
+  tenderedById    String?
+  tenderedBy      User?      @relation("TenderCreator", fields: [tenderedById], references: [id])
+  carrierConfirmedAt DateTime?
+
+  // Payment terms
+  carrierPaymentMethod CarrierPaymentMethod?
+  carrierPaymentTier   PaymentTier?
+  quickPayFeePercent   Float?
+
+  // Terms
+  termsConditions  String?
   specialInstructions String?
-  contactName     String?
-  contactPhone    String?
+  checkCallFrequency String?  @default("4 hours")
+  noBrokerClause  Boolean    @default(true)
+
+  notes           String?
+
+  // Legacy fields kept for compatibility
   length          Float?
   width           Float?
   height          Float?
+  contactName     String?
+  contactPhone    String?
 
-  // Asset assignment (for company-owned fleet)
+  // Asset assignment
   truckId         String?
   truck           Truck?     @relation(fields: [truckId], references: [id])
   trailerId       String?
@@ -354,8 +703,6 @@ model Load {
   customerId      String?
   customer        Customer?  @relation(fields: [customerId], references: [id])
 
-  pickupDate      DateTime
-  deliveryDate    DateTime
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -363,21 +710,26 @@ model Load {
   poster          User       @relation("LoadPoster", fields: [posterId], references: [id])
   carrierId       String?
   carrier         User?      @relation("LoadCarrier", fields: [carrierId], references: [id])
+
   invoices        Invoice[]
   documents       Document[]
-  tenders            LoadTender[]
-  messages           Message[]
-  ediTransactions    EDITransaction[]
-  shipments          Shipment[]
+  tenders         LoadTender[]
+  messages        Message[]
+  ediTransactions EDITransaction[]
+  shipments       Shipment[]
   rateConfirmations  RateConfirmation[]
-  checkCalls         CheckCall[]
-  carrierPays        CarrierPay[]
+  checkCalls      CheckCall[]
+  carrierPays     CarrierPay[]
 
   @@index([status])
+  @@index([loadNumber])
   @@index([originState])
   @@index([destState])
   @@index([customerId])
   @@index([carrierId])
+  @@index([pickupDate])
+  @@index([deliveryDate])
+  @@index([statusUpdatedAt])
   @@map("loads")
 }
 
@@ -404,12 +756,17 @@ model RateConfirmation {
   id              String   @id @default(cuid())
   loadId          String
   load            Load     @relation(fields: [loadId], references: [id])
-  formData        Json     // Full 10-section form data
-  status          String   @default("DRAFT") // DRAFT, SENT, SIGNED, VOID
+  rateConNumber   String?  @unique
+  formData        Json
+  pdfUrl          String?
+  sentToEmail     String?
   sentAt          DateTime?
+  signed          Boolean  @default(false)
   signedAt        DateTime?
+  signedUrl       String?
+  status          String   @default("DRAFT")
 
-  // Indexed financial columns (denormalized from formData for queries)
+  // Indexed financial columns
   carrierRate     Float?
   fuelSurcharge   Float?
   accessorialTotal Float?
@@ -420,6 +777,8 @@ model RateConfirmation {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  carrierPays     CarrierPay[]
 
   @@index([loadId])
   @@index([status])
@@ -433,13 +792,15 @@ model CheckCall {
   id          String   @id @default(cuid())
   loadId      String
   load        Load     @relation(fields: [loadId], references: [id])
-  status      String   // CHECKED_IN, AT_PICKUP, LOADED, IN_TRANSIT, AT_DELIVERY, DELIVERED, ISSUE
+  status      String
+  driverStatus CheckCallDriverStatus?
   location    String?
   city        String?
   state       String?
   notes       String?
-  contactedBy String?  // Name of person who made the call
-  method      String?  // PHONE, EMAIL, ELD, GPS, CARRIER_UPDATE
+  etaUpdate   DateTime?
+  contactedBy String?
+  method      String?
   calledById  String?
   calledBy    User?    @relation("CheckCallUser", fields: [calledById], references: [id])
   createdAt   DateTime @default(now())
@@ -453,26 +814,272 @@ model CheckCall {
 model Invoice {
   id              String        @id @default(cuid())
   invoiceNumber   String        @unique
+  loadId          String
+  load            Load          @relation(fields: [loadId], references: [id])
   status          InvoiceStatus @default(DRAFT)
   amount          Float
+  lineHaulAmount  Float?
+  fuelSurchargeAmount Float?
+  accessorialsAmount  Float?
+  totalAmount     Float?
   factoringFee    Float?
   advanceRate     Float?
   advanceAmount   Float?
   dueDate         DateTime?
+  sentDate        DateTime?
   paidAt          DateTime?
+  paidAmount      Float?
+  paymentReference String?
+  paymentMethod   PaymentMethod?
+  pdfUrl          String?
+
+  // Reminder tracking
+  reminderSent31  Boolean   @default(false)
+  reminderSent45  Boolean   @default(false)
+  reminderSent60  Boolean   @default(false)
+
+  notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   userId          String
   user            User          @relation(fields: [userId], references: [id])
-  loadId          String
-  load            Load          @relation(fields: [loadId], references: [id])
+  createdById     String?
+  createdBy       User?         @relation("InvoiceCreator", fields: [createdById], references: [id])
+
   documents       Document[]
   lineItems       InvoiceLineItem[]
 
   @@index([status])
   @@index([userId, status])
+  @@index([invoiceNumber])
+  @@index([dueDate])
   @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String       @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float        @default(1)
+  rate        Float
+  amount      Float
+  type        LineItemType @default(LINEHAUL)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+
+  @@index([invoiceId])
+  @@map("invoice_line_items")
+}
+
+// ─── Carrier Pay (Accounts Payable) ──────────────────────
+
+model CarrierPay {
+  id                String          @id @default(cuid())
+  paymentNumber     String?         @unique
+  carrierId         String
+  carrier           User            @relation("CarrierPayments", fields: [carrierId], references: [id])
+  loadId            String
+  load              Load            @relation(fields: [loadId], references: [id])
+  rateConfirmationId String?
+  rateConfirmation  RateConfirmation? @relation(fields: [rateConfirmationId], references: [id])
+
+  // Payment tier
+  paymentTier       PaymentTier     @default(STANDARD)
+
+  // Amounts
+  lineHaul          Float?
+  fuelSurcharge     Float?
+  accessorialsTotal Float?
+  amount            Float
+  grossAmount       Float?
+  quickPayDiscount  Float?
+  quickPayFeePercent Float?         @default(0)
+  quickPayFeeAmount Float?          @default(0)
+  netAmount         Float
+
+  status            CarrierPayStatus @default(PENDING)
+  paymentMethod     PaymentMethod?
+  checkNumber       String?
+  referenceNumber   String?
+  scheduledDate     DateTime?
+  paidAt            DateTime?
+  dueDate           DateTime?
+  paymentDate       DateTime?
+
+  // Approval workflow
+  preparedById      String?
+  preparedBy        User?           @relation("PaymentPreparer", fields: [preparedById], references: [id])
+  preparedAt        DateTime?
+  submittedAt       DateTime?
+  approvedById      String?
+  approvedBy        User?           @relation("PaymentApprover", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  rejectedById      String?
+  rejectedBy        User?           @relation("PaymentRejecter", fields: [rejectedById], references: [id])
+  rejectedAt        DateTime?
+  rejectionReason   String?
+
+  // Remit-to info
+  remitToName       String?
+  remitToAddress    String?
+
+  // Document checklist
+  docSignedRateCon  Boolean         @default(false)
+  docSignedBol      Boolean         @default(false)
+  docPod            Boolean         @default(false)
+  docCarrierInvoice Boolean         @default(false)
+  docLumperReceipt  Boolean         @default(false)
+  docScaleTicket    Boolean         @default(false)
+  docTempLog        Boolean         @default(false)
+  allDocsVerified   Boolean         @default(false)
+
+  notes             String?
+  settlementId      String?
+  settlement        Settlement?     @relation(fields: [settlementId], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  disputes          PaymentDispute[]
+
+  @@index([carrierId, status])
+  @@index([loadId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([paymentTier])
+  @@map("carrier_pays")
+}
+
+// ─── Payment Disputes ──────────────────────────────────
+
+model PaymentDispute {
+  id                String          @id @default(cuid())
+  disputeNumber     String?         @unique
+  carrierPaymentId  String
+  carrierPayment    CarrierPay      @relation(fields: [carrierPaymentId], references: [id])
+  loadId            String?
+  carrierId         String?
+
+  disputeType       DisputeType
+  disputedAmount    Float
+  description       String
+  status            DisputeStatus   @default(OPEN)
+
+  investigationNotes String?
+  proposedResolution String?
+  proposedAmount    Float?
+  resolutionNotes   String?
+  resolutionAmount  Float?
+
+  filedById         String
+  filedBy           User            @relation("DisputeFiler", fields: [filedById], references: [id])
+  resolvedById      String?
+  resolvedBy        User?           @relation("DisputeResolver", fields: [resolvedById], references: [id])
+  filedAt           DateTime        @default(now())
+  resolvedAt        DateTime?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status])
+  @@index([carrierPaymentId])
+  @@map("payment_disputes")
+}
+
+// ─── Shipper Credit ──────────────────────────────────
+
+model ShipperCredit {
+  id                String          @id @default(cuid())
+  customerId        String          @unique
+  customer          Customer        @relation(fields: [customerId], references: [id])
+
+  creditGrade       CreditGrade     @default(B)
+  creditLimit       Float           @default(0)
+  currentUtilized   Float           @default(0)
+  paymentTerms      ShipperPaymentTerms @default(NET30)
+  avgDaysToPay      Float           @default(0)
+  totalInvoices     Int             @default(0)
+  onTimePayments    Int             @default(0)
+  latePayments      Int             @default(0)
+  lastCreditReview  DateTime?
+  autoBlocked       Boolean         @default(false)
+  blockedReason     String?
+  blockedAt         DateTime?
+  notes             String?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@map("shipper_credits")
+}
+
+// ─── Factoring Fund ──────────────────────────────────
+
+model FactoringFund {
+  id                String          @id @default(cuid())
+  transactionType   FactoringTransactionType
+  amount            Float
+  runningBalance    Float
+  referenceType     String?
+  referenceId       String?
+  description       String
+  createdById       String?
+  createdBy         User?           @relation("FactoringCreator", fields: [createdById], references: [id])
+  createdAt         DateTime        @default(now())
+
+  @@index([createdAt])
+  @@index([transactionType])
+  @@map("factoring_fund")
+}
+
+// ─── Bank Reconciliation ──────────────────────────────────
+
+model BankReconciliation {
+  id                  String          @id @default(cuid())
+  accountName         String
+  periodStart         DateTime
+  periodEnd           DateTime
+  bankStatementBalance Float
+  systemBalance       Float
+  difference          Float
+  status              ReconciliationStatus @default(IN_PROGRESS)
+  matchedCount        Int             @default(0)
+  unmatchedCount      Int             @default(0)
+  reconciledById      String?
+  reconciledBy        User?           @relation("ReconciliationUser", fields: [reconciledById], references: [id])
+  reconciledAt        DateTime?
+  csvUploadUrl        String?
+  notes               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@map("bank_reconciliations")
+}
+
+// ─── Settlement ──────────────────────────────────────────
+
+model Settlement {
+  id               String           @id @default(cuid())
+  settlementNumber String           @unique
+  carrierId        String
+  carrier          User             @relation("CarrierSettlements", fields: [carrierId], references: [id])
+  periodStart      DateTime
+  periodEnd        DateTime
+  period           SettlementPeriod
+  grossPay         Float
+  deductions       Float            @default(0)
+  netSettlement    Float
+  status           SettlementStatus @default(DRAFT)
+  paidAt           DateTime?
+  notes            String?
+  carrierPays      CarrierPay[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([carrierId, status])
+  @@index([periodStart, periodEnd])
+  @@map("settlements")
 }
 
 // ─── Document & Communication Models ──────────────────
@@ -513,17 +1120,21 @@ model Message {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User             @relation(fields: [userId], references: [id])
   type      String
   title     String
   message   String
+  link      String?
+  read      Boolean          @default(false)
   readAt    DateTime?
   actionUrl String?
-  createdAt DateTime @default(now())
+  createdAt DateTime         @default(now())
 
+  @@index([userId, read])
   @@index([userId, readAt])
+  @@index([createdAt])
   @@map("notifications")
 }
 
@@ -543,6 +1154,7 @@ model Customer {
   status          String       @default("Active")
   rating          Int          @default(0)
   notes           String?
+  industry        String?
 
   // Financial
   creditLimit     Float?
@@ -559,8 +1171,13 @@ model Customer {
   preferredEquipment String[]
   onboardingStatus OnboardingStatus @default(PENDING)
   contractUrl     String?
+  origins         Json?
+  destinations    Json?
 
   // Billing
+  billingContactName  String?
+  billingContactEmail String?
+  billingContactPhone String?
   billingAddress  String?
   billingCity     String?
   billingState    String?
@@ -573,7 +1190,9 @@ model Customer {
   shipments       Shipment[]
   loads           Load[]
   contacts        CustomerContact[]
+  shipperCredit   ShipperCredit?
 
+  @@index([status])
   @@map("customers")
 }
 
@@ -610,7 +1229,6 @@ model Truck {
   status              AssetStatus   @default(ACTIVE)
   mileage             Int           @default(0)
 
-  // Compliance
   registrationExpiry  DateTime?
   lastInspectionDate  DateTime?
   nextInspectionDate  DateTime?
@@ -618,12 +1236,10 @@ model Truck {
   ifta                Boolean       @default(false)
   iftaExpiry          DateTime?
 
-  // Service
   lastServiceDate     DateTime?
   nextServiceDate     DateTime?
   nextServiceMileage  Int?
 
-  // Assignment
   assignedDriverId    String?       @unique
   assignedDriver      Driver?       @relation("TruckDriver")
 
@@ -644,22 +1260,19 @@ model Trailer {
   vin                 String?       @unique
   licensePlate        String?
   licensePlateState   String?
-  length              Int?          // feet
-  capacity            Int?          // lbs
+  length              Int?
+  capacity            Int?
   ownershipType       OwnershipType @default(COMPANY)
   status              AssetStatus   @default(ACTIVE)
 
-  // Compliance
   registrationExpiry  DateTime?
   lastInspectionDate  DateTime?
   nextInspectionDate  DateTime?
 
-  // Reefer-specific
   reeferUnit          Boolean       @default(false)
   reeferModel         String?
   reeferHours         Int?
 
-  // Assignment
   assignedDriverId    String?       @unique
   assignedDriver      Driver?       @relation("TrailerDriver")
 
@@ -688,32 +1301,30 @@ model Driver {
   safetyScore     Float        @default(100)
   violations      Int          @default(0)
 
-  // Compliance
   medicalCardExpiry DateTime?
   drugTestDate      DateTime?
-  endorsements      String[]      // HAZMAT, TANKER, DOUBLES, etc.
+  endorsements      String[]
   twicCard          Boolean       @default(false)
   twicExpiry        DateTime?
   backgroundCheckDate DateTime?
-  mvrDate           DateTime?     // Motor Vehicle Record check
+  mvrDate           DateTime?
 
-  // Emergency contact
   emergencyContactName  String?
   emergencyContactPhone String?
 
-  // HOS (Hours of Service)
   hosDrivingUsed  Float        @default(0)
   hosOnDutyUsed   Float        @default(0)
   hosCycleUsed    Float        @default(0)
   hosCycleLimit   Float        @default(70)
 
-  // Fleet assignment
+  // SRCPP miles
+  srcppMilesEarned Float       @default(0)
+
   assignedTruckId     String?  @unique
   assignedTruck       Truck?   @relation("TruckDriver", fields: [assignedTruckId], references: [id])
   assignedTrailerId   String?  @unique
   assignedTrailer     Trailer? @relation("TrailerDriver", fields: [assignedTrailerId], references: [id])
 
-  // Legacy equipment relation (kept for backward compat with Shipment)
   assignedEquipmentId String?  @unique
   assignedEquipment   Equipment? @relation("DriverEquipment", fields: [assignedEquipmentId], references: [id])
 
@@ -779,7 +1390,7 @@ model Shipment {
   @@map("shipments")
 }
 
-// ─── Legacy Equipment (kept for backward compatibility) ───
+// ─── Legacy Equipment ───
 
 model Equipment {
   id              String          @id @default(cuid())
@@ -829,7 +1440,7 @@ model BrokerIntegration {
   apiEndpoint     String?
   apiKeyEncrypted String?
   status          IntegrationStatus @default(INACTIVE)
-  config          String?           // JSON config (rate sources, ELD provider settings)
+  config          String?
   lastSyncAt      DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -855,16 +1466,54 @@ model EDITransaction {
   @@map("edi_transactions")
 }
 
-// ─── Audit & Compliance ──────────────────────────────────
+// ─── System Monitoring ──────────────────────────────────
+
+model SystemLog {
+  id          String      @id @default(cuid())
+  logType     LogType
+  severity    LogSeverity @default(INFO)
+  source      String
+  endpoint    String?
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  message     String
+  details     Json?
+  ipAddress   String?
+  durationMs  Int?
+  createdAt   DateTime    @default(now())
+
+  @@index([logType])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("system_logs")
+}
+
+model AuditTrail {
+  id            String      @id @default(cuid())
+  entityType    String
+  entityId      String
+  action        AuditAction
+  changedFields Json?
+  performedById String
+  performedBy   User        @relation("AuditPerformer", fields: [performedById], references: [id])
+  performedAt   DateTime    @default(now())
+  ipAddress     String?
+
+  @@index([entityType, entityId])
+  @@index([performedAt])
+  @@map("audit_trails")
+}
+
+// ─── Audit & Compliance (legacy) ──────────────────────────
 
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  action     String   // CREATE, UPDATE, DELETE, LOGIN, EXPORT, etc.
-  entity     String   // Load, Customer, Invoice, etc.
+  action     String
+  entity     String
   entityId   String?
-  changes    String?  // JSON diff of before/after
+  changes    String?
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
@@ -877,13 +1526,13 @@ model AuditLog {
 
 model ComplianceAlert {
   id          String   @id @default(cuid())
-  type        String   // LICENSE_EXPIRY, INSURANCE_EXPIRY, MEDICAL_CARD, INSPECTION_DUE, etc.
-  entityType  String   // Driver, Truck, Trailer, CarrierProfile
+  type        String
+  entityType  String
   entityId    String
-  entityName  String   // Human-readable name for display
+  entityName  String
   expiryDate  DateTime
-  status      String   @default("ACTIVE") // ACTIVE, RESOLVED, DISMISSED
-  severity    String   @default("WARNING") // CRITICAL, WARNING, INFO
+  status      String   @default("ACTIVE")
+  severity    String   @default("WARNING")
   notifiedAt  DateTime?
   resolvedAt  DateTime?
   createdAt   DateTime @default(now())
@@ -909,85 +1558,13 @@ model OtpCode {
   @@map("otp_codes")
 }
 
-// ─── Scheduler Locks (prevents duplicate cron runs on multi-instance) ───
+// ─── Scheduler Locks ───
 
 model SchedulerLock {
   id        String   @id
   lockedAt  DateTime @default(now())
-  lockedBy  String   // instance identifier
+  lockedBy  String
   expiresAt DateTime
 
   @@map("scheduler_locks")
-}
-
-// ─── Invoice Line Items ──────────────────────────────────
-
-model InvoiceLineItem {
-  id          String       @id @default(cuid())
-  invoiceId   String
-  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  description String
-  quantity    Float        @default(1)
-  rate        Float
-  amount      Float
-  type        LineItemType @default(LINEHAUL)
-  sortOrder   Int          @default(0)
-  createdAt   DateTime     @default(now())
-
-  @@index([invoiceId])
-  @@map("invoice_line_items")
-}
-
-// ─── Carrier Pay ──────────────────────────────────────────
-
-model CarrierPay {
-  id                String          @id @default(cuid())
-  carrierId         String
-  carrier           User            @relation("CarrierPayments", fields: [carrierId], references: [id])
-  loadId            String
-  load              Load            @relation(fields: [loadId], references: [id])
-  amount            Float
-  quickPayDiscount  Float?
-  netAmount         Float
-  status            CarrierPayStatus @default(PENDING)
-  paymentMethod     PaymentMethod?
-  checkNumber       String?
-  referenceNumber   String?
-  scheduledDate     DateTime?
-  paidAt            DateTime?
-  notes             String?
-  settlementId      String?
-  settlement        Settlement?     @relation(fields: [settlementId], references: [id])
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([carrierId, status])
-  @@index([loadId])
-  @@index([status])
-  @@map("carrier_pays")
-}
-
-// ─── Settlement ──────────────────────────────────────────
-
-model Settlement {
-  id               String           @id @default(cuid())
-  settlementNumber String           @unique
-  carrierId        String
-  carrier          User             @relation("CarrierSettlements", fields: [carrierId], references: [id])
-  periodStart      DateTime
-  periodEnd        DateTime
-  period           SettlementPeriod
-  grossPay         Float
-  deductions       Float            @default(0)
-  netSettlement    Float
-  status           SettlementStatus @default(DRAFT)
-  paidAt           DateTime?
-  notes            String?
-  carrierPays      CarrierPay[]
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-
-  @@index([carrierId, status])
-  @@index([periodStart, periodEnd])
-  @@map("settlements")
 }

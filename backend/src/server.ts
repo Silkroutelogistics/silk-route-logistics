@@ -6,7 +6,9 @@ import rateLimit from "express-rate-limit";
 import { env } from "./config/env";
 import routes from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
+import { auditMiddleware } from "./middleware/auditTrail";
 import { startSchedulers } from "./services/schedulerService";
+import { initCronJobs } from "./cron";
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: "1.0.0",
     email: {
       provider: "resend",
       configured: !!env.RESEND_API_KEY,
@@ -38,6 +42,9 @@ app.get("/health", (_req, res) => {
     },
   });
 });
+
+// Audit trail middleware for write operations
+app.use(auditMiddleware as any);
 
 // API routes
 app.use("/api", routes);
@@ -48,6 +55,7 @@ app.use(errorHandler);
 app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
   startSchedulers();
+  initCronJobs();
 });
 
 export default app;

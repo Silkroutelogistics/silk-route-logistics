@@ -79,8 +79,8 @@ type Tab = "loads" | "eld";
 
 /* ═══ Active loads filter — only show loads that are being tracked ═══ */
 const TRACKABLE_STATUSES = [
-  "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP",
-  "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED",
+  "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP",
+  "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED",
 ];
 
 export default function TrackingPage() {

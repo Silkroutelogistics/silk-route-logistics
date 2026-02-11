@@ -1,4 +1,6 @@
-import { Router } from "express";
+import { Router, Response } from "express";
+import { prisma } from "../config/database";
+import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import authRoutes from "./auth";
 import loadRoutes from "./loads";
 import invoiceRoutes from "./invoices";
@@ -58,5 +60,87 @@ router.use("/rate-confirmations", rateConfirmationRoutes);
 router.use("/check-calls", checkCallRoutes);
 router.use("/carrier-pay", carrierPayRoutes);
 router.use("/settlements", settlementRoutes);
+
+// --- Health & Monitoring (inline) ---
+router.get("/health", (_req, res) => {
+  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString(), version: "1.0.0" });
+});
+
+router.get("/health/detailed", authenticate, authorize("ADMIN") as any, async (req: any, res: Response) => {
+  try {
+    const dbCheck = await prisma.$queryRaw`SELECT 1 as ok`.then(() => true).catch(() => false);
+    const mem = process.memoryUsage();
+    const [userCount, loadCount, invoiceCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.load.count(),
+      prisma.invoice.count(),
+    ]);
+    res.json({
+      status: dbCheck ? "healthy" : "degraded",
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      version: "1.0.0",
+      node: process.version,
+      environment: process.env.NODE_ENV || "development",
+      database: { connected: dbCheck },
+      memory: {
+        rss: `${(mem.rss / 1024 / 1024).toFixed(1)} MB`,
+        heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(1)} MB`,
+        heapTotal: `${(mem.heapTotal / 1024 / 1024).toFixed(1)} MB`,
+      },
+      counts: { users: userCount, loads: loadCount, invoices: invoiceCount },
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", error: String(err) });
+  }
+});
+
+// --- System Logs (for admin monitoring) ---
+router.get("/system-logs", authenticate, authorize("ADMIN") as any, async (req: any, res: Response) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 50);
+    const type = req.query.type as string | undefined;
+    const severity = req.query.severity as string | undefined;
+
+    const where: any = {};
+    if (type) where.logType = type;
+    if (severity) where.severity = severity;
+
+    const [logs, total] = await Promise.all([
+      prisma.systemLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.systemLog.count({ where }),
+    ]);
+    res.json({ logs, total, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// --- Audit Trail (for admin monitoring) ---
+router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: any, res: Response) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 50);
+
+    const [entries, total] = await Promise.all([
+      prisma.auditTrail.findMany({
+        orderBy: { performedAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { performedBy: { select: { firstName: true, lastName: true, email: true, role: true } } },
+      }),
+      prisma.auditTrail.count(),
+    ]);
+    res.json({ entries, total, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
 
 export default router;
