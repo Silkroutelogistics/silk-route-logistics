@@ -32,36 +32,7 @@ import settlementRoutes from "./settlements";
 
 const router = Router();
 
-router.use("/auth", authRoutes);
-router.use("/chat", chatRoutes);
-router.use("/loads", loadRoutes);
-router.use("/invoices", invoiceRoutes);
-router.use("/documents", documentRoutes);
-router.use("/carrier", carrierRoutes);
-router.use("/", tenderRoutes);
-router.use("/messages", messageRoutes);
-router.use("/notifications", notificationRoutes);
-router.use("/integrations", integrationRoutes);
-router.use("/shipments", shipmentRoutes);
-router.use("/customers", customerRoutes);
-router.use("/drivers", driverRoutes);
-router.use("/equipment", equipmentRoutes);
-router.use("/sops", sopRoutes);
-router.use("/accounting", accountingRoutes);
-router.use("/pdf", pdfRoutes);
-router.use("/market", marketRoutes);
-router.use("/edi", ediRoutes);
-router.use("/fleet", fleetRoutes);
-router.use("/compliance", complianceRoutes);
-router.use("/audit", auditRoutes);
-router.use("/eld", eldRoutes);
-router.use("/fmcsa", fmcsaRoutes);
-router.use("/rate-confirmations", rateConfirmationRoutes);
-router.use("/check-calls", checkCallRoutes);
-router.use("/carrier-pay", carrierPayRoutes);
-router.use("/settlements", settlementRoutes);
-
-// --- Health & Monitoring (inline) ---
+// --- Health & Monitoring (before any auth-guarded routes) ---
 router.get("/health", (_req, res) => {
   res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString(), version: "1.0.0" });
 });
@@ -142,5 +113,35 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
     res.status(500).json({ error: String(err) });
   }
 });
+
+// --- API Routes ---
+router.use("/auth", authRoutes);
+router.use("/chat", chatRoutes);
+router.use("/loads", loadRoutes);
+router.use("/invoices", invoiceRoutes);
+router.use("/documents", documentRoutes);
+router.use("/carrier", carrierRoutes);
+router.use("/", tenderRoutes);
+router.use("/messages", messageRoutes);
+router.use("/notifications", notificationRoutes);
+router.use("/integrations", integrationRoutes);
+router.use("/shipments", shipmentRoutes);
+router.use("/customers", customerRoutes);
+router.use("/drivers", driverRoutes);
+router.use("/equipment", equipmentRoutes);
+router.use("/sops", sopRoutes);
+router.use("/accounting", accountingRoutes);
+router.use("/pdf", pdfRoutes);
+router.use("/market", marketRoutes);
+router.use("/edi", ediRoutes);
+router.use("/fleet", fleetRoutes);
+router.use("/compliance", complianceRoutes);
+router.use("/audit", auditRoutes);
+router.use("/eld", eldRoutes);
+router.use("/fmcsa", fmcsaRoutes);
+router.use("/rate-confirmations", rateConfirmationRoutes);
+router.use("/check-calls", checkCallRoutes);
+router.use("/carrier-pay", carrierPayRoutes);
+router.use("/settlements", settlementRoutes);
 
 export default router;
