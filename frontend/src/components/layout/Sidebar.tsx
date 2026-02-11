@@ -94,6 +94,8 @@ export function Sidebar() {
   const carrier = isCarrier(user?.role);
   const admin = isAdmin(user?.role);
   const ceo = isCeo(user?.role);
+  const broker = user?.role === "BROKER";
+  const hasAccountingAccess = admin || broker || user?.role === "ACCOUNTING";
   const navItems = getNav(user?.role, viewMode);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -110,32 +112,41 @@ export function Sidebar() {
   });
   const unreadCount = unreadData?.count || 0;
 
-  const viewToggle = admin ? (
-    <div className="px-5 py-3 border-b border-white/10">
-      <div className="flex items-center bg-white/5 rounded-lg p-1">
-        <button
-          onClick={() => setViewMode("ae")}
-          className={cn(
-            "flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
-            viewMode === "ae"
-              ? "bg-gold text-navy shadow-sm"
-              : "text-slate-400 hover:text-white"
-          )}
-        >
-          AE View
-        </button>
-        <button
-          onClick={() => setViewMode("carrier")}
-          className={cn(
-            "flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
-            viewMode === "carrier"
-              ? "bg-gold text-navy shadow-sm"
-              : "text-slate-400 hover:text-white"
-          )}
-        >
-          Carrier View
-        </button>
-      </div>
+  const viewToggle = (admin || hasAccountingAccess) ? (
+    <div className="px-5 py-3 border-b border-white/10 space-y-2">
+      {admin && (
+        <div className="flex items-center bg-white/5 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode("ae")}
+            className={cn(
+              "flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
+              viewMode === "ae"
+                ? "bg-gold text-navy shadow-sm"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            AE View
+          </button>
+          <button
+            onClick={() => setViewMode("carrier")}
+            className={cn(
+              "flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
+              viewMode === "carrier"
+                ? "bg-gold text-navy shadow-sm"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            Carrier View
+          </button>
+        </div>
+      )}
+      <Link
+        href="/accounting"
+        className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium bg-white/5 text-slate-400 hover:text-gold hover:bg-gold/10 transition"
+      >
+        <DollarSign className="w-3.5 h-3.5" />
+        Accounting Console
+      </Link>
     </div>
   ) : null;
 
