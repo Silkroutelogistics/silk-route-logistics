@@ -5,11 +5,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { CreateInvoiceModal } from "@/components/invoices/CreateInvoiceModal";
+import { BatchActionsBar } from "@/components/invoices/BatchActionsBar";
 import { cn } from "@/lib/utils";
 import {
   Download, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
-  ChevronDown, ChevronUp, Filter, TrendingUp, CreditCard, BarChart3,
+  ChevronDown, ChevronUp, Filter, TrendingUp, CreditCard, BarChart3, List,
 } from "lucide-react";
+
+interface LineItem {
+  id: string;
+  description: string;
+  type: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  sortOrder: number;
+}
 
 interface Invoice {
   id: string;
@@ -23,6 +34,7 @@ interface Invoice {
   createdAt: string;
   load?: { originCity: string; originState: string; destCity: string; destState: string; referenceNumber?: string };
   user?: { id: string; firstName: string; lastName: string; company: string | null };
+  lineItems?: LineItem[];
 }
 
 interface InvoiceStats {
@@ -81,8 +93,8 @@ export default function InvoicesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Fetch my invoices (carrier) or all invoices (employee)
   const { data: invoiceData, isLoading } = useQuery({
     queryKey: ["invoices", isEmployee ? "all" : "mine", statusFilter],
     queryFn: () => {
@@ -111,6 +123,18 @@ export default function InvoicesPage() {
   });
 
   const invoices = invoiceData?.invoices || [];
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === invoices.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(invoices.map((i) => i.id));
+    }
+  };
 
   const downloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     const res = await api.get(`/pdf/invoice/${invoiceId}`, { responseType: "blob" });
@@ -225,7 +249,18 @@ export default function InvoicesPage() {
       )}
 
       {/* Status Filter Pills */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        {isEmployee && invoices.length > 0 && (
+          <label className="flex items-center gap-2 mr-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedIds.length === invoices.length && invoices.length > 0}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-white/20 bg-white/5 text-gold focus:ring-gold/50 accent-[#D4A843]"
+            />
+            <span className="text-xs text-slate-400">All</span>
+          </label>
+        )}
         {["ALL", ...statusOrder, "REJECTED"].map((s) => {
           const count = s === "ALL" ? invoices.length : invoices.filter((i) => i.status === s).length;
           return (
@@ -245,46 +280,96 @@ export default function InvoicesPage() {
           {invoices.map((inv) => {
             const age = daysSince(inv.createdAt);
             const isOverdue = age > 30 && !["PAID", "REJECTED", "DRAFT"].includes(inv.status);
+            const lineItemCount = inv.lineItems?.length || 0;
             return (
-              <div key={inv.id} className={`bg-white/5 rounded-xl border overflow-hidden ${isOverdue ? "border-red-500/30" : "border-white/10"}`}>
-                <button onClick={() => setExpanded(expanded === inv.id ? null : inv.id)}
-                  className="w-full text-left p-5 hover:bg-white/5 transition">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1 flex-wrap">
-                        <FileText className="w-4 h-4 text-gold shrink-0" />
-                        <span className="font-semibold text-white">{inv.invoiceNumber}</span>
-                        <span className={cn("px-2 py-0.5 rounded text-xs font-medium", statusColors[inv.status] || "")}>{inv.status.replace(/_/g, " ")}</span>
-                        {isOverdue && (
-                          <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> {age} days
-                          </span>
-                        )}
-                        {inv.load?.referenceNumber && (
-                          <span className="text-xs text-slate-500">Ref: {inv.load.referenceNumber}</span>
-                        )}
-                      </div>
-                      <p className="text-sm text-slate-400">
-                        {inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}
-                      </p>
-                      {inv.user && isEmployee && (
-                        <p className="text-xs text-slate-500 mt-0.5">{inv.user.company || `${inv.user.firstName} ${inv.user.lastName}`}</p>
-                      )}
-                      <div className="mt-2"><PaymentTimeline status={inv.status} /></div>
+              <div key={inv.id} className={`bg-white/5 rounded-xl border overflow-hidden ${isOverdue ? "border-red-500/30" : selectedIds.includes(inv.id) ? "border-gold/40" : "border-white/10"}`}>
+                <div className="flex items-start">
+                  {/* Checkbox */}
+                  {isEmployee && (
+                    <div className="p-5 pr-0 flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(inv.id)}
+                        onChange={() => toggleSelect(inv.id)}
+                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-gold focus:ring-gold/50 accent-[#D4A843]"
+                      />
                     </div>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-gold">${inv.amount.toLocaleString()}</p>
-                        {inv.advanceAmount && <p className="text-xs text-green-400">Advanced: ${inv.advanceAmount.toLocaleString()}</p>}
-                        <p className="text-xs text-slate-500">{new Date(inv.createdAt).toLocaleDateString()}</p>
+                  )}
+                  <button onClick={() => setExpanded(expanded === inv.id ? null : inv.id)}
+                    className="flex-1 text-left p-5 hover:bg-white/5 transition">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
+                          <FileText className="w-4 h-4 text-gold shrink-0" />
+                          <span className="font-semibold text-white">{inv.invoiceNumber}</span>
+                          <span className={cn("px-2 py-0.5 rounded text-xs font-medium", statusColors[inv.status] || "")}>{inv.status.replace(/_/g, " ")}</span>
+                          {isOverdue && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" /> {age} days
+                            </span>
+                          )}
+                          {lineItemCount > 0 && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400 flex items-center gap-1">
+                              <List className="w-3 h-3" /> {lineItemCount} items
+                            </span>
+                          )}
+                          {inv.load?.referenceNumber && (
+                            <span className="text-xs text-slate-500">Ref: {inv.load.referenceNumber}</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-400">
+                          {inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}
+                        </p>
+                        {inv.user && isEmployee && (
+                          <p className="text-xs text-slate-500 mt-0.5">{inv.user.company || `${inv.user.firstName} ${inv.user.lastName}`}</p>
+                        )}
+                        <div className="mt-2"><PaymentTimeline status={inv.status} /></div>
                       </div>
-                      {expanded === inv.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-gold">${inv.amount.toLocaleString()}</p>
+                          {inv.advanceAmount && <p className="text-xs text-green-400">Advanced: ${inv.advanceAmount.toLocaleString()}</p>}
+                          <p className="text-xs text-slate-500">{new Date(inv.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        {expanded === inv.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+                </div>
 
                 {expanded === inv.id && (
                   <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-4">
+                    {/* Line Items Table */}
+                    {inv.lineItems && inv.lineItems.length > 0 && (
+                      <div>
+                        <p className="text-slate-500 font-semibold uppercase tracking-wider text-xs mb-2">Line Items</p>
+                        <div className="bg-white/5 rounded-lg overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-slate-400 border-b border-white/10">
+                                <th className="text-left px-3 py-2 font-medium">Description</th>
+                                <th className="text-left px-3 py-2 font-medium">Type</th>
+                                <th className="text-right px-3 py-2 font-medium">Qty</th>
+                                <th className="text-right px-3 py-2 font-medium">Rate</th>
+                                <th className="text-right px-3 py-2 font-medium">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {inv.lineItems.map((li) => (
+                                <tr key={li.id} className="border-b border-white/5">
+                                  <td className="px-3 py-2 text-white">{li.description}</td>
+                                  <td className="px-3 py-2 text-slate-400">{li.type.replace(/_/g, " ")}</td>
+                                  <td className="px-3 py-2 text-right text-white">{li.quantity}</td>
+                                  <td className="px-3 py-2 text-right text-white">${li.rate.toLocaleString()}</td>
+                                  <td className="px-3 py-2 text-right text-gold font-medium">${li.amount.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid sm:grid-cols-3 gap-4 text-xs">
                       <div className="space-y-1.5">
                         <p className="text-slate-500 font-semibold uppercase tracking-wider">Invoice Details</p>
@@ -359,6 +444,9 @@ export default function InvoicesPage() {
           )}
         </div>
       )}
+
+      {/* Batch Actions */}
+      {isEmployee && <BatchActionsBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} invoices={invoices} />}
 
       {showCreate && <CreateInvoiceModal onClose={() => setShowCreate(false)} />}
     </div>

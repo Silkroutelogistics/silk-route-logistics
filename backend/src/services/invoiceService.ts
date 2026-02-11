@@ -13,6 +13,11 @@ export async function autoGenerateInvoice(loadId: string) {
     where: { id: loadId },
     include: {
       carrier: { select: { id: true, email: true, firstName: true, lastName: true, company: true } },
+      rateConfirmations: {
+        where: { status: "SIGNED" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
   if (!load || !load.carrierId) {
@@ -31,18 +36,76 @@ export async function autoGenerateInvoice(loadId: string) {
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      invoiceNumber,
-      userId: load.carrierId,
-      loadId: load.id,
-      amount: load.rate,
-      status: "SUBMITTED",
-      dueDate,
-    },
+  // Build line items from load + rate confirmation
+  const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number }[] = [];
+  const rc = load.rateConfirmations[0];
+
+  // Linehaul
+  lineItems.push({
+    description: `Linehaul: ${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`,
+    quantity: 1,
+    rate: load.rate,
+    amount: load.rate,
+    type: "LINEHAUL",
+    sortOrder: 0,
   });
 
-  console.log(`[AutoInvoice] Created ${invoiceNumber} for load ${load.referenceNumber} — $${load.rate}`);
+  if (rc) {
+    if (rc.fuelSurcharge && rc.fuelSurcharge > 0) {
+      lineItems.push({
+        description: "Fuel Surcharge",
+        quantity: 1,
+        rate: rc.fuelSurcharge,
+        amount: rc.fuelSurcharge,
+        type: "FUEL_SURCHARGE",
+        sortOrder: 1,
+      });
+    }
+    const accessorialAmt = rc.accessorialTotal || 0;
+    if (accessorialAmt > 0) {
+      lineItems.push({
+        description: "Accessorial Charges",
+        quantity: 1,
+        rate: accessorialAmt,
+        amount: accessorialAmt,
+        type: "ACCESSORIAL",
+        sortOrder: 2,
+      });
+    }
+  }
+
+  const totalAmount = lineItems.reduce((sum, li) => sum + li.amount, 0);
+
+  const invoice = await prisma.$transaction(async (tx) => {
+    const inv = await tx.invoice.create({
+      data: {
+        invoiceNumber,
+        userId: load.carrierId!,
+        loadId: load.id,
+        amount: totalAmount,
+        status: "SUBMITTED",
+        dueDate,
+      },
+    });
+
+    if (lineItems.length > 0) {
+      await tx.invoiceLineItem.createMany({
+        data: lineItems.map((li) => ({
+          invoiceId: inv.id,
+          description: li.description,
+          quantity: li.quantity,
+          rate: li.rate,
+          amount: li.amount,
+          type: li.type as any,
+          sortOrder: li.sortOrder,
+        })),
+      });
+    }
+
+    return inv;
+  });
+
+  console.log(`[AutoInvoice] Created ${invoiceNumber} for load ${load.referenceNumber} — $${totalAmount}`);
 
   // Notify carrier in-app
   await prisma.notification.create({
@@ -50,7 +113,7 @@ export async function autoGenerateInvoice(loadId: string) {
       userId: load.carrierId,
       type: "INVOICE",
       title: "Invoice Auto-Generated",
-      message: `Invoice ${invoiceNumber} has been created for load ${load.referenceNumber} — $${load.rate.toLocaleString()}.`,
+      message: `Invoice ${invoiceNumber} has been created for load ${load.referenceNumber} — $${totalAmount.toLocaleString()}.`,
       actionUrl: "/dashboard/invoices",
     },
   });
@@ -62,7 +125,7 @@ export async function autoGenerateInvoice(loadId: string) {
       load.carrier.firstName || load.carrier.company || "Carrier",
       load.referenceNumber,
       invoiceNumber,
-      load.rate,
+      totalAmount,
     );
   }
 

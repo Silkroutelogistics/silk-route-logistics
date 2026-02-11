@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { createInvoiceSchema, submitForFactoringSchema } from "../validators/invoice";
+import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema, batchInvoiceStatusSchema } from "../validators/invoice";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
@@ -10,21 +10,54 @@ export async function createInvoice(req: AuthRequest, res: Response) {
     select: { invoiceNumber: true },
   });
   const lastNum = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
-  const invoice = await prisma.invoice.create({
-    data: {
-      ...data,
-      invoiceNumber: `INV-${lastNum + 1}`,
-      userId: req.user!.id,
-    } as any,
-    include: { load: true },
+
+  const { lineItems, ...invoiceData } = data;
+
+  // If line items provided, compute amount from them
+  const computedAmount = lineItems && lineItems.length > 0
+    ? lineItems.reduce((sum, li) => sum + li.amount, 0)
+    : data.amount;
+
+  const invoice = await prisma.$transaction(async (tx) => {
+    const inv = await tx.invoice.create({
+      data: {
+        ...invoiceData,
+        amount: computedAmount,
+        invoiceNumber: `INV-${lastNum + 1}`,
+        userId: req.user!.id,
+      } as any,
+    });
+
+    if (lineItems && lineItems.length > 0) {
+      await tx.invoiceLineItem.createMany({
+        data: lineItems.map((li, idx) => ({
+          invoiceId: inv.id,
+          description: li.description,
+          quantity: li.quantity,
+          rate: li.rate,
+          amount: li.amount,
+          type: li.type,
+          sortOrder: li.sortOrder ?? idx,
+        })),
+      });
+    }
+
+    return tx.invoice.findUnique({
+      where: { id: inv.id },
+      include: { load: true, lineItems: { orderBy: { sortOrder: "asc" } } },
+    });
   });
+
   res.status(201).json(invoice);
 }
 
 export async function getInvoices(req: AuthRequest, res: Response) {
   const invoices = await prisma.invoice.findMany({
     where: { userId: req.user!.id },
-    include: { load: { select: { originCity: true, originState: true, destCity: true, destState: true } } },
+    include: {
+      load: { select: { originCity: true, originState: true, destCity: true, destState: true } },
+      lineItems: { orderBy: { sortOrder: "asc" } },
+    },
     orderBy: { createdAt: "desc" },
   });
   res.json(invoices);
@@ -37,6 +70,7 @@ export async function getInvoiceById(req: AuthRequest, res: Response) {
       load: true,
       user: { select: { id: true, company: true, firstName: true, lastName: true } },
       documents: true,
+      lineItems: { orderBy: { sortOrder: "asc" } },
     },
   });
 
@@ -68,6 +102,7 @@ export async function getAllInvoices(req: AuthRequest, res: Response) {
       include: {
         load: { select: { originCity: true, originState: true, destCity: true, destState: true, referenceNumber: true } },
         user: { select: { id: true, firstName: true, lastName: true, company: true } },
+        lineItems: { orderBy: { sortOrder: "asc" } },
       },
       orderBy: { createdAt: "desc" },
       skip: (parseInt(page as string) - 1) * parseInt(limit as string),
@@ -95,6 +130,58 @@ export async function updateInvoiceStatus(req: AuthRequest, res: Response) {
 
   const updated = await prisma.invoice.update({ where: { id: req.params.id }, data, include: { load: true, user: { select: { id: true, firstName: true, lastName: true, company: true } } } });
   res.json(updated);
+}
+
+/** Update line items for an invoice (replace strategy) */
+export async function updateInvoiceLineItems(req: AuthRequest, res: Response) {
+  const { lineItems } = updateLineItemsSchema.parse(req.body);
+  const invoiceId = req.params.id;
+
+  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+  if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+
+  const newAmount = lineItems.reduce((sum, li) => sum + li.amount, 0);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    // Delete old line items
+    await tx.invoiceLineItem.deleteMany({ where: { invoiceId } });
+
+    // Create new ones
+    await tx.invoiceLineItem.createMany({
+      data: lineItems.map((li, idx) => ({
+        invoiceId,
+        description: li.description,
+        quantity: li.quantity,
+        rate: li.rate,
+        amount: li.amount,
+        type: li.type,
+        sortOrder: li.sortOrder ?? idx,
+      })),
+    });
+
+    // Update invoice amount
+    return tx.invoice.update({
+      where: { id: invoiceId },
+      data: { amount: newAmount },
+      include: { load: true, lineItems: { orderBy: { sortOrder: "asc" } } },
+    });
+  });
+
+  res.json(updated);
+}
+
+/** Batch update invoice statuses */
+export async function batchUpdateInvoiceStatus(req: AuthRequest, res: Response) {
+  const { ids, status } = batchInvoiceStatusSchema.parse(req.body);
+
+  const data: Record<string, unknown> = { status };
+  if (status === "PAID") data.paidAt = new Date();
+
+  const result = await prisma.$transaction(
+    ids.map((id) => prisma.invoice.update({ where: { id }, data }))
+  );
+
+  res.json({ updated: result.length, invoices: result });
 }
 
 /** Get invoice summary stats */

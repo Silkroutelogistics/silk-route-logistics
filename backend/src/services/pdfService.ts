@@ -589,16 +589,26 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   return doc;
 }
 
+interface InvoiceLineItemData {
+  description: string;
+  type: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
 interface InvoiceData {
   invoiceNumber: string; amount: number; status: string;
   factoringFee?: number | null; advanceAmount?: number | null;
   dueDate?: Date | null; createdAt: Date;
   load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; rate: number; pickupDate: Date; deliveryDate: Date };
   user: { firstName: string; lastName: string; company?: string | null };
+  lineItems?: InvoiceLineItemData[];
 }
 
 export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+  const hasLineItems = invoice.lineItems && invoice.lineItems.length > 0;
 
   addHeader(doc, "INVOICE");
 
@@ -642,31 +652,204 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
   y += 15;
 
-  // Amount
-  doc.fontSize(11).fillColor("#D4A843").text("AMOUNT", 50, y);
-  y += 20;
+  if (hasLineItems) {
+    // Line Items Table
+    doc.fontSize(11).fillColor("#D4A843").text("LINE ITEMS", 50, y);
+    y += 20;
 
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text("Load Rate:", 50, y); doc.text(`$${invoice.load.rate.toLocaleString()}`, 250, y);
-  y += 18;
-  if (invoice.factoringFee) {
-    doc.text("Factoring Fee:", 50, y); doc.text(`-$${invoice.factoringFee.toLocaleString()}`, 250, y);
+    // Table header
+    doc.fontSize(8).fillColor("#888888");
+    doc.text("Description", 50, y);
+    doc.text("Type", 250, y);
+    doc.text("Qty", 340, y);
+    doc.text("Rate", 390, y);
+    doc.text("Amount", 470, y);
+    y += 14;
+    doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+    y += 8;
+
+    // Table rows
+    doc.fontSize(9).fillColor("#1E1E2F");
+    for (const li of invoice.lineItems!) {
+      if (y > 650) { addFooter(doc); doc.addPage(); addHeader(doc, "INVOICE (cont.)"); y = 155; }
+      doc.text(li.description, 50, y, { width: 195 });
+      doc.text(li.type.replace(/_/g, " "), 250, y);
+      doc.text(String(li.quantity), 340, y);
+      doc.text(`$${li.rate.toLocaleString()}`, 390, y);
+      doc.text(`$${li.amount.toLocaleString()}`, 470, y);
+      y += 18;
+    }
+
+    // Subtotal
+    y += 5;
+    doc.moveTo(380, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+    y += 8;
+
+    const subtotal = invoice.lineItems!.reduce((s, li) => s + li.amount, 0);
+    doc.fontSize(10).fillColor("#1E1E2F");
+    doc.text("Subtotal:", 390, y); doc.text(`$${subtotal.toLocaleString()}`, 470, y);
     y += 18;
+
+    if (invoice.factoringFee) {
+      doc.text("Factoring Fee:", 390, y); doc.text(`-$${invoice.factoringFee.toLocaleString()}`, 470, y);
+      y += 18;
+    }
+
+    doc.fontSize(13).fillColor("#1E1E2F");
+    doc.text("Total Due:", 390, y); doc.text(`$${invoice.amount.toLocaleString()}`, 470, y);
+    y += 25;
+  } else {
+    // Simple amount layout (fallback)
+    doc.fontSize(11).fillColor("#D4A843").text("AMOUNT", 50, y);
+    y += 20;
+
+    doc.fontSize(10).fillColor("#1E1E2F");
+    doc.text("Load Rate:", 50, y); doc.text(`$${invoice.load.rate.toLocaleString()}`, 250, y);
+    y += 18;
+    if (invoice.factoringFee) {
+      doc.text("Factoring Fee:", 50, y); doc.text(`-$${invoice.factoringFee.toLocaleString()}`, 250, y);
+      y += 18;
+    }
+    doc.fontSize(14).fillColor("#1E1E2F");
+    doc.text("Total Due:", 50, y); doc.text(`$${invoice.amount.toLocaleString()}`, 250, y);
+    y += 25;
   }
-  doc.fontSize(14).fillColor("#1E1E2F");
-  doc.text("Total Due:", 50, y); doc.text(`$${invoice.amount.toLocaleString()}`, 250, y);
 
   if (invoice.dueDate) {
-    y += 25;
     doc.fontSize(9).fillColor("#888888").text(`Due Date: ${invoice.dueDate.toLocaleDateString()}`, 50, y);
+    y += 20;
   }
 
   // Payment Instructions
-  y += 40;
+  y += 15;
   doc.fontSize(9).fillColor("#D4A843").text("PAYMENT INSTRUCTIONS", 50, y);
   y += 14;
   doc.fontSize(9).fillColor("#1E1E2F");
   doc.text("Please remit payment to Silk Route Logistics Inc.", 50, y);
+  doc.text("For questions, contact accounting@silkroutelogistics.ai", 50, y + 14);
+
+  addFooter(doc);
+  doc.end();
+  return doc;
+}
+
+// ─── Settlement PDF ──────────────────────────────────
+
+interface SettlementPDFData {
+  settlementNumber: string;
+  periodStart: Date;
+  periodEnd: Date;
+  period: string;
+  grossPay: number;
+  deductions: number;
+  netSettlement: number;
+  status: string;
+  carrier: { firstName: string; lastName: string; company?: string | null };
+  carrierPays: {
+    load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; pickupDate: Date; deliveryDate: Date };
+    amount: number;
+    quickPayDiscount: number | null;
+    netAmount: number;
+  }[];
+}
+
+export function generateSettlementPDF(settlement: SettlementPDFData): PDFDoc {
+  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+
+  addHeader(doc, "CARRIER SETTLEMENT STATEMENT");
+
+  let y = 155;
+
+  // Settlement info
+  labelValue(doc, "Settlement #", settlement.settlementNumber, 50, y);
+  labelValue(doc, "Period", `${settlement.periodStart.toLocaleDateString()} — ${settlement.periodEnd.toLocaleDateString()}`, 200, y);
+  labelValue(doc, "Status", settlement.status, 450, y);
+
+  y += 40;
+  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 15;
+
+  // Carrier info
+  doc.fontSize(11).fillColor("#D4A843").text("CARRIER", 50, y);
+  y += 16;
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(settlement.carrier.company || `${settlement.carrier.firstName} ${settlement.carrier.lastName}`, 50, y);
+
+  // From
+  doc.fontSize(11).fillColor("#D4A843").text("ISSUED BY", 310, y - 16);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(COMPANY.name, 310, y);
+  doc.text(`${COMPANY.address}, ${COMPANY.cityStateZip}`, 310, y + 14);
+
+  y += 50;
+  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 15;
+
+  // Loads table
+  doc.fontSize(11).fillColor("#D4A843").text("LOADS", 50, y);
+  y += 20;
+
+  // Table header
+  doc.fontSize(8).fillColor("#888888");
+  doc.text("Reference", 50, y);
+  doc.text("Route", 150, y);
+  doc.text("Pickup", 340, y);
+  doc.text("Delivery", 420, y);
+  doc.text("Gross Pay", 500, y);
+  y += 14;
+  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 8;
+
+  // Table rows
+  doc.fontSize(9).fillColor("#1E1E2F");
+  for (const cp of settlement.carrierPays) {
+    if (y > 630) { addFooter(doc); doc.addPage(); addHeader(doc, "SETTLEMENT (cont.)"); y = 155; }
+    doc.text(cp.load.referenceNumber, 50, y);
+    doc.text(`${cp.load.originCity}, ${cp.load.originState} → ${cp.load.destCity}, ${cp.load.destState}`, 150, y, { width: 185 });
+    doc.text(cp.load.pickupDate.toLocaleDateString(), 340, y);
+    doc.text(cp.load.deliveryDate.toLocaleDateString(), 420, y);
+    doc.text(`$${cp.amount.toLocaleString()}`, 500, y);
+    y += 18;
+  }
+
+  y += 10;
+  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 15;
+
+  // Deductions section
+  doc.fontSize(11).fillColor("#D4A843").text("SUMMARY", 50, y);
+  y += 20;
+
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text("Gross Pay:", 50, y); doc.text(`$${settlement.grossPay.toLocaleString()}`, 250, y);
+  y += 18;
+
+  // QuickPay deductions
+  const quickPayTotal = settlement.carrierPays.reduce((s, cp) => s + (cp.quickPayDiscount || 0), 0);
+  if (quickPayTotal > 0) {
+    doc.text("QuickPay Discount:", 50, y); doc.text(`-$${quickPayTotal.toLocaleString()}`, 250, y);
+    y += 18;
+  }
+
+  const otherDeductions = settlement.deductions - quickPayTotal;
+  if (otherDeductions > 0) {
+    doc.text("Other Deductions:", 50, y); doc.text(`-$${otherDeductions.toLocaleString()}`, 250, y);
+    y += 18;
+  }
+
+  y += 5;
+  doc.moveTo(50, y).lineTo(350, y).strokeColor("#D4A843").lineWidth(1).stroke();
+  y += 10;
+
+  doc.fontSize(14).fillColor("#1E1E2F");
+  doc.text("Net Settlement:", 50, y); doc.text(`$${settlement.netSettlement.toLocaleString()}`, 250, y);
+
+  // Payment instructions
+  y += 40;
+  doc.fontSize(9).fillColor("#D4A843").text("PAYMENT INSTRUCTIONS", 50, y);
+  y += 14;
+  doc.fontSize(9).fillColor("#1E1E2F");
+  doc.text("Payment will be remitted via ACH or check within the standard payment terms.", 50, y);
   doc.text("For questions, contact accounting@silkroutelogistics.ai", 50, y + 14);
 
   addFooter(doc);

@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { generateBOL, generateBOLFromLoad, generateRateConfirmation, generateInvoicePDF } from "../services/pdfService";
+import { generateBOL, generateBOLFromLoad, generateRateConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
 
 export async function downloadBOL(req: AuthRequest, res: Response) {
   const shipment = await prisma.shipment.findUnique({
@@ -50,6 +50,7 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
     include: {
       load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true, pickupDate: true, deliveryDate: true } },
       user: { select: { firstName: true, lastName: true, company: true } },
+      lineItems: { orderBy: { sortOrder: "asc" } },
     },
   });
 
@@ -82,6 +83,30 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
 
   const doc = generateBOLFromLoad(load);
   const filename = `BOL-${load.referenceNumber}.pdf`;
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  doc.pipe(res);
+}
+
+export async function downloadSettlementPDF(req: AuthRequest, res: Response) {
+  const settlement = await prisma.settlement.findUnique({
+    where: { id: req.params.settlementId },
+    include: {
+      carrier: { select: { firstName: true, lastName: true, company: true } },
+      carrierPays: {
+        include: {
+          load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, pickupDate: true, deliveryDate: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  if (!settlement) { res.status(404).json({ error: "Settlement not found" }); return; }
+
+  const doc = generateSettlementPDF(settlement);
+  const filename = `${settlement.settlementNumber}.pdf`;
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

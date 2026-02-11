@@ -92,6 +92,42 @@ enum TenderStatus {
   EXPIRED
 }
 
+enum LineItemType {
+  LINEHAUL
+  FUEL_SURCHARGE
+  ACCESSORIAL
+  DETENTION
+  LUMPER
+  OTHER
+}
+
+enum CarrierPayStatus {
+  PENDING
+  SCHEDULED
+  PROCESSING
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  ACH
+  CHECK
+  WIRE
+  QUICKPAY
+  FACTORING
+}
+
+enum SettlementPeriod {
+  WEEKLY
+  BIWEEKLY
+}
+
+enum SettlementStatus {
+  DRAFT
+  FINALIZED
+  PAID
+}
+
 enum IntegrationStatus {
   ACTIVE
   INACTIVE
@@ -197,6 +233,8 @@ model User {
   otpCodes             OtpCode[]
   rateConfirmations    RateConfirmation[] @relation("RateConfCreator")
   checkCalls           CheckCall[]        @relation("CheckCallUser")
+  carrierPays          CarrierPay[]       @relation("CarrierPayments")
+  settlements          Settlement[]       @relation("CarrierSettlements")
 
   @@map("users")
 }
@@ -333,6 +371,7 @@ model Load {
   shipments          Shipment[]
   rateConfirmations  RateConfirmation[]
   checkCalls         CheckCall[]
+  carrierPays        CarrierPay[]
 
   @@index([status])
   @@index([originState])
@@ -429,6 +468,7 @@ model Invoice {
   loadId          String
   load            Load          @relation(fields: [loadId], references: [id])
   documents       Document[]
+  lineItems       InvoiceLineItem[]
 
   @@index([status])
   @@index([userId, status])
@@ -878,4 +918,76 @@ model SchedulerLock {
   expiresAt DateTime
 
   @@map("scheduler_locks")
+}
+
+// ─── Invoice Line Items ──────────────────────────────────
+
+model InvoiceLineItem {
+  id          String       @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float        @default(1)
+  rate        Float
+  amount      Float
+  type        LineItemType @default(LINEHAUL)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+
+  @@index([invoiceId])
+  @@map("invoice_line_items")
+}
+
+// ─── Carrier Pay ──────────────────────────────────────────
+
+model CarrierPay {
+  id                String          @id @default(cuid())
+  carrierId         String
+  carrier           User            @relation("CarrierPayments", fields: [carrierId], references: [id])
+  loadId            String
+  load              Load            @relation(fields: [loadId], references: [id])
+  amount            Float
+  quickPayDiscount  Float?
+  netAmount         Float
+  status            CarrierPayStatus @default(PENDING)
+  paymentMethod     PaymentMethod?
+  checkNumber       String?
+  referenceNumber   String?
+  scheduledDate     DateTime?
+  paidAt            DateTime?
+  notes             String?
+  settlementId      String?
+  settlement        Settlement?     @relation(fields: [settlementId], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([carrierId, status])
+  @@index([loadId])
+  @@index([status])
+  @@map("carrier_pays")
+}
+
+// ─── Settlement ──────────────────────────────────────────
+
+model Settlement {
+  id               String           @id @default(cuid())
+  settlementNumber String           @unique
+  carrierId        String
+  carrier          User             @relation("CarrierSettlements", fields: [carrierId], references: [id])
+  periodStart      DateTime
+  periodEnd        DateTime
+  period           SettlementPeriod
+  grossPay         Float
+  deductions       Float            @default(0)
+  netSettlement    Float
+  status           SettlementStatus @default(DRAFT)
+  paidAt           DateTime?
+  notes            String?
+  carrierPays      CarrierPay[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([carrierId, status])
+  @@index([periodStart, periodEnd])
+  @@map("settlements")
 }

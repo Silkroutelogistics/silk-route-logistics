@@ -25,6 +25,8 @@ import fmcsaRoutes from "./fmcsa";
 import chatRoutes from "./chat";
 import rateConfirmationRoutes from "./rateConfirmations";
 import checkCallRoutes from "./checkCalls";
+import carrierPayRoutes from "./carrierPay";
+import settlementRoutes from "./settlements";
 
 const router = Router();
 
@@ -54,5 +56,7 @@ router.use("/eld", eldRoutes);
 router.use("/fmcsa", fmcsaRoutes);
 router.use("/rate-confirmations", rateConfirmationRoutes);
 router.use("/check-calls", checkCallRoutes);
+router.use("/carrier-pay", carrierPayRoutes);
+router.use("/settlements", settlementRoutes);
 
 export default router;

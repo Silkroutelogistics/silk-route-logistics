@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
-  BarChart3, TrendingUp, MessageSquare, FolderOpen,
+  BarChart3, TrendingUp, MessageSquare, FolderOpen, CreditCard,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit,
 } from "lucide-react";
@@ -28,6 +28,8 @@ const employeeNav = [
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/payables", label: "Payables", icon: CreditCard },
+  { href: "/dashboard/settlements", label: "Settlements", icon: ClipboardList },
   { href: "/dashboard/market", label: "Market Intel", icon: Activity },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
@@ -55,6 +57,8 @@ const aeViewNav = [
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
   { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/payables", label: "Payables", icon: CreditCard },
+  { href: "/dashboard/settlements", label: "Settlements", icon: ClipboardList },
   { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/market", label: "Market Intel", icon: Activity },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
