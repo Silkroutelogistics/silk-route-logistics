@@ -4,6 +4,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { useViewMode } from "@/hooks/useViewMode";
 import { isAdmin, isCarrier } from "@/lib/roles";
 import { CarrierOverview } from "@/components/dashboard/CarrierOverview";
+import { CarrierFleetOverview } from "@/components/dashboard/CarrierFleetOverview";
 import { EmployeeOverview } from "@/components/dashboard/EmployeeOverview";
 import { CeoOverview } from "@/components/dashboard/CeoOverview";
 
@@ -12,7 +13,7 @@ export default function DashboardPage() {
   const { viewMode } = useViewMode();
 
   if (isAdmin(user?.role)) {
-    return viewMode === "ae" ? <CeoOverview /> : <CarrierOverview />;
+    return viewMode === "ae" ? <CeoOverview /> : <CarrierFleetOverview />;
   }
   if (isCarrier(user?.role)) return <CarrierOverview />;
   return <EmployeeOverview />;
