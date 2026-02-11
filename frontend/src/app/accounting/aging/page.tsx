@@ -12,19 +12,80 @@ interface AgingBucket {
   bg: string;
 }
 
-interface AgingData {
-  buckets: AgingBucket[];
-  totalOutstanding: number;
-  totalOverdue: number;
-  details: {
+interface AgingDetail {
+  id: string;
+  invoiceNumber: string;
+  customer: string;
+  amount: number;
+  dueDate: string;
+  daysOverdue: number;
+  bucket: string;
+}
+
+// Shape returned by the backend
+interface BackendBucket {
+  invoices: Array<{
     id: string;
     invoiceNumber: string;
-    customer: string;
     amount: number;
-    dueDate: string;
-    daysOverdue: number;
-    bucket: string;
-  }[];
+    dueDate?: string;
+    createdAt: string;
+    daysOutstanding: number;
+    user?: { firstName: string; lastName: string; company?: string | null };
+    load?: { referenceNumber: string; customer?: { name: string } | null };
+  }>;
+  total: number;
+}
+
+interface BackendAgingResponse {
+  buckets: Record<string, BackendBucket>;
+  summary: {
+    current: number;
+    "1-30": number;
+    "31-60": number;
+    "61-90": number;
+    "90+": number;
+    grandTotal: number;
+    invoiceCount: number;
+  };
+}
+
+const BUCKET_META: { key: string; label: string; color: string; bg: string }[] = [
+  { key: "current", label: "Current", color: "text-green-400", bg: "bg-green-500" },
+  { key: "1-30", label: "1-30 Days", color: "text-yellow-400", bg: "bg-yellow-500" },
+  { key: "31-60", label: "31-60 Days", color: "text-orange-400", bg: "bg-orange-500" },
+  { key: "61-90", label: "61-90 Days", color: "text-red-400", bg: "bg-red-500" },
+  { key: "90+", label: "90+ Days", color: "text-red-600", bg: "bg-red-700" },
+];
+
+function transformResponse(raw: BackendAgingResponse): { buckets: AgingBucket[]; totalOutstanding: number; totalOverdue: number; details: AgingDetail[] } {
+  const buckets: AgingBucket[] = [];
+  const details: AgingDetail[] = [];
+  let totalOverdue = 0;
+
+  for (const meta of BUCKET_META) {
+    const bucket = raw.buckets[meta.key];
+    if (!bucket) {
+      buckets.push({ label: meta.label, count: 0, amount: 0, color: meta.color, bg: meta.bg });
+      continue;
+    }
+    buckets.push({ label: meta.label, count: bucket.invoices.length, amount: bucket.total, color: meta.color, bg: meta.bg });
+    if (meta.key !== "current") totalOverdue += bucket.total;
+
+    for (const inv of bucket.invoices) {
+      details.push({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        customer: inv.load?.customer?.name || inv.user?.company || `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() || "—",
+        amount: inv.amount,
+        dueDate: inv.dueDate || inv.createdAt,
+        daysOverdue: inv.daysOutstanding,
+        bucket: meta.label,
+      });
+    }
+  }
+
+  return { buckets, totalOutstanding: raw.summary.grandTotal, totalOverdue, details };
 }
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n);
@@ -38,11 +99,12 @@ const DEFAULT_BUCKETS: AgingBucket[] = [
 ];
 
 export default function AgingReportPage() {
-  const { data, isLoading } = useQuery<AgingData>({
+  const { data: rawData, isLoading } = useQuery<BackendAgingResponse>({
     queryKey: ["aging-report"],
     queryFn: () => api.get("/accounting/invoices/aging").then(r => r.data),
   });
 
+  const data = rawData ? transformResponse(rawData) : null;
   const buckets = data?.buckets || DEFAULT_BUCKETS;
   const maxAmount = Math.max(...buckets.map(b => b.amount), 1);
 
