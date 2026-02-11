@@ -12,13 +12,14 @@ export interface AuthRequest extends Request<any, any, any, any> {
 }
 
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
+  // Check Authorization header first, then fall back to httpOnly cookie
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  const token = header?.startsWith("Bearer ") ? header.split(" ")[1] : req.cookies?.srl_token;
+
+  if (!token) {
     res.status(401).json({ error: "No token provided" });
     return;
   }
-
-  const token = header.split(" ")[1];
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as { userId: string };
     const user = await prisma.user.findUnique({

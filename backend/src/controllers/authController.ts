@@ -7,6 +7,7 @@ import { registerSchema, loginSchema } from "../validators/auth";
 import { AuthRequest } from "../middleware/auth";
 import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt, createPasswordResetToken, verifyPasswordResetToken } from "../services/otpService";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/emailService";
+import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 
@@ -26,6 +27,7 @@ export async function register(req: Request, res: Response) {
   });
 
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  setTokenCookie(res, token);
   res.status(201).json({ user, token });
 }
 
@@ -103,6 +105,7 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     },
   });
 
+  setTokenCookie(res, token);
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     token,
@@ -187,6 +190,7 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
 
+  setTokenCookie(res, fullToken);
   res.json({ user, token: fullToken });
 }
 
@@ -220,10 +224,12 @@ export async function updateProfile(req: AuthRequest, res: Response) {
 
 export async function refreshToken(req: AuthRequest, res: Response) {
   const token = jwt.sign({ userId: req.user!.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  setTokenCookie(res, token);
   res.json({ token });
 }
 
 export async function logout(_req: AuthRequest, res: Response) {
+  clearTokenCookie(res);
   res.json({ message: "Logged out successfully" });
 }
 

@@ -2,6 +2,7 @@ import "express-async-errors";
 import express from "express";
 import path from "path";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import hpp from "hpp";
@@ -102,7 +103,10 @@ app.use(hpp());
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
-// 8. Input sanitization (trim + escape all string fields)
+// 8. Cookie parser (for httpOnly JWT cookies)
+app.use(cookieParser());
+
+// 9. Input sanitization (trim + escape all string fields)
 app.use(sanitizeInput);
 
 // ─── Static Files ───────────────────────────────────────────
