@@ -18,7 +18,7 @@ export async function register(req: Request, res: Response) {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(data.password, 10);
+  const passwordHash = await bcrypt.hash(data.password, 12);
   const { password: _, ...userData } = data;
   const user = await prisma.user.create({
     data: { ...userData, passwordHash, passwordChangedAt: new Date() } as any,
@@ -159,7 +159,7 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
     }
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
     where: { id: req.user!.id },
     data: { passwordHash, passwordChangedAt: new Date() },
@@ -240,7 +240,7 @@ export async function changePassword(req: AuthRequest, res: Response) {
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) { res.status(401).json({ error: "Current password is incorrect" }); return; }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
     where: { id: req.user!.id },
     data: { passwordHash, passwordChangedAt: new Date() },
@@ -294,7 +294,7 @@ export async function resetPassword(req: Request, res: Response) {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
     where: { id: userId },
     data: { passwordHash, passwordChangedAt: new Date() },

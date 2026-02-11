@@ -15,7 +15,7 @@ export async function registerCarrier(req: Request, res: Response) {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(data.password, 10);
+  const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({
     data: {
       email: data.email,

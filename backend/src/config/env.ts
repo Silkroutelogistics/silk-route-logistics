@@ -18,6 +18,7 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default("noreply@silkroutelogistics.ai"),
   FMCSA_WEB_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
+  ENCRYPTION_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
