@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loads | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h2>SILK ROUTE</h2><p>Carrier Portal</p></div>
+    <div class="sidebar-user" id="sidebarUser"><div class="user-name skeleton skeleton-line w75"></div><div class="user-role">CARRIER</div></div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html" class="active"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help & SOPs</a>
+    </nav>
+    <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
+  </aside>
+
+  <main class="main">
+    <!-- Tabs: My Loads / Available Loads -->
+    <div class="tabs" id="mainTabs">
+      <button class="tab-btn active" data-tab="my-loads">My Loads</button>
+      <button class="tab-btn" data-tab="available">Available Loads</button>
+    </div>
+
+    <!-- ═══ MY LOADS VIEW ═══ -->
+    <div id="myLoadsView">
+      <div class="filter-bar">
+        <select class="form-control" id="myStatusFilter">
+          <option value="ALL">All Statuses</option>
+          <option value="BOOKED">Booked</option>
+          <option value="CONFIRMED">Confirmed</option>
+          <option value="DISPATCHED">Dispatched</option>
+          <option value="AT_PICKUP">At Pickup</option>
+          <option value="IN_TRANSIT">In Transit</option>
+          <option value="AT_DELIVERY">At Delivery</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="COMPLETED">Completed</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="loadMyLoads()">Refresh</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Load #</th><th>Origin</th><th>Destination</th><th>Pickup</th><th>Delivery</th>
+                <th>Equipment</th><th>Rate</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="myLoadsBody">
+              <tr><td colspan="9"><div class="skeleton skeleton-line w100"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="myLoadsPagination"></div>
+      </div>
+    </div>
+
+    <!-- ═══ AVAILABLE LOADS VIEW ═══ -->
+    <div id="availableView" style="display:none">
+      <div class="filter-bar">
+        <input type="text" class="form-control search-input" id="availSearch" placeholder="Search origin, destination...">
+        <button class="btn btn-secondary btn-sm" onclick="loadAvailable()">Refresh</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Origin</th><th>Destination</th><th>Pickup</th><th>Equipment</th>
+                <th>Weight</th><th>Distance</th><th>Rate</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="availBody">
+              <tr><td colspan="8"><div class="skeleton skeleton-line w100"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="availPagination"></div>
+      </div>
+    </div>
+
+    <!-- ═══ LOAD DETAIL VIEW ═══ -->
+    <div id="detailView" style="display:none">
+      <div style="margin-bottom:16px">
+        <button class="btn btn-secondary btn-sm" onclick="closeDetail()">&#8592; Back to List</button>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <h1 id="detailRef">Loading...</h1>
+          <p class="subtitle" id="detailRoute"></p>
+        </div>
+        <div id="detailStatus"></div>
+      </div>
+
+      <!-- Status Timeline -->
+      <div class="timeline" id="detailTimeline"></div>
+
+      <div class="detail-grid">
+        <!-- Left: Load Info -->
+        <div>
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><h3>Load Details</h3></div>
+            <div class="info-grid" id="detailInfo"></div>
+          </div>
+
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><h3>Special Instructions</h3></div>
+            <p id="detailInstructions" style="font-size:13px;color:#CBD5E1">--</p>
+          </div>
+
+          <!-- Documents -->
+          <div class="card">
+            <div class="card-header"><h3>Documents</h3></div>
+            <div id="detailDocs"></div>
+          </div>
+        </div>
+
+        <!-- Right: Actions & Driver Info -->
+        <div>
+          <!-- Driver/Truck Info -->
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><h3>Driver & Equipment</h3></div>
+            <form id="driverForm">
+              <div class="form-group">
+                <label>Driver Name</label>
+                <input type="text" class="form-control" id="driverName">
+              </div>
+              <div class="form-group">
+                <label>Driver Phone</label>
+                <input type="text" class="form-control" id="driverPhone">
+              </div>
+              <div class="form-group">
+                <label>Truck #</label>
+                <input type="text" class="form-control" id="truckNumber">
+              </div>
+              <div class="form-group">
+                <label>Trailer #</label>
+                <input type="text" class="form-control" id="trailerNumber">
+              </div>
+              <button type="submit" class="btn btn-secondary btn-sm">Update Driver Info</button>
+            </form>
+          </div>
+
+          <!-- Status Update -->
+          <div class="card" style="margin-bottom:20px" id="statusUpdateCard">
+            <div class="card-header"><h3>Update Status</h3></div>
+            <div id="statusButtons" class="btn-group" style="flex-wrap:wrap"></div>
+          </div>
+
+          <!-- Broker Contact -->
+          <div class="card">
+            <div class="card-header"><h3>Broker Contact</h3></div>
+            <div id="brokerInfo" style="font-size:13px;color:#CBD5E1">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="main-footer">Silk Route Logistics &middot; Carrier Portal</footer>
+  </main>
+
+  <!-- Accept Load Modal -->
+  <div class="modal-backdrop" id="acceptModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Accept Load</h2>
+        <button class="modal-close" onclick="closeAcceptModal()">&times;</button>
+      </div>
+      <p style="color:var(--slate);font-size:13px;margin-bottom:16px" id="acceptLoadInfo"></p>
+      <form id="acceptForm">
+        <div class="form-group">
+          <label>Driver Name</label>
+          <input type="text" class="form-control" id="acceptDriverName">
+        </div>
+        <div class="form-group">
+          <label>Driver Phone</label>
+          <input type="text" class="form-control" id="acceptDriverPhone">
+        </div>
+        <div class="form-group">
+          <label>Truck #</label>
+          <input type="text" class="form-control" id="acceptTruck">
+        </div>
+        <div class="form-group">
+          <label>Trailer #</label>
+          <input type="text" class="form-control" id="acceptTrailer">
+        </div>
+        <div id="acceptError" class="login-error"></div>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-success">Accept & Book Load</button>
+          <button type="button" class="btn btn-secondary" onclick="closeAcceptModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    if (!CARRIER.requireAuth()) throw new Error("Not authenticated");
+
+    function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+    function money(n) { return "$" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function shortDate(d) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "--"; }
+
+    var statusColors = {
+      POSTED: "blue", BOOKED: "gold", CONFIRMED: "gold", DISPATCHED: "amber",
+      AT_PICKUP: "amber", LOADED: "amber", IN_TRANSIT: "gold",
+      AT_DELIVERY: "amber", DELIVERED: "green", COMPLETED: "green",
+      INVOICED: "blue", CANCELLED: "red", TONU: "red"
+    };
+    function statusBadge(s) {
+      return '<span class="badge badge-' + (statusColors[s] || "slate") + '">' + esc((s || "").replace(/_/g, " ")) + '</span>';
+    }
+
+    // State
+    var myPage = 1, availPage = 1;
+    var currentTab = "my-loads";
+    var currentLoadId = null;
+
+    // ── Init sidebar user ──
+    CARRIER.getMe().then(function (u) {
+      if (u) {
+        document.getElementById("sidebarUser").innerHTML =
+          '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div><div class="user-role">CARRIER</div>' +
+          (u.carrierProfile ? '<div class="user-tier tier-' + u.carrierProfile.tier + '">' + u.carrierProfile.tier + '</div>' : '');
+      }
+    });
+
+    // ── Tab switching ──
+    var tabs = document.querySelectorAll(".tab-btn");
+    tabs.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        tabs.forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        currentTab = btn.dataset.tab;
+        document.getElementById("myLoadsView").style.display = currentTab === "my-loads" ? "block" : "none";
+        document.getElementById("availableView").style.display = currentTab === "available" ? "block" : "none";
+        document.getElementById("detailView").style.display = "none";
+        if (currentTab === "my-loads") loadMyLoads();
+        else loadAvailable();
+      });
+    });
+
+    // URL param: ?tab=available
+    if (new URLSearchParams(window.location.search).get("tab") === "available") {
+      document.querySelector('[data-tab="available"]').click();
+    } else {
+      loadMyLoads();
+    }
+
+    // ── My Loads ──
+    function loadMyLoads() {
+      var status = document.getElementById("myStatusFilter").value;
+      CARRIER.getMyLoads({ status: status, page: myPage, limit: 20 }).then(renderMyLoads);
+    }
+    document.getElementById("myStatusFilter").addEventListener("change", function () { myPage = 1; loadMyLoads(); });
+
+    function renderMyLoads(data) {
+      var tbody = document.getElementById("myLoadsBody");
+      var loads = data.loads || [];
+      if (loads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><p>No loads found</p></td></tr>';
+        document.getElementById("myLoadsPagination").innerHTML = "";
+        return;
+      }
+
+      tbody.innerHTML = loads.map(function (l) {
+        return '<tr class="clickable" onclick="openDetail(\'' + l.id + '\')">' +
+          '<td style="font-weight:600;color:var(--gold)">' + esc(l.referenceNumber) + '</td>' +
+          '<td>' + esc(l.originCity + ', ' + l.originState) + '</td>' +
+          '<td>' + esc(l.destCity + ', ' + l.destState) + '</td>' +
+          '<td>' + shortDate(l.pickupDate) + '</td>' +
+          '<td>' + shortDate(l.deliveryDate) + '</td>' +
+          '<td>' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
+          '<td style="font-weight:600">' + money(l.carrierRate || l.rate) + '</td>' +
+          '<td>' + statusBadge(l.status) + '</td>' +
+          '<td><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDetail(\'' + l.id + '\')">Details</button></td>' +
+        '</tr>';
+      }).join("");
+
+      renderPagination("myLoadsPagination", data.page, data.totalPages, function (p) { myPage = p; loadMyLoads(); });
+    }
+
+    // ── Available Loads ──
+    function loadAvailable() {
+      CARRIER.getAvailableLoads({ page: availPage, limit: 20 }).then(renderAvailable);
+    }
+
+    function renderAvailable(data) {
+      var tbody = document.getElementById("availBody");
+      var loads = data.loads || [];
+      if (loads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><p>No loads available right now</p></td></tr>';
+        document.getElementById("availPagination").innerHTML = "";
+        return;
+      }
+
+      tbody.innerHTML = loads.map(function (l) {
+        return '<tr>' +
+          '<td>' + esc(l.originCity + ', ' + l.originState) + '</td>' +
+          '<td>' + esc(l.destCity + ', ' + l.destState) + '</td>' +
+          '<td>' + shortDate(l.pickupDate) + '</td>' +
+          '<td>' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
+          '<td>' + (l.weight ? l.weight.toLocaleString() + ' lbs' : '--') + '</td>' +
+          '<td>' + (l.distance ? l.distance.toLocaleString() + ' mi' : '--') + '</td>' +
+          '<td style="font-weight:600;color:var(--gold)">' + money(l.carrierRate || l.rate) + '</td>' +
+          '<td>' +
+            '<div class="btn-group">' +
+              '<button class="btn btn-success btn-sm" onclick="openAcceptModal(\'' + l.id + '\',\'' + esc(l.originCity) + ', ' + esc(l.originState) + '\',\'' + esc(l.destCity) + ', ' + esc(l.destState) + '\',' + (l.carrierRate || l.rate || 0) + ')">Accept</button>' +
+              '<button class="btn btn-secondary btn-sm" onclick="openDetail(\'' + l.id + '\')">View</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }).join("");
+
+      renderPagination("availPagination", data.page, data.totalPages, function (p) { availPage = p; loadAvailable(); });
+    }
+
+    // ── Detail View ──
+    function openDetail(id) {
+      currentLoadId = id;
+      document.getElementById("myLoadsView").style.display = "none";
+      document.getElementById("availableView").style.display = "none";
+      document.getElementById("detailView").style.display = "block";
+
+      CARRIER.getLoadDetail(id).then(renderDetail).catch(function (err) {
+        alert("Error loading detail: " + err.message);
+        closeDetail();
+      });
+    }
+
+    function closeDetail() {
+      document.getElementById("detailView").style.display = "none";
+      if (currentTab === "my-loads") {
+        document.getElementById("myLoadsView").style.display = "block";
+      } else {
+        document.getElementById("availableView").style.display = "block";
+      }
+      currentLoadId = null;
+    }
+
+    var TIMELINE_STEPS = ["BOOKED", "DISPATCHED", "AT_PICKUP", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
+
+    function renderDetail(load) {
+      document.getElementById("detailRef").textContent = load.referenceNumber || "Load Detail";
+      document.getElementById("detailRoute").textContent =
+        (load.originCity || "") + ", " + (load.originState || "") + " → " + (load.destCity || "") + ", " + (load.destState || "");
+      document.getElementById("detailStatus").innerHTML = statusBadge(load.status);
+
+      // Timeline
+      var currentIdx = TIMELINE_STEPS.indexOf(load.status);
+      document.getElementById("detailTimeline").innerHTML = TIMELINE_STEPS.map(function (step, i) {
+        var cls = i < currentIdx ? "done" : i === currentIdx ? "current" : "";
+        return '<div class="timeline-step ' + cls + '">' +
+          '<div class="timeline-dot">' + (i < currentIdx ? "&#10003;" : (i + 1)) + '</div>' +
+          '<div class="timeline-label">' + step.replace(/_/g, " ") + '</div>' +
+        '</div>';
+      }).join("");
+
+      // Info grid
+      document.getElementById("detailInfo").innerHTML =
+        infoItem("Equipment", (load.equipmentType || "").replace(/_/g, " ")) +
+        infoItem("Weight", load.weight ? load.weight.toLocaleString() + " lbs" : "--") +
+        infoItem("Commodity", load.commodity || "--") +
+        infoItem("Distance", load.distance ? load.distance.toLocaleString() + " mi" : "--") +
+        infoItem("Pickup", shortDate(load.pickupDate) + (load.pickupTimeStart ? " " + load.pickupTimeStart : "")) +
+        infoItem("Delivery", shortDate(load.deliveryDate) + (load.deliveryTimeStart ? " " + load.deliveryTimeStart : "")) +
+        infoItem("Carrier Rate", money(load.carrierRate || load.rate)) +
+        infoItem("Ref #", load.referenceNumber || "--") +
+        (load.originCompany ? infoItem("Pickup Location", load.originCompany) : "") +
+        (load.destCompany ? infoItem("Delivery Location", load.destCompany) : "") +
+        (load.temperatureMin ? infoItem("Temp Range", load.temperatureMin + "°F - " + (load.temperatureMax || "") + "°F") : "");
+
+      // Instructions
+      document.getElementById("detailInstructions").textContent = load.specialInstructions || "No special instructions";
+
+      // Driver form
+      document.getElementById("driverName").value = load.driverName || "";
+      document.getElementById("driverPhone").value = load.driverPhone || "";
+      document.getElementById("truckNumber").value = load.truckNumber || "";
+      document.getElementById("trailerNumber").value = load.trailerNumber || "";
+
+      // Status update buttons
+      var statusBtns = document.getElementById("statusButtons");
+      var nextStatuses = getNextStatuses(load.status);
+      if (nextStatuses.length === 0) {
+        document.getElementById("statusUpdateCard").style.display = "none";
+      } else {
+        document.getElementById("statusUpdateCard").style.display = "block";
+        statusBtns.innerHTML = nextStatuses.map(function (s) {
+          return '<button class="btn btn-primary btn-sm" onclick="updateStatus(\'' + s + '\')">' + s.replace(/_/g, " ") + '</button>';
+        }).join("");
+      }
+
+      // Broker info
+      if (load.poster) {
+        var p = load.poster;
+        document.getElementById("brokerInfo").innerHTML =
+          '<div style="font-weight:600;color:#fff">' + esc(p.firstName + " " + p.lastName) + '</div>' +
+          (p.company ? '<div style="color:var(--slate);font-size:12px">' + esc(p.company) + '</div>' : '') +
+          (p.phone ? '<div style="margin-top:4px"><a href="tel:' + esc(p.phone) + '">' + esc(p.phone) + '</a></div>' : '') +
+          (p.email ? '<div><a href="mailto:' + esc(p.email) + '">' + esc(p.email) + '</a></div>' : '');
+      }
+
+      // Documents
+      var docs = load.documents || [];
+      document.getElementById("detailDocs").innerHTML = docs.length === 0
+        ? '<p style="color:var(--slate);font-size:13px">No documents yet</p>'
+        : docs.map(function (d) {
+            return '<div style="padding:6px 0;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">' +
+              '<span style="font-size:13px">' + esc(d.fileName) + '</span>' +
+              '<span class="badge badge-slate">' + esc(d.docType || "DOC") + '</span>' +
+            '</div>';
+          }).join("");
+    }
+
+    function infoItem(label, value) {
+      return '<div class="info-item"><label>' + esc(label) + '</label><div class="info-value">' + esc(value) + '</div></div>';
+    }
+
+    function getNextStatuses(current) {
+      var flow = {
+        BOOKED: ["AT_PICKUP"],
+        CONFIRMED: ["AT_PICKUP"],
+        DISPATCHED: ["AT_PICKUP"],
+        AT_PICKUP: ["LOADED", "IN_TRANSIT"],
+        LOADED: ["IN_TRANSIT"],
+        IN_TRANSIT: ["AT_DELIVERY"],
+        AT_DELIVERY: ["DELIVERED"],
+      };
+      return flow[current] || [];
+    }
+
+    function updateStatus(status) {
+      if (!currentLoadId) return;
+      if (!confirm("Update load status to " + status.replace(/_/g, " ") + "?")) return;
+
+      CARRIER.updateLoadStatus(currentLoadId, status)
+        .then(function () { openDetail(currentLoadId); })
+        .catch(function (err) { alert("Error: " + err.message); });
+    }
+
+    // Driver form
+    document.getElementById("driverForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!currentLoadId) return;
+      CARRIER.updateLoadDriver(currentLoadId, {
+        driverName: document.getElementById("driverName").value,
+        driverPhone: document.getElementById("driverPhone").value,
+        truckNumber: document.getElementById("truckNumber").value,
+        trailerNumber: document.getElementById("trailerNumber").value,
+      }).then(function () {
+        alert("Driver info updated");
+      }).catch(function (err) { alert("Error: " + err.message); });
+    });
+
+    // ── Accept Modal ──
+    var acceptLoadId = null;
+    function openAcceptModal(id, origin, dest, rate) {
+      acceptLoadId = id;
+      document.getElementById("acceptLoadInfo").textContent = origin + " → " + dest + " | " + money(rate);
+      document.getElementById("acceptModal").classList.add("show");
+    }
+    function closeAcceptModal() {
+      document.getElementById("acceptModal").classList.remove("show");
+      acceptLoadId = null;
+    }
+
+    document.getElementById("acceptForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!acceptLoadId) return;
+      var errEl = document.getElementById("acceptError");
+      errEl.style.display = "none";
+
+      CARRIER.acceptLoad(acceptLoadId, {
+        driverName: document.getElementById("acceptDriverName").value,
+        driverPhone: document.getElementById("acceptDriverPhone").value,
+        truckNumber: document.getElementById("acceptTruck").value,
+        trailerNumber: document.getElementById("acceptTrailer").value,
+      }).then(function () {
+        closeAcceptModal();
+        alert("Load accepted! It's now in your My Loads.");
+        document.querySelector('[data-tab="my-loads"]').click();
+      }).catch(function (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = "block";
+      });
+    });
+
+    // ── Pagination ──
+    function renderPagination(elId, page, totalPages, callback) {
+      var el = document.getElementById(elId);
+      if (totalPages <= 1) { el.innerHTML = ""; return; }
+      var html = '<button ' + (page <= 1 ? 'disabled' : '') + ' onclick="void(0)">Prev</button>';
+      for (var i = 1; i <= totalPages && i <= 10; i++) {
+        html += '<button class="' + (i === page ? 'active' : '') + '">' + i + '</button>';
+      }
+      html += '<button ' + (page >= totalPages ? 'disabled' : '') + '>Next</button>';
+      el.innerHTML = html;
+      el.querySelectorAll("button").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var txt = btn.textContent;
+          if (txt === "Prev") callback(page - 1);
+          else if (txt === "Next") callback(page + 1);
+          else callback(parseInt(txt));
+        });
+      });
+    }
+
+    // Sidebar toggle
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+
+    // URL param: ?id=xxx
+    var urlId = new URLSearchParams(window.location.search).get("id");
+    if (urlId) openDetail(urlId);
+  </script>
+</body>
+</html>

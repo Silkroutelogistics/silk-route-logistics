@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h2>SILK ROUTE</h2><p>Carrier Portal</p></div>
+    <div class="sidebar-user" id="sidebarUser"><div class="user-name skeleton skeleton-line w75"></div><div class="user-role">CARRIER</div></div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/payments.html" class="active"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help & SOPs</a>
+    </nav>
+    <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Payments</h1>
+        <p class="subtitle">Track your earnings and request QuickPay</p>
+      </div>
+    </div>
+
+    <!-- KPI Summary -->
+    <div class="grid-4" id="paymentKPIs" style="margin-bottom:24px">
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+    </div>
+
+    <!-- QuickPay Info Banner -->
+    <div class="card" style="margin-bottom:24px;border-left:3px solid var(--gold)">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="font-size:28px">&#9889;</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#fff">QuickPay Available</div>
+          <div style="font-size:12px;color:var(--slate)">Get paid within 24-48 hours. Fee varies by tier: Platinum 1%, Gold 1.5%, Silver 2%, Bronze 3%.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <select class="form-control" id="payStatusFilter">
+        <option value="ALL">All Statuses</option>
+        <option value="PENDING">Pending</option>
+        <option value="SCHEDULED">Scheduled</option>
+        <option value="PROCESSING">Processing</option>
+        <option value="PAID">Paid</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="loadPayments()">Refresh</button>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Load</th><th>Route</th><th>Amount</th><th>QuickPay</th>
+              <th>Net Pay</th><th>Method</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="paymentsBody">
+            <tr><td colspan="8"><div class="skeleton skeleton-line w100"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="payPagination"></div>
+    </div>
+
+    <footer class="main-footer">Silk Route Logistics &middot; Carrier Portal</footer>
+  </main>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    if (!CARRIER.requireAuth()) throw new Error("Not authenticated");
+
+    function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+    function money(n) { return "$" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function shortDate(d) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "--"; }
+
+    var payStatusColors = {
+      PENDING: "amber", PREPARED: "amber", SUBMITTED: "blue", APPROVED: "blue",
+      SCHEDULED: "gold", PROCESSING: "gold", PAID: "green",
+      DISPUTED: "red", VOID: "red", ON_HOLD: "slate", REJECTED: "red"
+    };
+
+    var payPage = 1;
+
+    // Init sidebar user
+    CARRIER.getMe().then(function (u) {
+      if (u) {
+        document.getElementById("sidebarUser").innerHTML =
+          '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div><div class="user-role">CARRIER</div>' +
+          (u.carrierProfile ? '<div class="user-tier tier-' + u.carrierProfile.tier + '">' + u.carrierProfile.tier + '</div>' : '');
+      }
+    });
+
+    // Load data
+    function init() {
+      CARRIER.getPaymentSummary().then(renderKPIs);
+      loadPayments();
+    }
+
+    function renderKPIs(data) {
+      var el = document.getElementById("paymentKPIs");
+      el.innerHTML =
+        '<div class="kpi-tile green"><div class="kpi-value">' + money(data.ytdEarnings.amount) + '</div><div class="kpi-label">YTD Earnings</div><div class="kpi-sub">' + data.ytdEarnings.count + ' loads</div></div>' +
+        '<div class="kpi-tile amber"><div class="kpi-value">' + money(data.totalPending.amount) + '</div><div class="kpi-label">Pending</div><div class="kpi-sub">' + data.totalPending.count + ' payments</div></div>' +
+        '<div class="kpi-tile gold"><div class="kpi-value">' + money(data.totalScheduled.amount) + '</div><div class="kpi-label">Scheduled</div><div class="kpi-sub">' + data.totalScheduled.count + ' payments</div></div>' +
+        '<div class="kpi-tile blue"><div class="kpi-value">' + money(data.totalPaid.amount) + '</div><div class="kpi-label">Total Paid</div><div class="kpi-sub">' + data.totalPaid.count + ' payments</div></div>';
+    }
+
+    function loadPayments() {
+      var status = document.getElementById("payStatusFilter").value;
+      CARRIER.getPayments({ status: status, page: payPage, limit: 20 }).then(renderPayments);
+    }
+    document.getElementById("payStatusFilter").addEventListener("change", function () { payPage = 1; loadPayments(); });
+
+    function renderPayments(data) {
+      var tbody = document.getElementById("paymentsBody");
+      var payments = data.payments || [];
+
+      if (payments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><p>No payments found</p></td></tr>';
+        document.getElementById("payPagination").innerHTML = "";
+        return;
+      }
+
+      tbody.innerHTML = payments.map(function (p) {
+        var load = p.load || {};
+        var route = (load.originCity || "?") + ", " + (load.originState || "") + " → " + (load.destCity || "?") + ", " + (load.destState || "");
+        var hasQuickPay = p.quickPayDiscount && p.quickPayDiscount > 0;
+        var canRequestQP = (p.status === "PENDING" || p.status === "PREPARED") && p.paymentMethod !== "QUICKPAY";
+
+        return '<tr>' +
+          '<td style="font-weight:600;color:var(--gold)">' + esc(load.referenceNumber || "--") + '</td>' +
+          '<td style="font-size:12px">' + esc(route) + '</td>' +
+          '<td>' + money(p.amount) + '</td>' +
+          '<td>' + (hasQuickPay ? '<span style="color:var(--red)">-' + money(p.quickPayDiscount) + '</span>' : '--') + '</td>' +
+          '<td style="font-weight:600">' + money(p.netAmount) + '</td>' +
+          '<td>' + esc(p.paymentMethod || "Standard") + '</td>' +
+          '<td><span class="badge badge-' + (payStatusColors[p.status] || "slate") + '">' + esc(p.status) + '</span></td>' +
+          '<td>' + (canRequestQP
+            ? '<button class="btn btn-primary btn-sm" onclick="requestQP(\'' + p.id + '\',' + p.amount + ')">QuickPay</button>'
+            : (p.status === "PAID" ? '<span style="color:var(--green);font-size:12px">&#10003; Paid</span>' : '--')
+          ) + '</td>' +
+        '</tr>';
+      }).join("");
+
+      renderPagination("payPagination", data.page, data.totalPages, function (pg) { payPage = pg; loadPayments(); });
+    }
+
+    function requestQP(id, amount) {
+      // Get carrier tier for fee estimate
+      var user = CARRIER.getUser();
+      var feeText = "3%"; // default
+      if (!confirm("Request QuickPay for " + money(amount) + "?\nA fee of up to " + feeText + " will be deducted.")) return;
+
+      CARRIER.requestQuickPay(id).then(function () {
+        alert("QuickPay requested! Payment will be expedited.");
+        init();
+      }).catch(function (err) { alert("Error: " + err.message); });
+    }
+
+    function renderPagination(elId, page, totalPages, callback) {
+      var el = document.getElementById(elId);
+      if (totalPages <= 1) { el.innerHTML = ""; return; }
+      var html = '<button ' + (page <= 1 ? 'disabled' : '') + '>Prev</button>';
+      for (var i = 1; i <= totalPages && i <= 10; i++) {
+        html += '<button class="' + (i === page ? 'active' : '') + '">' + i + '</button>';
+      }
+      html += '<button ' + (page >= totalPages ? 'disabled' : '') + '>Next</button>';
+      el.innerHTML = html;
+      el.querySelectorAll("button").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var txt = btn.textContent;
+          if (txt === "Prev") callback(page - 1);
+          else if (txt === "Next") callback(page + 1);
+          else callback(parseInt(txt));
+        });
+      });
+    }
+
+    // Init
+    init();
+
+    // Sidebar toggle
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+  </script>
+</body>
+</html>

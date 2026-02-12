@@ -14,7 +14,53 @@ export function getBonusPercentage(tier: CarrierTier): number {
     case "GOLD": return 1.5;
     case "SILVER": return 0;
     case "BRONZE": return 0;
+    case "GUEST": return 0;
+    case "NONE": return 0;
   }
+}
+
+/**
+ * Check if a Guest carrier should be promoted to Bronze.
+ * Requires 3 completed loads with average score >= 70.
+ */
+export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { id: carrierId },
+    include: {
+      user: { select: { id: true, email: true, firstName: true } },
+      scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
+    },
+  });
+
+  if (!profile || (profile.tier !== "GUEST" && profile.srcppTier !== "GUEST")) return false;
+
+  const completedLoads = await prisma.load.count({
+    where: { carrierId: profile.userId, status: { in: ["DELIVERED", "COMPLETED"] } },
+  });
+
+  if (completedLoads < 3) return false;
+
+  const latestScore = profile.scorecards[0]?.overallScore || 0;
+  if (latestScore < 70) return false;
+
+  // Promote to Bronze
+  await prisma.carrierProfile.update({
+    where: { id: carrierId },
+    data: { tier: "BRONZE", srcppTier: "BRONZE", source: "caravan" },
+  });
+
+  // Send notification
+  await prisma.notification.create({
+    data: {
+      userId: profile.userId,
+      type: "GENERAL",
+      title: "Welcome to The Caravan!",
+      message: "Congratulations! You've completed 3 loads with a qualifying score and earned Bronze tier in The Caravan.",
+      actionUrl: "/carrier/dashboard.html",
+    },
+  });
+
+  return true;
 }
 
 export function calculateOverallScore(metrics: {

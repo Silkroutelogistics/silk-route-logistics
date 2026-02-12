@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load Management - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Page-specific styles ========== */
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .filter-bar select,
+    .filter-bar input {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .filter-bar select:focus,
+    .filter-bar input:focus {
+      border-color: var(--gold);
+    }
+    .filter-bar input[type="text"] { width: 220px; }
+    .filter-bar input[type="date"] { width: 150px; }
+    .filter-spacer { flex: 1; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--gold);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: var(--gold-hover); text-decoration: none; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--white);
+      color: var(--navy);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-danger:hover { opacity: 0.9; }
+
+    /* --- Load Table --- */
+    .table-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+    }
+    .load-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .load-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .load-table th:hover { color: var(--navy); }
+    .load-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700);
+      white-space: nowrap;
+    }
+    .load-table tr.clickable-row { cursor: pointer; }
+    .load-table tr.clickable-row:hover td { background: var(--gray-50); }
+
+    /* --- Status Badge --- */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-posted      { background: rgba(59,130,246,0.1);  color: #2563EB; }
+    .status-tendered     { background: rgba(59,130,246,0.15); color: #1D4ED8; }
+    .status-booked,
+    .status-confirmed,
+    .status-dispatched   { background: rgba(245,158,11,0.12); color: #B45309; }
+    .status-at_pickup,
+    .status-loaded,
+    .status-picked_up,
+    .status-in_transit,
+    .status-at_delivery  { background: var(--gold-dim); color: var(--gold); }
+    .status-delivered,
+    .status-pod_received { background: rgba(34,197,94,0.1);   color: #15803D; }
+    .status-invoiced     { background: rgba(13,27,42,0.08);   color: var(--navy); }
+    .status-completed,
+    .status-paid         { background: var(--gray-100);        color: var(--gray-500); }
+    .status-cancelled,
+    .status-tonu         { background: var(--red-bg);          color: var(--red); }
+    .status-draft,
+    .status-planned      { background: var(--gray-100);        color: var(--gray-400); }
+
+    /* --- Pagination --- */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 32px;
+    }
+    .pagination button {
+      padding: 6px 12px;
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--gray-600);
+    }
+    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+    .pagination .page-info { font-size: 13px; color: var(--gray-500); }
+
+    /* --- Detail View --- */
+    .detail-view {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .detail-view.active { display: flex; }
+    .list-view.active { display: flex; flex-direction: column; flex: 1; }
+    .list-view { display: none; }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--gray-200);
+      background: var(--white);
+    }
+    .detail-header .back-btn {
+      background: none;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--gray-600);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .detail-header .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .detail-header h2 {
+      font-size: 18px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .detail-header .detail-status { margin-left: 8px; }
+    .detail-header-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    .detail-panels {
+      display: flex;
+      flex: 1;
+      overflow-y: auto;
+      gap: 0;
+    }
+    .detail-left {
+      flex: 0 0 60%;
+      padding: 24px 24px 24px 32px;
+      overflow-y: auto;
+      border-right: 1px solid var(--gray-200);
+    }
+    .detail-right {
+      flex: 0 0 40%;
+      padding: 24px 24px 24px 24px;
+      overflow-y: auto;
+      background: var(--gray-50);
+    }
+
+    /* --- Detail Section --- */
+    .detail-section {
+      margin-bottom: 24px;
+    }
+    .detail-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 20px;
+    }
+    .detail-field label {
+      display: block;
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .detail-field span {
+      font-size: 14px;
+      color: var(--navy);
+      font-weight: 500;
+    }
+
+    /* --- Timeline --- */
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 8px 0;
+    }
+    .timeline-step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    .timeline-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--gray-200);
+      margin: 0 auto 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: white;
+      position: relative;
+      z-index: 2;
+    }
+    .timeline-dot.completed { background: var(--green); }
+    .timeline-dot.current { background: var(--gold); box-shadow: 0 0 0 4px var(--gold-dim); }
+    .timeline-label {
+      font-size: 10px;
+      color: var(--gray-400);
+      white-space: nowrap;
+    }
+    .timeline-step.done .timeline-label { color: var(--green); font-weight: 600; }
+    .timeline-step.active .timeline-label { color: var(--gold); font-weight: 600; }
+    .timeline-line {
+      flex: 0 0 auto;
+      width: 30px;
+      height: 3px;
+      background: var(--gray-200);
+    }
+    .timeline-line.filled { background: var(--green); }
+
+    /* --- Rate Calculator --- */
+    .rate-calc {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+    .rate-calc h4 {
+      font-size: 14px;
+      color: var(--navy);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .rate-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .rate-row label {
+      flex: 0 0 110px;
+      font-size: 12px;
+      color: var(--gray-500);
+      text-align: right;
+    }
+    .rate-row input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--navy);
+      outline: none;
+    }
+    .rate-row input:focus { border-color: var(--gold); }
+    .rate-row .rate-val {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .rate-results {
+      border-top: 1px solid var(--gray-100);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+    .rate-result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .rate-result-row .rl { color: var(--gray-500); }
+    .rate-result-row .rv { font-weight: 600; color: var(--navy); }
+    .rate-result-row.highlight .rv { color: var(--green); font-size: 16px; }
+    .rate-result-row.negative .rv { color: var(--red); }
+
+    /* --- Carrier Assignment --- */
+    .assign-section {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+    .assign-section h4 {
+      font-size: 14px;
+      color: var(--navy);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .assign-section select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .assign-section select:focus { border-color: var(--gold); }
+
+    /* --- Comm Log --- */
+    .comm-log-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 12px;
+    }
+    .comm-log-item:last-child { border-bottom: none; }
+    .comm-log-item .comm-from { font-weight: 600; color: var(--navy); }
+    .comm-log-item .comm-time { color: var(--gray-400); }
+    .comm-log-item .comm-msg { color: var(--gray-600); margin-top: 2px; }
+
+    /* --- Documents --- */
+    .doc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 13px;
+    }
+    .doc-row:last-child { border-bottom: none; }
+    .doc-label { color: var(--gray-600); font-weight: 500; }
+    .doc-link { color: var(--gold); cursor: pointer; }
+    .doc-missing { color: var(--gray-400); font-style: italic; font-size: 12px; }
+
+    /* --- Tier Badge --- */
+    .tier-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .tier-PLATINUM { background: #E5E7EB; color: #374151; }
+    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
+    .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
+    .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
+    .tier-GUEST { background: rgba(107,114,128,0.1); color: #6B7280; }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+
+    /* --- Caravan / DAT Split Tabs --- */
+    .carrier-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--gray-100);
+      margin-bottom: 16px;
+    }
+    .carrier-tab {
+      flex: 1;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-400);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .carrier-tab:hover { color: var(--navy); }
+    .carrier-tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .carrier-tab-panel { display: none; }
+    .carrier-tab-panel.active { display: block; }
+
+    /* --- Match Card --- */
+    .match-card {
+      background: var(--white);
+      border: 1px solid var(--gray-100);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .match-card:hover { border-color: var(--gold); box-shadow: var(--shadow-sm); }
+    .match-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .match-card-company {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .match-score {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .match-score-high { background: rgba(34,197,94,0.1); color: #15803D; }
+    .match-score-mid { background: var(--gold-dim); color: var(--gold); }
+    .match-score-low { background: rgba(239,68,68,0.1); color: var(--red); }
+    .match-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--gray-500);
+      flex-wrap: wrap;
+    }
+    .match-meta span { white-space: nowrap; }
+    .match-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    /* --- DAT Section --- */
+    .dat-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+    .dat-posted { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #15803D; }
+    .dat-not-posted { background: var(--gray-50); border: 1px solid var(--gray-200); color: var(--gray-500); }
+    .dat-response-card {
+      background: var(--white);
+      border: 1px solid var(--gray-100);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .dat-response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .dat-response-company {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .dat-response-rate {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .source-caravan {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(34,197,94,0.1);
+      color: #15803D;
+    }
+    .source-dat {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(59,130,246,0.1);
+      color: #2563EB;
+    }
+
+    /* --- Modal --- */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 500;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+      overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 680px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .modal-header h3 {
+      font-size: 18px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--gray-400);
+      padding: 4px;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    /* --- Form --- */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 20px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 4px;
+    }
+    .form-group label .req { color: var(--red); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      outline: none;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--gold);
+    }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .form-section-title {
+      grid-column: 1 / -1;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-top: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .form-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 8px;
+      display: none;
+    }
+    .form-error.visible { display: block; }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+      z-index: 9999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    /* --- Responsive Detail --- */
+    @media (max-width: 1024px) {
+      .filter-bar { padding: 12px 20px; }
+      .table-wrap { padding: 0 20px 20px; }
+      .detail-panels { flex-direction: column; }
+      .detail-left { flex: none; border-right: none; border-bottom: 1px solid var(--gray-200); padding: 20px; }
+      .detail-right { flex: none; padding: 20px; }
+      .detail-header { padding: 16px 20px; }
+      .pagination { padding: 12px 20px; }
+    }
+    @media (max-width: 640px) {
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar input[type="text"] { width: 100%; }
+      .filter-bar input[type="date"] { width: 100%; }
+      .filter-spacer { display: none; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .modal { margin: 20px 0; }
+      .detail-header { flex-wrap: wrap; }
+      .detail-header-actions { margin-left: 0; width: 100%; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/logo.png" alt="SRL">
+        <span>SRL Command</span>
+      </div>
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html" class="active">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Hamburger -->
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- ===== LIST VIEW ===== -->
+      <div class="list-view active" id="list-view">
+        <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h1>Load Management</h1>
+            <p id="load-count-label">Loading loads...</p>
+          </div>
+          <button class="btn-primary" onclick="openNewLoadModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Load
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+          <select id="filter-status" onchange="applyFilters()">
+            <option value="">All Statuses</option>
+            <option value="DRAFT">Draft</option>
+            <option value="POSTED">Posted</option>
+            <option value="TENDERED">Tendered</option>
+            <option value="BOOKED">Booked</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="DISPATCHED">Dispatched</option>
+            <option value="AT_PICKUP">At Pickup</option>
+            <option value="LOADED">Loaded</option>
+            <option value="IN_TRANSIT">In Transit</option>
+            <option value="AT_DELIVERY">At Delivery</option>
+            <option value="DELIVERED">Delivered</option>
+            <option value="POD_RECEIVED">POD Received</option>
+            <option value="INVOICED">Invoiced</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="TONU">TONU</option>
+          </select>
+          <input type="date" id="filter-date-from" onchange="applyFilters()" title="Pickup from">
+          <input type="date" id="filter-date-to" onchange="applyFilters()" title="Pickup to">
+          <input type="text" id="filter-search" placeholder="Search ref#, city, commodity..." oninput="debounceSearch()">
+          <div class="filter-spacer"></div>
+          <span id="showing-label" style="font-size:12px;color:var(--gray-400);"></span>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+          <table class="load-table" id="load-table">
+            <thead>
+              <tr>
+                <th>Load #</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>Shipper</th>
+                <th>Carrier</th>
+                <th>Status</th>
+                <th>Pickup</th>
+                <th>Delivery</th>
+                <th style="text-align:right">Shipper Rate</th>
+                <th style="text-align:right">Carrier Rate</th>
+                <th style="text-align:right">Margin %</th>
+              </tr>
+            </thead>
+            <tbody id="load-tbody">
+              <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+      </div>
+
+      <!-- ===== DETAIL VIEW ===== -->
+      <div class="detail-view" id="detail-view">
+        <div class="detail-header">
+          <button class="back-btn" onclick="showListView()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </button>
+          <h2 id="detail-ref">--</h2>
+          <span id="detail-status-badge" class="status-badge"></span>
+          <div class="detail-header-actions">
+            <select id="detail-status-select" class="btn-secondary btn-sm" style="padding-right:28px" onchange="changeLoadStatus()">
+              <option value="">Change Status...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="detail-panels">
+          <!-- Left 60% -->
+          <div class="detail-left" id="detail-left">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Right 40% -->
+          <div class="detail-right" id="detail-right">
+            <!-- Rate Calculator + Carrier Assignment + Comm Log -->
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ===== NEW LOAD MODAL ===== -->
+  <div class="modal-backdrop" id="new-load-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create New Load</h3>
+        <button class="modal-close" onclick="closeNewLoadModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="form-error" class="form-error"></div>
+        <div class="form-grid">
+          <!-- Shipper -->
+          <div class="form-section-title">Shipper / Customer</div>
+          <div class="form-group full-width">
+            <label>Customer <span class="req">*</span></label>
+            <select id="f-customer">
+              <option value="">Select customer...</option>
+            </select>
+          </div>
+
+          <!-- Origin -->
+          <div class="form-section-title">Origin</div>
+          <div class="form-group">
+            <label>City <span class="req">*</span></label>
+            <input id="f-originCity" type="text" placeholder="Chicago">
+          </div>
+          <div class="form-group">
+            <label>State <span class="req">*</span></label>
+            <input id="f-originState" type="text" placeholder="IL" maxlength="2" style="text-transform:uppercase">
+          </div>
+          <div class="form-group">
+            <label>ZIP <span class="req">*</span></label>
+            <input id="f-originZip" type="text" placeholder="60601" maxlength="10">
+          </div>
+          <div class="form-group">
+            <label>Company</label>
+            <input id="f-originCompany" type="text" placeholder="Pickup facility name">
+          </div>
+
+          <!-- Destination -->
+          <div class="form-section-title">Destination</div>
+          <div class="form-group">
+            <label>City <span class="req">*</span></label>
+            <input id="f-destCity" type="text" placeholder="Dallas">
+          </div>
+          <div class="form-group">
+            <label>State <span class="req">*</span></label>
+            <input id="f-destState" type="text" placeholder="TX" maxlength="2" style="text-transform:uppercase">
+          </div>
+          <div class="form-group">
+            <label>ZIP <span class="req">*</span></label>
+            <input id="f-destZip" type="text" placeholder="75201" maxlength="10">
+          </div>
+          <div class="form-group">
+            <label>Company</label>
+            <input id="f-destCompany" type="text" placeholder="Delivery facility name">
+          </div>
+
+          <!-- Schedule -->
+          <div class="form-section-title">Schedule</div>
+          <div class="form-group">
+            <label>Pickup Date <span class="req">*</span></label>
+            <input id="f-pickupDate" type="datetime-local">
+          </div>
+          <div class="form-group">
+            <label>Delivery Date <span class="req">*</span></label>
+            <input id="f-deliveryDate" type="datetime-local">
+          </div>
+
+          <!-- Freight -->
+          <div class="form-section-title">Freight Details</div>
+          <div class="form-group">
+            <label>Equipment Type <span class="req">*</span></label>
+            <select id="f-equipmentType">
+              <option value="DRY_VAN">Dry Van</option>
+              <option value="REEFER">Reefer</option>
+              <option value="FLATBED">Flatbed</option>
+              <option value="STEP_DECK">Step Deck</option>
+              <option value="POWER_ONLY">Power Only</option>
+              <option value="BOX_TRUCK">Box Truck</option>
+              <option value="HOTSHOT">Hotshot</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Weight (lbs)</label>
+            <input id="f-weight" type="number" placeholder="42000">
+          </div>
+          <div class="form-group full-width">
+            <label>Commodity Description</label>
+            <input id="f-commodity" type="text" placeholder="General merchandise">
+          </div>
+
+          <!-- Rate -->
+          <div class="form-section-title">Rate</div>
+          <div class="form-group">
+            <label>Shipper Rate ($) <span class="req">*</span></label>
+            <input id="f-rate" type="number" step="0.01" placeholder="2500.00">
+          </div>
+          <div class="form-group">
+            <label>Distance (miles)</label>
+            <input id="f-distance" type="number" placeholder="Auto-calculated">
+          </div>
+
+          <!-- Instructions -->
+          <div class="form-section-title">Additional</div>
+          <div class="form-group full-width">
+            <label>Special Instructions</label>
+            <textarea id="f-instructions" placeholder="Dock hours, appointment numbers, handling notes..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeNewLoadModal()">Cancel</button>
+        <button class="btn-primary" id="save-load-btn" onclick="saveNewLoad()">Create Load</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- API Client -->
+  <script src="/ae/js/api.js"></script>
+
+  <script>
+    /* =========================================
+       STATE
+       ========================================= */
+    var state = {
+      loads: [],
+      total: 0,
+      page: 1,
+      totalPages: 1,
+      currentLoad: null,
+      carriers: [],
+      customers: [],
+      searchTimer: null
+    };
+
+    var STATUS_ORDER = [
+      "DRAFT","POSTED","TENDERED","BOOKED","CONFIRMED","DISPATCHED",
+      "AT_PICKUP","LOADED","IN_TRANSIT","AT_DELIVERY","DELIVERED",
+      "POD_RECEIVED","INVOICED","COMPLETED"
+    ];
+
+    var STATUS_LABELS = {
+      DRAFT:"Draft", PLANNED:"Planned", POSTED:"Posted", TENDERED:"Tendered",
+      BOOKED:"Booked", CONFIRMED:"Confirmed", DISPATCHED:"Dispatched",
+      AT_PICKUP:"At Pickup", LOADED:"Loaded", PICKED_UP:"Picked Up",
+      IN_TRANSIT:"In Transit", AT_DELIVERY:"At Delivery", DELIVERED:"Delivered",
+      POD_RECEIVED:"POD Received", INVOICED:"Invoiced", COMPLETED:"Completed",
+      TONU:"TONU", CANCELLED:"Cancelled"
+    };
+
+    /* =========================================
+       INIT
+       ========================================= */
+    (function init() {
+      loadUser();
+      fetchLoads();
+      loadCustomers();
+      loadCarriers();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function(){});
+    }
+
+    function loadCustomers() {
+      SRL.request("/api/customers?limit=200").then(function(res) {
+        state.customers = res.customers || [];
+        populateCustomerDropdown();
+      }).catch(function(){});
+    }
+
+    function loadCarriers() {
+      SRL.request("/api/carriers?limit=200").then(function(res) {
+        state.carriers = res.carriers || [];
+      }).catch(function(){});
+    }
+
+    /* =========================================
+       LOAD LIST
+       ========================================= */
+    function fetchLoads() {
+      var params = { page: state.page, limit: 25 };
+      var status = document.getElementById("filter-status").value;
+      var search = document.getElementById("filter-search").value.trim();
+      if (status) params.status = status;
+      if (search) params.search = search;
+
+      SRL.getLoads(params).then(function(res) {
+        state.loads = res.loads || [];
+        state.total = res.total || 0;
+        state.totalPages = res.totalPages || 1;
+        state.page = res.page || 1;
+        renderTable();
+        renderPagination();
+        document.getElementById("load-count-label").textContent = state.total + " total loads";
+        document.getElementById("showing-label").textContent =
+          "Showing " + state.loads.length + " of " + state.total;
+      }).catch(function(err) {
+        document.getElementById("load-tbody").innerHTML =
+          '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--red)">Error loading data</td></tr>';
+      });
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById("load-tbody");
+      if (state.loads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state" style="padding:40px">No loads found</td></tr>';
+        return;
+      }
+
+      var dateFrom = document.getElementById("filter-date-from").value;
+      var dateTo = document.getElementById("filter-date-to").value;
+
+      var filtered = state.loads;
+      if (dateFrom) {
+        var from = new Date(dateFrom).getTime();
+        filtered = filtered.filter(function(l) { return new Date(l.pickupDate).getTime() >= from; });
+      }
+      if (dateTo) {
+        var to = new Date(dateTo).getTime() + 86400000;
+        filtered = filtered.filter(function(l) { return new Date(l.pickupDate).getTime() < to; });
+      }
+
+      tbody.innerHTML = filtered.map(function(load) {
+        var shipperRate = load.customerRate || load.rate || 0;
+        var carrierRate = load.carrierRate || 0;
+        var margin = shipperRate > 0 && carrierRate > 0
+          ? ((shipperRate - carrierRate) / shipperRate * 100)
+          : null;
+        var marginClass = margin !== null && margin < 0 ? 'color:var(--red)' : 'color:var(--green)';
+
+        var shipperName = "";
+        if (load.customer) shipperName = load.customer.name;
+        else if (load.originCompany) shipperName = load.originCompany;
+        else if (load.poster) shipperName = load.poster.company || (load.poster.firstName + " " + load.poster.lastName);
+
+        var carrierName = "";
+        if (load.carrier) carrierName = load.carrier.company || (load.carrier.firstName + " " + load.carrier.lastName);
+
+        return '<tr class="clickable-row" onclick="openDetail(\'' + load.id + '\')">' +
+          '<td style="font-weight:600;color:var(--navy)">' + esc(load.referenceNumber) + '</td>' +
+          '<td>' + esc(load.originCity) + ', ' + esc(load.originState) + '</td>' +
+          '<td>' + esc(load.destCity) + ', ' + esc(load.destState) + '</td>' +
+          '<td>' + esc(shipperName || '--') + '</td>' +
+          '<td>' + esc(carrierName || '--') + '</td>' +
+          '<td><span class="status-badge status-' + load.status.toLowerCase() + '">' + (STATUS_LABELS[load.status] || load.status) + '</span></td>' +
+          '<td>' + shortDate(load.pickupDate) + '</td>' +
+          '<td>' + shortDate(load.deliveryDate) + '</td>' +
+          '<td style="text-align:right">$' + num(shipperRate) + '</td>' +
+          '<td style="text-align:right">' + (carrierRate ? '$' + num(carrierRate) : '--') + '</td>' +
+          '<td style="text-align:right;' + marginClass + '">' + (margin !== null ? margin.toFixed(1) + '%' : '--') + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    function renderPagination() {
+      var el = document.getElementById("pagination");
+      if (state.totalPages <= 1) { el.innerHTML = ""; return; }
+      el.innerHTML =
+        '<button ' + (state.page <= 1 ? 'disabled' : '') + ' onclick="goPage(' + (state.page-1) + ')">Prev</button>' +
+        '<span class="page-info">Page ' + state.page + ' of ' + state.totalPages + '</span>' +
+        '<button ' + (state.page >= state.totalPages ? 'disabled' : '') + ' onclick="goPage(' + (state.page+1) + ')">Next</button>';
+    }
+
+    function goPage(p) {
+      state.page = p;
+      fetchLoads();
+    }
+
+    function applyFilters() {
+      state.page = 1;
+      fetchLoads();
+    }
+
+    function debounceSearch() {
+      clearTimeout(state.searchTimer);
+      state.searchTimer = setTimeout(function() {
+        state.page = 1;
+        fetchLoads();
+      }, 350);
+    }
+
+    /* =========================================
+       DETAIL VIEW
+       ========================================= */
+    function openDetail(loadId) {
+      SRL.request("/api/loads/" + loadId).then(function(load) {
+        state.currentLoad = load;
+        renderDetail(load);
+        document.getElementById("list-view").classList.remove("active");
+        document.getElementById("detail-view").classList.add("active");
+      }).catch(function(err) {
+        showToast("Failed to load detail: " + err.message, "error");
+      });
+    }
+
+    function showListView() {
+      document.getElementById("detail-view").classList.remove("active");
+      document.getElementById("list-view").classList.add("active");
+      state.currentLoad = null;
+      fetchLoads();
+    }
+
+    function renderDetail(load) {
+      // Header
+      document.getElementById("detail-ref").textContent = load.referenceNumber || "--";
+      var badge = document.getElementById("detail-status-badge");
+      badge.textContent = STATUS_LABELS[load.status] || load.status;
+      badge.className = "status-badge status-" + load.status.toLowerCase();
+
+      // Status select
+      renderStatusSelect(load);
+
+      // Left panel
+      renderDetailLeft(load);
+
+      // Right panel
+      renderDetailRight(load);
+    }
+
+    function renderStatusSelect(load) {
+      var sel = document.getElementById("detail-status-select");
+      var terminal = ["COMPLETED","CANCELLED","TONU"];
+      if (terminal.indexOf(load.status) !== -1) {
+        sel.style.display = "none";
+        return;
+      }
+      sel.style.display = "";
+      var idx = STATUS_ORDER.indexOf(load.status);
+      var html = '<option value="">Change Status...</option>';
+      STATUS_ORDER.forEach(function(s, i) {
+        if (i > idx || s === "CANCELLED" || s === "TONU") {
+          html += '<option value="' + s + '"' + (s === load.status ? ' disabled' : '') + '>' + (STATUS_LABELS[s] || s) + '</option>';
+        }
+      });
+      html += '<option value="CANCELLED">Cancelled</option>';
+      html += '<option value="TONU">TONU</option>';
+      sel.innerHTML = html;
+    }
+
+    function changeLoadStatus() {
+      var sel = document.getElementById("detail-status-select");
+      var newStatus = sel.value;
+      if (!newStatus || !state.currentLoad) return;
+
+      SRL.request("/api/loads/" + state.currentLoad.id + "/status", {
+        method: "PATCH",
+        body: { status: newStatus }
+      }).then(function(updated) {
+        state.currentLoad = updated;
+        renderDetail(updated);
+        showToast("Status updated to " + (STATUS_LABELS[newStatus] || newStatus), "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+        sel.value = "";
+      });
+    }
+
+    function renderDetailLeft(load) {
+      var html = "";
+
+      // Status Timeline
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Status Timeline</div>';
+      html += renderTimeline(load.status);
+      html += '</div>';
+
+      // Load Info
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Load Information</div>';
+      html += '<div class="detail-grid">';
+      html += field("Origin", esc(load.originCity) + ', ' + esc(load.originState) + ' ' + esc(load.originZip));
+      html += field("Destination", esc(load.destCity) + ', ' + esc(load.destState) + ' ' + esc(load.destZip));
+      html += field("Distance", load.distance ? num(load.distance) + ' mi' : '--');
+      html += field("Equipment", esc(formatEquip(load.equipmentType)));
+      html += field("Weight", load.weight ? num(load.weight) + ' lbs' : '--');
+      html += field("Commodity", esc(load.commodity || '--'));
+      html += field("Pickup", formatDateTime(load.pickupDate) + (load.pickupTimeStart ? ' (' + load.pickupTimeStart + '-' + (load.pickupTimeEnd || '') + ')' : ''));
+      html += field("Delivery", formatDateTime(load.deliveryDate) + (load.deliveryTimeStart ? ' (' + load.deliveryTimeStart + '-' + (load.deliveryTimeEnd || '') + ')' : ''));
+      html += '</div></div>';
+
+      // Shipper Info
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Shipper Information</div>';
+      html += '<div class="detail-grid">';
+      if (load.customer) {
+        html += field("Company", esc(load.customer.name));
+        html += field("Contact", esc(load.customer.contactName || '--'));
+        html += field("Phone", load.customer.phone ? '<a href="tel:' + esc(load.customer.phone) + '">' + esc(load.customer.phone) + '</a>' : '--');
+        html += field("Email", esc(load.customer.email || '--'));
+      } else {
+        html += field("Company", esc(load.originCompany || '--'));
+        html += field("Contact", esc(load.originContactName || load.contactName || '--'));
+        html += field("Phone", (load.originContactPhone || load.contactPhone) ? '<a href="tel:' + esc(load.originContactPhone || load.contactPhone) + '">' + esc(load.originContactPhone || load.contactPhone) + '</a>' : '--');
+        html += field("Posted By", load.poster ? esc(load.poster.company || load.poster.firstName + ' ' + load.poster.lastName) : '--');
+      }
+      html += '</div></div>';
+
+      // Carrier Info
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Carrier Information</div>';
+      if (load.carrier) {
+        html += '<div class="detail-grid">';
+        html += field("Company", esc(load.carrier.company || load.carrier.firstName + ' ' + load.carrier.lastName));
+        html += field("Driver", esc(load.driverName || '--') + (load.driverPhone ? ' &middot; <a href="tel:' + esc(load.driverPhone) + '">' + esc(load.driverPhone) + '</a>' : ''));
+        html += field("Truck / Trailer", esc(load.truckNumber || '--') + ' / ' + esc(load.trailerNumber || '--'));
+        html += field("Phone", load.carrier.phone ? '<a href="tel:' + esc(load.carrier.phone) + '">' + esc(load.carrier.phone) + '</a>' : '--');
+        html += '</div>';
+      } else {
+        html += '<div class="empty-state" style="padding:12px">No carrier assigned</div>';
+      }
+      html += '</div>';
+
+      // Documents
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Documents</div>';
+      html += docRow("Rate Confirmation", load.rateConfirmationPdfUrl);
+      html += docRow("Bill of Lading (BOL)", load.bolUrl);
+      html += docRow("Proof of Delivery (POD)", load.podUrl);
+      html += '</div>';
+
+      // Special Instructions
+      if (load.specialInstructions || load.notes || load.pickupInstructions || load.deliveryInstructions) {
+        html += '<div class="detail-section">';
+        html += '<div class="detail-section-title">Notes &amp; Instructions</div>';
+        if (load.pickupInstructions) html += '<div style="font-size:13px;margin-bottom:6px"><strong>Pickup:</strong> ' + esc(load.pickupInstructions) + '</div>';
+        if (load.deliveryInstructions) html += '<div style="font-size:13px;margin-bottom:6px"><strong>Delivery:</strong> ' + esc(load.deliveryInstructions) + '</div>';
+        if (load.specialInstructions) html += '<div style="font-size:13px;margin-bottom:6px"><strong>Special:</strong> ' + esc(load.specialInstructions) + '</div>';
+        if (load.notes) html += '<div style="font-size:13px"><strong>Notes:</strong> ' + esc(load.notes) + '</div>';
+        html += '</div>';
+      }
+
+      document.getElementById("detail-left").innerHTML = html;
+    }
+
+    function renderDetailRight(load) {
+      var html = "";
+
+      // Rate Calculator
+      var shipperRate = load.customerRate || load.rate || 0;
+      var carrierRate = load.carrierRate || 0;
+      html += '<div class="rate-calc">';
+      html += '<h4>Rate Calculator</h4>';
+      html += '<div class="rate-row"><label>Shipper Rate $</label><input type="number" step="0.01" id="rc-shipper" value="' + shipperRate + '" oninput="calcRate()"></div>';
+      html += '<div class="rate-row"><label>Carrier Rate $</label><input type="number" step="0.01" id="rc-carrier" value="' + carrierRate + '" oninput="calcRate()"></div>';
+      html += '<div class="rate-row"><label>Fuel Surcharge $</label><input type="number" step="0.01" id="rc-fuel" value="' + (load.fuelSurcharge || 0) + '" oninput="calcRate()"></div>';
+      html += '<div class="rate-results" id="rc-results"></div>';
+      html += '<div style="margin-top:12px;text-align:right"><button class="btn-primary btn-sm" onclick="saveRates()">Save Rates</button></div>';
+      html += '</div>';
+
+      // Carrier Assignment (Current)
+      html += '<div class="assign-section">';
+      html += '<h4>Carrier Assignment</h4>';
+      if (load.carrier) {
+        html += '<div style="font-size:13px;color:var(--gray-600);margin-bottom:8px">Currently assigned to:</div>';
+        html += '<div style="font-weight:600;color:var(--navy);font-size:14px">' + esc(load.carrier.company || load.carrier.firstName + ' ' + load.carrier.lastName) + '</div>';
+        html += '<div style="margin-top:12px"><button class="btn-secondary btn-sm" onclick="reassignCarrier()">Reassign</button></div>';
+      } else {
+        html += renderCarrierSelect(load);
+        html += '<button class="btn-primary btn-sm" onclick="assignCarrier()">Assign Carrier</button>';
+      }
+      html += '</div>';
+
+      // Caravan Smart Match + DAT Split Panel
+      html += '<div class="assign-section">';
+      html += '<h4>Find Carrier</h4>';
+      html += '<div class="carrier-tabs">';
+      html += '<button class="carrier-tab active" onclick="switchCarrierTab(\'caravan\')">Caravan Match</button>';
+      html += '<button class="carrier-tab" onclick="switchCarrierTab(\'dat\')">DAT Board</button>';
+      html += '</div>';
+
+      // Caravan Tab
+      html += '<div class="carrier-tab-panel active" id="tab-caravan">';
+      html += '<div id="caravan-matches" style="color:var(--gray-400);font-size:13px;padding:12px 0">Click "Find Matches" to run smart matching</div>';
+      html += '<button class="btn-primary btn-sm" onclick="runSmartMatch(\'' + load.id + '\')">Find Matches</button>';
+      html += '</div>';
+
+      // DAT Tab
+      html += '<div class="carrier-tab-panel" id="tab-dat">';
+      if (load.datPostId) {
+        html += '<div class="dat-status-bar dat-posted">';
+        html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+        html += '<span>Posted to DAT</span>';
+        html += '<span style="margin-left:auto;font-size:11px;color:var(--gray-500)">' + esc(load.datPostId) + '</span>';
+        html += '</div>';
+        html += '<div style="display:flex;gap:8px;margin-bottom:14px">';
+        html += '<button class="btn-secondary btn-sm" onclick="loadDATResponses(\'' + load.id + '\')">Refresh Responses</button>';
+        html += '<button class="btn-danger btn-sm" onclick="removeDATPost(\'' + load.datPostId + '\', \'' + load.id + '\')">Remove Post</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="dat-status-bar dat-not-posted">';
+        html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+        html += '<span>Not posted to DAT</span>';
+        html += '</div>';
+        html += '<button class="btn-primary btn-sm" onclick="postToDAT(\'' + load.id + '\')">Post to DAT</button>';
+        html += '<div style="margin-top:6px;font-size:11px;color:var(--gray-400)">Posts this load to the DAT load board to find external carriers</div>';
+      }
+      html += '<div id="dat-responses" style="margin-top:14px"></div>';
+      html += '</div>';
+
+      html += '</div>';
+
+      // Communication Log
+      html += '<div class="assign-section">';
+      html += '<h4>Recent Activity</h4>';
+      if (load.messages && load.messages.length > 0) {
+        load.messages.slice(-5).reverse().forEach(function(m) {
+          html += '<div class="comm-log-item">';
+          html += '<div><span class="comm-from">' + esc(m.sender ? m.sender.firstName + ' ' + m.sender.lastName : 'System') + '</span> <span class="comm-time">' + timeAgo(m.createdAt) + '</span></div>';
+          html += '<div class="comm-msg">' + esc(truncate(m.content || m.body || '', 120)) + '</div>';
+          html += '</div>';
+        });
+      } else {
+        html += '<div class="empty-state" style="padding:12px">No activity yet</div>';
+      }
+      html += '</div>';
+
+      document.getElementById("detail-right").innerHTML = html;
+
+      // Trigger rate calc
+      calcRate();
+
+      // Auto-load DAT responses if posted
+      if (load.datPostId) {
+        loadDATResponses(load.id);
+      }
+    }
+
+    /* =========================================
+       CARAVAN + DAT TABS
+       ========================================= */
+    function switchCarrierTab(tab) {
+      var tabs = document.querySelectorAll(".carrier-tab");
+      tabs.forEach(function(t) { t.classList.remove("active"); });
+      document.querySelectorAll(".carrier-tab-panel").forEach(function(p) { p.classList.remove("active"); });
+
+      if (tab === "caravan") {
+        tabs[0].classList.add("active");
+        document.getElementById("tab-caravan").classList.add("active");
+      } else {
+        tabs[1].classList.add("active");
+        document.getElementById("tab-dat").classList.add("active");
+      }
+    }
+
+    function runSmartMatch(loadId) {
+      var el = document.getElementById("caravan-matches");
+      el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Matching...</div>';
+
+      SRL.matchCarriersForLoad(loadId).then(function(res) {
+        var matches = res.matches || [];
+        if (matches.length === 0) {
+          el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">No matching Caravan carriers found for this load.' +
+            (res.suggestDAT ? ' <strong>Consider posting to DAT.</strong>' : '') + '</div>';
+          return;
+        }
+
+        var html = '<div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">' + matches.length + ' matches from ' + (res.totalCandidates || 0) + ' candidates</div>';
+        matches.forEach(function(m) {
+          var scoreClass = m.matchScore >= 70 ? "match-score-high" : m.matchScore >= 50 ? "match-score-mid" : "match-score-low";
+          html += '<div class="match-card">';
+          html += '<div class="match-card-header">';
+          html += '<div><div class="match-card-company">' + esc(m.company) + '</div></div>';
+          html += '<span class="match-score ' + scoreClass + '">' + m.matchScore + ' pts</span>';
+          html += '</div>';
+          html += '<div class="match-meta">';
+          html += '<span class="tier-badge tier-' + (m.tier || 'NONE') + '">' + (m.tier || 'NONE') + '</span>';
+          html += '<span class="source-' + (m.source || 'caravan') + '">' + (m.source === 'dat' ? 'DAT' : 'Caravan') + '</span>';
+          html += '<span>MC# ' + esc(m.mcNumber || 'N/A') + '</span>';
+          if (m.overallScore > 0) html += '<span>SRCPP ' + m.overallScore.toFixed(0) + '%</span>';
+          html += '</div>';
+
+          // Score breakdown tooltip
+          if (m.breakdown) {
+            html += '<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">';
+            var bd = m.breakdown;
+            if (bd.equipment > 0) html += '<span class="equip-tag" style="background:rgba(34,197,94,0.1);color:#15803D">Equip +' + bd.equipment + '</span>';
+            if (bd.region > 0) html += '<span class="equip-tag">Region +' + bd.region + '</span>';
+            if (bd.performance > 0) html += '<span class="equip-tag">Perf +' + bd.performance + '</span>';
+            if (bd.compliance > 0) html += '<span class="equip-tag">Compl +' + bd.compliance + '</span>';
+            if (bd.tier > 0) html += '<span class="equip-tag">Tier +' + bd.tier + '</span>';
+            if (bd.sourceBonus > 0) html += '<span class="equip-tag" style="background:rgba(34,197,94,0.1);color:#15803D">Caravan +' + bd.sourceBonus + '</span>';
+            html += '</div>';
+          }
+
+          html += '<div class="match-actions">';
+          html += '<button class="btn-primary btn-sm" onclick="event.stopPropagation();assignMatchedCarrier(\'' + m.userId + '\')">Assign</button>';
+          if (m.phone) html += '<a href="tel:' + esc(m.phone) + '" class="btn-secondary btn-sm" onclick="event.stopPropagation()">' + esc(m.phone) + '</a>';
+          html += '</div>';
+          html += '</div>';
+        });
+
+        if (res.suggestDAT) {
+          html += '<div style="padding:12px;background:rgba(59,130,246,0.05);border-radius:6px;font-size:12px;color:#2563EB;margin-top:8px">';
+          html += 'Few Caravan matches found. <a href="#" onclick="event.preventDefault();switchCarrierTab(\'dat\')" style="font-weight:600">Post to DAT</a> for more coverage.';
+          html += '</div>';
+        }
+
+        el.innerHTML = html;
+      }).catch(function(err) {
+        el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px 0">Error: ' + esc(err.message) + '</div>';
+      });
+    }
+
+    function assignMatchedCarrier(userId) {
+      if (!state.currentLoad) return;
+      SRL.request("/api/loads/" + state.currentLoad.id, {
+        method: "PUT",
+        body: { carrierId: userId }
+      }).then(function() {
+        showToast("Carrier assigned from Caravan match", "success");
+        openDetail(state.currentLoad.id);
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       DAT INTEGRATION
+       ========================================= */
+    function postToDAT(loadId) {
+      SRL.postToDAT(loadId).then(function(res) {
+        showToast(res.message || "Posted to DAT", "success");
+        openDetail(loadId);
+      }).catch(function(err) {
+        showToast("DAT post failed: " + err.message, "error");
+      });
+    }
+
+    function removeDATPost(datPostId, loadId) {
+      if (!confirm("Remove this load from the DAT board?")) return;
+      SRL.removeFromDAT(datPostId).then(function() {
+        showToast("Removed from DAT", "success");
+        openDetail(loadId);
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    function loadDATResponses(loadId) {
+      var el = document.getElementById("dat-responses");
+      if (!el) return;
+      el.innerHTML = '<div style="color:var(--gray-400);font-size:12px">Loading responses...</div>';
+
+      SRL.getDATResponses(loadId).then(function(res) {
+        var responses = res.responses || [];
+        if (responses.length === 0) {
+          el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">No carrier responses yet</div>';
+          return;
+        }
+
+        var html = '<div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">' + responses.length + ' carrier response(s)</div>';
+        responses.forEach(function(r) {
+          html += '<div class="dat-response-card">';
+          html += '<div class="dat-response-header">';
+          html += '<div class="dat-response-company">' + esc(r.carrierName) + '</div>';
+          html += '<div class="dat-response-rate">$' + Number(r.offeredRate).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) + '</div>';
+          html += '</div>';
+          html += '<div class="match-meta">';
+          html += '<span>MC# ' + esc(r.mcNumber) + '</span>';
+          html += '<span>DOT# ' + esc(r.dotNumber) + '</span>';
+          html += '<span>' + (r.driverAvailable ? '<span style="color:var(--green)">Driver Ready</span>' : '<span style="color:var(--amber)">Pending</span>') + '</span>';
+          html += '<span>' + timeAgo(r.respondedAt) + '</span>';
+          html += '</div>';
+          html += '<div class="match-actions">';
+          html += '<button class="btn-primary btn-sm" onclick="importDATCarrier(\'' + esc(r.carrierName) + '\',\'' + esc(r.mcNumber) + '\',\'' + esc(r.dotNumber) + '\',\'' + esc(r.phone) + '\',\'' + esc(r.email) + '\')">Import to Caravan</button>';
+          if (r.phone) html += '<a href="tel:' + esc(r.phone) + '" class="btn-secondary btn-sm">' + esc(r.phone) + '</a>';
+          html += '</div>';
+          html += '</div>';
+        });
+
+        if (res.mock) {
+          html += '<div style="font-size:10px;color:var(--gray-400);text-align:center;margin-top:8px">Mock data — DAT API not configured</div>';
+        }
+
+        el.innerHTML = html;
+      }).catch(function(err) {
+        el.innerHTML = '<div style="color:var(--red);font-size:12px">Error loading responses</div>';
+      });
+    }
+
+    function importDATCarrier(name, mc, dot, phone, email) {
+      SRL.importFromDAT({
+        companyName: name,
+        mcNumber: mc || undefined,
+        dotNumber: dot || undefined,
+        phone: phone || undefined,
+        email: email || undefined,
+        contactName: name,
+      }).then(function(res) {
+        var msg = "Carrier imported as Guest";
+        if (res.fmcsa && res.fmcsa.verified) msg += " (FMCSA verified)";
+        showToast(msg, "success");
+      }).catch(function(err) {
+        if (err.message && err.message.indexOf("already exists") !== -1) {
+          showToast("Carrier already in the system", "error");
+        } else {
+          showToast("Import failed: " + err.message, "error");
+        }
+      });
+    }
+
+    function renderTimeline(currentStatus) {
+      var steps = [
+        {key:"POSTED",label:"Posted"},
+        {key:"BOOKED",label:"Booked"},
+        {key:"DISPATCHED",label:"Dispatched"},
+        {key:"IN_TRANSIT",label:"In Transit"},
+        {key:"DELIVERED",label:"Delivered"},
+        {key:"INVOICED",label:"Invoiced"},
+        {key:"COMPLETED",label:"Completed"}
+      ];
+
+      // Group statuses
+      var statusGroup = {
+        DRAFT:0, PLANNED:0, POSTED:0, TENDERED:0,
+        BOOKED:1, CONFIRMED:1,
+        DISPATCHED:2, AT_PICKUP:2, LOADED:2, PICKED_UP:2,
+        IN_TRANSIT:3, AT_DELIVERY:3,
+        DELIVERED:4, POD_RECEIVED:4,
+        INVOICED:5,
+        COMPLETED:6
+      };
+
+      var curIdx = statusGroup[currentStatus];
+      if (curIdx === undefined) curIdx = -1;
+
+      var html = '<div class="timeline">';
+      steps.forEach(function(step, i) {
+        if (i > 0) {
+          html += '<div class="timeline-line' + (i <= curIdx ? ' filled' : '') + '"></div>';
+        }
+        var cls = "";
+        if (i < curIdx) cls = "done";
+        else if (i === curIdx) cls = "active";
+
+        var dotCls = "";
+        if (i < curIdx) dotCls = "completed";
+        else if (i === curIdx) dotCls = "current";
+
+        html += '<div class="timeline-step ' + cls + '">';
+        html += '<div class="timeline-dot ' + dotCls + '">' + (i < curIdx ? '&#10003;' : '') + '</div>';
+        html += '<div class="timeline-label">' + step.label + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      if (currentStatus === "CANCELLED") {
+        html += '<div style="text-align:center;margin-top:8px;color:var(--red);font-weight:600;font-size:12px">CANCELLED</div>';
+      } else if (currentStatus === "TONU") {
+        html += '<div style="text-align:center;margin-top:8px;color:var(--red);font-weight:600;font-size:12px">TRUCK ORDER NOT USED</div>';
+      }
+
+      return html;
+    }
+
+    function renderCarrierSelect(load) {
+      var equip = load.equipmentType;
+      var matching = state.carriers.filter(function(c) {
+        if (c.onboardingStatus !== "APPROVED") return false;
+        if (!c.equipmentTypes || c.equipmentTypes.length === 0) return true;
+        return c.equipmentTypes.indexOf(equip) !== -1;
+      });
+
+      var html = '<select id="carrier-select">';
+      html += '<option value="">Select carrier...</option>';
+      matching.forEach(function(c) {
+        var label = esc(c.company || c.contactName) + ' (MC# ' + esc(c.mcNumber) + ')';
+        if (c.performance && c.performance.overallScore) label += ' - ' + c.performance.overallScore.toFixed(0) + '%';
+        html += '<option value="' + c.userId + '">' + label + '</option>';
+      });
+      if (matching.length === 0) {
+        html += '<option value="" disabled>No matching carriers</option>';
+      }
+      html += '</select>';
+      return html;
+    }
+
+    /* =========================================
+       RATE CALCULATOR
+       ========================================= */
+    function calcRate() {
+      var s = parseFloat(document.getElementById("rc-shipper").value) || 0;
+      var c = parseFloat(document.getElementById("rc-carrier").value) || 0;
+      var f = parseFloat(document.getElementById("rc-fuel").value) || 0;
+      var margin = s - c;
+      var pct = s > 0 ? (margin / s * 100) : 0;
+      var net = margin - f;
+      var isNeg = net < 0;
+
+      var el = document.getElementById("rc-results");
+      el.innerHTML =
+        '<div class="rate-result-row"><span class="rl">Margin $</span><span class="rv' + (margin < 0 ? '" style="color:var(--red)"' : '"') + '>$' + num2(margin) + '</span></div>' +
+        '<div class="rate-result-row"><span class="rl">Margin %</span><span class="rv' + (pct < 10 ? '" style="color:var(--amber)"' : '"') + '>' + pct.toFixed(1) + '%</span></div>' +
+        '<div class="rate-result-row"><span class="rl">Fuel Surcharge</span><span class="rv">$' + num2(f) + '</span></div>' +
+        '<div class="rate-result-row highlight' + (isNeg ? ' negative' : '') + '"><span class="rl">Net Profit</span><span class="rv">$' + num2(net) + '</span></div>';
+    }
+
+    function saveRates() {
+      if (!state.currentLoad) return;
+      var s = parseFloat(document.getElementById("rc-shipper").value) || 0;
+      var c = parseFloat(document.getElementById("rc-carrier").value) || 0;
+      var f = parseFloat(document.getElementById("rc-fuel").value) || 0;
+
+      SRL.request("/api/loads/" + state.currentLoad.id, {
+        method: "PUT",
+        body: { customerRate: s, carrierRate: c, fuelSurcharge: f, rate: s }
+      }).then(function(updated) {
+        state.currentLoad = updated;
+        showToast("Rates saved", "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       CARRIER ASSIGNMENT
+       ========================================= */
+    function assignCarrier() {
+      var sel = document.getElementById("carrier-select");
+      if (!sel || !sel.value) { showToast("Select a carrier first", "error"); return; }
+      var carrierId = sel.value;
+
+      SRL.request("/api/loads/" + state.currentLoad.id, {
+        method: "PUT",
+        body: { carrierId: carrierId }
+      }).then(function() {
+        showToast("Carrier assigned", "success");
+        openDetail(state.currentLoad.id);
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    function reassignCarrier() {
+      var load = state.currentLoad;
+      var rightEl = document.getElementById("detail-right");
+      // Replace the assignment section with a select
+      var sections = rightEl.querySelectorAll(".assign-section");
+      if (sections[0]) {
+        sections[0].innerHTML = '<h4>Reassign Carrier</h4>' +
+          renderCarrierSelect(load) +
+          '<div style="margin-top:12px;display:flex;gap:8px">' +
+          '<button class="btn-primary btn-sm" onclick="assignCarrier()">Assign</button>' +
+          '<button class="btn-secondary btn-sm" onclick="openDetail(\'' + load.id + '\')">Cancel</button>' +
+          '</div>';
+      }
+    }
+
+    /* =========================================
+       NEW LOAD MODAL
+       ========================================= */
+    function populateCustomerDropdown() {
+      var sel = document.getElementById("f-customer");
+      sel.innerHTML = '<option value="">Select customer...</option>';
+      state.customers.forEach(function(c) {
+        sel.innerHTML += '<option value="' + c.id + '">' + esc(c.name) + (c.city ? ' (' + esc(c.city) + ', ' + esc(c.state) + ')' : '') + '</option>';
+      });
+    }
+
+    function openNewLoadModal() {
+      document.getElementById("new-load-modal").classList.add("open");
+      document.getElementById("form-error").className = "form-error";
+      document.getElementById("form-error").textContent = "";
+    }
+
+    function closeNewLoadModal() {
+      document.getElementById("new-load-modal").classList.remove("open");
+    }
+
+    function saveNewLoad() {
+      var errEl = document.getElementById("form-error");
+      errEl.className = "form-error";
+
+      var originCity = document.getElementById("f-originCity").value.trim();
+      var originState = document.getElementById("f-originState").value.trim().toUpperCase();
+      var originZip = document.getElementById("f-originZip").value.trim();
+      var destCity = document.getElementById("f-destCity").value.trim();
+      var destState = document.getElementById("f-destState").value.trim().toUpperCase();
+      var destZip = document.getElementById("f-destZip").value.trim();
+      var pickupDate = document.getElementById("f-pickupDate").value;
+      var deliveryDate = document.getElementById("f-deliveryDate").value;
+      var equipmentType = document.getElementById("f-equipmentType").value;
+      var rate = parseFloat(document.getElementById("f-rate").value);
+
+      // Validation
+      if (!originCity || !originState || !originZip || !destCity || !destState || !destZip || !pickupDate || !deliveryDate || !rate) {
+        errEl.textContent = "Please fill in all required fields.";
+        errEl.className = "form-error visible";
+        return;
+      }
+      if (originState.length !== 2 || destState.length !== 2) {
+        errEl.textContent = "State must be 2 characters (e.g., TX).";
+        errEl.className = "form-error visible";
+        return;
+      }
+
+      var body = {
+        originCity: originCity,
+        originState: originState,
+        originZip: originZip,
+        originCompany: document.getElementById("f-originCompany").value.trim() || undefined,
+        destCity: destCity,
+        destState: destState,
+        destZip: destZip,
+        destCompany: document.getElementById("f-destCompany").value.trim() || undefined,
+        pickupDate: new Date(pickupDate).toISOString(),
+        deliveryDate: new Date(deliveryDate).toISOString(),
+        equipmentType: equipmentType,
+        rate: rate,
+        weight: parseFloat(document.getElementById("f-weight").value) || undefined,
+        commodity: document.getElementById("f-commodity").value.trim() || undefined,
+        distance: parseFloat(document.getElementById("f-distance").value) || undefined,
+        specialInstructions: document.getElementById("f-instructions").value.trim() || undefined,
+        customerId: document.getElementById("f-customer").value || undefined,
+        status: "POSTED"
+      };
+
+      var btn = document.getElementById("save-load-btn");
+      btn.disabled = true;
+      btn.textContent = "Creating...";
+
+      SRL.request("/api/loads", { method: "POST", body: body }).then(function(created) {
+        showToast("Load " + (created.referenceNumber || "") + " created", "success");
+        closeNewLoadModal();
+        clearForm();
+        fetchLoads();
+      }).catch(function(err) {
+        errEl.textContent = err.message || "Failed to create load.";
+        errEl.className = "form-error visible";
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "Create Load";
+      });
+    }
+
+    function clearForm() {
+      ["f-originCity","f-originState","f-originZip","f-originCompany",
+       "f-destCity","f-destState","f-destZip","f-destCompany",
+       "f-pickupDate","f-deliveryDate","f-weight","f-commodity",
+       "f-rate","f-distance","f-instructions"].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      document.getElementById("f-customer").selectedIndex = 0;
+      document.getElementById("f-equipmentType").selectedIndex = 0;
+    }
+
+    /* =========================================
+       HELPERS
+       ========================================= */
+    function field(label, value) {
+      return '<div class="detail-field"><label>' + label + '</label><span>' + (value || '--') + '</span></div>';
+    }
+
+    function docRow(label, url) {
+      return '<div class="doc-row"><span class="doc-label">' + label + '</span>' +
+        (url ? '<a class="doc-link" href="' + esc(url) + '" target="_blank">View</a>' : '<span class="doc-missing">Not uploaded</span>') +
+        '</div>';
+    }
+
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    function num(n) {
+      if (n === null || n === undefined) return "0";
+      return Number(n).toLocaleString("en-US", {minimumFractionDigits:0, maximumFractionDigits:0});
+    }
+
+    function num2(n) {
+      return Number(n).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    function shortDate(d) {
+      if (!d) return "--";
+      return new Date(d).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+    }
+
+    function formatDateTime(d) {
+      if (!d) return "--";
+      return new Date(d).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return "";
+      var diff = Date.now() - new Date(dateStr).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return "just now";
+      if (mins < 60) return mins + "m ago";
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + "h ago";
+      var days = Math.floor(hrs / 24);
+      return days + "d ago";
+    }
+
+    function truncate(str, len) {
+      if (!str) return "";
+      return str.length > len ? str.substring(0, len) + "..." : str;
+    }
+
+    function formatRole(role) {
+      var m = {ADMIN:"Administrator",BROKER:"Account Executive",DISPATCH:"Dispatch",OPERATIONS:"Operations",CEO:"CEO",CARRIER:"Carrier",ACCOUNTING:"Accounting"};
+      return m[role] || role;
+    }
+
+    function formatEquip(e) {
+      if (!e) return "--";
+      return e.replace(/_/g, " ").replace(/\b\w/g, function(c){return c.toUpperCase();});
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function(){ el.classList.remove("show"); }, 3000);
+    }
+
+    /* Sidebar Toggle */
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+</body>
+</html>

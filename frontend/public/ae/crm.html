@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM / Prospect Manager - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== CRM Styles ========== */
+
+    /* --- View Toggle --- */
+    .view-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 6px 14px;
+      border: none;
+      background: var(--white);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--gray-500);
+      transition: background 0.15s, color 0.15s;
+    }
+    .view-toggle button.active {
+      background: var(--navy);
+      color: var(--white);
+    }
+    .view-spacer { flex: 1; }
+    .view-bar input[type="text"] {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+    }
+    .view-bar input:focus { border-color: var(--gold); }
+    .view-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--gold); color: var(--white);
+      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; text-decoration: none;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--white); color: var(--navy);
+      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
+      font-weight: 500; cursor: pointer;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* --- Kanban Board --- */
+    .kanban-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 20px 32px;
+      display: none;
+    }
+    .kanban-wrap.active { display: block; }
+    .kanban {
+      display: flex;
+      gap: 16px;
+      min-width: max-content;
+      align-items: flex-start;
+    }
+    .kanban-col {
+      width: 260px;
+      flex-shrink: 0;
+      background: var(--gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 200px);
+    }
+    .kanban-col-header {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .kanban-col-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .kanban-col-count {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--gray-200);
+      color: var(--gray-600);
+    }
+    .kanban-col-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      min-height: 80px;
+    }
+    .kanban-col-body.drag-over {
+      background: var(--gold-dim);
+    }
+    .kanban-card {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
+      cursor: grab;
+      transition: box-shadow 0.15s, transform 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .kanban-card:hover { box-shadow: var(--shadow-md); }
+    .kanban-card.dragging { opacity: 0.5; transform: rotate(2deg); }
+    .kanban-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    .kanban-card-name:hover { color: var(--gold); }
+    .kanban-card-detail {
+      font-size: 11px;
+      color: var(--gray-500);
+    }
+    .kanban-card-tags {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .kanban-tag {
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .stage-lead .kanban-card { border-left-color: #6366F1; }
+    .stage-contacted .kanban-card { border-left-color: #3B82F6; }
+    .stage-quoted .kanban-card { border-left-color: var(--amber); }
+    .stage-negotiating .kanban-card { border-left-color: #F97316; }
+    .stage-won .kanban-card { border-left-color: var(--green); }
+    .stage-active .kanban-card { border-left-color: var(--gold); }
+
+    /* --- List View --- */
+    .list-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+      display: none;
+    }
+    .list-wrap.active { display: block; }
+    .crm-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .crm-table th {
+      text-align: left; padding: 10px 12px; font-weight: 600;
+      color: var(--gray-500); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap; cursor: pointer; user-select: none;
+    }
+    .crm-table th:hover { color: var(--navy); }
+    .crm-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700); white-space: nowrap;
+    }
+    .crm-table tr.clickable:hover td { background: var(--gray-50); cursor: pointer; }
+    .stage-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .stage-Lead { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .stage-Contacted { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
+    .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
+    .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }
+    .stage-Active { background: var(--gold-dim); color: var(--gold); }
+
+    /* --- Detail Slide Panel --- */
+    .detail-panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 520px; max-width: 100vw;
+      background: var(--white);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      z-index: 300;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-panel.open { transform: translateX(0); }
+    .detail-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+      z-index: 290; display: none;
+    }
+    .detail-overlay.open { display: block; }
+    .dp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+    }
+    .dp-header h3 { font-size: 17px; color: var(--navy); }
+    .dp-close {
+      background: none; border: none; font-size: 22px;
+      cursor: pointer; color: var(--gray-400); padding: 4px; line-height: 1;
+    }
+    .dp-close:hover { color: var(--red); }
+    .dp-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+    }
+    .dp-section { margin-bottom: 20px; }
+    .dp-section-title {
+      font-size: 12px; font-weight: 700; color: var(--gray-500);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px; padding-bottom: 4px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .dp-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
+    }
+    .dp-field label {
+      display: block; font-size: 11px; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .dp-field span {
+      font-size: 14px; color: var(--navy); font-weight: 500;
+    }
+    .dp-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .dp-footer {
+      padding: 16px 20px; border-top: 1px solid var(--gray-100);
+      display: flex; gap: 8px;
+    }
+    .contact-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: var(--gray-50); border-radius: 8px;
+      margin-bottom: 6px; font-size: 13px;
+    }
+    .contact-chip-name { font-weight: 600; color: var(--navy); }
+    .contact-chip-title { font-size: 11px; color: var(--gray-500); }
+    .contact-chip-info { font-size: 11px; color: var(--gray-400); }
+
+    /* --- Modals --- */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 500; align-items: flex-start; justify-content: center;
+      padding: 40px 20px; overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg); width: 100%; max-width: 640px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
+    }
+    .modal-header h3 { font-size: 18px; color: var(--navy); font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-400); }
+    .modal-close:hover { color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 16px 24px; border-top: 1px solid var(--gray-100);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
+    .form-group label .req { color: var(--red); }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 6px;
+      font-size: 13px; color: var(--gray-700); outline: none; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--gold); }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .form-section-title {
+      grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--navy);
+      margin-top: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--gray-100);
+    }
+    .form-error { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
+    .form-error.visible { display: block; }
+
+    /* --- CSV Import --- */
+    .csv-drop-zone {
+      border: 2px dashed var(--gray-300); border-radius: 12px;
+      padding: 40px; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .csv-drop-zone:hover, .csv-drop-zone.dragover {
+      border-color: var(--gold); background: var(--gold-dim);
+    }
+    .csv-drop-zone p { color: var(--gray-500); font-size: 14px; }
+    .csv-preview-table {
+      width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px;
+    }
+    .csv-preview-table th {
+      padding: 6px 8px; background: var(--gray-50); border: 1px solid var(--gray-200);
+      font-weight: 600; color: var(--gray-600);
+    }
+    .csv-preview-table td {
+      padding: 6px 8px; border: 1px solid var(--gray-100); color: var(--gray-700);
+    }
+    .csv-preview-table select {
+      padding: 4px; border: 1px solid var(--gray-200); border-radius: 4px; font-size: 11px; width: 100%;
+    }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--white);
+      z-index: 9999; transform: translateY(80px); opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    @media (max-width: 1024px) {
+      .view-bar { padding: 12px 20px; }
+      .kanban-wrap { padding: 16px 20px; }
+      .list-wrap { padding: 0 20px 20px; }
+      .detail-panel { width: 100%; }
+      .kanban-col { width: 230px; }
+    }
+    @media (max-width: 640px) {
+      .view-bar { flex-direction: column; align-items: stretch; }
+      .view-bar input { width: 100%; }
+      .view-spacer { display: none; }
+      .form-grid { grid-template-columns: 1fr; }
+      .dp-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+        <a href="/ae/loads.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Load Board</a>
+        <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
+        <a href="/ae/crm.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
+        <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+      </div>
+    </aside>
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1>CRM / Prospect Manager</h1>
+          <p id="crm-subtitle">Manage your shipper pipeline</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="openCSVModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import CSV
+          </button>
+          <button class="btn-primary" onclick="openNewProspectModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Prospect
+          </button>
+        </div>
+      </div>
+
+      <!-- View Bar -->
+      <div class="view-bar">
+        <div class="view-toggle">
+          <button class="active" id="btn-kanban" onclick="switchView('kanban')">Board</button>
+          <button id="btn-list" onclick="switchView('list')">List</button>
+        </div>
+        <select id="filter-type" onchange="applyFilters()">
+          <option value="">All Types</option>
+          <option value="SHIPPER">Shipper</option>
+          <option value="CONSIGNEE">Consignee</option>
+          <option value="BOTH">Both</option>
+        </select>
+        <input type="text" id="filter-search" placeholder="Search company, contact, city..." oninput="debounceSearch()">
+        <div class="view-spacer"></div>
+        <span id="count-label" style="font-size:12px;color:var(--gray-400)"></span>
+      </div>
+
+      <!-- Kanban -->
+      <div class="kanban-wrap active" id="kanban-view">
+        <div class="kanban" id="kanban-board"></div>
+      </div>
+
+      <!-- List View -->
+      <div class="list-wrap" id="list-view">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Contact</th>
+              <th>Phone</th>
+              <th>City / State</th>
+              <th>Stage</th>
+              <th>Industry</th>
+              <th>Avg Loads/Mo</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="crm-tbody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail Slide Panel -->
+  <div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div class="dp-header">
+      <h3 id="dp-name">--</h3>
+      <button class="dp-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="dp-body" id="dp-body"></div>
+    <div class="dp-footer">
+      <button class="btn-secondary btn-sm" onclick="editProspect()">Edit</button>
+      <button class="btn-primary btn-sm" onclick="advanceStage()">Advance Stage</button>
+    </div>
+  </div>
+
+  <!-- New Prospect Modal -->
+  <div class="modal-backdrop" id="new-prospect-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="prospect-modal-title">New Prospect</h3>
+        <button class="modal-close" onclick="closeProspectModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="prospect-error" class="form-error"></div>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Company Name <span class="req">*</span></label>
+            <input id="pf-name" type="text" placeholder="ABC Shipping Co.">
+          </div>
+          <div class="form-group">
+            <label>Contact Name</label>
+            <input id="pf-contactName" type="text" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input id="pf-email" type="email" placeholder="john@example.com">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input id="pf-phone" type="tel" placeholder="(555) 123-4567">
+          </div>
+          <div class="form-group">
+            <label>Industry</label>
+            <input id="pf-industry" type="text" placeholder="Manufacturing">
+          </div>
+          <div class="form-section-title">Location</div>
+          <div class="form-group">
+            <label>City</label>
+            <input id="pf-city" type="text" placeholder="Chicago">
+          </div>
+          <div class="form-group">
+            <label>State</label>
+            <input id="pf-state" type="text" placeholder="IL" maxlength="2" style="text-transform:uppercase">
+          </div>
+          <div class="form-section-title">Business Details</div>
+          <div class="form-group">
+            <label>Avg Loads/Month</label>
+            <input id="pf-avgLoads" type="number" placeholder="10">
+          </div>
+          <div class="form-group">
+            <label>Preferred Equipment</label>
+            <select id="pf-equipment">
+              <option value="">Select...</option>
+              <option value="DRY_VAN">Dry Van</option>
+              <option value="REEFER">Reefer</option>
+              <option value="FLATBED">Flatbed</option>
+              <option value="STEP_DECK">Step Deck</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Notes</label>
+            <textarea id="pf-notes" placeholder="Additional information..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeProspectModal()">Cancel</button>
+        <button class="btn-primary" id="save-prospect-btn" onclick="saveProspect()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Import Modal -->
+  <div class="modal-backdrop" id="csv-modal">
+    <div class="modal" style="max-width:780px">
+      <div class="modal-header">
+        <h3>Import Prospects from CSV</h3>
+        <button class="modal-close" onclick="closeCSVModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Step 1: Upload -->
+        <div id="csv-step-upload">
+          <div class="csv-drop-zone" id="csv-drop" onclick="document.getElementById('csv-file').click()">
+            <p style="font-size:28px;margin-bottom:8px">&#128196;</p>
+            <p>Drag & drop a CSV file here, or click to browse</p>
+            <p style="font-size:12px;color:var(--gray-400);margin-top:4px">Supported: .csv files</p>
+          </div>
+          <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleCSVFile(this)">
+        </div>
+        <!-- Step 2: Map & Preview -->
+        <div id="csv-step-preview" style="display:none">
+          <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">Map CSV columns to fields, then confirm import. First 5 rows shown as preview.</p>
+          <div style="overflow-x:auto" id="csv-preview-container"></div>
+          <p style="font-size:12px;color:var(--gray-400);margin-top:8px" id="csv-row-count"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeCSVModal()">Cancel</button>
+        <button class="btn-primary" id="csv-import-btn" style="display:none" onclick="executeCSVImport()">Import as Leads</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* ======== STATE ======== */
+    var STAGES = ["Lead","Contacted","Quoted","Negotiating","Won","Active"];
+    var state = {
+      customers: [],
+      filtered: [],
+      currentView: "kanban",
+      selectedCustomer: null,
+      editMode: false,
+      editId: null,
+      csvData: null,
+      csvHeaders: [],
+      searchTimer: null
+    };
+
+    /* ======== INIT ======== */
+    (function init() {
+      loadUser();
+      fetchCustomers();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function(){});
+    }
+
+    function fetchCustomers() {
+      SRL.request("/api/customers?limit=500").then(function(res) {
+        state.customers = (res.customers || []).map(function(c) {
+          if (!c.status || STAGES.indexOf(c.status) === -1) {
+            if (c.onboardingStatus === "APPROVED") c.status = "Active";
+            else c.status = c.status || "Lead";
+          }
+          return c;
+        });
+        applyFilters();
+      }).catch(function(err) {
+        console.error("Fetch customers error:", err);
+      });
+    }
+
+    function applyFilters() {
+      var type = document.getElementById("filter-type").value;
+      var search = (document.getElementById("filter-search").value || "").toLowerCase().trim();
+
+      state.filtered = state.customers.filter(function(c) {
+        if (type && c.type !== type) return false;
+        if (search) {
+          var hay = ((c.name||"")+" "+(c.contactName||"")+" "+(c.city||"")+" "+(c.email||"")+" "+(c.industry||"")).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+
+      document.getElementById("count-label").textContent = state.filtered.length + " prospects";
+      if (state.currentView === "kanban") renderKanban();
+      else renderList();
+    }
+
+    function debounceSearch() {
+      clearTimeout(state.searchTimer);
+      state.searchTimer = setTimeout(applyFilters, 300);
+    }
+
+    /* ======== VIEW TOGGLE ======== */
+    function switchView(v) {
+      state.currentView = v;
+      document.getElementById("btn-kanban").classList.toggle("active", v === "kanban");
+      document.getElementById("btn-list").classList.toggle("active", v === "list");
+      document.getElementById("kanban-view").classList.toggle("active", v === "kanban");
+      document.getElementById("list-view").classList.toggle("active", v === "list");
+      applyFilters();
+    }
+
+    /* ======== KANBAN ======== */
+    function renderKanban() {
+      var board = document.getElementById("kanban-board");
+      board.innerHTML = STAGES.map(function(stage) {
+        var items = state.filtered.filter(function(c) { return c.status === stage; });
+        return '<div class="kanban-col stage-' + stage.toLowerCase() + '">' +
+          '<div class="kanban-col-header">' +
+            '<span class="kanban-col-title">' + stage + '</span>' +
+            '<span class="kanban-col-count">' + items.length + '</span>' +
+          '</div>' +
+          '<div class="kanban-col-body" data-stage="' + stage + '" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event)">' +
+            (items.length === 0 ? '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:12px">No prospects</div>' :
+              items.map(function(c) {
+                return '<div class="kanban-card" draggable="true" data-id="' + c.id + '" ondragstart="kanbanDragStart(event)" ondragend="kanbanDragEnd(event)">' +
+                  '<div class="kanban-card-name" onclick="openDetail(\'' + c.id + '\')">' + esc(c.name) + '</div>' +
+                  '<div class="kanban-card-detail">' + esc(c.contactName || '--') + (c.city ? ' &middot; ' + esc(c.city) + ', ' + esc(c.state || '') : '') + '</div>' +
+                  '<div class="kanban-card-tags">' +
+                    (c.industry ? '<span class="kanban-tag" style="background:var(--gray-100);color:var(--gray-600)">' + esc(c.industry) + '</span>' : '') +
+                    (c.avgLoadsPerMonth ? '<span class="kanban-tag" style="background:var(--gold-dim);color:var(--gold)">' + c.avgLoadsPerMonth + ' loads/mo</span>' : '') +
+                  '</div>' +
+                '</div>';
+              }).join("")
+            ) +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    /* --- Drag & Drop --- */
+    var draggedId = null;
+    function kanbanDragStart(e) {
+      draggedId = e.target.dataset.id;
+      e.target.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    }
+    function kanbanDragEnd(e) {
+      e.target.classList.remove("dragging");
+    }
+    function kanbanDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add("drag-over");
+    }
+    function kanbanDragLeave(e) {
+      e.currentTarget.classList.remove("drag-over");
+    }
+    function kanbanDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("drag-over");
+      var newStage = e.currentTarget.dataset.stage;
+      if (!draggedId || !newStage) return;
+
+      SRL.request("/api/customers/" + draggedId, {
+        method: "PATCH",
+        body: { status: newStage }
+      }).then(function(updated) {
+        var idx = state.customers.findIndex(function(c) { return c.id === draggedId; });
+        if (idx !== -1) state.customers[idx].status = newStage;
+        applyFilters();
+        showToast("Moved to " + newStage, "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    /* ======== LIST VIEW ======== */
+    function renderList() {
+      var tbody = document.getElementById("crm-tbody");
+      if (state.filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gray-400)">No prospects found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.filtered.map(function(c) {
+        return '<tr class="clickable" onclick="openDetail(\'' + c.id + '\')">' +
+          '<td style="font-weight:600;color:var(--navy)">' + esc(c.name) + '</td>' +
+          '<td>' + esc(c.contactName || '--') + '</td>' +
+          '<td>' + esc(c.phone || '--') + '</td>' +
+          '<td>' + (c.city ? esc(c.city) + ', ' + esc(c.state || '') : '--') + '</td>' +
+          '<td><span class="stage-badge stage-' + (c.status || 'Lead') + '">' + esc(c.status || 'Lead') + '</span></td>' +
+          '<td>' + esc(c.industry || '--') + '</td>' +
+          '<td>' + (c.avgLoadsPerMonth || '--') + '</td>' +
+          '<td>' + shortDate(c.createdAt) + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    /* ======== DETAIL PANEL ======== */
+    function openDetail(id) {
+      SRL.request("/api/customers/" + id).then(function(customer) {
+        state.selectedCustomer = customer;
+        document.getElementById("dp-name").textContent = customer.name;
+        renderDetailBody(customer);
+        document.getElementById("detail-panel").classList.add("open");
+        document.getElementById("detail-overlay").classList.add("open");
+      }).catch(function(err) {
+        showToast("Failed to load: " + err.message, "error");
+      });
+    }
+
+    function closeDetail() {
+      document.getElementById("detail-panel").classList.remove("open");
+      document.getElementById("detail-overlay").classList.remove("open");
+      state.selectedCustomer = null;
+    }
+
+    function renderDetailBody(c) {
+      var html = '';
+
+      // Stage + Quick Actions
+      html += '<div class="dp-section">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+      html += '<span class="stage-badge stage-' + (c.status || 'Lead') + '">' + esc(c.status || 'Lead') + '</span>';
+      if (c.type) html += '<span style="font-size:11px;color:var(--gray-400)">' + esc(c.type) + '</span>';
+      html += '</div>';
+      html += '<div class="dp-actions">';
+      html += '<button class="btn-secondary btn-sm" onclick="stageChange(\'Contacted\')">Log Contact</button>';
+      html += '<button class="btn-secondary btn-sm" onclick="stageChange(\'Quoted\')">Send Quote</button>';
+      html += '<button class="btn-primary btn-sm" onclick="advanceStage()">Advance</button>';
+      html += '</div>';
+      html += '</div>';
+
+      // Company Info
+      html += '<div class="dp-section">';
+      html += '<div class="dp-section-title">Company Information</div>';
+      html += '<div class="dp-grid">';
+      html += dpField("Company", c.name);
+      html += dpField("Industry", c.industry || c.industryType || '--');
+      html += dpField("Location", (c.city ? c.city + ', ' + (c.state || '') : '--'));
+      html += dpField("Avg Loads/Mo", c.avgLoadsPerMonth || '--');
+      html += dpField("Credit Status", c.creditStatus || '--');
+      html += dpField("Payment Terms", c.paymentTerms || '--');
+      html += dpField("Annual Revenue", c.annualRevenue ? '$' + shortNum(c.annualRevenue) : '--');
+      html += dpField("Rating", c.rating ? '&#9733;'.repeat(c.rating) + '&#9734;'.repeat(5-c.rating) : '--');
+      html += '</div></div>';
+
+      // Contacts
+      html += '<div class="dp-section">';
+      html += '<div class="dp-section-title">Contacts</div>';
+      if (c.contactName || c.email || c.phone) {
+        html += '<div class="contact-chip">';
+        html += '<div><div class="contact-chip-name">' + esc(c.contactName || 'Primary Contact') + '</div>';
+        html += '<div class="contact-chip-info">' + esc(c.email || '') + (c.phone ? ' &middot; ' + esc(c.phone) : '') + '</div></div>';
+        html += '</div>';
+      }
+      if (c.contacts && c.contacts.length > 0) {
+        c.contacts.forEach(function(ct) {
+          html += '<div class="contact-chip">';
+          html += '<div><div class="contact-chip-name">' + esc(ct.name) + (ct.isPrimary ? ' <span style="font-size:10px;color:var(--gold)">(Primary)</span>' : '') + '</div>';
+          html += '<div class="contact-chip-title">' + esc(ct.title || '') + '</div>';
+          html += '<div class="contact-chip-info">' + esc(ct.email || '') + (ct.phone ? ' &middot; ' + esc(ct.phone) : '') + '</div></div>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+
+      // Notes
+      if (c.notes) {
+        html += '<div class="dp-section">';
+        html += '<div class="dp-section-title">Notes</div>';
+        html += '<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap">' + esc(c.notes) + '</div>';
+        html += '</div>';
+      }
+
+      // Stats
+      if (c.totalShipments || c.totalRevenue) {
+        html += '<div class="dp-section">';
+        html += '<div class="dp-section-title">Performance</div>';
+        html += '<div class="dp-grid">';
+        html += dpField("Total Shipments", c.totalShipments || 0);
+        html += dpField("Total Revenue", c.totalRevenue ? '$' + shortNum(c.totalRevenue) : '$0');
+        html += '</div></div>';
+      }
+
+      document.getElementById("dp-body").innerHTML = html;
+    }
+
+    function advanceStage() {
+      if (!state.selectedCustomer) return;
+      var cur = state.selectedCustomer.status || "Lead";
+      var idx = STAGES.indexOf(cur);
+      if (idx === -1 || idx >= STAGES.length - 1) {
+        showToast("Already at final stage", "error");
+        return;
+      }
+      stageChange(STAGES[idx + 1]);
+    }
+
+    function stageChange(newStage) {
+      if (!state.selectedCustomer) return;
+      SRL.request("/api/customers/" + state.selectedCustomer.id, {
+        method: "PATCH",
+        body: { status: newStage }
+      }).then(function() {
+        state.selectedCustomer.status = newStage;
+        var idx = state.customers.findIndex(function(c) { return c.id === state.selectedCustomer.id; });
+        if (idx !== -1) state.customers[idx].status = newStage;
+        renderDetailBody(state.selectedCustomer);
+        applyFilters();
+        showToast("Moved to " + newStage, "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    function editProspect() {
+      if (!state.selectedCustomer) return;
+      state.editMode = true;
+      state.editId = state.selectedCustomer.id;
+      var c = state.selectedCustomer;
+      document.getElementById("prospect-modal-title").textContent = "Edit Prospect";
+      document.getElementById("save-prospect-btn").textContent = "Save Changes";
+      document.getElementById("pf-name").value = c.name || "";
+      document.getElementById("pf-contactName").value = c.contactName || "";
+      document.getElementById("pf-email").value = c.email || "";
+      document.getElementById("pf-phone").value = c.phone || "";
+      document.getElementById("pf-industry").value = c.industry || "";
+      document.getElementById("pf-city").value = c.city || "";
+      document.getElementById("pf-state").value = c.state || "";
+      document.getElementById("pf-avgLoads").value = c.avgLoadsPerMonth || "";
+      document.getElementById("pf-notes").value = c.notes || "";
+      closeDetail();
+      document.getElementById("new-prospect-modal").classList.add("open");
+    }
+
+    /* ======== NEW PROSPECT ======== */
+    function openNewProspectModal() {
+      state.editMode = false;
+      state.editId = null;
+      document.getElementById("prospect-modal-title").textContent = "New Prospect";
+      document.getElementById("save-prospect-btn").textContent = "Create";
+      clearProspectForm();
+      document.getElementById("new-prospect-modal").classList.add("open");
+    }
+
+    function closeProspectModal() {
+      document.getElementById("new-prospect-modal").classList.remove("open");
+      document.getElementById("prospect-error").className = "form-error";
+    }
+
+    function saveProspect() {
+      var errEl = document.getElementById("prospect-error");
+      errEl.className = "form-error";
+      var name = document.getElementById("pf-name").value.trim();
+      if (!name) {
+        errEl.textContent = "Company name is required.";
+        errEl.className = "form-error visible";
+        return;
+      }
+
+      var body = {
+        name: name,
+        contactName: document.getElementById("pf-contactName").value.trim() || undefined,
+        email: document.getElementById("pf-email").value.trim() || undefined,
+        phone: document.getElementById("pf-phone").value.trim() || undefined,
+        industry: document.getElementById("pf-industry").value.trim() || undefined,
+        city: document.getElementById("pf-city").value.trim() || undefined,
+        state: document.getElementById("pf-state").value.trim().toUpperCase() || undefined,
+        avgLoadsPerMonth: parseInt(document.getElementById("pf-avgLoads").value) || undefined,
+        notes: document.getElementById("pf-notes").value.trim() || undefined
+      };
+
+      if (!state.editMode) {
+        body.status = "Lead";
+        var equip = document.getElementById("pf-equipment").value;
+        if (equip) body.preferredEquipment = [equip];
+      }
+
+      var method = state.editMode ? "PATCH" : "POST";
+      var url = state.editMode ? "/api/customers/" + state.editId : "/api/customers";
+
+      var btn = document.getElementById("save-prospect-btn");
+      btn.disabled = true;
+
+      SRL.request(url, { method: method, body: body }).then(function() {
+        showToast(state.editMode ? "Prospect updated" : "Prospect created", "success");
+        closeProspectModal();
+        fetchCustomers();
+      }).catch(function(err) {
+        errEl.textContent = err.message || "Failed";
+        errEl.className = "form-error visible";
+      }).finally(function() { btn.disabled = false; });
+    }
+
+    function clearProspectForm() {
+      ["pf-name","pf-contactName","pf-email","pf-phone","pf-industry","pf-city","pf-state","pf-avgLoads","pf-notes"].forEach(function(id) {
+        document.getElementById(id).value = "";
+      });
+      document.getElementById("pf-equipment").selectedIndex = 0;
+    }
+
+    /* ======== CSV IMPORT ======== */
+    function openCSVModal() {
+      document.getElementById("csv-modal").classList.add("open");
+      document.getElementById("csv-step-upload").style.display = "";
+      document.getElementById("csv-step-preview").style.display = "none";
+      document.getElementById("csv-import-btn").style.display = "none";
+      state.csvData = null;
+      state.csvHeaders = [];
+      document.getElementById("csv-file").value = "";
+    }
+
+    function closeCSVModal() {
+      document.getElementById("csv-modal").classList.remove("open");
+    }
+
+    // Drag-drop on the zone
+    (function() {
+      var zone = document.getElementById("csv-drop");
+      if (!zone) return;
+      zone.addEventListener("dragover", function(e) { e.preventDefault(); zone.classList.add("dragover"); });
+      zone.addEventListener("dragleave", function() { zone.classList.remove("dragover"); });
+      zone.addEventListener("drop", function(e) {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        var files = e.dataTransfer.files;
+        if (files.length > 0) parseCSV(files[0]);
+      });
+    })();
+
+    function handleCSVFile(input) {
+      if (input.files.length > 0) parseCSV(input.files[0]);
+    }
+
+    function parseCSV(file) {
+      if (!file.name.endsWith(".csv")) { showToast("Please upload a .csv file", "error"); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var text = e.target.result;
+        var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+        if (lines.length < 2) { showToast("CSV needs a header row and at least 1 data row", "error"); return; }
+
+        state.csvHeaders = parseCSVLine(lines[0]);
+        state.csvData = [];
+        for (var i = 1; i < lines.length; i++) {
+          var vals = parseCSVLine(lines[i]);
+          if (vals.length > 0) state.csvData.push(vals);
+        }
+
+        renderCSVPreview();
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSVLine(line) {
+      var result = [];
+      var current = "";
+      var inQuotes = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (inQuotes) {
+          if (ch === '"' && line[i+1] === '"') { current += '"'; i++; }
+          else if (ch === '"') inQuotes = false;
+          else current += ch;
+        } else {
+          if (ch === '"') inQuotes = true;
+          else if (ch === ',') { result.push(current.trim()); current = ""; }
+          else current += ch;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
+    var CSV_FIELD_MAP = [
+      {value:"name", label:"Company Name"},
+      {value:"contactName", label:"Contact Name"},
+      {value:"email", label:"Email"},
+      {value:"phone", label:"Phone"},
+      {value:"city", label:"City"},
+      {value:"state", label:"State"},
+      {value:"industry", label:"Industry"},
+      {value:"avgLoadsPerMonth", label:"Avg Loads/Mo"},
+      {value:"notes", label:"Notes"},
+      {value:"_skip", label:"(Skip)"}
+    ];
+
+    function renderCSVPreview() {
+      document.getElementById("csv-step-upload").style.display = "none";
+      document.getElementById("csv-step-preview").style.display = "";
+      document.getElementById("csv-import-btn").style.display = "";
+      document.getElementById("csv-row-count").textContent = state.csvData.length + " rows to import";
+
+      var headers = state.csvHeaders;
+      var preview = state.csvData.slice(0, 5);
+
+      // Auto-detect column mapping
+      var autoMap = headers.map(function(h) {
+        var hl = h.toLowerCase().replace(/[^a-z]/g, "");
+        if (hl.indexOf("company") !== -1 || hl === "name") return "name";
+        if (hl.indexOf("contact") !== -1) return "contactName";
+        if (hl.indexOf("email") !== -1) return "email";
+        if (hl.indexOf("phone") !== -1) return "phone";
+        if (hl.indexOf("city") !== -1) return "city";
+        if (hl.indexOf("state") !== -1) return "state";
+        if (hl.indexOf("industry") !== -1) return "industry";
+        if (hl.indexOf("load") !== -1 || hl.indexOf("volume") !== -1) return "avgLoadsPerMonth";
+        if (hl.indexOf("note") !== -1) return "notes";
+        return "_skip";
+      });
+
+      var html = '<table class="csv-preview-table"><thead><tr>';
+      headers.forEach(function(h, i) {
+        html += '<th>' + esc(h) + '<br>';
+        html += '<select id="csv-map-' + i + '">';
+        CSV_FIELD_MAP.forEach(function(fm) {
+          html += '<option value="' + fm.value + '"' + (autoMap[i] === fm.value ? ' selected' : '') + '>' + fm.label + '</option>';
+        });
+        html += '</select></th>';
+      });
+      html += '</tr></thead><tbody>';
+      preview.forEach(function(row) {
+        html += '<tr>' + headers.map(function(_, i) {
+          return '<td>' + esc(row[i] || '') + '</td>';
+        }).join("") + '</tr>';
+      });
+      html += '</tbody></table>';
+
+      document.getElementById("csv-preview-container").innerHTML = html;
+    }
+
+    function executeCSVImport() {
+      if (!state.csvData || state.csvData.length === 0) return;
+
+      var mapping = state.csvHeaders.map(function(_, i) {
+        return document.getElementById("csv-map-" + i).value;
+      });
+
+      // Check name is mapped
+      if (mapping.indexOf("name") === -1) {
+        showToast("You must map a 'Company Name' column", "error");
+        return;
+      }
+
+      var btn = document.getElementById("csv-import-btn");
+      btn.disabled = true;
+      btn.textContent = "Importing...";
+
+      var promises = state.csvData.map(function(row) {
+        var body = { status: "Lead" };
+        mapping.forEach(function(field, i) {
+          if (field === "_skip" || !row[i]) return;
+          if (field === "avgLoadsPerMonth") body[field] = parseInt(row[i]) || undefined;
+          else body[field] = row[i];
+        });
+        if (!body.name) return Promise.resolve(null);
+        return SRL.request("/api/customers", { method: "POST", body: body }).catch(function() { return null; });
+      });
+
+      Promise.allSettled(promises).then(function(results) {
+        var success = results.filter(function(r) { return r.status === "fulfilled" && r.value; }).length;
+        showToast(success + " of " + state.csvData.length + " prospects imported", "success");
+        closeCSVModal();
+        fetchCustomers();
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "Import as Leads";
+      });
+    }
+
+    /* ======== HELPERS ======== */
+    function dpField(label, value) {
+      return '<div class="dp-field"><label>' + label + '</label><span>' + (value || '--') + '</span></div>';
+    }
+
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    function shortDate(d) {
+      if (!d) return "--";
+      return new Date(d).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
+    }
+
+    function shortNum(n) {
+      if (!n) return "0";
+      if (n >= 1000000) return (n/1000000).toFixed(1)+"M";
+      if (n >= 1000) return (n/1000).toFixed(1)+"K";
+      return Number(n).toLocaleString();
+    }
+
+    function formatRole(role) {
+      var m = {ADMIN:"Administrator",BROKER:"Account Executive",DISPATCH:"Dispatch",OPERATIONS:"Operations",CEO:"CEO"};
+      return m[role] || role;
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type||"success") + " show";
+      setTimeout(function(){ el.classList.remove("show"); }, 3000);
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+</body>
+</html>

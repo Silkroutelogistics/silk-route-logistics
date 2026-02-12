@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Training &amp; SOPs - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Training Module Styles ========== */
+    .training-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* --- Category Sidebar --- */
+    .cat-sidebar {
+      width: 240px;
+      border-right: 1px solid var(--gray-200);
+      background: var(--white);
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .cat-title {
+      padding: 16px 16px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cat-list { list-style: none; }
+    .cat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--gray-600);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .cat-item:hover { background: var(--gray-50); color: var(--navy); }
+    .cat-item.active {
+      background: var(--gold-dim);
+      color: var(--gold);
+      border-left-color: var(--gold);
+      font-weight: 600;
+    }
+    .cat-icon { font-size: 16px; width: 20px; text-align: center; }
+    .cat-count {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--gray-100);
+      padding: 1px 6px;
+      border-radius: 8px;
+      color: var(--gray-500);
+    }
+
+    /* --- Main Content --- */
+    .training-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+      background: var(--gray-50);
+    }
+
+    /* --- Search --- */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .search-bar input {
+      flex: 1;
+      max-width: 400px;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      background: var(--white);
+    }
+    .search-bar input:focus { border-color: var(--gold); }
+
+    /* --- SOP Card --- */
+    .sop-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border-left: 4px solid var(--gold);
+    }
+    .sop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .sop-header:hover { background: var(--gray-50); }
+    .sop-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sop-number {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+      background: var(--gold-dim);
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .sop-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .sop-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sop-who {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .who-ae { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .who-all { background: rgba(34,197,94,0.1); color: #15803D; }
+    .who-admin { background: rgba(239,68,68,0.1); color: var(--red); }
+    .sop-chevron {
+      font-size: 18px;
+      color: var(--gray-400);
+      transition: transform 0.2s;
+    }
+    .sop-card.open .sop-chevron { transform: rotate(90deg); }
+    .sop-body {
+      display: none;
+      padding: 0 20px 20px;
+    }
+    .sop-card.open .sop-body { display: block; }
+
+    /* --- Context / When to Use --- */
+    .sop-context {
+      background: var(--gray-50);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--gray-600);
+      border-left: 3px solid var(--navy);
+    }
+    .sop-context strong { color: var(--navy); }
+
+    /* --- Steps --- */
+    .sop-steps { list-style: none; counter-reset: step; }
+    .sop-step {
+      position: relative;
+      padding: 12px 0 12px 48px;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--gray-700);
+    }
+    .sop-step:last-child { border-bottom: none; }
+    .sop-step::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .step-title {
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 2px;
+    }
+    .step-detail { color: var(--gray-500); font-size: 13px; }
+    .step-tip {
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: var(--gold-dim);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--gold);
+    }
+    .step-tip strong { color: #8B6914; }
+
+    /* --- No Results --- */
+    .no-results {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+    }
+    .no-results p { font-size: 16px; }
+
+    @media (max-width: 1024px) {
+      .cat-sidebar { width: 200px; }
+      .training-content { padding: 20px; }
+    }
+    @media (max-width: 640px) {
+      .training-layout { flex-direction: column; }
+      .cat-sidebar { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid var(--gray-200); }
+      .cat-list { display: flex; overflow-x: auto; }
+      .cat-item { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
+      .cat-item.active { border-left: none; border-bottom-color: var(--gold); }
+      .sop-header-left { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .sop-meta { margin-top: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+        <a href="/ae/loads.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Load Board</a>
+        <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
+        <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
+        <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/training.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+      </div>
+    </aside>
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <main class="main" style="display:flex;flex-direction:column">
+      <div class="main-header" style="flex-shrink:0">
+        <h1>Training &amp; Standard Operating Procedures</h1>
+        <p>Step-by-step guides for every AE workflow</p>
+      </div>
+
+      <div class="training-layout">
+        <!-- Category Sidebar -->
+        <div class="cat-sidebar">
+          <div class="cat-title">Categories</div>
+          <ul class="cat-list" id="cat-list"></ul>
+        </div>
+
+        <!-- Content Area -->
+        <div class="training-content" id="training-content">
+          <div class="search-bar">
+            <input type="text" id="sop-search" placeholder="Search procedures..." oninput="renderSOPs()">
+          </div>
+          <div id="sop-container"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* ======== SOP DATABASE ======== */
+    var CATEGORIES = [
+      { id: "load", label: "Load Management", icon: "&#128666;" },
+      { id: "carrier", label: "Carrier Ops", icon: "&#128101;" },
+      { id: "rate", label: "Rate & Revenue", icon: "&#128176;" },
+      { id: "comm", label: "Communications", icon: "&#128172;" },
+      { id: "crm", label: "CRM & Prospects", icon: "&#128188;" },
+      { id: "docs", label: "Documents", icon: "&#128196;" },
+      { id: "compliance", label: "Compliance", icon: "&#128737;" },
+      { id: "automation", label: "Automation (C)", icon: "&#9881;" },
+      { id: "all", label: "All Procedures", icon: "&#128218;" }
+    ];
+
+    var SOPS = [
+      {
+        id: "SOP-001",
+        title: "Creating a New Load",
+        category: "load",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Use this procedure when a shipper requests freight transportation. This creates a load entry visible on the load board for carrier matching.",
+        steps: [
+          {
+            title: "Navigate to Load Board",
+            detail: "Click 'Load Board' in the sidebar or go to /ae/loads.html. Click the '+ New Load' button in the top right corner.",
+            tip: null
+          },
+          {
+            title: "Select Customer / Shipper",
+            detail: "Choose the shipper from the dropdown. If this is a new shipper, add them in CRM first (/ae/crm.html) before creating the load.",
+            tip: "Tip: Having the shipper in CRM first links the load to their account for reporting and billing."
+          },
+          {
+            title: "Enter Origin & Destination",
+            detail: "Fill in the pickup city, state (2-letter code), and ZIP code. Repeat for the delivery destination. Optionally add the facility company name.",
+            tip: null
+          },
+          {
+            title: "Set Schedule",
+            detail: "Enter the pickup date/time and delivery date/time. These should reflect the shipper's requested windows.",
+            tip: "Tip: Leave buffer time for potential delays. Reefer loads typically need 2-4 extra hours for pre-cool."
+          },
+          {
+            title: "Configure Freight Details",
+            detail: "Select the equipment type (Dry Van, Reefer, Flatbed, Step Deck). Enter weight in pounds and a commodity description.",
+            tip: null
+          },
+          {
+            title: "Set Shipper Rate",
+            detail: "Enter the agreed shipper rate (what we charge the customer). Distance can be auto-calculated or entered manually.",
+            tip: "Tip: Target a minimum 15% margin. Check market rates on DAT before quoting."
+          },
+          {
+            title: "Add Special Instructions & Submit",
+            detail: "Enter any special handling, appointment numbers, or dock hours. Click 'Create Load' to post it with status 'Posted' on the load board.",
+            tip: null
+          }
+        ]
+      },
+      {
+        id: "SOP-002",
+        title: "Assigning a Carrier",
+        category: "carrier",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "After a load is posted, assign a qualified carrier. Carrier selection impacts service quality, profitability, and compliance.",
+        steps: [
+          {
+            title: "Open the Load Detail",
+            detail: "From the Load Board, click on the load row to open the detail view. Verify the load details are accurate before proceeding.",
+            tip: null
+          },
+          {
+            title: "Review Available Carriers",
+            detail: "In the right panel under 'Carrier Assignment', the dropdown shows carriers filtered by matching equipment type. Review their MC#, truck count, and performance score.",
+            tip: "Tip: Prioritize carriers with higher SRCPP tier (Platinum > Gold > Silver > Bronze). They have proven reliability."
+          },
+          {
+            title: "Verify Carrier Compliance",
+            detail: "Before assigning, check that the carrier's insurance is current, authority is active, and they have no critical compliance alerts. Check the Compliance section on the dashboard.",
+            tip: "Tip: Never assign a carrier with expired insurance. This creates immediate liability exposure."
+          },
+          {
+            title: "Negotiate Carrier Rate",
+            detail: "Use the Rate Calculator on the right panel. Enter the carrier's quoted rate and verify the margin meets minimum targets (typically 15%+).",
+            tip: null
+          },
+          {
+            title: "Assign and Confirm",
+            detail: "Select the carrier from the dropdown and click 'Assign Carrier'. Then update the load status to 'Booked' or 'Dispatched' using the status dropdown.",
+            tip: "Tip: Generate a Rate Confirmation immediately after assignment. Go to Documents section or use the rate-con generation feature."
+          },
+          {
+            title: "Communicate Assignment",
+            detail: "Use the Communications Hub to send an email or call the carrier confirming the assignment. Provide pickup details, contact information, and check-call requirements.",
+            tip: null
+          }
+        ]
+      },
+      {
+        id: "SOP-003",
+        title: "Using the Rate Calculator",
+        category: "rate",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "The Rate Calculator is available on every load detail view (right panel). Use it to ensure profitability before confirming any load.",
+        steps: [
+          {
+            title: "Open Rate Calculator",
+            detail: "Navigate to any load's detail view. The Rate Calculator is always visible in the right panel, pre-populated with the load's current rates.",
+            tip: null
+          },
+          {
+            title: "Enter Shipper Rate",
+            detail: "This is what the customer pays us. It should be pre-filled from the load creation. Adjust if the customer has negotiated a different rate.",
+            tip: null
+          },
+          {
+            title: "Enter Carrier Rate",
+            detail: "This is what we pay the carrier. Get quotes from multiple carriers before settling on a rate. Enter the agreed carrier rate.",
+            tip: "Tip: Always get at least 3 carrier quotes for competitive pricing. Use DAT rate data as a benchmark."
+          },
+          {
+            title: "Review Fuel Surcharge",
+            detail: "Enter any fuel surcharge amount. This is typically passed through from the shipper to the carrier, but verify both sides match.",
+            tip: null
+          },
+          {
+            title: "Analyze the Results",
+            detail: "The calculator auto-displays: Margin $ (shipper - carrier), Margin % (target 15%+), Fuel Surcharge, and Net Profit. Red values indicate negative margins.",
+            tip: "Tip: Margin below 10% is yellow (warning). Below 0% is red (loss). Never proceed with negative margins without management approval."
+          },
+          {
+            title: "Save Rates",
+            detail: "Click 'Save Rates' to persist the values to the load record. This updates the load's financial data for reporting and invoicing.",
+            tip: null
+          }
+        ]
+      },
+      {
+        id: "SOP-004",
+        title: "Logging a Communication",
+        category: "comm",
+        who: "All Staff",
+        whoClass: "who-all",
+        context: "Every interaction with a carrier or shipper should be logged. This creates an audit trail and ensures team visibility into all communications.",
+        steps: [
+          {
+            title: "Open Communications Hub",
+            detail: "Navigate to /ae/communications.html. The left panel shows all contacts (carriers and shippers).",
+            tip: null
+          },
+          {
+            title: "Select the Contact",
+            detail: "Search for the carrier or shipper by name, MC#, or company. Click their name to load the conversation thread. Use the tabs (All/Carriers/Shippers) to filter.",
+            tip: null
+          },
+          {
+            title: "Choose Communication Type",
+            detail: "At the bottom, select 'Note' tab for manual logging (phone calls, meetings, etc.) or 'Email' tab to send an email.",
+            tip: null
+          },
+          {
+            title: "Log the Communication",
+            detail: "For notes: Type a summary of the interaction (e.g., 'Called about load SRL-123, confirmed pickup for 8am tomorrow'). Press Enter or click Send.",
+            tip: "Tip: Be specific. Include load references, dates discussed, and any commitments made. Future you will thank present you."
+          },
+          {
+            title: "Verify in Thread",
+            detail: "The new entry appears in the conversation thread with a timestamp and your name. All team members can see this record.",
+            tip: null
+          }
+        ]
+      },
+      {
+        id: "SOP-005",
+        title: "Sending an Email",
+        category: "comm",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Use the Communications Hub to send branded emails to carriers and shippers. Templates are available for common scenarios.",
+        steps: [
+          {
+            title: "Select Contact & Email Tab",
+            detail: "In the Communications Hub, select the contact, then click the 'Email' tab at the bottom compose bar.",
+            tip: null
+          },
+          {
+            title: "Fill Email Fields",
+            detail: "The 'To' field auto-fills from the contact's email. Enter a subject line. Optionally select a template from the dropdown.",
+            tip: null
+          },
+          {
+            title: "Choose a Template (Optional)",
+            detail: "Available templates: Introduction, Follow Up, Rate Quote, Load Confirmation, Invoice, Thank You. Selecting a template pre-fills the subject and body with SRL-branded content.",
+            tip: "Tip: Templates use SRL branding (navy header, gold accents). They're professional and consistent. Always prefer templates over plain text for first contacts."
+          },
+          {
+            title: "Customize the Message",
+            detail: "Edit the email body as needed. Add specific details like load numbers, rates, or scheduling information. The template provides the structure; you add the specifics.",
+            tip: null
+          },
+          {
+            title: "Send",
+            detail: "Click 'Send'. The email is delivered via Resend (or logged in dev mode). A communication record is automatically created in the thread.",
+            tip: null
+          }
+        ]
+      },
+      {
+        id: "SOP-006",
+        title: "Importing Prospects via CSV",
+        category: "crm",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "When you receive a list of potential shippers (from trade shows, purchased lists, referrals), import them as leads in the CRM pipeline.",
+        steps: [
+          {
+            title: "Prepare Your CSV",
+            detail: "Ensure your CSV file has column headers. Common columns: Company Name, Contact Name, Email, Phone, City, State, Industry. The file must have a .csv extension.",
+            tip: "Tip: Required: at least a 'Company Name' column. All other fields are optional but improve lead quality."
+          },
+          {
+            title: "Open CSV Import",
+            detail: "Go to /ae/crm.html and click 'Import CSV' button at the top. The import modal opens with a drop zone.",
+            tip: null
+          },
+          {
+            title: "Upload the File",
+            detail: "Drag and drop the CSV file onto the drop zone, or click to browse. The system reads the file and shows a preview.",
+            tip: null
+          },
+          {
+            title: "Map Columns",
+            detail: "For each CSV column, select the matching SRL field from the dropdown. The system auto-detects common column names (Company, Email, Phone, etc.). Set unmapped columns to '(Skip)'.",
+            tip: "Tip: Always verify the mapping before importing. A mismatched column can create bad data that's harder to fix than to prevent."
+          },
+          {
+            title: "Review Preview",
+            detail: "Check the first 5 rows shown in the preview table. Verify the data looks correct under each mapped field.",
+            tip: null
+          },
+          {
+            title: "Import",
+            detail: "Click 'Import as Leads'. All records are created with stage 'Lead' in the CRM pipeline. The system reports how many were successfully imported.",
+            tip: "Tip: After import, go to the Board view and start moving prospects through the pipeline: Lead > Contacted > Quoted > Negotiating > Won > Active."
+          }
+        ]
+      },
+      {
+        id: "SOP-007",
+        title: "Uploading Documents",
+        category: "docs",
+        who: "All Staff",
+        whoClass: "who-all",
+        context: "All load-related documents (BOL, POD, Rate Confirmation, insurance certificates) should be uploaded to the system for compliance and record-keeping.",
+        steps: [
+          {
+            title: "Determine Document Type",
+            detail: "Common document types: BOL (Bill of Lading), POD (Proof of Delivery), Rate Confirmation, W-9, Certificate of Insurance (COI), Authority Letter. Know which type you're uploading.",
+            tip: null
+          },
+          {
+            title: "Navigate to the Load or Carrier",
+            detail: "For load documents: Open the load detail view on the Load Board. For carrier documents: Navigate to the carrier's profile.",
+            tip: null
+          },
+          {
+            title: "Upload the File",
+            detail: "Use the document upload area. Accepted formats: PDF, JPEG, PNG, DOC, DOCX. Maximum file size: 10MB. You can upload multiple files at once (up to 10).",
+            tip: "Tip: Always scan/photograph documents in good lighting. Unreadable documents may be rejected during audit."
+          },
+          {
+            title: "Verify Upload",
+            detail: "After upload, the document appears in the Documents section with filename, upload date, and a 'View' link. Click View to verify the correct document was uploaded.",
+            tip: null
+          },
+          {
+            title: "Generate Rate Confirmation",
+            detail: "For rate confirmations: Use the 'Generate Rate Con' feature instead of manual upload. This creates a branded SRL rate confirmation with all load details pre-filled.",
+            tip: "Tip: Always generate rate confirmations BEFORE the carrier starts driving. This is your legal protection."
+          }
+        ]
+      },
+      {
+        id: "SOP-008",
+        title: "Carrier Onboarding Process",
+        category: "carrier",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "When a new carrier registers, they need to be verified and approved before they can accept loads.",
+        steps: [
+          { title: "Carrier Registers", detail: "The carrier self-registers at /carrier/login.html with company info, MC/DOT numbers, equipment types, and operating regions. They receive a temporary password.", tip: null },
+          { title: "Document Upload", detail: "Carrier uploads W-9, Certificate of Insurance (COI), and Operating Authority Letter through their portal or during registration.", tip: null },
+          { title: "FMCSA Verification", detail: "The system automatically queries the FMCSA SAFER database to verify the carrier's DOT number, operating authority status, and insurance on file.", tip: "Tip: If FMCSA data is unavailable (demo mode), the system will still proceed but flag it for manual review." },
+          { title: "Admin Review", detail: "Navigate to Carriers list in the AE console. Review the carrier's profile, FMCSA verification results, and uploaded documents.", tip: null },
+          { title: "Approve or Reject", detail: "Use the Verify action: set status to APPROVED (with safety score) or REJECTED. Approved carriers receive a notification and can immediately start accepting loads.", tip: "Tip: Always verify insurance expiry dates and authority status before approving." }
+        ]
+      },
+      {
+        id: "SOP-009",
+        title: "Carrier Load Acceptance Flow",
+        category: "carrier",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Understand the carrier-side flow when a carrier browses and accepts a load from the Carrier Portal.",
+        steps: [
+          { title: "Load Posting", detail: "Post loads with status POSTED. These appear in the carrier's Available Loads view, filtered by their equipment type.", tip: null },
+          { title: "Carrier Accepts", detail: "Carrier clicks Accept, provides driver/truck/trailer info. Load status changes to BOOKED and you receive a notification.", tip: null },
+          { title: "Carrier Status Updates", detail: "Carrier progresses the load: AT_PICKUP → LOADED → IN_TRANSIT → AT_DELIVERY → DELIVERED. Each update creates a check call.", tip: "Tip: If a carrier hasn't updated status in 4+ hours, the dashboard alert strip turns red." },
+          { title: "Post-Delivery", detail: "After DELIVERED status, proceed with invoicing and carrier pay. The carrier can track their payment in their portal.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-010",
+        title: "SRCPP Loyalty Program Management",
+        category: "carrier",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "The Silk Route Carrier Performance Program (SRCPP) rewards carriers with tier-based perks including bonus payments and reduced QuickPay fees.",
+        steps: [
+          { title: "Understand Tiers", detail: "Bronze (0-89), Silver (90-94), Gold (95-97), Platinum (98+). Score is weighted: on-time pickup 20%, on-time delivery 20%, GPS compliance 15%, claims 15%, communication 10%, docs 10%, acceptance rate 10%.", tip: null },
+          { title: "Review Carrier Scorecards", detail: "Access via Carriers list → carrier detail → Scorecard. Shows latest score, component breakdown, and history.", tip: null },
+          { title: "Tier Recalculation", detail: "Admin can trigger tier recalculation via the SRCPP admin panel. This re-evaluates all carriers and sends notifications for tier changes.", tip: "Tip: Recalculate tiers monthly after the scorecard period closes." },
+          { title: "Perks Communication", detail: "Gold carriers get 1.5% bonus on loads and reduced QuickPay (1.5%). Platinum gets 3% bonus, instant QuickPay (1%), and dedicated account manager.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-011",
+        title: "Processing Carrier Payments",
+        category: "rate",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "After a load is delivered, carrier payment must be created and processed through the payment workflow.",
+        steps: [
+          { title: "Create Carrier Pay", detail: "Navigate to Carrier Pay section. Create payment with carrier ID, load ID, amount. System auto-calculates QuickPay discount if applicable.", tip: null },
+          { title: "QuickPay Requests", detail: "Carriers can request QuickPay from their portal. Fee is deducted automatically based on their tier. Review these in the Carrier Pay queue.", tip: "Tip: QuickPay payments should be prioritized — they're promised within 24-48 hours." },
+          { title: "Batch Processing", detail: "Use batch actions to Schedule, Process, or Pay multiple carrier payments at once. Select payments and apply the action.", tip: null },
+          { title: "Payment Verification", detail: "Verify all required documents (signed rate con, BOL, POD, carrier invoice) before marking as PAID.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-012",
+        title: "Compliance Monitoring",
+        category: "compliance",
+        who: "All Staff",
+        whoClass: "who-all",
+        context: "Monitor carrier compliance including insurance expiration, FMCSA authority, and safety metrics to prevent service disruptions.",
+        steps: [
+          { title: "Run Compliance Scan", detail: "Navigate to Compliance → Run Scan. This checks all active drivers, trucks, trailers, and carriers for expiring documents and certifications.", tip: null },
+          { title: "Review Alerts", detail: "Alerts are categorized as CRITICAL (expired) or WARNING (expiring within 30 days). Review the alerts list and prioritize critical items.", tip: "Tip: Schedule weekly compliance scans. Set a Monday morning reminder." },
+          { title: "Contact Carriers", detail: "For carrier-specific alerts (insurance expiry), contact the carrier through the Communications Hub. Use the template for compliance reminder emails.", tip: null },
+          { title: "Resolve Alerts", detail: "After receiving updated documents, use the Resolve action on the alert. Dismissed alerts won't reappear until the next scan.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-013",
+        title: "CSA Score Monitoring",
+        category: "compliance",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Monitor FMCSA CSA BASIC scores and SRL performance metrics for carriers to maintain safety standards.",
+        steps: [
+          { title: "Check BASIC Scores", detail: "Carrier's CSA BASIC scores are synced from FMCSA: Unsafe Driving, Hours of Service, Driver Fitness, Drug & Alcohol, Vehicle Maintenance, HazMat, Crash Indicator.", tip: null },
+          { title: "Identify At-Risk Carriers", detail: "Scores above 65% (75% for some categories) indicate the carrier may face FMCSA intervention. Flag these carriers for review.", tip: "Tip: A carrier with high CSA scores is a liability risk. Consider placing them on probation or restricting load access." },
+          { title: "Review SRL Metrics", detail: "SRL tracks its own metrics: on-time pickup/delivery, communication, claims ratio, document timeliness. These feed into the SRCPP score.", tip: null },
+          { title: "Take Action", detail: "For carriers with consistently poor scores: schedule a performance review call, adjust their tier manually if needed, or suspend their account.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-014",
+        title: "Carrier Portal Support",
+        category: "carrier",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Help carriers navigate their portal, reset passwords, and resolve common issues.",
+        steps: [
+          { title: "First Login Issues", detail: "Carriers must change their password on first login. If they're stuck, they can use the carrier-auth/force-change-password endpoint or contact their AE.", tip: null },
+          { title: "Load Acceptance Problems", detail: "If a carrier can't see available loads: verify their account is APPROVED, check their equipment types match posted loads, and ensure their compliance documents are current.", tip: "Tip: Most 'no loads available' complaints are because the carrier's equipment type doesn't match posted loads." },
+          { title: "Payment Questions", detail: "Direct carriers to the Payments section of their portal. Explain payment timelines: Standard is Net 30 from POD, QuickPay is 24-48 hours with fee.", tip: null },
+          { title: "Compliance Help", detail: "Walk carriers through uploading documents and understanding their CSA scores. The carrier portal has a Help section with SOPs 008-015.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-015",
+        title: "Using Smart Carrier Matching",
+        category: "automation",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "When assigning a carrier to a posted load, use Smart Match to find the best-fit carrier based on lane history, rate competitiveness, SRCPP tier, and availability.",
+        steps: [
+          { title: "Open Load Detail", detail: "From the Load Board, click a load in POSTED status to open the detail panel.", tip: null },
+          { title: "Click 'Caravan Match' Tab", detail: "In the right panel, switch to the 'Caravan Match' tab. Click the 'Run Smart Match' button to trigger the matching algorithm.", tip: null },
+          { title: "Review Match Results", detail: "The system returns up to 10 ranked carriers. Each card shows: match score (0-100), lane score, rate score, SRCPP tier score, and availability score.", tip: "Tip: Lane Score (0-30) is the biggest differentiator. Carriers who have completed the exact same lane get 30 points." },
+          { title: "Understand the Scoring", detail: "Lane: exact lane=30, preferred=25, origin state=20, dest state=15. Rate: within 5%=25, 10%=20, 15%=15. SRCPP: Platinum=25, Gold=20, Silver=15, Bronze=10. Availability: no conflicts=20, delivering near origin=15.", tip: null },
+          { title: "Assign the Carrier", detail: "Click 'Assign' on the best match. The system assigns the carrier, changes load status to BOOKED, and auto-creates check-call schedules.", tip: "Tip: If fewer than 3 Caravan matches appear, the system suggests posting to DAT for wider coverage." },
+          { title: "Self-Learning", detail: "The system tracks which matched carrier was assigned and whether the load completed successfully. Over time, match accuracy improves.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-016",
+        title: "Check-Call Automation & Responses",
+        category: "automation",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "When a carrier is assigned, automated check-calls are scheduled at key milestones. The system sends SMS texts and processes carrier responses.",
+        steps: [
+          { title: "Automatic Scheduling", detail: "When a carrier is assigned via Smart Match (or manually triggered), the system creates 5 check-call slots: Pre-Pickup (-2h), At Pickup, Midpoint, Pre-Delivery (-2h), At Delivery.", tip: null },
+          { title: "SMS Dispatch (Every 15 min)", detail: "A cron job runs every 15 minutes. When a scheduled check-call time passes, an SMS is sent to the carrier: 'Reply: 1=At Pickup, 2=Loaded, 3=In Transit, 4=At Delivery, 5=Delivered'.", tip: "Tip: SMS goes via OpenPhone API. In demo mode, messages are logged to the console." },
+          { title: "Carrier Response Handling", detail: "When the carrier replies (e.g., '3' for In Transit), the system auto-updates the load status and creates a check-call record. No AE intervention needed.", tip: null },
+          { title: "Missed Check-Call (AMBER)", detail: "If no response in 30 minutes: an AMBER alert notification is sent to the AE, and the system auto-retries once.", tip: null },
+          { title: "Escalation (RED)", detail: "If still no response after retry: a RED 'Carrier Unresponsive' alert is created. The check-call is marked ESCALATED. AE must call the carrier manually.", tip: "Tip: Two or more ESCALATED check-calls feed into the Risk Engine and increase the load's risk score." },
+          { title: "View Schedule", detail: "In the load detail, you can view the check-call schedule showing all 5 slots with their status (Pending, Sent, Responded, Missed, Escalated).", tip: null }
+        ]
+      },
+      {
+        id: "SOP-017",
+        title: "Risk Flagging Engine & Alerts",
+        category: "automation",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "The Risk Engine runs every 30 minutes, scoring all active loads on a GREEN/AMBER/RED scale. Use alerts to prioritize which loads need immediate attention.",
+        steps: [
+          { title: "Understand Risk Levels", detail: "GREEN (0-20 pts): Normal. AMBER (21-40 pts): Needs monitoring, in-app notification. RED (41+ pts): Urgent, in-app + email alert to AE.", tip: null },
+          { title: "Risk Factors", detail: "Unassigned 2h=+30, 4h=+50. Missed check-call=+25 (2+=+50). Pickup unconfirmed within 4h=+40. Low carrier OT score=+15. Bronze tier=+10. Low margin (<15%)=+15.", tip: "Tip: The biggest risk factor is an unassigned load approaching pickup. Always prioritize POSTED loads near their pickup date." },
+          { title: "Responding to AMBER Alerts", detail: "AMBER alerts appear in your notifications. Review the load, check carrier communication, and verify the load is on track. Often a quick call resolves the issue.", tip: null },
+          { title: "Responding to RED Alerts", detail: "RED alerts trigger both notification and email. Immediately review the load. If unassigned with pickup imminent, consider triggering Fall-Off Recovery or manual re-assignment.", tip: null },
+          { title: "On-Demand Risk Check", detail: "You can check any load's risk score on demand from the load detail panel. This shows the current score, active risk factors, and recent risk log history.", tip: null },
+          { title: "Risk Log History", detail: "All risk assessments are logged. Over time, you can see patterns — which lanes, carriers, or times of day have higher risk scores.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-018",
+        title: "Carrier Fall-Off Recovery",
+        category: "automation",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "When a carrier cancels or is removed from a load near pickup time, the Fall-Off Recovery system executes a parallel recovery to minimize downtime.",
+        steps: [
+          { title: "Trigger Recovery", detail: "From the load detail, click 'Fall-Off Recovery'. Enter a reason (e.g., 'Truck breakdown', 'Carrier no-show'). The system initiates parallel recovery actions.", tip: null },
+          { title: "Automatic Actions (Parallel)", detail: "1) AE receives RED notification + email alert. 2) Load status resets to POSTED, carrier is unassigned. 3) Smart Match runs to find top 3 backup carriers. 4) Urgent notifications sent to backup carriers.", tip: "Tip: Recovery notifications include the word 'URGENT' and are prioritized in carrier notification queues." },
+          { title: "Carrier Penalty Tracking", detail: "The falling-off carrier gets a note on their profile with the fall-off count. After 2+ fall-offs, a deactivation review notification is sent to the AE.", tip: null },
+          { title: "Backup Carrier Acceptance", detail: "When a backup carrier responds 'YES' (or accepts via the portal), the load is re-assigned. The system records recovery time (minutes from fall-off to recovery).", tip: null },
+          { title: "Monitor Recovery", detail: "Check the Fall-Off Events list for active recoveries. Each event shows: original carrier, backups contacted, recovery status (Active/Recovered/Unresolved), and recovery time.", tip: "Tip: Track average recovery times over time. Goal: resolve 80% of fall-offs within 60 minutes." },
+          { title: "DAT Escalation (Phase D)", detail: "If no Caravan carrier accepts within the recovery window, the load can be posted to DAT for wider coverage. This integration is available in Phase D.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-019",
+        title: "Email Auto-Sequences for Prospects",
+        category: "automation",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Start automated email drip campaigns for prospects in the CRM pipeline. The sequence sends 4 branded emails over 14 days to warm up leads.",
+        steps: [
+          { title: "Navigate to CRM", detail: "Go to /ae/crm.html and select a prospect (Lead or Contacted stage). The prospect must have an email address on file.", tip: null },
+          { title: "Start Sequence", detail: "Click 'Start Email Sequence' on the prospect's detail card. The system creates a 4-step sequence: Day 0 Introduction, Day 3 Follow-up #1, Day 7 #2, Day 14 #3.", tip: "Tip: Only one active sequence per prospect. If you need to restart, stop the current sequence first." },
+          { title: "Automatic Email Delivery", detail: "A cron job runs hourly. When a sequence step is due, the system sends a branded SRL email to the prospect. Each email is personalized with the prospect's first name.", tip: null },
+          { title: "Open & Click Tracking", detail: "The system tracks email opens and clicks via Resend webhooks. View engagement metrics in the sequence details to gauge prospect interest.", tip: null },
+          { title: "Auto-Stop on Reply", detail: "If the prospect replies to any email, the sequence automatically stops and the AE receives a notification: 'Prospect Replied — Follow Up!' This is your cue to call.", tip: "Tip: A reply is the best possible outcome. Drop everything and follow up within the hour while the prospect is engaged." },
+          { title: "Manual Stop & Stage Change", detail: "You can manually stop a sequence anytime. Sequences also auto-stop when a prospect's CRM status advances past 'Contacted' (e.g., to Active, Declined, Suspended).", tip: null }
+        ]
+      },
+      {
+        id: "SOP-020",
+        title: "Automation Dashboard & Monitoring",
+        category: "automation",
+        who: "AE",
+        whoClass: "who-ae",
+        context: "Monitor all Phase C automation systems from a single summary view: active sequences, check-call status, risk alerts, fall-off events, and match activity.",
+        steps: [
+          { title: "Access Automation Summary", detail: "The AE Dashboard alert strip now reflects Phase C data. RED alerts include overdue check-calls and active fall-offs. AMBER includes stale loads and pending check-calls.", tip: null },
+          { title: "Check-Call Monitoring", detail: "Review pending and missed check-calls. Missed calls (AMBER) need carrier contact. Escalated calls (RED) require immediate intervention. The dashboard shows counts for each.", tip: null },
+          { title: "Risk Heatmap", detail: "Monitor RED and AMBER risk counts from the last 24 hours. Drill into specific loads to see which risk factors are driving the score.", tip: "Tip: If you see consistently high risk on certain lanes or with certain carriers, consider adjusting your carrier assignments." },
+          { title: "Fall-Off Metrics", detail: "Track active vs. recovered fall-off events. Average recovery time is a key operational metric. Goal: <60 minutes for recovery.", tip: null },
+          { title: "Sequence Performance", detail: "View active email sequences and their progress (step X of 4). Track overall open rates and reply rates to optimize outreach messaging.", tip: null },
+          { title: "Cron Job Schedule", detail: "Check-calls process every 15 min. Risk flagging every 30 min. Email sequences every hour. Pre-tracing hourly. Late detection every 30 min. All use distributed locks to prevent duplicate execution.", tip: null }
+        ]
+      }
+    ];
+
+    /* ======== STATE ======== */
+    var activeCategory = "all";
+
+    /* ======== INIT ======== */
+    (function init() {
+      loadUser();
+      renderCategories();
+      renderSOPs();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function(){});
+    }
+
+    /* ======== CATEGORIES ======== */
+    function renderCategories() {
+      var html = CATEGORIES.map(function(cat) {
+        var count = cat.id === "all" ? SOPS.length : SOPS.filter(function(s) { return s.category === cat.id; }).length;
+        return '<li class="cat-item' + (activeCategory === cat.id ? ' active' : '') + '" onclick="selectCategory(\'' + cat.id + '\')">' +
+          '<span class="cat-icon">' + cat.icon + '</span>' +
+          '<span>' + cat.label + '</span>' +
+          '<span class="cat-count">' + count + '</span>' +
+        '</li>';
+      }).join("");
+      document.getElementById("cat-list").innerHTML = html;
+    }
+
+    function selectCategory(id) {
+      activeCategory = id;
+      renderCategories();
+      renderSOPs();
+    }
+
+    /* ======== RENDER SOPs ======== */
+    function renderSOPs() {
+      var search = (document.getElementById("sop-search").value || "").toLowerCase();
+      var filtered = SOPS.filter(function(sop) {
+        if (activeCategory !== "all" && sop.category !== activeCategory) return false;
+        if (search) {
+          var hay = (sop.id + " " + sop.title + " " + sop.context + " " + sop.steps.map(function(s){return s.title+" "+s.detail}).join(" ")).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+
+      var container = document.getElementById("sop-container");
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="no-results"><p style="font-size:28px;margin-bottom:12px">&#128269;</p><p>No procedures found</p></div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(function(sop) {
+        return '<div class="sop-card" id="sop-' + sop.id + '">' +
+          '<div class="sop-header" onclick="toggleSOP(\'' + sop.id + '\')">' +
+            '<div class="sop-header-left">' +
+              '<span class="sop-number">' + sop.id + '</span>' +
+              '<span class="sop-title">' + sop.title + '</span>' +
+            '</div>' +
+            '<div class="sop-meta">' +
+              '<span class="sop-who ' + sop.whoClass + '">' + sop.who + '</span>' +
+              '<span class="sop-chevron">&#9654;</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sop-body">' +
+            '<div class="sop-context"><strong>When to use:</strong> ' + sop.context + '</div>' +
+            '<ol class="sop-steps">' +
+              sop.steps.map(function(step) {
+                return '<li class="sop-step">' +
+                  '<div class="step-title">' + step.title + '</div>' +
+                  '<div class="step-detail">' + step.detail + '</div>' +
+                  (step.tip ? '<div class="step-tip"><strong>&#128161; </strong>' + step.tip + '</div>' : '') +
+                '</li>';
+              }).join("") +
+            '</ol>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function toggleSOP(id) {
+      var card = document.getElementById("sop-" + id);
+      if (card) card.classList.toggle("open");
+    }
+
+    /* ======== HELPERS ======== */
+    function formatRole(role) {
+      var m = {ADMIN:"Administrator",BROKER:"Account Executive",DISPATCH:"Dispatch",OPERATIONS:"Operations",CEO:"CEO"};
+      return m[role] || role;
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+</body>
+</html>

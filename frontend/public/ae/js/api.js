@@ -1,0 +1,400 @@
+/**
+ * SRL API Client — AE Command Center
+ * Vanilla JS module exposing SRL namespace
+ */
+var SRL = (function () {
+  "use strict";
+
+  // --- Config ---
+  var BASE =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+      ? "http://localhost:4000"
+      : "https://api.silkroutelogistics.ai";
+
+  var REFRESH_INTERVAL = 120000; // 2 minutes
+  var _timer = null;
+  var _onRefresh = null;
+
+  // --- Core Fetch Wrapper ---
+  function request(path, opts) {
+    opts = opts || {};
+    var url = BASE + path;
+    var token = localStorage.getItem("token");
+
+    var headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+    if (token) {
+      headers["Authorization"] = "Bearer " + token;
+    }
+
+    return fetch(url, {
+      method: opts.method || "GET",
+      headers: headers,
+      credentials: "include",
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    }).then(function (res) {
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/auth/login";
+        return Promise.reject(new Error("Unauthorized"));
+      }
+      if (res.status === 403) {
+        return Promise.reject(new Error("Forbidden"));
+      }
+      if (!res.ok) {
+        return res.json().then(function (body) {
+          return Promise.reject(new Error(body.error || "Request failed"));
+        }).catch(function () {
+          return Promise.reject(new Error("Request failed: " + res.status));
+        });
+      }
+      return res.json();
+    });
+  }
+
+  // --- Data Fetching ---
+  function getMe() {
+    return request("/api/auth/me");
+  }
+
+  function getLoads(params) {
+    var qs = buildQuery(params);
+    return request("/api/loads" + qs);
+  }
+
+  function getCarriers(params) {
+    var qs = buildQuery(params);
+    return request("/api/carriers" + qs);
+  }
+
+  function getAllInvoices(params) {
+    var qs = buildQuery(params);
+    return request("/api/invoices/all" + qs);
+  }
+
+  function getInvoiceStats() {
+    return request("/api/invoices/stats");
+  }
+
+  function getRecentCheckCalls(limit) {
+    return request("/api/check-calls/recent?limit=" + (limit || 100));
+  }
+
+  function getComplianceStats() {
+    return request("/api/compliance/stats");
+  }
+
+  function getNotifications() {
+    return request("/api/notifications");
+  }
+
+  // --- Dashboard Aggregate ---
+  function fetchDashboardData() {
+    return Promise.allSettled([
+      getMe(),                                          // 0
+      getLoads({ status: "POSTED", limit: 100 }),       // 1 - unassigned
+      getLoads({ activeOnly: true, limit: 100 }),       // 2 - active
+      getLoads({ status: "DELIVERED", limit: 100 }),    // 3 - delivered
+      getCarriers({ status: "NEW" }),                   // 4 - pending carriers
+      getInvoiceStats(),                                // 5
+      getAllInvoices({ status: "SUBMITTED" }),           // 6 - open invoices
+      getRecentCheckCalls(100),                         // 7
+      getComplianceStats(),                             // 8
+      getNotifications(),                               // 9
+    ]).then(function (results) {
+      return {
+        user: unwrap(results[0]),
+        postedLoads: unwrap(results[1]),
+        activeLoads: unwrap(results[2]),
+        deliveredLoads: unwrap(results[3]),
+        pendingCarriers: unwrap(results[4]),
+        invoiceStats: unwrap(results[5]),
+        openInvoices: unwrap(results[6]),
+        checkCalls: unwrap(results[7]),
+        complianceStats: unwrap(results[8]),
+        notifications: unwrap(results[9]),
+      };
+    });
+  }
+
+  // --- Alert Computation ---
+  function computeAlerts(data) {
+    var alerts = [];
+
+    // Red: Overdue check calls (active loads with no check call in >4 hours)
+    if (data.activeLoads && data.checkCalls) {
+      var activeLoadsList = data.activeLoads.loads || [];
+      var checkCallsList = Array.isArray(data.checkCalls) ? data.checkCalls : [];
+      var fourHoursAgo = Date.now() - 4 * 60 * 60 * 1000;
+
+      // Build map: loadId -> most recent check call timestamp
+      var lastCallMap = {};
+      checkCallsList.forEach(function (cc) {
+        var t = new Date(cc.createdAt).getTime();
+        if (!lastCallMap[cc.loadId] || t > lastCallMap[cc.loadId]) {
+          lastCallMap[cc.loadId] = t;
+        }
+      });
+
+      var overdueLoads = activeLoadsList.filter(function (load) {
+        var inTransitStatuses = ["DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY"];
+        if (inTransitStatuses.indexOf(load.status) === -1) return false;
+        var lastCall = lastCallMap[load.id];
+        return !lastCall || lastCall < fourHoursAgo;
+      });
+
+      if (overdueLoads.length > 0) {
+        alerts.push({
+          level: "red",
+          message: overdueLoads.length + " load(s) overdue for check call (>4 hrs)",
+        });
+      }
+    }
+
+    // Red: Critical compliance issues
+    if (data.complianceStats && data.complianceStats.severity) {
+      var critical = data.complianceStats.severity.critical || 0;
+      if (critical > 0) {
+        alerts.push({
+          level: "red",
+          message: critical + " critical compliance alert(s)",
+        });
+      }
+    }
+
+    // Amber: Stale posted loads (>24 hours old)
+    if (data.postedLoads) {
+      var postedList = data.postedLoads.loads || [];
+      var twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+      var stalePosted = postedList.filter(function (load) {
+        return new Date(load.createdAt).getTime() < twentyFourHoursAgo;
+      });
+      if (stalePosted.length > 0) {
+        alerts.push({
+          level: "amber",
+          message: stalePosted.length + " posted load(s) uncovered for 24+ hrs",
+        });
+      }
+    }
+
+    // Amber: Aging invoices > 30 days
+    if (data.invoiceStats && data.invoiceStats.aging) {
+      var aging = data.invoiceStats.aging;
+      var agingCount =
+        (aging.over30 ? aging.over30.count : 0) +
+        (aging.over60 ? aging.over60.count : 0) +
+        (aging.over90 ? aging.over90.count : 0);
+      if (agingCount > 0) {
+        alerts.push({
+          level: "amber",
+          message: agingCount + " invoice(s) aging beyond 30 days",
+        });
+      }
+    }
+
+    // Amber: Compliance warnings
+    if (data.complianceStats && data.complianceStats.severity) {
+      var warnings = data.complianceStats.severity.warning || 0;
+      if (warnings > 0) {
+        alerts.push({
+          level: "amber",
+          message: warnings + " compliance warning(s)",
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  // --- Auto-Refresh ---
+  function startAutoRefresh(callback) {
+    _onRefresh = callback;
+    _timer = setInterval(function () {
+      if (_onRefresh) _onRefresh();
+    }, REFRESH_INTERVAL);
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        clearInterval(_timer);
+        _timer = null;
+      } else {
+        if (_onRefresh) _onRefresh();
+        _timer = setInterval(function () {
+          if (_onRefresh) _onRefresh();
+        }, REFRESH_INTERVAL);
+      }
+    });
+  }
+
+  function stopAutoRefresh() {
+    clearInterval(_timer);
+    _timer = null;
+    _onRefresh = null;
+  }
+
+  // --- Helpers ---
+  function buildQuery(params) {
+    if (!params) return "";
+    var parts = [];
+    Object.keys(params).forEach(function (key) {
+      if (params[key] !== undefined && params[key] !== null) {
+        parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(params[key]));
+      }
+    });
+    return parts.length ? "?" + parts.join("&") : "";
+  }
+
+  function unwrap(result) {
+    return result.status === "fulfilled" ? result.value : null;
+  }
+
+  // --- Caravan / Carrier Match ---
+  function getCaravanCarriers(params) {
+    var qs = buildQuery(params);
+    return request("/api/carriers" + qs);
+  }
+
+  function matchCarriersForLoad(loadId) {
+    return request("/api/carrier-match/" + loadId);
+  }
+
+  function importFromDAT(data) {
+    return request("/api/carrier-match/import-from-dat", { method: "POST", body: data });
+  }
+
+  function emergencyApproveCarrier(carrierId, reason) {
+    return request("/api/carrier-match/" + carrierId + "/emergency-approve", { method: "POST", body: { reason: reason } });
+  }
+
+  function promoteToBronze(carrierId) {
+    return request("/api/carrier-match/" + carrierId + "/promote-to-bronze", { method: "POST" });
+  }
+
+  // --- DAT Integration ---
+  function postToDAT(loadId) {
+    return request("/api/dat/post-load", { method: "POST", body: { loadId: loadId } });
+  }
+
+  function postToDATAdvanced(data) {
+    return request("/api/dat/post-load-advanced", { method: "POST", body: data });
+  }
+
+  function removeFromDAT(datPostId) {
+    return request("/api/dat/remove-post/" + datPostId, { method: "DELETE" });
+  }
+
+  function getDATResponses(loadId) {
+    return request("/api/dat/responses/" + loadId);
+  }
+
+  // --- SRCPP ---
+  function getSRCPPLeaderboard() {
+    return request("/api/srcpp/leaderboard");
+  }
+
+  // --- Phase C: Automation ---
+
+  function smartMatchCarriers(loadId) {
+    return request("/api/automation/match-carriers/" + loadId, { method: "POST" });
+  }
+
+  function assignMatchedCarrier(loadId, userId) {
+    return request("/api/automation/assign-match/" + loadId, {
+      method: "POST",
+      body: JSON.stringify({ userId: userId }),
+    });
+  }
+
+  function getCheckCallSchedule(loadId) {
+    return request("/api/automation/check-call-schedule/" + loadId);
+  }
+
+  function createCheckCallSchedule(loadId) {
+    return request("/api/automation/check-call-schedule/" + loadId, { method: "POST" });
+  }
+
+  function getRiskScore(loadId) {
+    return request("/api/automation/risk-score/" + loadId);
+  }
+
+  function triggerFallOffRecovery(loadId, reason) {
+    return request("/api/automation/fall-off-recovery/" + loadId, {
+      method: "POST",
+      body: JSON.stringify({ reason: reason }),
+    });
+  }
+
+  function acceptFallOff(loadId, carrierUserId) {
+    return request("/api/automation/fall-off-accept/" + loadId, {
+      method: "POST",
+      body: JSON.stringify({ carrierUserId: carrierUserId }),
+    });
+  }
+
+  function getFallOffEvents(status) {
+    var q = status ? "?status=" + status : "";
+    return request("/api/automation/fall-off-events" + q);
+  }
+
+  function startEmailSequence(prospectId) {
+    return request("/api/automation/sequences/start", {
+      method: "POST",
+      body: JSON.stringify({ prospectId: prospectId }),
+    });
+  }
+
+  function stopEmailSequence(sequenceId, reason) {
+    return request("/api/automation/sequences/" + sequenceId, {
+      method: "DELETE",
+      body: JSON.stringify({ reason: reason || "MANUAL" }),
+    });
+  }
+
+  function getActiveSequences() {
+    return request("/api/automation/sequences/active");
+  }
+
+  function getAutomationSummary() {
+    return request("/api/automation/summary");
+  }
+
+  // --- Public API ---
+  return {
+    BASE: BASE,
+    request: request,
+    getMe: getMe,
+    getLoads: getLoads,
+    getCarriers: getCarriers,
+    getAllInvoices: getAllInvoices,
+    getInvoiceStats: getInvoiceStats,
+    getRecentCheckCalls: getRecentCheckCalls,
+    getComplianceStats: getComplianceStats,
+    getNotifications: getNotifications,
+    fetchDashboardData: fetchDashboardData,
+    computeAlerts: computeAlerts,
+    startAutoRefresh: startAutoRefresh,
+    stopAutoRefresh: stopAutoRefresh,
+    getCaravanCarriers: getCaravanCarriers,
+    matchCarriersForLoad: matchCarriersForLoad,
+    importFromDAT: importFromDAT,
+    emergencyApproveCarrier: emergencyApproveCarrier,
+    promoteToBronze: promoteToBronze,
+    postToDAT: postToDAT,
+    postToDATAdvanced: postToDATAdvanced,
+    removeFromDAT: removeFromDAT,
+    getDATResponses: getDATResponses,
+    getSRCPPLeaderboard: getSRCPPLeaderboard,
+    smartMatchCarriers: smartMatchCarriers,
+    assignMatchedCarrier: assignMatchedCarrier,
+    getCheckCallSchedule: getCheckCallSchedule,
+    createCheckCallSchedule: createCheckCallSchedule,
+    getRiskScore: getRiskScore,
+    triggerFallOffRecovery: triggerFallOffRecovery,
+    acceptFallOff: acceptFallOff,
+    getFallOffEvents: getFallOffEvents,
+    startEmailSequence: startEmailSequence,
+    stopEmailSequence: stopEmailSequence,
+    getActiveSequences: getActiveSequences,
+    getAutomationSummary: getAutomationSummary,
+  };
+})();

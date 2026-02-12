@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AE Command Center - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/logo.png" alt="SRL">
+        <span>SRL Command</span>
+      </div>
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-user-name skeleton skeleton-line w-75">&nbsp;</div>
+        <div class="sidebar-user-role skeleton skeleton-line w-50" style="margin-top:6px">&nbsp;</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard" class="active">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Hamburger (mobile) -->
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="main-header">
+        <h1>AE Command Center</h1>
+        <p id="header-greeting">Loading your dashboard...</p>
+      </div>
+
+      <!-- Alert Strip -->
+      <div class="alert-strip alert-green" id="alert-strip">
+        <span class="alert-dot"></span>
+        <div class="alert-messages" id="alert-messages">
+          <span class="alert-msg">Checking systems...</span>
+        </div>
+        <button class="alert-refresh" id="refresh-btn" onclick="manualRefresh()" title="Refresh data">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-1.64-8.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Dashboard Grid -->
+      <div class="dashboard-grid">
+        <!-- Column 1: Action Items -->
+        <section>
+          <!-- Unassigned Loads -->
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">Unassigned Loads</span>
+              <span class="card-badge badge-navy" id="badge-unassigned">--</span>
+            </div>
+            <div class="card-body" id="list-unassigned" style="max-height:280px;overflow-y:auto">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+            </div>
+          </div>
+
+          <!-- Pending Carriers -->
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">Pending Carriers</span>
+              <span class="card-badge badge-navy" id="badge-carriers">--</span>
+            </div>
+            <div class="card-body" id="list-carriers" style="max-height:220px;overflow-y:auto">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+            </div>
+          </div>
+
+          <!-- Open Invoices -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Open Invoices</span>
+              <span class="card-badge badge-navy" id="badge-invoices">--</span>
+            </div>
+            <div class="card-body" id="list-invoices" style="max-height:220px;overflow-y:auto">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Column 2: Today's Numbers -->
+        <section>
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">Key Metrics</span>
+            </div>
+            <div class="card-body" id="kpi-area">
+              <div class="kpi-grid">
+                <div class="skeleton skeleton-kpi"></div>
+                <div class="skeleton skeleton-kpi"></div>
+                <div class="skeleton skeleton-kpi"></div>
+                <div class="skeleton skeleton-kpi"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Invoice Aging -->
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">Invoice Aging</span>
+            </div>
+            <div class="card-body" id="aging-area">
+              <div class="skeleton skeleton-line w-80"></div>
+              <div class="skeleton skeleton-block" style="height:8px;margin-top:12px"></div>
+              <div class="skeleton skeleton-line w-60" style="margin-top:8px"></div>
+            </div>
+          </div>
+
+          <!-- Compliance -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Compliance Overview</span>
+            </div>
+            <div class="card-body" id="compliance-area">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-line w-75"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Column 3: Quick Actions + Notifications -->
+        <section>
+          <div class="card" style="margin-bottom:24px">
+            <div class="card-header">
+              <span class="card-title">Quick Actions</span>
+            </div>
+            <div class="card-body">
+              <div class="quick-actions">
+                <a href="/loads" class="quick-action-btn btn-gold">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Post Load
+                </a>
+                <a href="/carriers" class="quick-action-btn btn-navy">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                  Add Carrier
+                </a>
+                <a href="/invoices" class="quick-action-btn btn-outline">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Invoices
+                </a>
+                <a href="/messages" class="quick-action-btn btn-outline">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Messages
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Notifications -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent Notifications</span>
+              <span class="card-badge badge-navy" id="badge-notifs">--</span>
+            </div>
+            <div class="card-body" id="list-notifs" style="max-height:400px;overflow-y:auto">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Footer -->
+      <footer class="main-footer">
+        <span>&copy; 2026 Silk Route Logistics. All rights reserved.</span>
+        <span id="last-updated">Last updated: --</span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- API Client -->
+  <script src="/ae/js/api.js"></script>
+
+  <!-- Dashboard Logic -->
+  <script>
+    // --- State ---
+    var dashData = null;
+
+    // --- Init ---
+    function initDashboard() {
+      loadDashboard();
+      SRL.startAutoRefresh(loadDashboard);
+    }
+
+    function loadDashboard() {
+      SRL.fetchDashboardData().then(function (data) {
+        dashData = data;
+        renderDashboard(data);
+      }).catch(function (err) {
+        console.error("Dashboard load error:", err);
+      });
+    }
+
+    function manualRefresh() {
+      var btn = document.getElementById("refresh-btn");
+      btn.classList.add("spinning");
+      SRL.fetchDashboardData().then(function (data) {
+        dashData = data;
+        renderDashboard(data);
+      }).catch(function (err) {
+        console.error("Refresh error:", err);
+      }).finally(function () {
+        btn.classList.remove("spinning");
+      });
+    }
+
+    // --- Master Render ---
+    function renderDashboard(data) {
+      renderUser(data.user);
+      renderAlertStrip(data);
+      renderUnassignedLoads(data.postedLoads);
+      renderPendingCarriers(data.pendingCarriers);
+      renderOpenInvoices(data.openInvoices);
+      renderKPIs(data);
+      renderAging(data.invoiceStats);
+      renderCompliance(data.complianceStats);
+      renderNotifications(data.notifications);
+      document.getElementById("last-updated").textContent =
+        "Last updated: " + new Date().toLocaleTimeString();
+    }
+
+    // --- User ---
+    function renderUser(user) {
+      var el = document.getElementById("sidebar-user");
+      if (!user) {
+        el.innerHTML =
+          '<div class="sidebar-user-name">Unknown User</div>' +
+          '<div class="sidebar-user-role">--</div>';
+        return;
+      }
+      el.innerHTML =
+        '<div class="sidebar-user-name">' + esc(user.firstName + " " + user.lastName) + '</div>' +
+        '<div class="sidebar-user-role">' + esc(formatRole(user.role)) + '</div>';
+
+      var greeting = getGreeting();
+      document.getElementById("header-greeting").textContent =
+        greeting + ", " + user.firstName + "! Here's your operational snapshot.";
+    }
+
+    // --- Alert Strip ---
+    function renderAlertStrip(data) {
+      var alerts = SRL.computeAlerts(data);
+      var strip = document.getElementById("alert-strip");
+      var msgArea = document.getElementById("alert-messages");
+
+      // Determine highest severity
+      var hasRed = alerts.some(function (a) { return a.level === "red"; });
+      var hasAmber = alerts.some(function (a) { return a.level === "amber"; });
+
+      strip.className = "alert-strip";
+      if (hasRed) {
+        strip.classList.add("alert-red");
+      } else if (hasAmber) {
+        strip.classList.add("alert-amber");
+      } else {
+        strip.classList.add("alert-green");
+      }
+
+      if (alerts.length === 0) {
+        msgArea.innerHTML = '<span class="alert-msg">All systems nominal — no action items.</span>';
+      } else {
+        msgArea.innerHTML = alerts.map(function (a) {
+          return '<span class="alert-msg">' + esc(a.message) + '</span>';
+        }).join("");
+      }
+    }
+
+    // --- Unassigned Loads ---
+    function renderUnassignedLoads(postedLoads) {
+      var container = document.getElementById("list-unassigned");
+      var badge = document.getElementById("badge-unassigned");
+
+      if (!postedLoads || !postedLoads.loads) {
+        badge.textContent = "!";
+        badge.className = "card-badge badge-red";
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#9888;</div>Unable to load data</div>';
+        return;
+      }
+
+      var loads = postedLoads.loads;
+      var total = postedLoads.total || loads.length;
+      badge.textContent = total;
+      badge.className = "card-badge " + (total > 0 ? "badge-amber" : "badge-green");
+
+      if (loads.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#10003;</div>All loads assigned!</div>';
+        return;
+      }
+
+      container.innerHTML = '<ul class="action-list">' + loads.slice(0, 10).map(function (load) {
+        var age = timeAgo(load.createdAt);
+        return '<li class="action-item">' +
+          '<div class="action-item-icon icon-load">&#9679;</div>' +
+          '<div class="action-item-details">' +
+            '<div class="action-item-title">' + esc(load.referenceNumber) + ' &mdash; ' + esc(load.originCity) + ', ' + esc(load.originState) + ' &rarr; ' + esc(load.destCity) + ', ' + esc(load.destState) + '</div>' +
+            '<div class="action-item-sub">' + esc(load.equipmentType) + ' &middot; $' + num(load.rate) + ' &middot; ' + age + '</div>' +
+          '</div>' +
+          '<span class="action-item-arrow">&rsaquo;</span>' +
+        '</li>';
+      }).join("") + '</ul>' +
+      (total > 10 ? '<div style="text-align:center;padding:8px;font-size:12px;color:var(--gray-400)">+ ' + (total - 10) + ' more</div>' : '');
+    }
+
+    // --- Pending Carriers ---
+    function renderPendingCarriers(carrierData) {
+      var container = document.getElementById("list-carriers");
+      var badge = document.getElementById("badge-carriers");
+
+      if (!carrierData || !carrierData.carriers) {
+        badge.textContent = "!";
+        badge.className = "card-badge badge-red";
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#9888;</div>Unable to load data</div>';
+        return;
+      }
+
+      var carriers = carrierData.carriers;
+      var total = carrierData.total || carriers.length;
+      badge.textContent = total;
+      badge.className = "card-badge " + (total > 0 ? "badge-amber" : "badge-green");
+
+      if (carriers.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#10003;</div>No pending applications</div>';
+        return;
+      }
+
+      container.innerHTML = '<ul class="action-list">' + carriers.slice(0, 8).map(function (c) {
+        return '<li class="action-item">' +
+          '<div class="action-item-icon icon-carrier">&#9679;</div>' +
+          '<div class="action-item-details">' +
+            '<div class="action-item-title">' + esc(c.company || c.contactName) + '</div>' +
+            '<div class="action-item-sub">MC# ' + esc(c.mcNumber) + ' &middot; ' + c.numberOfTrucks + ' truck(s) &middot; ' + timeAgo(c.createdAt) + '</div>' +
+          '</div>' +
+          '<span class="action-item-arrow">&rsaquo;</span>' +
+        '</li>';
+      }).join("") + '</ul>';
+    }
+
+    // --- Open Invoices ---
+    function renderOpenInvoices(invoiceData) {
+      var container = document.getElementById("list-invoices");
+      var badge = document.getElementById("badge-invoices");
+
+      if (!invoiceData || !invoiceData.invoices) {
+        badge.textContent = "!";
+        badge.className = "card-badge badge-red";
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#9888;</div>Unable to load data</div>';
+        return;
+      }
+
+      var invoices = invoiceData.invoices;
+      var total = invoiceData.total || invoices.length;
+      badge.textContent = total;
+      badge.className = "card-badge " + (total > 0 ? "badge-amber" : "badge-green");
+
+      if (invoices.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#10003;</div>No open invoices</div>';
+        return;
+      }
+
+      container.innerHTML = '<ul class="action-list">' + invoices.slice(0, 8).map(function (inv) {
+        var company = inv.user ? (inv.user.company || inv.user.firstName + " " + inv.user.lastName) : "Unknown";
+        return '<li class="action-item">' +
+          '<div class="action-item-icon icon-invoice">&#9679;</div>' +
+          '<div class="action-item-details">' +
+            '<div class="action-item-title">' + esc(inv.invoiceNumber) + ' &mdash; $' + num(inv.amount) + '</div>' +
+            '<div class="action-item-sub">' + esc(company) + ' &middot; ' + timeAgo(inv.createdAt) + '</div>' +
+          '</div>' +
+          '<span class="action-item-arrow">&rsaquo;</span>' +
+        '</li>';
+      }).join("") + '</ul>';
+    }
+
+    // --- KPIs ---
+    function renderKPIs(data) {
+      var container = document.getElementById("kpi-area");
+
+      var activeCount = data.activeLoads ? (data.activeLoads.total || 0) : "--";
+      var postedCount = data.postedLoads ? (data.postedLoads.total || 0) : "--";
+      var deliveredCount = data.deliveredLoads ? (data.deliveredLoads.total || 0) : "--";
+
+      var revenue = "--";
+      if (data.invoiceStats) {
+        revenue = "$" + shortNum(data.invoiceStats.totalAmount || 0);
+      }
+
+      container.innerHTML =
+        '<div class="kpi-grid">' +
+          kpiTile(activeCount, "Active Loads") +
+          kpiTile(postedCount, "Posted (Open)") +
+          kpiTile(deliveredCount, "Delivered") +
+          kpiTile(revenue, "Total Revenue") +
+        '</div>';
+    }
+
+    function kpiTile(value, label) {
+      return '<div class="kpi-tile">' +
+        '<div class="kpi-value">' + value + '</div>' +
+        '<div class="kpi-label">' + label + '</div>' +
+      '</div>';
+    }
+
+    // --- Invoice Aging ---
+    function renderAging(stats) {
+      var container = document.getElementById("aging-area");
+
+      if (!stats || !stats.aging) {
+        container.innerHTML = '<div class="empty-state">No aging data available</div>';
+        return;
+      }
+
+      var aging = stats.aging;
+      var current = aging.current || { amount: 0, count: 0 };
+      var over30 = aging.over30 || { amount: 0, count: 0 };
+      var over60 = aging.over60 || { amount: 0, count: 0 };
+      var over90 = aging.over90 || { amount: 0, count: 0 };
+
+      var totalAmt = current.amount + over30.amount + over60.amount + over90.amount;
+      var pct = function (amt) {
+        return totalAmt > 0 ? Math.max((amt / totalAmt) * 100, 2) : 25;
+      };
+
+      container.innerHTML =
+        '<div style="font-size:13px;color:var(--gray-600);margin-bottom:4px">Total Outstanding: <strong>$' + num(totalAmt) + '</strong></div>' +
+        '<div class="aging-bar">' +
+          '<div class="aging-segment aging-current" style="width:' + pct(current.amount) + '%"></div>' +
+          '<div class="aging-segment aging-30" style="width:' + pct(over30.amount) + '%"></div>' +
+          '<div class="aging-segment aging-60" style="width:' + pct(over60.amount) + '%"></div>' +
+          '<div class="aging-segment aging-90" style="width:' + pct(over90.amount) + '%"></div>' +
+        '</div>' +
+        '<div class="aging-legend">' +
+          agingLegendItem("var(--green)", "Current", current.count, current.amount) +
+          agingLegendItem("var(--amber)", "30+ days", over30.count, over30.amount) +
+          agingLegendItem("#F97316", "60+ days", over60.count, over60.amount) +
+          agingLegendItem("var(--red)", "90+ days", over90.count, over90.amount) +
+        '</div>';
+    }
+
+    function agingLegendItem(color, label, count, amount) {
+      return '<span class="aging-legend-item">' +
+        '<span class="aging-legend-dot" style="background:' + color + '"></span>' +
+        label + ': ' + count + ' ($' + shortNum(amount) + ')' +
+      '</span>';
+    }
+
+    // --- Compliance ---
+    function renderCompliance(stats) {
+      var container = document.getElementById("compliance-area");
+
+      if (!stats) {
+        container.innerHTML = '<div class="empty-state">No compliance data available</div>';
+        return;
+      }
+
+      var sev = stats.severity || {};
+      var upcoming = stats.upcomingExpirations || [];
+
+      container.innerHTML =
+        '<div style="display:flex;gap:12px;margin-bottom:16px">' +
+          compliancePill("var(--red)", "Critical", sev.critical || 0) +
+          compliancePill("var(--amber)", "Warning", sev.warning || 0) +
+          compliancePill("var(--green)", "Info", sev.info || 0) +
+        '</div>' +
+        (upcoming.length > 0
+          ? '<div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:8px">Upcoming Expirations</div>' +
+            '<ul class="action-list">' + upcoming.slice(0, 5).map(function (item) {
+              var badgeClass = item.severity === "CRITICAL" ? "badge-red" : item.severity === "WARNING" ? "badge-amber" : "badge-green";
+              return '<li class="action-item">' +
+                '<div class="action-item-details">' +
+                  '<div class="action-item-title">' + esc(item.entityName) + '</div>' +
+                  '<div class="action-item-sub">' + esc(item.type.replace(/_/g, " ")) + ' &middot; Expires ' + formatDate(item.expiryDate) + '</div>' +
+                '</div>' +
+                '<span class="card-badge ' + badgeClass + '" style="font-size:10px">' + esc(item.severity) + '</span>' +
+              '</li>';
+            }).join("") + '</ul>'
+          : '<div class="empty-state" style="padding:8px"><div class="empty-state-icon">&#10003;</div>No upcoming expirations</div>'
+        );
+    }
+
+    function compliancePill(color, label, count) {
+      return '<div style="flex:1;text-align:center;padding:10px;border-radius:8px;background:' + color + '15">' +
+        '<div style="font-size:22px;font-weight:700;color:' + color + '">' + count + '</div>' +
+        '<div style="font-size:11px;color:var(--gray-500)">' + label + '</div>' +
+      '</div>';
+    }
+
+    // --- Notifications ---
+    function renderNotifications(notifs) {
+      var container = document.getElementById("list-notifs");
+      var badge = document.getElementById("badge-notifs");
+
+      if (!notifs || !Array.isArray(notifs)) {
+        badge.textContent = "!";
+        badge.className = "card-badge badge-red";
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#9888;</div>Unable to load notifications</div>';
+        return;
+      }
+
+      var unread = notifs.filter(function (n) { return !n.readAt; });
+      badge.textContent = unread.length || "0";
+      badge.className = "card-badge " + (unread.length > 0 ? "badge-amber" : "badge-green");
+
+      if (notifs.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128276;</div>No notifications yet</div>';
+        return;
+      }
+
+      container.innerHTML = '<ul class="notif-list">' + notifs.slice(0, 15).map(function (n) {
+        var isRead = !!n.readAt;
+        return '<li class="notif-item">' +
+          '<span class="notif-dot' + (isRead ? " read" : "") + '"></span>' +
+          '<div class="notif-content">' +
+            '<div class="notif-title">' + esc(n.title) + '</div>' +
+            '<div class="notif-message">' + esc(n.message) + '</div>' +
+            '<div class="notif-time">' + timeAgo(n.createdAt) + '</div>' +
+          '</div>' +
+        '</li>';
+      }).join("") + '</ul>';
+    }
+
+    // --- Sidebar Toggle ---
+    function toggleSidebar() {
+      var sidebar = document.getElementById("sidebar");
+      var overlay = document.getElementById("overlay");
+      sidebar.classList.toggle("open");
+      overlay.classList.toggle("open");
+    }
+
+    // --- Logout ---
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+
+    // --- Helpers ---
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    function num(n) {
+      if (n === null || n === undefined) return "0";
+      return Number(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function shortNum(n) {
+      if (!n) return "0";
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+      if (n >= 1000) return (n / 1000).toFixed(1) + "K";
+      return num(n);
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return "";
+      var diff = Date.now() - new Date(dateStr).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return "just now";
+      if (mins < 60) return mins + "m ago";
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + "h ago";
+      var days = Math.floor(hrs / 24);
+      if (days < 30) return days + "d ago";
+      return formatDate(dateStr);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "--";
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function formatRole(role) {
+      var roles = {
+        ADMIN: "Administrator",
+        BROKER: "Account Executive",
+        DISPATCH: "Dispatch",
+        OPERATIONS: "Operations",
+        CEO: "CEO",
+        CARRIER: "Carrier",
+        ACCOUNTING: "Accounting"
+      };
+      return roles[role] || role;
+    }
+
+    function getGreeting() {
+      var h = new Date().getHours();
+      if (h < 12) return "Good morning";
+      if (h < 17) return "Good afternoon";
+      return "Good evening";
+    }
+
+    // --- Boot ---
+    initDashboard();
+  </script>
+</body>
+</html>

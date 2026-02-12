@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <h2>SILK ROUTE</h2>
+      <p>Carrier Portal</p>
+    </div>
+    <div class="sidebar-user" id="sidebarUser">
+      <div class="user-name skeleton skeleton-line w75"></div>
+      <div class="user-role">CARRIER</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html" class="active"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help & SOPs</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button onclick="CARRIER.logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Status Strip -->
+    <div class="status-strip green" id="statusStrip">
+      All systems operational
+      <button class="refresh-btn" onclick="loadDashboard()">Refresh</button>
+    </div>
+
+    <div class="page-header">
+      <div>
+        <h1>Carrier Dashboard</h1>
+        <p class="subtitle" id="welcomeMsg">Welcome back</p>
+      </div>
+    </div>
+
+    <!-- SRCPP Tier Card -->
+    <div class="tier-card" id="tierCard" style="margin-bottom:24px">
+      <div class="skeleton skeleton-line w50"></div>
+      <div class="skeleton skeleton-box"></div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid-4" id="kpiGrid" style="margin-bottom:24px">
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+      <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid-3">
+      <!-- Col 1: My Active Loads -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Active Loads</h3>
+          <a href="/carrier/loads.html" class="card-action">View All</a>
+        </div>
+        <div id="activeLoadsList">
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w75"></div>
+          <div class="skeleton skeleton-line w100"></div>
+        </div>
+      </div>
+
+      <!-- Col 2: Available Loads -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Available Loads</h3>
+          <a href="/carrier/loads.html?tab=available" class="card-action">Browse All</a>
+        </div>
+        <div id="availableLoadsList">
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w75"></div>
+          <div class="skeleton skeleton-line w100"></div>
+        </div>
+      </div>
+
+      <!-- Col 3: Notifications & Quick Actions -->
+      <div>
+        <!-- Compliance Alerts -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <h3>Compliance Alerts</h3>
+            <a href="/carrier/compliance.html" class="card-action">View All</a>
+          </div>
+          <div id="complianceAlerts">
+            <div class="skeleton skeleton-line w100"></div>
+            <div class="skeleton skeleton-line w75"></div>
+          </div>
+        </div>
+
+        <!-- Recent Notifications -->
+        <div class="card">
+          <div class="card-header"><h3>Notifications</h3></div>
+          <div id="notificationsList">
+            <div class="skeleton skeleton-line w100"></div>
+            <div class="skeleton skeleton-line w75"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="main-footer">
+      Silk Route Logistics &middot; Carrier Portal &middot; <span id="lastUpdated"></span>
+    </footer>
+  </main>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    if (!CARRIER.requireAuth()) throw new Error("Not authenticated");
+
+    function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+    function money(n) { return "$" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function shortDate(d) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "--"; }
+
+    function statusBadge(s) {
+      var colors = {
+        POSTED: "blue", BOOKED: "gold", CONFIRMED: "gold", DISPATCHED: "amber",
+        AT_PICKUP: "amber", LOADED: "amber", IN_TRANSIT: "gold",
+        AT_DELIVERY: "amber", DELIVERED: "green", COMPLETED: "green",
+        INVOICED: "blue", CANCELLED: "red", TONU: "red"
+      };
+      return '<span class="badge badge-' + (colors[s] || "slate") + '">' + esc((s || "").replace(/_/g, " ")) + '</span>';
+    }
+
+    function loadDashboard() {
+      CARRIER.fetchDashboardData().then(renderDashboard);
+    }
+
+    function renderDashboard(data) {
+      // User info
+      if (data.user) {
+        var u = data.user;
+        document.getElementById("sidebarUser").innerHTML =
+          '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div>' +
+          '<div class="user-role">CARRIER</div>' +
+          (u.carrierProfile ? '<div class="user-tier tier-' + u.carrierProfile.tier + '">' + u.carrierProfile.tier + '</div>' : '');
+        document.getElementById("welcomeMsg").textContent = "Welcome back, " + u.firstName;
+      }
+
+      // SRCPP Tier Card
+      renderTierCard(data.srcpp, data.dashboard);
+
+      // KPIs
+      renderKPIs(data.dashboard, data.payments);
+
+      // Active Loads
+      renderActiveLoads(data.myLoads);
+
+      // Available Loads
+      renderAvailableLoads(data.availableLoads);
+
+      // Compliance
+      renderComplianceAlerts(data.compliance);
+
+      // Notifications
+      renderNotifications(data.notifications);
+
+      // Status strip
+      renderStatusStrip(data.compliance);
+
+      document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
+    }
+
+    function renderTierCard(srcpp, dashboard) {
+      var card = document.getElementById("tierCard");
+      if (!srcpp) {
+        card.innerHTML = '<div style="text-align:center;color:var(--slate);padding:20px">SRCPP data loading...</div>';
+        return;
+      }
+
+      var tier = srcpp.tier || "BRONZE";
+      var score = srcpp.score || 0;
+      var nextTier = srcpp.nextTier;
+      var progressPct = Math.min(100, score);
+
+      card.innerHTML =
+        '<div class="tier-badge-lg tier-' + tier + '">' + tier + ' TIER</div>' +
+        '<div class="tier-score">' + score.toFixed(1) + ' <span>/ 100 pts</span></div>' +
+        '<div class="tier-progress"><div class="tier-progress-bar" style="width:' + progressPct + '%"></div></div>' +
+        (nextTier
+          ? '<div class="next-tier">' + (nextTier.pointsNeeded > 0 ? nextTier.pointsNeeded.toFixed(1) + ' pts to ' + nextTier.name : 'Top tier reached!') + '</div>'
+          : '<div class="next-tier">Top tier reached!</div>') +
+        '<div style="margin-top:12px;display:flex;gap:24px;font-size:12px;color:var(--slate)">' +
+          '<span>Loads: <strong style="color:#fff">' + (srcpp.totalLoads || 0) + '</strong></span>' +
+          '<span>Miles: <strong style="color:#fff">' + Math.round(srcpp.totalMiles || 0).toLocaleString() + '</strong></span>' +
+          '<span>Bonus Rate: <strong style="color:var(--gold)">' + (srcpp.bonusPercentage || 0) + '%</strong></span>' +
+        '</div>';
+    }
+
+    function renderKPIs(dashboard, payments) {
+      var grid = document.getElementById("kpiGrid");
+      var d = dashboard || {};
+      var p = payments || {};
+      var stats = d.stats || {};
+
+      grid.innerHTML =
+        '<div class="kpi-tile gold"><div class="kpi-value">' + (stats.activeLoads || 0) + '</div><div class="kpi-label">Active Loads</div></div>' +
+        '<div class="kpi-tile green"><div class="kpi-value">' + money(stats.weeklyRevenue || 0) + '</div><div class="kpi-label">This Week</div></div>' +
+        '<div class="kpi-tile blue"><div class="kpi-value">' + money(stats.monthlyRevenue || 0) + '</div><div class="kpi-label">This Month</div></div>' +
+        '<div class="kpi-tile amber"><div class="kpi-value">' + money(p.totalPending ? p.totalPending.amount : 0) + '</div><div class="kpi-label">Pending Pay</div></div>';
+    }
+
+    function renderActiveLoads(data) {
+      var el = document.getElementById("activeLoadsList");
+      var loads = data && data.loads ? data.loads : [];
+      if (loads.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>No active loads</p></div>';
+        return;
+      }
+
+      el.innerHTML = loads.slice(0, 5).map(function (l) {
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:600;color:#fff">' + esc(l.referenceNumber) + '</div>' +
+            '<div style="font-size:11px;color:var(--slate)">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
+          '</div>' +
+          '<div>' + statusBadge(l.status) + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function renderAvailableLoads(data) {
+      var el = document.getElementById("availableLoadsList");
+      var loads = data && data.loads ? data.loads : [];
+      if (loads.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>No loads available</p></div>';
+        return;
+      }
+
+      el.innerHTML = loads.slice(0, 5).map(function (l) {
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--card-border)">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<div style="font-size:13px;font-weight:600;color:#fff">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
+            '<span style="color:var(--gold);font-weight:600;font-size:13px">' + money(l.carrierRate || l.rate) + '</span>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--slate);margin-top:2px">' +
+            esc((l.equipmentType || "").replace(/_/g, " ")) + ' &middot; ' + shortDate(l.pickupDate) +
+            (l.distance ? ' &middot; ' + l.distance + ' mi' : '') +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function renderComplianceAlerts(data) {
+      var el = document.getElementById("complianceAlerts");
+      if (!data || !data.alerts || data.alerts.length === 0) {
+        el.innerHTML = '<div style="padding:8px 0;color:var(--green);font-size:13px">&#10003; All clear - no compliance alerts</div>';
+        return;
+      }
+
+      el.innerHTML = data.alerts.slice(0, 3).map(function (a) {
+        var color = a.severity === "CRITICAL" ? "red" : "amber";
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:8px">' +
+          '<span class="badge badge-' + color + '">' + esc(a.severity) + '</span>' +
+          '<span style="font-size:12px;color:#CBD5E1">' + esc(a.type.replace(/_/g, " ")) + ' - ' + esc(a.entityName) + '</span>' +
+        '</div>';
+      }).join("");
+    }
+
+    function renderNotifications(data) {
+      var el = document.getElementById("notificationsList");
+      var list = Array.isArray(data) ? data : (data && data.notifications ? data.notifications : []);
+      if (list.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>No notifications</p></div>';
+        return;
+      }
+
+      el.innerHTML = list.slice(0, 5).map(function (n) {
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--card-border)">' +
+          '<div style="font-size:12px;font-weight:500;color:#fff">' + esc(n.title) + '</div>' +
+          '<div style="font-size:11px;color:var(--slate)">' + esc(n.message) + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    function renderStatusStrip(compliance) {
+      var strip = document.getElementById("statusStrip");
+      if (compliance && compliance.alertsSummary) {
+        var s = compliance.alertsSummary;
+        if (s.critical > 0) {
+          strip.className = "status-strip red";
+          strip.innerHTML = s.critical + " critical compliance issue(s) require attention <button class='refresh-btn' onclick='loadDashboard()'>Refresh</button>";
+        } else if (s.warning > 0) {
+          strip.className = "status-strip amber";
+          strip.innerHTML = s.warning + " compliance warning(s) - review recommended <button class='refresh-btn' onclick='loadDashboard()'>Refresh</button>";
+        } else {
+          strip.className = "status-strip green";
+          strip.innerHTML = "All systems operational <button class='refresh-btn' onclick='loadDashboard()'>Refresh</button>";
+        }
+      }
+    }
+
+    // Init
+    loadDashboard();
+    CARRIER.startAutoRefresh(loadDashboard);
+
+    // Sidebar toggle
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+  </script>
+</body>
+</html>

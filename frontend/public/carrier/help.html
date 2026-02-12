@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help & SOPs | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+  <style>
+    .sop-sidebar { width: 220px; flex-shrink: 0; }
+    .sop-sidebar a {
+      display: block; padding: 8px 12px; font-size: 13px;
+      color: var(--slate); border-radius: var(--radius-sm); margin-bottom: 4px;
+    }
+    .sop-sidebar a:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .sop-sidebar a.active { background: var(--gold-dim); color: var(--gold); }
+    .sop-content { flex: 1; min-width: 0; }
+    .sop-layout { display: flex; gap: 24px; }
+    .sop-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+    }
+    .sop-card h2 { font-size: 18px; color: var(--gold); margin-bottom: 4px; }
+    .sop-card .sop-meta { font-size: 12px; color: var(--slate); margin-bottom: 16px; }
+    .sop-card .sop-meta span {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      background: var(--gold-dim); color: var(--gold); font-size: 11px; font-weight: 600; margin-right: 8px;
+    }
+    .step-list { counter-reset: step; list-style: none; padding: 0; }
+    .step-list li {
+      counter-increment: step; position: relative; padding: 10px 0 10px 44px;
+      border-bottom: 1px solid var(--card-border); font-size: 13px; color: #CBD5E1;
+    }
+    .step-list li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 10px;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gold); color: var(--navy); font-weight: 700;
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+    }
+    .step-list li:last-child { border-bottom: none; }
+    .tip-box {
+      background: var(--gold-dim); border: 1px solid rgba(200,150,62,0.2);
+      border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 16px;
+      font-size: 12px; color: var(--gold-light);
+    }
+    .tip-box strong { color: var(--gold); }
+    .when-box {
+      background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px;
+      font-size: 12px; color: var(--blue);
+    }
+    @media (max-width: 768px) {
+      .sop-layout { flex-direction: column; }
+      .sop-sidebar { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h2>SILK ROUTE</h2><p>Carrier Portal</p></div>
+    <div class="sidebar-user" id="sidebarUser"><div class="user-name skeleton skeleton-line w75"></div><div class="user-role">CARRIER</div></div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/help.html" class="active"><span class="nav-icon">&#63;</span> Help & SOPs</a>
+    </nav>
+    <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Help & Standard Operating Procedures</h1>
+        <p class="subtitle">Step-by-step guides for the Carrier Portal</p>
+      </div>
+    </div>
+
+    <div class="sop-layout">
+      <div class="sop-sidebar" id="sopNav">
+        <a href="#sop-008" class="active" onclick="filterSOPs('all')">All SOPs</a>
+        <a href="#" onclick="filterSOPs('getting-started')">Getting Started</a>
+        <a href="#" onclick="filterSOPs('loads')">Load Management</a>
+        <a href="#" onclick="filterSOPs('payments')">Payments</a>
+        <a href="#" onclick="filterSOPs('compliance')">Compliance</a>
+        <a href="#" onclick="filterSOPs('srcpp')">SRCPP Program</a>
+        <a href="#" onclick="filterSOPs('automation')">Automation</a>
+      </div>
+
+      <div class="sop-content" id="sopContent">
+
+        <!-- SOP-008: Getting Started -->
+        <div class="sop-card" data-category="getting-started" id="sop-008">
+          <h2>SOP-008: Getting Started with the Carrier Portal</h2>
+          <div class="sop-meta"><span>Carrier</span> Getting Started</div>
+          <div class="when-box">When to use: After receiving your carrier login credentials from SRL.</div>
+          <ol class="step-list">
+            <li>Navigate to the Carrier Portal login page at <code>/carrier/login.html</code></li>
+            <li>Enter your email and the temporary password provided by SRL</li>
+            <li>On first login, you will be prompted to set a new secure password (min 8 characters)</li>
+            <li>After setting your password, you'll land on the Dashboard showing your SRCPP tier, active loads, and compliance status</li>
+            <li>Check the sidebar for navigation: Dashboard, My Loads, Available Loads, Payments, Compliance, and Help</li>
+            <li>Review your Compliance Center to ensure all documents (W-9, COI, Authority Letter) are uploaded</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Complete your compliance documents first — you cannot accept loads until your account is fully approved.</div>
+        </div>
+
+        <!-- SOP-009: Browsing & Accepting Loads -->
+        <div class="sop-card" data-category="loads" id="sop-009">
+          <h2>SOP-009: Browsing & Accepting Available Loads</h2>
+          <div class="sop-meta"><span>Carrier</span> Load Management</div>
+          <div class="when-box">When to use: When looking for new loads to haul.</div>
+          <ol class="step-list">
+            <li>Navigate to <strong>Available Loads</strong> from the sidebar or dashboard</li>
+            <li>Browse posted loads — they are filtered to match your equipment type</li>
+            <li>Review load details: origin/destination, pickup date, equipment type, weight, distance, and carrier rate</li>
+            <li>Click <strong>View</strong> to see full load details including special instructions and broker contact</li>
+            <li>Click <strong>Accept</strong> to book the load — optionally enter driver name, phone, truck #, and trailer #</li>
+            <li>The load moves to "My Loads" with status BOOKED and the broker is notified automatically</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Loads with higher rates per mile and shorter deadhead are more profitable. Check the distance column.</div>
+        </div>
+
+        <!-- SOP-010: Managing Your Loads -->
+        <div class="sop-card" data-category="loads" id="sop-010">
+          <h2>SOP-010: Managing Active Loads & Status Updates</h2>
+          <div class="sop-meta"><span>Carrier</span> Load Management</div>
+          <div class="when-box">When to use: After accepting a load through delivery.</div>
+          <ol class="step-list">
+            <li>Go to <strong>My Loads</strong> to see all your assigned loads</li>
+            <li>Click a load to open the detail view with timeline, info, and action buttons</li>
+            <li>Update driver and equipment info using the Driver & Equipment form on the right</li>
+            <li>Use the <strong>Update Status</strong> buttons to progress through: AT PICKUP → LOADED → IN TRANSIT → AT DELIVERY → DELIVERED</li>
+            <li>Each status update creates a check call and notifies the broker automatically</li>
+            <li>After marking as DELIVERED, the broker will handle invoicing and your payment will appear in the Payments section</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Timely status updates improve your SRCPP score — especially on-time pickup and delivery metrics.</div>
+        </div>
+
+        <!-- SOP-011: Understanding Payments -->
+        <div class="sop-card" data-category="payments" id="sop-011">
+          <h2>SOP-011: Understanding Your Payments</h2>
+          <div class="sop-meta"><span>Carrier</span> Payments</div>
+          <div class="when-box">When to use: To track earnings and understand payment timelines.</div>
+          <ol class="step-list">
+            <li>Navigate to <strong>Payments</strong> from the sidebar</li>
+            <li>Review the KPI tiles: YTD Earnings, Pending, Scheduled, and Total Paid</li>
+            <li>Use the status filter to find specific payment types (Pending, Scheduled, Paid)</li>
+            <li>Each payment row shows the load reference, route, gross amount, QuickPay discount (if any), and net pay</li>
+            <li>Standard payment terms are Net 30 from delivery and POD submission</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Submit your POD (Proof of Delivery) and carrier invoice promptly — this speeds up payment processing.</div>
+        </div>
+
+        <!-- SOP-012: Using QuickPay -->
+        <div class="sop-card" data-category="payments" id="sop-012">
+          <h2>SOP-012: Requesting QuickPay</h2>
+          <div class="sop-meta"><span>Carrier</span> Payments</div>
+          <div class="when-box">When to use: When you need expedited payment (24-48 hours).</div>
+          <ol class="step-list">
+            <li>Go to <strong>Payments</strong> and find a payment with status Pending or Prepared</li>
+            <li>Click the <strong>QuickPay</strong> button next to the payment</li>
+            <li>Confirm the request — a percentage fee will be deducted based on your SRCPP tier:
+              <br>Platinum: 1% | Gold: 1.5% | Silver: 2% | Bronze: 3%</li>
+            <li>Payment will be expedited and processed within 24-48 hours</li>
+            <li>The net amount (after QuickPay fee) will be shown in the payment details</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Higher SRCPP tiers get lower QuickPay fees. Consistent performance pays off!</div>
+        </div>
+
+        <!-- SOP-013: SRCPP Loyalty Program -->
+        <div class="sop-card" data-category="srcpp" id="sop-013">
+          <h2>SOP-013: Understanding the SRCPP Loyalty Program</h2>
+          <div class="sop-meta"><span>Carrier</span> SRCPP</div>
+          <div class="when-box">When to use: To understand how to earn rewards and advance tiers.</div>
+          <ol class="step-list">
+            <li>Your SRCPP (Silk Route Carrier Performance Program) tier is shown on the Dashboard tier card</li>
+            <li>Tiers are based on your overall performance score (0-100):
+              <br><strong>Bronze</strong>: 0-89 | <strong>Silver</strong>: 90-94 | <strong>Gold</strong>: 95-97 | <strong>Platinum</strong>: 98+</li>
+            <li>Score is calculated from: on-time pickup (20%), on-time delivery (20%), GPS compliance (15%), claims ratio (15%), communication (10%), doc timeliness (10%), acceptance rate (10%)</li>
+            <li>Tier perks include: load priority access, bonus percentages (Gold 1.5%, Platinum 3%), reduced QuickPay fees, and dedicated support</li>
+            <li>Track your progress bar on the Dashboard — it shows points needed for the next tier</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Focus on on-time performance and communication — they account for 50% of your score combined.</div>
+        </div>
+
+        <!-- SOP-014: Compliance Requirements -->
+        <div class="sop-card" data-category="compliance" id="sop-014">
+          <h2>SOP-014: Maintaining Compliance</h2>
+          <div class="sop-meta"><span>Carrier</span> Compliance</div>
+          <div class="when-box">When to use: To ensure your documents and certifications stay current.</div>
+          <ol class="step-list">
+            <li>Navigate to <strong>Compliance</strong> from the sidebar</li>
+            <li>The Overview tab shows: insurance status, FMCSA authority, document checklist, and active alerts</li>
+            <li>Ensure all required documents are uploaded: W-9, Certificate of Insurance (COI), and Operating Authority Letter</li>
+            <li>Monitor the Expirations tab for upcoming document and insurance expirations</li>
+            <li>You'll receive alerts 30 days before any document expires (WARNING) and immediately when expired (CRITICAL)</li>
+            <li>Upload renewed documents through the Documents section or by contacting your SRL broker</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Set calendar reminders 45 days before insurance/authority renewals to avoid any lapses in compliance.</div>
+        </div>
+
+        <!-- SOP-015: CSA Scores & Safety -->
+        <div class="sop-card" data-category="compliance" id="sop-015">
+          <h2>SOP-015: Understanding CSA Scores & Safety Metrics</h2>
+          <div class="sop-meta"><span>Carrier</span> Compliance</div>
+          <div class="when-box">When to use: To monitor your safety performance and FMCSA standing.</div>
+          <ol class="step-list">
+            <li>Go to <strong>Compliance</strong> → <strong>CSA / Safety</strong> tab</li>
+            <li>View your FMCSA BASIC scores across 7 categories (lower is better):
+              <br>Unsafe Driving, Hours of Service, Driver Fitness, Drug & Alcohol, Vehicle Maintenance, HazMat, Crash Indicator</li>
+            <li>Scores above 65-80% (depending on category) may trigger FMCSA intervention</li>
+            <li>Below the BASIC scores, view your SRL-specific performance metrics: on-time rates, communication, claims, and doc timeliness</li>
+            <li>The Score History table shows your performance trend over recent scoring periods</li>
+            <li>Work to keep all scores in the green zone to maintain your SRCPP tier and avoid safety interventions</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Regularly check your CSA scores on the FMCSA SAFER website and contest any inaccurate data through DataQs.</div>
+        </div>
+
+        <!-- SOP-016: Responding to Check-Calls -->
+        <div class="sop-card" data-category="automation" id="sop-016">
+          <h2>SOP-016: Responding to Automated Check-Calls</h2>
+          <div class="sop-meta"><span>Carrier</span> Load Management</div>
+          <div class="when-box">When to use: When you receive an SMS check-call from SRL during a load.</div>
+          <ol class="step-list">
+            <li>You will receive an SMS at key milestones: 2 hours before pickup, at pickup, midpoint, 2 hours before delivery, and at delivery</li>
+            <li>The text will say: "SRL Check-Call: Load #SRL-XXX. Reply: 1=At Pickup, 2=Loaded, 3=In Transit, 4=At Delivery, 5=Delivered"</li>
+            <li>Reply with the number matching your current status (e.g., reply "3" if you're in transit)</li>
+            <li>The system automatically updates your load status — no need to log into the portal</li>
+            <li>If you don't respond within 30 minutes, you'll receive one reminder text</li>
+            <li>If you still don't respond, your broker will be alerted and may call you directly</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Responding to check-calls promptly improves your SRCPP communication score. Missed check-calls negatively impact your performance rating.</div>
+        </div>
+
+        <!-- SOP-017: Fall-Off Notifications -->
+        <div class="sop-card" data-category="automation" id="sop-017">
+          <h2>SOP-017: Urgent Load Notifications & Fall-Off Recovery</h2>
+          <div class="sop-meta"><span>Carrier</span> Load Management</div>
+          <div class="when-box">When to use: When you receive an urgent load notification from SRL.</div>
+          <ol class="step-list">
+            <li>You may receive urgent notifications when another carrier has fallen off a load and SRL needs a replacement quickly</li>
+            <li>These appear as "Urgent Load Available" in your notifications with the load details and rate</li>
+            <li>Review the load: origin, destination, pickup date, equipment type, and rate</li>
+            <li>If you can take the load, accept it through the portal or reply "YES" to the SMS</li>
+            <li>The load will be immediately assigned to you and your broker will be notified of the successful recovery</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Accepting urgent loads quickly builds trust with SRL and can positively impact your SRCPP tier. Reliable backup carriers get priority on future loads.</div>
+        </div>
+
+        <!-- SOP-018: Understanding Your Risk Profile -->
+        <div class="sop-card" data-category="automation" id="sop-018">
+          <h2>SOP-018: Understanding Load Risk & Your Performance Impact</h2>
+          <div class="sop-meta"><span>Carrier</span> SRCPP</div>
+          <div class="when-box">When to use: To understand how your actions affect load risk scores and your carrier performance.</div>
+          <ol class="step-list">
+            <li>Every active load has a risk score (GREEN/AMBER/RED) that your broker monitors</li>
+            <li>Your actions directly influence the risk score:
+              <br>&bull; Responding to check-calls on time → reduces risk
+              <br>&bull; Missing check-calls → increases risk (+25-50 points)
+              <br>&bull; Being a Bronze tier carrier → adds +10 risk points</li>
+            <li>High-risk loads get escalated to management, which can affect your standing</li>
+            <li>To keep loads GREEN: respond to check-calls promptly, update your status at each milestone, and communicate any delays proactively</li>
+            <li>Fall-offs (cancelling an assigned load) are tracked and penalized:
+              <br>&bull; 1st fall-off: noted on your profile
+              <br>&bull; 2+ fall-offs: flagged for deactivation review</li>
+            <li>Maintaining a clean record with zero fall-offs and prompt communication is the fastest path to higher SRCPP tiers</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> If you have an issue with a load (truck breakdown, weather delay), call your broker immediately. Proactive communication is always better than going silent.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <footer class="main-footer">Silk Route Logistics &middot; Carrier Portal</footer>
+  </main>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    if (!CARRIER.requireAuth()) throw new Error("Not authenticated");
+
+    // Init sidebar user
+    CARRIER.getMe().then(function (u) {
+      if (u) {
+        document.getElementById("sidebarUser").innerHTML =
+          '<div class="user-name">' + (u.firstName + " " + u.lastName) + '</div><div class="user-role">CARRIER</div>' +
+          (u.carrierProfile ? '<div class="user-tier tier-' + u.carrierProfile.tier + '">' + u.carrierProfile.tier + '</div>' : '');
+      }
+    });
+
+    // SOP filtering
+    function filterSOPs(category) {
+      var cards = document.querySelectorAll('.sop-card');
+      cards.forEach(function (card) {
+        if (category === 'all') {
+          card.style.display = 'block';
+        } else {
+          card.style.display = card.dataset.category === category ? 'block' : 'none';
+        }
+      });
+
+      // Update active nav
+      document.querySelectorAll('.sop-sidebar a').forEach(function (a) { a.classList.remove('active'); });
+      event.target.classList.add('active');
+    }
+
+    // Sidebar toggle
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+  </script>
+</body>
+</html>

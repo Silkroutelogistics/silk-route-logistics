@@ -2,6 +2,9 @@ import crypto from "crypto";
 import cron from "node-cron";
 import { prisma } from "../config/database";
 import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder } from "./emailService";
+import { processDueCheckCalls } from "./checkCallAutomation";
+import { runRiskFlagging } from "./riskEngine";
+import { processDueSequences } from "./emailSequenceService";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -303,6 +306,24 @@ export function startSchedulers() {
   cron.schedule("0 3 * * *", async () => {
     console.log("[Scheduler] Running OTP cleanup...");
     await withLock("otp-cleanup", 5 * 60 * 1000, runOtpCleanup);
+  });
+
+  // Phase C: Check-call automation: every 15 minutes
+  cron.schedule("*/15 * * * *", async () => {
+    console.log("[Scheduler] Running check-call automation...");
+    await withLock("check-call-automation", 5 * 60 * 1000, processDueCheckCalls);
+  });
+
+  // Phase C: Risk flagging: every 30 minutes at :05 and :35
+  cron.schedule("5,35 * * * *", async () => {
+    console.log("[Scheduler] Running risk flagging engine...");
+    await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
+  });
+
+  // Phase C: Email sequence processor: every hour at :10
+  cron.schedule("10 * * * *", async () => {
+    console.log("[Scheduler] Processing due email sequences...");
+    await withLock("email-sequences", 5 * 60 * 1000, processDueSequences);
   });
 
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);

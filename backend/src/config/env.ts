@@ -19,6 +19,10 @@ const envSchema = z.object({
   FMCSA_WEB_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   ENCRYPTION_KEY: z.string().optional(),
+  OPENPHONE_WEBHOOK_SECRET: z.string().optional(),
+  DAT_API_KEY: z.string().optional(),
+  DAT_API_SECRET: z.string().optional(),
+  DAT_API_URL: z.string().optional().default("https://freight.dat.com/api/v2"),
 });
 
 export const env = envSchema.parse(process.env);

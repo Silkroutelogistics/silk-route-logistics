@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Caravan - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Caravan Page Styles ========== */
+
+    /* --- KPI Bar --- */
+    .kpi-bar {
+      display: flex;
+      gap: 16px;
+      padding: 20px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .kpi-card {
+      flex: 1;
+      min-width: 160px;
+      padding: 16px 20px;
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-100);
+    }
+    .kpi-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--gray-500);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .filter-bar select,
+    .filter-bar input {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .filter-bar select:focus,
+    .filter-bar input:focus {
+      border-color: var(--gold);
+    }
+    .filter-bar input[type="text"] { width: 240px; }
+    .filter-spacer { flex: 1; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--gold);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--white);
+      color: var(--navy);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-danger:hover { opacity: 0.9; }
+
+    /* --- View Toggle --- */
+    .view-toggle {
+      display: inline-flex;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 6px 14px;
+      border: none;
+      background: var(--white);
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--gray-500);
+      transition: background 0.15s, color 0.15s;
+    }
+    .view-toggle button.active {
+      background: var(--navy);
+      color: var(--white);
+    }
+    .view-toggle button:not(:last-child) {
+      border-right: 1px solid var(--gray-200);
+    }
+
+    /* --- Card Grid --- */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      padding: 24px 32px;
+    }
+    .carrier-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+      padding: 20px;
+      cursor: pointer;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .carrier-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--gold);
+    }
+    .carrier-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .carrier-card-company {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.3;
+    }
+    .carrier-card-contact {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-top: 2px;
+    }
+    .carrier-card-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      margin-top: 12px;
+    }
+    .carrier-card-meta .meta-label {
+      color: var(--gray-400);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .carrier-card-meta .meta-value {
+      color: var(--navy);
+      font-weight: 600;
+    }
+    .carrier-card-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .carrier-card-equipment {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .equip-tag {
+      padding: 2px 8px;
+      background: var(--gray-100);
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+
+    /* --- Table View --- */
+    .table-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+    }
+    .carrier-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .carrier-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .carrier-table th:hover { color: var(--navy); }
+    .carrier-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700);
+      white-space: nowrap;
+    }
+    .carrier-table tr.clickable-row { cursor: pointer; }
+    .carrier-table tr.clickable-row:hover td { background: var(--gray-50); }
+
+    /* --- Tier Badge --- */
+    .tier-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .tier-PLATINUM { background: linear-gradient(135deg, #E5E7EB, #D1D5DB); color: #374151; }
+    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
+    .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
+    .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
+    .tier-GUEST { background: rgba(107,114,128,0.1); color: #6B7280; }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+
+    /* --- Source Badge --- */
+    .source-caravan {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(34,197,94,0.1);
+      color: #15803D;
+    }
+    .source-dat {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(59,130,246,0.1);
+      color: #2563EB;
+    }
+
+    /* --- Compliance Dot --- */
+    .compliance-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+    .compliance-green { background: var(--green); }
+    .compliance-amber { background: var(--amber); }
+    .compliance-red { background: var(--red); }
+
+    /* --- Score Bar --- */
+    .score-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .score-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--gray-100);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    .score-bar-label {
+      font-size: 12px;
+      font-weight: 700;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* --- Detail Panel --- */
+    .detail-panel {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 480px;
+      max-width: 100vw;
+      height: 100vh;
+      background: var(--white);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      z-index: 400;
+      overflow-y: auto;
+      animation: slideIn 0.2s ease;
+    }
+    .detail-panel.open { display: block; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+    .detail-panel-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 399;
+    }
+    .detail-panel-overlay.open { display: block; }
+    .detail-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-100);
+      position: sticky;
+      top: 0;
+      background: var(--white);
+      z-index: 1;
+    }
+    .detail-panel-header h3 {
+      font-size: 18px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .detail-panel-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--gray-400);
+      padding: 4px;
+    }
+    .detail-panel-close:hover { color: var(--red); }
+    .detail-panel-body { padding: 24px; }
+    .detail-section {
+      margin-bottom: 24px;
+    }
+    .detail-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+    .detail-field label {
+      display: block;
+      font-size: 10px;
+      color: var(--gray-400);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .detail-field span {
+      font-size: 14px;
+      color: var(--navy);
+      font-weight: 500;
+    }
+    .detail-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    /* --- Import Modal --- */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 500;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+      overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 540px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .modal-header h3 {
+      font-size: 18px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--gray-400);
+    }
+    .modal-close:hover { color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 4px;
+    }
+    .form-group label .req { color: var(--red); }
+    .form-group input,
+    .form-group select {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      outline: none;
+    }
+    .form-group input:focus { border-color: var(--gold); }
+    .form-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 8px;
+      display: none;
+    }
+    .form-error.visible { display: block; }
+
+    /* --- Pagination --- */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 32px;
+    }
+    .pagination button {
+      padding: 6px 12px;
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--gray-600);
+    }
+    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+    .pagination .page-info { font-size: 13px; color: var(--gray-500); }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+      z-index: 9999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    /* --- Responsive --- */
+    @media (max-width: 1024px) {
+      .kpi-bar { padding: 16px 20px; }
+      .filter-bar { padding: 12px 20px; }
+      .card-grid { padding: 16px 20px; gap: 12px; }
+      .table-wrap { padding: 0 20px 20px; }
+      .detail-panel { width: 100vw; }
+    }
+    @media (max-width: 640px) {
+      .kpi-bar { flex-direction: column; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar input[type="text"] { width: 100%; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/logo.png" alt="SRL">
+        <span>SRL Command</span>
+      </div>
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html" class="active">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Hamburger -->
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1>The Caravan</h1>
+          <p style="color:var(--gray-500);font-size:13px">Internal Carrier Directory &amp; Relationship Manager</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="openImportModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Import from DAT
+          </button>
+          <button class="btn-primary" onclick="window.location.href='/ae/loads.html'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            Load Board
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Bar -->
+      <div class="kpi-bar" id="kpi-bar">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Carriers</div>
+          <div class="kpi-value" id="kpi-total">--</div>
+          <div class="kpi-sub" id="kpi-total-sub">loading...</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Caravan Members</div>
+          <div class="kpi-value" id="kpi-caravan">--</div>
+          <div class="kpi-sub" id="kpi-caravan-sub"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">DAT / Guest</div>
+          <div class="kpi-value" id="kpi-guest">--</div>
+          <div class="kpi-sub" id="kpi-guest-sub"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Avg SRCPP Score</div>
+          <div class="kpi-value" id="kpi-score">--</div>
+          <div class="kpi-sub" id="kpi-score-sub"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Compliance Issues</div>
+          <div class="kpi-value" id="kpi-compliance">--</div>
+          <div class="kpi-sub" id="kpi-compliance-sub"></div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <select id="filter-tier" onchange="applyFilters()">
+          <option value="">All Tiers</option>
+          <option value="PLATINUM">Platinum</option>
+          <option value="GOLD">Gold</option>
+          <option value="SILVER">Silver</option>
+          <option value="BRONZE">Bronze</option>
+          <option value="GUEST">Guest</option>
+        </select>
+        <select id="filter-source" onchange="applyFilters()">
+          <option value="">All Sources</option>
+          <option value="caravan">Caravan</option>
+          <option value="dat">DAT Import</option>
+        </select>
+        <select id="filter-equipment" onchange="applyFilters()">
+          <option value="">All Equipment</option>
+          <option value="DRY_VAN">Dry Van</option>
+          <option value="REEFER">Reefer</option>
+          <option value="FLATBED">Flatbed</option>
+          <option value="STEP_DECK">Step Deck</option>
+          <option value="POWER_ONLY">Power Only</option>
+          <option value="BOX_TRUCK">Box Truck</option>
+          <option value="HOTSHOT">Hotshot</option>
+        </select>
+        <select id="filter-status" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option value="APPROVED">Approved</option>
+          <option value="NEW">New / Pending</option>
+          <option value="REVIEW">Under Review</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="SUSPENDED">Suspended</option>
+        </select>
+        <input type="text" id="filter-search" placeholder="Search company, MC#, DOT#, contact..." oninput="debounceSearch()">
+        <div class="filter-spacer"></div>
+        <div class="view-toggle">
+          <button id="view-card" class="active" onclick="setView('card')">Cards</button>
+          <button id="view-table" onclick="setView('table')">Table</button>
+        </div>
+        <span id="showing-label" style="font-size:12px;color:var(--gray-400);"></span>
+      </div>
+
+      <!-- Card View -->
+      <div class="card-grid" id="card-view">
+        <div style="text-align:center;padding:40px;color:var(--gray-400);grid-column:1/-1">Loading carriers...</div>
+      </div>
+
+      <!-- Table View (hidden by default) -->
+      <div class="table-wrap" id="table-view" style="display:none;">
+        <table class="carrier-table">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>MC#</th>
+              <th>DOT#</th>
+              <th>Source</th>
+              <th>Tier</th>
+              <th>SRCPP Score</th>
+              <th>Equipment</th>
+              <th>Regions</th>
+              <th>Loads</th>
+              <th>Compliance</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="table-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+    </main>
+  </div>
+
+  <!-- Detail Slide-out Panel -->
+  <div class="detail-panel-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-panel-header">
+      <h3 id="detail-company">--</h3>
+      <button class="detail-panel-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="detail-panel-body" id="detail-body">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Import from DAT Modal -->
+  <div class="modal-backdrop" id="import-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Import Carrier from DAT</h3>
+        <button class="modal-close" onclick="closeImportModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">Enter carrier details from a DAT load board response. FMCSA verification will run automatically if DOT# is provided.</p>
+        <div id="import-error" class="form-error"></div>
+        <div class="form-group">
+          <label>Company Name <span class="req">*</span></label>
+          <input type="text" id="imp-company" placeholder="Carrier company name">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label>MC Number</label>
+            <input type="text" id="imp-mc" placeholder="MC-1234567">
+          </div>
+          <div class="form-group">
+            <label>DOT Number</label>
+            <input type="text" id="imp-dot" placeholder="1234567">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Contact Name</label>
+          <input type="text" id="imp-contact" placeholder="John Smith">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="imp-phone" placeholder="(555) 123-4567">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="imp-email" placeholder="dispatch@company.com">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeImportModal()">Cancel</button>
+        <button class="btn-primary" id="import-btn" onclick="submitImport()">Import &amp; Verify</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- API Client -->
+  <script src="/ae/js/api.js"></script>
+
+  <script>
+    /* =========================================
+       STATE
+       ========================================= */
+    var state = {
+      carriers: [],
+      allCarriers: [],
+      filtered: [],
+      view: "card",
+      searchTimer: null,
+      selectedCarrier: null
+    };
+
+    /* =========================================
+       INIT
+       ========================================= */
+    (function init() {
+      loadUser();
+      fetchCarriers();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function(){});
+    }
+
+    /* =========================================
+       FETCH CARRIERS
+       ========================================= */
+    function fetchCarriers() {
+      SRL.getCarriers({ limit: 500 }).then(function(res) {
+        state.allCarriers = res.carriers || [];
+        computeKPIs();
+        applyFilters();
+      }).catch(function(err) {
+        document.getElementById("card-view").innerHTML =
+          '<div style="text-align:center;padding:40px;color:var(--red);grid-column:1/-1">Error: ' + esc(err.message) + '</div>';
+      });
+    }
+
+    /* =========================================
+       KPIs
+       ========================================= */
+    function computeKPIs() {
+      var carriers = state.allCarriers;
+      var total = carriers.length;
+      var approved = carriers.filter(function(c){ return c.onboardingStatus === "APPROVED"; }).length;
+      var caravan = carriers.filter(function(c){ return (!c.source || c.source === "caravan") && c.tier !== "GUEST" && c.tier !== "NONE"; }).length;
+      var guest = carriers.filter(function(c){ return c.source === "dat" || c.tier === "GUEST"; }).length;
+
+      // Average SRCPP score from scorecards
+      var scored = carriers.filter(function(c){ return c.performance && c.performance.overallScore > 0; });
+      var avgScore = scored.length > 0
+        ? scored.reduce(function(sum, c){ return sum + (c.performance.overallScore || 0); }, 0) / scored.length
+        : 0;
+
+      // Compliance issues
+      var complianceIssues = carriers.filter(function(c){
+        if (!c.insuranceExpiry) return true;
+        return new Date(c.insuranceExpiry) < new Date();
+      }).length;
+
+      document.getElementById("kpi-total").textContent = total;
+      document.getElementById("kpi-total-sub").textContent = approved + " approved";
+      document.getElementById("kpi-caravan").textContent = caravan;
+      document.getElementById("kpi-caravan-sub").textContent = tierBreakdown(carriers);
+      document.getElementById("kpi-guest").textContent = guest;
+      document.getElementById("kpi-guest-sub").textContent = "eligible for promotion";
+      document.getElementById("kpi-score").textContent = avgScore > 0 ? avgScore.toFixed(1) + "%" : "N/A";
+      document.getElementById("kpi-score-sub").textContent = scored.length + " scored carriers";
+      document.getElementById("kpi-compliance").textContent = complianceIssues;
+      document.getElementById("kpi-compliance-sub").textContent = complianceIssues > 0 ? "need attention" : "all clear";
+    }
+
+    function tierBreakdown(carriers) {
+      var tiers = { PLATINUM: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
+      carriers.forEach(function(c) { if (tiers[c.tier] !== undefined) tiers[c.tier]++; });
+      var parts = [];
+      if (tiers.PLATINUM > 0) parts.push(tiers.PLATINUM + " Plat");
+      if (tiers.GOLD > 0) parts.push(tiers.GOLD + " Gold");
+      if (tiers.SILVER > 0) parts.push(tiers.SILVER + " Silver");
+      if (tiers.BRONZE > 0) parts.push(tiers.BRONZE + " Bronze");
+      return parts.join(", ") || "none yet";
+    }
+
+    /* =========================================
+       FILTERS
+       ========================================= */
+    function applyFilters() {
+      var tier = document.getElementById("filter-tier").value;
+      var source = document.getElementById("filter-source").value;
+      var equip = document.getElementById("filter-equipment").value;
+      var status = document.getElementById("filter-status").value;
+      var search = (document.getElementById("filter-search").value || "").toLowerCase().trim();
+
+      var list = state.allCarriers.filter(function(c) {
+        if (tier && c.tier !== tier) return false;
+        if (source === "caravan" && c.source === "dat") return false;
+        if (source === "dat" && c.source !== "dat") return false;
+        if (equip && (!c.equipmentTypes || c.equipmentTypes.indexOf(equip) === -1)) return false;
+        if (status) {
+          if (status === "NEW" && c.onboardingStatus !== "PENDING" && c.status !== "NEW") return false;
+          if (status === "REVIEW" && c.onboardingStatus !== "UNDER_REVIEW" && c.status !== "REVIEW") return false;
+          if (status === "APPROVED" && c.onboardingStatus !== "APPROVED") return false;
+          if (status === "REJECTED" && c.onboardingStatus !== "REJECTED") return false;
+          if (status === "SUSPENDED" && c.status !== "SUSPENDED") return false;
+        }
+        if (search) {
+          var haystack = [
+            c.companyName || "", c.company || "", c.mcNumber || "", c.dotNumber || "",
+            c.contactName || "", c.contactEmail || "", c.contactPhone || "",
+            (c.user ? (c.user.firstName + " " + c.user.lastName + " " + (c.user.company || "")) : "")
+          ].join(" ").toLowerCase();
+          if (haystack.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+
+      state.filtered = list;
+      document.getElementById("showing-label").textContent = "Showing " + list.length + " of " + state.allCarriers.length;
+      renderView();
+    }
+
+    function debounceSearch() {
+      clearTimeout(state.searchTimer);
+      state.searchTimer = setTimeout(applyFilters, 300);
+    }
+
+    /* =========================================
+       VIEW RENDERING
+       ========================================= */
+    function setView(v) {
+      state.view = v;
+      document.getElementById("view-card").className = v === "card" ? "active" : "";
+      document.getElementById("view-table").className = v === "table" ? "active" : "";
+      document.getElementById("card-view").style.display = v === "card" ? "" : "none";
+      document.getElementById("table-view").style.display = v === "table" ? "" : "none";
+      renderView();
+    }
+
+    function renderView() {
+      if (state.view === "card") renderCards();
+      else renderTable();
+    }
+
+    function renderCards() {
+      var el = document.getElementById("card-view");
+      if (state.filtered.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);grid-column:1/-1">No carriers match your filters</div>';
+        return;
+      }
+
+      el.innerHTML = state.filtered.map(function(c) {
+        var company = esc(c.companyName || c.company || (c.user ? c.user.company : "") || "Unknown");
+        var contact = esc(c.contactName || (c.user ? c.user.firstName + " " + c.user.lastName : ""));
+        var tier = c.tier || "NONE";
+        var source = c.source || "caravan";
+        var score = c.performance ? c.performance.overallScore : (c.safetyScore || 0);
+        var scoreColor = score >= 95 ? "var(--green)" : score >= 85 ? "var(--gold)" : score >= 70 ? "var(--amber)" : "var(--red)";
+        var complianceOk = c.insuranceExpiry ? new Date(c.insuranceExpiry) > new Date() : false;
+        var complianceClass = !complianceOk ? "compliance-red" : (c.insuranceExpiry && new Date(c.insuranceExpiry) < new Date(Date.now() + 30*86400000) ? "compliance-amber" : "compliance-green");
+
+        var equipTags = (c.equipmentTypes || []).slice(0,3).map(function(e) {
+          return '<span class="equip-tag">' + formatEquip(e) + '</span>';
+        }).join("");
+        if ((c.equipmentTypes || []).length > 3) equipTags += '<span class="equip-tag">+' + ((c.equipmentTypes || []).length - 3) + '</span>';
+
+        return '<div class="carrier-card" onclick="openCarrierDetail(\'' + c.id + '\')">' +
+          '<div class="carrier-card-header">' +
+            '<div>' +
+              '<div class="carrier-card-company">' + company + '</div>' +
+              '<div class="carrier-card-contact">' + contact + '</div>' +
+            '</div>' +
+            '<span class="tier-badge tier-' + tier + '">' + tier + '</span>' +
+          '</div>' +
+          '<div class="carrier-card-meta">' +
+            '<div><div class="meta-label">MC#</div><div class="meta-value">' + esc(c.mcNumber || "N/A") + '</div></div>' +
+            '<div><div class="meta-label">DOT#</div><div class="meta-value">' + esc(c.dotNumber || "N/A") + '</div></div>' +
+            '<div><div class="meta-label">SRCPP Score</div><div class="meta-value">' +
+              '<div class="score-bar">' +
+                '<div class="score-bar-track"><div class="score-bar-fill" style="width:' + score + '%;background:' + scoreColor + '"></div></div>' +
+                '<span class="score-bar-label" style="color:' + scoreColor + '">' + (score > 0 ? score.toFixed(0) + '%' : '--') + '</span>' +
+              '</div>' +
+            '</div></div>' +
+            '<div><div class="meta-label">Compliance</div><div class="meta-value"><span class="compliance-dot ' + complianceClass + '"></span>' + (complianceOk ? 'Valid' : 'Issue') + '</div></div>' +
+          '</div>' +
+          '<div class="carrier-card-badges">' +
+            '<span class="source-' + source + '">' + (source === "dat" ? "DAT" : "Caravan") + '</span>' +
+            (c.emergencyApproved ? '<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,0.1);color:#EF4444">Emergency</span>' : '') +
+          '</div>' +
+          (equipTags ? '<div class="carrier-card-equipment">' + equipTags + '</div>' : '') +
+        '</div>';
+      }).join("");
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById("table-tbody");
+      if (state.filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--gray-400)">No carriers match your filters</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = state.filtered.map(function(c) {
+        var company = esc(c.companyName || c.company || (c.user ? c.user.company : "") || "Unknown");
+        var tier = c.tier || "NONE";
+        var source = c.source || "caravan";
+        var score = c.performance ? c.performance.overallScore : (c.safetyScore || 0);
+        var equip = (c.equipmentTypes || []).slice(0,2).map(formatEquip).join(", ");
+        if ((c.equipmentTypes || []).length > 2) equip += " +" + ((c.equipmentTypes || []).length - 2);
+        var regions = (c.operatingRegions || []).slice(0,2).join(", ");
+        if ((c.operatingRegions || []).length > 2) regions += " +" + ((c.operatingRegions || []).length - 2);
+        var loads = c.srcppTotalLoads || 0;
+        var complianceOk = c.insuranceExpiry ? new Date(c.insuranceExpiry) > new Date() : false;
+        var complianceClass = !complianceOk ? "compliance-red" : (c.insuranceExpiry && new Date(c.insuranceExpiry) < new Date(Date.now() + 30*86400000) ? "compliance-amber" : "compliance-green");
+        var statusLabel = c.onboardingStatus === "APPROVED" ? "Approved" : c.onboardingStatus === "REJECTED" ? "Rejected" : c.status || "Pending";
+
+        return '<tr class="clickable-row" onclick="openCarrierDetail(\'' + c.id + '\')">' +
+          '<td style="font-weight:600;color:var(--navy)">' + company + '</td>' +
+          '<td>' + esc(c.mcNumber || "--") + '</td>' +
+          '<td>' + esc(c.dotNumber || "--") + '</td>' +
+          '<td><span class="source-' + source + '">' + (source === "dat" ? "DAT" : "Caravan") + '</span></td>' +
+          '<td><span class="tier-badge tier-' + tier + '">' + tier + '</span></td>' +
+          '<td>' + (score > 0 ? score.toFixed(1) + '%' : '--') + '</td>' +
+          '<td>' + esc(equip || "--") + '</td>' +
+          '<td>' + esc(regions || "--") + '</td>' +
+          '<td>' + loads + '</td>' +
+          '<td><span class="compliance-dot ' + complianceClass + '"></span>' + (complianceOk ? 'OK' : 'Issue') + '</td>' +
+          '<td>' + esc(statusLabel) + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    /* =========================================
+       CARRIER DETAIL PANEL
+       ========================================= */
+    function openCarrierDetail(carrierId) {
+      var c = state.allCarriers.find(function(x) { return x.id === carrierId; });
+      if (!c) return;
+      state.selectedCarrier = c;
+
+      document.getElementById("detail-company").textContent = c.companyName || c.company || (c.user ? c.user.company : "Unknown");
+
+      var html = "";
+      var tier = c.tier || "NONE";
+      var source = c.source || "caravan";
+      var score = c.performance ? c.performance.overallScore : (c.safetyScore || 0);
+      var complianceOk = c.insuranceExpiry ? new Date(c.insuranceExpiry) > new Date() : false;
+
+      // Badges
+      html += '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">';
+      html += '<span class="tier-badge tier-' + tier + '">' + tier + '</span>';
+      html += '<span class="source-' + source + '">' + (source === "dat" ? "DAT Import" : "Caravan Member") + '</span>';
+      if (c.emergencyApproved) html += '<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,0.1);color:#EF4444">Emergency Approved</span>';
+      html += '</div>';
+
+      // Contact Info
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Contact Information</div>';
+      html += '<div class="detail-grid">';
+      html += dField("Contact", esc(c.contactName || (c.user ? c.user.firstName + " " + c.user.lastName : "--")));
+      html += dField("Phone", c.contactPhone || (c.user ? c.user.phone : null) ? '<a href="tel:' + esc(c.contactPhone || c.user.phone) + '">' + esc(c.contactPhone || c.user.phone) + '</a>' : '--');
+      html += dField("Email", esc(c.contactEmail || (c.user ? c.user.email : "--")));
+      html += dField("MC#", esc(c.mcNumber || "N/A"));
+      html += dField("DOT#", esc(c.dotNumber || "N/A"));
+      html += dField("Status", esc(c.onboardingStatus || c.status || "Unknown"));
+      html += '</div></div>';
+
+      // SRCPP Performance
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">SRCPP Performance</div>';
+      html += '<div class="detail-grid">';
+      html += dField("Overall Score", score > 0 ? '<span style="font-size:18px;font-weight:700;color:' + (score >= 95 ? 'var(--green)' : score >= 85 ? 'var(--gold)' : 'var(--amber)') + '">' + score.toFixed(1) + '%</span>' : '--');
+      html += dField("Tier", '<span class="tier-badge tier-' + tier + '">' + tier + '</span>');
+      html += dField("Total Loads", String(c.srcppTotalLoads || 0));
+      html += dField("Safety Score", c.safetyScore ? c.safetyScore.toFixed(1) : '--');
+      html += '</div></div>';
+
+      // Equipment & Regions
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Equipment &amp; Coverage</div>';
+      var equipTags = (c.equipmentTypes || []).map(function(e) { return '<span class="equip-tag">' + formatEquip(e) + '</span>'; }).join(" ");
+      html += '<div style="margin-bottom:8px"><span style="font-size:11px;color:var(--gray-400);text-transform:uppercase">Equipment:</span> ' + (equipTags || '<span style="color:var(--gray-400)">None listed</span>') + '</div>';
+      var regionTags = (c.operatingRegions || []).map(function(r) { return '<span class="equip-tag">' + esc(r) + '</span>'; }).join(" ");
+      html += '<div><span style="font-size:11px;color:var(--gray-400);text-transform:uppercase">Regions:</span> ' + (regionTags || '<span style="color:var(--gray-400)">None listed</span>') + '</div>';
+      html += '</div>';
+
+      // Compliance
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">Compliance</div>';
+      html += '<div class="detail-grid">';
+      var compClass = !complianceOk ? "compliance-red" : "compliance-green";
+      html += dField("Insurance", '<span class="compliance-dot ' + compClass + '"></span>' + (c.insuranceExpiry ? 'Exp: ' + new Date(c.insuranceExpiry).toLocaleDateString() : 'Unknown'));
+      html += dField("W9", c.w9Uploaded ? '<span style="color:var(--green)">Uploaded</span>' : '<span style="color:var(--red)">Missing</span>');
+      html += dField("Insurance Cert", c.insuranceCertUploaded ? '<span style="color:var(--green)">Uploaded</span>' : '<span style="color:var(--red)">Missing</span>');
+      html += dField("Authority Doc", c.authorityDocUploaded ? '<span style="color:var(--green)">Uploaded</span>' : '<span style="color:var(--red)">Missing</span>');
+      html += dField("FMCSA Status", esc(c.fmcsaAuthorityStatus || "Not checked"));
+      html += dField("Safety Rating", esc(c.safetyRating || "Not rated"));
+      html += '</div></div>';
+
+      // Actions
+      html += '<div class="detail-actions">';
+      if (tier === "GUEST") {
+        html += '<button class="btn-primary btn-sm" onclick="doPromote(\'' + c.id + '\')">Promote to Bronze</button>';
+      }
+      if (c.onboardingStatus !== "APPROVED") {
+        html += '<button class="btn-secondary btn-sm" style="border-color:var(--amber);color:var(--amber)" onclick="doEmergencyApprove(\'' + c.id + '\')">Emergency Approve</button>';
+      }
+      html += '<button class="btn-secondary btn-sm" onclick="window.location.href=\'/ae/loads.html\'">Find Loads</button>';
+      html += '</div>';
+
+      document.getElementById("detail-body").innerHTML = html;
+      document.getElementById("detail-panel").classList.add("open");
+      document.getElementById("detail-overlay").classList.add("open");
+    }
+
+    function closeDetail() {
+      document.getElementById("detail-panel").classList.remove("open");
+      document.getElementById("detail-overlay").classList.remove("open");
+      state.selectedCarrier = null;
+    }
+
+    /* =========================================
+       ACTIONS
+       ========================================= */
+    function doPromote(carrierId) {
+      if (!confirm("Promote this Guest carrier to Bronze tier in The Caravan?")) return;
+      SRL.promoteToBronze(carrierId).then(function() {
+        showToast("Carrier promoted to Bronze!", "success");
+        closeDetail();
+        fetchCarriers();
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    function doEmergencyApprove(carrierId) {
+      var reason = prompt("Enter reason for emergency approval:");
+      if (!reason) return;
+      SRL.emergencyApproveCarrier(carrierId, reason).then(function() {
+        showToast("Emergency approval granted", "success");
+        closeDetail();
+        fetchCarriers();
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       IMPORT FROM DAT
+       ========================================= */
+    function openImportModal() {
+      document.getElementById("import-modal").classList.add("open");
+      document.getElementById("import-error").className = "form-error";
+    }
+
+    function closeImportModal() {
+      document.getElementById("import-modal").classList.remove("open");
+    }
+
+    function submitImport() {
+      var errEl = document.getElementById("import-error");
+      errEl.className = "form-error";
+      var company = document.getElementById("imp-company").value.trim();
+      if (!company) {
+        errEl.textContent = "Company name is required.";
+        errEl.className = "form-error visible";
+        return;
+      }
+
+      var data = {
+        companyName: company,
+        mcNumber: document.getElementById("imp-mc").value.trim() || undefined,
+        dotNumber: document.getElementById("imp-dot").value.trim() || undefined,
+        contactName: document.getElementById("imp-contact").value.trim() || undefined,
+        phone: document.getElementById("imp-phone").value.trim() || undefined,
+        email: document.getElementById("imp-email").value.trim() || undefined,
+      };
+
+      var btn = document.getElementById("import-btn");
+      btn.disabled = true;
+      btn.textContent = "Importing...";
+
+      SRL.importFromDAT(data).then(function(res) {
+        var msg = "Carrier imported";
+        if (res.fmcsa && res.fmcsa.verified) msg += " & FMCSA verified";
+        else if (res.fmcsa && !res.fmcsa.verified) msg += " (FMCSA check failed)";
+        showToast(msg, "success");
+        closeImportModal();
+        // Clear form
+        ["imp-company","imp-mc","imp-dot","imp-contact","imp-phone","imp-email"].forEach(function(id) {
+          document.getElementById(id).value = "";
+        });
+        fetchCarriers();
+      }).catch(function(err) {
+        errEl.textContent = err.message || "Import failed.";
+        errEl.className = "form-error visible";
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "Import & Verify";
+      });
+    }
+
+    /* =========================================
+       HELPERS
+       ========================================= */
+    function dField(label, value) {
+      return '<div class="detail-field"><label>' + label + '</label><span>' + (value || '--') + '</span></div>';
+    }
+
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    function formatRole(role) {
+      var m = {ADMIN:"Administrator",BROKER:"Account Executive",DISPATCH:"Dispatch",OPERATIONS:"Operations",CEO:"CEO",CARRIER:"Carrier",ACCOUNTING:"Accounting"};
+      return m[role] || role;
+    }
+
+    function formatEquip(e) {
+      if (!e) return "--";
+      return e.replace(/_/g, " ").replace(/\b\w/g, function(c){return c.toUpperCase();});
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function(){ el.classList.remove("show"); }, 3500);
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+</body>
+</html>

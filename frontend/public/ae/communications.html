@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Communications Hub - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Communications Hub Styles ========== */
+    .comm-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* --- Left: Contact List (30%) --- */
+    .contact-panel {
+      width: 30%;
+      min-width: 260px;
+      border-right: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      background: var(--white);
+    }
+    .contact-search {
+      padding: 12px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .contact-search input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .contact-search input:focus { border-color: var(--gold); }
+    .contact-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .contact-tab {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--gray-500);
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .contact-tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .contact-list {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--gray-50);
+      transition: background 0.1s;
+    }
+    .contact-item:hover { background: var(--gray-50); }
+    .contact-item.active { background: var(--gold-dim); }
+    .contact-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+    .avatar-carrier { background: #6366F1; }
+    .avatar-shipper { background: #F59E0B; }
+    .contact-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .contact-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .contact-last-msg {
+      font-size: 11px;
+      color: var(--gray-400);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .contact-meta {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .contact-time {
+      font-size: 10px;
+      color: var(--gray-400);
+    }
+    .contact-unread {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      margin-top: 4px;
+    }
+
+    /* --- Center: Conversation (50%) --- */
+    .convo-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--gray-50);
+    }
+    .convo-header {
+      padding: 14px 20px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .convo-header h3 {
+      font-size: 16px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .convo-header-type {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .type-carrier { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .type-shipper { background: rgba(245,158,11,0.1); color: #B45309; }
+    .convo-thread {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .convo-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+    .comm-entry {
+      display: flex;
+      gap: 10px;
+      max-width: 85%;
+    }
+    .comm-entry.outbound { margin-left: auto; flex-direction: row-reverse; }
+    .comm-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 12px;
+    }
+    .icon-call { background: rgba(34,197,94,0.1); color: var(--green); }
+    .icon-text { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .icon-email { background: rgba(168,85,247,0.1); color: #A855F7; }
+    .icon-note { background: rgba(245,158,11,0.1); color: #B45309; }
+    .comm-bubble {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow-sm);
+      min-width: 120px;
+    }
+    .comm-entry.outbound .comm-bubble {
+      background: var(--navy);
+      color: var(--white);
+    }
+    .comm-bubble-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .comm-type-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .comm-timestamp {
+      font-size: 10px;
+      color: var(--gray-400);
+    }
+    .comm-entry.outbound .comm-timestamp { color: rgba(255,255,255,0.5); }
+    .comm-subject {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .comm-body {
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .comm-entry.outbound .comm-type-label { color: var(--gold); }
+    .comm-duration {
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 4px;
+    }
+    .comm-entry.outbound .comm-duration { color: rgba(255,255,255,0.4); }
+
+    /* --- Compose Bar --- */
+    .compose-bar {
+      background: var(--white);
+      border-top: 1px solid var(--gray-200);
+      padding: 12px 20px;
+    }
+    .compose-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 10px;
+    }
+    .compose-tab {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--gray-500);
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      transition: background 0.15s, color 0.15s;
+    }
+    .compose-tab:first-child { border-radius: 6px 0 0 6px; }
+    .compose-tab:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+    .compose-tab.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .compose-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+    .compose-textarea {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+      height: 40px;
+      outline: none;
+    }
+    .compose-textarea:focus { border-color: var(--gold); }
+    .compose-email-fields {
+      display: none;
+      width: 100%;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .compose-email-fields.active { display: flex; flex-wrap: wrap; }
+    .compose-email-fields input,
+    .compose-email-fields select {
+      padding: 6px 10px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+    }
+    .compose-email-fields input { flex: 1; min-width: 150px; }
+    .compose-email-fields select { width: 180px; }
+    .compose-email-fields input:focus,
+    .compose-email-fields select:focus { border-color: var(--gold); }
+    .btn-send {
+      padding: 8px 18px;
+      background: var(--gold);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-send:hover { background: var(--gold-hover); }
+
+    /* --- Right: Contact Info (20%) --- */
+    .info-panel {
+      width: 20%;
+      min-width: 200px;
+      border-left: 1px solid var(--gray-200);
+      background: var(--white);
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+    .info-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .info-name {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .info-type-badge {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .info-section {
+      margin-bottom: 16px;
+    }
+    .info-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .info-field {
+      margin-bottom: 6px;
+    }
+    .info-field label {
+      display: block;
+      font-size: 10px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+    }
+    .info-field span {
+      font-size: 13px;
+      color: var(--navy);
+      font-weight: 500;
+    }
+    .tier-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .tier-PLATINUM { background: #E5E7EB; color: #374151; }
+    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
+    .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
+    .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+    .stage-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 700;
+    }
+    .stage-Lead { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .stage-Contacted { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
+    .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
+    .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }
+    .stage-Active { background: var(--gold-dim); color: var(--gold); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--white);
+      z-index: 9999; transform: translateY(80px); opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    @media (max-width: 1024px) {
+      .info-panel { display: none; }
+      .contact-panel { width: 35%; min-width: 220px; }
+    }
+    @media (max-width: 640px) {
+      .comm-layout { flex-direction: column; }
+      .contact-panel { width: 100%; max-height: 40vh; }
+      .convo-panel { min-height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+        <a href="/ae/loads.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Load Board</a>
+        <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
+        <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
+        <a href="/ae/communications.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+      </div>
+    </aside>
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <main class="main" style="display:flex;flex-direction:column">
+      <div class="main-header" style="flex-shrink:0">
+        <h1>Communications Hub</h1>
+      </div>
+
+      <div class="comm-layout">
+        <!-- LEFT: Contact List -->
+        <div class="contact-panel">
+          <div class="contact-search">
+            <input type="text" id="contact-search" placeholder="Search contacts..." oninput="filterContacts()">
+          </div>
+          <div class="contact-tabs">
+            <button class="contact-tab active" data-filter="all" onclick="setContactTab('all',this)">All</button>
+            <button class="contact-tab" data-filter="carrier" onclick="setContactTab('carrier',this)">Carriers</button>
+            <button class="contact-tab" data-filter="shipper" onclick="setContactTab('shipper',this)">Shippers</button>
+          </div>
+          <ul class="contact-list" id="contact-list"></ul>
+        </div>
+
+        <!-- CENTER: Conversation -->
+        <div class="convo-panel">
+          <div class="convo-header" id="convo-header" style="display:none">
+            <h3 id="convo-name">--</h3>
+            <span class="convo-header-type" id="convo-type-badge"></span>
+          </div>
+          <div class="convo-thread" id="convo-thread">
+            <div class="convo-empty">Select a contact to view communications</div>
+          </div>
+          <div class="compose-bar" id="compose-bar" style="display:none">
+            <div class="compose-tabs">
+              <button class="compose-tab active" onclick="setComposeMode('note',this)">Note</button>
+              <button class="compose-tab" onclick="setComposeMode('email',this)">Email</button>
+            </div>
+            <div class="compose-email-fields" id="email-fields">
+              <input type="email" id="email-to" placeholder="To email address...">
+              <input type="text" id="email-subject" placeholder="Subject...">
+              <select id="email-template" onchange="loadTemplate()">
+                <option value="">No template</option>
+                <option value="introduction">Introduction</option>
+                <option value="follow_up">Follow Up</option>
+                <option value="rate_quote">Rate Quote</option>
+                <option value="load_confirmation">Load Confirmation</option>
+                <option value="invoice">Invoice</option>
+                <option value="thank_you">Thank You</option>
+              </select>
+            </div>
+            <div class="compose-form">
+              <textarea class="compose-textarea" id="compose-text" placeholder="Type a note..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComm()}"></textarea>
+              <button class="btn-send" onclick="sendComm()">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Contact Info -->
+        <div class="info-panel" id="info-panel">
+          <div style="text-align:center;color:var(--gray-400);padding:40px 0;font-size:13px">
+            Select a contact
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* ======== STATE ======== */
+    var state = {
+      contacts: [],
+      filtered: [],
+      currentContact: null,
+      communications: [],
+      composeMode: "note",
+      tabFilter: "all",
+      currentUser: null,
+      templates: []
+    };
+
+    /* ======== INIT ======== */
+    (function init() {
+      loadUser();
+      loadContacts();
+      loadTemplates();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        state.currentUser = u;
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function(){});
+    }
+
+    function loadTemplates() {
+      SRL.request("/api/email/templates").then(function(res) {
+        state.templates = res.templates || [];
+      }).catch(function(){});
+    }
+
+    function loadContacts() {
+      // Load both carriers and customers as "contacts"
+      Promise.allSettled([
+        SRL.request("/api/carriers?limit=200"),
+        SRL.request("/api/customers?limit=200")
+      ]).then(function(results) {
+        var contacts = [];
+
+        // Carriers
+        if (results[0].status === "fulfilled" && results[0].value.carriers) {
+          results[0].value.carriers.forEach(function(c) {
+            contacts.push({
+              id: c.userId || c.id,
+              entityType: "CARRIER",
+              entityId: c.userId || c.id,
+              name: c.company || c.contactName || "Unknown Carrier",
+              subtitle: "MC# " + (c.mcNumber || "--"),
+              email: c.email,
+              phone: c.phone,
+              tier: c.tier,
+              data: c
+            });
+          });
+        }
+
+        // Customers/Shippers
+        if (results[1].status === "fulfilled" && results[1].value.customers) {
+          results[1].value.customers.forEach(function(c) {
+            contacts.push({
+              id: c.id,
+              entityType: "SHIPPER",
+              entityId: c.id,
+              name: c.name || "Unknown Shipper",
+              subtitle: c.city ? c.city + ", " + (c.state || "") : c.industry || "",
+              email: c.email,
+              phone: c.phone,
+              stage: c.status,
+              data: c
+            });
+          });
+        }
+
+        state.contacts = contacts;
+        filterContacts();
+      });
+    }
+
+    function filterContacts() {
+      var search = (document.getElementById("contact-search").value || "").toLowerCase();
+      state.filtered = state.contacts.filter(function(c) {
+        if (state.tabFilter === "carrier" && c.entityType !== "CARRIER") return false;
+        if (state.tabFilter === "shipper" && c.entityType !== "SHIPPER") return false;
+        if (search) {
+          var hay = ((c.name||"")+" "+(c.subtitle||"")+" "+(c.email||"")).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+      renderContactList();
+    }
+
+    function setContactTab(filter, btn) {
+      state.tabFilter = filter;
+      document.querySelectorAll(".contact-tab").forEach(function(t) { t.classList.remove("active"); });
+      btn.classList.add("active");
+      filterContacts();
+    }
+
+    function renderContactList() {
+      var list = document.getElementById("contact-list");
+      if (state.filtered.length === 0) {
+        list.innerHTML = '<li style="padding:30px;text-align:center;color:var(--gray-400);font-size:13px">No contacts found</li>';
+        return;
+      }
+      list.innerHTML = state.filtered.map(function(c) {
+        var initials = getInitials(c.name);
+        var avatarClass = c.entityType === "CARRIER" ? "avatar-carrier" : "avatar-shipper";
+        var isActive = state.currentContact && state.currentContact.id === c.id;
+        return '<li class="contact-item' + (isActive ? ' active' : '') + '" onclick="selectContact(\'' + c.id + '\')">' +
+          '<div class="contact-avatar ' + avatarClass + '">' + initials + '</div>' +
+          '<div class="contact-info">' +
+            '<div class="contact-name">' + esc(c.name) + '</div>' +
+            '<div class="contact-last-msg">' + esc(c.subtitle) + '</div>' +
+          '</div>' +
+        '</li>';
+      }).join("");
+    }
+
+    /* ======== SELECT CONTACT ======== */
+    function selectContact(id) {
+      var contact = state.contacts.find(function(c) { return c.id === id; });
+      if (!contact) return;
+      state.currentContact = contact;
+      renderContactList();
+      renderInfoPanel(contact);
+      loadCommunications(contact);
+      document.getElementById("convo-header").style.display = "";
+      document.getElementById("convo-name").textContent = contact.name;
+      var badge = document.getElementById("convo-type-badge");
+      badge.textContent = contact.entityType;
+      badge.className = "convo-header-type type-" + contact.entityType.toLowerCase();
+      document.getElementById("compose-bar").style.display = "";
+
+      // Pre-fill email to if available
+      if (contact.email) {
+        document.getElementById("email-to").value = contact.email;
+      }
+    }
+
+    function loadCommunications(contact) {
+      SRL.request("/api/communications?entity_type=" + contact.entityType + "&entity_id=" + contact.entityId + "&limit=100").then(function(res) {
+        state.communications = (res.communications || []).reverse();
+        renderThread();
+      }).catch(function() {
+        state.communications = [];
+        renderThread();
+      });
+    }
+
+    /* ======== RENDER THREAD ======== */
+    function renderThread() {
+      var thread = document.getElementById("convo-thread");
+      if (state.communications.length === 0) {
+        thread.innerHTML = '<div class="convo-empty">No communications yet. Log a note or send an email to get started.</div>';
+        return;
+      }
+      thread.innerHTML = state.communications.map(function(c) {
+        var isOutbound = c.direction === "OUTBOUND" || c.type.includes("OUTBOUND") || c.type === "NOTE";
+        var iconClass = getTypeIcon(c.type);
+        var typeLabel = getTypeLabel(c.type);
+
+        return '<div class="comm-entry' + (isOutbound ? ' outbound' : '') + '">' +
+          '<div class="comm-icon ' + iconClass + '">' + getTypeEmoji(c.type) + '</div>' +
+          '<div class="comm-bubble">' +
+            '<div class="comm-bubble-header">' +
+              '<span class="comm-type-label">' + typeLabel + '</span>' +
+              '<span class="comm-timestamp">' + timeAgo(c.createdAt) + '</span>' +
+            '</div>' +
+            (c.subject ? '<div class="comm-subject">' + esc(c.subject) + '</div>' : '') +
+            '<div class="comm-body">' + esc(c.body || "--") + '</div>' +
+            (c.duration ? '<div class="comm-duration">' + formatDuration(c.duration) + '</div>' : '') +
+            (c.user ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">by ' + esc(c.user.firstName + " " + c.user.lastName) + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    /* ======== INFO PANEL ======== */
+    function renderInfoPanel(contact) {
+      var html = '';
+      var initials = getInitials(contact.name);
+      var avatarClass = contact.entityType === "CARRIER" ? "avatar-carrier" : "avatar-shipper";
+
+      html += '<div class="info-avatar ' + avatarClass + '">' + initials + '</div>';
+      html += '<div class="info-name">' + esc(contact.name) + '</div>';
+      html += '<div class="info-type-badge">';
+      html += '<span class="convo-header-type type-' + contact.entityType.toLowerCase() + '">' + contact.entityType + '</span>';
+      html += '</div>';
+
+      // Contact details
+      html += '<div class="info-section">';
+      html += '<div class="info-section-title">Contact</div>';
+      if (contact.email) html += '<div class="info-field"><label>Email</label><span>' + esc(contact.email) + '</span></div>';
+      if (contact.phone) html += '<div class="info-field"><label>Phone</label><span><a href="tel:' + esc(contact.phone) + '">' + esc(contact.phone) + '</a></span></div>';
+      html += '</div>';
+
+      // Type-specific info
+      if (contact.entityType === "CARRIER") {
+        var d = contact.data;
+        html += '<div class="info-section">';
+        html += '<div class="info-section-title">Carrier Details</div>';
+        if (d.mcNumber) html += '<div class="info-field"><label>MC#</label><span>' + esc(d.mcNumber) + '</span></div>';
+        if (d.dotNumber) html += '<div class="info-field"><label>DOT#</label><span>' + esc(d.dotNumber) + '</span></div>';
+        if (d.tier) html += '<div class="info-field"><label>SRCPP Tier</label><span class="tier-badge tier-' + d.tier + '">' + d.tier + '</span></div>';
+        if (d.numberOfTrucks) html += '<div class="info-field"><label>Trucks</label><span>' + d.numberOfTrucks + '</span></div>';
+        if (d.equipmentTypes && d.equipmentTypes.length) html += '<div class="info-field"><label>Equipment</label><span>' + d.equipmentTypes.join(", ") + '</span></div>';
+        html += '</div>';
+      } else {
+        var d = contact.data;
+        html += '<div class="info-section">';
+        html += '<div class="info-section-title">Shipper Details</div>';
+        if (contact.stage) html += '<div class="info-field"><label>Pipeline</label><span class="stage-badge stage-' + contact.stage + '">' + contact.stage + '</span></div>';
+        if (d.industry) html += '<div class="info-field"><label>Industry</label><span>' + esc(d.industry) + '</span></div>';
+        if (d.avgLoadsPerMonth) html += '<div class="info-field"><label>Avg Loads/Mo</label><span>' + d.avgLoadsPerMonth + '</span></div>';
+        if (d.paymentTerms) html += '<div class="info-field"><label>Payment Terms</label><span>' + esc(d.paymentTerms) + '</span></div>';
+        html += '</div>';
+      }
+
+      document.getElementById("info-panel").innerHTML = html;
+    }
+
+    /* ======== COMPOSE ======== */
+    function setComposeMode(mode, btn) {
+      state.composeMode = mode;
+      document.querySelectorAll(".compose-tab").forEach(function(t) { t.classList.remove("active"); });
+      btn.classList.add("active");
+      var emailFields = document.getElementById("email-fields");
+      var textarea = document.getElementById("compose-text");
+      if (mode === "email") {
+        emailFields.classList.add("active");
+        textarea.placeholder = "Email body...";
+      } else {
+        emailFields.classList.remove("active");
+        textarea.placeholder = "Type a note...";
+      }
+    }
+
+    function loadTemplate() {
+      var tpl = document.getElementById("email-template").value;
+      if (!tpl) return;
+      var textarea = document.getElementById("compose-text");
+      var senderName = state.currentUser ? (state.currentUser.firstName + " " + state.currentUser.lastName) : "AE";
+      var recipientName = state.currentContact ? state.currentContact.name : "there";
+
+      var prefills = {
+        introduction: "I'd like to introduce myself and Silk Route Logistics. We can support your freight needs across all 48 states.",
+        follow_up: "Following up on our previous conversation. Would love to discuss how we can help with your upcoming shipments.",
+        rate_quote: "Please find our competitive rate quote for your requested lanes.",
+        load_confirmation: "Your load has been confirmed and a carrier has been assigned.",
+        invoice: "Please find your invoice details attached.",
+        thank_you: "Thank you for your business. We value our partnership and look forward to serving you."
+      };
+      textarea.value = prefills[tpl] || "";
+      document.getElementById("email-subject").value = {
+        introduction: "Introduction - Silk Route Logistics",
+        follow_up: "Following Up - Silk Route Logistics",
+        rate_quote: "Rate Quote - Silk Route Logistics",
+        load_confirmation: "Load Confirmation - Silk Route Logistics",
+        invoice: "Invoice - Silk Route Logistics",
+        thank_you: "Thank You - Silk Route Logistics"
+      }[tpl] || "Silk Route Logistics";
+    }
+
+    function sendComm() {
+      if (!state.currentContact) return;
+      var text = document.getElementById("compose-text").value.trim();
+      if (!text) return;
+
+      if (state.composeMode === "note") {
+        SRL.request("/api/communications", {
+          method: "POST",
+          body: {
+            type: "NOTE",
+            direction: "OUTBOUND",
+            entityType: state.currentContact.entityType,
+            entityId: state.currentContact.entityId,
+            body: text
+          }
+        }).then(function() {
+          document.getElementById("compose-text").value = "";
+          loadCommunications(state.currentContact);
+          showToast("Note saved", "success");
+        }).catch(function(err) {
+          showToast("Failed: " + err.message, "error");
+        });
+      } else {
+        // Email
+        var to = document.getElementById("email-to").value.trim();
+        var subject = document.getElementById("email-subject").value.trim();
+        var template = document.getElementById("email-template").value;
+
+        if (!to) { showToast("Enter recipient email", "error"); return; }
+        if (!subject) { showToast("Enter subject", "error"); return; }
+
+        var senderName = state.currentUser ? (state.currentUser.firstName + " " + state.currentUser.lastName) : "AE";
+        var body = {
+          to: to,
+          subject: subject,
+          entityType: state.currentContact.entityType,
+          entityId: state.currentContact.entityId
+        };
+
+        if (template) {
+          body.template = template;
+          body.templateParams = [state.currentContact.name, senderName, text];
+        } else {
+          body.customBody = text.replace(/\n/g, "<br>");
+        }
+
+        SRL.request("/api/email/send", { method: "POST", body: body }).then(function() {
+          document.getElementById("compose-text").value = "";
+          loadCommunications(state.currentContact);
+          showToast("Email sent", "success");
+        }).catch(function(err) {
+          showToast("Failed: " + err.message, "error");
+        });
+      }
+    }
+
+    /* ======== HELPERS ======== */
+    function getInitials(name) {
+      if (!name) return "?";
+      var parts = name.trim().split(/\s+/);
+      return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+    }
+
+    function getTypeIcon(type) {
+      if (type.includes("CALL")) return "icon-call";
+      if (type.includes("TEXT")) return "icon-text";
+      if (type.includes("EMAIL")) return "icon-email";
+      return "icon-note";
+    }
+
+    function getTypeEmoji(type) {
+      if (type.includes("CALL")) return "&#128222;";
+      if (type.includes("TEXT")) return "&#128172;";
+      if (type.includes("EMAIL")) return "&#9993;";
+      return "&#128221;";
+    }
+
+    function getTypeLabel(type) {
+      var labels = {
+        CALL_INBOUND: "Incoming Call", CALL_OUTBOUND: "Outgoing Call",
+        TEXT_INBOUND: "Text Received", TEXT_OUTBOUND: "Text Sent",
+        EMAIL_INBOUND: "Email Received", EMAIL_OUTBOUND: "Email Sent",
+        NOTE: "Note"
+      };
+      return labels[type] || type;
+    }
+
+    function formatDuration(seconds) {
+      if (!seconds) return "";
+      var m = Math.floor(seconds / 60);
+      var s = seconds % 60;
+      return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return "";
+      var diff = Date.now() - new Date(dateStr).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return "just now";
+      if (mins < 60) return mins + "m ago";
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + "h ago";
+      var days = Math.floor(hrs / 24);
+      if (days < 30) return days + "d ago";
+      return new Date(dateStr).toLocaleDateString("en-US", {month:"short",day:"numeric"});
+    }
+
+    function formatRole(role) {
+      var m = {ADMIN:"Administrator",BROKER:"Account Executive",DISPATCH:"Dispatch",OPERATIONS:"Operations",CEO:"CEO"};
+      return m[role] || role;
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type||"success") + " show";
+      setTimeout(function(){ el.classList.remove("show"); }, 3000);
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+</body>
+</html>

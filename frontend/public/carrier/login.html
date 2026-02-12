@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrier Login | Silk Route Logistics</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <h1>SILK ROUTE LOGISTICS</h1>
+      <p class="login-subtitle">Carrier Portal</p>
+
+      <div id="loginError" class="login-error"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" class="form-control" placeholder="carrier@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" id="loginBtn">
+          Sign In
+        </button>
+      </form>
+
+      <p style="margin-top:24px;font-size:12px;color:var(--slate)">
+        New carrier? <a href="/carrier/register.html">Register here</a>
+      </p>
+      <p style="margin-top:8px;font-size:12px;color:var(--slate)">
+        <a href="/auth/login">Employee Login</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal-backdrop" id="changePassModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Set New Password</h2>
+      </div>
+      <p style="color:var(--slate);font-size:13px;margin-bottom:20px">
+        For security, please set a new password on first login.
+      </p>
+      <form id="changePassForm">
+        <div class="form-group">
+          <label for="newPass">New Password (min 8 characters)</label>
+          <input type="password" id="newPass" class="form-control" minlength="8" required>
+        </div>
+        <div class="form-group">
+          <label for="confirmPass">Confirm Password</label>
+          <input type="password" id="confirmPass" class="form-control" minlength="8" required>
+        </div>
+        <div id="changePassError" class="login-error"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Set Password & Continue</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    // If already logged in, go to dashboard
+    if (CARRIER.isLoggedIn()) {
+      window.location.href = "/carrier/dashboard.html";
+    }
+
+    var loginForm = document.getElementById("loginForm");
+    var loginError = document.getElementById("loginError");
+    var loginBtn = document.getElementById("loginBtn");
+
+    loginForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      loginError.style.display = "none";
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Signing in...";
+
+      var email = document.getElementById("email").value;
+      var password = document.getElementById("password").value;
+
+      CARRIER.login(email, password)
+        .then(function (data) {
+          if (data.mustChangePassword) {
+            // Show change password modal
+            document.getElementById("changePassModal").classList.add("show");
+            window._tempToken = data.token;
+          } else {
+            window.location.href = "/carrier/dashboard.html";
+          }
+        })
+        .catch(function (err) {
+          loginError.textContent = err.message || "Login failed";
+          loginError.style.display = "block";
+          loginBtn.disabled = false;
+          loginBtn.textContent = "Sign In";
+        });
+    });
+
+    // Change password form
+    document.getElementById("changePassForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var newPass = document.getElementById("newPass").value;
+      var confirm = document.getElementById("confirmPass").value;
+      var errEl = document.getElementById("changePassError");
+
+      if (newPass !== confirm) {
+        errEl.textContent = "Passwords do not match";
+        errEl.style.display = "block";
+        return;
+      }
+
+      CARRIER.forceChangePassword(newPass)
+        .then(function () {
+          window.location.href = "/carrier/dashboard.html";
+        })
+        .catch(function (err) {
+          errEl.textContent = err.message || "Failed to change password";
+          errEl.style.display = "block";
+        });
+    });
+  </script>
+</body>
+</html>

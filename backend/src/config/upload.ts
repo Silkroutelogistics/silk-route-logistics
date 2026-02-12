@@ -17,7 +17,13 @@ const storage = multer.diskStorage({
   },
 });
 
-const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 
 export const upload = multer({
   storage,

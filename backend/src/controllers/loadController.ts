@@ -197,6 +197,93 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   res.json(updated);
 }
 
+export async function updateLoad(req: AuthRequest, res: Response) {
+  const existing = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!existing) { res.status(404).json({ error: "Load not found" }); return; }
+
+  const isPoster = existing.posterId === req.user!.id;
+  const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
+  if (!isPoster && !isEmployee) {
+    res.status(403).json({ error: "Not authorized to update this load" });
+    return;
+  }
+
+  // Prevent editing loads that are completed/cancelled
+  if (["COMPLETED", "CANCELLED", "TONU"].includes(existing.status)) {
+    res.status(400).json({ error: `Cannot edit a load with status ${existing.status}` });
+    return;
+  }
+
+  const {
+    originCity, originState, originZip, originAddress, originCompany,
+    destCity, destState, destZip, destAddress, destCompany,
+    weight, pieces, pallets, equipmentType, commodity, freightClass,
+    rate, customerRate, carrierRate, distance,
+    pickupDate, deliveryDate, pickupTimeStart, pickupTimeEnd,
+    deliveryTimeStart, deliveryTimeEnd,
+    hazmat, hazmatClass, hazmatUnNumber,
+    temperatureControlled, tempMin, tempMax,
+    specialInstructions, notes, contactName, contactPhone,
+    customerId, carrierId,
+  } = req.body;
+
+  const data: Record<string, unknown> = {};
+  if (originCity !== undefined) data.originCity = originCity;
+  if (originState !== undefined) data.originState = originState;
+  if (originZip !== undefined) data.originZip = originZip;
+  if (originAddress !== undefined) data.originAddress = originAddress;
+  if (originCompany !== undefined) data.originCompany = originCompany;
+  if (destCity !== undefined) data.destCity = destCity;
+  if (destState !== undefined) data.destState = destState;
+  if (destZip !== undefined) data.destZip = destZip;
+  if (destAddress !== undefined) data.destAddress = destAddress;
+  if (destCompany !== undefined) data.destCompany = destCompany;
+  if (weight !== undefined) data.weight = weight;
+  if (pieces !== undefined) data.pieces = pieces;
+  if (pallets !== undefined) data.pallets = pallets;
+  if (equipmentType !== undefined) data.equipmentType = equipmentType;
+  if (commodity !== undefined) data.commodity = commodity;
+  if (freightClass !== undefined) data.freightClass = freightClass;
+  if (rate !== undefined) data.rate = rate;
+  if (customerRate !== undefined) data.customerRate = customerRate;
+  if (carrierRate !== undefined) data.carrierRate = carrierRate;
+  if (distance !== undefined) data.distance = distance;
+  if (pickupDate !== undefined) data.pickupDate = new Date(pickupDate);
+  if (deliveryDate !== undefined) data.deliveryDate = new Date(deliveryDate);
+  if (pickupTimeStart !== undefined) data.pickupTimeStart = pickupTimeStart;
+  if (pickupTimeEnd !== undefined) data.pickupTimeEnd = pickupTimeEnd;
+  if (deliveryTimeStart !== undefined) data.deliveryTimeStart = deliveryTimeStart;
+  if (deliveryTimeEnd !== undefined) data.deliveryTimeEnd = deliveryTimeEnd;
+  if (hazmat !== undefined) data.hazmat = hazmat;
+  if (hazmatClass !== undefined) data.hazmatClass = hazmatClass;
+  if (hazmatUnNumber !== undefined) data.hazmatUnNumber = hazmatUnNumber;
+  if (temperatureControlled !== undefined) data.temperatureControlled = temperatureControlled;
+  if (tempMin !== undefined) data.tempMin = tempMin;
+  if (tempMax !== undefined) data.tempMax = tempMax;
+  if (specialInstructions !== undefined) data.specialInstructions = specialInstructions;
+  if (notes !== undefined) data.notes = notes;
+  if (contactName !== undefined) data.contactName = contactName;
+  if (contactPhone !== undefined) data.contactPhone = contactPhone;
+  if (customerId !== undefined) data.customerId = customerId;
+  if (carrierId !== undefined) data.carrierId = carrierId;
+
+  // Recalculate margin fields if rates changed
+  const finalCustRate = (customerRate ?? existing.customerRate ?? rate ?? existing.rate) as number;
+  const finalCarrRate = (carrierRate ?? existing.carrierRate) as number | null;
+  const finalDist = (distance ?? existing.distance) as number | null;
+  if (finalCarrRate) {
+    data.grossMargin = finalCustRate - finalCarrRate;
+    data.marginPercent = Math.round(((finalCustRate - finalCarrRate) / finalCustRate) * 10000) / 100;
+  }
+  if (finalDist && finalDist > 0) {
+    data.revenuePerMile = Math.round((finalCustRate / finalDist) * 100) / 100;
+    if (finalCarrRate) data.costPerMile = Math.round((finalCarrRate / finalDist) * 100) / 100;
+  }
+
+  const load = await prisma.load.update({ where: { id: req.params.id }, data });
+  res.json(load);
+}
+
 export async function deleteLoad(req: AuthRequest, res: Response) {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) {

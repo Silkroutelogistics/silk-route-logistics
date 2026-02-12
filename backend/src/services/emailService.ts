@@ -186,6 +186,74 @@ export async function sendRateConfirmationEmail(
   );
 }
 
+/**
+ * C.3 — Risk Alert Email (RED level)
+ */
+export async function sendRiskAlertEmail(
+  brokerEmail: string,
+  brokerName: string,
+  loadRef: string,
+  risk: { score: number; level: string; factors: { factor: string; points: number; description: string }[] },
+) {
+  const factorRows = risk.factors.map(
+    (f) => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${f.description}</td><td style="padding:8px;border:1px solid #e2e8f0;text-align:center;font-weight:bold;color:#dc2626">+${f.points}</td></tr>`
+  ).join("");
+
+  const html = wrap(`
+    <h2 style="color:#dc2626">RISK RED ALERT — Load ${loadRef}</h2>
+    <p>Hi ${brokerName},</p>
+    <p>Load <strong>${loadRef}</strong> has been flagged with a <strong style="color:#dc2626">RED risk level</strong> (score: ${risk.score}).</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr style="background:#fef2f2"><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Risk Factor</th><th style="padding:8px;border:1px solid #e2e8f0;width:60px">Points</th></tr>
+      ${factorRows}
+    </table>
+    <p><strong>Immediate action required.</strong> Review the load and take corrective measures.</p>
+    <a href="https://silkroutelogistics.ai/ae/loads.html" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Load Board</a>
+  `);
+
+  await sendEmail(brokerEmail, `RISK RED: Load ${loadRef} — Score ${risk.score}`, html);
+}
+
+/**
+ * C.4 — Fall-Off Alert Email
+ */
+export async function sendFallOffAlertEmail(
+  brokerEmail: string,
+  brokerName: string,
+  loadRef: string,
+  carrierName: string,
+  origin: string,
+  dest: string,
+) {
+  const html = wrap(`
+    <h2 style="color:#dc2626">CARRIER FALL-OFF — Load ${loadRef}</h2>
+    <p>Hi ${brokerName},</p>
+    <p><strong>${carrierName}</strong> has fallen off load <strong>${loadRef}</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Status</td><td style="padding:8px;border:1px solid #e2e8f0;color:#dc2626;font-weight:bold">Recovery In Progress</td></tr>
+    </table>
+    <p>The system is automatically contacting backup carriers. Monitor the load board for updates.</p>
+    <a href="https://silkroutelogistics.ai/ae/loads.html" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Load Board</a>
+  `);
+
+  await sendEmail(brokerEmail, `CARRIER FALL-OFF: Load ${loadRef} — Recovery Active`, html);
+}
+
+/**
+ * C.5 — Sequence Email Sender (wraps sendEmail for sequence tracking)
+ */
+export async function sendSequenceEmail(
+  to: string,
+  subject: string,
+  html: string,
+  sequenceId: string,
+) {
+  // Send via the standard sendEmail function
+  await sendEmail(to, subject, html);
+  console.log(`[Sequence][Email] Sent to ${to}: ${subject} (seq: ${sequenceId})`);
+}
+
 export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {
   const urgency = daysLeft <= 2 ? "#dc2626" : daysLeft <= 7 ? "#f59e0b" : "#3b82f6";
   const html = wrap(`

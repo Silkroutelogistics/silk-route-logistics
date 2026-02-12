@@ -234,6 +234,37 @@ export async function getScorecard(req: AuthRequest, res: Response) {
   });
 }
 
+export async function getCarrierScore(req: AuthRequest, res: Response) {
+  const profile = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+
+  const scorecards = await prisma.carrierScorecard.findMany({
+    where: { carrierId: profile.id },
+    orderBy: { calculatedAt: "desc" },
+    take: 12,
+  });
+
+  const currentTier = profile.tier;
+  const currentScore = scorecards[0]?.overallScore || 0;
+  const nextTierThreshold =
+    currentTier === "BRONZE" ? 90 : currentTier === "SILVER" ? 95 : currentTier === "GOLD" ? 98 : 100;
+  const bonusPct = getBonusPercentage(currentTier);
+
+  res.json({
+    carrierId: profile.id,
+    companyName: profile.companyName,
+    currentTier,
+    currentScore,
+    nextTierThreshold,
+    bonusPercentage: bonusPct,
+    pointsToNextTier: Math.max(0, nextTierThreshold - currentScore),
+    scorecards,
+  });
+}
+
 export async function getRevenue(req: AuthRequest, res: Response) {
   const period = (req.query.period as string) || "monthly";
   const now = new Date();

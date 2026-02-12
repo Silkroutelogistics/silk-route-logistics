@@ -63,6 +63,7 @@ enum CarrierTier {
   GOLD
   SILVER
   BRONZE
+  GUEST
   NONE
 }
 
@@ -429,6 +430,7 @@ model User {
   resolvedDisputes   PaymentDispute[]   @relation("DisputeResolver")
   factoringEntries   FactoringFund[]    @relation("FactoringCreator")
   reconciliations    BankReconciliation[] @relation("ReconciliationUser")
+  communications     Communication[]
 
   @@index([email])
   @@index([role])
@@ -493,6 +495,14 @@ model CarrierProfile {
   fmcsaLastChecked      DateTime?
 
   notes                 String?
+
+  // Caravan / DAT source tracking
+  source                String?                 @default("caravan")   // 'caravan' | 'dat'
+  emergencyApproved     Boolean                 @default(false)
+  emergencyApproveReason String?
+  emergencyApprovedById String?
+  emergencyApprovedAt   DateTime?
+
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
@@ -504,6 +514,7 @@ model CarrierProfile {
   @@index([dotNumber])
   @@index([status])
   @@index([srcppTier])
+  @@index([source])
   @@map("carrier_profiles")
 }
 
@@ -686,6 +697,11 @@ model Load {
 
   notes           String?
 
+  // DAT Load Board
+  datPostId       String?
+  datPostedAt     DateTime?
+  datPostedFields Json?
+
   // Legacy fields kept for compatibility
   length          Float?
   width           Float?
@@ -720,6 +736,10 @@ model Load {
   rateConfirmations  RateConfirmation[]
   checkCalls      CheckCall[]
   carrierPays     CarrierPay[]
+  matchResults    MatchResult[]
+  checkCallSchedules CheckCallSchedule[]
+  riskLogs        RiskLog[]
+  fallOffEvents   FallOffEvent[]
 
   @@index([status])
   @@index([loadNumber])
@@ -1090,6 +1110,9 @@ model Document {
   fileUrl     String
   fileType    String
   fileSize    Int
+  entityType  String?  // LOAD, CARRIER, SHIPPER, INVOICE
+  entityId    String?
+  docType     String?  // BOL, POD, RATE_CON, W9, COI, AUTHORITY, OTHER
   createdAt   DateTime @default(now())
 
   userId      String
@@ -1099,6 +1122,7 @@ model Document {
   invoiceId   String?
   invoice     Invoice? @relation(fields: [invoiceId], references: [id])
 
+  @@index([entityType, entityId])
   @@map("documents")
 }
 
@@ -1543,6 +1567,33 @@ model ComplianceAlert {
   @@map("compliance_alerts")
 }
 
+// ─── Communication Log ──────────────────────────────────
+
+model Communication {
+  id          String   @id @default(cuid())
+  type        String   // CALL_INBOUND, CALL_OUTBOUND, TEXT_INBOUND, TEXT_OUTBOUND, EMAIL_INBOUND, EMAIL_OUTBOUND, NOTE
+  direction   String?  // INBOUND, OUTBOUND
+  entityType  String   // CARRIER, SHIPPER, LOAD
+  entityId    String
+  loadId      String?
+  from        String?  // Phone number or email
+  to          String?
+  subject     String?
+  body        String?  @db.Text
+  phoneNumber String?
+  duration    Int?     // Call duration in seconds
+  metadata    Json?
+  userId      String   // Who logged this
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([loadId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("communications")
+}
+
 // ─── OTP Codes ──────────────────────────────────────────
 
 model OtpCode {
@@ -1556,6 +1607,117 @@ model OtpCode {
 
   @@index([userId, used])
   @@map("otp_codes")
+}
+
+// ─── Smart Carrier Matching (C.1) ──────────────────────────
+
+model MatchResult {
+  id              String   @id @default(cuid())
+  loadId          String
+  load            Load     @relation(fields: [loadId], references: [id])
+  carrierId       String   // CarrierProfile id
+  userId          String   // User id of carrier
+  matchScore      Float
+  laneScore       Float    @default(0)
+  rateScore       Float    @default(0)
+  srcppScore      Float    @default(0)
+  availabilityScore Float  @default(0)
+  breakdown       Json?
+  rank            Int      @default(0)
+  wasAssigned     Boolean  @default(false)
+  wasCompleted    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([loadId])
+  @@index([carrierId])
+  @@map("match_results")
+}
+
+// ─── Check-Call Schedule (C.2) ──────────────────────────
+
+model CheckCallSchedule {
+  id              String   @id @default(cuid())
+  loadId          String
+  load            Load     @relation(fields: [loadId], references: [id])
+  scheduledTime   DateTime
+  type            String   // PRE_PICKUP, AT_PICKUP, MIDPOINT, PRE_DELIVERY, AT_DELIVERY
+  status          String   @default("PENDING")  // PENDING, SENT, RESPONDED, MISSED, ESCALATED
+  sentAt          DateTime?
+  respondedAt     DateTime?
+  response        String?  // 1-5 carrier response
+  responseText    String?
+  retryCount      Int      @default(0)
+  carrierPhone    String?
+  escalatedAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([loadId])
+  @@index([status, scheduledTime])
+  @@map("check_call_schedules")
+}
+
+// ─── Risk Log (C.3) ──────────────────────────
+
+model RiskLog {
+  id          String   @id @default(cuid())
+  loadId      String
+  load        Load     @relation(fields: [loadId], references: [id])
+  score       Int      @default(0)
+  level       String   // GREEN, AMBER, RED
+  factors     Json     // Array of {factor, points, description}
+  notified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([loadId])
+  @@index([level])
+  @@index([createdAt])
+  @@map("risk_logs")
+}
+
+// ─── Fall-Off Event (C.4) ──────────────────────────
+
+model FallOffEvent {
+  id              String   @id @default(cuid())
+  loadId          String
+  load            Load     @relation(fields: [loadId], references: [id])
+  originalCarrierId String?
+  reason          String?
+  recoveryMethod  String?  // CARAVAN_MATCH, DAT, MANUAL
+  newCarrierId    String?
+  recoveryTimeMin Float?   // Minutes from fall-off to new assignment
+  backupsSent     Int      @default(0)
+  backupsAccepted Int      @default(0)
+  status          String   @default("ACTIVE")  // ACTIVE, RECOVERED, UNRESOLVED
+  resolvedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([loadId])
+  @@index([status])
+  @@map("fall_off_events")
+}
+
+// ─── Email Sequence (C.5) ──────────────────────────
+
+model EmailSequence {
+  id              String   @id @default(cuid())
+  prospectId      String   // Customer id (prospect)
+  prospectEmail   String
+  prospectName    String
+  templateName    String   @default("prospect_outreach")
+  currentStep     Int      @default(0)  // 0-based
+  totalSteps      Int      @default(4)
+  nextSendAt      DateTime?
+  status          String   @default("ACTIVE")  // ACTIVE, PAUSED, COMPLETED, STOPPED
+  stopReason      String?  // REPLIED, MANUAL, STAGE_CHANGE
+  schedule        Json     // [{day: 0, subject, template}, {day: 3, ...}, ...]
+  metadata        Json?    // Track opens, clicks, etc.
+  startedById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([prospectId])
+  @@index([status, nextSendAt])
+  @@map("email_sequences")
 }
 
 // ─── Scheduler Locks ───

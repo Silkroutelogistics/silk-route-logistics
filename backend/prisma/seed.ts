@@ -4,9 +4,12 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clean existing data
+  // Clean existing data (FK-safe order)
   await prisma.complianceAlert.deleteMany();
   await prisma.auditLog.deleteMany();
+  await prisma.auditTrail.deleteMany();
+  await prisma.systemLog.deleteMany();
+  await prisma.otpCode.deleteMany();
   await prisma.customerContact.deleteMany();
   await prisma.eDITransaction.deleteMany();
   await prisma.notification.deleteMany();
@@ -15,11 +18,20 @@ async function main() {
   await prisma.carrierBonus.deleteMany();
   await prisma.carrierScorecard.deleteMany();
   await prisma.document.deleteMany();
+  await prisma.checkCall.deleteMany();
+  await prisma.paymentDispute.deleteMany();
+  await prisma.carrierPay.deleteMany();
+  await prisma.settlement.deleteMany();
+  await prisma.rateConfirmation.deleteMany();
+  await prisma.factoringFund.deleteMany();
+  await prisma.bankReconciliation.deleteMany();
+  await prisma.invoiceLineItem.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.load.deleteMany();
   await prisma.carrierProfile.deleteMany();
   await prisma.brokerIntegration.deleteMany();
   await prisma.shipment.deleteMany();
+  await prisma.shipperCredit.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.driver.deleteMany();
   await prisma.equipment.deleteMany();
@@ -28,10 +40,13 @@ async function main() {
   await prisma.sOP.deleteMany();
   await prisma.user.deleteMany();
 
+  const now = new Date();
+  const day = 24 * 60 * 60 * 1000;
+
   const hash = await bcrypt.hash("W3lcome2SRL26!!", 12);
 
   // Single admin account
-  await prisma.user.create({
+  const admin = await prisma.user.create({
     data: {
       email: "whaider@silkroutelogistics.ai",
       passwordHash: hash,
@@ -45,7 +60,7 @@ async function main() {
   });
 
   // Account Executive — Noor
-  await prisma.user.create({
+  const broker = await prisma.user.create({
     data: {
       email: "noor@silkroutelogistics.ai",
       passwordHash: hash,
@@ -72,27 +87,1141 @@ async function main() {
     },
   });
 
-  await prisma.carrierProfile.create({
+  // Dispatcher
+  const dispatcher = await prisma.user.create({
+    data: {
+      email: "dispatch@silkroutelogistics.ai",
+      passwordHash: hash,
+      firstName: "Marcus",
+      lastName: "Johnson",
+      company: "Silk Route Logistics",
+      role: UserRole.DISPATCH,
+      isVerified: true,
+      phone: "(269) 555-0102",
+    },
+  });
+
+  // Accountant
+  const accountant = await prisma.user.create({
+    data: {
+      email: "accounting@silkroutelogistics.ai",
+      passwordHash: hash,
+      firstName: "Priya",
+      lastName: "Patel",
+      company: "Silk Route Logistics",
+      role: UserRole.ACCOUNTING,
+      isVerified: true,
+      phone: "(269) 555-0103",
+    },
+  });
+
+  // Additional carrier users
+  const carrierUser2 = await prisma.user.create({
+    data: {
+      email: "jthompson@midwestfreight.com",
+      passwordHash: hash,
+      firstName: "Jake",
+      lastName: "Thompson",
+      company: "Midwest Freight Lines",
+      role: UserRole.CARRIER,
+      isVerified: true,
+      phone: "(312) 555-0300",
+    },
+  });
+
+  const carrierUser3 = await prisma.user.create({
+    data: {
+      email: "maria@dixiehaulers.com",
+      passwordHash: hash,
+      firstName: "Maria",
+      lastName: "Garcia",
+      company: "Dixie Haulers Inc",
+      role: UserRole.CARRIER,
+      isVerified: true,
+      phone: "(404) 555-0400",
+    },
+  });
+
+  const carrierUser4 = await prisma.user.create({
+    data: {
+      email: "kevin@pacificcoasttrucking.com",
+      passwordHash: hash,
+      firstName: "Kevin",
+      lastName: "Chen",
+      company: "Pacific Coast Trucking",
+      role: UserRole.CARRIER,
+      isVerified: true,
+      phone: "(503) 555-0500",
+    },
+  });
+
+  const carrierUser5 = await prisma.user.create({
+    data: {
+      email: "carlos@sunbeltlogistics.com",
+      passwordHash: hash,
+      firstName: "Carlos",
+      lastName: "Ramirez",
+      company: "Sunbelt Logistics",
+      role: UserRole.CARRIER,
+      isVerified: true,
+      phone: "(602) 555-0600",
+    },
+  });
+
+  const cp1 = await prisma.carrierProfile.create({
     data: {
       userId: carrierUser.id,
       mcNumber: "MC-1234567",
       dotNumber: "3456789",
+      companyName: "SRL Transport LLC",
+      contactName: "SRL Carrier",
+      contactPhone: "(269) 555-0200",
+      contactEmail: "carrier@silkroutelogistics.ai",
       tier: "PLATINUM",
+      srcppTier: "PLATINUM",
+      srcppTotalLoads: 342,
+      srcppTotalMiles: 187500,
       equipmentTypes: ["Dry Van", "Reefer", "Flatbed"],
       operatingRegions: ["Midwest", "Northeast", "Southeast", "Southwest", "West Coast", "South Central"],
       onboardingStatus: "APPROVED",
+      status: "APPROVED",
       approvedAt: new Date(),
       w9Uploaded: true,
       insuranceCertUploaded: true,
       authorityDocUploaded: true,
       insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      safetyScore: 98,
+      safetyScore:98,
       address: "1000 Logistics Pkwy",
       city: "Kalamazoo",
       state: "MI",
       zip: "49001",
       numberOfTrucks: 25,
+      paymentPreference: "FLASH",
     },
+  });
+
+  const cp2 = await prisma.carrierProfile.create({
+    data: {
+      userId: carrierUser2.id,
+      mcNumber: "MC-2345678",
+      dotNumber: "4567890",
+      companyName: "Midwest Freight Lines",
+      contactName: "Jake Thompson",
+      contactPhone: "(312) 555-0300",
+      contactEmail: "jthompson@midwestfreight.com",
+      tier: "GOLD",
+      srcppTier: "GOLD",
+      srcppTotalLoads: 185,
+      srcppTotalMiles: 94200,
+      equipmentTypes: ["Dry Van", "Reefer"],
+      operatingRegions: ["Midwest", "Northeast"],
+      onboardingStatus: "APPROVED",
+      status: "APPROVED",
+      approvedAt: new Date(),
+      w9Uploaded: true,
+      insuranceCertUploaded: true,
+      authorityDocUploaded: true,
+      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      safetyScore:96,
+      address: "500 Commerce Dr",
+      city: "Chicago",
+      state: "IL",
+      zip: "60609",
+      numberOfTrucks: 15,
+      paymentPreference: "EXPRESS",
+    },
+  });
+
+  const cp3 = await prisma.carrierProfile.create({
+    data: {
+      userId: carrierUser3.id,
+      mcNumber: "MC-3456789",
+      dotNumber: "5678901",
+      companyName: "Dixie Haulers Inc",
+      contactName: "Maria Garcia",
+      contactPhone: "(404) 555-0400",
+      contactEmail: "maria@dixiehaulers.com",
+      tier: "SILVER",
+      srcppTier: "SILVER",
+      srcppTotalLoads: 98,
+      srcppTotalMiles: 52000,
+      equipmentTypes: ["Dry Van", "Flatbed"],
+      operatingRegions: ["Southeast", "South Central"],
+      onboardingStatus: "APPROVED",
+      status: "APPROVED",
+      approvedAt: new Date(),
+      w9Uploaded: true,
+      insuranceCertUploaded: true,
+      authorityDocUploaded: true,
+      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      safetyScore:92,
+      address: "800 Peachtree Blvd",
+      city: "Atlanta",
+      state: "GA",
+      zip: "30309",
+      numberOfTrucks: 10,
+      paymentPreference: "STANDARD",
+    },
+  });
+
+  const cp4 = await prisma.carrierProfile.create({
+    data: {
+      userId: carrierUser4.id,
+      mcNumber: "MC-4567890",
+      dotNumber: "6789012",
+      companyName: "Pacific Coast Trucking",
+      contactName: "Kevin Chen",
+      contactPhone: "(503) 555-0500",
+      contactEmail: "kevin@pacificcoasttrucking.com",
+      tier: "BRONZE",
+      srcppTier: "BRONZE",
+      srcppTotalLoads: 42,
+      srcppTotalMiles: 23100,
+      equipmentTypes: ["Dry Van", "Reefer", "Flatbed"],
+      operatingRegions: ["West Coast"],
+      onboardingStatus: "APPROVED",
+      status: "APPROVED",
+      approvedAt: new Date(),
+      w9Uploaded: true,
+      insuranceCertUploaded: true,
+      authorityDocUploaded: true,
+      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      safetyScore:85,
+      address: "1200 Marine Dr",
+      city: "Portland",
+      state: "OR",
+      zip: "97201",
+      numberOfTrucks: 5,
+      paymentPreference: "STANDARD",
+    },
+  });
+
+  const cp5 = await prisma.carrierProfile.create({
+    data: {
+      userId: carrierUser5.id,
+      mcNumber: "MC-5678901",
+      dotNumber: "7890123",
+      companyName: "Sunbelt Logistics",
+      contactName: "Carlos Ramirez",
+      contactPhone: "(602) 555-0600",
+      contactEmail: "carlos@sunbeltlogistics.com",
+      tier: "NONE",
+      srcppTier: "NONE",
+      srcppTotalLoads: 0,
+      srcppTotalMiles: 0,
+      equipmentTypes: ["Dry Van"],
+      operatingRegions: ["Southwest"],
+      onboardingStatus: "PENDING",
+      status: "NEW",
+      w9Uploaded: true,
+      insuranceCertUploaded: true,
+      authorityDocUploaded: true,
+      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      address: "2400 Desert Sky Blvd",
+      city: "Phoenix",
+      state: "AZ",
+      zip: "85001",
+      numberOfTrucks: 3,
+      paymentPreference: "STANDARD",
+    },
+  });
+
+  // ═══════════════════════════════════════════════
+  // CUSTOMERS
+  // ═══════════════════════════════════════════════
+
+  const cust1 = await prisma.customer.create({
+    data: {
+      name: "Acme Manufacturing",
+      type: "SHIPPER",
+      address: "1500 Industrial Pkwy",
+      city: "Detroit",
+      state: "MI",
+      zip: "48201",
+      contactName: "Robert Mitchell",
+      email: "rmitchell@acmemfg.com",
+      phone: "(313) 555-1000",
+      creditLimit: 500000,
+      creditStatus: "APPROVED",
+      paymentTerms: "Net 30",
+      avgLoadsPerMonth: 45,
+      preferredEquipment: ["Dry Van", "Flatbed"],
+      rating: 5,
+      industry: "Manufacturing",
+      onboardingStatus: "APPROVED",
+      status: "Active",
+    },
+  });
+
+  const cust2 = await prisma.customer.create({
+    data: {
+      name: "Great Lakes Foods",
+      type: "SHIPPER",
+      address: "2200 Lakefront Dr",
+      city: "Milwaukee",
+      state: "WI",
+      zip: "53202",
+      contactName: "Linda Kowalski",
+      email: "lkowalski@greatlakesfoods.com",
+      phone: "(414) 555-2000",
+      creditLimit: 250000,
+      creditStatus: "APPROVED",
+      paymentTerms: "Net 30",
+      avgLoadsPerMonth: 25,
+      preferredEquipment: ["Reefer"],
+      rating: 4,
+      industry: "Food & Beverage",
+      onboardingStatus: "APPROVED",
+      status: "Active",
+    },
+  });
+
+  const cust3 = await prisma.customer.create({
+    data: {
+      name: "Pacific Distributors",
+      type: "SHIPPER",
+      address: "3300 Harbor Blvd",
+      city: "Seattle",
+      state: "WA",
+      zip: "98101",
+      contactName: "David Park",
+      email: "dpark@pacificdist.com",
+      phone: "(206) 555-3000",
+      creditLimit: 200000,
+      creditStatus: "APPROVED",
+      paymentTerms: "Net 30",
+      avgLoadsPerMonth: 20,
+      preferredEquipment: ["Dry Van", "Reefer"],
+      rating: 4,
+      industry: "Consumer Goods",
+      onboardingStatus: "APPROVED",
+      status: "Active",
+    },
+  });
+
+  const cust4 = await prisma.customer.create({
+    data: {
+      name: "Southern Paper Co",
+      type: "SHIPPER",
+      address: "4400 Paper Mill Rd",
+      city: "Birmingham",
+      state: "AL",
+      zip: "35203",
+      contactName: "James Calloway",
+      email: "jcalloway@southernpaper.com",
+      phone: "(205) 555-4000",
+      creditLimit: 100000,
+      creditStatus: "APPROVED",
+      paymentTerms: "Net 15",
+      avgLoadsPerMonth: 10,
+      preferredEquipment: ["Dry Van", "Flatbed"],
+      rating: 3,
+      industry: "Paper & Packaging",
+      onboardingStatus: "APPROVED",
+      status: "Active",
+    },
+  });
+
+  const cust5 = await prisma.customer.create({
+    data: {
+      name: "Lone Star Chemicals",
+      type: "SHIPPER",
+      address: "5500 Refinery Rd",
+      city: "Houston",
+      state: "TX",
+      zip: "77001",
+      contactName: "William Brooks",
+      email: "wbrooks@lonestarchemicals.com",
+      phone: "(713) 555-5000",
+      creditLimit: 350000,
+      creditStatus: "APPROVED",
+      paymentTerms: "Net 30",
+      avgLoadsPerMonth: 30,
+      preferredEquipment: ["Dry Van"],
+      rating: 5,
+      industry: "Chemicals",
+      onboardingStatus: "APPROVED",
+      status: "Active",
+      notes: "Hazmat shipper",
+    },
+  });
+
+  // ═══════════════════════════════════════════════
+  // CUSTOMER CONTACTS
+  // ═══════════════════════════════════════════════
+
+  await prisma.customerContact.createMany({
+    data: [
+      // Acme Manufacturing
+      { customerId: cust1.id, name: "Robert Mitchell", title: "Logistics Manager", email: "rmitchell@acmemfg.com", phone: "(313) 555-1000", isPrimary: true },
+      { customerId: cust1.id, name: "Susan Peters", title: "AP Specialist", email: "speters@acmemfg.com", phone: "(313) 555-1001", isPrimary: false },
+
+      // Great Lakes Foods
+      { customerId: cust2.id, name: "Linda Kowalski", title: "Shipping Coordinator", email: "lkowalski@greatlakesfoods.com", phone: "(414) 555-2000", isPrimary: true },
+      { customerId: cust2.id, name: "Mark Davis", title: "Accounts Payable", email: "mdavis@greatlakesfoods.com", phone: "(414) 555-2001", isPrimary: false },
+
+      // Pacific Distributors
+      { customerId: cust3.id, name: "David Park", title: "Distribution Manager", email: "dpark@pacificdist.com", phone: "(206) 555-3000", isPrimary: true },
+      { customerId: cust3.id, name: "Emily Chen", title: "Billing Coordinator", email: "echen@pacificdist.com", phone: "(206) 555-3001", isPrimary: false },
+
+      // Southern Paper Co
+      { customerId: cust4.id, name: "James Calloway", title: "Freight Manager", email: "jcalloway@southernpaper.com", phone: "(205) 555-4000", isPrimary: true },
+      { customerId: cust4.id, name: "Rachel Moore", title: "AP Manager", email: "rmoore@southernpaper.com", phone: "(205) 555-4001", isPrimary: false },
+
+      // Lone Star Chemicals
+      { customerId: cust5.id, name: "William Brooks", title: "Transportation Director", email: "wbrooks@lonestarchemicals.com", phone: "(713) 555-5000", isPrimary: true },
+      { customerId: cust5.id, name: "Patricia Martinez", title: "Accounts Payable", email: "pmartinez@lonestarchemicals.com", phone: "(713) 555-5001", isPrimary: false },
+    ],
+  });
+
+  // ═══════════════════════════════════════════════
+  // FLEET - TRUCKS
+  // ═══════════════════════════════════════════════
+
+  const trucks = [];
+  trucks.push(await prisma.truck.create({
+    data: {
+      unitNumber: "T-101",
+      vin: "1FUJGLDR7CLBP1234",
+      make: "Freightliner",
+      model: "Cascadia",
+      year: 2021,
+      type: "SLEEPER",
+      status: "ACTIVE",
+      licensePlate: "MI-1234",
+      registrationExpiry: new Date(now.getTime() + 180 * day),
+    },
+  }));
+
+  trucks.push(await prisma.truck.create({
+    data: {
+      unitNumber: "T-102",
+      vin: "1XKYDP9X9KJ123456",
+      make: "Kenworth",
+      model: "T680",
+      year: 2022,
+      type: "SLEEPER",
+      status: "ACTIVE",
+      licensePlate: "MI-1235",
+      registrationExpiry: new Date(now.getTime() + 210 * day),
+    },
+  }));
+
+  trucks.push(await prisma.truck.create({
+    data: {
+      unitNumber: "T-103",
+      vin: "1NP5DB9X9MN234567",
+      make: "Peterbilt",
+      model: "579",
+      year: 2020,
+      type: "SLEEPER",
+      status: "ACTIVE",
+      licensePlate: "MI-1236",
+      registrationExpiry: new Date(now.getTime() + 150 * day),
+    },
+  }));
+
+  trucks.push(await prisma.truck.create({
+    data: {
+      unitNumber: "T-104",
+      vin: "4V4NC9EH7LN345678",
+      make: "Volvo",
+      model: "VNL 860",
+      year: 2023,
+      type: "SLEEPER",
+      status: "IN_SHOP",
+      licensePlate: "MI-1237",
+      registrationExpiry: new Date(now.getTime() + 300 * day),
+    },
+  }));
+
+  trucks.push(await prisma.truck.create({
+    data: {
+      unitNumber: "T-105",
+      vin: "3AKJHHDR8MSLT4567",
+      make: "International",
+      model: "LT",
+      year: 2021,
+      type: "DAY_CAB",
+      status: "ACTIVE",
+      licensePlate: "MI-1238",
+      registrationExpiry: new Date(now.getTime() + 190 * day),
+    },
+  }));
+
+  // ═══════════════════════════════════════════════
+  // FLEET - TRAILERS
+  // ═══════════════════════════════════════════════
+
+  const trailers = [];
+  trailers.push(await prisma.trailer.create({
+    data: {
+      unitNumber: "TR-201",
+      vin: "1GRAA0621PB123456",
+      make: "Great Dane",
+      model: "Everest",
+      year: 2021,
+      type: "DRY_VAN",
+      status: "ACTIVE",
+      licensePlate: "MI-T201",
+      registrationExpiry: new Date(now.getTime() + 180 * day),
+      length: 53,
+    },
+  }));
+
+  trailers.push(await prisma.trailer.create({
+    data: {
+      unitNumber: "TR-202",
+      vin: "1JJV532W8KL234567",
+      make: "Wabash",
+      model: "DuraPlate",
+      year: 2022,
+      type: "REEFER",
+      status: "ACTIVE",
+      licensePlate: "MI-T202",
+      registrationExpiry: new Date(now.getTime() + 200 * day),
+      length: 53,
+      reeferUnit: true,
+      reeferModel: "Carrier Transicold",
+      reeferHours: 3450,
+    },
+  }));
+
+  trailers.push(await prisma.trailer.create({
+    data: {
+      unitNumber: "TR-203",
+      vin: "1JJV532W3ML345678",
+      make: "Utility",
+      model: "3000R",
+      year: 2020,
+      type: "REEFER",
+      status: "ACTIVE",
+      licensePlate: "MI-T203",
+      registrationExpiry: new Date(now.getTime() + 160 * day),
+      length: 53,
+      reeferUnit: true,
+      reeferModel: "Thermo King",
+      reeferHours: 5680,
+    },
+  }));
+
+  trailers.push(await prisma.trailer.create({
+    data: {
+      unitNumber: "TR-204",
+      vin: "1GRAA0628NB456789",
+      make: "Great Dane",
+      model: "Champion",
+      year: 2023,
+      type: "DRY_VAN",
+      status: "ACTIVE",
+      licensePlate: "MI-T204",
+      registrationExpiry: new Date(now.getTime() + 320 * day),
+      length: 53,
+    },
+  }));
+
+  trailers.push(await prisma.trailer.create({
+    data: {
+      unitNumber: "TR-205",
+      vin: "4KFFF0820PU567890",
+      make: "Fontaine",
+      model: "Revolution",
+      year: 2021,
+      type: "FLATBED",
+      status: "ACTIVE",
+      licensePlate: "MI-T205",
+      registrationExpiry: new Date(now.getTime() + 185 * day),
+      length: 48,
+    },
+  }));
+
+  // ═══════════════════════════════════════════════
+  // FLEET - DRIVERS
+  // ═══════════════════════════════════════════════
+
+  const drivers = [];
+  drivers.push(await prisma.driver.create({
+    data: {
+      firstName: "Mike",
+      lastName: "Kowalski",
+      email: "mkowalski@srltransport.com",
+      phone: "(269) 555-0301",
+      licenseNumber: "K234-5678-9012",
+      licenseState: "MI",
+      licenseExpiry: new Date(now.getTime() + 730 * day),
+      status: "ON_ROUTE",
+      licenseType: "CDL-A",
+      endorsements: ["Hazmat", "Tanker"],
+      assignedTruckId: trucks[0].id,
+      assignedTrailerId: trailers[0].id,
+      safetyScore:98,
+    },
+  }));
+
+  drivers.push(await prisma.driver.create({
+    data: {
+      firstName: "James",
+      lastName: "Brown",
+      email: "jbrown@srltransport.com",
+      phone: "(269) 555-0302",
+      licenseNumber: "B345-6789-0123",
+      licenseState: "MI",
+      licenseExpiry: new Date(now.getTime() + 650 * day),
+      status: "ON_ROUTE",
+      licenseType: "CDL-A",
+      endorsements: ["Doubles/Triples"],
+      assignedTruckId: trucks[1].id,
+      assignedTrailerId: trailers[1].id,
+      safetyScore:95,
+    },
+  }));
+
+  drivers.push(await prisma.driver.create({
+    data: {
+      firstName: "Roberto",
+      lastName: "Santos",
+      email: "rsantos@srltransport.com",
+      phone: "(269) 555-0303",
+      licenseNumber: "S456-7890-1234",
+      licenseState: "MI",
+      licenseExpiry: new Date(now.getTime() + 580 * day),
+      status: "AVAILABLE",
+      licenseType: "CDL-A",
+      endorsements: [],
+      assignedTruckId: trucks[2].id,
+      assignedTrailerId: trailers[2].id,
+      safetyScore:92,
+    },
+  }));
+
+  drivers.push(await prisma.driver.create({
+    data: {
+      firstName: "Derek",
+      lastName: "Williams",
+      email: "dwilliams@srltransport.com",
+      phone: "(269) 555-0304",
+      licenseNumber: "W567-8901-2345",
+      licenseState: "MI",
+      licenseExpiry: new Date(now.getTime() + 820 * day),
+      status: "AVAILABLE",
+      licenseType: "CDL-A",
+      endorsements: ["Hazmat"],
+      assignedTruckId: trucks[3].id,
+      assignedTrailerId: trailers[3].id,
+      safetyScore:97,
+    },
+  }));
+
+  drivers.push(await prisma.driver.create({
+    data: {
+      firstName: "Tyler",
+      lastName: "Anderson",
+      email: "tanderson@srltransport.com",
+      phone: "(269) 555-0305",
+      licenseNumber: "A678-9012-3456",
+      licenseState: "MI",
+      licenseExpiry: new Date(now.getTime() + 910 * day),
+      status: "OFF_DUTY",
+      licenseType: "CDL-A",
+      endorsements: [],
+      assignedTruckId: trucks[4].id,
+      assignedTrailerId: trailers[4].id,
+      safetyScore:89,
+    },
+  }));
+
+  // ═══════════════════════════════════════════════
+  // LOADS (30)
+  // ═══════════════════════════════════════════════
+
+  const loadData = [
+    // POSTED (3) - future pickup, no carrier
+    { num: 1, status: "POSTED", eqType: "Dry Van", originCity: "Detroit", originState: "MI", originZip: "48201", destCity: "Chicago", destState: "IL", destZip: "60601", distance: 280, rate: 1800, customerRate: 2100, carrierRate: null, pickupDayOffset: 3, deliveryDayOffset: 4, customerIndex: 0, carrierIndex: null, commodity: "Auto Parts", weight: 42000 },
+    { num: 2, status: "POSTED", eqType: "Reefer", originCity: "Milwaukee", originState: "WI", originZip: "53202", destCity: "Indianapolis", destState: "IN", destZip: "46201", distance: 295, rate: 2200, customerRate: 2500, carrierRate: null, pickupDayOffset: 4, deliveryDayOffset: 5, customerIndex: 1, carrierIndex: null, commodity: "Fresh Produce", weight: 38000, tempMin: 34, tempMax: 38 },
+    { num: 3, status: "POSTED", eqType: "Flatbed", originCity: "Birmingham", originState: "AL", originZip: "35203", destCity: "Nashville", destState: "TN", destZip: "37201", distance: 190, rate: 1500, customerRate: 1700, carrierRate: null, pickupDayOffset: 5, deliveryDayOffset: 6, customerIndex: 3, carrierIndex: null, commodity: "Paper Rolls", weight: 45000 },
+
+    // BOOKED (3) - carrier assigned, future dates
+    { num: 4, status: "BOOKED", eqType: "Dry Van", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Dallas", destState: "TX", destZip: "75201", distance: 240, rate: 1600, customerRate: 1850, carrierRate: 1600, pickupDayOffset: 2, deliveryDayOffset: 3, customerIndex: 4, carrierIndex: 0, commodity: "Industrial Chemicals", weight: 40000, hazmat: true, hazmatClass: "8" },
+    { num: 5, status: "BOOKED", eqType: "Dry Van", originCity: "Seattle", originState: "WA", originZip: "98101", destCity: "Portland", destState: "OR", destZip: "97201", distance: 175, rate: 1400, customerRate: 1600, carrierRate: 1400, pickupDayOffset: 3, deliveryDayOffset: 4, customerIndex: 2, carrierIndex: 1, commodity: "Electronics", weight: 35000 },
+    { num: 6, status: "BOOKED", eqType: "Reefer", originCity: "Milwaukee", originState: "WI", originZip: "53202", destCity: "Detroit", destState: "MI", destZip: "48201", distance: 380, rate: 2400, customerRate: 2750, carrierRate: 2400, pickupDayOffset: 2, deliveryDayOffset: 3, customerIndex: 1, carrierIndex: 0, commodity: "Frozen Foods", weight: 41000, tempMin: -10, tempMax: 0 },
+
+    // DISPATCHED (2) - pickup tomorrow
+    { num: 7, status: "DISPATCHED", eqType: "Dry Van", originCity: "Detroit", originState: "MI", originZip: "48201", destCity: "Louisville", destState: "KY", destZip: "40201", distance: 380, rate: 2100, customerRate: 2400, carrierRate: 2100, pickupDayOffset: 1, deliveryDayOffset: 2, customerIndex: 0, carrierIndex: 1, commodity: "Automotive Parts", weight: 44000 },
+    { num: 8, status: "DISPATCHED", eqType: "Flatbed", originCity: "Phoenix", originState: "AZ", originZip: "85001", destCity: "Tucson", destState: "AZ", destZip: "85701", distance: 115, rate: 1200, customerRate: 1350, carrierRate: 1200, pickupDayOffset: 1, deliveryDayOffset: 2, customerIndex: 3, carrierIndex: 2, commodity: "Steel Beams", weight: 46000 },
+
+    // IN_TRANSIT (4) - picked up yesterday
+    { num: 9, status: "IN_TRANSIT", eqType: "Dry Van", originCity: "Chicago", originState: "IL", originZip: "60601", destCity: "Cincinnati", destState: "OH", destZip: "45201", distance: 300, rate: 1900, customerRate: 2150, carrierRate: 1900, pickupDayOffset: -1, deliveryDayOffset: 1, customerIndex: 0, carrierIndex: 0, commodity: "Consumer Goods", weight: 39000 },
+    { num: 10, status: "IN_TRANSIT", eqType: "Reefer", originCity: "Milwaukee", originState: "WI", originZip: "53202", destCity: "Minneapolis", destState: "MN", destZip: "55401", distance: 340, rate: 2300, customerRate: 2600, carrierRate: 2300, pickupDayOffset: -1, deliveryDayOffset: 1, customerIndex: 1, carrierIndex: 1, commodity: "Dairy Products", weight: 37000, tempMin: 33, tempMax: 40 },
+    { num: 11, status: "IN_TRANSIT", eqType: "Dry Van", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "San Antonio", destState: "TX", destZip: "78201", distance: 197, rate: 1500, customerRate: 1700, carrierRate: 1500, pickupDayOffset: -1, deliveryDayOffset: 0, customerIndex: 4, carrierIndex: 0, commodity: "Chemicals", weight: 42000, hazmat: true, hazmatClass: "3" },
+    { num: 12, status: "IN_TRANSIT", eqType: "Dry Van", originCity: "Seattle", originState: "WA", originZip: "98101", destCity: "Sacramento", destState: "CA", destZip: "95814", distance: 750, rate: 3200, customerRate: 3650, carrierRate: 3200, pickupDayOffset: -1, deliveryDayOffset: 1, customerIndex: 2, carrierIndex: 3, commodity: "Retail Goods", weight: 38000 },
+
+    // AT_DELIVERY (2) - at destination now
+    { num: 13, status: "AT_DELIVERY", eqType: "Flatbed", originCity: "Birmingham", originState: "AL", originZip: "35203", destCity: "Atlanta", destState: "GA", destZip: "30303", distance: 145, rate: 1300, customerRate: 1500, carrierRate: 1300, pickupDayOffset: -1, deliveryDayOffset: 0, customerIndex: 3, carrierIndex: 2, commodity: "Paper Products", weight: 44000 },
+    { num: 14, status: "AT_DELIVERY", eqType: "Dry Van", originCity: "Detroit", originState: "MI", originZip: "48201", destCity: "Indianapolis", destState: "IN", destZip: "46201", distance: 290, rate: 1850, customerRate: 2100, carrierRate: 1850, pickupDayOffset: -1, deliveryDayOffset: 0, customerIndex: 0, carrierIndex: 1, commodity: "Manufacturing Parts", weight: 41000 },
+
+    // DELIVERED (4) - delivered 2-6 days ago
+    { num: 15, status: "DELIVERED", eqType: "Dry Van", originCity: "Chicago", originState: "IL", originZip: "60601", destCity: "Nashville", destState: "TN", destZip: "37201", distance: 475, rate: 2400, customerRate: 2750, carrierRate: 2400, pickupDayOffset: -4, deliveryDayOffset: -2, customerIndex: 0, carrierIndex: 0, commodity: "Auto Parts", weight: 43000 },
+    { num: 16, status: "DELIVERED", eqType: "Reefer", originCity: "Milwaukee", originState: "WI", originZip: "53202", destCity: "Chicago", destState: "IL", destZip: "60601", distance: 90, rate: 1600, customerRate: 1850, carrierRate: 1600, pickupDayOffset: -5, deliveryDayOffset: -4, customerIndex: 1, carrierIndex: 1, commodity: "Fresh Meat", weight: 36000, tempMin: 34, tempMax: 38 },
+    { num: 17, status: "DELIVERED", eqType: "Dry Van", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "New Orleans", destState: "LA", destZip: "70112", distance: 350, rate: 2000, customerRate: 2300, carrierRate: 2000, pickupDayOffset: -5, deliveryDayOffset: -3, customerIndex: 4, carrierIndex: 0, commodity: "Chemicals", weight: 40000 },
+    { num: 18, status: "DELIVERED", eqType: "Flatbed", originCity: "Phoenix", originState: "AZ", originZip: "85001", destCity: "Albuquerque", destState: "NM", destZip: "87101", distance: 420, rate: 2200, customerRate: 2500, carrierRate: 2200, pickupDayOffset: -8, deliveryDayOffset: -6, customerIndex: 3, carrierIndex: 2, commodity: "Construction Materials", weight: 47000 },
+
+    // POD_RECEIVED (3) - delivered 5-8 days ago
+    { num: 19, status: "POD_RECEIVED", eqType: "Dry Van", originCity: "Detroit", originState: "MI", originZip: "48201", destCity: "Buffalo", destState: "NY", destZip: "14201", distance: 265, rate: 1800, customerRate: 2050, carrierRate: 1800, pickupDayOffset: -7, deliveryDayOffset: -5, customerIndex: 0, carrierIndex: 1, commodity: "Auto Parts", weight: 42000 },
+    { num: 20, status: "POD_RECEIVED", eqType: "Reefer", originCity: "Seattle", originState: "WA", originZip: "98101", destCity: "San Francisco", destState: "CA", destZip: "94102", distance: 810, rate: 3500, customerRate: 4000, carrierRate: 3500, pickupDayOffset: -10, deliveryDayOffset: -8, customerIndex: 2, carrierIndex: 3, commodity: "Fresh Seafood", weight: 35000, tempMin: 32, tempMax: 38 },
+    { num: 21, status: "POD_RECEIVED", eqType: "Dry Van", originCity: "Birmingham", originState: "AL", originZip: "35203", destCity: "Memphis", destState: "TN", destZip: "38103", distance: 240, rate: 1650, customerRate: 1900, carrierRate: 1650, pickupDayOffset: -8, deliveryDayOffset: -6, customerIndex: 3, carrierIndex: 2, commodity: "Paper Goods", weight: 43000 },
+
+    // INVOICED (3) - delivered 8-12 days ago
+    { num: 22, status: "INVOICED", eqType: "Dry Van", originCity: "Chicago", originState: "IL", originZip: "60601", destCity: "Detroit", destState: "MI", destZip: "48201", distance: 280, rate: 1800, customerRate: 2100, carrierRate: 1800, pickupDayOffset: -11, deliveryDayOffset: -9, customerIndex: 0, carrierIndex: 0, commodity: "Consumer Goods", weight: 40000 },
+    { num: 23, status: "INVOICED", eqType: "Reefer", originCity: "Milwaukee", originState: "WI", originZip: "53202", destCity: "Green Bay", destState: "WI", destZip: "54301", distance: 120, rate: 1700, customerRate: 1950, carrierRate: 1700, pickupDayOffset: -13, deliveryDayOffset: -12, customerIndex: 1, carrierIndex: 1, commodity: "Frozen Foods", weight: 38000, tempMin: -10, tempMax: 0 },
+    { num: 24, status: "INVOICED", eqType: "Dry Van", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Oklahoma City", destState: "OK", destZip: "73102", distance: 450, rate: 2300, customerRate: 2600, carrierRate: 2300, pickupDayOffset: -12, deliveryDayOffset: -10, customerIndex: 4, carrierIndex: 0, commodity: "Chemicals", weight: 41000, hazmat: true, hazmatClass: "8" },
+
+    // COMPLETED (4) - delivered 16-25 days ago
+    { num: 25, status: "COMPLETED", eqType: "Dry Van", originCity: "Seattle", originState: "WA", originZip: "98101", destCity: "Los Angeles", destState: "CA", destZip: "90001", distance: 1135, rate: 4200, customerRate: 4800, carrierRate: 4200, pickupDayOffset: -27, deliveryDayOffset: -25, customerIndex: 2, carrierIndex: 3, commodity: "Electronics", weight: 36000 },
+    { num: 26, status: "COMPLETED", eqType: "Flatbed", originCity: "Phoenix", originState: "AZ", originZip: "85001", destCity: "Denver", destState: "CO", destZip: "80202", distance: 600, rate: 2800, customerRate: 3200, carrierRate: 2800, pickupDayOffset: -20, deliveryDayOffset: -18, customerIndex: 3, carrierIndex: 2, commodity: "Steel Products", weight: 46000 },
+    { num: 27, status: "COMPLETED", eqType: "Dry Van", originCity: "Detroit", originState: "MI", originZip: "48201", destCity: "Cleveland", destState: "OH", destZip: "44101", distance: 170, rate: 1400, customerRate: 1600, carrierRate: 1400, pickupDayOffset: -19, deliveryDayOffset: -18, customerIndex: 0, carrierIndex: 1, commodity: "Auto Parts", weight: 42000 },
+    { num: 28, status: "COMPLETED", eqType: "Reefer", originCity: "Milwaukee", originState: "WI", originZip: "53202", destCity: "Madison", destState: "WI", destZip: "53703", distance: 80, rate: 1500, customerRate: 1700, carrierRate: 1500, pickupDayOffset: -18, deliveryDayOffset: -17, customerIndex: 1, carrierIndex: 1, commodity: "Dairy Products", weight: 37000, tempMin: 33, tempMax: 40 },
+
+    // CANCELLED (1)
+    { num: 29, status: "CANCELLED", eqType: "Dry Van", originCity: "Birmingham", originState: "AL", originZip: "35203", destCity: "Jacksonville", destState: "FL", destZip: "32201", distance: 450, rate: 2300, customerRate: 2600, carrierRate: null, pickupDayOffset: 6, deliveryDayOffset: 7, customerIndex: 3, carrierIndex: null, commodity: "Paper Products", weight: 44000 },
+
+    // TONU (1)
+    { num: 30, status: "TONU", eqType: "Flatbed", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Dallas", destState: "TX", destZip: "75201", distance: 240, rate: 350, customerRate: 350, carrierRate: 350, pickupDayOffset: -2, deliveryDayOffset: -2, customerIndex: 4, carrierIndex: 2, commodity: "Construction Equipment", weight: 48000 },
+  ];
+
+  const loads = [];
+  const customers = [cust1, cust2, cust3, cust4, cust5];
+  const carriers = [carrierUser, carrierUser2, carrierUser3, carrierUser4, carrierUser5];
+
+  for (const ld of loadData) {
+    const pickupDate = new Date(now.getTime() + ld.pickupDayOffset * day);
+    const deliveryDate = new Date(now.getTime() + ld.deliveryDayOffset * day);
+    const loadNumber = `SRL-${pickupDate.toISOString().split('T')[0].replace(/-/g, '')}-${String(ld.num).padStart(4, '0')}`;
+    const referenceNumber = `REF-${ld.num}-${Date.now().toString().slice(-6)}`;
+
+    const loadCreateData: any = {
+      loadNumber,
+      referenceNumber,
+      status: ld.status,
+      equipmentType: ld.eqType,
+      originCity: ld.originCity,
+      originState: ld.originState,
+      originZip: ld.originZip,
+      destCity: ld.destCity,
+      destState: ld.destState,
+      destZip: ld.destZip,
+      pickupDate,
+      deliveryDate,
+      distance: ld.distance,
+      rate: ld.rate,
+      commodity: ld.commodity,
+      weight: ld.weight,
+      posterId: broker.id,
+    };
+
+    if (ld.customerIndex !== undefined && ld.customerIndex !== null) {
+      loadCreateData.customerId = customers[ld.customerIndex].id;
+    }
+
+    if (ld.carrierIndex !== null && ld.carrierIndex !== undefined) {
+      loadCreateData.carrierId = carriers[ld.carrierIndex].id;
+    }
+
+    if (ld.customerRate) {
+      loadCreateData.customerRate = ld.customerRate;
+    }
+
+    if (ld.carrierRate) {
+      loadCreateData.carrierRate = ld.carrierRate;
+    }
+
+    if (ld.tempMin !== undefined) {
+      loadCreateData.temperatureControlled = true;
+      loadCreateData.tempMin = ld.tempMin;
+      loadCreateData.tempMax = ld.tempMax;
+    }
+
+    if (ld.hazmat) {
+      loadCreateData.hazmat = true;
+      loadCreateData.hazmatClass = ld.hazmatClass;
+    }
+
+    const load = await prisma.load.create({ data: loadCreateData });
+    loads.push(load);
+  }
+
+  // ═══════════════════════════════════════════════
+  // INVOICES (10)
+  // ═══════════════════════════════════════════════
+
+  const invoices = [];
+
+  // INVOICED loads (3)
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[21].id,
+      invoiceNumber: "INV-20260001",
+      status: "SENT",
+      amount: 2100,
+      lineHaulAmount: 1800,
+      fuelSurchargeAmount: 300,
+      totalAmount: 2100,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 21 * day),
+    },
+  }));
+
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[22].id,
+      invoiceNumber: "INV-20260002",
+      status: "SENT",
+      amount: 1950,
+      lineHaulAmount: 1700,
+      fuelSurchargeAmount: 250,
+      totalAmount: 1950,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 18 * day),
+    },
+  }));
+
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[23].id,
+      invoiceNumber: "INV-20260003",
+      status: "SENT",
+      amount: 2600,
+      lineHaulAmount: 2300,
+      fuelSurchargeAmount: 300,
+      totalAmount: 2600,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 20 * day),
+    },
+  }));
+
+  // COMPLETED loads - PAID invoices (4)
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[24].id,
+      invoiceNumber: "INV-20260004",
+      status: "PAID",
+      amount: 4800,
+      lineHaulAmount: 4200,
+      fuelSurchargeAmount: 600,
+      totalAmount: 4800,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 5 * day),
+      paidAt: new Date(now.getTime() - 3 * day),
+    },
+  }));
+
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[25].id,
+      invoiceNumber: "INV-20260005",
+      status: "PAID",
+      amount: 3200,
+      lineHaulAmount: 2800,
+      fuelSurchargeAmount: 400,
+      totalAmount: 3200,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 12 * day),
+      paidAt: new Date(now.getTime() - 1 * day),
+    },
+  }));
+
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[26].id,
+      invoiceNumber: "INV-20260006",
+      status: "PAID",
+      amount: 1600,
+      lineHaulAmount: 1400,
+      fuelSurchargeAmount: 200,
+      totalAmount: 1600,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 12 * day),
+      paidAt: new Date(now.getTime() - 2 * day),
+    },
+  }));
+
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[27].id,
+      invoiceNumber: "INV-20260007",
+      status: "PAID",
+      amount: 1700,
+      lineHaulAmount: 1500,
+      fuelSurchargeAmount: 200,
+      totalAmount: 1700,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 13 * day),
+      paidAt: new Date(now.getTime() - 4 * day),
+    },
+  }));
+
+  // DRAFT invoices (2)
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[14].id,
+      invoiceNumber: "INV-20260008",
+      status: "DRAFT",
+      amount: 2750,
+      lineHaulAmount: 2400,
+      fuelSurchargeAmount: 350,
+      totalAmount: 2750,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 32 * day),
+    },
+  }));
+
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[15].id,
+      invoiceNumber: "INV-20260009",
+      status: "DRAFT",
+      amount: 1850,
+      lineHaulAmount: 1600,
+      fuelSurchargeAmount: 250,
+      totalAmount: 1850,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() + 26 * day),
+    },
+  }));
+
+  // OVERDUE invoice (1) - POD_RECEIVED
+  invoices.push(await prisma.invoice.create({
+    data: {
+      loadId: loads[18].id,
+      invoiceNumber: "INV-20260010",
+      status: "OVERDUE",
+      amount: 2050,
+      lineHaulAmount: 1800,
+      fuelSurchargeAmount: 250,
+      totalAmount: 2050,
+      userId: broker.id,
+      createdById: accountant.id,
+      dueDate: new Date(now.getTime() - 5 * day),
+    },
+  }));
+
+  // ═══════════════════════════════════════════════
+  // CARRIER SCORECARDS (4 - skip pending carrier)
+  // ═══════════════════════════════════════════════
+
+  await prisma.carrierScorecard.createMany({
+    data: [
+      {
+        carrierId: cp1.id,
+        period: "WEEKLY",
+        onTimePickupPct: 99,
+        onTimeDeliveryPct: 98,
+        communicationScore: 99,
+        documentSubmissionTimeliness: 97,
+        acceptanceRate: 98,
+        gpsCompliancePct: 100,
+        overallScore: 98.5,
+        tierAtTime: "PLATINUM",
+        claimRatio: 0.5,
+        bonusEarned: 750,
+      },
+      {
+        carrierId: cp2.id,
+        period: "WEEKLY",
+        onTimePickupPct: 97,
+        onTimeDeliveryPct: 96,
+        communicationScore: 96,
+        documentSubmissionTimeliness: 95,
+        acceptanceRate: 97,
+        gpsCompliancePct: 98,
+        overallScore: 96.2,
+        tierAtTime: "GOLD",
+        claimRatio: 1.2,
+        bonusEarned: 400,
+      },
+      {
+        carrierId: cp3.id,
+        period: "WEEKLY",
+        onTimePickupPct: 93,
+        onTimeDeliveryPct: 92,
+        communicationScore: 90,
+        documentSubmissionTimeliness: 91,
+        acceptanceRate: 92,
+        gpsCompliancePct: 95,
+        overallScore: 92.0,
+        tierAtTime: "SILVER",
+        claimRatio: 3.0,
+        bonusEarned: 0,
+      },
+      {
+        carrierId: cp4.id,
+        period: "WEEKLY",
+        onTimePickupPct: 88,
+        onTimeDeliveryPct: 85,
+        communicationScore: 82,
+        documentSubmissionTimeliness: 86,
+        acceptanceRate: 87,
+        gpsCompliancePct: 90,
+        overallScore: 85.5,
+        tierAtTime: "BRONZE",
+        claimRatio: 5.5,
+        bonusEarned: 0,
+      },
+    ],
+  });
+
+  // ═══════════════════════════════════════════════
+  // MESSAGES (10)
+  // ═══════════════════════════════════════════════
+
+  const messages = [];
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: broker.id,
+      receiverId: carrierUser.id,
+      loadId: loads[8].id,
+      content: "Load SRL-20260211-0009 - Pickup Confirmation\n\nHi, please confirm pickup time for tomorrow's load to Cincinnati. Shipper prefers 8 AM.",
+      readAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: carrierUser.id,
+      receiverId: broker.id,
+      loadId: loads[8].id,
+      content: "Re: Load SRL-20260211-0009 - Pickup Confirmation\n\nConfirmed. Driver will be there at 8 AM sharp. Truck T-101, Trailer TR-201.",
+      readAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: dispatcher.id,
+      receiverId: carrierUser2.id,
+      loadId: loads[9].id,
+      content: "Load Update - ETA Request\n\nCan you provide updated ETA for the Minneapolis delivery? Customer is asking.",
+      readAt: null,
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: carrierUser3.id,
+      receiverId: broker.id,
+      content: "POD Uploaded - Load SRL-20260203-0021\n\nPOD has been uploaded for the Memphis delivery. Load completed without issues.",
+      readAt: new Date(now.getTime() - 3 * day),
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: accountant.id,
+      receiverId: carrierUser.id,
+      content: "Payment Processed - Invoice #QP-20260205\n\nYour Quick Pay invoice has been processed. Funds will be in your account by EOD.",
+      readAt: new Date(now.getTime() - 5 * day),
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: broker.id,
+      receiverId: dispatcher.id,
+      loadId: loads[6].id,
+      content: "Urgent - Customer Request\n\nCustomer needs delivery moved up by 4 hours. Can we accommodate?",
+      readAt: new Date(now.getTime() - 30 * 60 * 1000),
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: admin.id,
+      receiverId: broker.id,
+      content: "Weekly Performance Summary\n\nGreat work this week! 28 loads moved, 97% on-time delivery. Keep it up!",
+      readAt: null,
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: carrierUser2.id,
+      receiverId: dispatcher.id,
+      content: "Driver Availability - Next Week\n\nWe have 3 drivers available for Midwest lanes next week. Let me know if you have loads.",
+      readAt: new Date(now.getTime() - 6 * 60 * 60 * 1000),
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: broker.id,
+      receiverId: carrierUser3.id,
+      loadId: loads[2].id,
+      content: "Load Tender - Birmingham to Nashville\n\nTendering load SRL-20260216-0003. Flatbed, 45K lbs paper rolls. Rate: $1500. Accept by EOD.",
+      readAt: null,
+    },
+  }));
+
+  messages.push(await prisma.message.create({
+    data: {
+      senderId: dispatcher.id,
+      receiverId: broker.id,
+      content: "Daily Operations Report\n\n4 loads in transit, 2 at delivery, no issues to report. All on schedule.",
+      readAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+    },
+  }));
+
+  // ═══════════════════════════════════════════════
+  // NOTIFICATIONS (20)
+  // ═══════════════════════════════════════════════
+
+  await prisma.notification.createMany({
+    data: [
+      { userId: admin.id, type: "CARRIER_APPLICATION", title: "New Carrier Application", message: "Sunbelt Logistics has submitted a carrier application", link: "/carriers", read: false },
+      { userId: broker.id, type: "LOAD_TENDERED", title: "Load Tendered", message: "Load SRL-20260211-0009 tendered to SRL Transport LLC", link: "/loads/9", read: true, readAt: new Date(now.getTime() - 2 * day) },
+      { userId: carrierUser.id, type: "LOAD_UPDATE", title: "Load Update", message: "Pickup time updated for load SRL-20260211-0009", link: "/loads/9", read: true, readAt: new Date(now.getTime() - 1 * day) },
+      { userId: carrierUser2.id, type: "PAYMENT_PENDING", title: "Payment Pending", message: "Invoice #QP-20260208 pending approval", link: "/invoices", read: false },
+      { userId: carrierUser.id, type: "PAYMENT_APPROVED", title: "Payment Approved", message: "Quick Pay payment of $2,100 approved", link: "/payments", read: true, readAt: new Date(now.getTime() - 3 * day) },
+      { userId: accountant.id, type: "INVOICE_OVERDUE", title: "Invoice Overdue", message: "Invoice INV-20260010 is 5 days overdue", link: "/invoices", read: false },
+      { userId: broker.id, type: "POD_RECEIVED", title: "POD Received", message: "POD received for load SRL-20260203-0021", link: "/loads/21", read: true, readAt: new Date(now.getTime() - 4 * day) },
+      { userId: carrierUser.id, type: "SRCPP_UPGRADE", title: "SRCPP Tier Upgrade", message: "Congratulations! You've maintained Platinum tier", link: "/srcpp", read: false },
+      { userId: dispatcher.id, type: "LOAD_UPDATE", title: "Load In Transit", message: "Load SRL-20260210-0010 is now in transit", link: "/loads/10", read: true, readAt: new Date(now.getTime() - 1 * day) },
+      { userId: broker.id, type: "LOAD_UPDATE", title: "Load Delivered", message: "Load SRL-20260209-0015 has been delivered", link: "/loads/15", read: true, readAt: new Date(now.getTime() - 2 * day) },
+      { userId: carrierUser3.id, type: "LOAD_TENDERED", title: "New Load Tender", message: "You have been tendered load SRL-20260216-0003", link: "/loads/3", read: false },
+      { userId: dispatcher.id, type: "GENERAL", title: "Check Call Due", message: "Check call due for 4 in-transit loads", link: "/loads", read: false },
+      { userId: broker.id, type: "GENERAL", title: "Weekly Report Ready", message: "Your weekly performance report is ready", link: "/reports", read: true, readAt: new Date(now.getTime() - 5 * day) },
+      { userId: admin.id, type: "GENERAL", title: "System Maintenance", message: "Scheduled maintenance tonight 11 PM - 2 AM", link: "/settings", read: true, readAt: new Date(now.getTime() - 1 * day) },
+      { userId: carrierUser2.id, type: "LOAD_UPDATE", title: "Load Completed", message: "Load SRL-20260203-0016 marked as completed", link: "/loads/16", read: true, readAt: new Date(now.getTime() - 4 * day) },
+      { userId: accountant.id, type: "PAYMENT_APPROVED", title: "Payment Sent", message: "Payment of $3,200 sent to Pacific Coast Trucking", link: "/payments", read: true, readAt: new Date(now.getTime() - 2 * day) },
+      { userId: broker.id, type: "LOAD_UPDATE", title: "Load Cancelled", message: "Load SRL-20260217-0029 has been cancelled by customer", link: "/loads/29", read: false },
+      { userId: carrierUser.id, type: "GENERAL", title: "Documentation Required", message: "Insurance certificate expires in 30 days", link: "/profile", read: false },
+      { userId: dispatcher.id, type: "LOAD_UPDATE", title: "Load At Delivery", message: "Load SRL-20260210-0013 arrived at destination", link: "/loads/13", read: true, readAt: new Date(now.getTime() - 3 * 60 * 60 * 1000) },
+      { userId: broker.id, type: "GENERAL", title: "Customer Feedback", message: "Acme Manufacturing rated their last delivery 5 stars", link: "/customers", read: true, readAt: new Date(now.getTime() - 6 * day) },
+    ],
+  });
+
+  // ═══════════════════════════════════════════════
+  // CHECK CALLS (8)
+  // ═══════════════════════════════════════════════
+
+  await prisma.checkCall.createMany({
+    data: [
+      { loadId: loads[8].id, status: "COMPLETED", city: "Cincinnati", state: "OH", location: "Cincinnati, OH", notes: "On schedule, ETA 2 PM", driverStatus: "ON_SCHEDULE", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000) },
+      { loadId: loads[9].id, status: "COMPLETED", city: "Minneapolis", state: "MN", location: "Minneapolis, MN", notes: "30 min delay due to traffic", driverStatus: "ON_SCHEDULE", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000) },
+      { loadId: loads[10].id, status: "COMPLETED", city: "San Antonio", state: "TX", location: "San Antonio, TX", notes: "Arriving on time", driverStatus: "ON_SCHEDULE", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000) },
+      { loadId: loads[11].id, status: "COMPLETED", city: "Sacramento", state: "CA", location: "Sacramento, CA", notes: "1 hour ahead of schedule", driverStatus: "ON_SCHEDULE", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000) },
+      { loadId: loads[12].id, status: "COMPLETED", city: "Atlanta", state: "GA", location: "Atlanta, GA", notes: "At receiver dock", driverStatus: "AT_DELIVERY", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 1 * 60 * 60 * 1000) },
+      { loadId: loads[13].id, status: "COMPLETED", city: "Indianapolis", state: "IN", location: "Indianapolis, IN", notes: "Unloading in progress", driverStatus: "AT_DELIVERY", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 30 * 60 * 1000) },
+      { loadId: loads[8].id, status: "COMPLETED", city: "Louisville", state: "KY", location: "Louisville, KY", notes: "Passed through Louisville, heading to Cincinnati", driverStatus: "ON_SCHEDULE", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 6 * 60 * 60 * 1000) },
+      { loadId: loads[9].id, status: "COMPLETED", city: "Eau Claire", state: "WI", location: "Eau Claire, WI", notes: "Fuel stop, will resume in 15 min", driverStatus: "ON_SCHEDULE", calledById: dispatcher.id, method: "Phone", createdAt: new Date(now.getTime() - 8 * 60 * 60 * 1000) },
+    ],
   });
 
   // ═══════════════════════════════════════════════
@@ -621,19 +1750,36 @@ Last revised: ${new Date().toISOString().split("T")[0]} | Owner: VP Sales`,
 
   console.log(`
 Seed complete:
-  Users: 3
-    - admin@silkroutelogistics.ai (ADMIN) — password123
-    - noor@silkroutelogistics.ai (BROKER / Account Executive) — password123
-    - carrier@silkroutelogistics.ai (CARRIER / SRL Transport LLC) — password123
-  Carrier Profile: SRL Transport LLC (MC-1234567, DOT 3456789, Platinum tier)
-  SOPs: 13 industry-standard documents across 6 categories
+  Users: 9 (3 SRL employees + 2 new employees + 4 external carriers)
+    - whaider@silkroutelogistics.ai (ADMIN)
+    - noor@silkroutelogistics.ai (BROKER / Account Executive)
+    - dispatch@silkroutelogistics.ai (DISPATCH)
+    - accounting@silkroutelogistics.ai (ACCOUNTING)
+    - carrier@silkroutelogistics.ai (CARRIER / SRL Transport LLC)
+    - jthompson@midwestfreight.com (CARRIER / Midwest Freight Lines)
+    - maria@dixiehaulers.com (CARRIER / Dixie Haulers Inc)
+    - kevin@pacificcoasttrucking.com (CARRIER / Pacific Coast Trucking)
+    - carlos@sunbeltlogistics.com (CARRIER / Sunbelt Logistics - PENDING)
+    Password for all: W3lcome2SRL26!!
+  Carrier Profiles: 5
+  Customers: 5
+  Customer Contacts: 10
+  Trucks: 5
+  Trailers: 5
+  Drivers: 5
+  Loads: 30
+  Invoices: 10
+  Carrier Scorecards: 4
+  Messages: 10
+  Notifications: 20
+  Check Calls: 8
+  SOPs: 14 industry-standard documents across 6 categories
     - Operations: 4 (Freight Ops, Reefer, Hazmat, Flatbed)
     - Safety: 3 (Driver Safety, Workplace OSHA, Claims)
     - Compliance: 2 (Carrier Vetting, DOT Audit)
     - Finance: 2 (AR/Invoicing, Factoring)
     - HR: 2 (Onboarding, Code of Conduct)
     - Sales: 1 (Customer Onboarding)
-  Everything else: empty — build from the UI
   `);
 }
 

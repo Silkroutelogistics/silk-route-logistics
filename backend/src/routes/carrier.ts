@@ -7,11 +7,13 @@ import {
 import { authenticate, authorize } from "../middleware/auth";
 import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
+import { validateBody } from "../middleware/validate";
+import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 
 const router = Router();
 
 // Public
-router.post("/register", registerCarrier);
+router.post("/register", validateBody(carrierRegisterSchema), registerCarrier);
 
 // Authenticated carrier
 router.use(authenticate);
@@ -31,6 +33,6 @@ router.get("/:id/detail", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERA
 router.patch("/:id", authorize("ADMIN", "CEO"), auditLog("UPDATE", "Carrier"), updateCarrier);
 
 // Admin only
-router.post("/verify/:id", authorize("ADMIN", "CEO"), auditLog("VERIFY", "Carrier"), verifyCarrier);
+router.post("/verify/:id", authorize("ADMIN", "CEO"), validateBody(verifyCarrierSchema), auditLog("VERIFY", "Carrier"), verifyCarrier);
 
 export default router;

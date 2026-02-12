@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compliance | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h2>SILK ROUTE</h2><p>Carrier Portal</p></div>
+    <div class="sidebar-user" id="sidebarUser"><div class="user-name skeleton skeleton-line w75"></div><div class="user-role">CARRIER</div></div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html" class="active"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help & SOPs</a>
+    </nav>
+    <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Compliance Center</h1>
+        <p class="subtitle">Insurance, FMCSA, CSA scores, and document tracking</p>
+      </div>
+      <button class="btn btn-secondary" onclick="loadAll()">Refresh</button>
+    </div>
+
+    <!-- Status Strip -->
+    <div class="status-strip green" id="compStrip">All compliance items current</div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+      <button class="tab-btn" data-tab="csa" onclick="switchTab('csa')">CSA / Safety</button>
+      <button class="tab-btn" data-tab="documents" onclick="switchTab('documents')">Documents</button>
+      <button class="tab-btn" data-tab="expirations" onclick="switchTab('expirations')">Expirations</button>
+    </div>
+
+    <!-- ═══ OVERVIEW TAB ═══ -->
+    <div id="tab-overview">
+      <div class="grid-2" style="margin-bottom:24px">
+        <!-- Insurance Card -->
+        <div class="card">
+          <div class="card-header"><h3>Insurance Status</h3></div>
+          <div id="insuranceInfo">
+            <div class="skeleton skeleton-line w100"></div>
+            <div class="skeleton skeleton-line w75"></div>
+          </div>
+        </div>
+
+        <!-- FMCSA Authority -->
+        <div class="card">
+          <div class="card-header"><h3>FMCSA Authority</h3></div>
+          <div id="fmcsaInfo">
+            <div class="skeleton skeleton-line w100"></div>
+            <div class="skeleton skeleton-line w75"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Checklist -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header"><h3>Document Checklist</h3></div>
+        <div class="compliance-grid" id="docChecklist">
+          <div class="skeleton skeleton-line w100"></div>
+        </div>
+      </div>
+
+      <!-- Active Alerts -->
+      <div class="card">
+        <div class="card-header"><h3>Active Compliance Alerts</h3></div>
+        <div id="alertsList">
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w75"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CSA / SAFETY TAB ═══ -->
+    <div id="tab-csa" style="display:none">
+      <div class="grid-2" style="margin-bottom:24px">
+        <!-- BASIC Scores -->
+        <div class="card">
+          <div class="card-header"><h3>FMCSA BASIC Scores</h3></div>
+          <div id="basicScores">
+            <div class="skeleton skeleton-box"></div>
+          </div>
+          <p style="font-size:11px;color:var(--slate-dark);margin-top:12px">
+            Lower scores are better. Threshold for intervention is typically 65-80% depending on category.
+          </p>
+        </div>
+
+        <!-- SRL Performance Metrics -->
+        <div class="card">
+          <div class="card-header"><h3>SRL Performance Metrics</h3></div>
+          <div id="srlMetrics">
+            <div class="skeleton skeleton-box"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score History -->
+      <div class="card">
+        <div class="card-header"><h3>Score History</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Period</th><th>On-Time Pickup</th><th>On-Time Delivery</th>
+                <th>Communication</th><th>Claims</th><th>Docs</th><th>Overall</th>
+              </tr>
+            </thead>
+            <tbody id="scoreHistoryBody">
+              <tr><td colspan="7"><div class="skeleton skeleton-line w100"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DOCUMENTS TAB ═══ -->
+    <div id="tab-documents" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <h3>Uploaded Documents</h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>File Name</th><th>Type</th><th>Size</th><th>Uploaded</th></tr>
+            </thead>
+            <tbody id="docsTableBody">
+              <tr><td colspan="4"><div class="skeleton skeleton-line w100"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ EXPIRATIONS TAB ═══ -->
+    <div id="tab-expirations" style="display:none">
+      <div class="card">
+        <div class="card-header"><h3>Expiration Calendar</h3></div>
+        <div id="expirationsList">
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w75"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="main-footer">Silk Route Logistics &middot; Carrier Portal</footer>
+  </main>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    if (!CARRIER.requireAuth()) throw new Error("Not authenticated");
+
+    function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+    function shortDate(d) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "--"; }
+    function money(n) { return "$" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+
+    // Init sidebar
+    CARRIER.getMe().then(function (u) {
+      if (u) {
+        document.getElementById("sidebarUser").innerHTML =
+          '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div><div class="user-role">CARRIER</div>' +
+          (u.carrierProfile ? '<div class="user-tier tier-' + u.carrierProfile.tier + '">' + u.carrierProfile.tier + '</div>' : '');
+      }
+    });
+
+    // Tab switching
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+      ['overview', 'csa', 'documents', 'expirations'].forEach(function (t) {
+        document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+      });
+    }
+
+    function loadAll() {
+      CARRIER.getComplianceOverview().then(renderOverview);
+      CARRIER.getCsaScores().then(renderCSA);
+      CARRIER.getComplianceDocuments().then(renderDocuments);
+      CARRIER.getExpirationCalendar().then(renderExpirations);
+    }
+
+    function renderOverview(data) {
+      // Status strip
+      var strip = document.getElementById("compStrip");
+      var summary = data.alertsSummary || {};
+      if (summary.critical > 0) {
+        strip.className = "status-strip red";
+        strip.textContent = summary.critical + " CRITICAL issue(s) - immediate action required";
+      } else if (summary.warning > 0) {
+        strip.className = "status-strip amber";
+        strip.textContent = summary.warning + " warning(s) - review recommended";
+      } else {
+        strip.className = "status-strip green";
+        strip.textContent = "All compliance items current";
+      }
+
+      // Insurance
+      var ins = data.insurance || {};
+      var insColor = ins.status === "VALID" ? "green" : ins.status === "EXPIRING_SOON" ? "amber" : ins.status === "EXPIRED" ? "red" : "slate";
+      document.getElementById("insuranceInfo").innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+          '<span style="font-size:14px;font-weight:600;color:#fff">Status</span>' +
+          '<span class="badge badge-' + insColor + '">' + esc((ins.status || "UNKNOWN").replace(/_/g, " ")) + '</span>' +
+        '</div>' +
+        '<div class="info-grid">' +
+          '<div class="info-item"><label>Expires</label><div class="info-value">' + shortDate(ins.expiry) + '</div></div>' +
+          '<div class="info-item"><label>Company</label><div class="info-value">' + esc(ins.company || "--") + '</div></div>' +
+          '<div class="info-item"><label>Policy #</label><div class="info-value">' + esc(ins.policyNumber || "--") + '</div></div>' +
+          '<div class="info-item"><label>Cargo</label><div class="info-value">' + (ins.cargoAmount ? money(ins.cargoAmount) : "--") + '</div></div>' +
+          '<div class="info-item"><label>Auto Liability</label><div class="info-value">' + (ins.autoLiability ? money(ins.autoLiability) : "--") + '</div></div>' +
+          '<div class="info-item"><label>General Liability</label><div class="info-value">' + (ins.generalLiability ? money(ins.generalLiability) : "--") + '</div></div>' +
+        '</div>';
+
+      // FMCSA
+      var fmcsa = data.fmcsa || {};
+      var authColor = fmcsa.authorityStatus === "AUTHORIZED" ? "green" : fmcsa.authorityStatus === "NOT AUTHORIZED" ? "red" : "slate";
+      document.getElementById("fmcsaInfo").innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+          '<span style="font-size:14px;font-weight:600;color:#fff">Authority</span>' +
+          '<span class="badge badge-' + authColor + '">' + esc(fmcsa.authorityStatus || "UNKNOWN") + '</span>' +
+        '</div>' +
+        '<div class="info-grid">' +
+          '<div class="info-item"><label>MC Number</label><div class="info-value">' + esc(data.carrier ? data.carrier.mcNumber || "--" : "--") + '</div></div>' +
+          '<div class="info-item"><label>DOT Number</label><div class="info-value">' + esc(data.carrier ? data.carrier.dotNumber || "--" : "--") + '</div></div>' +
+          '<div class="info-item"><label>Safety Rating</label><div class="info-value">' + esc(fmcsa.safetyRating || "NOT RATED") + '</div></div>' +
+          '<div class="info-item"><label>Last Checked</label><div class="info-value">' + shortDate(fmcsa.lastChecked) + '</div></div>' +
+        '</div>';
+
+      // Doc checklist
+      var docs = data.documents || {};
+      document.getElementById("docChecklist").innerHTML =
+        complianceItem("W-9 Form", docs.w9) +
+        complianceItem("Insurance Certificate (COI)", docs.insuranceCert) +
+        complianceItem("Operating Authority Letter", docs.authorityDoc);
+
+      // Alerts
+      var alerts = data.alerts || [];
+      var alertsEl = document.getElementById("alertsList");
+      if (alerts.length === 0) {
+        alertsEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--green)">&#10003; No active alerts</div>';
+      } else {
+        alertsEl.innerHTML = alerts.map(function (a) {
+          var color = a.severity === "CRITICAL" ? "red" : a.severity === "WARNING" ? "amber" : "blue";
+          return '<div style="padding:10px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:10px">' +
+            '<span class="badge badge-' + color + '">' + esc(a.severity) + '</span>' +
+            '<div>' +
+              '<div style="font-size:13px;color:#fff">' + esc(a.type.replace(/_/g, " ")) + '</div>' +
+              '<div style="font-size:11px;color:var(--slate)">' + esc(a.entityName) + ' &middot; Expires ' + shortDate(a.expiryDate) + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join("");
+      }
+    }
+
+    function complianceItem(label, uploaded) {
+      return '<div class="compliance-item">' +
+        '<span class="item-label">' + esc(label) + '</span>' +
+        (uploaded
+          ? '<span class="item-status" style="color:var(--green)">&#10003; Uploaded</span>'
+          : '<span class="item-status" style="color:var(--red)">&#10007; Missing</span>') +
+      '</div>';
+    }
+
+    function renderCSA(data) {
+      // BASIC scores
+      var basic = data.basicScores || {};
+      var basicLabels = {
+        unsafeDriving: "Unsafe Driving",
+        hoursOfService: "Hours of Service",
+        driverFitness: "Driver Fitness",
+        controlledSubstances: "Drug & Alcohol",
+        vehicleMaintenance: "Vehicle Maintenance",
+        hazmat: "HazMat",
+        crashIndicator: "Crash Indicator",
+      };
+      var basicEl = document.getElementById("basicScores");
+      basicEl.innerHTML = Object.keys(basicLabels).map(function (key) {
+        var val = basic[key] || 0;
+        var color = val > 75 ? "red" : val > 50 ? "amber" : "green";
+        return '<div class="score-bar">' +
+          '<span class="bar-label">' + basicLabels[key] + '</span>' +
+          '<div class="bar-track"><div class="bar-fill ' + color + '" style="width:' + Math.min(100, val) + '%"></div></div>' +
+          '<span class="bar-value">' + val + '%</span>' +
+        '</div>';
+      }).join("");
+
+      // SRL metrics
+      var srl = data.srlMetrics;
+      var metricsEl = document.getElementById("srlMetrics");
+      if (!srl) {
+        metricsEl.innerHTML = '<div class="empty-state"><p>No scorecard data yet</p></div>';
+      } else {
+        var metrics = [
+          { label: "On-Time Pickup", value: srl.onTimePickup, color: "gold" },
+          { label: "On-Time Delivery", value: srl.onTimeDelivery, color: "gold" },
+          { label: "Communication", value: srl.communication, color: "blue" },
+          { label: "Doc Timeliness", value: srl.docTimeliness, color: "green" },
+          { label: "Claims Ratio", value: srl.claimRatio, color: srl.claimRatio > 5 ? "red" : "green" },
+          { label: "Overall Score", value: srl.overallScore, color: "gold" },
+        ];
+        metricsEl.innerHTML = metrics.map(function (m) {
+          return '<div class="score-bar">' +
+            '<span class="bar-label">' + m.label + '</span>' +
+            '<div class="bar-track"><div class="bar-fill ' + m.color + '" style="width:' + Math.min(100, m.value || 0) + '%"></div></div>' +
+            '<span class="bar-value">' + (m.value || 0).toFixed(1) + '%</span>' +
+          '</div>';
+        }).join("");
+      }
+
+      // Score history
+      var history = data.history || [];
+      var tbody = document.getElementById("scoreHistoryBody");
+      if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No score history</p></td></tr>';
+      } else {
+        tbody.innerHTML = history.map(function (s) {
+          return '<tr>' +
+            '<td>' + esc(s.period) + ' ' + shortDate(s.calculatedAt) + '</td>' +
+            '<td>' + s.onTimePickupPct.toFixed(1) + '%</td>' +
+            '<td>' + s.onTimeDeliveryPct.toFixed(1) + '%</td>' +
+            '<td>' + s.communicationScore.toFixed(1) + '</td>' +
+            '<td>' + s.claimRatio.toFixed(1) + '%</td>' +
+            '<td>' + (s.documentSubmissionTimeliness || 0).toFixed(1) + '%</td>' +
+            '<td style="font-weight:600;color:var(--gold)">' + s.overallScore.toFixed(1) + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    function renderDocuments(data) {
+      var docs = data.documents || [];
+      var tbody = document.getElementById("docsTableBody");
+      if (docs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><p>No documents uploaded</p></td></tr>';
+        return;
+      }
+      tbody.innerHTML = docs.map(function (d) {
+        var sizeKB = d.fileSize ? (d.fileSize / 1024).toFixed(1) + " KB" : "--";
+        return '<tr>' +
+          '<td>' + esc(d.fileName) + '</td>' +
+          '<td><span class="badge badge-slate">' + esc(d.docType || d.fileType || "DOC") + '</span></td>' +
+          '<td>' + sizeKB + '</td>' +
+          '<td>' + shortDate(d.createdAt) + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    function renderExpirations(data) {
+      var exps = data.expirations || [];
+      var el = document.getElementById("expirationsList");
+      if (exps.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>No tracked expirations</p></div>';
+        return;
+      }
+
+      el.innerHTML = exps.map(function (e) {
+        var statusColor = e.status === "VALID" ? "green" : e.status === "EXPIRING_SOON" ? "amber" : e.status === "EXPIRED" ? "red" : "slate";
+        return '<div style="padding:10px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between">' +
+          '<div>' +
+            '<div style="font-size:14px;font-weight:500;color:#fff">' + esc(e.type) + '</div>' +
+            '<div style="font-size:12px;color:var(--slate)">Expires: ' + shortDate(e.date) + '</div>' +
+          '</div>' +
+          '<span class="badge badge-' + statusColor + '">' + esc(e.status.replace(/_/g, " ")) + '</span>' +
+        '</div>';
+      }).join("");
+    }
+
+    // Init
+    loadAll();
+
+    // Sidebar toggle
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+  </script>
+</body>
+</html>
