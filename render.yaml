@@ -4,8 +4,8 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && node dist/server.js
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
