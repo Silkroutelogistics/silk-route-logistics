@@ -49,7 +49,6 @@ app.use(securityHeaders);
 
 // 3. CORS locked to specific origins
 const allowedOrigins = [
-  "https://app.silkroutelogistics.ai",
   "https://silkroutelogistics.ai",
   "http://localhost:3000",
 ];
