@@ -16,7 +16,7 @@ function generateRefNumber(): string {
 }
 
 export async function createLoad(req: AuthRequest, res: Response) {
-  const data = createLoadSchema.parse(req.body);
+  const data = req.body; // Already validated & transformed by validateBody middleware
 
   // Enforce shipper credit limit if customer is specified
   if (data.customerId) {
