@@ -577,7 +577,13 @@ export async function enforceShipperCredit(customerId: string): Promise<{ allowe
     where: { customerId },
   });
 
-  if (!credit) return { allowed: true }; // No credit record = no limit enforced
+  if (!credit) {
+    // Auto-create credit record with default $50K limit (defense in depth)
+    await prisma.shipperCredit.create({
+      data: { customerId, creditLimit: 50000, creditGrade: "B", paymentTerms: "NET30" },
+    }).catch(() => {});
+    return { allowed: true };
+  }
 
   if (credit.autoBlocked) {
     return { allowed: false, reason: `Shipper is auto-blocked: ${credit.blockedReason || "credit limit exceeded"}` };

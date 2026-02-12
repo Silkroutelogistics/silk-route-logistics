@@ -7,6 +7,17 @@ import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
   const customer = await prisma.customer.create({ data: data as any });
+
+  // Auto-initialize ShipperCredit with default $50K limit
+  await prisma.shipperCredit.create({
+    data: {
+      customerId: customer.id,
+      creditLimit: data.creditLimit ?? 50000,
+      creditGrade: "B",
+      paymentTerms: "NET30",
+    },
+  }).catch(() => {}); // Ignore if already exists (unique constraint)
+
   res.status(201).json(customer);
 }
 
