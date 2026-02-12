@@ -1942,3 +1942,37 @@ model ErrorLog {
   @@index([userId])
   @@map("error_logs")
 }
+
+// ─── Website Leads & Contact Submissions ──────────────────────────
+
+model WebsiteLead {
+  id          String   @id @default(cuid())
+  type        String   // "quote_request" or "contact"
+  name        String
+  company     String
+  email       String
+  phone       String?
+  // Quote-specific fields
+  originCity  String?
+  originState String?
+  destCity    String?
+  destState   String?
+  equipment   String?
+  weight      String?
+  pickupDate  String?
+  details     String?
+  // Contact-specific fields
+  inquiryType String?
+  message     String?
+  // Tracking
+  status      String   @default("new") // new, contacted, qualified, converted
+  notes       String?
+  assignedTo  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("website_leads")
+}

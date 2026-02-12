@@ -187,7 +187,7 @@ export default function Home() {
             <StatCard value={50} label="Carrier Partners" />
             <StatCard value={500} label="Loads Moved" />
             <StatCard value={98} label="On-Time Delivery %" />
-            <StatCard value={12} label="Midwest States Covered" />
+            <StatCard value={48} label="States Covered" />
           </div>
         </div>
       </section>

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Contact Silk Route Logistics — Get a freight quote, join our carrier network, or ask a question. 24/7 operations support.">
+  <meta name="keywords" content="contact freight broker, freight quote, carrier partnership, logistics support, Silk Route Logistics">
+  <meta name="author" content="Silk Route Logistics Inc.">
+  <meta name="robots" content="index, follow">
+
+  <meta property="og:title" content="Contact Us — Silk Route Logistics">
+  <meta property="og:description" content="Get in touch with our team for freight quotes, carrier partnerships, or shipment support.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.silkroutelogistics.ai/contact">
+
+  <title>Contact Us — Silk Route Logistics | Get in Touch</title>
+
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1A1A2E; background: #FFFFFF; overflow-x: hidden; line-height: 1.6;
+    }
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; color: inherit; }
+    ul { list-style: none; }
+    button { cursor: pointer; border: none; font-family: inherit; }
+
+    :root {
+      --navy: #0D1B2A;
+      --navy-mid: #1B2838;
+      --navy-deep: #0A1628;
+      --gold: #C8963E;
+      --gold-light: #D4A84E;
+      --gold-dark: #B8862E;
+      --white: #FFFFFF;
+      --light-gray: #F5F5F5;
+      --dark-text: #1A1A2E;
+      --text-muted: #6B7280;
+      --font-headline: 'DM Serif Display', Georgia, serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --container: 1200px;
+    }
+
+    .container { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
+    .headline { font-family: var(--font-headline); font-weight: 400; line-height: 1.2; }
+
+    /* ======================================
+       NAV
+       ====================================== */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: transparent; transition: var(--transition);
+    }
+    .nav.scrolled {
+      background: rgba(13, 27, 42, 0.97);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+    }
+    .nav-inner {
+      max-width: var(--container); margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; height: 72px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-body); font-weight: 700; font-size: 1rem;
+      color: var(--white); letter-spacing: 0.04em;
+    }
+    .logo-gold { color: var(--gold); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a {
+      color: rgba(255,255,255,0.85); font-size: 0.9rem; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-links a.active { color: var(--gold); }
+
+    .nav-cta {
+      background: var(--gold); color: var(--white); padding: 10px 24px;
+      border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+      transition: var(--transition);
+    }
+    .nav-cta:hover { background: var(--gold-light); transform: translateY(-1px); }
+
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      background: none; padding: 4px;
+    }
+    .hamburger span {
+      width: 24px; height: 2px; background: var(--white);
+      transition: var(--transition); border-radius: 2px;
+    }
+    .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+    .mobile-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 998;
+    }
+    .mobile-overlay.show { display: block; }
+    .mobile-menu {
+      position: fixed; top: 0; right: -300px; width: 280px; height: 100vh;
+      background: var(--navy); z-index: 999; padding: 80px 24px 24px;
+      transition: right 0.3s ease; overflow-y: auto;
+    }
+    .mobile-menu.open { right: 0; }
+    .mobile-nav-link {
+      display: block; padding: 14px 0; color: rgba(255,255,255,0.85);
+      font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .mobile-nav-link:hover { color: var(--gold); }
+
+    /* ======================================
+       HERO
+       ====================================== */
+    .hero {
+      background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 40%, var(--navy-mid) 100%);
+      padding: 160px 0 100px; text-align: center; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(200,150,62,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero h1 {
+      font-family: var(--font-headline); font-size: clamp(2.2rem, 5vw, 3.5rem);
+      color: var(--white); margin-bottom: 16px; position: relative;
+    }
+    .hero h1 .gold-line { color: var(--gold); }
+    .hero p {
+      color: rgba(255,255,255,0.7); font-size: 1.15rem; max-width: 600px;
+      margin: 0 auto; position: relative;
+    }
+
+    /* ======================================
+       CONTACT INFO + FORM
+       ====================================== */
+    .contact-section { padding: 80px 0; }
+    .contact-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start;
+    }
+    .contact-info h2 {
+      font-family: var(--font-headline); font-size: 1.75rem; color: var(--navy);
+      margin-bottom: 32px;
+    }
+    .info-block { margin-bottom: 28px; }
+    .info-block h3 {
+      font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--gold); margin-bottom: 8px; font-weight: 700;
+    }
+    .info-block p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; }
+    .info-block a { color: var(--navy); font-weight: 500; transition: color 0.2s; }
+    .info-block a:hover { color: var(--gold); }
+
+    .hours-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(34,197,94,0.1); color: #16a34a;
+      padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+      margin-top: 4px;
+    }
+    .hours-badge::before {
+      content: ''; width: 6px; height: 6px; background: #16a34a;
+      border-radius: 50%; animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Form */
+    .contact-form-card {
+      background: var(--white); border: 1px solid #E5E7EB;
+      border-radius: var(--radius); padding: 40px;
+      box-shadow: var(--shadow-lg);
+    }
+    .contact-form-card h2 {
+      font-family: var(--font-headline); font-size: 1.5rem; color: var(--navy);
+      margin-bottom: 24px;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: 0.85rem; font-weight: 600; color: var(--dark-text);
+      margin-bottom: 6px;
+    }
+    .form-group label .required { color: #ef4444; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%; padding: 12px 16px; border: 1px solid #D1D5DB;
+      border-radius: var(--radius-sm); font-size: 0.95rem;
+      font-family: var(--font-body); color: var(--dark-text);
+      transition: border-color 0.2s, box-shadow 0.2s; background: var(--white);
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none; border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(200,150,62,0.15);
+    }
+    .form-group textarea { resize: vertical; min-height: 120px; }
+
+    .btn-submit {
+      width: 100%; padding: 14px 32px; background: var(--gold); color: var(--white);
+      border: none; border-radius: var(--radius-sm); font-size: 1rem;
+      font-weight: 700; cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover { background: var(--gold-dark); transform: translateY(-1px); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-submit .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: var(--white); border-radius: 50%;
+      animation: spin 0.6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .form-status {
+      margin-top: 16px; padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 0.9rem; font-weight: 500; display: none;
+    }
+    .form-status.success { display: block; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .form-status.error { display: block; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+    /* ======================================
+       MAP
+       ====================================== */
+    .map-section { padding: 0 0 80px; }
+    .map-section h2 {
+      font-family: var(--font-headline); font-size: 1.75rem; color: var(--navy);
+      text-align: center; margin-bottom: 32px;
+    }
+    .map-wrapper {
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow-md); border: 1px solid #E5E7EB;
+    }
+    .map-wrapper iframe { width: 100%; height: 400px; border: none; display: block; }
+
+    /* ======================================
+       QUICK LINKS
+       ====================================== */
+    .quick-links { padding: 60px 0; background: var(--light-gray); }
+    .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .quick-card {
+      background: var(--white); border: 1px solid #E5E7EB;
+      border-radius: var(--radius); padding: 32px; text-align: center;
+      transition: var(--transition);
+    }
+    .quick-card:hover {
+      transform: translateY(-4px); box-shadow: var(--shadow-md);
+      border-color: var(--gold);
+    }
+    .quick-card .icon {
+      width: 48px; height: 48px; background: rgba(200,150,62,0.1);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px; font-size: 1.4rem;
+    }
+    .quick-card h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 8px; font-weight: 700; }
+    .quick-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px; }
+    .quick-card .link {
+      color: var(--gold); font-weight: 600; font-size: 0.9rem;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .quick-card .link:hover { gap: 8px; }
+
+    /* ======================================
+       FAQ
+       ====================================== */
+    .faq-section { padding: 80px 0; }
+    .faq-section h2 {
+      font-family: var(--font-headline); font-size: 2rem; color: var(--navy);
+      text-align: center; margin-bottom: 12px;
+    }
+    .faq-section .subtitle {
+      text-align: center; color: var(--text-muted); font-size: 1.05rem; margin-bottom: 48px;
+    }
+    .faq-list { max-width: 800px; margin: 0 auto; }
+    .faq-item {
+      border: 1px solid #E5E7EB; border-radius: var(--radius-sm);
+      margin-bottom: 12px; overflow: hidden; transition: var(--transition);
+    }
+    .faq-item:hover { border-color: rgba(200,150,62,0.3); }
+    .faq-question {
+      width: 100%; padding: 18px 24px; background: none; text-align: left;
+      font-size: 1rem; font-weight: 600; color: var(--dark-text);
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--font-body); cursor: pointer;
+    }
+    .faq-question .chevron {
+      width: 20px; height: 20px; transition: transform 0.3s; flex-shrink: 0; color: var(--gold);
+    }
+    .faq-item.open .faq-question .chevron { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease;
+    }
+    .faq-item.open .faq-answer { max-height: 300px; }
+    .faq-answer-inner {
+      padding: 0 24px 18px; color: var(--text-muted); font-size: 0.95rem; line-height: 1.7;
+    }
+
+    /* ======================================
+       FOOTER
+       ====================================== */
+    .footer {
+      background: var(--navy); color: rgba(255,255,255,0.7); padding: 60px 0 0;
+    }
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
+      padding-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 0.95rem; color: var(--white); margin-bottom: 16px;
+    }
+    .footer-brand p { font-size: 0.9rem; line-height: 1.7; margin-bottom: 20px; }
+    .footer-col h5 {
+      color: var(--white); font-size: 0.85rem; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 16px;
+    }
+    .footer-col a {
+      display: block; color: rgba(255,255,255,0.6); font-size: 0.9rem;
+      padding: 4px 0; transition: color 0.2s;
+    }
+    .footer-col a:hover { color: var(--gold); }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 24px 0; font-size: 0.8rem; color: rgba(255,255,255,0.4);
+    }
+    .footer-bottom-links { display: flex; gap: 24px; }
+    .footer-bottom-links a { color: rgba(255,255,255,0.4); transition: color 0.2s; }
+    .footer-bottom-links a:hover { color: var(--gold); }
+
+    /* ======================================
+       RESPONSIVE
+       ====================================== */
+    @media (max-width: 900px) {
+      .contact-grid { grid-template-columns: 1fr; gap: 40px; }
+      .quick-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+      .form-row { grid-template-columns: 1fr; }
+      .hero { padding: 140px 0 80px; }
+      .hero h1 { font-size: 2rem; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    }
+
+    /* ======================================
+       ANIMATIONS
+       ====================================== */
+    .fade-in {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav scrolled" id="mainNav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo" aria-label="Silk Route Logistics Home">
+        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="8" fill="#C8963E"/>
+          <path d="M10 28L20 12L30 28" stroke="#0D1B2A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 22H26" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="20" cy="14" r="2.5" fill="#0D1B2A"/>
+        </svg>
+        <span><span class="logo-gold">SILK ROUTE</span> LOGISTICS</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/shippers">Shippers</a>
+        <a href="/carriers">Carriers</a>
+        <a href="/about">About</a>
+        <a href="/contact" class="active">Contact</a>
+        <a href="/tracking">Track</a>
+        <a href="/shippers" class="nav-cta">Get a Quote</a>
+      </div>
+
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/" class="mobile-nav-link">Home</a>
+    <a href="/shippers" class="mobile-nav-link">Shippers</a>
+    <a href="/carriers" class="mobile-nav-link">Carriers</a>
+    <a href="/about" class="mobile-nav-link">About</a>
+    <a href="/contact" class="mobile-nav-link">Contact</a>
+    <a href="/tracking" class="mobile-nav-link">Track Shipment</a>
+    <a href="/ae/loads.html" class="mobile-nav-link">AE Login</a>
+    <a href="/carrier/login.html" class="mobile-nav-link">Carrier Login</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <h1>Let's Talk <span class="gold-line">Freight</span></h1>
+      <p>Whether you need a quote, want to join our carrier network, or have a question — we're here to help.</p>
+    </div>
+  </section>
+
+  <!-- CONTACT INFO + FORM -->
+  <section class="contact-section">
+    <div class="container">
+      <div class="contact-grid">
+        <!-- Left Column — Info -->
+        <div class="contact-info fade-in">
+          <h2>Get in Touch</h2>
+
+          <div class="info-block">
+            <h3>Headquarters</h3>
+            <p>
+              Silk Route Logistics LLC<br>
+              233 S Wacker Dr, Suite 8400<br>
+              Chicago, IL 60606
+            </p>
+          </div>
+
+          <div class="info-block">
+            <h3>Phone</h3>
+            <p>
+              General: <a href="tel:+13125550175">(312) 555-0175</a><br>
+              Carrier Support: <a href="tel:+13125550176">(312) 555-0176</a><br>
+              After-Hours: <a href="tel:+13125550177">(312) 555-0177</a>
+            </p>
+          </div>
+
+          <div class="info-block">
+            <h3>Email</h3>
+            <p>
+              General: <a href="mailto:info@silkroutelogistics.ai">info@silkroutelogistics.ai</a><br>
+              Shipper Inquiries: <a href="mailto:sales@silkroutelogistics.ai">sales@silkroutelogistics.ai</a><br>
+              Carrier Onboarding: <a href="mailto:carriers@silkroutelogistics.ai">carriers@silkroutelogistics.ai</a>
+            </p>
+          </div>
+
+          <div class="info-block">
+            <h3>Hours</h3>
+            <p>
+              Operations: 24/7/365
+              <span class="hours-badge">Live Now</span><br>
+              Business Office: Mon–Fri, 8 AM – 6 PM CT
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Column — Form -->
+        <div class="contact-form-card fade-in">
+          <h2>Send Us a Message</h2>
+          <form id="contactForm" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <input type="text" name="name" required placeholder="John Doe">
+              </div>
+              <div class="form-group">
+                <label>Company Name <span class="required">*</span></label>
+                <input type="text" name="company" required placeholder="Acme Corp">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email <span class="required">*</span></label>
+                <input type="email" name="email" required placeholder="john@company.com">
+              </div>
+              <div class="form-group">
+                <label>Phone</label>
+                <input type="tel" name="phone" placeholder="(555) 123-4567">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Inquiry Type <span class="required">*</span></label>
+              <select name="inquiryType" required>
+                <option value="">Select an option...</option>
+                <option value="shipping_quote">Shipping Quote</option>
+                <option value="carrier_partnership">Carrier Partnership</option>
+                <option value="existing_shipment">Existing Shipment</option>
+                <option value="billing_payment">Billing / Payment</option>
+                <option value="general">General Inquiry</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Message <span class="required">*</span></label>
+              <textarea name="message" required placeholder="Tell us how we can help..."></textarea>
+            </div>
+            <button type="submit" class="btn-submit" id="submitBtn">
+              <span class="spinner" id="spinner"></span>
+              <span id="btnText">Send Message</span>
+            </button>
+            <div class="form-status" id="formStatus"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="map-section">
+    <div class="container">
+      <h2 class="fade-in">Find Us</h2>
+      <div class="map-wrapper fade-in">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2970.6!2d-87.6359!3d41.8789!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880e2cbce8b5f44b%3A0x75d0bbdce0b0e6c0!2sWillis%20Tower!5e0!3m2!1sen!2sus!4v1700000000000"
+          allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          title="Silk Route Logistics Office Location">
+        </iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK LINKS -->
+  <section class="quick-links">
+    <div class="container">
+      <div class="quick-grid">
+        <a href="/shippers" class="quick-card fade-in">
+          <div class="icon">&#9878;</div>
+          <h3>For Shippers</h3>
+          <p>Get a competitive freight quote in minutes from our team of logistics experts.</p>
+          <span class="link">Get a Quote &#8594;</span>
+        </a>
+        <a href="/carriers" class="quick-card fade-in">
+          <div class="icon">&#9951;</div>
+          <h3>For Carriers</h3>
+          <p>Join our carrier network and access consistent freight, quick pay, and dedicated support.</p>
+          <span class="link">Join Our Network &#8594;</span>
+        </a>
+        <a href="/tracking" class="quick-card fade-in">
+          <div class="icon">&#9741;</div>
+          <h3>Track a Shipment</h3>
+          <p>Real-time visibility on your freight with milestone updates and ETA tracking.</p>
+          <span class="link">Track Now &#8594;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq-section">
+    <div class="container">
+      <h2 class="fade-in">Frequently Asked Questions</h2>
+      <p class="subtitle fade-in">Quick answers to common questions about working with Silk Route Logistics.</p>
+
+      <div class="faq-list">
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            How quickly can I get a freight quote?
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">We provide quotes within 15 minutes during business hours. For urgent or time-critical shipments, call our operations team directly at (312) 555-0175 for immediate assistance.</div></div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            What areas do you serve?
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">We provide freight brokerage services across all 48 contiguous US states, with cross-border capabilities into Canada and Mexico. Our strongest lanes connect major freight corridors including Chicago–LA, Dallas–Atlanta, and NYC–Miami.</div></div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            How do I become a carrier partner?
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">Visit our <a href="/carriers" style="color:#C8963E;font-weight:600">Carriers page</a> and click "Start Your Application." You'll need active FMCSA operating authority, valid insurance ($1M auto liability, $100K cargo), and a clean safety record. Owner-operators and fleet carriers welcome.</div></div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            What payment terms do you offer carriers?
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">Standard payment is Net 30. Through our Caravan Carrier Program, carriers can unlock faster payment: Silver tier gets 15-day terms, Gold gets 7-day, and Platinum carriers receive 2-day quick pay at no additional cost.</div></div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            Do you handle hazmat or oversized freight?
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">Yes, we have certified carriers for hazmat, oversized, overweight, and other specialized freight including temperature-controlled and high-value loads. Contact us for a custom quote tailored to your specific requirements.</div></div>
+        </div>
+
+        <div class="faq-item fade-in">
+          <button class="faq-question">
+            How do I track my shipment?
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="faq-answer"><div class="faq-answer-inner">Use our <a href="/tracking" style="color:#C8963E;font-weight:600">Tracking page</a> with your PRO number or load reference. Shippers also receive automated email updates at pickup, during transit (twice daily), and at delivery, including proof of delivery notification.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="40" height="40" rx="8" fill="#C8963E"/>
+              <path d="M10 28L20 12L30 28" stroke="#0D1B2A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 22H26" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="20" cy="14" r="2.5" fill="#0D1B2A"/>
+            </svg>
+            <span><span class="logo-gold">SILK ROUTE</span> LOGISTICS</span>
+          </div>
+          <p>Asset-based trucking and freight brokerage connecting shippers and carriers across North America.</p>
+        </div>
+        <div class="footer-col">
+          <h5>Company</h5>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h5>Shippers</h5>
+          <a href="/shippers">Services</a>
+          <a href="/tracking">Track Shipment</a>
+        </div>
+        <div class="footer-col">
+          <h5>Carriers</h5>
+          <a href="/carriers">Join The Caravan</a>
+          <a href="/carrier/login.html">Carrier Portal</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics LLC. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      'use strict';
+
+      /* NAV SCROLL */
+      var nav = document.getElementById('mainNav');
+      function handleNavScroll() {
+        if (window.scrollY > 60) {
+          nav.classList.add('scrolled');
+        } else {
+          nav.classList.remove('scrolled');
+        }
+      }
+      window.addEventListener('scroll', handleNavScroll, { passive: true });
+
+      /* MOBILE MENU */
+      var hamburger = document.getElementById('hamburger');
+      var mobileMenu = document.getElementById('mobileMenu');
+      var overlay = document.getElementById('mobileOverlay');
+
+      function toggleMobile() {
+        var isOpen = mobileMenu.classList.contains('open');
+        mobileMenu.classList.toggle('open');
+        overlay.classList.toggle('show');
+        hamburger.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', String(!isOpen));
+      }
+      hamburger.addEventListener('click', toggleMobile);
+      overlay.addEventListener('click', toggleMobile);
+
+      document.querySelectorAll('.mobile-nav-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (mobileMenu.classList.contains('open')) toggleMobile();
+        });
+      });
+
+      /* FAQ ACCORDION */
+      document.querySelectorAll('.faq-question').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var item = btn.closest('.faq-item');
+          var isOpen = item.classList.contains('open');
+          // Close all others
+          document.querySelectorAll('.faq-item.open').forEach(function(el) {
+            el.classList.remove('open');
+          });
+          if (!isOpen) item.classList.add('open');
+        });
+      });
+
+      /* CONTACT FORM */
+      var form = document.getElementById('contactForm');
+      var submitBtn = document.getElementById('submitBtn');
+      var spinner = document.getElementById('spinner');
+      var btnText = document.getElementById('btnText');
+      var status = document.getElementById('formStatus');
+
+      var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:4000' : 'https://silk-route-logistics.onrender.com';
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        status.className = 'form-status';
+        status.style.display = 'none';
+
+        var name = form.name.value.trim();
+        var company = form.company.value.trim();
+        var email = form.email.value.trim();
+        var phone = form.phone.value.trim();
+        var inquiryType = form.inquiryType.value;
+        var message = form.message.value.trim();
+
+        if (!name || !company || !email || !inquiryType || !message) {
+          status.className = 'form-status error';
+          status.textContent = 'Please fill in all required fields.';
+          status.style.display = 'block';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        spinner.style.display = 'inline-block';
+        btnText.textContent = 'Sending...';
+
+        fetch(API_BASE + '/api/contact/website', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, company: company, email: email, phone: phone, inquiryType: inquiryType, message: message })
+        })
+        .then(function(res) {
+          if (!res.ok) throw new Error('Failed');
+          return res.json();
+        })
+        .then(function() {
+          status.className = 'form-status success';
+          status.textContent = 'Thank you! We\'ll respond within 2 business hours.';
+          status.style.display = 'block';
+          form.reset();
+        })
+        .catch(function() {
+          status.className = 'form-status error';
+          status.textContent = 'Something went wrong. Please try again or call us directly.';
+          status.style.display = 'block';
+        })
+        .finally(function() {
+          submitBtn.disabled = false;
+          spinner.style.display = 'none';
+          btnText.textContent = 'Send Message';
+        });
+      });
+
+      /* SCROLL ANIMATIONS */
+      if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          observer.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+
+    })();
+  </script>
+
+</body>
+</html>

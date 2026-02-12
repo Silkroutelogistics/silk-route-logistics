@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us — Silk Route Logistics | Our Story</title>
+  <meta name="description" content="Learn about Silk Route Logistics — a technology-driven freight brokerage headquartered in Chicago, connecting shippers and carriers across North America with transparency, innovation, and trust.">
+  <meta name="keywords" content="freight brokerage, logistics company, about Silk Route Logistics, Chicago freight, supply chain technology">
+  <meta name="author" content="Silk Route Logistics LLC">
+  <meta property="og:title" content="About Us — Silk Route Logistics">
+  <meta property="og:description" content="Built on Trust. Driven by Innovation. Discover our story and the team behind Silk Route Logistics.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       RESET & BASE
+       ======================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0D1B2A;
+      color: #E0E7EE;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'DM Serif Display', serif;
+      line-height: 1.2;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    /* ========================================
+       UTILITY
+       ======================================== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #C8963E;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 5vw, 48px);
+      color: #FFFFFF;
+      margin-bottom: 20px;
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: #8899AA;
+      max-width: 640px;
+      line-height: 1.7;
+    }
+
+    /* Fade-in animation */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fade-in-delay-1 { transition-delay: 0.1s; }
+    .fade-in-delay-2 { transition-delay: 0.2s; }
+    .fade-in-delay-3 { transition-delay: 0.3s; }
+    .fade-in-delay-4 { transition-delay: 0.4s; }
+    .fade-in-delay-5 { transition-delay: 0.5s; }
+    .fade-in-delay-6 { transition-delay: 0.6s; }
+
+    /* ========================================
+       NAVIGATION
+       ======================================== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(13, 27, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .navbar.scrolled {
+      background: rgba(13, 27, 42, 0.95);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .navbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .navbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .navbar-logo-bar {
+      width: 3px;
+      height: 36px;
+      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+    }
+
+    .navbar-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: #FFFFFF;
+      letter-spacing: 1.5px;
+      line-height: 1.2;
+    }
+
+    .navbar-logo-text span {
+      display: block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
+      color: #C8963E;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    .navbar-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: #8899AA;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+
+    .navbar-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C8963E;
+      transition: width 0.3s ease;
+    }
+
+    .navbar-links a:hover,
+    .navbar-links a.active {
+      color: #FFFFFF;
+    }
+
+    .navbar-links a:hover::after,
+    .navbar-links a.active::after {
+      width: 100%;
+    }
+
+    .navbar-links a:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    .navbar-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      background: #C8963E;
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: background 0.3s ease, transform 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .navbar-cta:hover {
+      background: #B8862E;
+      transform: translateY(-1px);
+    }
+
+    .navbar-cta:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+    }
+
+    /* Hamburger */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      z-index: 1001;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: #E0E7EE;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .hamburger.open span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .hamburger.open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.open span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* Mobile menu */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 72px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(13, 27, 42, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 999;
+      padding: 40px 24px;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .mobile-menu.open {
+      display: flex;
+    }
+
+    .mobile-menu a {
+      font-size: 20px;
+      font-weight: 500;
+      color: #8899AA;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: color 0.3s ease;
+    }
+
+    .mobile-menu a:hover,
+    .mobile-menu a.active {
+      color: #FFFFFF;
+    }
+
+    .mobile-menu .navbar-cta {
+      margin-top: 24px;
+      text-align: center;
+      justify-content: center;
+      padding: 16px 24px;
+      font-size: 16px;
+    }
+
+    /* ========================================
+       HERO SECTION
+       ======================================== */
+    .hero {
+      position: relative;
+      padding: 180px 0 120px;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.05) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .hero-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #C8963E;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 64px);
+      color: #FFFFFF;
+      margin-bottom: 24px;
+      line-height: 1.1;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: #C8963E;
+    }
+
+    .hero-text {
+      font-size: 18px;
+      color: #8899AA;
+      line-height: 1.8;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .hero-divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+      margin: 40px auto 0;
+    }
+
+    /* ========================================
+       OUR STORY
+       ======================================== */
+    .story-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .story-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    .story-left .section-label {
+      margin-bottom: 16px;
+    }
+
+    .story-left .section-title {
+      margin-bottom: 0;
+    }
+
+    .story-accent-line {
+      width: 50px;
+      height: 3px;
+      background: linear-gradient(90deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+      margin-top: 24px;
+    }
+
+    .story-right p {
+      font-size: 16px;
+      color: #A0AEBB;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+
+    .story-right p:last-child {
+      margin-bottom: 0;
+    }
+
+    .story-right strong {
+      color: #C8963E;
+      font-weight: 600;
+    }
+
+    /* ========================================
+       MISSION, VISION, PROMISE
+       ======================================== */
+    .mvp-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .mvp-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(200, 150, 62, 0.02) 0%, transparent 50%, rgba(200, 150, 62, 0.02) 100%);
+      pointer-events: none;
+    }
+
+    .mvp-header {
+      text-align: center;
+      margin-bottom: 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mvp-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mvp-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 40px 32px;
+      transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .mvp-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(200, 150, 62, 0.25);
+      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+    }
+
+    .mvp-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: rgba(200, 150, 62, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      font-size: 24px;
+    }
+
+    .mvp-card h3 {
+      font-size: 24px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .mvp-card p {
+      font-size: 15px;
+      color: #8899AA;
+      line-height: 1.7;
+    }
+
+    /* ========================================
+       STATS / BY THE NUMBERS
+       ======================================== */
+    .stats-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .stats-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 36px 28px;
+      text-align: center;
+      transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(200, 150, 62, 0.25);
+      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+    }
+
+    .stat-number {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(36px, 4vw, 48px);
+      color: #C8963E;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #8899AA;
+      letter-spacing: 0.5px;
+    }
+
+    /* ========================================
+       WHAT SETS US APART
+       ======================================== */
+    .apart-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .apart-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(200, 150, 62, 0.02) 50%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .apart-header {
+      text-align: center;
+      margin-bottom: 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .apart-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .apart-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 36px 28px;
+      transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .apart-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(200, 150, 62, 0.25);
+      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+    }
+
+    .apart-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(200, 150, 62, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+
+    .apart-card h3 {
+      font-size: 20px;
+      color: #FFFFFF;
+      margin-bottom: 12px;
+    }
+
+    .apart-card p {
+      font-size: 14px;
+      color: #8899AA;
+      line-height: 1.7;
+    }
+
+    /* ========================================
+       LEADERSHIP
+       ======================================== */
+    .leadership-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .leadership-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .leadership-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+    }
+
+    .leader-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 40px 28px;
+      text-align: center;
+      transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .leader-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(200, 150, 62, 0.25);
+      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+    }
+
+    .leader-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      color: #FFFFFF;
+      margin: 0 auto 20px;
+      position: relative;
+    }
+
+    .leader-avatar::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 2px solid rgba(200, 150, 62, 0.3);
+    }
+
+    .leader-avatar-wh {
+      background: linear-gradient(135deg, #C8963E, #A07830);
+    }
+
+    .leader-avatar-na {
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+    }
+
+    .leader-avatar-ot {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+
+    .leader-name {
+      font-size: 22px;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+    }
+
+    .leader-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #C8963E;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .leader-bio {
+      font-size: 14px;
+      color: #8899AA;
+      line-height: 1.7;
+    }
+
+    /* ========================================
+       CTA SECTION
+       ======================================== */
+    .cta-section {
+      padding: 100px 0;
+      position: relative;
+      text-align: center;
+    }
+
+    .cta-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 24px;
+      padding: 80px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.06) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .cta-box h2 {
+      font-size: clamp(32px, 4vw, 44px);
+      color: #FFFFFF;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-box p {
+      font-size: 17px;
+      color: #8899AA;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: #C8963E;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #B8862E;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(200, 150, 62, 0.3);
+    }
+
+    .btn-primary:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: transparent;
+      color: #C8963E;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: 2px solid rgba(200, 150, 62, 0.4);
+      transition: border-color 0.3s ease, background 0.3s ease, transform 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      border-color: #C8963E;
+      background: rgba(200, 150, 62, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+    }
+
+    /* ========================================
+       FOOTER
+       ======================================== */
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 80px 0 40px;
+      position: relative;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 60px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: #667788;
+      line-height: 1.7;
+      margin-top: 16px;
+      max-width: 280px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-logo-bar {
+      width: 3px;
+      height: 30px;
+      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+    }
+
+    .footer-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px;
+      color: #FFFFFF;
+      letter-spacing: 1px;
+    }
+
+    .footer-col h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #C8963E;
+      margin-bottom: 20px;
+    }
+
+    .footer-col ul li {
+      margin-bottom: 12px;
+    }
+
+    .footer-col ul li a {
+      font-size: 14px;
+      color: #667788;
+      transition: color 0.3s ease;
+    }
+
+    .footer-col ul li a:hover {
+      color: #FFFFFF;
+    }
+
+    .footer-col ul li a:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-bottom p {
+      font-size: 13px;
+      color: #4A5568;
+    }
+
+    .footer-bottom-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-bottom-links a {
+      font-size: 13px;
+      color: #4A5568;
+      transition: color 0.3s ease;
+    }
+
+    .footer-bottom-links a:hover {
+      color: #C8963E;
+    }
+
+    /* ========================================
+       RESPONSIVE — TABLET
+       ======================================== */
+    @media (max-width: 1024px) {
+      .story-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .mvp-grid,
+      .apart-grid,
+      .leadership-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .mvp-grid .mvp-card:last-child,
+      .leadership-grid .leader-card:last-child {
+        grid-column: 1 / -1;
+        max-width: 500px;
+        margin: 0 auto;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+      }
+    }
+
+    /* ========================================
+       RESPONSIVE — MOBILE
+       ======================================== */
+    @media (max-width: 768px) {
+      .navbar-links,
+      .navbar-cta-desktop {
+        display: none;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+
+      .hero {
+        padding: 140px 0 80px;
+      }
+
+      .hero-text {
+        font-size: 16px;
+      }
+
+      .story-section,
+      .mvp-section,
+      .stats-section,
+      .apart-section,
+      .leadership-section,
+      .cta-section {
+        padding: 70px 0;
+      }
+
+      .mvp-grid,
+      .apart-grid,
+      .leadership-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mvp-grid .mvp-card:last-child,
+      .leadership-grid .leader-card:last-child {
+        max-width: 100%;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cta-box {
+        padding: 50px 24px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+      }
+
+      .navbar-inner {
+        padding: 0 16px;
+      }
+
+      .container {
+        padding: 0 16px;
+      }
+    }
+
+    /* ========================================
+       SKIP LINK (Accessibility)
+       ======================================== */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      background: #C8963E;
+      color: #FFFFFF;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      z-index: 10000;
+      transition: top 0.3s ease;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    /* ========================================
+       REDUCED MOTION
+       ======================================== */
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .fade-in {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+
+      .mvp-card,
+      .apart-card,
+      .stat-card,
+      .leader-card {
+        transition: none;
+      }
+
+      .navbar-links a::after {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Skip to main content (Accessibility) -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- ==========================================
+       NAVIGATION
+       ========================================== -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-logo" aria-label="Silk Route Logistics - Home">
+        <div class="navbar-logo-bar" aria-hidden="true"></div>
+        <div class="navbar-logo-text">
+          SILK ROUTE
+          <span>LOGISTICS</span>
+        </div>
+      </a>
+
+      <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/shippers">Shippers</a>
+        <a href="/carriers">Carriers</a>
+        <a href="/about" class="active" aria-current="page">About</a>
+        <a href="/contact">Contact</a>
+        <a href="/tracking">Tracking</a>
+      </div>
+
+      <a href="/shippers" class="navbar-cta navbar-cta-desktop">Get a Quote</a>
+
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="mobile-menu" role="menu">
+      <a href="/" role="menuitem">Home</a>
+      <a href="/shippers" role="menuitem">Shippers</a>
+      <a href="/carriers" role="menuitem">Carriers</a>
+      <a href="/about" class="active" role="menuitem" aria-current="page">About</a>
+      <a href="/contact" role="menuitem">Contact</a>
+      <a href="/tracking" role="menuitem">Tracking</a>
+      <a href="/shippers" class="navbar-cta" role="menuitem">Get a Quote</a>
+    </div>
+  </nav>
+
+  <!-- ==========================================
+       MAIN CONTENT
+       ========================================== -->
+  <main id="main-content">
+
+    <!-- ==========================================
+         HERO
+         ========================================== -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-content">
+        <p class="hero-label fade-in">About Silk Route Logistics</p>
+        <h1 id="hero-heading" class="fade-in fade-in-delay-1">Built on Trust. Driven by <em>Innovation.</em></h1>
+        <p class="hero-text fade-in fade-in-delay-2">
+          Silk Route Logistics is redefining freight brokerage through technology,
+          transparency, and an unwavering commitment to service.
+        </p>
+        <div class="hero-divider fade-in fade-in-delay-3" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         OUR STORY
+         ========================================== -->
+    <section class="story-section" aria-labelledby="story-heading">
+      <div class="container">
+        <div class="story-grid">
+          <div class="story-left fade-in">
+            <p class="section-label">Our Heritage</p>
+            <h2 id="story-heading" class="section-title">Our Story</h2>
+            <div class="story-accent-line" aria-hidden="true"></div>
+          </div>
+          <div class="story-right">
+            <p class="fade-in">
+              Silk Route Logistics was founded with a singular vision: to bring
+              <strong>transparency and technology</strong> to an industry that has
+              traditionally operated in the dark. In freight brokerage, information
+              asymmetry has long been the norm — shippers don't know where their
+              freight is, carriers don't know when they'll get paid, and everyone
+              is left guessing. We set out to change that.
+            </p>
+            <p class="fade-in fade-in-delay-1">
+              Our name pays homage to the ancient <strong>Silk Road</strong> — the world's
+              first logistics network that connected civilizations, facilitated trade,
+              and built bridges between cultures spanning thousands of miles. Just as
+              those historic routes thrived on trust and mutual benefit, SRL is built
+              on the principle that lasting success comes from creating value for
+              every partner in the supply chain.
+            </p>
+            <p class="fade-in fade-in-delay-2">
+              Today, headquartered in <strong>Chicago — the freight capital of
+              North America</strong> — Silk Route Logistics connects shippers and
+              carriers across the continent with the same spirit of partnership and
+              reliability. We leverage cutting-edge technology to optimize every
+              shipment, providing real-time visibility, data-driven pricing, and
+              proactive communication that our partners can depend on.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         MISSION / VISION / PROMISE
+         ========================================== -->
+    <section class="mvp-section" aria-labelledby="mvp-heading">
+      <div class="container">
+        <div class="mvp-header">
+          <p class="section-label fade-in">What Drives Us</p>
+          <h2 id="mvp-heading" class="section-title fade-in fade-in-delay-1">Mission, Vision &amp; Promise</h2>
+        </div>
+        <div class="mvp-grid">
+          <!-- Mission -->
+          <div class="mvp-card fade-in fade-in-delay-1" role="article">
+            <div class="mvp-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="6"/>
+                <circle cx="12" cy="12" r="2"/>
+              </svg>
+            </div>
+            <h3>Our Mission</h3>
+            <p>
+              To be the most trusted freight brokerage in North America by delivering
+              unmatched service, leveraging technology, and building lasting partnerships
+              with shippers and carriers alike.
+            </p>
+          </div>
+          <!-- Vision -->
+          <div class="mvp-card fade-in fade-in-delay-2" role="article">
+            <div class="mvp-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </div>
+            <h3>Our Vision</h3>
+            <p>
+              A logistics ecosystem where every shipment moves with precision,
+              every partner is valued, and technology eliminates inefficiency.
+            </p>
+          </div>
+          <!-- Promise -->
+          <div class="mvp-card fade-in fade-in-delay-3" role="article">
+            <div class="mvp-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <h3>Our Promise</h3>
+            <p>
+              Transparent pricing, proactive communication, and a relentless focus
+              on your success. Every load, every time.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         BY THE NUMBERS
+         ========================================== -->
+    <section class="stats-section" aria-labelledby="stats-heading">
+      <div class="container">
+        <div class="stats-header">
+          <p class="section-label fade-in">By The Numbers</p>
+          <h2 id="stats-heading" class="section-title fade-in fade-in-delay-1">Performance That Speaks</h2>
+          <p class="section-subtitle fade-in fade-in-delay-2" style="margin: 0 auto;">
+            Our numbers reflect our commitment to operational excellence and partner satisfaction.
+          </p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card fade-in fade-in-delay-1">
+            <div class="stat-number" data-target="500" data-suffix="+">0</div>
+            <div class="stat-label">Carrier Partners</div>
+          </div>
+          <div class="stat-card fade-in fade-in-delay-2">
+            <div class="stat-number" data-target="48" data-suffix="">0</div>
+            <div class="stat-label">States Covered</div>
+          </div>
+          <div class="stat-card fade-in fade-in-delay-3">
+            <div class="stat-number" data-target="99.2" data-suffix="%" data-decimal="true">0</div>
+            <div class="stat-label">On-Time Delivery</div>
+          </div>
+          <div class="stat-card fade-in fade-in-delay-1">
+            <div class="stat-number" data-target="24" data-suffix="/7">0</div>
+            <div class="stat-label">Operations Support</div>
+          </div>
+          <div class="stat-card fade-in fade-in-delay-2">
+            <div class="stat-number" data-prefix="$" data-target="50" data-suffix="M+">0</div>
+            <div class="stat-label">Annual Freight Under Management</div>
+          </div>
+          <div class="stat-card fade-in fade-in-delay-3">
+            <div class="stat-number" data-target="15" data-suffix="-Min">0</div>
+            <div class="stat-label">Average Response Time</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         WHAT SETS US APART
+         ========================================== -->
+    <section class="apart-section" aria-labelledby="apart-heading">
+      <div class="container">
+        <div class="apart-header">
+          <p class="section-label fade-in">Our Advantage</p>
+          <h2 id="apart-heading" class="section-title fade-in fade-in-delay-1">What Sets Us Apart</h2>
+          <p class="section-subtitle fade-in fade-in-delay-2" style="margin: 0 auto;">
+            Six pillars that define the Silk Route Logistics difference.
+          </p>
+        </div>
+        <div class="apart-grid">
+          <!-- 1. Technology-First -->
+          <div class="apart-card fade-in fade-in-delay-1" role="article">
+            <div class="apart-card-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </div>
+            <h3>Technology-First Approach</h3>
+            <p>
+              Real-time tracking, automated status updates, and digital document
+              management. Our platform gives you complete visibility from quote
+              to delivery.
+            </p>
+          </div>
+          <!-- 2. Carrier-Centric -->
+          <div class="apart-card fade-in fade-in-delay-2" role="article">
+            <div class="apart-card-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13"/>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+            </div>
+            <h3>Carrier-Centric Model</h3>
+            <p>
+              Quick pay options, loyalty tiers, and dedicated support teams.
+              Happy carriers mean reliable service — and that's a promise
+              we deliver on every day.
+            </p>
+          </div>
+          <!-- 3. Industry Expertise -->
+          <div class="apart-card fade-in fade-in-delay-3" role="article">
+            <div class="apart-card-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+              </svg>
+            </div>
+            <h3>Industry Expertise</h3>
+            <p>
+              Deep knowledge in dry van, reefer, flatbed, LTL, and specialized
+              freight. Whatever the commodity, we have the expertise and network
+              to move it.
+            </p>
+          </div>
+          <!-- 4. Financial Strength -->
+          <div class="apart-card fade-in fade-in-delay-1" role="article">
+            <div class="apart-card-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <h3>Financial Strength</h3>
+            <p>
+              Backed by strong capital, ensuring carriers get paid on time,
+              every time. Financial stability you can count on in a volatile
+              market.
+            </p>
+          </div>
+          <!-- 5. Nationwide Network -->
+          <div class="apart-card fade-in fade-in-delay-2" role="article">
+            <div class="apart-card-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </div>
+            <h3>Nationwide Network</h3>
+            <p>
+              Coast-to-coast coverage with optimized lane density in major
+              freight corridors. From the ports of LA to the warehouses of
+              New Jersey, we've got you covered.
+            </p>
+          </div>
+          <!-- 6. Compliance & Safety -->
+          <div class="apart-card fade-in fade-in-delay-3" role="article">
+            <div class="apart-card-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
+              </svg>
+            </div>
+            <h3>Compliance &amp; Safety</h3>
+            <p>
+              Rigorous carrier vetting, insurance verification, and FMCSA
+              compliance monitoring. We never cut corners when it comes to
+              protecting your freight.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         LEADERSHIP
+         ========================================== -->
+    <section class="leadership-section" aria-labelledby="leadership-heading">
+      <div class="container">
+        <div class="leadership-header">
+          <p class="section-label fade-in">The Team</p>
+          <h2 id="leadership-heading" class="section-title fade-in fade-in-delay-1">Our Leadership</h2>
+          <p class="section-subtitle fade-in fade-in-delay-2" style="margin: 0 auto;">
+            Led by industry veterans who combine deep logistics expertise with a passion for technology.
+          </p>
+        </div>
+        <div class="leadership-grid">
+          <!-- Wasih Haider -->
+          <div class="leader-card fade-in fade-in-delay-1" role="article">
+            <div class="leader-avatar leader-avatar-wh" aria-hidden="true">WH</div>
+            <h3 class="leader-name">Wasih Haider</h3>
+            <p class="leader-title">Founder &amp; CEO</p>
+            <p class="leader-bio">
+              With a background in technology and supply chain, Wasih founded
+              SRL to bring Silicon Valley innovation to the freight industry.
+              His vision is to create a logistics platform where technology
+              eliminates friction and every partner thrives.
+            </p>
+          </div>
+          <!-- Noor Ahmad -->
+          <div class="leader-card fade-in fade-in-delay-2" role="article">
+            <div class="leader-avatar leader-avatar-na" aria-hidden="true">NA</div>
+            <h3 class="leader-name">Noor Ahmad</h3>
+            <p class="leader-title">VP of Operations</p>
+            <p class="leader-bio">
+              Noor leads our operations team, ensuring every shipment is
+              executed flawlessly from pickup to delivery. With years of
+              hands-on logistics experience, she brings operational rigor
+              and a carrier-first mindset to every decision.
+            </p>
+          </div>
+          <!-- Operations Team -->
+          <div class="leader-card fade-in fade-in-delay-3" role="article">
+            <div class="leader-avatar leader-avatar-ot" aria-hidden="true">OT</div>
+            <h3 class="leader-name">Operations Team</h3>
+            <p class="leader-title">24/7 Operations Center</p>
+            <p class="leader-bio">
+              Our around-the-clock operations center monitors every load in
+              real-time, proactively solving problems before they impact your
+              supply chain. Every team member is trained to treat your freight
+              like their own.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         CTA
+         ========================================== -->
+    <section class="cta-section" aria-labelledby="cta-heading">
+      <div class="container">
+        <div class="cta-box fade-in">
+          <h2 id="cta-heading">Ready to Experience the Difference?</h2>
+          <p>
+            Whether you're shipping freight or looking for quality loads, Silk Route
+            Logistics is your partner in success.
+          </p>
+          <div class="cta-buttons">
+            <a href="/shippers" class="btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="1" y="3" width="15" height="13"/>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+              Ship With Us
+            </a>
+            <a href="/carriers" class="btn-secondary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 3 21 3 21 8"/>
+                <line x1="4" y1="20" x2="21" y2="3"/>
+                <polyline points="21 16 21 21 16 21"/>
+                <line x1="15" y1="15" x2="21" y2="21"/>
+                <line x1="4" y1="4" x2="9" y2="9"/>
+              </svg>
+              Haul With Us
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="footer-logo-bar" aria-hidden="true"></div>
+            <div class="footer-logo-text">SILK ROUTE LOGISTICS</div>
+          </div>
+          <p>
+            A technology-driven freight brokerage connecting shippers and carriers
+            across North America with transparency, reliability, and innovation.
+          </p>
+          <p style="margin-top: 12px; color: #4A5568;">
+            Silk Route Logistics LLC<br>
+            Chicago, IL
+          </p>
+        </div>
+
+        <!-- Company Column -->
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/contact">Contact</a></li>
+            <li><a href="/tracking">Track Shipment</a></li>
+          </ul>
+        </div>
+
+        <!-- Services Column -->
+        <div class="footer-col">
+          <h4>Services</h4>
+          <ul>
+            <li><a href="/shippers">Shipper Solutions</a></li>
+            <li><a href="/shippers">Full Truckload (FTL)</a></li>
+            <li><a href="/shippers">Less Than Truckload (LTL)</a></li>
+            <li><a href="/shippers">Specialized Freight</a></li>
+          </ul>
+        </div>
+
+        <!-- Carriers Column -->
+        <div class="footer-col">
+          <h4>Carriers</h4>
+          <ul>
+            <li><a href="/carriers">Haul With Us</a></li>
+            <li><a href="/carriers">Quick Pay Program</a></li>
+            <li><a href="/carriers">Carrier Portal</a></li>
+            <li><a href="/carrier/login.html">Carrier Login</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics LLC. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       JAVASCRIPT
+       ========================================== -->
+  <script>
+    (function() {
+      'use strict';
+
+      /* ========================================
+         NAVBAR SCROLL EFFECT
+         ======================================== */
+      var navbar = document.querySelector('.navbar');
+      var lastScrollY = 0;
+
+      function handleNavScroll() {
+        var scrollY = window.scrollY || window.pageYOffset;
+        if (scrollY > 50) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+        lastScrollY = scrollY;
+      }
+
+      window.addEventListener('scroll', handleNavScroll, { passive: true });
+
+      /* ========================================
+         MOBILE MENU TOGGLE
+         ======================================== */
+      var hamburger = document.querySelector('.hamburger');
+      var mobileMenu = document.querySelector('.mobile-menu');
+
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', function() {
+          var isOpen = mobileMenu.classList.toggle('open');
+          hamburger.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          document.body.style.overflow = isOpen ? 'hidden' : '';
+        });
+
+        // Close mobile menu when a link is clicked
+        var mobileLinks = mobileMenu.querySelectorAll('a');
+        mobileLinks.forEach(function(link) {
+          link.addEventListener('click', function() {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+          });
+        });
+      }
+
+      /* ========================================
+         INTERSECTION OBSERVER — FADE IN
+         ======================================== */
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+        var fadeElements = document.querySelectorAll('.fade-in');
+
+        var observerOptions = {
+          root: null,
+          rootMargin: '0px 0px -60px 0px',
+          threshold: 0.1
+        };
+
+        var fadeObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              fadeObserver.unobserve(entry.target);
+            }
+          });
+        }, observerOptions);
+
+        fadeElements.forEach(function(el) {
+          fadeObserver.observe(el);
+        });
+      } else {
+        // If reduced motion or no IntersectionObserver, show everything
+        var allFade = document.querySelectorAll('.fade-in');
+        allFade.forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+
+      /* ========================================
+         STAT COUNTER ANIMATION
+         ======================================== */
+      var statNumbers = document.querySelectorAll('.stat-number[data-target]');
+
+      function animateCounter(el) {
+        var target = parseFloat(el.getAttribute('data-target'));
+        var suffix = el.getAttribute('data-suffix') || '';
+        var prefix = el.getAttribute('data-prefix') || '';
+        var isDecimal = el.getAttribute('data-decimal') === 'true';
+        var duration = 2000;
+        var startTime = null;
+
+        function easeOutQuart(t) {
+          return 1 - Math.pow(1 - t, 4);
+        }
+
+        function step(timestamp) {
+          if (!startTime) startTime = timestamp;
+          var progress = Math.min((timestamp - startTime) / duration, 1);
+          var easedProgress = easeOutQuart(progress);
+          var current = easedProgress * target;
+
+          if (isDecimal) {
+            el.textContent = prefix + current.toFixed(1) + suffix;
+          } else {
+            el.textContent = prefix + Math.floor(current) + suffix;
+          }
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            if (isDecimal) {
+              el.textContent = prefix + target.toFixed(1) + suffix;
+            } else {
+              el.textContent = prefix + target + suffix;
+            }
+          }
+        }
+
+        requestAnimationFrame(step);
+      }
+
+      if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+        var statObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              animateCounter(entry.target);
+              statObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.3 });
+
+        statNumbers.forEach(function(el) {
+          statObserver.observe(el);
+        });
+      } else {
+        // No animation — show final values immediately
+        statNumbers.forEach(function(el) {
+          var target = el.getAttribute('data-target');
+          var suffix = el.getAttribute('data-suffix') || '';
+          var prefix = el.getAttribute('data-prefix') || '';
+          var isDecimal = el.getAttribute('data-decimal') === 'true';
+          if (isDecimal) {
+            el.textContent = prefix + parseFloat(target).toFixed(1) + suffix;
+          } else {
+            el.textContent = prefix + target + suffix;
+          }
+        });
+      }
+
+      /* ========================================
+         CLOSE MOBILE MENU ON RESIZE
+         ======================================== */
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 768 && mobileMenu && mobileMenu.classList.contains('open')) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+
+      /* ========================================
+         KEYBOARD TRAP FOR MOBILE MENU
+         ======================================== */
+      if (mobileMenu) {
+        mobileMenu.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            hamburger.focus();
+          }
+        });
+      }
+
+    })();
+  </script>
+
+</body>
+</html>

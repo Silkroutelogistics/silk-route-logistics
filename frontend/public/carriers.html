@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carriers — Silk Route Logistics | Freight Carrier Network</title>
+  <meta name="description" content="Partner with Silk Route Logistics. Quick pay options, consistent freight lanes, and dedicated carrier support. Join 500+ carriers in our nationwide network.">
+  <meta name="keywords" content="freight carrier, trucking partner, quick pay, carrier network, freight brokerage, carrier portal, dedicated lanes">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0D1B2A;
+      color: #E0E7EE;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'DM Serif Display', serif;
+      line-height: 1.2;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    ul, ol {
+      list-style: none;
+    }
+
+    button {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      cursor: pointer;
+      border: none;
+      outline: none;
+    }
+
+    /* ===== UTILITY ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-pad {
+      padding: 100px 0;
+    }
+
+    .section-pad-sm {
+      padding: 80px 0;
+    }
+
+    .text-gold {
+      color: #C8963E;
+    }
+
+    .text-muted {
+      color: #8A9BB5;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    /* ===== NAVIGATION ===== */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(13, 27, 42, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(200, 150, 62, 0.15);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .navbar.scrolled {
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .navbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 72px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .brand-accent-bar {
+      width: 3px;
+      height: 36px;
+      background: linear-gradient(180deg, #C8963E, #A67A2E);
+      border-radius: 2px;
+    }
+
+    .brand-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: #E0E7EE;
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+
+    .brand-text span {
+      display: block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
+      color: #C8963E;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-links a {
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #8A9BB5;
+      border-radius: 8px;
+      transition: color 0.2s ease, background 0.2s ease;
+      letter-spacing: 0.2px;
+    }
+
+    .nav-links a:hover {
+      color: #E0E7EE;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .nav-links a.active {
+      color: #C8963E;
+      background: rgba(200, 150, 62, 0.08);
+    }
+
+    .nav-cta {
+      margin-left: 12px;
+      padding: 10px 22px !important;
+      background: #C8963E !important;
+      color: #fff !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+      letter-spacing: 0.3px;
+      transition: background 0.2s ease, transform 0.2s ease !important;
+    }
+
+    .nav-cta:hover {
+      background: #B8862E !important;
+      transform: translateY(-1px);
+    }
+
+    /* Hamburger */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: #E0E7EE;
+      border-radius: 2px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .hamburger.open span:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+
+    .hamburger.open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.open span:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+
+    /* Mobile menu */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 72px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(13, 27, 42, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 999;
+      padding: 32px 24px;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .mobile-menu.open {
+      display: flex;
+    }
+
+    .mobile-menu a {
+      padding: 16px 20px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #8A9BB5;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .mobile-menu a:hover,
+    .mobile-menu a.active {
+      color: #C8963E;
+      background: rgba(200, 150, 62, 0.08);
+    }
+
+    .mobile-menu .mobile-cta {
+      margin-top: 16px;
+      padding: 16px 24px;
+      background: #C8963E;
+      color: #fff;
+      border-radius: 10px;
+      font-weight: 600;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .mobile-menu .mobile-cta:hover {
+      background: #B8862E;
+    }
+
+    @media (max-width: 900px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+    }
+
+    /* ===== HERO SECTION ===== */
+    .hero {
+      position: relative;
+      min-height: 600px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      padding: 80px 0;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 70% 40%, rgba(200, 150, 62, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 20% 70%, rgba(200, 150, 62, 0.04) 0%, transparent 50%),
+        linear-gradient(180deg, #0D1B2A 0%, #0F2035 50%, #0D1B2A 100%);
+    }
+
+    /* Abstract road/route lines */
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 60px,
+          rgba(200, 150, 62, 0.03) 60px,
+          rgba(200, 150, 62, 0.03) 62px
+        );
+      mask-image: linear-gradient(0deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+      -webkit-mask-image: linear-gradient(0deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+    }
+
+    .hero-grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200, 150, 62, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200, 150, 62, 0.02) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,0,0,0.4) 0%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,0,0,0.4) 0%, transparent 70%);
+    }
+
+    /* Decorative truck silhouette via CSS */
+    .hero-truck-silhouette {
+      position: absolute;
+      bottom: 40px;
+      right: 8%;
+      width: 280px;
+      height: 120px;
+      opacity: 0.04;
+      z-index: 0;
+    }
+
+    .hero-truck-silhouette::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 200px;
+      height: 80px;
+      background: #C8963E;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .hero-truck-silhouette::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 200px;
+      width: 80px;
+      height: 60px;
+      background: #C8963E;
+      border-radius: 8px 0 0 0;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 720px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      background: rgba(200, 150, 62, 0.1);
+      border: 1px solid rgba(200, 150, 62, 0.2);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #C8963E;
+      margin-bottom: 28px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-badge svg {
+      width: 16px;
+      height: 16px;
+      fill: #C8963E;
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      color: #FFFFFF;
+      margin-bottom: 24px;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: #C8963E;
+    }
+
+    .hero-sub {
+      font-size: 19px;
+      color: #8A9BB5;
+      line-height: 1.7;
+      margin-bottom: 40px;
+      max-width: 560px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 32px;
+      background: #C8963E;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary:hover {
+      background: #B8862E;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(200, 150, 62, 0.25);
+    }
+
+    .btn-primary:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 3px;
+    }
+
+    .btn-primary svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 32px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #E0E7EE;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(200, 150, 62, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 3px;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      margin-top: 56px;
+      padding-top: 40px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .hero-stat-item {
+      text-align: left;
+    }
+
+    .hero-stat-number {
+      font-family: 'DM Serif Display', serif;
+      font-size: 36px;
+      color: #C8963E;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .hero-stat-label {
+      font-size: 13px;
+      color: #8A9BB5;
+      font-weight: 500;
+    }
+
+    /* ===== WHY CARRIERS SECTION ===== */
+    .why-carriers {
+      background: linear-gradient(180deg, #0D1B2A 0%, #0F2035 100%);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #C8963E;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 42px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 17px;
+      color: #8A9BB5;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .benefit-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 36px 28px;
+      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .benefit-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(200, 150, 62, 0.25);
+      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+    }
+
+    .benefit-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: rgba(200, 150, 62, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      font-size: 24px;
+      transition: background 0.3s ease;
+    }
+
+    .benefit-card:hover .benefit-icon {
+      background: rgba(200, 150, 62, 0.18);
+    }
+
+    .benefit-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: #C8963E;
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .benefit-card h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 12px;
+    }
+
+    .benefit-card p {
+      font-size: 14px;
+      color: #8A9BB5;
+      line-height: 1.7;
+    }
+
+    /* ===== CARAVAN CARRIER PROGRAM ===== */
+    .caravan {
+      position: relative;
+      background: #0D1B2A;
+    }
+
+    .caravan-inner {
+      position: relative;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(200, 150, 62, 0.15);
+      border-radius: 24px;
+      padding: 60px;
+      overflow: hidden;
+    }
+
+    .caravan-inner::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 60px;
+      right: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #C8963E, transparent);
+    }
+
+    .caravan-glow {
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .caravan-header {
+      text-align: center;
+      margin-bottom: 48px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .caravan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(200, 150, 62, 0.12);
+      border: 1px solid rgba(200, 150, 62, 0.25);
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #C8963E;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .caravan-header h2 {
+      font-size: 40px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .caravan-header p {
+      font-size: 17px;
+      color: #8A9BB5;
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* Tier Cards */
+    .tiers-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tier-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tier-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .tier-card.bronze { border-top: 3px solid #CD7F32; }
+    .tier-card.silver { border-top: 3px solid #C0C0C0; }
+    .tier-card.gold { border-top: 3px solid #C8963E; }
+    .tier-card.platinum { border-top: 3px solid #E5E4E2; }
+
+    .tier-card.bronze:hover { border-color: rgba(205, 127, 50, 0.4); }
+    .tier-card.silver:hover { border-color: rgba(192, 192, 192, 0.4); }
+    .tier-card.gold:hover { border-color: rgba(200, 150, 62, 0.4); box-shadow: 0 8px 40px rgba(200, 150, 62, 0.1); }
+    .tier-card.platinum:hover { border-color: rgba(229, 228, 226, 0.4); }
+
+    .tier-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 22px;
+    }
+
+    .tier-card.bronze .tier-icon { background: rgba(205, 127, 50, 0.15); color: #CD7F32; }
+    .tier-card.silver .tier-icon { background: rgba(192, 192, 192, 0.15); color: #C0C0C0; }
+    .tier-card.gold .tier-icon { background: rgba(200, 150, 62, 0.15); color: #C8963E; }
+    .tier-card.platinum .tier-icon { background: rgba(229, 228, 226, 0.15); color: #E5E4E2; }
+
+    .tier-name {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+
+    .tier-req {
+      font-size: 12px;
+      color: #8A9BB5;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      line-height: 1.6;
+    }
+
+    .tier-benefits {
+      text-align: left;
+    }
+
+    .tier-benefit-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #B0BFCF;
+      line-height: 1.5;
+    }
+
+    .tier-benefit-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .tier-card.bronze .tier-benefit-item svg { stroke: #CD7F32; }
+    .tier-card.silver .tier-benefit-item svg { stroke: #C0C0C0; }
+    .tier-card.gold .tier-benefit-item svg { stroke: #C8963E; }
+    .tier-card.platinum .tier-benefit-item svg { stroke: #E5E4E2; }
+
+    .tier-popular {
+      position: absolute;
+      top: 16px;
+      right: -30px;
+      background: #C8963E;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 36px;
+      transform: rotate(45deg);
+    }
+
+    /* ===== COVERAGE MAP SECTION ===== */
+    .coverage {
+      background: linear-gradient(180deg, #0F2035 0%, #0D1B2A 100%);
+    }
+
+    .coverage-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    .coverage-text h2 {
+      font-size: 40px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .coverage-text > p {
+      font-size: 16px;
+      color: #8A9BB5;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .coverage-highlights {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .coverage-stat {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .coverage-stat:hover {
+      transform: translateY(-2px);
+      border-color: rgba(200, 150, 62, 0.2);
+    }
+
+    .coverage-stat-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: #C8963E;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .coverage-stat-label {
+      font-size: 12px;
+      color: #8A9BB5;
+      font-weight: 500;
+    }
+
+    .lanes-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .lane-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .lane-item:hover {
+      transform: translateX(4px);
+      border-color: rgba(200, 150, 62, 0.2);
+    }
+
+    .lane-route {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .lane-city {
+      font-size: 14px;
+      font-weight: 600;
+      color: #E0E7EE;
+    }
+
+    .lane-arrow {
+      color: #C8963E;
+      font-size: 14px;
+    }
+
+    .lane-arrow svg {
+      width: 20px;
+      height: 20px;
+      stroke: #C8963E;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .lane-miles {
+      font-size: 13px;
+      color: #8A9BB5;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .lane-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: #C8963E;
+      background: rgba(200, 150, 62, 0.1);
+      padding: 3px 10px;
+      border-radius: 100px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ===== REQUIREMENTS SECTION ===== */
+    .requirements {
+      background: #0D1B2A;
+    }
+
+    .requirements-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .requirements-text h2 {
+      font-size: 40px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .requirements-text > p {
+      font-size: 16px;
+      color: #8A9BB5;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .req-note {
+      display: flex;
+      gap: 12px;
+      padding: 20px;
+      background: rgba(200, 150, 62, 0.06);
+      border: 1px solid rgba(200, 150, 62, 0.15);
+      border-radius: 12px;
+      margin-top: 28px;
+    }
+
+    .req-note svg {
+      width: 20px;
+      height: 20px;
+      stroke: #C8963E;
+      fill: none;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .req-note p {
+      font-size: 14px;
+      color: #B0BFCF;
+      line-height: 1.6;
+    }
+
+    .requirements-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .req-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .req-item:hover {
+      transform: translateY(-2px);
+      border-color: rgba(200, 150, 62, 0.2);
+    }
+
+    .req-check {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(200, 150, 62, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .req-check svg {
+      width: 18px;
+      height: 18px;
+      stroke: #C8963E;
+      fill: none;
+      stroke-width: 2.5;
+    }
+
+    .req-item-text h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 4px;
+    }
+
+    .req-item-text p {
+      font-size: 13px;
+      color: #8A9BB5;
+      line-height: 1.5;
+    }
+
+    /* ===== REGISTRATION CTA SECTION ===== */
+    .registration-cta {
+      background: linear-gradient(180deg, #0D1B2A 0%, #0F2035 60%, #0D1B2A 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .registration-cta::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cta-card {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(200, 150, 62, 0.15);
+      border-radius: 24px;
+      padding: 64px 48px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .cta-card h2 {
+      font-size: 40px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .cta-card > p {
+      font-size: 17px;
+      color: #8A9BB5;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .btn-large {
+      padding: 18px 40px;
+      font-size: 16px;
+    }
+
+    .cta-sub {
+      font-size: 14px;
+      color: #8A9BB5;
+    }
+
+    .cta-sub a {
+      color: #C8963E;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .cta-sub a:hover {
+      color: #B8862E;
+    }
+
+    .cta-phone {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      color: #C8963E;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .cta-phone svg {
+      width: 20px;
+      height: 20px;
+      stroke: #C8963E;
+      fill: none;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      background: #080F1A;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 64px 0 0;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand {
+      max-width: 280px;
+    }
+
+    .footer-brand .brand-text-footer {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: #E0E7EE;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: #6B7F99;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .footer-social {
+      display: flex;
+      gap: 12px;
+    }
+
+    .footer-social a {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .footer-social a:hover {
+      background: rgba(200, 150, 62, 0.1);
+      border-color: rgba(200, 150, 62, 0.25);
+    }
+
+    .footer-social a svg {
+      width: 18px;
+      height: 18px;
+      stroke: #8A9BB5;
+      fill: none;
+      stroke-width: 1.5;
+    }
+
+    .footer-social a:hover svg {
+      stroke: #C8963E;
+    }
+
+    .footer-col h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #E0E7EE;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 20px;
+    }
+
+    .footer-col ul {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer-col li a {
+      font-size: 14px;
+      color: #6B7F99;
+      transition: color 0.2s ease;
+    }
+
+    .footer-col li a:hover {
+      color: #C8963E;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: #4A5C73;
+    }
+
+    .footer-legal {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-legal a {
+      font-size: 13px;
+      color: #4A5C73;
+      transition: color 0.2s ease;
+    }
+
+    .footer-legal a:hover {
+      color: #C8963E;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1100px) {
+      .benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .tiers-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hero h1 {
+        font-size: 46px;
+      }
+
+      .section-title,
+      .caravan-header h2,
+      .coverage-text h2,
+      .requirements-text h2,
+      .cta-card h2 {
+        font-size: 34px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .coverage-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .requirements-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 36px;
+      }
+
+      .hero-stats {
+        gap: 32px;
+      }
+
+      .caravan-inner {
+        padding: 40px 28px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .section-pad {
+        padding: 64px 0;
+      }
+
+      .section-pad-sm {
+        padding: 56px 0;
+      }
+
+      .hero {
+        min-height: auto;
+        padding: 56px 0;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+      }
+
+      .hero-sub {
+        font-size: 16px;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+      }
+
+      .hero-actions a {
+        text-align: center;
+        justify-content: center;
+      }
+
+      .hero-stats {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .hero-stat-item {
+        text-align: center;
+      }
+
+      .benefits-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .tiers-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .coverage-highlights {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .section-title,
+      .caravan-header h2,
+      .coverage-text h2,
+      .requirements-text h2,
+      .cta-card h2 {
+        font-size: 28px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .cta-card {
+        padding: 40px 24px;
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+      }
+
+      .cta-buttons a {
+        text-align: center;
+        justify-content: center;
+      }
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .animate-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .animate-on-scroll.delay-1 { transition-delay: 0.1s; }
+    .animate-on-scroll.delay-2 { transition-delay: 0.2s; }
+    .animate-on-scroll.delay-3 { transition-delay: 0.3s; }
+    .animate-on-scroll.delay-4 { transition-delay: 0.4s; }
+
+    /* ===== FOCUS / ACCESSIBILITY ===== */
+    :focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 2px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      background: #C8963E;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      z-index: 10000;
+      transition: top 0.2s ease;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Skip to content link for accessibility -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-brand" aria-label="Silk Route Logistics - Home">
+        <div class="brand-accent-bar"></div>
+        <div class="brand-text">
+          SILK ROUTE
+          <span>LOGISTICS</span>
+        </div>
+      </a>
+
+      <div class="nav-links" role="menubar">
+        <a href="/" role="menuitem">Home</a>
+        <a href="/shippers.html" role="menuitem">Shippers</a>
+        <a href="/carriers.html" class="active" role="menuitem" aria-current="page">Carriers</a>
+        <a href="/about.html" role="menuitem">About</a>
+        <a href="/contact.html" role="menuitem">Contact</a>
+        <a href="/tracking.html" role="menuitem">Tracking</a>
+        <a href="/carrier/dashboard.html" class="nav-cta" role="menuitem">Carrier Login</a>
+      </div>
+
+      <button class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobileMenu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="mobileMenu" role="menu" aria-hidden="true">
+      <a href="/" role="menuitem">Home</a>
+      <a href="/shippers.html" role="menuitem">Shippers</a>
+      <a href="/carriers.html" class="active" role="menuitem" aria-current="page">Carriers</a>
+      <a href="/about.html" role="menuitem">About</a>
+      <a href="/contact.html" role="menuitem">Contact</a>
+      <a href="/tracking.html" role="menuitem">Tracking</a>
+      <a href="/carrier/dashboard.html" class="mobile-cta" role="menuitem">Carrier Login</a>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main id="main-content">
+
+    <!-- ===== HERO SECTION ===== -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-bg" aria-hidden="true">
+        <div class="hero-grid-overlay"></div>
+        <div class="hero-truck-silhouette"></div>
+      </div>
+
+      <div class="container">
+        <div class="hero-content">
+          <div class="hero-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
+              <path d="M13 16V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10l2 0m8 0H9m4 0h2m0 0V9a1 1 0 0 1 1-1h2l3 3v5l-2 0"/>
+            </svg>
+            Carrier Network
+          </div>
+
+          <h1 id="hero-heading">Partner with a Brokerage That <em>Values Carriers</em></h1>
+
+          <p class="hero-sub">
+            Quick pay options, consistent freight, transparent communication.
+            Join 500+ carriers in our nationwide network.
+          </p>
+
+          <div class="hero-actions">
+            <a href="#registration" class="btn-primary btn-large">
+              Apply to Our Network
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="/carrier/dashboard.html" class="btn-secondary btn-large">
+              Carrier Login
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+            </a>
+          </div>
+
+          <div class="hero-stats">
+            <div class="hero-stat-item">
+              <div class="hero-stat-number">500+</div>
+              <div class="hero-stat-label">Active Carriers</div>
+            </div>
+            <div class="hero-stat-item">
+              <div class="hero-stat-number">48</div>
+              <div class="hero-stat-label">States Covered</div>
+            </div>
+            <div class="hero-stat-item">
+              <div class="hero-stat-number">98%</div>
+              <div class="hero-stat-label">On-Time Rate</div>
+            </div>
+            <div class="hero-stat-item">
+              <div class="hero-stat-number">2-Day</div>
+              <div class="hero-stat-label">Quick Pay Option</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== WHY CARRIERS CHOOSE SRL ===== -->
+    <section class="why-carriers section-pad" aria-labelledby="why-heading">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-label">Why SRL</div>
+          <h2 class="section-title" id="why-heading">Why Carriers Choose Silk Route</h2>
+          <p class="section-desc">
+            We built our carrier program from the driver's seat. Everything we do is designed
+            to keep you moving, earning, and growing.
+          </p>
+        </div>
+
+        <div class="benefits-grid">
+          <!-- Card 1: Quick Pay -->
+          <div class="benefit-card animate-on-scroll">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <h3>Quick Pay Available</h3>
+            <p>Get paid in as little as 2 days with our Quick Pay program. Standard payment in 30 days.</p>
+          </div>
+
+          <!-- Card 2: Consistent Freight -->
+          <div class="benefit-card animate-on-scroll delay-1">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24">
+                <rect x="1" y="3" width="15" height="13" rx="1"/>
+                <path d="M16 8h4l3 3v5h-7V8z"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+            </div>
+            <h3>Consistent Freight</h3>
+            <p>Year-round lanes across North America. No seasonal gaps — we keep your trucks moving.</p>
+          </div>
+
+          <!-- Card 3: Dedicated Support -->
+          <div class="benefit-card animate-on-scroll delay-2">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            </div>
+            <h3>Dedicated Support</h3>
+            <p>Every carrier gets a dedicated point of contact. Real people, real answers, 24/7.</p>
+          </div>
+
+          <!-- Card 4: Digital Tools -->
+          <div class="benefit-card animate-on-scroll delay-3">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <path d="M8 21h8M12 17v4"/>
+              </svg>
+            </div>
+            <h3>Digital Tools</h3>
+            <p>Track loads, submit PODs, manage documents — all from our carrier portal.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CARAVAN CARRIER PROGRAM ===== -->
+    <section class="caravan section-pad" id="caravan" aria-labelledby="caravan-heading">
+      <div class="container">
+        <div class="caravan-inner">
+          <div class="caravan-glow" aria-hidden="true"></div>
+
+          <div class="caravan-header">
+            <div class="caravan-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Loyalty Program
+            </div>
+            <h2 id="caravan-heading">The Caravan Carrier Program</h2>
+            <p>
+              Our tiered loyalty program rewards carriers who consistently deliver excellence.
+              Higher tiers unlock better rates, priority freight, and faster payment.
+            </p>
+          </div>
+
+          <div class="tiers-grid">
+            <!-- Bronze Tier -->
+            <div class="tier-card bronze animate-on-scroll">
+              <div class="tier-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15l-2 5 2-2 2 2-2-5z"/><circle cx="12" cy="9" r="6"/></svg>
+              </div>
+              <div class="tier-name">Bronze</div>
+              <div class="tier-req">New carrier, verified insurance &amp; authority</div>
+              <div class="tier-benefits">
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Standard market rates</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>30-day payment terms</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Full portal access</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Silver Tier -->
+            <div class="tier-card silver animate-on-scroll delay-1">
+              <div class="tier-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15l-2 5 2-2 2 2-2-5z"/><circle cx="12" cy="9" r="6"/></svg>
+              </div>
+              <div class="tier-name">Silver</div>
+              <div class="tier-req">25+ loads, 95%+ on-time, 90+ scorecard</div>
+              <div class="tier-benefits">
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>3% rate premium</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>15-day payment terms</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Priority dispatch queue</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gold Tier -->
+            <div class="tier-card gold animate-on-scroll delay-2">
+              <div class="tier-popular" aria-label="Most popular tier">POPULAR</div>
+              <div class="tier-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15l-2 5 2-2 2 2-2-5z"/><circle cx="12" cy="9" r="6"/></svg>
+              </div>
+              <div class="tier-name">Gold</div>
+              <div class="tier-req">100+ loads, 98%+ on-time, 95+ scorecard</div>
+              <div class="tier-benefits">
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>5% rate premium</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>7-day payment terms</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Dedicated lane access</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Platinum Tier -->
+            <div class="tier-card platinum animate-on-scroll delay-3">
+              <div class="tier-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div class="tier-name">Platinum</div>
+              <div class="tier-req">250+ loads, 99%+ on-time, 98+ scorecard</div>
+              <div class="tier-benefits">
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>8% rate premium</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>2-day quick pay FREE</span>
+                </div>
+                <div class="tier-benefit-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>First-look freight access</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== COVERAGE MAP SECTION ===== -->
+    <section class="coverage section-pad" aria-labelledby="coverage-heading">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-label">Coverage</div>
+          <h2 class="section-title" id="coverage-heading">Nationwide Coverage, Coast to Coast</h2>
+          <p class="section-desc">
+            We move freight across all 48 contiguous states and cross-border into
+            Canada and Mexico. Our strongest lanes connect major freight corridors.
+          </p>
+        </div>
+
+        <div class="coverage-layout">
+          <div class="coverage-text">
+            <div class="coverage-highlights">
+              <div class="coverage-stat animate-on-scroll">
+                <div class="coverage-stat-num">48</div>
+                <div class="coverage-stat-label">States Served</div>
+              </div>
+              <div class="coverage-stat animate-on-scroll delay-1">
+                <div class="coverage-stat-num">3</div>
+                <div class="coverage-stat-label">Countries</div>
+              </div>
+              <div class="coverage-stat animate-on-scroll delay-2">
+                <div class="coverage-stat-num">150+</div>
+                <div class="coverage-stat-label">Active Lanes</div>
+              </div>
+              <div class="coverage-stat animate-on-scroll delay-3">
+                <div class="coverage-stat-num">12K+</div>
+                <div class="coverage-stat-label">Loads per Year</div>
+              </div>
+            </div>
+
+            <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:#E0E7EE;margin-bottom:12px;letter-spacing:0.3px;">Cross-Border Capability</h3>
+            <p style="font-size:14px;color:#8A9BB5;line-height:1.7;">
+              Our network extends beyond U.S. borders with established cross-border
+              operations into Canada and Mexico. Bonded carriers, customs brokerage
+              partnerships, and FAST/C-TPAT compliance ensure seamless international moves.
+            </p>
+          </div>
+
+          <div class="lanes-grid">
+            <div class="lane-item animate-on-scroll">
+              <div class="lane-route">
+                <span class="lane-city">Chicago, IL</span>
+                <span class="lane-arrow">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+                <span class="lane-city">Los Angeles, CA</span>
+              </div>
+              <span class="lane-miles">2,015 mi</span>
+              <span class="lane-tag">High Vol</span>
+            </div>
+
+            <div class="lane-item animate-on-scroll delay-1">
+              <div class="lane-route">
+                <span class="lane-city">Dallas, TX</span>
+                <span class="lane-arrow">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+                <span class="lane-city">Atlanta, GA</span>
+              </div>
+              <span class="lane-miles">781 mi</span>
+              <span class="lane-tag">High Vol</span>
+            </div>
+
+            <div class="lane-item animate-on-scroll delay-2">
+              <div class="lane-route">
+                <span class="lane-city">New York, NY</span>
+                <span class="lane-arrow">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+                <span class="lane-city">Miami, FL</span>
+              </div>
+              <span class="lane-miles">1,280 mi</span>
+              <span class="lane-tag">Dedicated</span>
+            </div>
+
+            <div class="lane-item animate-on-scroll delay-3">
+              <div class="lane-route">
+                <span class="lane-city">Seattle, WA</span>
+                <span class="lane-arrow">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+                <span class="lane-city">Phoenix, AZ</span>
+              </div>
+              <span class="lane-miles">1,418 mi</span>
+              <span class="lane-tag">Growing</span>
+            </div>
+
+            <div class="lane-item animate-on-scroll delay-4">
+              <div class="lane-route">
+                <span class="lane-city">Memphis, TN</span>
+                <span class="lane-arrow">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+                <span class="lane-city">Denver, CO</span>
+              </div>
+              <span class="lane-miles">1,040 mi</span>
+              <span class="lane-tag">Dedicated</span>
+            </div>
+
+            <div class="lane-item animate-on-scroll delay-4">
+              <div class="lane-route">
+                <span class="lane-city">Detroit, MI</span>
+                <span class="lane-arrow">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+                <span class="lane-city">Houston, TX</span>
+              </div>
+              <span class="lane-miles">1,312 mi</span>
+              <span class="lane-tag">High Vol</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CARRIER REQUIREMENTS ===== -->
+    <section class="requirements section-pad" id="requirements" aria-labelledby="requirements-heading">
+      <div class="container">
+        <div class="requirements-layout">
+          <div class="requirements-text">
+            <div class="section-label">Get Started</div>
+            <h2 id="requirements-heading">What You Need to Get Started</h2>
+            <p>
+              Our onboarding is fast and straightforward. Meet these baseline requirements
+              and you could be hauling your first load within 48 hours.
+            </p>
+            <div class="req-note">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <p>
+                Owner-operators and fleet carriers welcome. All equipment types accepted
+                including dry van, reefer, flatbed, step deck, and specialized.
+              </p>
+            </div>
+          </div>
+
+          <div class="requirements-list">
+            <div class="req-item animate-on-scroll">
+              <div class="req-check">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="req-item-text">
+                <h4>Active FMCSA Operating Authority</h4>
+                <p>Valid MC number with active operating authority status</p>
+              </div>
+            </div>
+
+            <div class="req-item animate-on-scroll delay-1">
+              <div class="req-check">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="req-item-text">
+                <h4>$1M Auto Liability Insurance</h4>
+                <p>Minimum $1,000,000 auto liability coverage required</p>
+              </div>
+            </div>
+
+            <div class="req-item animate-on-scroll delay-2">
+              <div class="req-check">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="req-item-text">
+                <h4>$100K Cargo Insurance</h4>
+                <p>Minimum $100,000 cargo insurance coverage</p>
+              </div>
+            </div>
+
+            <div class="req-item animate-on-scroll delay-3">
+              <div class="req-check">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="req-item-text">
+                <h4>Valid W-9 on File</h4>
+                <p>Current W-9 form required for tax reporting purposes</p>
+              </div>
+            </div>
+
+            <div class="req-item animate-on-scroll delay-4">
+              <div class="req-check">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="req-item-text">
+                <h4>Clean Safety Record</h4>
+                <p>No unsatisfactory FMCSA safety rating on file</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REGISTRATION CTA ===== -->
+    <section class="registration-cta section-pad" id="registration" aria-labelledby="cta-heading">
+      <div class="container">
+        <div class="cta-card">
+          <h2 id="cta-heading">Ready to Haul with Silk Route?</h2>
+          <p>
+            Start your carrier application today. Our onboarding team will verify your
+            credentials and get you set up within 48 hours.
+          </p>
+
+          <div class="cta-buttons">
+            <a href="/carrier/dashboard.html" class="btn-primary btn-large">
+              Start Your Application
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="/carrier/dashboard.html" class="btn-secondary btn-large">
+              Carrier Login
+            </a>
+          </div>
+
+          <p class="cta-sub">
+            Already a carrier?
+            <a href="/carrier/dashboard.html">Log in to your portal</a>
+          </p>
+
+          <div style="margin-top:24px;">
+            <a href="tel:+13125550175" class="cta-phone" aria-label="Call us at (312) 555-0175">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              (312) 555-0175
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <div class="brand-text-footer">SILK ROUTE LOGISTICS</div>
+          <p>
+            Full-service freight brokerage connecting shippers with reliable carriers
+            across North America. Based in Chicago, moving freight nationwide.
+          </p>
+          <div class="footer-social">
+            <a href="#" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/>
+                <rect x="2" y="9" width="4" height="12"/>
+                <circle cx="4" cy="4" r="2"/>
+              </svg>
+            </a>
+            <a href="#" aria-label="Twitter / X">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4l11.733 16H20L8.267 4z"/>
+                <path d="M4 20l6.768-6.768M15.232 10.768L20 4"/>
+              </svg>
+            </a>
+            <a href="#" aria-label="Facebook">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Company Column -->
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about.html">About Us</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">News</a></li>
+          </ul>
+        </div>
+
+        <!-- Services Column -->
+        <div class="footer-col">
+          <h4>Services</h4>
+          <ul>
+            <li><a href="/shippers.html">For Shippers</a></li>
+            <li><a href="/carriers.html">For Carriers</a></li>
+            <li><a href="/tracking.html">Track Shipment</a></li>
+            <li><a href="#">EDI Integration</a></li>
+          </ul>
+        </div>
+
+        <!-- Connect Column -->
+        <div class="footer-col">
+          <h4>Connect</h4>
+          <ul>
+            <li><a href="tel:+13125550175">(312) 555-0175</a></li>
+            <li><a href="mailto:carriers@silkroutelogistics.ai">carriers@silkroutelogistics.ai</a></li>
+            <li>Chicago, IL 60601</li>
+            <li><a href="/carrier/dashboard.html">Carrier Portal</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Silk Route Logistics LLC. All rights reserved.</p>
+        <div class="footer-legal">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // ── Mobile Menu Toggle ─────────────────────────────────────────
+      var hamburger = document.querySelector('.hamburger');
+      var mobileMenu = document.getElementById('mobileMenu');
+
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', function () {
+          var isOpen = hamburger.classList.toggle('open');
+          mobileMenu.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', isOpen.toString());
+          mobileMenu.setAttribute('aria-hidden', (!isOpen).toString());
+
+          // Prevent body scroll when menu is open
+          document.body.style.overflow = isOpen ? 'hidden' : '';
+        });
+
+        // Close mobile menu when a link is clicked
+        var mobileLinks = mobileMenu.querySelectorAll('a');
+        mobileLinks.forEach(function (link) {
+          link.addEventListener('click', function () {
+            hamburger.classList.remove('open');
+            mobileMenu.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            mobileMenu.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+          });
+        });
+      }
+
+      // ── Navbar Scroll Shadow ───────────────────────────────────────
+      var navbar = document.querySelector('.navbar');
+      var scrollThreshold = 20;
+
+      function handleScroll() {
+        if (window.scrollY > scrollThreshold) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+      }
+
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      handleScroll();
+
+      // ── Scroll-triggered Animations ────────────────────────────────
+      var animatedElements = document.querySelectorAll('.animate-on-scroll');
+
+      if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          {
+            threshold: 0.15,
+            rootMargin: '0px 0px -40px 0px'
+          }
+        );
+
+        animatedElements.forEach(function (el) {
+          observer.observe(el);
+        });
+      } else {
+        // Fallback: show all immediately
+        animatedElements.forEach(function (el) {
+          el.classList.add('visible');
+        });
+      }
+
+      // ── Smooth Scroll for Anchor Links ─────────────────────────────
+      var anchorLinks = document.querySelectorAll('a[href^="#"]');
+      anchorLinks.forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          var targetId = this.getAttribute('href');
+          if (targetId === '#') return;
+
+          var targetEl = document.querySelector(targetId);
+          if (targetEl) {
+            e.preventDefault();
+            var navHeight = navbar.offsetHeight;
+            var targetPosition = targetEl.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
+
+            window.scrollTo({
+              top: targetPosition,
+              behavior: 'smooth'
+            });
+          }
+        });
+      });
+
+      // ── Close mobile menu on Escape key ────────────────────────────
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+          hamburger.classList.remove('open');
+          mobileMenu.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          mobileMenu.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = '';
+          hamburger.focus();
+        }
+      });
+
+    })();
+  </script>
+
+</body>
+</html>

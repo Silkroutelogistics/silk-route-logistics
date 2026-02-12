@@ -47,6 +47,7 @@ import financialRoutes from "./financials";
 import claimRoutes from "./claims";
 import monitoringRoutes from "./monitoring";
 import mileageRoutes from "./mileage";
+import websiteRoutes from "./website";
 
 const router = Router();
 
@@ -134,6 +135,7 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
 
 // --- Public Routes (no auth) ---
 router.use("/tracking", trackingRoutes);
+router.use("/", websiteRoutes);
 
 // --- API Routes ---
 router.use("/auth", authRoutes);
