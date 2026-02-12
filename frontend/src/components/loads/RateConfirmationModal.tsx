@@ -1704,7 +1704,7 @@ function SectionFinancials({
 
         {form.accessorials.length === 0 ? (
           <div className="text-center py-6 text-sm text-slate-500">
-            No accessorials added. Click "Add Accessorial" to add charges.
+            No accessorials added. Click &quot;Add Accessorial&quot; to add charges.
           </div>
         ) : (
           <div className="space-y-2">

@@ -14,6 +14,11 @@ export default function ForcePasswordChangePage() {
   const [validationError, setValidationError] = useState("");
   const [showSplash, setShowSplash] = useState(false);
 
+  const handleSplashComplete = useCallback(() => {
+    sessionStorage.removeItem("otpEmail");
+    window.location.href = "/dashboard/overview";
+  }, []);
+
   // Redirect if no temp token
   if (typeof window !== "undefined" && !tempToken && !showSplash) {
     window.location.href = "/auth/login";
@@ -38,11 +43,6 @@ export default function ForcePasswordChangePage() {
       setShowSplash(true);
     }
   };
-
-  const handleSplashComplete = useCallback(() => {
-    sessionStorage.removeItem("otpEmail");
-    window.location.href = "/dashboard/overview";
-  }, []);
 
   if (showSplash && user) {
     return (
