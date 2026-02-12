@@ -536,12 +536,6 @@ var MarcoPolo = (function () {
       '<div class="mp-welcome-title">Marco Polo</div>' +
       '<div class="mp-welcome-text">' + welcomeText + '</div>';
     _els.messages.appendChild(welcome);
-
-    // Add as first assistant message
-    var msg = { role: "assistant", content: welcomeText, timestamp: Date.now(), actions: null };
-    _state.messages.push(msg);
-    renderMessageDOM(msg, false);
-    saveMessages();
     scrollToBottom();
   }
 
@@ -907,3 +901,6 @@ var MarcoPolo = (function () {
   };
 
 })();
+
+// Auto-initialize on load
+MarcoPolo.init();
