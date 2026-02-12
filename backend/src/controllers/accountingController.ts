@@ -743,14 +743,14 @@ export async function preparePayment(req: AuthRequest, res: Response) {
     const acc = accessorialsTotal ?? 0;
     const grossAmount = lh + fs + acc;
 
-    // Calculate quick-pay discount if applicable
+    // Calculate quick-pay discount based on SRCPP tier
     const tier = paymentTier ?? "STANDARD";
     let quickPayFeePercent = 0;
     if (tier === "FLASH") quickPayFeePercent = 5;
-    else if (tier === "EXPRESS") quickPayFeePercent = 4;
-    else if (tier === "PRIORITY") quickPayFeePercent = 3;
-    else if (tier === "PARTNER") quickPayFeePercent = 2;
-    else if (tier === "ELITE") quickPayFeePercent = 1.5;
+    else if (tier === "EXPRESS") quickPayFeePercent = 3.5;
+    else if (tier === "PRIORITY") quickPayFeePercent = 2;
+    else if (tier === "PARTNER") quickPayFeePercent = 1.5;
+    else if (tier === "ELITE") quickPayFeePercent = 0;
 
     const quickPayFeeAmount = grossAmount * (quickPayFeePercent / 100);
     const netAmount = grossAmount - quickPayFeeAmount;
@@ -832,10 +832,10 @@ export async function updatePayment(req: AuthRequest, res: Response) {
     let quickPayFeePercent = existing.quickPayFeePercent ?? 0;
     if (paymentTier) {
       if (tier === "FLASH") quickPayFeePercent = 5;
-      else if (tier === "EXPRESS") quickPayFeePercent = 4;
-      else if (tier === "PRIORITY") quickPayFeePercent = 3;
-      else if (tier === "PARTNER") quickPayFeePercent = 2;
-      else if (tier === "ELITE") quickPayFeePercent = 1.5;
+      else if (tier === "EXPRESS") quickPayFeePercent = 3.5;
+      else if (tier === "PRIORITY") quickPayFeePercent = 2;
+      else if (tier === "PARTNER") quickPayFeePercent = 1.5;
+      else if (tier === "ELITE") quickPayFeePercent = 0;
       else quickPayFeePercent = 0;
     }
 
@@ -882,6 +882,9 @@ export async function submitPayment(req: AuthRequest, res: Response) {
       return;
     }
 
+    // $5K approval threshold — auto-create approval queue entry
+    const needsApproval = existing.netAmount >= 5000;
+
     const payment = await prisma.carrierPay.update({
       where: { id },
       data: {
@@ -890,7 +893,21 @@ export async function submitPayment(req: AuthRequest, res: Response) {
       },
     });
 
-    res.json(payment);
+    if (needsApproval) {
+      await prisma.approvalQueue.create({
+        data: {
+          type: "CARRIER_PAYMENT",
+          referenceId: payment.id,
+          referenceType: "CARRIER_PAY",
+          amount: payment.netAmount,
+          description: `Carrier payment ${payment.paymentNumber} requires admin approval (>$5K)`,
+          priority: payment.netAmount >= 25000 ? "URGENT" : payment.netAmount >= 10000 ? "HIGH" : "NORMAL",
+          requestedById: req.user!.id,
+        },
+      });
+    }
+
+    res.json({ ...payment, needsApproval });
   } catch (error: any) {
     console.error("submitPayment error:", error);
     res.status(500).json({ error: "Failed to submit payment", details: error.message });
@@ -917,6 +934,12 @@ export async function approvePayment(req: AuthRequest, res: Response) {
         approvedById: req.user!.id,
         approvedAt: new Date(),
       },
+    });
+
+    // Resolve matching approval queue entry
+    await prisma.approvalQueue.updateMany({
+      where: { referenceId: id, referenceType: "CARRIER_PAY", status: "PENDING" },
+      data: { status: "APPROVED", reviewedById: req.user!.id, reviewedAt: new Date() },
     });
 
     res.json(payment);
@@ -949,6 +972,12 @@ export async function rejectPayment(req: AuthRequest, res: Response) {
         rejectedAt: new Date(),
         rejectionReason: reason ?? null,
       },
+    });
+
+    // Resolve matching approval queue entry
+    await prisma.approvalQueue.updateMany({
+      where: { referenceId: id, referenceType: "CARRIER_PAY", status: "PENDING" },
+      data: { status: "REJECTED", reviewedById: req.user!.id, reviewedAt: new Date(), reviewNotes: reason ?? null },
     });
 
     res.json(payment);
@@ -2689,5 +2718,670 @@ export async function exportData(req: AuthRequest, res: Response) {
   } catch (error: any) {
     console.error("exportData error:", error);
     res.status(500).json({ error: "Failed to export data", details: error.message });
+  }
+}
+
+// ============================================================
+// 42-47. APPROVAL QUEUE
+// ============================================================
+
+export async function getApprovals(req: AuthRequest, res: Response) {
+  try {
+    const { page, limit, skip } = paginate(req.query);
+    const { status, type, priority } = req.query;
+
+    const where: any = {};
+    if (status) where.status = status;
+    if (type) where.type = type;
+    if (priority) where.priority = priority;
+
+    const [approvals, total] = await Promise.all([
+      prisma.approvalQueue.findMany({
+        where,
+        include: {
+          requestedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+          reviewedBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: [
+          { status: "asc" },
+          { priority: "asc" },
+          { createdAt: "asc" },
+        ],
+        skip,
+        take: limit,
+      }),
+      prisma.approvalQueue.count({ where }),
+    ]);
+
+    // Enrich with urgency
+    const enriched = approvals.map((a) => {
+      const ageHours = (Date.now() - a.createdAt.getTime()) / 3_600_000;
+      return {
+        ...a,
+        ageHours: Math.round(ageHours * 10) / 10,
+        isUrgent: a.priority === "URGENT" || ageHours > 24,
+      };
+    });
+
+    // Count by status
+    const statusCounts = await prisma.approvalQueue.groupBy({
+      by: ["status"],
+      _count: true,
+    });
+    const counts: Record<string, number> = {};
+    for (const s of statusCounts) counts[s.status] = s._count;
+
+    res.json({
+      approvals: enriched,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      statusCounts: counts,
+    });
+  } catch (error: any) {
+    console.error("getApprovals error:", error);
+    res.status(500).json({ error: "Failed to fetch approvals", details: error.message });
+  }
+}
+
+export async function getApprovalById(req: AuthRequest, res: Response) {
+  try {
+    const approval = await prisma.approvalQueue.findUnique({
+      where: { id: req.params.id },
+      include: {
+        requestedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        reviewedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    if (!approval) {
+      res.status(404).json({ error: "Approval not found" });
+      return;
+    }
+
+    // Fetch the referenced item details
+    let referenceData: any = null;
+    if (approval.referenceType === "CARRIER_PAY") {
+      referenceData = await prisma.carrierPay.findUnique({
+        where: { id: approval.referenceId },
+        include: {
+          carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
+          load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
+        },
+      });
+    } else if (approval.referenceType === "INVOICE") {
+      referenceData = await prisma.invoice.findUnique({
+        where: { id: approval.referenceId },
+        include: {
+          load: { select: { referenceNumber: true, customer: { select: { name: true } } } },
+        },
+      });
+    }
+
+    res.json({ ...approval, referenceData });
+  } catch (error: any) {
+    console.error("getApprovalById error:", error);
+    res.status(500).json({ error: "Failed to fetch approval", details: error.message });
+  }
+}
+
+export async function reviewApproval(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { action, notes } = req.body; // action: "approve" | "reject"
+
+    if (!action || !["approve", "reject"].includes(action)) {
+      res.status(400).json({ error: "action must be 'approve' or 'reject'" });
+      return;
+    }
+
+    const existing = await prisma.approvalQueue.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: "Approval not found" });
+      return;
+    }
+    if (existing.status !== "PENDING") {
+      res.status(400).json({ error: `Approval is already ${existing.status}` });
+      return;
+    }
+
+    const newStatus = action === "approve" ? "APPROVED" : "REJECTED";
+
+    const approval = await prisma.approvalQueue.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        reviewedById: req.user!.id,
+        reviewedAt: new Date(),
+        reviewNotes: notes ?? null,
+      },
+    });
+
+    // Cascade the decision to the referenced item
+    if (existing.referenceType === "CARRIER_PAY") {
+      if (newStatus === "APPROVED") {
+        await prisma.carrierPay.update({
+          where: { id: existing.referenceId },
+          data: { status: "APPROVED", approvedById: req.user!.id, approvedAt: new Date() },
+        });
+      } else {
+        await prisma.carrierPay.update({
+          where: { id: existing.referenceId },
+          data: { status: "REJECTED", rejectedById: req.user!.id, rejectedAt: new Date(), rejectionReason: notes ?? "Rejected via approval queue" },
+        });
+      }
+    }
+
+    res.json(approval);
+  } catch (error: any) {
+    console.error("reviewApproval error:", error);
+    res.status(500).json({ error: "Failed to review approval", details: error.message });
+  }
+}
+
+// ============================================================
+// 48-50. FACTORING FUND HEALTH & ALERTS
+// ============================================================
+
+export async function getFundHealth(req: AuthRequest, res: Response) {
+  try {
+    const latest = await prisma.factoringFund.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { runningBalance: true, createdAt: true },
+    });
+    const balance = latest?.runningBalance ?? 0;
+
+    // Health indicator: green >$25K, yellow $10-25K, red <$10K
+    let healthStatus: "GREEN" | "YELLOW" | "RED";
+    let healthLabel: string;
+    if (balance >= 25000) {
+      healthStatus = "GREEN";
+      healthLabel = "Healthy";
+    } else if (balance >= 10000) {
+      healthStatus = "YELLOW";
+      healthLabel = "Caution";
+    } else {
+      healthStatus = "RED";
+      healthLabel = "Critical";
+    }
+
+    // Upcoming outflows (pending/approved carrier payments)
+    const upcomingOutflows = await prisma.carrierPay.aggregate({
+      where: { status: { in: ["APPROVED", "PROCESSING", "SCHEDULED"] } },
+      _sum: { netAmount: true },
+      _count: true,
+    });
+
+    // Pending inflows (sent invoices)
+    const pendingInflows = await prisma.invoice.aggregate({
+      where: { status: { in: ["SENT", "SUBMITTED", "APPROVED", "FUNDED"] } },
+      _sum: { amount: true },
+      _count: true,
+    });
+
+    // Projected balance
+    const projectedBalance = balance
+      - (upcomingOutflows._sum.netAmount ?? 0)
+      + (pendingInflows._sum.amount ?? 0) * 0.3; // conservative: assume 30% collected soon
+
+    // 7-day trend
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+    const recentTxns = await prisma.factoringFund.findMany({
+      where: { createdAt: { gte: weekAgo } },
+      select: { amount: true, createdAt: true, transactionType: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const dailyNet: Record<string, number> = {};
+    for (const t of recentTxns) {
+      const day = t.createdAt.toISOString().slice(0, 10);
+      dailyNet[day] = (dailyNet[day] ?? 0) + t.amount;
+    }
+
+    // Alerts
+    const alerts: string[] = [];
+    if (balance < 10000) alerts.push("Fund balance below $10,000 — critical threshold");
+    if (balance < 25000 && balance >= 10000) alerts.push("Fund balance below $25,000 — approaching caution zone");
+    if ((upcomingOutflows._sum.netAmount ?? 0) > balance) alerts.push("Upcoming outflows exceed current balance");
+    if (projectedBalance < 0) alerts.push("Projected balance is negative — urgent action needed");
+
+    res.json({
+      currentBalance: balance,
+      healthStatus,
+      healthLabel,
+      lastUpdated: latest?.createdAt ?? null,
+      upcomingOutflows: {
+        total: upcomingOutflows._sum.netAmount ?? 0,
+        count: upcomingOutflows._count,
+      },
+      pendingInflows: {
+        total: pendingInflows._sum.amount ?? 0,
+        count: pendingInflows._count,
+      },
+      projectedBalance: Math.round(projectedBalance * 100) / 100,
+      dailyTrend: Object.entries(dailyNet).map(([date, net]) => ({ date, netChange: net })),
+      alerts,
+    });
+  } catch (error: any) {
+    console.error("getFundHealth error:", error);
+    res.status(500).json({ error: "Failed to fetch fund health", details: error.message });
+  }
+}
+
+// ============================================================
+// 51-54. FINANCIAL REPORTS (Stored)
+// ============================================================
+
+export async function getFinancialReports(req: AuthRequest, res: Response) {
+  try {
+    const { page, limit, skip } = paginate(req.query);
+    const { reportType, status } = req.query;
+
+    const where: any = {};
+    if (reportType) where.reportType = reportType;
+    if (status) where.status = status;
+
+    const [reports, total] = await Promise.all([
+      prisma.financialReport.findMany({
+        where,
+        include: {
+          generatedBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.financialReport.count({ where }),
+    ]);
+
+    res.json({
+      reports,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error: any) {
+    console.error("getFinancialReports error:", error);
+    res.status(500).json({ error: "Failed to fetch financial reports", details: error.message });
+  }
+}
+
+export async function generateFinancialReport(req: AuthRequest, res: Response) {
+  try {
+    const { reportType, periodStart, periodEnd, title } = req.body;
+
+    if (!reportType || !periodStart || !periodEnd) {
+      res.status(400).json({ error: "reportType, periodStart, and periodEnd are required" });
+      return;
+    }
+
+    const start = new Date(periodStart);
+    const end = new Date(periodEnd);
+
+    // Gather summary data based on report type
+    const [loads, invoices, payments, fundTxns] = await Promise.all([
+      prisma.load.findMany({
+        where: {
+          status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
+          deliveryDate: { gte: start, lte: end },
+        },
+        select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, distance: true },
+      }),
+      prisma.invoice.findMany({
+        where: { createdAt: { gte: start, lte: end } },
+        select: { amount: true, status: true, paidAmount: true },
+      }),
+      prisma.carrierPay.findMany({
+        where: { createdAt: { gte: start, lte: end } },
+        select: { netAmount: true, status: true, quickPayFeeAmount: true },
+      }),
+      prisma.factoringFund.findMany({
+        where: { createdAt: { gte: start, lte: end } },
+        select: { amount: true, transactionType: true },
+      }),
+    ]);
+
+    const revenue = loads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
+    const cost = loads.reduce((s, l) => s + (l.carrierRate ?? 0), 0);
+    const margin = loads.reduce((s, l) => s + (l.grossMargin ?? 0), 0);
+    const margins = loads.filter((l) => l.marginPercent !== null).map((l) => l.marginPercent!);
+    const avgMargin = margins.length ? margins.reduce((s, m) => s + m, 0) / margins.length : 0;
+
+    const invoiceTotal = invoices.reduce((s, i) => s + i.amount, 0);
+    const invoicesPaid = invoices.filter((i) => i.status === "PAID");
+    const collectedAmount = invoicesPaid.reduce((s, i) => s + (i.paidAmount ?? i.amount), 0);
+
+    const paymentTotal = payments.reduce((s, p) => s + p.netAmount, 0);
+    const qpFees = payments.reduce((s, p) => s + (p.quickPayFeeAmount ?? 0), 0);
+
+    const fundInflows = fundTxns.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    const fundOutflows = fundTxns.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+
+    const summary = {
+      loads: { count: loads.length, revenue, cost, margin, avgMarginPercent: Math.round(avgMargin * 100) / 100 },
+      invoices: { total: invoiceTotal, count: invoices.length, collected: collectedAmount, paidCount: invoicesPaid.length },
+      payments: { total: paymentTotal, count: payments.length, qpFees },
+      fund: { inflows: fundInflows, outflows: fundOutflows, netFlow: fundInflows - fundOutflows },
+    };
+
+    const autoTitle = title || `${reportType} Report: ${start.toISOString().slice(0, 10)} to ${end.toISOString().slice(0, 10)}`;
+
+    const report = await prisma.financialReport.create({
+      data: {
+        reportType,
+        title: autoTitle,
+        periodStart: start,
+        periodEnd: end,
+        summary,
+        status: "COMPLETED",
+        generatedById: req.user!.id,
+        generatedAt: new Date(),
+      },
+    });
+
+    res.status(201).json(report);
+  } catch (error: any) {
+    console.error("generateFinancialReport error:", error);
+    res.status(500).json({ error: "Failed to generate report", details: error.message });
+  }
+}
+
+export async function deleteFinancialReport(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.financialReport.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: "Report not found" });
+      return;
+    }
+    await prisma.financialReport.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("deleteFinancialReport error:", error);
+    res.status(500).json({ error: "Failed to delete report", details: error.message });
+  }
+}
+
+// ============================================================
+// 55. AR REMINDER PROCESSOR (called by cron)
+// ============================================================
+
+export async function processARReminders() {
+  const now = new Date();
+  const unpaidStatuses: any[] = ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"];
+
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      status: { in: unpaidStatuses },
+      dueDate: { not: null },
+    },
+    include: {
+      load: {
+        select: {
+          referenceNumber: true,
+          customer: { select: { id: true, name: true, email: true, contactName: true } },
+        },
+      },
+    },
+  });
+
+  let sent = 0;
+  for (const inv of invoices) {
+    if (!inv.dueDate || !inv.load?.customer?.email) continue;
+
+    const daysToDue = daysBetween(now, inv.dueDate); // positive = before due, negative = overdue
+    const daysOverdue = -daysToDue;
+
+    // 7 days before due
+    if (daysToDue <= 7 && daysToDue > 0 && !inv.reminderSentPre7) {
+      await prisma.invoice.update({
+        where: { id: inv.id },
+        data: { reminderSentPre7: true, lastReminderAt: now },
+      });
+      sent++;
+    }
+    // On due date
+    else if (daysToDue <= 0 && daysToDue > -1 && !inv.reminderSentDue) {
+      await prisma.invoice.update({
+        where: { id: inv.id },
+        data: { reminderSentDue: true, status: "OVERDUE", lastReminderAt: now },
+      });
+      sent++;
+    }
+    // 7 days overdue
+    else if (daysOverdue >= 7 && daysOverdue < 30 && !inv.reminderSent7) {
+      await prisma.invoice.update({
+        where: { id: inv.id },
+        data: { reminderSent7: true, status: "OVERDUE", lastReminderAt: now },
+      });
+      sent++;
+    }
+    // 30 days overdue
+    else if (daysOverdue >= 30 && daysOverdue < 60 && !inv.reminderSent31) {
+      await prisma.invoice.update({
+        where: { id: inv.id },
+        data: { reminderSent31: true, lastReminderAt: now },
+      });
+      sent++;
+      // Auto-downgrade shipper credit
+      if (inv.load?.customer?.id) {
+        await prisma.shipperCredit.updateMany({
+          where: { customerId: inv.load.customer.id },
+          data: { latePayments: { increment: 1 } },
+        });
+      }
+    }
+    // 60 days overdue
+    else if (daysOverdue >= 60 && daysOverdue < 90 && !inv.reminderSent60) {
+      await prisma.invoice.update({
+        where: { id: inv.id },
+        data: { reminderSent60: true, lastReminderAt: now },
+      });
+      sent++;
+    }
+    // 90 days overdue
+    else if (daysOverdue >= 90 && !inv.reminderSent90) {
+      await prisma.invoice.update({
+        where: { id: inv.id },
+        data: { reminderSent90: true, lastReminderAt: now },
+      });
+      sent++;
+      // Auto-block shipper credit at 90 days
+      if (inv.load?.customer?.id) {
+        await prisma.shipperCredit.updateMany({
+          where: { customerId: inv.load.customer.id, autoBlocked: false },
+          data: { autoBlocked: true, blockedReason: `Auto-blocked: Invoice ${inv.invoiceNumber} 90+ days overdue`, blockedAt: now },
+        });
+      }
+    }
+  }
+
+  return { processed: invoices.length, remindersSent: sent };
+}
+
+// ============================================================
+// 56. AP AGING SUMMARY
+// ============================================================
+
+export async function getAPAging(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const unpaidStatuses: any[] = ["PENDING", "PREPARED", "SUBMITTED", "APPROVED", "PROCESSING", "SCHEDULED", "ON_HOLD"];
+
+    const payments = await prisma.carrierPay.findMany({
+      where: { status: { in: unpaidStatuses } },
+      include: {
+        carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
+        load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const buckets = {
+      current: { payments: [] as any[], total: 0 },
+      "1-15": { payments: [] as any[], total: 0 },
+      "16-30": { payments: [] as any[], total: 0 },
+      "31-45": { payments: [] as any[], total: 0 },
+      "45+": { payments: [] as any[], total: 0 },
+    };
+
+    let grandTotal = 0;
+
+    for (const cp of payments) {
+      const anchorDate = cp.dueDate ?? cp.createdAt;
+      const daysOld = daysBetween(anchorDate, now);
+      const enriched = { ...cp, daysOutstanding: Math.max(0, daysOld) };
+      grandTotal += cp.netAmount;
+
+      if (daysOld <= 0) {
+        buckets.current.payments.push(enriched);
+        buckets.current.total += cp.netAmount;
+      } else if (daysOld <= 15) {
+        buckets["1-15"].payments.push(enriched);
+        buckets["1-15"].total += cp.netAmount;
+      } else if (daysOld <= 30) {
+        buckets["16-30"].payments.push(enriched);
+        buckets["16-30"].total += cp.netAmount;
+      } else if (daysOld <= 45) {
+        buckets["31-45"].payments.push(enriched);
+        buckets["31-45"].total += cp.netAmount;
+      } else {
+        buckets["45+"].payments.push(enriched);
+        buckets["45+"].total += cp.netAmount;
+      }
+    }
+
+    res.json({
+      buckets,
+      summary: {
+        current: buckets.current.total,
+        "1-15": buckets["1-15"].total,
+        "16-30": buckets["16-30"].total,
+        "31-45": buckets["31-45"].total,
+        "45+": buckets["45+"].total,
+        grandTotal,
+        paymentCount: payments.length,
+      },
+    });
+  } catch (error: any) {
+    console.error("getAPAging error:", error);
+    res.status(500).json({ error: "Failed to fetch AP aging", details: error.message });
+  }
+}
+
+// ============================================================
+// 57. SRCPP TIER FEE SCHEDULE
+// ============================================================
+
+export async function getSRCPPTierSchedule(_req: AuthRequest, res: Response) {
+  res.json({
+    tiers: [
+      { tier: "FLASH", feePercent: 5, slaHours: 2, description: "Flash Pay — Same day, 2-hour SLA" },
+      { tier: "EXPRESS", feePercent: 3.5, slaHours: 24, description: "Express Pay — Next business day" },
+      { tier: "PRIORITY", feePercent: 2, slaHours: 48, description: "Priority Pay — 2 business days" },
+      { tier: "PARTNER", feePercent: 1.5, slaHours: 72, description: "Partner Pay — 3 business days" },
+      { tier: "ELITE", feePercent: 0, slaHours: 120, description: "Elite Pay — 5 business days, no fee" },
+      { tier: "STANDARD", feePercent: 0, slaHours: 720, description: "Standard — Net 30" },
+    ],
+    approvalThreshold: 5000,
+    fundHealthThresholds: { green: 25000, yellow: 10000, red: 0 },
+  });
+}
+
+// ============================================================
+// 58. ACCOUNTING DASHBOARD (Enhanced)
+// ============================================================
+
+export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+
+    // --- All core metrics in parallel ---
+    const [
+      latestFund,
+      arOutstanding,
+      apDue,
+      qpRevenue,
+      mtdLoads,
+      pendingApprovals,
+      overdueInvoices,
+      openDisputes,
+      creditAlerts,
+      recentApprovals,
+    ] = await Promise.all([
+      prisma.factoringFund.findFirst({ orderBy: { createdAt: "desc" }, select: { runningBalance: true } }),
+      prisma.invoice.aggregate({
+        where: { status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"] } },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      prisma.carrierPay.aggregate({
+        where: { status: { in: ["PENDING", "PREPARED", "SUBMITTED", "APPROVED", "PROCESSING", "SCHEDULED"] } },
+        _sum: { netAmount: true },
+        _count: true,
+      }),
+      prisma.carrierPay.aggregate({
+        where: { paidAt: { gte: monthStart }, quickPayFeeAmount: { gt: 0 }, status: "PAID" },
+        _sum: { quickPayFeeAmount: true },
+      }),
+      prisma.load.findMany({
+        where: {
+          status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
+          deliveryDate: { gte: monthStart },
+          customerRate: { not: null },
+        },
+        select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true },
+      }),
+      prisma.approvalQueue.count({ where: { status: "PENDING" } }),
+      prisma.invoice.count({
+        where: { status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE"] }, dueDate: { lt: now } },
+      }),
+      prisma.paymentDispute.count({ where: { status: { in: ["OPEN", "INVESTIGATING", "PROPOSED"] } } }),
+      prisma.shipperCredit.count({ where: { OR: [{ autoBlocked: true }, { creditLimit: { gt: 0 }, currentUtilized: { gt: 0 } }] } }),
+      prisma.approvalQueue.findMany({
+        where: { status: "PENDING" },
+        include: { requestedBy: { select: { firstName: true, lastName: true } } },
+        orderBy: { createdAt: "asc" },
+        take: 5,
+      }),
+    ]);
+
+    const cashBalance = latestFund?.runningBalance ?? 0;
+    const mtdRevenue = mtdLoads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
+    const mtdMargins = mtdLoads.filter((l) => l.marginPercent !== null);
+    const avgMargin = mtdMargins.length ? mtdMargins.reduce((s, l) => s + (l.marginPercent ?? 0), 0) / mtdMargins.length : 0;
+
+    // Fund health
+    let fundHealth: "GREEN" | "YELLOW" | "RED";
+    if (cashBalance >= 25000) fundHealth = "GREEN";
+    else if (cashBalance >= 10000) fundHealth = "YELLOW";
+    else fundHealth = "RED";
+
+    res.json({
+      cashBalance,
+      fundHealth,
+      arOutstanding: arOutstanding._sum.amount ?? 0,
+      arCount: arOutstanding._count,
+      apDue: apDue._sum.netAmount ?? 0,
+      apCount: apDue._count,
+      qpRevenueMTD: qpRevenue._sum.quickPayFeeAmount ?? 0,
+      revenueMTD: mtdRevenue,
+      avgMarginPercent: Math.round(avgMargin * 100) / 100,
+      loadsThisMonth: mtdLoads.length,
+      pendingApprovals,
+      alerts: {
+        overdueInvoices,
+        openDisputes,
+        creditAlerts,
+        lowFund: cashBalance < 10000,
+      },
+      recentApprovals,
+    });
+  } catch (error: any) {
+    console.error("Enhanced dashboard error:", error);
+    res.status(500).json({ error: "Failed to load dashboard", details: error.message });
   }
 }

@@ -440,6 +440,54 @@ var SRL = (function () {
     return request("/api/financials/summary?period=" + (period || "month"));
   }
 
+  // --- Accounting Console ---
+  function acctDashboard() { return request("/api/accounting/dashboard/enhanced"); }
+  function acctInvoices(params) { return request("/api/accounting/invoices?" + new URLSearchParams(params || {}).toString()); }
+  function acctInvoiceById(id) { return request("/api/accounting/invoices/" + id); }
+  function acctCreateInvoice(data) { return request("/api/accounting/invoices", { method: "POST", body: data }); }
+  function acctSendInvoice(id) { return request("/api/accounting/invoices/" + id + "/send", { method: "POST" }); }
+  function acctMarkInvoicePaid(id, data) { return request("/api/accounting/invoices/" + id + "/mark-paid", { method: "PUT", body: data }); }
+  function acctVoidInvoice(id, data) { return request("/api/accounting/invoices/" + id + "/void", { method: "POST", body: data }); }
+  function acctInvoiceAging() { return request("/api/accounting/invoices/aging"); }
+  function acctPayments(params) { return request("/api/accounting/payments?" + new URLSearchParams(params || {}).toString()); }
+  function acctPaymentById(id) { return request("/api/accounting/payments/" + id); }
+  function acctPreparePayment(data) { return request("/api/accounting/payments/prepare", { method: "POST", body: data }); }
+  function acctUpdatePayment(id, data) { return request("/api/accounting/payments/" + id, { method: "PUT", body: data }); }
+  function acctSubmitPayment(id) { return request("/api/accounting/payments/" + id + "/submit", { method: "POST" }); }
+  function acctApprovePayment(id) { return request("/api/accounting/payments/" + id + "/approve", { method: "POST" }); }
+  function acctRejectPayment(id, data) { return request("/api/accounting/payments/" + id + "/reject", { method: "POST", body: data }); }
+  function acctHoldPayment(id, data) { return request("/api/accounting/payments/" + id + "/hold", { method: "POST", body: data }); }
+  function acctMarkPaymentPaid(id, data) { return request("/api/accounting/payments/" + id + "/mark-paid", { method: "POST", body: data }); }
+  function acctBulkApprove(ids) { return request("/api/accounting/payments/bulk-approve", { method: "POST", body: { paymentIds: ids } }); }
+  function acctPaymentQueue(params) { return request("/api/accounting/payments/queue?" + new URLSearchParams(params || {}).toString()); }
+  function acctAPAging() { return request("/api/accounting/payments/aging"); }
+  function acctSRCPPTiers() { return request("/api/accounting/payments/srcpp-tiers"); }
+  function acctDisputes(params) { return request("/api/accounting/disputes?" + new URLSearchParams(params || {}).toString()); }
+  function acctDisputeById(id) { return request("/api/accounting/disputes/" + id); }
+  function acctFileDispute(data) { return request("/api/accounting/disputes", { method: "POST", body: data }); }
+  function acctCredit(params) { return request("/api/accounting/credit?" + new URLSearchParams(params || {}).toString()); }
+  function acctCreditById(id) { return request("/api/accounting/credit/" + id); }
+  function acctUpdateCredit(id, data) { return request("/api/accounting/credit/" + id, { method: "PUT", body: data }); }
+  function acctCreditAlerts() { return request("/api/accounting/credit/alerts"); }
+  function acctFundBalance() { return request("/api/accounting/fund/balance"); }
+  function acctFundHealth() { return request("/api/accounting/fund/health"); }
+  function acctFundTransactions(params) { return request("/api/accounting/fund/transactions?" + new URLSearchParams(params || {}).toString()); }
+  function acctFundPerformance() { return request("/api/accounting/fund/performance"); }
+  function acctFundAdjustment(data) { return request("/api/accounting/fund/adjustment", { method: "POST", body: data }); }
+  function acctApprovals(params) { return request("/api/accounting/approvals?" + new URLSearchParams(params || {}).toString()); }
+  function acctApprovalById(id) { return request("/api/accounting/approvals/" + id); }
+  function acctReviewApproval(id, data) { return request("/api/accounting/approvals/" + id + "/review", { method: "POST", body: data }); }
+  function acctPnlLoads(params) { return request("/api/accounting/pnl/loads?" + new URLSearchParams(params || {}).toString()); }
+  function acctLaneProfitability(params) { return request("/api/accounting/pnl/lanes?" + new URLSearchParams(params || {}).toString()); }
+  function acctCarrierProfitability(params) { return request("/api/accounting/pnl/carriers?" + new URLSearchParams(params || {}).toString()); }
+  function acctShipperProfitability(params) { return request("/api/accounting/pnl/shippers?" + new URLSearchParams(params || {}).toString()); }
+  function acctWeeklyReport() { return request("/api/accounting/reports/weekly"); }
+  function acctMonthlyReport(params) { return request("/api/accounting/reports/monthly?" + new URLSearchParams(params || {}).toString()); }
+  function acctStoredReports(params) { return request("/api/accounting/reports/stored?" + new URLSearchParams(params || {}).toString()); }
+  function acctGenerateReport(data) { return request("/api/accounting/reports/generate", { method: "POST", body: data }); }
+  function acctDeleteReport(id) { return request("/api/accounting/reports/" + id, { method: "DELETE" }); }
+  function acctExport(data) { return request("/api/accounting/export", { method: "POST", body: data }); }
+
   // --- Public API ---
   return {
     BASE: BASE,
@@ -497,5 +545,51 @@ var SRL = (function () {
     markInvoicePaid: markInvoicePaid,
     getInvoiceAging: getInvoiceAging,
     getFinancialSummary: getFinancialSummary,
+    acctDashboard: acctDashboard,
+    acctInvoices: acctInvoices,
+    acctInvoiceById: acctInvoiceById,
+    acctCreateInvoice: acctCreateInvoice,
+    acctSendInvoice: acctSendInvoice,
+    acctMarkInvoicePaid: acctMarkInvoicePaid,
+    acctVoidInvoice: acctVoidInvoice,
+    acctInvoiceAging: acctInvoiceAging,
+    acctPayments: acctPayments,
+    acctPaymentById: acctPaymentById,
+    acctPreparePayment: acctPreparePayment,
+    acctUpdatePayment: acctUpdatePayment,
+    acctSubmitPayment: acctSubmitPayment,
+    acctApprovePayment: acctApprovePayment,
+    acctRejectPayment: acctRejectPayment,
+    acctHoldPayment: acctHoldPayment,
+    acctMarkPaymentPaid: acctMarkPaymentPaid,
+    acctBulkApprove: acctBulkApprove,
+    acctPaymentQueue: acctPaymentQueue,
+    acctAPAging: acctAPAging,
+    acctSRCPPTiers: acctSRCPPTiers,
+    acctDisputes: acctDisputes,
+    acctDisputeById: acctDisputeById,
+    acctFileDispute: acctFileDispute,
+    acctCredit: acctCredit,
+    acctCreditById: acctCreditById,
+    acctUpdateCredit: acctUpdateCredit,
+    acctCreditAlerts: acctCreditAlerts,
+    acctFundBalance: acctFundBalance,
+    acctFundHealth: acctFundHealth,
+    acctFundTransactions: acctFundTransactions,
+    acctFundPerformance: acctFundPerformance,
+    acctFundAdjustment: acctFundAdjustment,
+    acctApprovals: acctApprovals,
+    acctApprovalById: acctApprovalById,
+    acctReviewApproval: acctReviewApproval,
+    acctPnlLoads: acctPnlLoads,
+    acctLaneProfitability: acctLaneProfitability,
+    acctCarrierProfitability: acctCarrierProfitability,
+    acctShipperProfitability: acctShipperProfitability,
+    acctWeeklyReport: acctWeeklyReport,
+    acctMonthlyReport: acctMonthlyReport,
+    acctStoredReports: acctStoredReports,
+    acctGenerateReport: acctGenerateReport,
+    acctDeleteReport: acctDeleteReport,
+    acctExport: acctExport,
   };
 })();

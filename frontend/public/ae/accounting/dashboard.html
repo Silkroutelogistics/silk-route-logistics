@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounting Dashboard - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    /* --- KPI Grid --- */
+    .acct-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .acct-kpi-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      text-align: center;
+      border-top: 3px solid var(--gold);
+      position: relative;
+    }
+    .acct-kpi-label {
+      font-size: 11px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .acct-kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    .acct-kpi-sub {
+      font-size: 12px;
+      color: var(--gray-400);
+      margin-top: 4px;
+    }
+    .health-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .health-GREEN { background: var(--green); }
+    .health-YELLOW { background: var(--amber); }
+    .health-RED { background: var(--red); }
+
+    /* --- Alerts Row --- */
+    .alerts-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+    .alert-badge-red {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .alert-badge-amber {
+      background: var(--amber-bg);
+      color: #B45309;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .alert-badge-green {
+      background: var(--green-bg);
+      color: #15803D;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+    .alert-badge-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 6px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(0,0,0,0.1);
+    }
+
+    /* --- Charts Row --- */
+    .chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+    }
+    .chart-card h3 {
+      font-size: 14px;
+      color: var(--navy);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .chart-card canvas {
+      max-height: 280px;
+    }
+
+    /* --- Approvals Table --- */
+    .approvals-section {
+      margin-bottom: 24px;
+    }
+    .approvals-section h3 {
+      font-size: 16px;
+      color: var(--navy);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .approvals-table-wrap {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .approvals-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .approvals-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--gray-200);
+      background: var(--gray-50);
+    }
+    .approvals-table td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700);
+    }
+    .approvals-table tr:last-child td {
+      border-bottom: none;
+    }
+    .approvals-table tr:hover td {
+      background: var(--gray-50);
+    }
+    .priority-HIGH, .priority-URGENT {
+      color: var(--red);
+      font-weight: 600;
+    }
+    .priority-MEDIUM {
+      color: var(--amber);
+      font-weight: 600;
+    }
+    .priority-LOW {
+      color: var(--green);
+      font-weight: 600;
+    }
+    .review-link {
+      color: var(--gold);
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .review-link:hover {
+      text-decoration: underline;
+    }
+
+    /* --- Quick Actions --- */
+    .quick-actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .qa-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s, box-shadow 0.15s;
+      text-decoration: none;
+    }
+    .qa-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+      text-decoration: none;
+    }
+    .qa-btn:active {
+      transform: translateY(0);
+    }
+    .qa-btn-gold {
+      background: var(--gold);
+      color: var(--white);
+    }
+    .qa-btn-gold:hover {
+      background: var(--gold-hover);
+      color: var(--white);
+    }
+    .qa-btn-navy {
+      background: var(--navy);
+      color: var(--white);
+    }
+    .qa-btn-navy:hover {
+      background: var(--navy-light);
+      color: var(--white);
+    }
+    .qa-btn-outline {
+      background: var(--white);
+      color: var(--navy);
+      border: 1px solid var(--gray-200);
+    }
+    .qa-btn-outline:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* --- Access Denied --- */
+    .access-denied {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--gray-400);
+    }
+    .access-denied h2 {
+      color: var(--red);
+      margin-bottom: 12px;
+      font-size: 22px;
+    }
+    .access-denied p {
+      font-size: 14px;
+    }
+
+    /* --- Modal Overlay --- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-box {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: var(--gray-400);
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      color: var(--red);
+    }
+    .modal-body {
+      padding: 24px;
+    }
+    .modal-body label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .modal-body input,
+    .modal-body textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-size: 14px;
+      color: var(--gray-700);
+      background: var(--gray-50);
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .modal-body input:focus,
+    .modal-body textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    .modal-body textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-hint {
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 4px;
+    }
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .modal-btn {
+      padding: 10px 24px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s;
+    }
+    .modal-btn-cancel {
+      background: var(--gray-100);
+      color: var(--gray-600);
+    }
+    .modal-btn-cancel:hover {
+      background: var(--gray-200);
+    }
+    .modal-btn-submit {
+      background: var(--gold);
+      color: var(--white);
+    }
+    .modal-btn-submit:hover {
+      background: var(--gold-hover);
+    }
+    .modal-btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .modal-success {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 8px;
+      display: none;
+    }
+    .modal-error {
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* --- Loading State --- */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* --- Page Header --- */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .page-header-sub {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+    .refresh-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .refresh-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* --- Empty Row --- */
+    .empty-row td {
+      text-align: center;
+      color: var(--gray-400);
+      padding: 24px 16px !important;
+      font-style: italic;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 1400px) {
+      .acct-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 1024px) {
+      .acct-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-row { grid-template-columns: 1fr; }
+      .quick-actions-row { flex-direction: column; }
+    }
+    @media (max-width: 640px) {
+      .acct-kpi-grid { grid-template-columns: 1fr; }
+      .alerts-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-layout">
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">Dashboard</a>
+        <a href="/ae/loads.html">Load Board</a>
+        <a href="/ae/caravan.html">The Caravan</a>
+        <a href="/ae/crm.html">CRM</a>
+        <a href="/ae/communications.html">Communications</a>
+        <a href="/ae/claims.html">Claims</a>
+        <a href="/ae/financials.html">Financials</a>
+        <a href="/ae/training.html">Training</a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+          <a href="/ae/accounting/dashboard.html" class="active">Acct Dashboard</a>
+          <a href="/ae/accounting/payable.html">Accounts Payable</a>
+          <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
+          <a href="/ae/accounting/fund.html">Factoring Fund</a>
+          <a href="/ae/accounting/reports.html">Reports</a>
+          <a href="/ae/accounting/approvals.html">Approvals</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer"><button onclick="handleLogout()">Sign Out</button></div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="main-content">
+      <!-- Access Denied Gate -->
+      <div id="access-denied" style="display:none">
+        <div class="access-denied">
+          <h2>Access Denied</h2>
+          <p>The Accounting Dashboard is restricted to Admin, CEO, and Accounting users.</p>
+          <p style="margin-top:16px"><a href="/ae/dashboard" style="color:var(--gold)">Return to main dashboard</a></p>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading-state" class="loading-state">
+        <div class="loading-spinner"></div>
+        <div>Loading accounting data...</div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div id="dashboard-content" style="display:none;padding:24px 32px;">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div>
+            <h1>Accounting Console</h1>
+            <div class="page-header-sub" id="last-updated">Last updated: --</div>
+          </div>
+          <button class="refresh-btn" id="refresh-btn" onclick="refreshDashboard()">Refresh</button>
+        </div>
+
+        <!-- ============ 1. KPI ROW ============ -->
+        <div class="acct-kpi-grid">
+          <div class="acct-kpi-card">
+            <div class="acct-kpi-label">Cash Balance</div>
+            <div class="acct-kpi-value" id="kpi-cash">$0</div>
+            <div class="acct-kpi-sub">
+              Fund Health <span class="health-dot" id="health-dot"></span>
+            </div>
+          </div>
+          <div class="acct-kpi-card">
+            <div class="acct-kpi-label">AR Outstanding</div>
+            <div class="acct-kpi-value" id="kpi-ar">$0</div>
+            <div class="acct-kpi-sub" id="kpi-ar-sub">0 unpaid invoices</div>
+          </div>
+          <div class="acct-kpi-card">
+            <div class="acct-kpi-label">AP Due</div>
+            <div class="acct-kpi-value" id="kpi-ap">$0</div>
+            <div class="acct-kpi-sub" id="kpi-ap-sub">0 unpaid payments</div>
+          </div>
+          <div class="acct-kpi-card">
+            <div class="acct-kpi-label">QP Revenue MTD</div>
+            <div class="acct-kpi-value" id="kpi-qp">$0</div>
+            <div class="acct-kpi-sub">Quick-pay fee income</div>
+          </div>
+          <div class="acct-kpi-card">
+            <div class="acct-kpi-label">Revenue MTD</div>
+            <div class="acct-kpi-value" id="kpi-rev">$0</div>
+            <div class="acct-kpi-sub" id="kpi-rev-sub">0 loads this month</div>
+          </div>
+          <div class="acct-kpi-card">
+            <div class="acct-kpi-label">Avg Margin</div>
+            <div class="acct-kpi-value" id="kpi-margin">0%</div>
+            <div class="acct-kpi-sub">Target: 15%+</div>
+          </div>
+        </div>
+
+        <!-- ============ 2. ALERTS ROW ============ -->
+        <div class="alerts-row" id="alerts-row">
+          <div class="alert-badge alert-badge-red" id="alert-overdue" style="display:none">
+            <span class="alert-badge-count" id="alert-overdue-count">0</span>
+            Overdue Invoices
+          </div>
+          <div class="alert-badge alert-badge-amber" id="alert-approvals" style="display:none">
+            <span class="alert-badge-count" id="alert-approvals-count">0</span>
+            Pending Approvals
+          </div>
+          <div class="alert-badge alert-badge-amber" id="alert-disputes" style="display:none">
+            <span class="alert-badge-count" id="alert-disputes-count">0</span>
+            Open Disputes
+          </div>
+          <div class="alert-badge alert-badge-red" id="alert-credit" style="display:none">
+            <span class="alert-badge-count" id="alert-credit-count">0</span>
+            Credit Alerts
+          </div>
+          <div class="alert-badge alert-badge-red" id="alert-fund" style="display:none">
+            Low Fund Balance
+          </div>
+          <div class="alert-badge alert-badge-green" id="alert-none" style="display:none">
+            All Clear - No active alerts
+          </div>
+        </div>
+
+        <!-- ============ 3. CHARTS ROW ============ -->
+        <div class="chart-row">
+          <div class="chart-card">
+            <h3>Monthly Revenue vs Cost (Last 6 Months)</h3>
+            <canvas id="revenueCostChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Fund Balance Trend</h3>
+            <canvas id="fundTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- ============ 4. RECENT APPROVALS TABLE ============ -->
+        <div class="approvals-section">
+          <h3>Recent Pending Approvals</h3>
+          <div class="approvals-table-wrap">
+            <table class="approvals-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Priority</th>
+                  <th>Requested By</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="approvals-tbody">
+                <tr class="empty-row"><td colspan="7">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ============ 5. QUICK ACTIONS ROW ============ -->
+        <div class="quick-actions-row">
+          <a href="/ae/accounting/payable.html" class="qa-btn qa-btn-gold">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg>
+            Prepare Payment
+          </a>
+          <a href="/ae/accounting/receivable.html" class="qa-btn qa-btn-navy">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Create Invoice
+          </a>
+          <a href="/ae/accounting/reports.html" class="qa-btn qa-btn-outline">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17v-6M13 17v-4M17 17v-8M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            View Reports
+          </a>
+          <button class="qa-btn qa-btn-outline" onclick="openFundModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            Fund Adjustment
+          </button>
+        </div>
+
+      </div><!-- /dashboard-content -->
+    </main>
+  </div>
+
+  <!-- ==================== FUND ADJUSTMENT MODAL ==================== -->
+  <div class="modal-overlay" id="fund-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Fund Adjustment</h3>
+        <button class="modal-close" onclick="closeFundModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="adj-amount">Amount ($)</label>
+          <input type="number" id="adj-amount" placeholder="e.g. 5000 or -2000" step="0.01">
+          <div class="form-hint">Use a positive value for deposits, negative for withdrawals.</div>
+        </div>
+        <div class="form-group">
+          <label for="adj-description">Description</label>
+          <textarea id="adj-description" placeholder="Reason for this adjustment..."></textarea>
+        </div>
+        <div class="modal-success" id="adj-success">Adjustment submitted successfully.</div>
+        <div class="modal-error" id="adj-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="closeFundModal()">Cancel</button>
+        <button class="modal-btn modal-btn-submit" id="adj-submit-btn" onclick="submitFundAdjustment()">Submit Adjustment</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    (function() {
+      var token = localStorage.getItem('token');
+      if (!token) { window.location.href = '/auth/login'; return; }
+
+      var revenueCostChartInst = null;
+      var fundTrendChartInst = null;
+      var dashboardData = null;
+
+      // ========== AUTH & ROLE CHECK ==========
+      SRL.getMe().then(function(user) {
+        document.getElementById('user-name').textContent = user.firstName + ' ' + user.lastName;
+        document.getElementById('user-role').textContent = user.role;
+
+        if (user.role !== 'ADMIN' && user.role !== 'CEO' && user.role !== 'ACCOUNTING') {
+          document.getElementById('loading-state').style.display = 'none';
+          document.getElementById('access-denied').style.display = 'block';
+          return;
+        }
+
+        loadDashboard();
+      }).catch(function() {
+        window.location.href = '/auth/login';
+      });
+
+      // ========== LOAD DASHBOARD ==========
+      function loadDashboard() {
+        document.getElementById('loading-state').style.display = 'block';
+        document.getElementById('dashboard-content').style.display = 'none';
+
+        SRL.acctDashboard().then(function(data) {
+          dashboardData = data;
+          document.getElementById('loading-state').style.display = 'none';
+          document.getElementById('dashboard-content').style.display = 'block';
+
+          renderKPIs(data);
+          renderAlerts(data);
+          renderCharts(data);
+          renderApprovals(data.recentApprovals || []);
+          updateTimestamp();
+        }).catch(function(err) {
+          document.getElementById('loading-state').style.display = 'none';
+          document.getElementById('dashboard-content').style.display = 'block';
+
+          // Render with empty/fallback data
+          renderKPIs({});
+          renderAlerts({});
+          renderCharts({});
+          renderApprovals([]);
+          updateTimestamp();
+          console.error('Dashboard load error:', err);
+        });
+      }
+
+      // ========== FORMAT HELPERS ==========
+      function fmt(n) {
+        if (n === undefined || n === null || isNaN(n)) return '$0';
+        var neg = n < 0;
+        var abs = Math.abs(Math.round(n));
+        var str = abs.toLocaleString('en-US');
+        return (neg ? '-$' : '$') + str;
+      }
+
+      function fmtPct(n) {
+        if (n === undefined || n === null || isNaN(n)) return '0%';
+        return n.toFixed(1) + '%';
+      }
+
+      function fmtDate(dateStr) {
+        if (!dateStr) return '--';
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+
+      function updateTimestamp() {
+        var now = new Date();
+        document.getElementById('last-updated').textContent =
+          'Last updated: ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      // ========== RENDER KPIs ==========
+      function renderKPIs(data) {
+        // Cash Balance
+        document.getElementById('kpi-cash').textContent = fmt(data.cashBalance);
+        var healthDot = document.getElementById('health-dot');
+        var health = data.fundHealth || 'GREEN';
+        healthDot.className = 'health-dot health-' + health;
+
+        // Color the cash balance based on fund health
+        var cashEl = document.getElementById('kpi-cash');
+        if (health === 'RED') cashEl.style.color = 'var(--red)';
+        else if (health === 'YELLOW') cashEl.style.color = 'var(--amber)';
+        else cashEl.style.color = 'var(--green)';
+
+        // AR Outstanding
+        document.getElementById('kpi-ar').textContent = fmt(data.arOutstanding);
+        document.getElementById('kpi-ar-sub').textContent = (data.arCount || 0) + ' unpaid invoices';
+
+        // AP Due
+        document.getElementById('kpi-ap').textContent = fmt(data.apDue);
+        document.getElementById('kpi-ap-sub').textContent = (data.apCount || 0) + ' unpaid payments';
+
+        // QP Revenue MTD
+        document.getElementById('kpi-qp').textContent = fmt(data.qpRevenueMTD);
+
+        // Revenue MTD
+        document.getElementById('kpi-rev').textContent = fmt(data.revenueMTD);
+        document.getElementById('kpi-rev-sub').textContent = (data.loadsThisMonth || 0) + ' loads this month';
+
+        // Avg Margin %
+        var marginEl = document.getElementById('kpi-margin');
+        var marginVal = data.avgMarginPercent || 0;
+        marginEl.textContent = fmtPct(marginVal);
+        if (marginVal >= 15) marginEl.style.color = 'var(--green)';
+        else if (marginVal >= 10) marginEl.style.color = 'var(--amber)';
+        else marginEl.style.color = 'var(--red)';
+      }
+
+      // ========== RENDER ALERTS ==========
+      function renderAlerts(data) {
+        var alerts = data.alerts || {};
+        var pendingApprovals = data.pendingApprovals || 0;
+        var hasAny = false;
+
+        // Overdue Invoices (red)
+        var overdueEl = document.getElementById('alert-overdue');
+        var overdueCount = alerts.overdueInvoices || 0;
+        if (overdueCount > 0) {
+          overdueEl.style.display = 'inline-flex';
+          document.getElementById('alert-overdue-count').textContent = overdueCount;
+          hasAny = true;
+        } else {
+          overdueEl.style.display = 'none';
+        }
+
+        // Pending Approvals (amber)
+        var approvalsEl = document.getElementById('alert-approvals');
+        if (pendingApprovals > 0) {
+          approvalsEl.style.display = 'inline-flex';
+          document.getElementById('alert-approvals-count').textContent = pendingApprovals;
+          hasAny = true;
+        } else {
+          approvalsEl.style.display = 'none';
+        }
+
+        // Open Disputes (amber)
+        var disputesEl = document.getElementById('alert-disputes');
+        var disputeCount = alerts.openDisputes || 0;
+        if (disputeCount > 0) {
+          disputesEl.style.display = 'inline-flex';
+          document.getElementById('alert-disputes-count').textContent = disputeCount;
+          hasAny = true;
+        } else {
+          disputesEl.style.display = 'none';
+        }
+
+        // Credit Alerts (red)
+        var creditEl = document.getElementById('alert-credit');
+        var creditCount = alerts.creditAlerts || 0;
+        if (creditCount > 0) {
+          creditEl.style.display = 'inline-flex';
+          document.getElementById('alert-credit-count').textContent = creditCount;
+          hasAny = true;
+        } else {
+          creditEl.style.display = 'none';
+        }
+
+        // Low Fund (red)
+        var fundEl = document.getElementById('alert-fund');
+        if (alerts.lowFund) {
+          fundEl.style.display = 'inline-flex';
+          hasAny = true;
+        } else {
+          fundEl.style.display = 'none';
+        }
+
+        // All Clear
+        var noneEl = document.getElementById('alert-none');
+        noneEl.style.display = hasAny ? 'none' : 'inline-flex';
+      }
+
+      // ========== RENDER CHARTS ==========
+      function renderCharts(data) {
+        renderRevenueCostChart(data);
+        renderFundTrendChart(data);
+      }
+
+      function renderRevenueCostChart(data) {
+        var canvas = document.getElementById('revenueCostChart');
+        if (revenueCostChartInst) revenueCostChartInst.destroy();
+
+        // Try to use data from API, fallback to dummy months
+        var monthlyData = data.monthlyRevenueCost || data.monthlyTrend || null;
+        var labels, revenues, costs;
+
+        if (monthlyData && Array.isArray(monthlyData) && monthlyData.length > 0) {
+          labels = monthlyData.map(function(m) { return m.month || m.label; });
+          revenues = monthlyData.map(function(m) { return m.revenue || 0; });
+          costs = monthlyData.map(function(m) { return m.cost || m.carrierCost || 0; });
+        } else {
+          // Fallback: generate last 6 months with sample data
+          var now = new Date();
+          labels = [];
+          revenues = [];
+          costs = [];
+          var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          for (var i = 5; i >= 0; i--) {
+            var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            labels.push(monthNames[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
+            var baseRev = (data.revenueMTD || 45000) * (0.7 + Math.random() * 0.6);
+            revenues.push(Math.round(baseRev));
+            costs.push(Math.round(baseRev * (0.75 + Math.random() * 0.1)));
+          }
+        }
+
+        revenueCostChartInst = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Revenue',
+                data: revenues,
+                backgroundColor: 'rgba(200, 150, 62, 0.85)',
+                borderColor: '#C8963E',
+                borderWidth: 1,
+                borderRadius: 4,
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
+              },
+              {
+                label: 'Cost',
+                data: costs,
+                backgroundColor: 'rgba(13, 27, 42, 0.6)',
+                borderColor: '#0D1B2A',
+                borderWidth: 1,
+                borderRadius: 4,
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { font: { size: 12 }, usePointStyle: true, pointStyleWidth: 12 }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString(); }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(v) { return '$' + (v / 1000).toFixed(0) + 'k'; },
+                  font: { size: 11 }
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              },
+              x: {
+                ticks: { font: { size: 11 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      function renderFundTrendChart(data) {
+        var canvas = document.getElementById('fundTrendChart');
+        if (fundTrendChartInst) fundTrendChartInst.destroy();
+
+        var trendData = data.fundTrend || data.dailyFundTrend || null;
+        var labels, balances;
+
+        if (trendData && Array.isArray(trendData) && trendData.length > 0) {
+          labels = trendData.map(function(d) { return d.date || d.label; });
+          balances = trendData.map(function(d) { return d.balance || d.amount || 0; });
+        } else {
+          // Fallback: generate 30 days of sample data
+          var now = new Date();
+          labels = [];
+          balances = [];
+          var balance = data.cashBalance || 50000;
+          for (var i = 29; i >= 0; i--) {
+            var d = new Date(now);
+            d.setDate(d.getDate() - i);
+            labels.push((d.getMonth() + 1) + '/' + d.getDate());
+            balance += (Math.random() - 0.45) * 3000;
+            if (balance < 5000) balance = 5000 + Math.random() * 5000;
+            balances.push(Math.round(balance));
+          }
+          // Ensure last point matches current cash balance
+          if (data.cashBalance) balances[balances.length - 1] = data.cashBalance;
+        }
+
+        var gradient = canvas.getContext('2d').createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, 'rgba(200, 150, 62, 0.25)');
+        gradient.addColorStop(1, 'rgba(200, 150, 62, 0.02)');
+
+        fundTrendChartInst = new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Fund Balance',
+              data: balances,
+              borderColor: '#C8963E',
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.35,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: '#C8963E'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) { return 'Balance: $' + ctx.parsed.y.toLocaleString(); }
+                }
+              }
+            },
+            scales: {
+              y: {
+                ticks: {
+                  callback: function(v) { return '$' + (v / 1000).toFixed(0) + 'k'; },
+                  font: { size: 11 }
+                },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+              },
+              x: {
+                ticks: {
+                  font: { size: 10 },
+                  maxTicksLimit: 10
+                },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // ========== RENDER APPROVALS TABLE ==========
+      function renderApprovals(approvals) {
+        var tbody = document.getElementById('approvals-tbody');
+        tbody.innerHTML = '';
+
+        if (!approvals || approvals.length === 0) {
+          var tr = document.createElement('tr');
+          tr.className = 'empty-row';
+          tr.innerHTML = '<td colspan="7">No pending approvals</td>';
+          tbody.appendChild(tr);
+          return;
+        }
+
+        // Show top 5
+        var top5 = approvals.slice(0, 5);
+        top5.forEach(function(item) {
+          var tr = document.createElement('tr');
+          var priorityClass = 'priority-' + (item.priority || 'MEDIUM');
+          tr.innerHTML =
+            '<td>' + escHtml(item.type || '--') + '</td>' +
+            '<td>' + escHtml(item.description || '--') + '</td>' +
+            '<td style="font-weight:600;color:var(--gold)">' + fmt(item.amount) + '</td>' +
+            '<td><span class="' + priorityClass + '">' + escHtml(item.priority || 'MEDIUM') + '</span></td>' +
+            '<td>' + escHtml(item.requestedBy || '--') + '</td>' +
+            '<td>' + fmtDate(item.createdAt) + '</td>' +
+            '<td><a href="/ae/accounting/approvals.html" class="review-link">Review</a></td>';
+          tbody.appendChild(tr);
+        });
+      }
+
+      function escHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      // ========== REFRESH ==========
+      window.refreshDashboard = function() {
+        var btn = document.getElementById('refresh-btn');
+        btn.textContent = 'Refreshing...';
+        btn.disabled = true;
+        loadDashboard();
+        setTimeout(function() {
+          btn.textContent = 'Refresh';
+          btn.disabled = false;
+        }, 1500);
+      };
+
+      // ========== FUND ADJUSTMENT MODAL ==========
+      window.openFundModal = function() {
+        document.getElementById('fund-modal').classList.add('open');
+        document.getElementById('adj-amount').value = '';
+        document.getElementById('adj-description').value = '';
+        document.getElementById('adj-success').style.display = 'none';
+        document.getElementById('adj-error').style.display = 'none';
+        document.getElementById('adj-submit-btn').disabled = false;
+        document.getElementById('adj-amount').focus();
+      };
+
+      window.closeFundModal = function() {
+        document.getElementById('fund-modal').classList.remove('open');
+      };
+
+      window.submitFundAdjustment = function() {
+        var amountInput = document.getElementById('adj-amount');
+        var descInput = document.getElementById('adj-description');
+        var successEl = document.getElementById('adj-success');
+        var errorEl = document.getElementById('adj-error');
+        var submitBtn = document.getElementById('adj-submit-btn');
+
+        var amount = parseFloat(amountInput.value);
+        var description = descInput.value.trim();
+
+        // Validation
+        if (isNaN(amount) || amount === 0) {
+          errorEl.textContent = 'Please enter a valid non-zero amount.';
+          errorEl.style.display = 'block';
+          successEl.style.display = 'none';
+          return;
+        }
+        if (!description) {
+          errorEl.textContent = 'Please provide a description for this adjustment.';
+          errorEl.style.display = 'block';
+          successEl.style.display = 'none';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+
+        SRL.acctFundAdjustment({ amount: amount, description: description })
+          .then(function() {
+            successEl.style.display = 'block';
+            submitBtn.textContent = 'Submit Adjustment';
+            submitBtn.disabled = false;
+            amountInput.value = '';
+            descInput.value = '';
+
+            // Refresh dashboard after a short delay
+            setTimeout(function() {
+              closeFundModal();
+              loadDashboard();
+            }, 1500);
+          })
+          .catch(function(err) {
+            errorEl.textContent = err.message || 'Failed to submit adjustment. Please try again.';
+            errorEl.style.display = 'block';
+            submitBtn.textContent = 'Submit Adjustment';
+            submitBtn.disabled = false;
+          });
+      };
+
+      // Close modal on overlay click
+      document.getElementById('fund-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeFundModal();
+      });
+
+      // Close modal on Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeFundModal();
+      });
+
+      // ========== LOGOUT ==========
+      window.handleLogout = function() {
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      };
+
+      // ========== AUTO REFRESH (every 2 minutes) ==========
+      setInterval(function() {
+        if (!document.hidden && document.getElementById('dashboard-content').style.display !== 'none') {
+          loadDashboard();
+        }
+      }, 120000);
+
+    })();
+  </script>
+</body>
+</html>

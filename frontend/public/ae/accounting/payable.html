@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounts Payable — Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* --- Page Layout --- */
+    .page-layout { display: flex; min-height: 100vh; }
+    .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 0; background: var(--gray-50); }
+    .page-header { padding: 24px 32px 0; }
+    .page-header h1 { font-size: 24px; font-weight: 700; color: var(--navy); }
+    .page-header p { font-size: 14px; color: var(--gray-500); margin-top: 4px; }
+    .content-area { padding: 24px 32px; }
+
+    /* --- SRCPP Tier Banner --- */
+    .srcpp-banner {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 20px 24px; margin-bottom: 24px; border-top: 3px solid var(--gold);
+    }
+    .srcpp-banner h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 14px; }
+    .srcpp-tiers-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+    }
+    .srcpp-tier-card {
+      border-radius: var(--radius); padding: 14px 12px; text-align: center;
+      border: 1px solid var(--gray-200); transition: transform 0.1s;
+    }
+    .srcpp-tier-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .srcpp-tier-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .srcpp-tier-fee { font-size: 22px; font-weight: 700; color: var(--navy); }
+    .srcpp-tier-sla { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+    .tier-flash { border-color: #EF4444; background: rgba(239, 68, 68, 0.05); }
+    .tier-flash .srcpp-tier-name { color: #EF4444; }
+    .tier-express { border-color: #F97316; background: rgba(249, 115, 22, 0.05); }
+    .tier-express .srcpp-tier-name { color: #F97316; }
+    .tier-priority { border-color: #F59E0B; background: rgba(245, 158, 11, 0.05); }
+    .tier-priority .srcpp-tier-name { color: #F59E0B; }
+    .tier-partner { border-color: #3B82F6; background: rgba(59, 130, 246, 0.05); }
+    .tier-partner .srcpp-tier-name { color: #3B82F6; }
+    .tier-elite { border-color: #22C55E; background: rgba(34, 197, 94, 0.05); }
+    .tier-elite .srcpp-tier-name { color: #22C55E; }
+    .tier-standard { border-color: var(--gray-300); background: var(--gray-50); }
+    .tier-standard .srcpp-tier-name { color: var(--gray-500); }
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 16px 20px; margin-bottom: 24px;
+    }
+    .filter-bar select, .filter-bar input {
+      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      font-size: 13px; color: var(--gray-700); background: var(--white); outline: none;
+    }
+    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--gold); }
+    .filter-bar input[type="text"] { min-width: 200px; }
+    .filter-bar input[type="date"] { min-width: 140px; }
+    .filter-label { font-size: 12px; color: var(--gray-500); font-weight: 500; }
+    .filter-actions { margin-left: auto; display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-gold { background: var(--gold); color: var(--white); }
+    .btn-gold:hover { background: var(--gold-hover); }
+    .btn-outline { background: var(--white); color: var(--gray-600); border: 1px solid var(--gray-200); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* --- Tab Toggle --- */
+    .tab-row { display: flex; gap: 4px; margin-bottom: 24px; }
+    .tab-btn {
+      padding: 8px 20px; border-radius: 6px 6px 0 0; border: 1px solid var(--gray-200);
+      border-bottom: none; background: var(--white); color: var(--gray-500); font-size: 13px;
+      font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--gold); color: var(--white); border-color: var(--gold); }
+    .tab-btn:hover:not(.active) { color: var(--navy); background: var(--gray-100); }
+
+    /* --- AP Aging Summary --- */
+    .aging-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;
+    }
+    .aging-card {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 18px; text-align: center; transition: transform 0.1s; cursor: pointer;
+    }
+    .aging-card:hover { transform: translateY(-2px); }
+    .aging-card-label { font-size: 12px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .aging-card-amount { font-size: 24px; font-weight: 700; color: var(--navy); }
+    .aging-card-count { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+    .aging-card.current { border-top: 3px solid var(--green); }
+    .aging-card.days-1-15 { border-top: 3px solid #3B82F6; }
+    .aging-card.days-16-30 { border-top: 3px solid var(--amber); }
+    .aging-card.days-31-45 { border-top: 3px solid #F97316; }
+    .aging-card.days-45-plus { border-top: 3px solid var(--red); }
+
+    /* --- Approval Threshold Banner --- */
+    .threshold-banner {
+      display: none; align-items: center; gap: 10px;
+      background: rgba(245, 158, 11, 0.1); border: 1px solid var(--amber); border-radius: var(--radius);
+      padding: 10px 16px; margin-bottom: 16px; font-size: 13px; color: #92400E;
+    }
+    .threshold-banner.visible { display: flex; }
+    .threshold-banner svg { flex-shrink: 0; }
+
+    /* --- Table --- */
+    .table-wrapper {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table thead th {
+      text-align: left; padding: 12px 16px; font-size: 11px; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
+      background: var(--gray-50); white-space: nowrap;
+    }
+    .data-table tbody td {
+      padding: 12px 16px; font-size: 13px; color: var(--gray-700);
+      border-bottom: 1px solid var(--gray-100); vertical-align: middle;
+    }
+    .data-table tbody tr:hover { background: rgba(200, 150, 62, 0.03); }
+    .data-table tbody tr.high-value { background: rgba(245, 158, 11, 0.04); }
+
+    /* --- Tier Badges --- */
+    .tier-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .tier-badge.flash { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+    .tier-badge.express { background: rgba(249, 115, 22, 0.12); color: #EA580C; }
+    .tier-badge.priority { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+    .tier-badge.partner { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+    .tier-badge.elite { background: rgba(34, 197, 94, 0.12); color: #16A34A; }
+    .tier-badge.standard { background: rgba(100, 116, 139, 0.12); color: #475569; }
+
+    /* --- Status Badges --- */
+    .status-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .status-badge.pending { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+    .status-badge.prepared { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+    .status-badge.submitted { background: rgba(168, 85, 247, 0.12); color: #9333EA; }
+    .status-badge.approved { background: rgba(34, 197, 94, 0.12); color: #16A34A; }
+    .status-badge.paid { background: rgba(34, 197, 94, 0.2); color: #15803D; }
+    .status-badge.on_hold { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+    .status-badge.rejected { background: rgba(239, 68, 68, 0.2); color: #B91C1C; }
+
+    /* --- Action Buttons --- */
+    .action-btn {
+      padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500;
+      cursor: pointer; border: 1px solid; transition: all 0.15s; white-space: nowrap;
+    }
+    .action-btn.submit { background: rgba(168, 85, 247, 0.1); color: #9333EA; border-color: rgba(168, 85, 247, 0.3); }
+    .action-btn.submit:hover { background: rgba(168, 85, 247, 0.2); }
+    .action-btn.approve { background: rgba(34, 197, 94, 0.1); color: #16A34A; border-color: rgba(34, 197, 94, 0.3); }
+    .action-btn.approve:hover { background: rgba(34, 197, 94, 0.2); }
+    .action-btn.reject { background: rgba(239, 68, 68, 0.1); color: #DC2626; border-color: rgba(239, 68, 68, 0.3); }
+    .action-btn.reject:hover { background: rgba(239, 68, 68, 0.2); }
+    .action-btn.hold { background: rgba(245, 158, 11, 0.1); color: #D97706; border-color: rgba(245, 158, 11, 0.3); }
+    .action-btn.hold:hover { background: rgba(245, 158, 11, 0.2); }
+    .action-btn.mark-paid { background: rgba(34, 197, 94, 0.15); color: #15803D; border-color: rgba(34, 197, 94, 0.4); }
+    .action-btn.mark-paid:hover { background: rgba(34, 197, 94, 0.25); }
+    .action-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    /* --- Approval Indicator --- */
+    .approval-indicator {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 10px;
+      color: #92400E; background: rgba(245, 158, 11, 0.15); padding: 2px 6px;
+      border-radius: 4px; margin-left: 6px; font-weight: 600;
+    }
+
+    /* --- Quick Pay Queue --- */
+    .queue-sla-bar {
+      display: flex; align-items: center; gap: 6px; font-size: 12px;
+    }
+    .sla-progress {
+      flex: 1; height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden;
+    }
+    .sla-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .sla-fill.green { background: var(--green); }
+    .sla-fill.amber { background: var(--amber); }
+    .sla-fill.red { background: var(--red); }
+    .sla-text { font-size: 11px; color: var(--gray-500); white-space: nowrap; }
+
+    /* --- Pagination --- */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-top: 1px solid var(--gray-100);
+    }
+    .pagination-info { font-size: 13px; color: var(--gray-500); }
+    .pagination-btns { display: flex; gap: 4px; }
+    .page-btn {
+      padding: 6px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      background: var(--white); color: var(--gray-600); font-size: 13px; cursor: pointer;
+    }
+    .page-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .page-btn.active { background: var(--gold); color: var(--white); border-color: var(--gold); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* --- Modal --- */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      padding: 24px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 18px; color: var(--navy); margin-bottom: 16px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 12px; color: var(--gray-500); margin-bottom: 4px; font-weight: 500; }
+    .modal-field input, .modal-field select, .modal-field textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      font-size: 13px; color: var(--gray-700); outline: none;
+    }
+    .modal-field textarea { resize: vertical; min-height: 80px; }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--gold); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* --- Loading / Empty --- */
+    .loading-row td { text-align: center; padding: 40px; color: var(--gray-400); }
+    .empty-row td { text-align: center; padding: 40px; color: var(--gray-400); }
+    .loading-spinner {
+      display: inline-block; width: 24px; height: 24px; border: 3px solid var(--gray-200);
+      border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 1200px) {
+      .srcpp-tiers-grid { grid-template-columns: repeat(3, 1fr); }
+      .aging-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 1024px) {
+      .main-content { margin-left: 0; }
+      .content-area { padding: 20px 16px; }
+      .page-header { padding: 64px 16px 0; }
+    }
+    @media (max-width: 768px) {
+      .srcpp-tiers-grid { grid-template-columns: repeat(2, 1fr); }
+      .aging-grid { grid-template-columns: 1fr 1fr; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-actions { margin-left: 0; }
+      .data-table { font-size: 12px; }
+      .data-table thead th, .data-table tbody td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">Dashboard</a>
+        <a href="/ae/loads.html">Load Board</a>
+        <a href="/ae/caravan.html">The Caravan</a>
+        <a href="/ae/crm.html">CRM</a>
+        <a href="/ae/communications.html">Communications</a>
+        <a href="/ae/claims.html">Claims</a>
+        <a href="/ae/financials.html">Financials</a>
+        <a href="/ae/training.html">Training</a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+          <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
+          <a href="/ae/accounting/payable.html" class="active">Accounts Payable</a>
+          <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
+          <a href="/ae/accounting/fund.html">Factoring Fund</a>
+          <a href="/ae/accounting/reports.html">Reports</a>
+          <a href="/ae/accounting/approvals.html">Approvals</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer"><button onclick="handleLogout()">Sign Out</button></div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Accounts Payable</h1>
+        <p>Manage carrier payments, SRCPP tiers, and quick-pay processing</p>
+      </div>
+
+      <div class="content-area">
+        <!-- SRCPP Tier Fee Schedule Banner -->
+        <div class="srcpp-banner">
+          <h3>SRCPP Tier Fee Schedule</h3>
+          <div class="srcpp-tiers-grid" id="srcpp-tiers">
+            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+          </div>
+        </div>
+
+        <!-- Tab Toggle: All Payments / Quick-Pay Queue -->
+        <div class="tab-row">
+          <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">All Payments</button>
+          <button class="tab-btn" id="tab-queue" onclick="switchTab('queue')">Quick-Pay Queue</button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar" id="filter-bar">
+          <div>
+            <div class="filter-label">Status</div>
+            <select id="filter-status" onchange="applyFilters()">
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PREPARED">Prepared</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="APPROVED">Approved</option>
+              <option value="PAID">Paid</option>
+              <option value="ON_HOLD">On Hold</option>
+            </select>
+          </div>
+          <div>
+            <div class="filter-label">Payment Tier</div>
+            <select id="filter-tier" onchange="applyFilters()">
+              <option value="">All Tiers</option>
+              <option value="FLASH">Flash</option>
+              <option value="EXPRESS">Express</option>
+              <option value="PRIORITY">Priority</option>
+              <option value="PARTNER">Partner</option>
+              <option value="ELITE">Elite</option>
+              <option value="STANDARD">Standard</option>
+            </select>
+          </div>
+          <div>
+            <div class="filter-label">Search</div>
+            <input type="text" id="filter-search" placeholder="Payment #, carrier, load..." onkeyup="handleSearchKeyup(event)">
+          </div>
+          <div>
+            <div class="filter-label">From</div>
+            <input type="date" id="filter-from" onchange="applyFilters()">
+          </div>
+          <div>
+            <div class="filter-label">To</div>
+            <input type="date" id="filter-to" onchange="applyFilters()">
+          </div>
+          <div class="filter-actions">
+            <button class="btn-sm btn-gold" onclick="applyFilters()">Search</button>
+            <button class="btn-sm btn-outline" onclick="resetFilters()">Reset</button>
+          </div>
+        </div>
+
+        <!-- AP Aging Summary -->
+        <div class="aging-grid" id="aging-grid">
+          <div class="aging-card current">
+            <div class="aging-card-label">Current</div>
+            <div class="aging-card-amount" id="aging-current-amt">--</div>
+            <div class="aging-card-count" id="aging-current-cnt">-- payments</div>
+          </div>
+          <div class="aging-card days-1-15">
+            <div class="aging-card-label">1-15 Days</div>
+            <div class="aging-card-amount" id="aging-15-amt">--</div>
+            <div class="aging-card-count" id="aging-15-cnt">-- payments</div>
+          </div>
+          <div class="aging-card days-16-30">
+            <div class="aging-card-label">16-30 Days</div>
+            <div class="aging-card-amount" id="aging-30-amt">--</div>
+            <div class="aging-card-count" id="aging-30-cnt">-- payments</div>
+          </div>
+          <div class="aging-card days-31-45">
+            <div class="aging-card-label">31-45 Days</div>
+            <div class="aging-card-amount" id="aging-45-amt">--</div>
+            <div class="aging-card-count" id="aging-45-cnt">-- payments</div>
+          </div>
+          <div class="aging-card days-45-plus">
+            <div class="aging-card-label">45+ Days</div>
+            <div class="aging-card-amount" id="aging-over45-amt">--</div>
+            <div class="aging-card-count" id="aging-over45-cnt">-- payments</div>
+          </div>
+        </div>
+
+        <!-- $5K Approval Threshold Banner -->
+        <div class="threshold-banner" id="threshold-banner">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span id="threshold-text">Payments of $5,000 or above require Admin approval before processing.</span>
+        </div>
+
+        <!-- Payments Table (All Payments Tab) -->
+        <div id="tab-all-content">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Payment #</th>
+                  <th>Carrier</th>
+                  <th>Load Ref</th>
+                  <th>Route</th>
+                  <th>Gross Amount</th>
+                  <th>QP Fee</th>
+                  <th>Net Amount</th>
+                  <th>Tier</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="payments-tbody">
+                <tr class="loading-row">
+                  <td colspan="10"><div class="loading-spinner"></div><br>Loading payments...</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="pagination" id="pagination">
+              <div class="pagination-info" id="pagination-info">--</div>
+              <div class="pagination-btns" id="pagination-btns"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick-Pay Queue Tab -->
+        <div id="tab-queue-content" style="display:none">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Payment #</th>
+                  <th>Carrier</th>
+                  <th>Load Ref</th>
+                  <th>Tier</th>
+                  <th>Gross Amount</th>
+                  <th>QP Fee</th>
+                  <th>Net Amount</th>
+                  <th>SLA Deadline</th>
+                  <th>Time Left</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="queue-tbody">
+                <tr class="loading-row">
+                  <td colspan="11"><div class="loading-spinner"></div><br>Loading quick-pay queue...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reject / Hold Modal -->
+      <div class="modal-overlay" id="modal-reason">
+        <div class="modal">
+          <h3 id="modal-reason-title">Reason</h3>
+          <div class="modal-field">
+            <label for="modal-reason-text">Provide a reason</label>
+            <textarea id="modal-reason-text" placeholder="Enter the reason for this action..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-sm btn-outline" onclick="closeReasonModal()">Cancel</button>
+            <button class="btn-sm btn-gold" id="modal-reason-submit" onclick="submitReasonModal()">Confirm</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mark Paid Modal -->
+      <div class="modal-overlay" id="modal-paid">
+        <div class="modal">
+          <h3>Mark Payment as Paid</h3>
+          <div class="modal-field">
+            <label for="paid-method">Payment Method</label>
+            <select id="paid-method">
+              <option value="ACH">ACH Transfer</option>
+              <option value="WIRE">Wire Transfer</option>
+              <option value="CHECK">Check</option>
+              <option value="FACTORING">Factoring</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-sm btn-outline" onclick="closePaidModal()">Cancel</button>
+            <button class="btn-sm btn-gold" onclick="submitMarkPaid()">Mark Paid</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* =========================================
+       Accounts Payable — Controller
+       ========================================= */
+
+    var currentPage = 1;
+    var totalPages = 1;
+    var currentTab = 'all';
+    var approvalThreshold = 5000;
+    var reasonModalCallback = null;
+    var markPaidPaymentId = null;
+    var userRole = null;
+
+    // --- Auth Gate ---
+    function initAuth() {
+      SRL.getMe().then(function (res) {
+        var user = res.user || res;
+        var role = user.role || '';
+        userRole = role;
+        var allowed = ['ADMIN', 'CEO', 'ACCOUNTING'];
+        if (allowed.indexOf(role) === -1) {
+          document.querySelector('.content-area').innerHTML =
+            '<div style="text-align:center;padding:80px 20px;color:var(--gray-400)">' +
+            '<h2 style="color:var(--red);margin-bottom:12px">Access Denied</h2>' +
+            '<p>You do not have permission to view Accounts Payable.</p></div>';
+          return;
+        }
+        document.getElementById('user-name').textContent = user.firstName + ' ' + user.lastName;
+        document.getElementById('user-role').textContent = role;
+        loadAll();
+      }).catch(function () {
+        window.location.href = '/auth/login';
+      });
+    }
+
+    // --- Logout ---
+    function handleLogout() {
+      localStorage.removeItem('token');
+      window.location.href = '/auth/login';
+    }
+
+    // --- Load All Data ---
+    function loadAll() {
+      loadSRCPPTiers();
+      loadAPAging();
+      loadPayments();
+    }
+
+    // --- Format Currency ---
+    function fmtMoney(val) {
+      if (val === null || val === undefined) return '$0.00';
+      var num = parseFloat(val);
+      if (isNaN(num)) return '$0.00';
+      return '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // --- Format Date ---
+    function fmtDate(dateStr) {
+      if (!dateStr) return '--';
+      var d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // --- Format Time Remaining ---
+    function fmtTimeLeft(deadline) {
+      if (!deadline) return '--';
+      var now = Date.now();
+      var target = new Date(deadline).getTime();
+      var diff = target - now;
+      if (diff <= 0) return 'OVERDUE';
+      var hours = Math.floor(diff / (1000 * 60 * 60));
+      var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      if (hours >= 24) {
+        var days = Math.floor(hours / 24);
+        return days + 'd ' + (hours % 24) + 'h';
+      }
+      return hours + 'h ' + minutes + 'm';
+    }
+
+    // --- SLA Progress ---
+    function getSlaPercent(deadline, totalHours) {
+      if (!deadline) return 0;
+      var now = Date.now();
+      var target = new Date(deadline).getTime();
+      var diff = target - now;
+      if (diff <= 0) return 100;
+      var totalMs = (totalHours || 24) * 60 * 60 * 1000;
+      var elapsed = totalMs - diff;
+      return Math.max(0, Math.min(100, (elapsed / totalMs) * 100));
+    }
+
+    // --- SRCPP Tier Banner ---
+    function loadSRCPPTiers() {
+      SRL.acctSRCPPTiers().then(function (res) {
+        var tiers = res.tiers || [];
+        if (res.approvalThreshold) approvalThreshold = res.approvalThreshold;
+
+        var tierClassMap = {
+          'FLASH': 'tier-flash', 'EXPRESS': 'tier-express', 'PRIORITY': 'tier-priority',
+          'PARTNER': 'tier-partner', 'ELITE': 'tier-elite', 'STANDARD': 'tier-standard'
+        };
+
+        // Default tiers if API returns empty
+        var displayTiers = tiers.length > 0 ? tiers : [
+          { tier: 'FLASH', feePercent: 5, slaHours: 2, description: '2hr SLA' },
+          { tier: 'EXPRESS', feePercent: 3.5, slaHours: 24, description: '24hr SLA' },
+          { tier: 'PRIORITY', feePercent: 2, slaHours: 48, description: '48hr SLA' },
+          { tier: 'PARTNER', feePercent: 1.5, slaHours: 72, description: '72hr SLA' },
+          { tier: 'ELITE', feePercent: 0, slaHours: 120, description: '5 day SLA' },
+          { tier: 'STANDARD', feePercent: 0, slaHours: 720, description: 'Net 30' }
+        ];
+
+        var html = '';
+        displayTiers.forEach(function (t) {
+          var cls = tierClassMap[t.tier] || 'tier-standard';
+          var slaLabel = t.description || formatSLA(t.slaHours);
+          html += '<div class="srcpp-tier-card ' + cls + '">' +
+            '<div class="srcpp-tier-name">' + escHtml(t.tier) + '</div>' +
+            '<div class="srcpp-tier-fee">' + t.feePercent + '%</div>' +
+            '<div class="srcpp-tier-sla">' + escHtml(slaLabel) + '</div>' +
+            '</div>';
+        });
+        document.getElementById('srcpp-tiers').innerHTML = html;
+      }).catch(function () {
+        // Show default tiers on error
+        var defaults = [
+          { tier: 'FLASH', fee: '5%', sla: '2hr SLA', cls: 'tier-flash' },
+          { tier: 'EXPRESS', fee: '3.5%', sla: '24hr SLA', cls: 'tier-express' },
+          { tier: 'PRIORITY', fee: '2%', sla: '48hr SLA', cls: 'tier-priority' },
+          { tier: 'PARTNER', fee: '1.5%', sla: '72hr SLA', cls: 'tier-partner' },
+          { tier: 'ELITE', fee: '0%', sla: '5 day SLA', cls: 'tier-elite' },
+          { tier: 'STANDARD', fee: '0%', sla: 'Net 30', cls: 'tier-standard' }
+        ];
+        var html = '';
+        defaults.forEach(function (t) {
+          html += '<div class="srcpp-tier-card ' + t.cls + '">' +
+            '<div class="srcpp-tier-name">' + t.tier + '</div>' +
+            '<div class="srcpp-tier-fee">' + t.fee + '</div>' +
+            '<div class="srcpp-tier-sla">' + t.sla + '</div>' +
+            '</div>';
+        });
+        document.getElementById('srcpp-tiers').innerHTML = html;
+      });
+    }
+
+    function formatSLA(hours) {
+      if (!hours) return '--';
+      if (hours < 24) return hours + 'hr SLA';
+      if (hours < 168) return Math.round(hours / 24) + ' day SLA';
+      return 'Net ' + Math.round(hours / 24);
+    }
+
+    // --- AP Aging ---
+    function loadAPAging() {
+      SRL.acctAPAging().then(function (res) {
+        var buckets = res.buckets || {};
+        var summary = res.summary || {};
+
+        var current = buckets.current || summary.current || { amount: 0, count: 0 };
+        var d15 = buckets['1-15'] || buckets.days1to15 || summary['1-15'] || { amount: 0, count: 0 };
+        var d30 = buckets['16-30'] || buckets.days16to30 || summary['16-30'] || { amount: 0, count: 0 };
+        var d45 = buckets['31-45'] || buckets.days31to45 || summary['31-45'] || { amount: 0, count: 0 };
+        var over45 = buckets['45+'] || buckets.over45 || summary['45+'] || { amount: 0, count: 0 };
+
+        document.getElementById('aging-current-amt').textContent = fmtMoney(current.amount);
+        document.getElementById('aging-current-cnt').textContent = (current.count || 0) + ' payments';
+        document.getElementById('aging-15-amt').textContent = fmtMoney(d15.amount);
+        document.getElementById('aging-15-cnt').textContent = (d15.count || 0) + ' payments';
+        document.getElementById('aging-30-amt').textContent = fmtMoney(d30.amount);
+        document.getElementById('aging-30-cnt').textContent = (d30.count || 0) + ' payments';
+        document.getElementById('aging-45-amt').textContent = fmtMoney(d45.amount);
+        document.getElementById('aging-45-cnt').textContent = (d45.count || 0) + ' payments';
+        document.getElementById('aging-over45-amt').textContent = fmtMoney(over45.amount);
+        document.getElementById('aging-over45-cnt').textContent = (over45.count || 0) + ' payments';
+      }).catch(function () {
+        console.error('Failed to load AP aging data');
+      });
+    }
+
+    // --- Payments Table ---
+    function loadPayments() {
+      var params = buildFilterParams();
+      params.page = currentPage;
+
+      SRL.acctPayments(params).then(function (res) {
+        var payments = res.payments || [];
+        totalPages = res.totalPages || 1;
+        var total = res.total || 0;
+        var limit = res.limit || 20;
+
+        var hasHighValue = false;
+        renderPaymentsTable(payments);
+
+        // Check for threshold banner
+        payments.forEach(function (p) {
+          if (parseFloat(p.grossAmount || 0) >= approvalThreshold) {
+            hasHighValue = true;
+          }
+        });
+        var banner = document.getElementById('threshold-banner');
+        if (hasHighValue) {
+          banner.classList.add('visible');
+          document.getElementById('threshold-text').textContent =
+            'Payments of ' + fmtMoney(approvalThreshold) + ' or above require Admin approval before processing.';
+        } else {
+          banner.classList.remove('visible');
+        }
+
+        renderPagination(currentPage, totalPages, total, limit);
+      }).catch(function (err) {
+        document.getElementById('payments-tbody').innerHTML =
+          '<tr class="empty-row"><td colspan="10">Failed to load payments: ' + escHtml(err.message) + '</td></tr>';
+      });
+    }
+
+    function renderPaymentsTable(payments) {
+      var tbody = document.getElementById('payments-tbody');
+      if (!payments || payments.length === 0) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No payments found</td></tr>';
+        return;
+      }
+
+      var html = '';
+      payments.forEach(function (p) {
+        var gross = parseFloat(p.grossAmount || 0);
+        var isHigh = gross >= approvalThreshold;
+        var rowClass = isHigh ? ' class="high-value"' : '';
+
+        html += '<tr' + rowClass + '>';
+        html += '<td>' + escHtml(p.paymentNumber || '--');
+        if (isHigh) {
+          html += '<span class="approval-indicator">$5K+</span>';
+        }
+        html += '</td>';
+        html += '<td>' + escHtml(getCarrierName(p)) + '</td>';
+        html += '<td>' + escHtml(p.loadRef || p.loadReference || '--') + '</td>';
+        html += '<td>' + escHtml(p.route || getRoute(p)) + '</td>';
+        html += '<td>' + fmtMoney(p.grossAmount) + '</td>';
+        html += '<td>' + fmtMoney(p.qpFee || p.quickPayFee || 0) + '</td>';
+        html += '<td style="font-weight:600">' + fmtMoney(p.netAmount) + '</td>';
+        html += '<td>' + renderTierBadge(p.tier || p.paymentTier || 'STANDARD') + '</td>';
+        html += '<td>' + renderStatusBadge(p.status) + '</td>';
+        html += '<td>' + renderActions(p) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function getCarrierName(p) {
+      if (p.carrierName) return p.carrierName;
+      if (p.carrier && p.carrier.companyName) return p.carrier.companyName;
+      if (p.carrier && p.carrier.name) return p.carrier.name;
+      return '--';
+    }
+
+    function getRoute(p) {
+      if (p.route) return p.route;
+      if (p.origin && p.destination) return p.origin + ' > ' + p.destination;
+      if (p.load) {
+        var o = p.load.originCity || '';
+        var d = p.load.destinationCity || '';
+        if (o && d) return o + ' > ' + d;
+      }
+      return '--';
+    }
+
+    function renderTierBadge(tier) {
+      var t = (tier || '').toUpperCase();
+      var cls = t.toLowerCase();
+      return '<span class="tier-badge ' + cls + '">' + t + '</span>';
+    }
+
+    function renderStatusBadge(status) {
+      var s = (status || '').toUpperCase();
+      var cls = s.toLowerCase().replace(/ /g, '_');
+      var label = s.replace(/_/g, ' ');
+      return '<span class="status-badge ' + cls + '">' + label + '</span>';
+    }
+
+    function renderActions(p) {
+      var status = (p.status || '').toUpperCase();
+      var id = p.id;
+      var html = '<div class="action-btns">';
+
+      switch (status) {
+        case 'PREPARED':
+          html += '<button class="action-btn submit" onclick="handleSubmit(\'' + id + '\')">Submit</button>';
+          html += '<button class="action-btn hold" onclick="handleHold(\'' + id + '\')">Hold</button>';
+          break;
+        case 'SUBMITTED':
+          html += '<button class="action-btn approve" onclick="handleApprove(\'' + id + '\')">Approve</button>';
+          html += '<button class="action-btn reject" onclick="handleReject(\'' + id + '\')">Reject</button>';
+          html += '<button class="action-btn hold" onclick="handleHold(\'' + id + '\')">Hold</button>';
+          break;
+        case 'APPROVED':
+          html += '<button class="action-btn mark-paid" onclick="handleMarkPaid(\'' + id + '\')">Mark Paid</button>';
+          html += '<button class="action-btn hold" onclick="handleHold(\'' + id + '\')">Hold</button>';
+          break;
+        case 'ON_HOLD':
+          html += '<button class="action-btn submit" onclick="handleSubmit(\'' + id + '\')">Release</button>';
+          break;
+        case 'PENDING':
+          html += '<button class="action-btn hold" onclick="handleHold(\'' + id + '\')">Hold</button>';
+          break;
+        default:
+          html += '<span style="color:var(--gray-400);font-size:11px">--</span>';
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    // --- Quick-Pay Queue ---
+    function loadQueuePayments() {
+      SRL.acctPaymentQueue().then(function (res) {
+        var payments = res.payments || res.queue || [];
+        renderQueueTable(payments);
+      }).catch(function (err) {
+        document.getElementById('queue-tbody').innerHTML =
+          '<tr class="empty-row"><td colspan="11">Failed to load queue: ' + escHtml(err.message) + '</td></tr>';
+      });
+    }
+
+    function renderQueueTable(payments) {
+      var tbody = document.getElementById('queue-tbody');
+      if (!payments || payments.length === 0) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="11">No quick-pay items in queue</td></tr>';
+        return;
+      }
+
+      var slaHoursMap = { 'FLASH': 2, 'EXPRESS': 24, 'PRIORITY': 48, 'PARTNER': 72 };
+
+      var html = '';
+      payments.forEach(function (p) {
+        var tier = (p.tier || p.paymentTier || 'STANDARD').toUpperCase();
+        var slaHours = slaHoursMap[tier] || 24;
+        var deadline = p.slaDeadline || p.deadline;
+        var timeLeft = fmtTimeLeft(deadline);
+        var pct = getSlaPercent(deadline, slaHours);
+        var barColor = pct < 60 ? 'green' : (pct < 85 ? 'amber' : 'red');
+
+        html += '<tr>';
+        html += '<td>' + escHtml(p.paymentNumber || '--') + '</td>';
+        html += '<td>' + escHtml(getCarrierName(p)) + '</td>';
+        html += '<td>' + escHtml(p.loadRef || p.loadReference || '--') + '</td>';
+        html += '<td>' + renderTierBadge(tier) + '</td>';
+        html += '<td>' + fmtMoney(p.grossAmount) + '</td>';
+        html += '<td>' + fmtMoney(p.qpFee || p.quickPayFee || 0) + '</td>';
+        html += '<td style="font-weight:600">' + fmtMoney(p.netAmount) + '</td>';
+        html += '<td>' + fmtDate(deadline) + '</td>';
+        html += '<td>';
+        html += '<div class="queue-sla-bar">';
+        html += '<div class="sla-progress"><div class="sla-fill ' + barColor + '" style="width:' + pct + '%"></div></div>';
+        html += '<span class="sla-text' + (timeLeft === 'OVERDUE' ? '" style="color:var(--red);font-weight:600' : '') + '">' + timeLeft + '</span>';
+        html += '</div>';
+        html += '</td>';
+        html += '<td>' + renderStatusBadge(p.status) + '</td>';
+        html += '<td>' + renderActions(p) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    // --- Tab Switching ---
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-all').classList.toggle('active', tab === 'all');
+      document.getElementById('tab-queue').classList.toggle('active', tab === 'queue');
+      document.getElementById('tab-all-content').style.display = tab === 'all' ? '' : 'none';
+      document.getElementById('tab-queue-content').style.display = tab === 'queue' ? '' : 'none';
+
+      if (tab === 'queue') {
+        loadQueuePayments();
+      }
+    }
+
+    // --- Filters ---
+    function buildFilterParams() {
+      var params = {};
+      var status = document.getElementById('filter-status').value;
+      var tier = document.getElementById('filter-tier').value;
+      var search = document.getElementById('filter-search').value.trim();
+      var from = document.getElementById('filter-from').value;
+      var to = document.getElementById('filter-to').value;
+
+      if (status) params.status = status;
+      if (tier) params.paymentTier = tier;
+      if (search) params.search = search;
+      if (from) params.from = from;
+      if (to) params.to = to;
+
+      return params;
+    }
+
+    function applyFilters() {
+      currentPage = 1;
+      loadPayments();
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-tier').value = '';
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-from').value = '';
+      document.getElementById('filter-to').value = '';
+      applyFilters();
+    }
+
+    function handleSearchKeyup(e) {
+      if (e.key === 'Enter') applyFilters();
+    }
+
+    // --- Pagination ---
+    function renderPagination(page, total, totalItems, limit) {
+      var start = ((page - 1) * limit) + 1;
+      var end = Math.min(page * limit, totalItems);
+      document.getElementById('pagination-info').textContent =
+        'Showing ' + start + '-' + end + ' of ' + totalItems + ' payments';
+
+      var btnsHtml = '';
+      btnsHtml += '<button class="page-btn" onclick="goToPage(' + (page - 1) + ')"' +
+        (page <= 1 ? ' disabled' : '') + '>&laquo; Prev</button>';
+
+      var startPage = Math.max(1, page - 2);
+      var endPage = Math.min(total, page + 2);
+
+      if (startPage > 1) {
+        btnsHtml += '<button class="page-btn" onclick="goToPage(1)">1</button>';
+        if (startPage > 2) btnsHtml += '<span style="padding:6px 4px;color:var(--gray-400)">...</span>';
+      }
+
+      for (var i = startPage; i <= endPage; i++) {
+        btnsHtml += '<button class="page-btn' + (i === page ? ' active' : '') +
+          '" onclick="goToPage(' + i + ')">' + i + '</button>';
+      }
+
+      if (endPage < total) {
+        if (endPage < total - 1) btnsHtml += '<span style="padding:6px 4px;color:var(--gray-400)">...</span>';
+        btnsHtml += '<button class="page-btn" onclick="goToPage(' + total + ')">' + total + '</button>';
+      }
+
+      btnsHtml += '<button class="page-btn" onclick="goToPage(' + (page + 1) + ')"' +
+        (page >= total ? ' disabled' : '') + '>Next &raquo;</button>';
+
+      document.getElementById('pagination-btns').innerHTML = btnsHtml;
+    }
+
+    function goToPage(p) {
+      if (p < 1 || p > totalPages) return;
+      currentPage = p;
+      loadPayments();
+      window.scrollTo({ top: document.getElementById('payments-tbody').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    // --- Payment Actions ---
+    function handleSubmit(id) {
+      if (!confirm('Submit this payment for approval?')) return;
+      SRL.acctSubmitPayment(id).then(function () {
+        showToast('Payment submitted for approval');
+        loadPayments();
+        loadAPAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    function handleApprove(id) {
+      if (!confirm('Approve this payment?')) return;
+      SRL.acctApprovePayment(id).then(function () {
+        showToast('Payment approved');
+        loadPayments();
+        loadAPAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    function handleReject(id) {
+      openReasonModal('Reject Payment', function (reason) {
+        SRL.acctRejectPayment(id, { reason: reason }).then(function () {
+          showToast('Payment rejected');
+          loadPayments();
+          loadAPAging();
+        }).catch(function (err) { alert('Error: ' + err.message); });
+      });
+    }
+
+    function handleHold(id) {
+      openReasonModal('Hold Payment', function (reason) {
+        SRL.acctHoldPayment(id, { reason: reason }).then(function () {
+          showToast('Payment placed on hold');
+          loadPayments();
+          loadAPAging();
+        }).catch(function (err) { alert('Error: ' + err.message); });
+      });
+    }
+
+    function handleMarkPaid(id) {
+      markPaidPaymentId = id;
+      document.getElementById('paid-method').value = 'ACH';
+      document.getElementById('modal-paid').classList.add('open');
+    }
+
+    function submitMarkPaid() {
+      if (!markPaidPaymentId) return;
+      var method = document.getElementById('paid-method').value;
+      SRL.acctMarkPaymentPaid(markPaidPaymentId, { paymentMethod: method }).then(function () {
+        showToast('Payment marked as paid');
+        closePaidModal();
+        loadPayments();
+        loadAPAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    function closePaidModal() {
+      document.getElementById('modal-paid').classList.remove('open');
+      markPaidPaymentId = null;
+    }
+
+    // --- Reason Modal ---
+    function openReasonModal(title, callback) {
+      document.getElementById('modal-reason-title').textContent = title;
+      document.getElementById('modal-reason-text').value = '';
+      reasonModalCallback = callback;
+      document.getElementById('modal-reason').classList.add('open');
+    }
+
+    function closeReasonModal() {
+      document.getElementById('modal-reason').classList.remove('open');
+      reasonModalCallback = null;
+    }
+
+    function submitReasonModal() {
+      var reason = document.getElementById('modal-reason-text').value.trim();
+      if (!reason) {
+        alert('Please provide a reason.');
+        return;
+      }
+      if (reasonModalCallback) {
+        reasonModalCallback(reason);
+      }
+      closeReasonModal();
+    }
+
+    // --- Toast ---
+    function showToast(msg) {
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--navy);color:var(--white);' +
+        'padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999;box-shadow:var(--shadow-lg);' +
+        'animation:slideIn 0.3s ease;';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(function () {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(function () { toast.remove(); }, 300);
+      }, 3000);
+    }
+
+    // --- Escape HTML ---
+    function escHtml(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    // --- Close modals on overlay click ---
+    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) {
+          overlay.classList.remove('open');
+        }
+      });
+    });
+
+    // --- Init ---
+    initAuth();
+  </script>
+</body>
+</html>

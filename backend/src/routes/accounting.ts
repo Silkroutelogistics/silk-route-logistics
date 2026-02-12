@@ -42,6 +42,16 @@ import {
   getWeeklyReport,
   getMonthlyReport,
   exportData,
+  getApprovals,
+  getApprovalById,
+  reviewApproval,
+  getFundHealth,
+  getFinancialReports,
+  generateFinancialReport,
+  deleteFinancialReport,
+  getAPAging,
+  getSRCPPTierSchedule,
+  getAccountingDashboardEnhanced,
 } from "../controllers/accountingController";
 
 const router = Router();
@@ -51,6 +61,7 @@ router.use(authenticate);
 
 // --- Dashboard ---
 router.get("/dashboard", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDashboard);
+router.get("/dashboard/enhanced", authorize("ADMIN", "CEO", "ACCOUNTING"), getAccountingDashboardEnhanced);
 
 // --- Invoices (AR) ---
 router.get("/invoices/aging", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getInvoiceAging);
@@ -64,6 +75,8 @@ router.post("/invoices/:id/void", authorize("ADMIN", "CEO"), voidInvoice);
 
 // --- Carrier Payments (AP) ---
 router.get("/payments/queue", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPaymentQueue);
+router.get("/payments/aging", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getAPAging);
+router.get("/payments/srcpp-tiers", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getSRCPPTierSchedule);
 router.get("/payments", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPayments);
 router.get("/payments/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPaymentById);
 router.post("/payments/prepare", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), preparePayment);
@@ -91,9 +104,15 @@ router.put("/credit/:id", authorize("ADMIN", "CEO"), updateCredit);
 
 // --- Factoring Fund ---
 router.get("/fund/balance", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getFundBalance);
+router.get("/fund/health", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getFundHealth);
 router.get("/fund/transactions", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getFundTransactions);
 router.get("/fund/performance", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getFundPerformance);
 router.post("/fund/adjustment", authorize("ADMIN", "CEO"), fundAdjustment);
+
+// --- Approval Queue ---
+router.get("/approvals", authorize("ADMIN", "CEO"), getApprovals);
+router.get("/approvals/:id", authorize("ADMIN", "CEO"), getApprovalById);
+router.post("/approvals/:id/review", authorize("ADMIN", "CEO"), reviewApproval);
 
 // --- P&L / Profitability ---
 router.get("/pnl/loads", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getLoadPnl);
@@ -101,7 +120,10 @@ router.get("/pnl/lanes", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getL
 router.get("/pnl/carriers", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getCarrierProfitability);
 router.get("/pnl/shippers", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getShipperProfitability);
 
-// --- Reports ---
+// --- Financial Reports ---
+router.get("/reports/stored", authorize("ADMIN", "CEO", "ACCOUNTING"), getFinancialReports);
+router.post("/reports/generate", authorize("ADMIN", "CEO", "ACCOUNTING"), generateFinancialReport);
+router.delete("/reports/:id", authorize("ADMIN", "CEO"), deleteFinancialReport);
 router.get("/reports/weekly", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getWeeklyReport);
 router.get("/reports/monthly", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getMonthlyReport);
 

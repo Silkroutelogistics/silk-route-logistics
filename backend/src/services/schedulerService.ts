@@ -6,6 +6,7 @@ import { processDueCheckCalls } from "./checkCallAutomation";
 import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
 import { processShipperTransitUpdates } from "./shipperNotificationService";
+import { processARReminders } from "../controllers/accountingController";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -337,6 +338,70 @@ export function startSchedulers() {
   cron.schedule("0 21 * * *", async () => {
     console.log("[Scheduler] Running shipper transit updates (4 PM ET)...");
     await withLock("shipper-transit-pm", 10 * 60 * 1000, processShipperTransitUpdates);
+  });
+
+  // Accounting: Daily AR reminders at 6 AM ET (11:00 UTC)
+  cron.schedule("0 11 * * *", async () => {
+    console.log("[Scheduler] Running daily AR reminder processing...");
+    await withLock("ar-reminders-daily", 10 * 60 * 1000, async () => {
+      const result = await processARReminders();
+      console.log(`[Scheduler] AR reminders: ${result.remindersSent} sent of ${result.processed} processed`);
+    });
+  });
+
+  // Accounting: Weekly AP aging check — Monday 7 AM ET (12:00 UTC)
+  cron.schedule("0 12 * * 1", async () => {
+    console.log("[Scheduler] Running weekly AP aging check...");
+    await withLock("ap-aging-weekly", 10 * 60 * 1000, async () => {
+      const overduePayments = await prisma.carrierPay.findMany({
+        where: {
+          status: { in: ["PENDING", "PREPARED", "SUBMITTED"] },
+          dueDate: { lt: new Date() },
+        },
+        select: { id: true, paymentNumber: true, netAmount: true, dueDate: true },
+      });
+      console.log(`[Scheduler] Weekly AP: ${overduePayments.length} overdue carrier payments found`);
+    });
+  });
+
+  // Accounting: Monthly financial report generation — 1st of month 8 AM ET (13:00 UTC)
+  cron.schedule("0 13 1 * *", async () => {
+    console.log("[Scheduler] Running monthly financial report generation...");
+    await withLock("monthly-report-gen", 15 * 60 * 1000, async () => {
+      const now = new Date();
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      const monthName = prevMonth.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+      // Gather summary
+      const loads = await prisma.load.findMany({
+        where: {
+          status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
+          deliveryDate: { gte: prevMonth, lte: prevMonthEnd },
+        },
+        select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true },
+      });
+      const revenue = loads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
+      const cost = loads.reduce((s, l) => s + (l.carrierRate ?? 0), 0);
+      const margin = loads.reduce((s, l) => s + (l.grossMargin ?? 0), 0);
+      const margins = loads.filter((l) => l.marginPercent !== null).map((l) => l.marginPercent!);
+      const avgMargin = margins.length ? margins.reduce((s, m) => s + m, 0) / margins.length : 0;
+
+      await prisma.financialReport.create({
+        data: {
+          reportType: "MONTHLY",
+          title: `Monthly Financial Report — ${monthName}`,
+          periodStart: prevMonth,
+          periodEnd: prevMonthEnd,
+          status: "COMPLETED",
+          generatedAt: now,
+          summary: {
+            loads: { count: loads.length, revenue, cost, margin, avgMarginPercent: Math.round(avgMargin * 100) / 100 },
+          },
+        },
+      });
+      console.log(`[Scheduler] Monthly report generated for ${monthName}`);
+    });
   });
 
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);

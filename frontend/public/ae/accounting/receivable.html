@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounts Receivable — Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* --- Page Layout --- */
+    .page-layout { display: flex; min-height: 100vh; }
+    .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 0; background: var(--gray-50); }
+    .page-header { padding: 24px 32px 0; }
+    .page-header h1 { font-size: 24px; font-weight: 700; color: var(--navy); }
+    .page-header p { font-size: 14px; color: var(--gray-500); margin-top: 4px; }
+    .page-header-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .content-area { padding: 24px 32px; }
+
+    /* --- AR Aging Summary --- */
+    .aging-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;
+    }
+    .aging-card {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 18px; text-align: center; transition: transform 0.1s; cursor: pointer;
+    }
+    .aging-card:hover { transform: translateY(-2px); }
+    .aging-card-label { font-size: 12px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .aging-card-amount { font-size: 24px; font-weight: 700; color: var(--navy); }
+    .aging-card-count { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+    .aging-card.current { border-top: 3px solid var(--green); }
+    .aging-card.days-1-30 { border-top: 3px solid var(--amber); }
+    .aging-card.days-31-60 { border-top: 3px solid #F97316; }
+    .aging-card.days-61-90 { border-top: 3px solid #EF4444; }
+    .aging-card.days-90-plus { border-top: 3px solid #B91C1C; }
+
+    /* --- Reminder Schedule Banner --- */
+    .reminder-banner {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 20px 24px; margin-bottom: 24px; border-left: 4px solid var(--gold);
+    }
+    .reminder-banner h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 14px; }
+    .reminder-timeline {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+    }
+    .reminder-step {
+      text-align: center; padding: 12px 8px; border-radius: var(--radius);
+      border: 1px solid var(--gray-200); position: relative;
+    }
+    .reminder-step-dot {
+      width: 10px; height: 10px; border-radius: 50%; margin: 0 auto 8px;
+    }
+    .reminder-step-day { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .reminder-step-action { font-size: 11px; color: var(--gray-500); line-height: 1.3; }
+    .step-green { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.03); }
+    .step-green .reminder-step-dot { background: var(--green); }
+    .step-green .reminder-step-day { color: #16A34A; }
+    .step-blue { border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.03); }
+    .step-blue .reminder-step-dot { background: #3B82F6; }
+    .step-blue .reminder-step-day { color: #2563EB; }
+    .step-amber { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.03); }
+    .step-amber .reminder-step-dot { background: var(--amber); }
+    .step-amber .reminder-step-day { color: #D97706; }
+    .step-orange { border-color: rgba(249, 115, 22, 0.3); background: rgba(249, 115, 22, 0.03); }
+    .step-orange .reminder-step-dot { background: #F97316; }
+    .step-orange .reminder-step-day { color: #EA580C; }
+    .step-red { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.03); }
+    .step-red .reminder-step-dot { background: var(--red); }
+    .step-red .reminder-step-day { color: #DC2626; }
+    .step-dark-red { border-color: rgba(185, 28, 28, 0.3); background: rgba(185, 28, 28, 0.03); }
+    .step-dark-red .reminder-step-dot { background: #B91C1C; }
+    .step-dark-red .reminder-step-day { color: #B91C1C; }
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 16px 20px; margin-bottom: 24px;
+    }
+    .filter-bar select, .filter-bar input {
+      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      font-size: 13px; color: var(--gray-700); background: var(--white); outline: none;
+    }
+    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--gold); }
+    .filter-bar input[type="text"] { min-width: 200px; }
+    .filter-bar input[type="date"] { min-width: 140px; }
+    .filter-label { font-size: 12px; color: var(--gray-500); font-weight: 500; }
+    .filter-actions { margin-left: auto; display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-gold { background: var(--gold); color: var(--white); }
+    .btn-gold:hover { background: var(--gold-hover); }
+    .btn-outline { background: var(--white); color: var(--gray-600); border: 1px solid var(--gray-200); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-navy { background: var(--navy); color: var(--white); }
+    .btn-navy:hover { background: var(--navy-light); }
+
+    /* --- Table --- */
+    .table-wrapper {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table thead th {
+      text-align: left; padding: 12px 16px; font-size: 11px; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
+      background: var(--gray-50); white-space: nowrap;
+    }
+    .data-table tbody td {
+      padding: 12px 16px; font-size: 13px; color: var(--gray-700);
+      border-bottom: 1px solid var(--gray-100); vertical-align: middle;
+    }
+    .data-table tbody tr:hover { background: rgba(200, 150, 62, 0.03); }
+
+    /* --- Status Badges --- */
+    .status-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .status-badge.draft { background: rgba(100, 116, 139, 0.12); color: #475569; }
+    .status-badge.sent { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+    .status-badge.overdue { background: rgba(239, 68, 68, 0.15); color: #DC2626; }
+    .status-badge.paid { background: rgba(34, 197, 94, 0.15); color: #15803D; }
+    .status-badge.void { background: rgba(100, 116, 139, 0.15); color: #64748B; }
+    .status-badge.partial { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+
+    /* --- Overdue Indicator --- */
+    .overdue-color.current { color: var(--green); }
+    .overdue-color.days-1-30 { color: var(--amber); }
+    .overdue-color.days-31-60 { color: #F97316; }
+    .overdue-color.days-60-plus { color: var(--red); font-weight: 600; }
+    .overdue-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px;
+      font-weight: 600; background: rgba(239, 68, 68, 0.12); color: #DC2626;
+      text-transform: uppercase; margin-left: 6px;
+    }
+
+    /* --- Action Buttons --- */
+    .action-btn {
+      padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500;
+      cursor: pointer; border: 1px solid; transition: all 0.15s; white-space: nowrap;
+    }
+    .action-btn.send { background: rgba(59, 130, 246, 0.1); color: #2563EB; border-color: rgba(59, 130, 246, 0.3); }
+    .action-btn.send:hover { background: rgba(59, 130, 246, 0.2); }
+    .action-btn.mark-paid { background: rgba(34, 197, 94, 0.1); color: #16A34A; border-color: rgba(34, 197, 94, 0.3); }
+    .action-btn.mark-paid:hover { background: rgba(34, 197, 94, 0.2); }
+    .action-btn.void-btn { background: rgba(100, 116, 139, 0.1); color: #475569; border-color: rgba(100, 116, 139, 0.3); }
+    .action-btn.void-btn:hover { background: rgba(100, 116, 139, 0.2); }
+    .action-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    /* --- Pagination --- */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-top: 1px solid var(--gray-100);
+    }
+    .pagination-info { font-size: 13px; color: var(--gray-500); }
+    .pagination-btns { display: flex; gap: 4px; }
+    .page-btn {
+      padding: 6px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      background: var(--white); color: var(--gray-600); font-size: 13px; cursor: pointer;
+    }
+    .page-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .page-btn.active { background: var(--gold); color: var(--white); border-color: var(--gold); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* --- Modal --- */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      padding: 24px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 18px; color: var(--navy); margin-bottom: 16px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 12px; color: var(--gray-500); margin-bottom: 4px; font-weight: 500; }
+    .modal-field input, .modal-field select, .modal-field textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      font-size: 13px; color: var(--gray-700); outline: none;
+    }
+    .modal-field textarea { resize: vertical; min-height: 80px; }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--gold); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* --- Line Items --- */
+    .line-items-container { margin-bottom: 14px; }
+    .line-item-row {
+      display: grid; grid-template-columns: 3fr 1fr 1fr 32px; gap: 8px;
+      align-items: center; margin-bottom: 8px;
+    }
+    .line-item-row input {
+      padding: 6px 10px; border: 1px solid var(--gray-200); border-radius: var(--radius);
+      font-size: 13px; color: var(--gray-700); outline: none;
+    }
+    .line-item-row input:focus { border-color: var(--gold); }
+    .line-item-header {
+      display: grid; grid-template-columns: 3fr 1fr 1fr 32px; gap: 8px;
+      font-size: 11px; color: var(--gray-400); margin-bottom: 4px; font-weight: 500;
+    }
+    .line-item-remove {
+      width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--gray-200);
+      background: var(--white); color: var(--red); cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .line-item-remove:hover { background: rgba(239, 68, 68, 0.1); }
+    .add-line-btn {
+      font-size: 12px; color: var(--gold); background: none; border: none; cursor: pointer;
+      padding: 4px 0; font-weight: 500;
+    }
+    .add-line-btn:hover { text-decoration: underline; }
+    .line-items-total {
+      text-align: right; font-size: 14px; font-weight: 600; color: var(--navy);
+      padding-top: 8px; border-top: 1px solid var(--gray-200);
+    }
+
+    /* --- Loading / Empty --- */
+    .loading-row td { text-align: center; padding: 40px; color: var(--gray-400); }
+    .empty-row td { text-align: center; padding: 40px; color: var(--gray-400); }
+    .loading-spinner {
+      display: inline-block; width: 24px; height: 24px; border: 3px solid var(--gray-200);
+      border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 1200px) {
+      .aging-grid { grid-template-columns: repeat(3, 1fr); }
+      .reminder-timeline { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 1024px) {
+      .main-content { margin-left: 0; }
+      .content-area { padding: 20px 16px; }
+      .page-header { padding: 64px 16px 0; }
+    }
+    @media (max-width: 768px) {
+      .aging-grid { grid-template-columns: 1fr 1fr; }
+      .reminder-timeline { grid-template-columns: 1fr 1fr; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-actions { margin-left: 0; }
+      .data-table { font-size: 12px; }
+      .data-table thead th, .data-table tbody td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">Dashboard</a>
+        <a href="/ae/loads.html">Load Board</a>
+        <a href="/ae/caravan.html">The Caravan</a>
+        <a href="/ae/crm.html">CRM</a>
+        <a href="/ae/communications.html">Communications</a>
+        <a href="/ae/claims.html">Claims</a>
+        <a href="/ae/financials.html">Financials</a>
+        <a href="/ae/training.html">Training</a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+          <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
+          <a href="/ae/accounting/payable.html">Accounts Payable</a>
+          <a href="/ae/accounting/receivable.html" class="active">Accounts Receivable</a>
+          <a href="/ae/accounting/fund.html">Factoring Fund</a>
+          <a href="/ae/accounting/reports.html">Reports</a>
+          <a href="/ae/accounting/approvals.html">Approvals</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer"><button onclick="handleLogout()">Sign Out</button></div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Accounts Receivable</h1>
+        <p>Manage shipper invoices, aging, and collection workflows</p>
+        <div class="page-header-actions">
+          <button class="btn-sm btn-gold" onclick="openCreateInvoiceModal()">+ Create Invoice</button>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <!-- AR Aging Summary -->
+        <div class="aging-grid" id="aging-grid">
+          <div class="aging-card current">
+            <div class="aging-card-label">Current</div>
+            <div class="aging-card-amount" id="aging-current-amt">--</div>
+            <div class="aging-card-count" id="aging-current-cnt">-- invoices</div>
+          </div>
+          <div class="aging-card days-1-30">
+            <div class="aging-card-label">1-30 Days</div>
+            <div class="aging-card-amount" id="aging-30-amt">--</div>
+            <div class="aging-card-count" id="aging-30-cnt">-- invoices</div>
+          </div>
+          <div class="aging-card days-31-60">
+            <div class="aging-card-label">31-60 Days</div>
+            <div class="aging-card-amount" id="aging-60-amt">--</div>
+            <div class="aging-card-count" id="aging-60-cnt">-- invoices</div>
+          </div>
+          <div class="aging-card days-61-90">
+            <div class="aging-card-label">61-90 Days</div>
+            <div class="aging-card-amount" id="aging-90-amt">--</div>
+            <div class="aging-card-count" id="aging-90-cnt">-- invoices</div>
+          </div>
+          <div class="aging-card days-90-plus">
+            <div class="aging-card-label">90+ Days</div>
+            <div class="aging-card-amount" id="aging-over90-amt">--</div>
+            <div class="aging-card-count" id="aging-over90-cnt">-- invoices</div>
+          </div>
+        </div>
+
+        <!-- Auto-Reminder Schedule Banner -->
+        <div class="reminder-banner">
+          <h3>Auto-Reminder Schedule</h3>
+          <div class="reminder-timeline">
+            <div class="reminder-step step-green">
+              <div class="reminder-step-dot"></div>
+              <div class="reminder-step-day">7 Days Before</div>
+              <div class="reminder-step-action">Friendly reminder sent to shipper</div>
+            </div>
+            <div class="reminder-step step-blue">
+              <div class="reminder-step-dot"></div>
+              <div class="reminder-step-day">Due Date</div>
+              <div class="reminder-step-action">Payment due today notification</div>
+            </div>
+            <div class="reminder-step step-amber">
+              <div class="reminder-step-dot"></div>
+              <div class="reminder-step-day">7 Days Overdue</div>
+              <div class="reminder-step-action">First overdue notice</div>
+            </div>
+            <div class="reminder-step step-orange">
+              <div class="reminder-step-dot"></div>
+              <div class="reminder-step-day">30 Days Overdue</div>
+              <div class="reminder-step-action">Second notice + credit downgrade</div>
+            </div>
+            <div class="reminder-step step-red">
+              <div class="reminder-step-dot"></div>
+              <div class="reminder-step-day">60 Days Overdue</div>
+              <div class="reminder-step-action">Escalation warning issued</div>
+            </div>
+            <div class="reminder-step step-dark-red">
+              <div class="reminder-step-dot"></div>
+              <div class="reminder-step-day">90 Days Overdue</div>
+              <div class="reminder-step-action">Final notice + auto credit block</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div>
+            <div class="filter-label">Status</div>
+            <select id="filter-status" onchange="applyFilters()">
+              <option value="">All Statuses</option>
+              <option value="DRAFT">Draft</option>
+              <option value="SENT">Sent</option>
+              <option value="OVERDUE">Overdue</option>
+              <option value="PAID">Paid</option>
+              <option value="VOID">Void</option>
+              <option value="PARTIAL">Partial</option>
+            </select>
+          </div>
+          <div>
+            <div class="filter-label">Customer Search</div>
+            <input type="text" id="filter-search" placeholder="Invoice #, shipper, load..." onkeyup="handleSearchKeyup(event)">
+          </div>
+          <div>
+            <div class="filter-label">From</div>
+            <input type="date" id="filter-from" onchange="applyFilters()">
+          </div>
+          <div>
+            <div class="filter-label">To</div>
+            <input type="date" id="filter-to" onchange="applyFilters()">
+          </div>
+          <div class="filter-actions">
+            <button class="btn-sm btn-gold" onclick="applyFilters()">Search</button>
+            <button class="btn-sm btn-outline" onclick="resetFilters()">Reset</button>
+          </div>
+        </div>
+
+        <!-- Invoices Table -->
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Shipper</th>
+                <th>Load Ref</th>
+                <th>Route</th>
+                <th>Amount</th>
+                <th>Due Date</th>
+                <th>Days Outstanding</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="invoices-tbody">
+              <tr class="loading-row">
+                <td colspan="9"><div class="loading-spinner"></div><br>Loading invoices...</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination" id="pagination">
+            <div class="pagination-info" id="pagination-info">--</div>
+            <div class="pagination-btns" id="pagination-btns"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create Invoice Modal -->
+      <div class="modal-overlay" id="modal-create">
+        <div class="modal">
+          <h3>Create Invoice</h3>
+          <div class="modal-field">
+            <label for="create-load-id">Load ID / Reference</label>
+            <input type="text" id="create-load-id" placeholder="Enter load ID or reference number">
+          </div>
+          <div class="modal-field">
+            <label for="create-due-date">Due Date</label>
+            <input type="date" id="create-due-date">
+          </div>
+
+          <div class="line-items-container">
+            <label style="font-size:12px;color:var(--gray-500);font-weight:500;margin-bottom:8px;display:block;">Line Items</label>
+            <div class="line-item-header">
+              <span>Description</span>
+              <span>Qty</span>
+              <span>Unit Price</span>
+              <span></span>
+            </div>
+            <div id="line-items-list">
+              <div class="line-item-row" data-idx="0">
+                <input type="text" placeholder="Freight charges" class="li-desc">
+                <input type="number" placeholder="1" value="1" min="1" class="li-qty" onchange="recalcLineItems()">
+                <input type="number" placeholder="0.00" step="0.01" class="li-price" onchange="recalcLineItems()">
+                <button class="line-item-remove" onclick="removeLineItem(this)" title="Remove">&times;</button>
+              </div>
+            </div>
+            <button class="add-line-btn" onclick="addLineItem()">+ Add Line Item</button>
+            <div class="line-items-total" id="line-items-total">Total: $0.00</div>
+          </div>
+
+          <div class="modal-field">
+            <label for="create-amount">Invoice Amount (auto-calculated or override)</label>
+            <input type="number" id="create-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="modal-field">
+            <label for="create-notes">Notes (optional)</label>
+            <textarea id="create-notes" placeholder="Additional notes for this invoice..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-sm btn-outline" onclick="closeCreateInvoiceModal()">Cancel</button>
+            <button class="btn-sm btn-gold" onclick="submitCreateInvoice()">Create Invoice</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mark Paid Modal -->
+      <div class="modal-overlay" id="modal-paid">
+        <div class="modal">
+          <h3>Mark Invoice as Paid</h3>
+          <div class="modal-field">
+            <label for="paid-amount">Amount Paid</label>
+            <input type="number" id="paid-amount" placeholder="0.00" step="0.01">
+          </div>
+          <div class="modal-field">
+            <label for="paid-reference">Payment Reference</label>
+            <input type="text" id="paid-reference" placeholder="Check #, wire ref, etc.">
+          </div>
+          <div class="modal-field">
+            <label for="paid-method">Payment Method</label>
+            <select id="paid-method">
+              <option value="ACH">ACH Transfer</option>
+              <option value="WIRE">Wire Transfer</option>
+              <option value="CHECK">Check</option>
+              <option value="CREDIT_CARD">Credit Card</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-sm btn-outline" onclick="closePaidModal()">Cancel</button>
+            <button class="btn-sm btn-gold" onclick="submitMarkPaid()">Mark Paid</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Void Invoice Modal -->
+      <div class="modal-overlay" id="modal-void">
+        <div class="modal">
+          <h3>Void Invoice</h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">
+            This action cannot be undone. The invoice will be permanently voided.
+          </p>
+          <div class="modal-field">
+            <label for="void-reason">Reason for voiding</label>
+            <textarea id="void-reason" placeholder="Explain why this invoice is being voided..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-sm btn-outline" onclick="closeVoidModal()">Cancel</button>
+            <button class="btn-sm" style="background:var(--red);color:var(--white)" onclick="submitVoidInvoice()">Void Invoice</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* =========================================
+       Accounts Receivable — Controller
+       ========================================= */
+
+    var currentPage = 1;
+    var totalPages = 1;
+    var userRole = null;
+    var markPaidInvoiceId = null;
+    var voidInvoiceId = null;
+    var lineItemIndex = 1;
+
+    // --- Auth Gate ---
+    function initAuth() {
+      SRL.getMe().then(function (res) {
+        var user = res.user || res;
+        var role = user.role || '';
+        userRole = role;
+        var allowed = ['ADMIN', 'CEO', 'ACCOUNTING'];
+        if (allowed.indexOf(role) === -1) {
+          document.querySelector('.content-area').innerHTML =
+            '<div style="text-align:center;padding:80px 20px;color:var(--gray-400)">' +
+            '<h2 style="color:var(--red);margin-bottom:12px">Access Denied</h2>' +
+            '<p>You do not have permission to view Accounts Receivable.</p></div>';
+          return;
+        }
+        document.getElementById('user-name').textContent = user.firstName + ' ' + user.lastName;
+        document.getElementById('user-role').textContent = role;
+        loadAll();
+      }).catch(function () {
+        window.location.href = '/auth/login';
+      });
+    }
+
+    // --- Logout ---
+    function handleLogout() {
+      localStorage.removeItem('token');
+      window.location.href = '/auth/login';
+    }
+
+    // --- Load All Data ---
+    function loadAll() {
+      loadInvoiceAging();
+      loadInvoices();
+    }
+
+    // --- Format Currency ---
+    function fmtMoney(val) {
+      if (val === null || val === undefined) return '$0.00';
+      var num = parseFloat(val);
+      if (isNaN(num)) return '$0.00';
+      return '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // --- Format Date ---
+    function fmtDate(dateStr) {
+      if (!dateStr) return '--';
+      var d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // --- Calculate Days Outstanding ---
+    function calcDaysOutstanding(dateStr) {
+      if (!dateStr) return 0;
+      var due = new Date(dateStr);
+      var now = new Date();
+      var diff = Math.floor((now - due) / (1000 * 60 * 60 * 24));
+      return diff;
+    }
+
+    // --- Overdue Color Class ---
+    function getOverdueClass(days) {
+      if (days <= 0) return 'current';
+      if (days <= 30) return 'days-1-30';
+      if (days <= 60) return 'days-31-60';
+      return 'days-60-plus';
+    }
+
+    // --- Invoice Aging ---
+    function loadInvoiceAging() {
+      SRL.acctInvoiceAging().then(function (res) {
+        var buckets = res.buckets || {};
+        var summary = res.summary || {};
+
+        var current = buckets.current || summary.current || { amount: 0, count: 0 };
+        var d30 = buckets['1-30'] || buckets.days1to30 || summary['1-30'] || { amount: 0, count: 0 };
+        var d60 = buckets['31-60'] || buckets.days31to60 || summary['31-60'] || { amount: 0, count: 0 };
+        var d90 = buckets['61-90'] || buckets.days61to90 || summary['61-90'] || { amount: 0, count: 0 };
+        var over90 = buckets['90+'] || buckets.over90 || summary['90+'] || { amount: 0, count: 0 };
+
+        document.getElementById('aging-current-amt').textContent = fmtMoney(current.amount);
+        document.getElementById('aging-current-cnt').textContent = (current.count || 0) + ' invoices';
+        document.getElementById('aging-30-amt').textContent = fmtMoney(d30.amount);
+        document.getElementById('aging-30-cnt').textContent = (d30.count || 0) + ' invoices';
+        document.getElementById('aging-60-amt').textContent = fmtMoney(d60.amount);
+        document.getElementById('aging-60-cnt').textContent = (d60.count || 0) + ' invoices';
+        document.getElementById('aging-90-amt').textContent = fmtMoney(d90.amount);
+        document.getElementById('aging-90-cnt').textContent = (d90.count || 0) + ' invoices';
+        document.getElementById('aging-over90-amt').textContent = fmtMoney(over90.amount);
+        document.getElementById('aging-over90-cnt').textContent = (over90.count || 0) + ' invoices';
+      }).catch(function () {
+        console.error('Failed to load invoice aging data');
+      });
+    }
+
+    // --- Invoices Table ---
+    function loadInvoices() {
+      var params = buildFilterParams();
+      params.page = currentPage;
+
+      SRL.acctInvoices(params).then(function (res) {
+        var invoices = res.invoices || [];
+        totalPages = res.totalPages || 1;
+        var total = res.total || 0;
+        var limit = res.limit || 20;
+
+        renderInvoicesTable(invoices);
+        renderPagination(currentPage, totalPages, total, limit);
+      }).catch(function (err) {
+        document.getElementById('invoices-tbody').innerHTML =
+          '<tr class="empty-row"><td colspan="9">Failed to load invoices: ' + escHtml(err.message) + '</td></tr>';
+      });
+    }
+
+    function renderInvoicesTable(invoices) {
+      var tbody = document.getElementById('invoices-tbody');
+      if (!invoices || invoices.length === 0) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No invoices found</td></tr>';
+        return;
+      }
+
+      var html = '';
+      invoices.forEach(function (inv) {
+        var dueDate = inv.dueDate;
+        var days = inv.daysOutstanding !== undefined ? inv.daysOutstanding : calcDaysOutstanding(dueDate);
+        var status = (inv.status || '').toUpperCase();
+        var isOverdue = status === 'OVERDUE' || (status === 'SENT' && days > 0);
+        var overdueClass = getOverdueClass(days);
+
+        html += '<tr>';
+        html += '<td>' + escHtml(inv.invoiceNumber || '--') + '</td>';
+        html += '<td>' + escHtml(getShipperName(inv)) + '</td>';
+        html += '<td>' + escHtml(inv.loadRef || inv.loadReference || '--') + '</td>';
+        html += '<td>' + escHtml(inv.route || getRoute(inv)) + '</td>';
+        html += '<td style="font-weight:600">' + fmtMoney(inv.amount || inv.totalAmount) + '</td>';
+        html += '<td>' + fmtDate(dueDate) + '</td>';
+        html += '<td>';
+        if (status !== 'PAID' && status !== 'VOID' && status !== 'DRAFT') {
+          html += '<span class="overdue-color ' + overdueClass + '">' + Math.max(0, days) + ' days</span>';
+          if (isOverdue && days > 0) {
+            html += '<span class="overdue-badge">Overdue</span>';
+          }
+        } else {
+          html += '<span style="color:var(--gray-400)">--</span>';
+        }
+        html += '</td>';
+        html += '<td>' + renderStatusBadge(status) + '</td>';
+        html += '<td>' + renderActions(inv) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function getShipperName(inv) {
+      if (inv.shipperName) return inv.shipperName;
+      if (inv.shipper && inv.shipper.companyName) return inv.shipper.companyName;
+      if (inv.shipper && inv.shipper.name) return inv.shipper.name;
+      if (inv.customer && inv.customer.companyName) return inv.customer.companyName;
+      return '--';
+    }
+
+    function getRoute(inv) {
+      if (inv.route) return inv.route;
+      if (inv.origin && inv.destination) return inv.origin + ' > ' + inv.destination;
+      if (inv.load) {
+        var o = inv.load.originCity || '';
+        var d = inv.load.destinationCity || '';
+        if (o && d) return o + ' > ' + d;
+      }
+      return '--';
+    }
+
+    function renderStatusBadge(status) {
+      var s = (status || '').toUpperCase();
+      var cls = s.toLowerCase();
+      var label = s;
+      return '<span class="status-badge ' + cls + '">' + label + '</span>';
+    }
+
+    function renderActions(inv) {
+      var status = (inv.status || '').toUpperCase();
+      var id = inv.id;
+      var html = '<div class="action-btns">';
+
+      switch (status) {
+        case 'DRAFT':
+          html += '<button class="action-btn send" onclick="handleSend(\'' + id + '\')">Send</button>';
+          if (userRole === 'ADMIN' || userRole === 'CEO') {
+            html += '<button class="action-btn void-btn" onclick="handleVoid(\'' + id + '\')">Void</button>';
+          }
+          break;
+        case 'SENT':
+          html += '<button class="action-btn mark-paid" onclick="handleMarkPaid(\'' + id + '\')">Mark Paid</button>';
+          if (userRole === 'ADMIN' || userRole === 'CEO') {
+            html += '<button class="action-btn void-btn" onclick="handleVoid(\'' + id + '\')">Void</button>';
+          }
+          break;
+        case 'OVERDUE':
+          html += '<button class="action-btn mark-paid" onclick="handleMarkPaid(\'' + id + '\')">Mark Paid</button>';
+          if (userRole === 'ADMIN' || userRole === 'CEO') {
+            html += '<button class="action-btn void-btn" onclick="handleVoid(\'' + id + '\')">Void</button>';
+          }
+          break;
+        case 'PARTIAL':
+          html += '<button class="action-btn mark-paid" onclick="handleMarkPaid(\'' + id + '\')">Mark Paid</button>';
+          break;
+        default:
+          html += '<span style="color:var(--gray-400);font-size:11px">--</span>';
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    // --- Filters ---
+    function buildFilterParams() {
+      var params = {};
+      var status = document.getElementById('filter-status').value;
+      var search = document.getElementById('filter-search').value.trim();
+      var from = document.getElementById('filter-from').value;
+      var to = document.getElementById('filter-to').value;
+
+      if (status) params.status = status;
+      if (search) params.search = search;
+      if (from) params.from = from;
+      if (to) params.to = to;
+
+      return params;
+    }
+
+    function applyFilters() {
+      currentPage = 1;
+      loadInvoices();
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-from').value = '';
+      document.getElementById('filter-to').value = '';
+      applyFilters();
+    }
+
+    function handleSearchKeyup(e) {
+      if (e.key === 'Enter') applyFilters();
+    }
+
+    // --- Pagination ---
+    function renderPagination(page, total, totalItems, limit) {
+      var start = ((page - 1) * limit) + 1;
+      var end = Math.min(page * limit, totalItems);
+      document.getElementById('pagination-info').textContent =
+        totalItems > 0 ? 'Showing ' + start + '-' + end + ' of ' + totalItems + ' invoices' : 'No invoices';
+
+      var btnsHtml = '';
+      btnsHtml += '<button class="page-btn" onclick="goToPage(' + (page - 1) + ')"' +
+        (page <= 1 ? ' disabled' : '') + '>&laquo; Prev</button>';
+
+      var startPage = Math.max(1, page - 2);
+      var endPage = Math.min(total, page + 2);
+
+      if (startPage > 1) {
+        btnsHtml += '<button class="page-btn" onclick="goToPage(1)">1</button>';
+        if (startPage > 2) btnsHtml += '<span style="padding:6px 4px;color:var(--gray-400)">...</span>';
+      }
+
+      for (var i = startPage; i <= endPage; i++) {
+        btnsHtml += '<button class="page-btn' + (i === page ? ' active' : '') +
+          '" onclick="goToPage(' + i + ')">' + i + '</button>';
+      }
+
+      if (endPage < total) {
+        if (endPage < total - 1) btnsHtml += '<span style="padding:6px 4px;color:var(--gray-400)">...</span>';
+        btnsHtml += '<button class="page-btn" onclick="goToPage(' + total + ')">' + total + '</button>';
+      }
+
+      btnsHtml += '<button class="page-btn" onclick="goToPage(' + (page + 1) + ')"' +
+        (page >= total ? ' disabled' : '') + '>Next &raquo;</button>';
+
+      document.getElementById('pagination-btns').innerHTML = btnsHtml;
+    }
+
+    function goToPage(p) {
+      if (p < 1 || p > totalPages) return;
+      currentPage = p;
+      loadInvoices();
+      window.scrollTo({ top: document.getElementById('invoices-tbody').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    // --- Invoice Actions ---
+    function handleSend(id) {
+      if (!confirm('Send this invoice to the shipper?')) return;
+      SRL.acctSendInvoice(id).then(function () {
+        showToast('Invoice sent successfully');
+        loadInvoices();
+        loadInvoiceAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    function handleMarkPaid(id) {
+      markPaidInvoiceId = id;
+      document.getElementById('paid-amount').value = '';
+      document.getElementById('paid-reference').value = '';
+      document.getElementById('paid-method').value = 'ACH';
+      document.getElementById('modal-paid').classList.add('open');
+    }
+
+    function submitMarkPaid() {
+      if (!markPaidInvoiceId) return;
+      var amount = document.getElementById('paid-amount').value;
+      var reference = document.getElementById('paid-reference').value.trim();
+      var method = document.getElementById('paid-method').value;
+
+      if (!amount || parseFloat(amount) <= 0) {
+        alert('Please enter a valid amount.');
+        return;
+      }
+
+      var data = {
+        paidAmount: parseFloat(amount),
+        paymentReference: reference,
+        paymentMethod: method
+      };
+
+      SRL.acctMarkInvoicePaid(markPaidInvoiceId, data).then(function () {
+        showToast('Invoice marked as paid');
+        closePaidModal();
+        loadInvoices();
+        loadInvoiceAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    function closePaidModal() {
+      document.getElementById('modal-paid').classList.remove('open');
+      markPaidInvoiceId = null;
+    }
+
+    function handleVoid(id) {
+      voidInvoiceId = id;
+      document.getElementById('void-reason').value = '';
+      document.getElementById('modal-void').classList.add('open');
+    }
+
+    function submitVoidInvoice() {
+      if (!voidInvoiceId) return;
+      var reason = document.getElementById('void-reason').value.trim();
+      if (!reason) {
+        alert('Please provide a reason for voiding.');
+        return;
+      }
+
+      SRL.acctVoidInvoice(voidInvoiceId, { reason: reason }).then(function () {
+        showToast('Invoice voided');
+        closeVoidModal();
+        loadInvoices();
+        loadInvoiceAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    function closeVoidModal() {
+      document.getElementById('modal-void').classList.remove('open');
+      voidInvoiceId = null;
+    }
+
+    // --- Create Invoice Modal ---
+    function openCreateInvoiceModal() {
+      document.getElementById('create-load-id').value = '';
+      document.getElementById('create-due-date').value = '';
+      document.getElementById('create-amount').value = '';
+      document.getElementById('create-notes').value = '';
+      lineItemIndex = 1;
+      document.getElementById('line-items-list').innerHTML =
+        '<div class="line-item-row" data-idx="0">' +
+        '<input type="text" placeholder="Freight charges" class="li-desc">' +
+        '<input type="number" placeholder="1" value="1" min="1" class="li-qty" onchange="recalcLineItems()">' +
+        '<input type="number" placeholder="0.00" step="0.01" class="li-price" onchange="recalcLineItems()">' +
+        '<button class="line-item-remove" onclick="removeLineItem(this)" title="Remove">&times;</button>' +
+        '</div>';
+      document.getElementById('line-items-total').textContent = 'Total: $0.00';
+      document.getElementById('modal-create').classList.add('open');
+    }
+
+    function closeCreateInvoiceModal() {
+      document.getElementById('modal-create').classList.remove('open');
+    }
+
+    function addLineItem() {
+      var container = document.getElementById('line-items-list');
+      var row = document.createElement('div');
+      row.className = 'line-item-row';
+      row.setAttribute('data-idx', lineItemIndex++);
+      row.innerHTML =
+        '<input type="text" placeholder="Description" class="li-desc">' +
+        '<input type="number" placeholder="1" value="1" min="1" class="li-qty" onchange="recalcLineItems()">' +
+        '<input type="number" placeholder="0.00" step="0.01" class="li-price" onchange="recalcLineItems()">' +
+        '<button class="line-item-remove" onclick="removeLineItem(this)" title="Remove">&times;</button>';
+      container.appendChild(row);
+    }
+
+    function removeLineItem(btn) {
+      var row = btn.closest('.line-item-row');
+      var container = document.getElementById('line-items-list');
+      if (container.children.length > 1) {
+        row.remove();
+        recalcLineItems();
+      }
+    }
+
+    function recalcLineItems() {
+      var rows = document.querySelectorAll('#line-items-list .line-item-row');
+      var total = 0;
+      rows.forEach(function (row) {
+        var qty = parseFloat(row.querySelector('.li-qty').value) || 0;
+        var price = parseFloat(row.querySelector('.li-price').value) || 0;
+        total += qty * price;
+      });
+      document.getElementById('line-items-total').textContent = 'Total: ' + fmtMoney(total);
+      document.getElementById('create-amount').value = total > 0 ? total.toFixed(2) : '';
+    }
+
+    function getLineItems() {
+      var rows = document.querySelectorAll('#line-items-list .line-item-row');
+      var items = [];
+      rows.forEach(function (row) {
+        var desc = row.querySelector('.li-desc').value.trim();
+        var qty = parseFloat(row.querySelector('.li-qty').value) || 1;
+        var price = parseFloat(row.querySelector('.li-price').value) || 0;
+        if (desc || price > 0) {
+          items.push({ description: desc || 'Line item', quantity: qty, unitPrice: price, total: qty * price });
+        }
+      });
+      return items;
+    }
+
+    function submitCreateInvoice() {
+      var loadId = document.getElementById('create-load-id').value.trim();
+      var dueDate = document.getElementById('create-due-date').value;
+      var amount = parseFloat(document.getElementById('create-amount').value);
+      var notes = document.getElementById('create-notes').value.trim();
+      var lineItems = getLineItems();
+
+      if (!loadId) {
+        alert('Please enter a Load ID or reference.');
+        return;
+      }
+      if (!amount || amount <= 0) {
+        alert('Please enter a valid amount or add line items.');
+        return;
+      }
+
+      var data = {
+        loadId: loadId,
+        amount: amount,
+        lineItems: lineItems
+      };
+      if (dueDate) data.dueDate = dueDate;
+      if (notes) data.notes = notes;
+
+      SRL.acctCreateInvoice(data).then(function () {
+        showToast('Invoice created successfully');
+        closeCreateInvoiceModal();
+        loadInvoices();
+        loadInvoiceAging();
+      }).catch(function (err) { alert('Error: ' + err.message); });
+    }
+
+    // --- Toast ---
+    function showToast(msg) {
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--navy);color:var(--white);' +
+        'padding:12px 24px;border-radius:8px;font-size:14px;z-index:9999;box-shadow:var(--shadow-lg);' +
+        'animation:slideIn 0.3s ease;';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(function () {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(function () { toast.remove(); }, 300);
+      }, 3000);
+    }
+
+    // --- Escape HTML ---
+    function escHtml(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    // --- Close modals on overlay click ---
+    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) {
+          overlay.classList.remove('open');
+        }
+      });
+    });
+
+    // --- Init ---
+    initAuth();
+  </script>
+</body>
+</html>

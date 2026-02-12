@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approval Queue - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Approval Queue Styles ========== */
+
+    /* --- Summary Cards --- */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .summary-card.pending::before { background: #EAB308; }
+    .summary-card.approved::before { background: var(--green); }
+    .summary-card.rejected::before { background: var(--red); }
+    .summary-card.escalated::before { background: #F97316; }
+    .summary-card.total::before { background: var(--gold); }
+    .summary-label {
+      font-size: 11px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .summary-count {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .summary-card.pending .summary-count { color: #A16207; }
+    .summary-card.approved .summary-count { color: #16A34A; }
+    .summary-card.rejected .summary-count { color: var(--red); }
+    .summary-card.escalated .summary-count { color: #EA580C; }
+
+    /* --- Threshold Banner --- */
+    .threshold-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(200, 150, 62, 0.08);
+      border: 1px solid rgba(200, 150, 62, 0.25);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.5;
+    }
+    .threshold-banner .info-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+    .threshold-banner strong { color: var(--navy); }
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 0;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--white);
+      color: var(--gray-600);
+      outline: none;
+      cursor: pointer;
+    }
+    .filter-bar select:focus { border-color: var(--gold); }
+    .filter-bar label {
+      font-size: 12px;
+      color: var(--gray-400);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .filter-spacer { flex: 1; }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-reset {
+      padding: 8px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-reset:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* --- Table --- */
+    .approvals-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .approvals-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .approvals-table thead th {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap;
+    }
+    .approvals-table tbody tr {
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .approvals-table tbody tr:hover {
+      background: var(--gray-50);
+    }
+    .approvals-table tbody tr.selected {
+      background: rgba(200, 150, 62, 0.06);
+    }
+    .approvals-table tbody td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-600);
+    }
+
+    /* Priority icons */
+    .priority-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .priority-dot.urgent { background: var(--red); animation: pulse-dot 1.5s infinite; }
+    .priority-dot.high { background: #F97316; }
+    .priority-dot.normal { background: #3B82F6; }
+    .priority-dot.low { background: var(--gray-300); }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+    }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .status-badge.pending { background: rgba(234, 179, 8, 0.12); color: #A16207; }
+    .status-badge.approved { background: rgba(34, 197, 94, 0.12); color: #16A34A; }
+    .status-badge.rejected { background: rgba(239, 68, 68, 0.1); color: var(--red); }
+    .status-badge.escalated { background: rgba(249, 115, 22, 0.12); color: #EA580C; }
+
+    /* Age highlight */
+    .age-overdue { color: var(--red); font-weight: 600; }
+
+    /* Amount */
+    .amount-cell { font-weight: 600; color: var(--navy); white-space: nowrap; }
+
+    /* Type label */
+    .type-label {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      white-space: nowrap;
+    }
+
+    /* Action buttons */
+    .btn-approve {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(34, 197, 94, 0.12);
+      color: #16A34A;
+      transition: all 0.15s;
+    }
+    .btn-approve:hover { background: #22C55E; color: var(--white); }
+    .btn-reject {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--red);
+      transition: all 0.15s;
+    }
+    .btn-reject:hover { background: var(--red); color: var(--white); }
+    .action-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* --- Detail Panel (Slide-in) --- */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(13, 27, 42, 0.35);
+      z-index: 500;
+    }
+    .detail-overlay.open { display: block; }
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: -520px;
+      width: 520px;
+      height: 100vh;
+      background: var(--white);
+      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+      z-index: 501;
+      transition: right 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .detail-panel.open { right: 0; }
+    .detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-200);
+      flex-shrink: 0;
+    }
+    .detail-header h2 {
+      font-size: 16px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .detail-close {
+      width: 32px; height: 32px;
+      border: none; background: var(--gray-50);
+      border-radius: 6px; cursor: pointer;
+      font-size: 18px; color: var(--gray-400);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detail-close:hover { background: var(--gray-100); color: var(--navy); }
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .detail-section {
+      margin-bottom: 24px;
+    }
+    .detail-section h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--gray-400);
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 13px;
+    }
+    .detail-row .label { color: var(--gray-400); }
+    .detail-row .value { color: var(--navy); font-weight: 500; text-align: right; max-width: 60%; }
+
+    /* Reference data card */
+    .ref-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .ref-card .ref-title {
+      font-size: 11px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .ref-card .ref-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 13px;
+    }
+    .ref-card .ref-row .r-label { color: var(--gray-400); }
+    .ref-card .ref-row .r-value { color: var(--navy); font-weight: 500; }
+
+    /* Review form */
+    .review-form {
+      border-top: 2px solid var(--gray-100);
+      padding-top: 20px;
+    }
+    .review-form label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .review-form textarea {
+      width: 100%;
+      min-height: 90px;
+      padding: 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      color: var(--gray-600);
+    }
+    .review-form textarea:focus { border-color: var(--gold); }
+    .review-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .review-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .review-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .review-btn.approve-btn { background: #22C55E; color: var(--white); }
+    .review-btn.approve-btn:hover:not(:disabled) { background: #16A34A; }
+    .review-btn.reject-btn { background: var(--red); color: var(--white); }
+    .review-btn.reject-btn:hover:not(:disabled) { background: #DC2626; }
+
+    /* --- Pagination --- */
+    .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-top: 1px solid var(--gray-100);
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+    .pagination-btns {
+      display: flex;
+      gap: 4px;
+    }
+    .page-btn {
+      min-width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .page-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .page-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* --- Empty / Loading --- */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+    }
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+    .empty-state h3 { color: var(--gray-500); margin-bottom: 6px; }
+    .loading-row td {
+      text-align: center;
+      padding: 40px;
+      color: var(--gray-400);
+      font-size: 13px;
+    }
+
+    /* --- Auth Gate --- */
+    .access-denied {
+      text-align: center;
+      padding: 100px 20px;
+      color: var(--gray-400);
+    }
+    .access-denied h2 { color: var(--red); margin-bottom: 12px; font-size: 20px; }
+    .access-denied p { max-width: 400px; margin: 0 auto; }
+
+    /* --- Confirm Dialog --- */
+    .confirm-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(13, 27, 42, 0.5);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+    }
+    .confirm-overlay.open { display: flex; }
+    .confirm-dialog {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 28px;
+      width: 420px;
+      max-width: 90vw;
+    }
+    .confirm-dialog h3 {
+      font-size: 16px;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+    .confirm-dialog p {
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .confirm-cancel {
+      padding: 8px 18px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .confirm-cancel:hover { border-color: var(--navy); color: var(--navy); }
+    .confirm-proceed {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--white);
+    }
+    .confirm-proceed.approve { background: #22C55E; }
+    .confirm-proceed.approve:hover { background: #16A34A; }
+    .confirm-proceed.reject { background: var(--red); }
+    .confirm-proceed.reject:hover { background: #DC2626; }
+
+    /* --- Responsive --- */
+    @media (max-width: 1200px) {
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .detail-panel { width: 100vw; right: -100vw; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-layout">
+
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">Dashboard</a>
+        <a href="/ae/loads.html">Load Board</a>
+        <a href="/ae/caravan.html">The Caravan</a>
+        <a href="/ae/crm.html">CRM</a>
+        <a href="/ae/communications.html">Communications</a>
+        <a href="/ae/claims.html">Claims</a>
+        <a href="/ae/financials.html">Financials</a>
+        <a href="/ae/training.html">Training</a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+          <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
+          <a href="/ae/accounting/payable.html">Accounts Payable</a>
+          <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
+          <a href="/ae/accounting/fund.html">Factoring Fund</a>
+          <a href="/ae/accounting/reports.html">Reports</a>
+          <a href="/ae/accounting/approvals.html" class="active">Approvals</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer"><button onclick="handleLogout()">Sign Out</button></div>
+    </aside>
+
+    <!-- ===== Main Content ===== -->
+    <main class="main-content" id="main-content">
+      <!-- Access Denied (hidden by default) -->
+      <div class="access-denied" id="access-denied" style="display:none;">
+        <h2>Access Denied</h2>
+        <p>The Approval Queue is restricted to Admin and CEO roles. Please contact your administrator if you require access.</p>
+      </div>
+
+      <!-- Page Content (hidden until auth) -->
+      <div id="page-body" style="display:none;">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1>Approval Queue</h1>
+          <div class="page-header-actions">
+            <button class="btn-reset" onclick="resetFilters()">Reset Filters</button>
+          </div>
+        </div>
+
+        <!-- Status Summary Cards -->
+        <div class="summary-grid" id="summary-grid">
+          <div class="summary-card pending">
+            <div class="summary-label">Pending</div>
+            <div class="summary-count" id="count-pending">0</div>
+          </div>
+          <div class="summary-card approved">
+            <div class="summary-label">Approved</div>
+            <div class="summary-count" id="count-approved">0</div>
+          </div>
+          <div class="summary-card rejected">
+            <div class="summary-label">Rejected</div>
+            <div class="summary-count" id="count-rejected">0</div>
+          </div>
+          <div class="summary-card escalated">
+            <div class="summary-label">Escalated</div>
+            <div class="summary-count" id="count-escalated">0</div>
+          </div>
+          <div class="summary-card total">
+            <div class="summary-label">Total</div>
+            <div class="summary-count" id="count-total">0</div>
+          </div>
+        </div>
+
+        <!-- Threshold Banner -->
+        <div class="threshold-banner">
+          <div class="info-icon">i</div>
+          <div>
+            <strong>$5,000 Approval Threshold</strong> &mdash;
+            All carrier payments greater than or equal to <strong>$5,000</strong> require admin approval before processing.
+            Payments are automatically added to this queue when submitted. Urgent items older than 24 hours are highlighted for immediate attention.
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Status</label>
+            <select id="filter-status">
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="ESCALATED">Escalated</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Type</label>
+            <select id="filter-type">
+              <option value="">All Types</option>
+              <option value="CARRIER_PAYMENT">Carrier Payment</option>
+              <option value="INVOICE_VOID">Invoice Void</option>
+              <option value="CREDIT_OVERRIDE">Credit Override</option>
+              <option value="FUND_ADJUSTMENT">Fund Adjustment</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Priority</label>
+            <select id="filter-priority">
+              <option value="">All Priorities</option>
+              <option value="LOW">Low</option>
+              <option value="NORMAL">Normal</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Approvals Table -->
+        <div class="approvals-card">
+          <table class="approvals-table">
+            <thead>
+              <tr>
+                <th style="width:44px;">Pri</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Requested By</th>
+                <th>Age</th>
+                <th>Status</th>
+                <th style="width:150px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="approvals-tbody">
+              <tr class="loading-row"><td colspan="8">Loading approvals...</td></tr>
+            </tbody>
+          </table>
+
+          <!-- Pagination -->
+          <div class="pagination-bar" id="pagination-bar" style="display:none;">
+            <div id="pagination-info">Showing 0 of 0</div>
+            <div class="pagination-btns" id="pagination-btns"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== Detail Panel ===== -->
+  <div class="detail-overlay" id="detail-overlay"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <h2 id="detail-title">Approval Details</h2>
+      <button class="detail-close" id="detail-close">&times;</button>
+    </div>
+    <div class="detail-body" id="detail-body">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ===== Confirm Dialog ===== -->
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-dialog">
+      <h3 id="confirm-title">Confirm Action</h3>
+      <p id="confirm-message">Are you sure you want to proceed?</p>
+      <div class="confirm-actions">
+        <button class="confirm-cancel" id="confirm-cancel">Cancel</button>
+        <button class="confirm-proceed" id="confirm-proceed">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Scripts ===== -->
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* ==========================================
+       Approval Queue — Controller
+       ========================================== */
+    (function () {
+      'use strict';
+
+      // --- State ---
+      var state = {
+        approvals: [],
+        statusCounts: { PENDING: 0, APPROVED: 0, REJECTED: 0, ESCALATED: 0 },
+        total: 0,
+        page: 1,
+        totalPages: 1,
+        limit: 20,
+        filters: { status: '', type: '', priority: '' },
+        selectedId: null,
+        confirmCallback: null
+      };
+
+      // --- DOM Refs ---
+      var $tbody = document.getElementById('approvals-tbody');
+      var $paginationBar = document.getElementById('pagination-bar');
+      var $paginationInfo = document.getElementById('pagination-info');
+      var $paginationBtns = document.getElementById('pagination-btns');
+      var $filterStatus = document.getElementById('filter-status');
+      var $filterType = document.getElementById('filter-type');
+      var $filterPriority = document.getElementById('filter-priority');
+      var $detailOverlay = document.getElementById('detail-overlay');
+      var $detailPanel = document.getElementById('detail-panel');
+      var $detailBody = document.getElementById('detail-body');
+      var $detailClose = document.getElementById('detail-close');
+      var $detailTitle = document.getElementById('detail-title');
+      var $confirmOverlay = document.getElementById('confirm-overlay');
+      var $confirmTitle = document.getElementById('confirm-title');
+      var $confirmMessage = document.getElementById('confirm-message');
+      var $confirmCancel = document.getElementById('confirm-cancel');
+      var $confirmProceed = document.getElementById('confirm-proceed');
+
+      // --- Utility ---
+      function formatCurrency(val) {
+        if (val === null || val === undefined) return '$0.00';
+        var num = parseFloat(val);
+        if (isNaN(num)) return '$0.00';
+        return '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      function typeLabel(type) {
+        var labels = {
+          'CARRIER_PAYMENT': 'Carrier Payment',
+          'INVOICE_VOID': 'Invoice Void',
+          'CREDIT_OVERRIDE': 'Credit Override',
+          'FUND_ADJUSTMENT': 'Fund Adjustment'
+        };
+        return labels[type] || type;
+      }
+
+      function priorityClass(p) {
+        return (p || 'normal').toLowerCase();
+      }
+
+      function formatAge(hours) {
+        if (hours === null || hours === undefined) return '--';
+        var h = parseFloat(hours);
+        if (isNaN(h)) return '--';
+        return Math.round(h) + 'h';
+      }
+
+      function formatDate(dateStr) {
+        if (!dateStr) return '--';
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+             + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      // --- Auth Gate ---
+      function init() {
+        SRL.getMe().then(function (res) {
+          var user = res.user || res;
+          var name = user.name || (user.firstName + ' ' + user.lastName) || user.email;
+          var role = user.role || '';
+
+          document.getElementById('user-name').textContent = name;
+          document.getElementById('user-role').textContent = role;
+
+          // Only ADMIN and CEO can access approvals
+          if (role !== 'ADMIN' && role !== 'CEO') {
+            document.getElementById('access-denied').style.display = 'block';
+            document.getElementById('page-body').style.display = 'none';
+            return;
+          }
+
+          document.getElementById('page-body').style.display = 'block';
+          bindEvents();
+          loadApprovals();
+        }).catch(function () {
+          window.location.href = '/auth/login';
+        });
+      }
+
+      // --- Events ---
+      function bindEvents() {
+        $filterStatus.addEventListener('change', function () {
+          state.filters.status = this.value;
+          state.page = 1;
+          loadApprovals();
+        });
+        $filterType.addEventListener('change', function () {
+          state.filters.type = this.value;
+          state.page = 1;
+          loadApprovals();
+        });
+        $filterPriority.addEventListener('change', function () {
+          state.filters.priority = this.value;
+          state.page = 1;
+          loadApprovals();
+        });
+
+        // Detail panel close
+        $detailClose.addEventListener('click', closeDetail);
+        $detailOverlay.addEventListener('click', closeDetail);
+
+        // Confirm dialog cancel
+        $confirmCancel.addEventListener('click', closeConfirm);
+        $confirmOverlay.addEventListener('click', function (e) {
+          if (e.target === $confirmOverlay) closeConfirm();
+        });
+
+        // Confirm proceed
+        $confirmProceed.addEventListener('click', function () {
+          if (typeof state.confirmCallback === 'function') {
+            state.confirmCallback();
+          }
+          closeConfirm();
+        });
+
+        // Keyboard: Escape to close panels
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            if ($confirmOverlay.classList.contains('open')) {
+              closeConfirm();
+            } else if ($detailPanel.classList.contains('open')) {
+              closeDetail();
+            }
+          }
+        });
+      }
+
+      // --- Load Approvals ---
+      function loadApprovals() {
+        $tbody.innerHTML = '<tr class="loading-row"><td colspan="8">Loading approvals...</td></tr>';
+
+        var params = { page: state.page, limit: state.limit };
+        if (state.filters.status) params.status = state.filters.status;
+        if (state.filters.type) params.type = state.filters.type;
+        if (state.filters.priority) params.priority = state.filters.priority;
+
+        SRL.acctApprovals(params).then(function (res) {
+          state.approvals = res.approvals || [];
+          state.total = res.total || 0;
+          state.page = res.page || 1;
+          state.totalPages = res.totalPages || 1;
+          state.limit = res.limit || 20;
+
+          // Update status counts
+          if (res.statusCounts) {
+            state.statusCounts = res.statusCounts;
+          }
+          updateSummaryCards();
+          renderTable();
+          renderPagination();
+        }).catch(function (err) {
+          console.error('Failed to load approvals:', err);
+          $tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="color:var(--red);">Failed to load approvals. Please try again.</td></tr>';
+        });
+      }
+
+      // --- Update Summary Cards ---
+      function updateSummaryCards() {
+        var sc = state.statusCounts;
+        document.getElementById('count-pending').textContent = sc.PENDING || 0;
+        document.getElementById('count-approved').textContent = sc.APPROVED || 0;
+        document.getElementById('count-rejected').textContent = sc.REJECTED || 0;
+        document.getElementById('count-escalated').textContent = sc.ESCALATED || 0;
+
+        var total = (sc.PENDING || 0) + (sc.APPROVED || 0) + (sc.REJECTED || 0) + (sc.ESCALATED || 0);
+        document.getElementById('count-total').textContent = total;
+      }
+
+      // --- Render Table ---
+      function renderTable() {
+        if (!state.approvals.length) {
+          $tbody.innerHTML =
+            '<tr><td colspan="8">' +
+            '<div class="empty-state">' +
+            '<div class="empty-icon">&#9745;</div>' +
+            '<h3>No approvals found</h3>' +
+            '<p>Adjust your filters or check back later.</p>' +
+            '</div></td></tr>';
+          return;
+        }
+
+        var html = '';
+        state.approvals.forEach(function (a) {
+          var pClass = priorityClass(a.priority);
+          var statusLower = (a.status || '').toLowerCase();
+          var ageVal = parseFloat(a.ageHours);
+          var ageOverdue = !isNaN(ageVal) && ageVal > 24;
+          var isPending = a.status === 'PENDING';
+          var isSelected = state.selectedId === a.id;
+
+          html += '<tr data-id="' + a.id + '"' + (isSelected ? ' class="selected"' : '') + '>';
+
+          // Priority
+          html += '<td><span class="priority-dot ' + pClass + '" title="' + escapeHtml(a.priority) + '"></span></td>';
+
+          // Type
+          html += '<td><span class="type-label">' + escapeHtml(typeLabel(a.type)) + '</span></td>';
+
+          // Amount
+          html += '<td class="amount-cell">' + formatCurrency(a.amount) + '</td>';
+
+          // Description
+          var desc = a.description || '--';
+          if (desc.length > 50) desc = desc.substring(0, 50) + '...';
+          html += '<td>' + escapeHtml(desc) + '</td>';
+
+          // Requested By
+          html += '<td>' + escapeHtml(a.requestedBy || '--') + '</td>';
+
+          // Age
+          html += '<td class="' + (ageOverdue ? 'age-overdue' : '') + '">' + formatAge(a.ageHours) + '</td>';
+
+          // Status
+          html += '<td><span class="status-badge ' + statusLower + '">' + escapeHtml(a.status) + '</span></td>';
+
+          // Actions
+          html += '<td>';
+          if (isPending) {
+            html += '<div class="action-btns">';
+            html += '<button class="btn-approve" data-action="approve" data-id="' + a.id + '" title="Approve">Approve</button>';
+            html += '<button class="btn-reject" data-action="reject" data-id="' + a.id + '" title="Reject">Reject</button>';
+            html += '</div>';
+          } else {
+            html += '<span style="color:var(--gray-300);font-size:12px;">--</span>';
+          }
+          html += '</td>';
+
+          html += '</tr>';
+        });
+
+        $tbody.innerHTML = html;
+
+        // Bind row clicks (for detail panel)
+        var rows = $tbody.querySelectorAll('tr[data-id]');
+        rows.forEach(function (row) {
+          row.addEventListener('click', function (e) {
+            // Don't open detail if clicking action buttons
+            if (e.target.closest('.action-btns')) return;
+            var id = row.getAttribute('data-id');
+            openDetail(id);
+          });
+        });
+
+        // Bind inline action buttons
+        var actionBtns = $tbody.querySelectorAll('[data-action]');
+        actionBtns.forEach(function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var action = btn.getAttribute('data-action');
+            var id = btn.getAttribute('data-id');
+            showQuickConfirm(id, action);
+          });
+        });
+      }
+
+      // --- Quick Confirm (from table buttons) ---
+      function showQuickConfirm(id, action) {
+        var approval = state.approvals.find(function (a) { return a.id === id; });
+        var label = action === 'approve' ? 'Approve' : 'Reject';
+        var amountStr = approval ? formatCurrency(approval.amount) : '';
+
+        $confirmTitle.textContent = label + ' Approval';
+        $confirmMessage.textContent = 'Are you sure you want to ' + action + ' this ' +
+          (approval ? typeLabel(approval.type).toLowerCase() : 'item') +
+          (amountStr ? ' for ' + amountStr : '') + '?';
+
+        $confirmProceed.className = 'confirm-proceed ' + action;
+        $confirmProceed.textContent = label;
+
+        state.confirmCallback = function () {
+          submitReview(id, action, '');
+        };
+
+        $confirmOverlay.classList.add('open');
+      }
+
+      // --- Open Detail Panel ---
+      function openDetail(id) {
+        state.selectedId = id;
+
+        // Highlight selected row
+        var rows = $tbody.querySelectorAll('tr[data-id]');
+        rows.forEach(function (r) {
+          r.classList.toggle('selected', r.getAttribute('data-id') === id);
+        });
+
+        $detailBody.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">Loading details...</div>';
+        $detailOverlay.classList.add('open');
+        $detailPanel.classList.add('open');
+
+        SRL.acctApprovalById(id).then(function (data) {
+          renderDetail(data);
+        }).catch(function (err) {
+          console.error('Failed to load approval detail:', err);
+          $detailBody.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">Failed to load details.</div>';
+        });
+      }
+
+      // --- Render Detail ---
+      function renderDetail(data) {
+        var a = data.approval || data;
+        var ref = a.referenceData || data.referenceData || null;
+        var isPending = a.status === 'PENDING';
+        var statusLower = (a.status || '').toLowerCase();
+        var pClass = priorityClass(a.priority);
+        var ageVal = parseFloat(a.ageHours);
+        var ageOverdue = !isNaN(ageVal) && ageVal > 24;
+
+        $detailTitle.textContent = typeLabel(a.type) + ' Approval';
+
+        var html = '';
+
+        // Approval Info Section
+        html += '<div class="detail-section">';
+        html += '<h3>Approval Information</h3>';
+        html += '<div class="detail-row"><span class="label">ID</span><span class="value" style="font-family:monospace;font-size:12px;">' + escapeHtml(a.id) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Type</span><span class="value">' + escapeHtml(typeLabel(a.type)) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Amount</span><span class="value" style="font-size:16px;font-weight:700;color:var(--navy);">' + formatCurrency(a.amount) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Priority</span><span class="value"><span class="priority-dot ' + pClass + '" style="margin-right:6px;vertical-align:middle;"></span>' + escapeHtml(a.priority) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Status</span><span class="value"><span class="status-badge ' + statusLower + '">' + escapeHtml(a.status) + '</span></span></div>';
+        html += '<div class="detail-row"><span class="label">Requested By</span><span class="value">' + escapeHtml(a.requestedBy || '--') + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Age</span><span class="value' + (ageOverdue ? ' age-overdue' : '') + '">' + formatAge(a.ageHours) + (ageOverdue ? ' (overdue)' : '') + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Created</span><span class="value">' + formatDate(a.createdAt) + '</span></div>';
+        html += '</div>';
+
+        // Description Section
+        if (a.description) {
+          html += '<div class="detail-section">';
+          html += '<h3>Description</h3>';
+          html += '<p style="font-size:13px;color:var(--gray-600);line-height:1.6;">' + escapeHtml(a.description) + '</p>';
+          html += '</div>';
+        }
+
+        // Reference Data Section
+        if (ref) {
+          html += '<div class="detail-section">';
+          html += '<h3>Referenced Item</h3>';
+          html += '<div class="ref-card">';
+          html += '<div class="ref-title">' + escapeHtml(a.referenceType || a.type) + ' Details</div>';
+
+          // Render reference data fields dynamically
+          var refFields = Object.keys(ref);
+          refFields.forEach(function (key) {
+            var val = ref[key];
+            if (val === null || val === undefined || typeof val === 'object') return;
+
+            var displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, function (s) { return s.toUpperCase(); });
+
+            // Format amounts
+            var displayVal = val;
+            if (typeof val === 'number' && (key.toLowerCase().indexOf('amount') >= 0 || key.toLowerCase().indexOf('rate') >= 0 || key.toLowerCase().indexOf('cost') >= 0 || key.toLowerCase().indexOf('price') >= 0)) {
+              displayVal = formatCurrency(val);
+            } else if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}/)) {
+              displayVal = formatDate(val);
+            }
+
+            html += '<div class="ref-row"><span class="r-label">' + escapeHtml(displayKey) + '</span><span class="r-value">' + escapeHtml(String(displayVal)) + '</span></div>';
+          });
+
+          html += '</div>';
+          html += '</div>';
+        }
+
+        // Review notes (if already reviewed)
+        if (a.reviewNotes) {
+          html += '<div class="detail-section">';
+          html += '<h3>Review Notes</h3>';
+          html += '<p style="font-size:13px;color:var(--gray-600);line-height:1.6;background:var(--gray-50);padding:12px;border-radius:var(--radius);border:1px solid var(--gray-100);">' + escapeHtml(a.reviewNotes) + '</p>';
+          if (a.reviewedBy) {
+            html += '<div style="font-size:11px;color:var(--gray-400);margin-top:6px;">Reviewed by ' + escapeHtml(a.reviewedBy) + (a.reviewedAt ? ' on ' + formatDate(a.reviewedAt) : '') + '</div>';
+          }
+          html += '</div>';
+        }
+
+        // Review Form (only for pending approvals)
+        if (isPending) {
+          html += '<div class="review-form">';
+          html += '<label for="review-notes">Review Notes</label>';
+          html += '<textarea id="review-notes" placeholder="Add optional notes for this review decision..."></textarea>';
+          html += '<div class="review-actions">';
+          html += '<button class="review-btn approve-btn" id="detail-approve-btn">Approve</button>';
+          html += '<button class="review-btn reject-btn" id="detail-reject-btn">Reject</button>';
+          html += '</div>';
+          html += '</div>';
+        }
+
+        $detailBody.innerHTML = html;
+
+        // Bind review buttons in detail panel
+        if (isPending) {
+          var approveBtn = document.getElementById('detail-approve-btn');
+          var rejectBtn = document.getElementById('detail-reject-btn');
+
+          approveBtn.addEventListener('click', function () {
+            var notes = document.getElementById('review-notes').value.trim();
+            showDetailConfirm(a.id, 'approve', notes, a);
+          });
+
+          rejectBtn.addEventListener('click', function () {
+            var notes = document.getElementById('review-notes').value.trim();
+            showDetailConfirm(a.id, 'reject', notes, a);
+          });
+        }
+      }
+
+      // --- Detail Confirm ---
+      function showDetailConfirm(id, action, notes, approval) {
+        var label = action === 'approve' ? 'Approve' : 'Reject';
+
+        $confirmTitle.textContent = label + ' ' + typeLabel(approval.type);
+        $confirmMessage.textContent = 'You are about to ' + action + ' a ' +
+          typeLabel(approval.type).toLowerCase() + ' for ' + formatCurrency(approval.amount) +
+          '. This action cannot be undone.' +
+          (notes ? ' Your notes: "' + notes + '"' : '');
+
+        $confirmProceed.className = 'confirm-proceed ' + action;
+        $confirmProceed.textContent = label;
+
+        state.confirmCallback = function () {
+          submitReview(id, action, notes);
+        };
+
+        $confirmOverlay.classList.add('open');
+      }
+
+      // --- Submit Review ---
+      function submitReview(id, action, notes) {
+        // Disable buttons during submission
+        var approveBtn = document.getElementById('detail-approve-btn');
+        var rejectBtn = document.getElementById('detail-reject-btn');
+        if (approveBtn) approveBtn.disabled = true;
+        if (rejectBtn) rejectBtn.disabled = true;
+
+        SRL.acctReviewApproval(id, { action: action, notes: notes || '' }).then(function () {
+          // Close detail panel
+          closeDetail();
+          // Reload data
+          loadApprovals();
+        }).catch(function (err) {
+          console.error('Review failed:', err);
+          alert('Failed to ' + action + ' approval: ' + (err.message || 'Unknown error'));
+          if (approveBtn) approveBtn.disabled = false;
+          if (rejectBtn) rejectBtn.disabled = false;
+        });
+      }
+
+      // --- Close Detail ---
+      function closeDetail() {
+        $detailOverlay.classList.remove('open');
+        $detailPanel.classList.remove('open');
+        state.selectedId = null;
+
+        // Remove selected highlight
+        var rows = $tbody.querySelectorAll('tr.selected');
+        rows.forEach(function (r) { r.classList.remove('selected'); });
+      }
+
+      // --- Close Confirm ---
+      function closeConfirm() {
+        $confirmOverlay.classList.remove('open');
+        state.confirmCallback = null;
+      }
+
+      // --- Render Pagination ---
+      function renderPagination() {
+        if (state.totalPages <= 1 && state.total <= state.limit) {
+          $paginationBar.style.display = 'none';
+          return;
+        }
+
+        $paginationBar.style.display = 'flex';
+
+        var start = ((state.page - 1) * state.limit) + 1;
+        var end = Math.min(state.page * state.limit, state.total);
+        $paginationInfo.textContent = 'Showing ' + start + '-' + end + ' of ' + state.total;
+
+        var btnsHtml = '';
+
+        // Prev
+        btnsHtml += '<button class="page-btn" data-page="' + (state.page - 1) + '"' +
+          (state.page <= 1 ? ' disabled' : '') + '>&laquo;</button>';
+
+        // Page numbers
+        var startPage = Math.max(1, state.page - 2);
+        var endPage = Math.min(state.totalPages, state.page + 2);
+
+        if (startPage > 1) {
+          btnsHtml += '<button class="page-btn" data-page="1">1</button>';
+          if (startPage > 2) {
+            btnsHtml += '<span style="padding:0 6px;color:var(--gray-300);">...</span>';
+          }
+        }
+
+        for (var p = startPage; p <= endPage; p++) {
+          btnsHtml += '<button class="page-btn' + (p === state.page ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+        }
+
+        if (endPage < state.totalPages) {
+          if (endPage < state.totalPages - 1) {
+            btnsHtml += '<span style="padding:0 6px;color:var(--gray-300);">...</span>';
+          }
+          btnsHtml += '<button class="page-btn" data-page="' + state.totalPages + '">' + state.totalPages + '</button>';
+        }
+
+        // Next
+        btnsHtml += '<button class="page-btn" data-page="' + (state.page + 1) + '"' +
+          (state.page >= state.totalPages ? ' disabled' : '') + '>&raquo;</button>';
+
+        $paginationBtns.innerHTML = btnsHtml;
+
+        // Bind page buttons
+        var pageBtns = $paginationBtns.querySelectorAll('.page-btn:not(:disabled)');
+        pageBtns.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var pg = parseInt(btn.getAttribute('data-page'), 10);
+            if (pg >= 1 && pg <= state.totalPages && pg !== state.page) {
+              state.page = pg;
+              loadApprovals();
+              // Scroll to top of table
+              document.querySelector('.approvals-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          });
+        });
+      }
+
+      // --- Reset Filters (global) ---
+      window.resetFilters = function () {
+        state.filters = { status: '', type: '', priority: '' };
+        state.page = 1;
+        $filterStatus.value = '';
+        $filterType.value = '';
+        $filterPriority.value = '';
+        loadApprovals();
+      };
+
+      // --- Logout ---
+      window.handleLogout = function () {
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      };
+
+      // --- Boot ---
+      init();
+
+    })();
+  </script>
+</body>
+</html>
