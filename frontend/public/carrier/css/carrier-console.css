@@ -99,6 +99,7 @@ a:hover { color: var(--gold-light); }
 .tier-GOLD { background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: #1F2937; }
 .tier-SILVER { background: linear-gradient(135deg, #9CA3AF, #D1D5DB); color: #1F2937; }
 .tier-BRONZE { background: linear-gradient(135deg, #B45309, #D97706); color: #fff; }
+.tier-GUEST { background: linear-gradient(135deg, #6B7280, #9CA3AF); color: #fff; }
 .tier-NONE { background: var(--navy-light); color: var(--slate); }
 
 .sidebar-nav {

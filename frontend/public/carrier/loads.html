@@ -28,7 +28,7 @@
     <!-- Tabs: My Loads / Available Loads -->
     <div class="tabs" id="mainTabs">
       <button class="tab-btn active" data-tab="my-loads">My Loads</button>
-      <button class="tab-btn" data-tab="available">Available Loads</button>
+      <button class="tab-btn" data-tab="available"><span style="color:var(--gold)">&#9670;</span> The Caravan — Available Loads</button>
     </div>
 
     <!-- ═══ MY LOADS VIEW ═══ -->
@@ -68,6 +68,13 @@
 
     <!-- ═══ AVAILABLE LOADS VIEW ═══ -->
     <div id="availableView" style="display:none">
+      <div id="caravanBanner" style="padding:12px 16px;margin-bottom:16px;border-radius:8px;background:rgba(200,150,62,0.08);border:1px solid rgba(200,150,62,0.2);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px;color:var(--gold)">&#9670;</span>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--gold)">The Caravan Load Board</div>
+          <div style="font-size:11px;color:var(--slate)" id="caravanPerkText">Loading your tier perks...</div>
+        </div>
+      </div>
       <div class="filter-bar">
         <input type="text" class="form-control search-input" id="availSearch" placeholder="Search origin, destination...">
         <button class="btn btn-secondary btn-sm" onclick="loadAvailable()">Refresh</button>
@@ -228,13 +235,16 @@
     var myPage = 1, availPage = 1;
     var currentTab = "my-loads";
     var currentLoadId = null;
+    var _carrierTier = "BRONZE";
 
     // ── Init sidebar user ──
     CARRIER.getMe().then(function (u) {
       if (u) {
+        var tier = u.carrierProfile ? u.carrierProfile.tier : "BRONZE";
+        _carrierTier = tier;
         document.getElementById("sidebarUser").innerHTML =
           '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div><div class="user-role">CARRIER</div>' +
-          (u.carrierProfile ? '<div class="user-tier tier-' + u.carrierProfile.tier + '">' + u.carrierProfile.tier + '</div>' : '');
+          (u.carrierProfile ? '<div class="user-tier tier-' + tier + '">' + tier + '</div>' : '');
       }
     });
 
@@ -299,6 +309,17 @@
     }
 
     function renderAvailable(data) {
+      // Update Caravan perk banner
+      var perkTexts = {
+        GUEST: "Complete 3 loads to join The Caravan. Rates shown after you accept.",
+        BRONZE: "Bronze Member — Standard rates, QuickPay at 3%",
+        SILVER: "Silver Member — Priority matching, QuickPay at 2%",
+        GOLD: "Gold Member — 1.5% bonus on loads, QuickPay at 1.5%",
+        PLATINUM: "Platinum Elite — 3% bonus, instant QuickPay at 1%, dedicated support"
+      };
+      var perkEl = document.getElementById("caravanPerkText");
+      if (perkEl) perkEl.textContent = perkTexts[_carrierTier] || perkTexts.BRONZE;
+
       var tbody = document.getElementById("availBody");
       var loads = data.loads || [];
       if (loads.length === 0) {
@@ -307,7 +328,11 @@
         return;
       }
 
+      var isGuest = _carrierTier === "GUEST";
       tbody.innerHTML = loads.map(function (l) {
+        var rateCell = isGuest
+          ? '<td style="color:#808080;font-style:italic;font-size:12px">Accept to view</td>'
+          : '<td style="font-weight:600;color:var(--gold)">' + money(l.carrierRate || l.rate) + '</td>';
         return '<tr>' +
           '<td>' + esc(l.originCity + ', ' + l.originState) + '</td>' +
           '<td>' + esc(l.destCity + ', ' + l.destState) + '</td>' +
@@ -315,7 +340,7 @@
           '<td>' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
           '<td>' + (l.weight ? l.weight.toLocaleString() + ' lbs' : '--') + '</td>' +
           '<td>' + (l.distance ? l.distance.toLocaleString() + ' mi' : '--') + '</td>' +
-          '<td style="font-weight:600;color:var(--gold)">' + money(l.carrierRate || l.rate) + '</td>' +
+          rateCell +
           '<td>' +
             '<div class="btn-group">' +
               '<button class="btn btn-success btn-sm" onclick="openAcceptModal(\'' + l.id + '\',\'' + esc(l.originCity) + ', ' + esc(l.originState) + '\',\'' + esc(l.destCity) + ', ' + esc(l.destState) + '\',' + (l.carrierRate || l.rate || 0) + ')">Accept</button>' +

@@ -75,12 +75,13 @@
         </div>
       </div>
 
-      <!-- Col 2: Available Loads -->
+      <!-- Col 2: The Caravan Load Board -->
       <div class="card">
         <div class="card-header">
-          <h3>Available Loads</h3>
+          <h3 style="display:flex;align-items:center;gap:8px"><span style="color:var(--gold)">&#9670;</span> The Caravan Load Board</h3>
           <a href="/carrier/loads.html?tab=available" class="card-action">Browse All</a>
         </div>
+        <div id="caravanTierBanner" style="display:none"></div>
         <div id="availableLoadsList">
           <div class="skeleton skeleton-line w100"></div>
           <div class="skeleton skeleton-line w75"></div>
@@ -175,6 +176,8 @@
       document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
     }
 
+    var _carrierTier = "BRONZE"; // tracked globally for rate visibility
+
     function renderTierCard(srcpp, dashboard) {
       var card = document.getElementById("tierCard");
       if (!srcpp) {
@@ -183,9 +186,32 @@
       }
 
       var tier = srcpp.tier || "BRONZE";
+      _carrierTier = tier;
       var score = srcpp.score || 0;
       var nextTier = srcpp.nextTier;
       var progressPct = Math.min(100, score);
+      var totalLoads = srcpp.totalLoads || 0;
+
+      // Guest tier: show 3-load conversion progress
+      if (tier === "GUEST") {
+        var guestProgress = Math.min(3, totalLoads);
+        var guestPct = Math.round((guestProgress / 3) * 100);
+        card.innerHTML =
+          '<div class="tier-badge-lg" style="background:rgba(128,128,128,0.15);color:#808080;border:2px solid #808080">GUEST</div>' +
+          '<div style="margin:12px 0 8px;font-size:14px;color:#CBD5E1;font-weight:600">Join The Caravan as a Bronze member</div>' +
+          '<div style="font-size:12px;color:var(--slate);margin-bottom:12px">Complete 3 loads with a score of 70+ to earn your spot</div>' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">' +
+            '<div style="flex:1;height:12px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden">' +
+              '<div style="height:100%;width:' + guestPct + '%;background:linear-gradient(90deg,#808080,var(--gold));border-radius:6px;transition:width 0.4s"></div>' +
+            '</div>' +
+            '<span style="font-size:14px;font-weight:700;color:var(--gold)">' + guestProgress + ' / 3</span>' +
+          '</div>' +
+          (score >= 70
+            ? '<div style="font-size:11px;color:var(--green)">&#10003; Your avg score (' + score.toFixed(0) + ') qualifies! Complete ' + (3 - guestProgress) + ' more load(s).</div>'
+            : '<div style="font-size:11px;color:#f59e0b">&#9888; Avg score ' + score.toFixed(0) + ' — need 70+ to qualify for Bronze</div>');
+        renderCaravanBanner(tier, totalLoads);
+        return;
+      }
 
       card.innerHTML =
         '<div class="tier-badge-lg tier-' + tier + '">' + tier + ' TIER</div>' +
@@ -195,9 +221,32 @@
           ? '<div class="next-tier">' + (nextTier.pointsNeeded > 0 ? nextTier.pointsNeeded.toFixed(1) + ' pts to ' + nextTier.name : 'Top tier reached!') + '</div>'
           : '<div class="next-tier">Top tier reached!</div>') +
         '<div style="margin-top:12px;display:flex;gap:24px;font-size:12px;color:var(--slate)">' +
-          '<span>Loads: <strong style="color:#fff">' + (srcpp.totalLoads || 0) + '</strong></span>' +
+          '<span>Loads: <strong style="color:#fff">' + (totalLoads) + '</strong></span>' +
           '<span>Miles: <strong style="color:#fff">' + Math.round(srcpp.totalMiles || 0).toLocaleString() + '</strong></span>' +
           '<span>Bonus Rate: <strong style="color:var(--gold)">' + (srcpp.bonusPercentage || 0) + '%</strong></span>' +
+        '</div>';
+
+      renderCaravanBanner(tier, totalLoads);
+    }
+
+    function renderCaravanBanner(tier, totalLoads) {
+      var banner = document.getElementById("caravanTierBanner");
+      var perks = {
+        GUEST:    { msg: "Complete 3 loads to join The Caravan", perksText: "No perks yet", color: "#808080" },
+        BRONZE:   { msg: "Welcome to The Caravan!", perksText: "Standard rates, QuickPay at 3%", color: "#CD7F32" },
+        SILVER:   { msg: "Silver Caravan Member", perksText: "Priority matching, QuickPay at 2%", color: "#A0AEC0" },
+        GOLD:     { msg: "Gold Caravan Member", perksText: "1.5% load bonus, QuickPay at 1.5%, priority loads", color: "#C8963E" },
+        PLATINUM: { msg: "Platinum Caravan Elite", perksText: "3% load bonus, instant QuickPay at 1%, dedicated support", color: "#E5E7EB" }
+      };
+      var p = perks[tier] || perks.BRONZE;
+      banner.style.display = "block";
+      banner.innerHTML =
+        '<div style="padding:10px 14px;margin-bottom:10px;border-radius:8px;border:1px solid ' + p.color + '22;background:' + p.color + '0D;display:flex;align-items:center;gap:10px">' +
+          '<span style="font-size:16px;color:' + p.color + '">&#9670;</span>' +
+          '<div>' +
+            '<div style="font-size:12px;font-weight:600;color:' + p.color + '">' + esc(p.msg) + '</div>' +
+            '<div style="font-size:11px;color:var(--slate)">' + esc(p.perksText) + '</div>' +
+          '</div>' +
         '</div>';
     }
 
@@ -241,11 +290,15 @@
         return;
       }
 
+      var isGuest = _carrierTier === "GUEST";
       el.innerHTML = loads.slice(0, 5).map(function (l) {
+        var rateDisplay = isGuest
+          ? '<span style="color:#808080;font-size:11px;font-style:italic">Accept to see rate</span>'
+          : '<span style="color:var(--gold);font-weight:600;font-size:13px">' + money(l.carrierRate || l.rate) + '</span>';
         return '<div style="padding:8px 0;border-bottom:1px solid var(--card-border)">' +
           '<div style="display:flex;justify-content:space-between;align-items:center">' +
             '<div style="font-size:13px;font-weight:600;color:#fff">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
-            '<span style="color:var(--gold);font-weight:600;font-size:13px">' + money(l.carrierRate || l.rate) + '</span>' +
+            rateDisplay +
           '</div>' +
           '<div style="font-size:11px;color:var(--slate);margin-top:2px">' +
             esc((l.equipmentType || "").replace(/_/g, " ")) + ' &middot; ' + shortDate(l.pickupDate) +

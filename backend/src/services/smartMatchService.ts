@@ -18,12 +18,13 @@ interface MatchCandidate {
   rateScore: number;
   srcppScore: number;
   availabilityScore: number;
+  sourceScore: number;
   breakdown: Record<string, any>;
 }
 
 /**
  * C.1 — Smart Carrier Matching
- * Score = lane_score(0-30) + rate_score(0-25) + srcpp_score(0-25) + availability_score(0-20)
+ * Score = lane_score(0-30) + rate_score(0-25) + srcpp_score(0-25) + availability_score(0-20) + source_score(0-5)
  */
 export async function matchCarriersForLoad(loadId: string): Promise<{
   load: any;
@@ -216,7 +217,12 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
     }
     breakdown.availability = availabilityScore;
 
-    const matchScore = laneScore + rateScore + srcppScore + availabilityScore;
+    // --- Source Score (0-5) ---
+    const sourceScore = (c.source === "caravan" || !c.source) ? 5 : 0;
+    breakdown.source = sourceScore;
+    breakdown.sourceDetail = c.source === "dat" ? "DAT import (+0)" : "Caravan member (+5)";
+
+    const matchScore = laneScore + rateScore + srcppScore + availabilityScore + sourceScore;
 
     return {
       carrierId: c.id,
@@ -236,6 +242,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
       rateScore,
       srcppScore,
       availabilityScore,
+      sourceScore,
       breakdown,
     };
   });
