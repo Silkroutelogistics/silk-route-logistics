@@ -45,6 +45,7 @@ import automationRoutes from "./automation";
 import trackingRoutes from "./tracking";
 import financialRoutes from "./financials";
 import claimRoutes from "./claims";
+import monitoringRoutes from "./monitoring";
 
 const router = Router();
 
@@ -178,5 +179,6 @@ router.use("/srcpp", srcppRoutes);
 router.use("/automation", automationRoutes);
 router.use("/financials", financialRoutes);
 router.use("/claims", claimRoutes);
+router.use("/admin", monitoringRoutes);
 
 export default router;

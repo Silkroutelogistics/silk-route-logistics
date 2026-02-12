@@ -482,6 +482,7 @@ model User {
   requestedApprovals ApprovalQueue[]    @relation("ApprovalRequester")
   reviewedApprovals  ApprovalQueue[]    @relation("ApprovalReviewer")
   generatedReports   FinancialReport[]  @relation("ReportGenerator")
+  errorLogs          ErrorLog[]         @relation("ErrorLogUser")
 
   @@index([email])
   @@index([role])
@@ -1873,4 +1874,48 @@ model SchedulerLock {
   expiresAt DateTime
 
   @@map("scheduler_locks")
+}
+
+// ─── Cron Registry ───
+
+model CronRegistry {
+  id          String   @id @default(cuid())
+  jobName     String   @unique
+  schedule    String
+  description String?
+  lastRun     DateTime?
+  lastStatus  String?  // SUCCESS, FAILED, RUNNING
+  lastError   String?
+  lastDuration Int?    // milliseconds
+  nextRun     DateTime?
+  enabled     Boolean  @default(true)
+  runCount    Int      @default(0)
+  failCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cron_registry")
+}
+
+// ─── Error Log ───
+
+model ErrorLog {
+  id          String   @id @default(cuid())
+  errorType   String   // UNHANDLED, VALIDATION, DATABASE, INTEGRATION, CRON, AUTH
+  message     String
+  stackTrace  String?
+  endpoint    String?
+  method      String?
+  userId      String?
+  user        User?    @relation("ErrorLogUser", fields: [userId], references: [id])
+  ipAddress   String?
+  userAgent   String?
+  statusCode  Int?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([errorType])
+  @@index([createdAt])
+  @@index([userId])
+  @@map("error_logs")
 }

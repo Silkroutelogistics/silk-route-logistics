@@ -7,12 +7,14 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import hpp from "hpp";
 import { env } from "./config/env";
+import { prisma } from "./config/database";
 import routes from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeInput } from "./middleware/security";
 import { auditMiddleware } from "./middleware/auditTrail";
 import { startSchedulers } from "./services/schedulerService";
 import { initCronJobs } from "./cron";
+import { seedCronRegistry } from "./services/cronRegistryService";
 
 const app = express();
 
@@ -112,12 +114,28 @@ app.use(sanitizeInput);
 app.use("/uploads", express.static(path.resolve(env.UPLOAD_DIR)));
 
 // ─── Health Check (outside rate limiter) ────────────────────
-app.get("/health", (_req, res) => {
+app.get("/health", async (_req, res) => {
+  let dbOk = false;
+  let dbLatency = 0;
+  try {
+    const s = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    dbLatency = Date.now() - s;
+    dbOk = true;
+  } catch { /* db down */ }
+
+  const mem = process.memoryUsage();
   res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
+    status: dbOk ? "ok" : "degraded",
     uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
     version: "1.0.0",
+    environment: env.NODE_ENV,
+    database: { connected: dbOk, latencyMs: dbLatency },
+    memory: {
+      rss: `${(mem.rss / 1024 / 1024).toFixed(1)} MB`,
+      heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(1)} MB`,
+    },
   });
 });
 
@@ -139,6 +157,7 @@ app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
   startSchedulers();
   initCronJobs();
+  seedCronRegistry().catch((e) => console.error("[CronRegistry] Seed error:", e.message));
 });
 
 export default app;
