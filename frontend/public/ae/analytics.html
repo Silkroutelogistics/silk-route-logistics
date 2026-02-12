@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/analytics.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-bar select {
+      padding: 7px 12px;
+      border: 1px solid var(--theme-border, #e2e8f0);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--theme-card-bg, #fff);
+      color: var(--theme-text-primary, #334155);
+      outline: none;
+    }
+    .filter-bar select:focus { border-color: var(--theme-primary, #c8963e); }
+    .filter-bar label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--theme-text-muted, #94a3b8);
+    }
+    .export-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .sort-arrow { font-size: 10px; margin-left: 3px; opacity: 0.6; }
+    .sort-arrow.active { opacity: 1; color: var(--theme-primary, #c8963e); }
+    .export-card {
+      background: var(--theme-card-bg, #fff);
+      border: 1px solid var(--theme-card-border, #e2e8f0);
+      border-radius: 10px;
+      padding: 32px;
+      box-shadow: var(--theme-card-shadow, 0 1px 3px rgba(0,0,0,0.06));
+    }
+    .export-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--theme-text-heading, #0d1b2a);
+      margin-bottom: 20px;
+    }
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .export-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--theme-bg-alt, #f8fafc);
+      border-radius: 8px;
+      border: 1px solid var(--theme-border-light, #f1f5f9);
+    }
+    .export-item-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--theme-text-primary, #334155);
+    }
+    .export-item-actions { display: flex; gap: 6px; }
+    .export-item-actions button {
+      padding: 5px 12px;
+      border: 1px solid var(--theme-border, #e2e8f0);
+      background: var(--theme-card-bg, #fff);
+      color: var(--theme-text-primary, #334155);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .export-item-actions button:hover {
+      border-color: var(--theme-primary, #c8963e);
+      color: var(--theme-primary, #c8963e);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+        <a href="/ae/loads.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Load Board</a>
+        <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
+        <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
+        <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
+        <a href="/ae/analytics.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</a>
+        <a href="/ae/accounting/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>Accounting</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+      </div>
+    </aside>
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <main class="main">
+      <div class="main-header">
+        <h1>Analytics</h1>
+        <p>Performance metrics, scorecards, and operational intelligence</p>
+      </div>
+
+      <div id="date-picker"></div>
+
+      <div class="analytics-tabs" id="analytics-tabs">
+        <button class="analytics-tab active" data-tab="tab-revenue">Revenue &amp; Margin</button>
+        <button class="analytics-tab" data-tab="tab-loads">Load Volume</button>
+        <button class="analytics-tab" data-tab="tab-ontime">On-Time Performance</button>
+        <button class="analytics-tab" data-tab="tab-lanes">Lane Profitability</button>
+        <button class="analytics-tab" data-tab="tab-carriers">Carrier Scorecards</button>
+        <button class="analytics-tab" data-tab="tab-shippers">Shipper Scorecards</button>
+        <button class="analytics-tab" data-tab="tab-export">Export</button>
+      </div>
+
+      <!-- TAB 1: Revenue & Margin -->
+      <div class="tab-panel active" id="tab-revenue">
+        <div id="revenue-kpis"></div>
+        <div class="chart-container">
+          <div class="chart-header">
+            <span class="chart-title">Revenue, Cost &amp; Margin Trend</span>
+            <div class="chart-actions">
+              <button class="chart-group-btn active" data-granularity="day">Day</button>
+              <button class="chart-group-btn" data-granularity="week">Week</button>
+              <button class="chart-group-btn" data-granularity="month">Month</button>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="revenue-chart"></canvas></div>
+        </div>
+        <div class="export-row">
+          <button class="export-btn" onclick="SRLAnalytics.exportCSV('revenue')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: Load Volume -->
+      <div class="tab-panel" id="tab-loads">
+        <div id="load-kpis"></div>
+        <div class="analytics-grid-2">
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Load Status Breakdown</span></div>
+            <div class="chart-canvas-wrap"><canvas id="load-status-chart"></canvas></div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Loads by Equipment Type</span></div>
+            <div class="chart-canvas-wrap"><canvas id="load-equipment-chart"></canvas></div>
+          </div>
+        </div>
+        <div class="export-row">
+          <button class="export-btn" onclick="SRLAnalytics.exportCSV('loads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+      </div>
+
+      <!-- TAB 3: On-Time Performance -->
+      <div class="tab-panel" id="tab-ontime">
+        <div class="analytics-grid-2">
+          <div class="chart-container">
+            <div class="gauge-container">
+              <div class="chart-title" style="margin-bottom:12px">Overall On-Time %</div>
+              <div class="gauge-canvas-wrap"><canvas id="ontime-gauge"></canvas></div>
+              <div class="gauge-value" id="ontime-gauge-value">--</div>
+              <div class="gauge-label">On-Time Delivery Rate</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">On-Time Trend</span></div>
+            <div class="chart-canvas-wrap"><canvas id="ontime-trend-chart"></canvas></div>
+          </div>
+        </div>
+        <div class="analytics-grid-2">
+          <div class="analytics-table-wrap" id="ontime-carriers-table">
+            <div class="analytics-table-header"><span class="analytics-table-title">Bottom 10 Carriers by On-Time</span></div>
+            <table class="analytics-table"><thead><tr><th>Carrier</th><th>On-Time %</th><th>Loads</th><th>Late</th></tr></thead><tbody></tbody></table>
+          </div>
+          <div class="analytics-table-wrap" id="ontime-lanes-table">
+            <div class="analytics-table-header"><span class="analytics-table-title">Bottom 10 Lanes</span></div>
+            <table class="analytics-table"><thead><tr><th>Lane</th><th>On-Time %</th><th>Loads</th><th>Avg Delay</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+        <div class="export-row">
+          <button class="export-btn" onclick="SRLAnalytics.exportCSV('ontime')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+      </div>
+
+      <!-- TAB 4: Lane Profitability -->
+      <div class="tab-panel" id="tab-lanes">
+        <div class="filter-bar" id="lanes-filter">
+          <label>Equipment:</label>
+          <select id="lanes-equip-filter">
+            <option value="">All Equipment</option>
+            <option value="DRY_VAN">Dry Van</option>
+            <option value="REEFER">Reefer</option>
+            <option value="FLATBED">Flatbed</option>
+            <option value="STEP_DECK">Step Deck</option>
+          </select>
+        </div>
+        <div class="analytics-table-wrap" id="lanes-table">
+          <div class="analytics-table-header"><span class="analytics-table-title">Lane Profitability Heatmap</span></div>
+          <table class="analytics-table" id="lanes-data-table">
+            <thead>
+              <tr>
+                <th data-sort="lane">Lane</th>
+                <th data-sort="loads">Loads</th>
+                <th data-sort="revenue">Revenue</th>
+                <th data-sort="cost">Cost</th>
+                <th data-sort="margin">Margin $</th>
+                <th data-sort="marginPct">Margin %</th>
+                <th data-sort="rpm">Rev/Mile</th>
+              </tr>
+            </thead>
+            <tbody id="lanes-tbody"></tbody>
+          </table>
+        </div>
+        <div class="analytics-grid-2">
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Top 5 Most Profitable Lanes</span></div>
+            <div class="chart-canvas-wrap"><canvas id="top-lanes-chart"></canvas></div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Bottom 5 Least Profitable Lanes</span></div>
+            <div class="chart-canvas-wrap"><canvas id="bottom-lanes-chart"></canvas></div>
+          </div>
+        </div>
+        <div class="export-row">
+          <button class="export-btn" onclick="SRLAnalytics.exportCSV('lanes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+      </div>
+
+      <!-- TAB 5: Carrier Scorecards -->
+      <div class="tab-panel" id="tab-carriers">
+        <div class="filter-bar" id="carriers-filter">
+          <label>Tier:</label>
+          <select id="carriers-tier-filter">
+            <option value="">All Tiers</option>
+            <option value="PLATINUM">Platinum</option>
+            <option value="GOLD">Gold</option>
+            <option value="SILVER">Silver</option>
+            <option value="BRONZE">Bronze</option>
+          </select>
+          <label>Equipment:</label>
+          <select id="carriers-equip-filter">
+            <option value="">All Equipment</option>
+            <option value="DRY_VAN">Dry Van</option>
+            <option value="REEFER">Reefer</option>
+            <option value="FLATBED">Flatbed</option>
+            <option value="STEP_DECK">Step Deck</option>
+          </select>
+        </div>
+        <div class="analytics-table-wrap" id="carriers-table">
+          <div class="analytics-table-header"><span class="analytics-table-title">Carrier Scorecard</span></div>
+          <table class="analytics-table" id="carriers-data-table">
+            <thead>
+              <tr>
+                <th data-sort="name">Carrier</th>
+                <th data-sort="tier">Tier</th>
+                <th data-sort="score">Score</th>
+                <th data-sort="ontime">On-Time %</th>
+                <th data-sort="loads">Loads</th>
+                <th data-sort="claims">Claims</th>
+                <th data-sort="revenue">Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="carriers-tbody"></tbody>
+          </table>
+        </div>
+        <div class="export-row">
+          <button class="export-btn" onclick="SRLAnalytics.exportCSV('carriers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+      </div>
+
+      <!-- TAB 6: Shipper Scorecards -->
+      <div class="tab-panel" id="tab-shippers">
+        <div class="analytics-table-wrap" id="shippers-table">
+          <div class="analytics-table-header"><span class="analytics-table-title">Shipper Scorecard</span></div>
+          <table class="analytics-table" id="shippers-data-table">
+            <thead>
+              <tr>
+                <th data-sort="name">Shipper</th>
+                <th data-sort="loads">Loads</th>
+                <th data-sort="revenue">Revenue</th>
+                <th data-sort="margin">Margin $</th>
+                <th data-sort="marginPct">Margin %</th>
+                <th data-sort="payDays">Avg Pay Days</th>
+                <th data-sort="credit">Credit Status</th>
+              </tr>
+            </thead>
+            <tbody id="shippers-tbody"></tbody>
+          </table>
+        </div>
+        <div class="export-row">
+          <button class="export-btn" onclick="SRLAnalytics.exportCSV('shippers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+      </div>
+
+      <!-- TAB 7: Export -->
+      <div class="tab-panel" id="tab-export">
+        <div class="export-card">
+          <h3>Export Reports</h3>
+          <p style="color:var(--theme-text-muted,#94a3b8);font-size:13px;margin-bottom:24px">Download analytics reports for the selected date range. CSV files open in Excel; PDF files are formatted for printing.</p>
+          <div class="export-grid">
+            <div class="export-item">
+              <span class="export-item-label">Revenue &amp; Margin</span>
+              <div class="export-item-actions">
+                <button onclick="SRLAnalytics.exportCSV('revenue')">CSV</button>
+                <button onclick="SRLAnalytics.exportPDF('revenue')">PDF</button>
+              </div>
+            </div>
+            <div class="export-item">
+              <span class="export-item-label">Load Volume</span>
+              <div class="export-item-actions">
+                <button onclick="SRLAnalytics.exportCSV('loads')">CSV</button>
+                <button onclick="SRLAnalytics.exportPDF('loads')">PDF</button>
+              </div>
+            </div>
+            <div class="export-item">
+              <span class="export-item-label">On-Time Performance</span>
+              <div class="export-item-actions">
+                <button onclick="SRLAnalytics.exportCSV('ontime')">CSV</button>
+                <button onclick="SRLAnalytics.exportPDF('ontime')">PDF</button>
+              </div>
+            </div>
+            <div class="export-item">
+              <span class="export-item-label">Lane Profitability</span>
+              <div class="export-item-actions">
+                <button onclick="SRLAnalytics.exportCSV('lanes')">CSV</button>
+                <button onclick="SRLAnalytics.exportPDF('lanes')">PDF</button>
+              </div>
+            </div>
+            <div class="export-item">
+              <span class="export-item-label">Carrier Scorecards</span>
+              <div class="export-item-actions">
+                <button onclick="SRLAnalytics.exportCSV('carriers')">CSV</button>
+                <button onclick="SRLAnalytics.exportPDF('carriers')">PDF</button>
+              </div>
+            </div>
+            <div class="export-item">
+              <span class="export-item-label">Shipper Scorecards</span>
+              <div class="export-item-actions">
+                <button onclick="SRLAnalytics.exportCSV('shippers')">CSV</button>
+                <button onclick="SRLAnalytics.exportPDF('shippers')">PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script src="/shared/js/analyticsHelpers.js"></script>
+  <script src="/ae/js/notification-bell.js"></script>
+  <script src="/shared/js/themeEngine.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    var token = localStorage.getItem("token");
+    if (!token) { window.location.href = "/auth/login"; return; }
+
+    /* ── State ── */
+    var currentGranularity = "day";
+    var revenueData = null;
+    var loadsData = null;
+    var ontimeData = null;
+    var lanesRawData = null;
+    var carriersRawData = null;
+    var shippersRawData = null;
+
+    var laneSortCol = "marginPct";
+    var laneSortDir = -1;
+    var carrierSortCol = "score";
+    var carrierSortDir = -1;
+    var shipperSortCol = "revenue";
+    var shipperSortDir = -1;
+
+    /* ── Init ── */
+    SRL.getMe().then(function (user) {
+      if (window.SRLTheme) SRLTheme.restoreFromUser(user);
+      document.getElementById("user-name").textContent = user.firstName + " " + user.lastName;
+      document.getElementById("user-role").textContent = formatRole(user.role);
+
+      SRLAnalytics.initDatePicker("date-picker", function () { loadAllData(); });
+      SRLAnalytics.initTabs("analytics-tabs");
+
+      loadAllData();
+    }).catch(function () {
+      window.location.href = "/auth/login";
+    });
+
+    /* ── Granularity toggle ── */
+    document.querySelectorAll(".chart-group-btn[data-granularity]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll(".chart-group-btn[data-granularity]").forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        currentGranularity = btn.dataset.granularity;
+        fetchRevenue();
+      });
+    });
+
+    /* ── Equipment filter for lanes ── */
+    document.getElementById("lanes-equip-filter").addEventListener("change", function () {
+      renderLanes(lanesRawData);
+    });
+
+    /* ── Carrier filters ── */
+    document.getElementById("carriers-tier-filter").addEventListener("change", function () {
+      renderCarriers(carriersRawData);
+    });
+    document.getElementById("carriers-equip-filter").addEventListener("change", function () {
+      renderCarriers(carriersRawData);
+    });
+
+    /* ── Table sorting ── */
+    document.querySelectorAll("#lanes-data-table thead th[data-sort]").forEach(function (th) {
+      th.addEventListener("click", function () {
+        var col = th.dataset.sort;
+        if (laneSortCol === col) { laneSortDir *= -1; } else { laneSortCol = col; laneSortDir = -1; }
+        renderLanes(lanesRawData);
+      });
+    });
+    document.querySelectorAll("#carriers-data-table thead th[data-sort]").forEach(function (th) {
+      th.addEventListener("click", function () {
+        var col = th.dataset.sort;
+        if (carrierSortCol === col) { carrierSortDir *= -1; } else { carrierSortCol = col; carrierSortDir = -1; }
+        renderCarriers(carriersRawData);
+      });
+    });
+    document.querySelectorAll("#shippers-data-table thead th[data-sort]").forEach(function (th) {
+      th.addEventListener("click", function () {
+        var col = th.dataset.sort;
+        if (shipperSortCol === col) { shipperSortDir *= -1; } else { shipperSortCol = col; shipperSortDir = -1; }
+        renderShippers(shippersRawData);
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════════
+       Data Loading
+       ══════════════════════════════════════════════════════════ */
+    function loadAllData() {
+      SRLAnalytics.showSkeleton("revenue-kpis", "kpi");
+      SRLAnalytics.showSkeleton("load-kpis", "kpi");
+
+      fetchRevenue();
+      fetchLoads();
+      fetchOnTime();
+      fetchLanes();
+      fetchCarriers();
+      fetchShippers();
+    }
+
+    function fetchRevenue() {
+      SRLAnalytics.fetch("/api/analytics/revenue?" + SRLAnalytics.dateQS() + "&group_by=" + currentGranularity)
+        .then(function (data) { revenueData = data; renderRevenue(data); })
+        .catch(function () { SRLAnalytics.showEmpty("revenue-kpis", "Unable to load revenue data"); });
+    }
+
+    function fetchLoads() {
+      SRLAnalytics.fetch("/api/analytics/loads?" + SRLAnalytics.dateQS())
+        .then(function (data) { loadsData = data; renderLoads(data); })
+        .catch(function () { SRLAnalytics.showEmpty("load-kpis", "Unable to load volume data"); });
+    }
+
+    function fetchOnTime() {
+      SRLAnalytics.fetch("/api/analytics/on-time?" + SRLAnalytics.dateQS())
+        .then(function (data) { ontimeData = data; renderOnTime(data); })
+        .catch(function () { });
+    }
+
+    function fetchLanes() {
+      SRLAnalytics.fetch("/api/analytics/lanes?" + SRLAnalytics.dateQS())
+        .then(function (data) { lanesRawData = data; renderLanes(data); })
+        .catch(function () { SRLAnalytics.showEmpty("lanes-table", "Unable to load lane data"); });
+    }
+
+    function fetchCarriers() {
+      SRLAnalytics.fetch("/api/analytics/carriers?" + SRLAnalytics.dateQS())
+        .then(function (data) { carriersRawData = data; renderCarriers(data); })
+        .catch(function () { SRLAnalytics.showEmpty("carriers-table", "Unable to load carrier data"); });
+    }
+
+    function fetchShippers() {
+      SRLAnalytics.fetch("/api/analytics/shippers?" + SRLAnalytics.dateQS())
+        .then(function (data) { shippersRawData = data; renderShippers(data); })
+        .catch(function () { SRLAnalytics.showEmpty("shippers-table", "Unable to load shipper data"); });
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 1 — Revenue & Margin
+       ══════════════════════════════════════════════════════════ */
+    function renderRevenue(data) {
+      if (!data || !data.summary) {
+        SRLAnalytics.showEmpty("revenue-kpis", "No revenue data for this period");
+        return;
+      }
+      var s = data.summary;
+      var prev = data.previous || {};
+
+      var revChange = SRLAnalytics.pctChange(s.totalRevenue || 0, prev.totalRevenue || 0);
+      var costChange = SRLAnalytics.pctChange(s.totalCost || 0, prev.totalCost || 0);
+      var marginChange = SRLAnalytics.pctChange(s.totalMargin || 0, prev.totalMargin || 0);
+      var marginPctChange = SRLAnalytics.pctChange(s.avgMarginPct || 0, prev.avgMarginPct || 0);
+      var rpmChange = SRLAnalytics.pctChange(s.avgRevenuePerMile || 0, prev.avgRevenuePerMile || 0);
+
+      document.getElementById("revenue-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total Revenue", SRLAnalytics.fmtMoney(s.totalRevenue || 0), revChange) +
+          kpiCard("Total Cost", SRLAnalytics.fmtMoney(s.totalCost || 0), costChange) +
+          kpiCard("Gross Margin", SRLAnalytics.fmtMoney(s.totalMargin || 0), marginChange) +
+          kpiCard("Avg Margin %", SRLAnalytics.fmtPct(s.avgMarginPct || 0), marginPctChange) +
+          kpiCard("Rev / Mile", "$" + ((s.avgRevenuePerMile || 0)).toFixed(2), rpmChange) +
+        '</div>';
+
+      /* Chart */
+      var points = data.data || [];
+      if (points.length === 0) return;
+
+      var labels = points.map(function (p) { return p.label || p.date || p.period || ""; });
+      var c = SRLAnalytics.chartColors();
+
+      SRLAnalytics.createLineChart("revenue-chart", labels, [
+        { label: "Revenue", data: points.map(function (p) { return p.revenue || 0; }), borderColor: c.primary, backgroundColor: c.primaryDim, fill: true, tension: 0.3 },
+        { label: "Cost", data: points.map(function (p) { return p.cost || 0; }), borderColor: c.info, backgroundColor: "rgba(59,130,246,0.08)", fill: true, tension: 0.3 },
+        { label: "Margin", data: points.map(function (p) { return p.margin || 0; }), borderColor: c.success, backgroundColor: "rgba(34,197,94,0.08)", fill: true, tension: 0.3 },
+      ], { money: true });
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 2 — Load Volume
+       ══════════════════════════════════════════════════════════ */
+    function renderLoads(data) {
+      if (!data || !data.summary) {
+        SRLAnalytics.showEmpty("load-kpis", "No load data for this period");
+        return;
+      }
+      var s = data.summary;
+      var prev = data.previous || {};
+
+      var totalChange = SRLAnalytics.pctChange(s.totalLoads || 0, prev.totalLoads || 0);
+      var deliveredChange = SRLAnalytics.pctChange(s.delivered || 0, prev.delivered || 0);
+      var avgRateChange = SRLAnalytics.pctChange(s.avgRate || 0, prev.avgRate || 0);
+      var avgMilesChange = SRLAnalytics.pctChange(s.avgMiles || 0, prev.avgMiles || 0);
+
+      document.getElementById("load-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total Loads", SRLAnalytics.fmtNum(s.totalLoads || 0), totalChange) +
+          kpiCard("Delivered", SRLAnalytics.fmtNum(s.delivered || 0), deliveredChange) +
+          kpiCard("In Transit", SRLAnalytics.fmtNum(s.inTransit || 0), { value: 0, direction: "neutral" }) +
+          kpiCard("Avg Rate", SRLAnalytics.fmtMoney(s.avgRate || 0), avgRateChange) +
+          kpiCard("Avg Miles", SRLAnalytics.fmtNum(s.avgMiles || 0), avgMilesChange) +
+        '</div>';
+
+      /* Status bar chart */
+      var statuses = data.statusBreakdown || [];
+      if (statuses.length > 0) {
+        var statusLabels = statuses.map(function (s) { return s.status || s.label || ""; });
+        var statusValues = statuses.map(function (s) { return s.count || 0; });
+        var statusColors = statuses.map(function (s, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+
+        SRLAnalytics.createBarChart("load-status-chart", statusLabels, [{
+          label: "Loads",
+          data: statusValues,
+          backgroundColor: statusColors,
+        }]);
+      } else {
+        SRLAnalytics.showEmpty("load-status-chart", "No status data");
+      }
+
+      /* Equipment stacked bar */
+      var equipment = data.equipmentBreakdown || [];
+      if (equipment.length > 0) {
+        var periods = data.equipmentPeriods || [];
+        if (periods.length > 0) {
+          var datasets = equipment.map(function (eq, i) {
+            return {
+              label: eq.type || eq.label || "",
+              data: eq.data || [],
+              backgroundColor: SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length],
+            };
+          });
+          SRLAnalytics.createBarChart("load-equipment-chart", periods, datasets, {
+            plugins: { legend: { display: true, position: "top" } },
+            scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } },
+          });
+        } else {
+          var eqLabels = equipment.map(function (e) { return e.type || e.label || ""; });
+          var eqValues = equipment.map(function (e) { return e.count || 0; });
+          var eqColors = equipment.map(function (e, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+          SRLAnalytics.createBarChart("load-equipment-chart", eqLabels, [{
+            label: "Loads",
+            data: eqValues,
+            backgroundColor: eqColors,
+          }]);
+        }
+      } else {
+        SRLAnalytics.showEmpty("load-equipment-chart", "No equipment data");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 3 — On-Time Performance
+       ══════════════════════════════════════════════════════════ */
+    function renderOnTime(data) {
+      if (!data) return;
+
+      /* Gauge */
+      var otPct = (data.overallOnTimePct !== undefined) ? data.overallOnTimePct : (data.summary ? data.summary.onTimePct : 0);
+      SRLAnalytics.createGaugeChart("ontime-gauge", otPct || 0, 100);
+      document.getElementById("ontime-gauge-value").textContent = SRLAnalytics.fmtPct(otPct || 0);
+
+      /* Trend line */
+      var trend = data.trend || [];
+      if (trend.length > 0) {
+        var trendLabels = trend.map(function (t) { return t.label || t.period || t.date || ""; });
+        var c = SRLAnalytics.chartColors();
+        SRLAnalytics.createLineChart("ontime-trend-chart", trendLabels, [{
+          label: "On-Time %",
+          data: trend.map(function (t) { return t.onTimePct || t.value || 0; }),
+          borderColor: c.success,
+          backgroundColor: "rgba(34,197,94,0.08)",
+          fill: true,
+          tension: 0.3,
+        }], {
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: false, min: 0, max: 100, grid: { color: c.border + "40" }, ticks: { callback: function (v) { return v + "%"; } } },
+          }
+        });
+      }
+
+      /* Bottom 10 carriers table */
+      var bottomCarriers = data.bottomCarriers || [];
+      var carrierTbody = document.querySelector("#ontime-carriers-table tbody");
+      if (bottomCarriers.length === 0) {
+        carrierTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--theme-text-muted);padding:24px">No data available</td></tr>';
+      } else {
+        carrierTbody.innerHTML = bottomCarriers.map(function (row) {
+          var otClass = (row.onTimePct || 0) >= 95 ? "heatmap-dark-green" : (row.onTimePct || 0) >= 90 ? "heatmap-light-green" : (row.onTimePct || 0) >= 80 ? "heatmap-yellow" : "heatmap-red";
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(row.name || row.carrier || "") + '</td>' +
+            '<td><span class="heatmap-cell ' + otClass + '">' + SRLAnalytics.fmtPct(row.onTimePct || 0) + '</span></td>' +
+            '<td>' + (row.loads || 0) + '</td>' +
+            '<td>' + (row.lateCount || 0) + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+
+      /* Bottom 10 lanes table */
+      var bottomLanes = data.bottomLanes || [];
+      var lanesTbody = document.querySelector("#ontime-lanes-table tbody");
+      if (bottomLanes.length === 0) {
+        lanesTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--theme-text-muted);padding:24px">No data available</td></tr>';
+      } else {
+        lanesTbody.innerHTML = bottomLanes.map(function (row) {
+          var otClass = (row.onTimePct || 0) >= 95 ? "heatmap-dark-green" : (row.onTimePct || 0) >= 90 ? "heatmap-light-green" : (row.onTimePct || 0) >= 80 ? "heatmap-yellow" : "heatmap-red";
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(row.lane || "") + '</td>' +
+            '<td><span class="heatmap-cell ' + otClass + '">' + SRLAnalytics.fmtPct(row.onTimePct || 0) + '</span></td>' +
+            '<td>' + (row.loads || 0) + '</td>' +
+            '<td>' + (row.avgDelayHrs !== undefined ? row.avgDelayHrs.toFixed(1) + "h" : "--") + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 4 — Lane Profitability
+       ══════════════════════════════════════════════════════════ */
+    function renderLanes(data) {
+      if (!data || !data.lanes) {
+        var tbody = document.getElementById("lanes-tbody");
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No lane data available</td></tr>';
+        return;
+      }
+
+      var filterEquip = document.getElementById("lanes-equip-filter").value;
+      var lanes = data.lanes.slice();
+
+      if (filterEquip) {
+        lanes = lanes.filter(function (l) { return l.equipmentType === filterEquip; });
+      }
+
+      /* Sort */
+      lanes.sort(function (a, b) {
+        var av = getSortVal(a, laneSortCol);
+        var bv = getSortVal(b, laneSortCol);
+        if (typeof av === "string") return av.localeCompare(bv) * laneSortDir;
+        return ((av || 0) - (bv || 0)) * laneSortDir;
+      });
+
+      /* Update sort arrows */
+      document.querySelectorAll("#lanes-data-table thead th[data-sort]").forEach(function (th) {
+        var arrow = th.querySelector(".sort-arrow");
+        if (!arrow) { arrow = document.createElement("span"); arrow.className = "sort-arrow"; th.appendChild(arrow); }
+        if (th.dataset.sort === laneSortCol) {
+          arrow.classList.add("active");
+          arrow.textContent = laneSortDir > 0 ? " \u25B2" : " \u25BC";
+        } else {
+          arrow.classList.remove("active");
+          arrow.textContent = "";
+        }
+      });
+
+      /* Table body */
+      var tbody = document.getElementById("lanes-tbody");
+      if (lanes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No lanes match filter</td></tr>';
+      } else {
+        tbody.innerHTML = lanes.map(function (l) {
+          var mPct = l.marginPct || 0;
+          var hmClass = SRLAnalytics.heatmapClass(mPct);
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(l.lane || (l.originState + " \u2192 " + l.destState) || "") + '</td>' +
+            '<td>' + (l.loads || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(l.revenue || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(l.cost || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(l.margin || 0) + '</td>' +
+            '<td><span class="heatmap-cell ' + hmClass + '">' + SRLAnalytics.fmtPct(mPct) + '</span></td>' +
+            '<td>$' + (l.revenuePerMile || 0).toFixed(2) + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+
+      /* Top 5 / Bottom 5 charts */
+      var sorted = lanes.slice().sort(function (a, b) { return (b.margin || 0) - (a.margin || 0); });
+      var top5 = sorted.slice(0, 5);
+      var bottom5 = sorted.slice(-5).reverse();
+
+      var c = SRLAnalytics.chartColors();
+      if (top5.length > 0) {
+        SRLAnalytics.createBarChart("top-lanes-chart",
+          top5.map(function (l) { return l.lane || (l.originState + " \u2192 " + l.destState) || ""; }),
+          [{ label: "Margin $", data: top5.map(function (l) { return l.margin || 0; }), backgroundColor: c.success }],
+          { indexAxis: "y", money: true }
+        );
+      }
+      if (bottom5.length > 0) {
+        SRLAnalytics.createBarChart("bottom-lanes-chart",
+          bottom5.map(function (l) { return l.lane || (l.originState + " \u2192 " + l.destState) || ""; }),
+          [{ label: "Margin $", data: bottom5.map(function (l) { return l.margin || 0; }), backgroundColor: c.danger }],
+          { indexAxis: "y", money: true }
+        );
+      }
+    }
+
+    function getSortVal(row, col) {
+      switch (col) {
+        case "lane": return row.lane || (row.originState + " " + row.destState) || "";
+        case "loads": return row.loads || 0;
+        case "revenue": return row.revenue || 0;
+        case "cost": return row.cost || 0;
+        case "margin": return row.margin || 0;
+        case "marginPct": return row.marginPct || 0;
+        case "rpm": return row.revenuePerMile || 0;
+        case "name": return row.name || row.carrier || row.company || "";
+        case "tier": return row.tier || "";
+        case "score": return row.score || 0;
+        case "ontime": return row.onTimePct || 0;
+        case "claims": return row.claimsCount || row.claims || 0;
+        case "payDays": return row.avgPayDays || row.payDays || 0;
+        case "credit": return row.creditStatus || "";
+        default: return row[col] || 0;
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 5 — Carrier Scorecards
+       ══════════════════════════════════════════════════════════ */
+    function renderCarriers(data) {
+      if (!data || !data.carriers) {
+        var tbody = document.getElementById("carriers-tbody");
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No carrier data available</td></tr>';
+        return;
+      }
+
+      var filterTier = document.getElementById("carriers-tier-filter").value;
+      var filterEquip = document.getElementById("carriers-equip-filter").value;
+      var carriers = data.carriers.slice();
+
+      if (filterTier) {
+        carriers = carriers.filter(function (c) { return c.tier === filterTier; });
+      }
+      if (filterEquip) {
+        carriers = carriers.filter(function (c) {
+          var types = c.equipmentTypes || c.equipment || [];
+          if (typeof types === "string") return types === filterEquip;
+          return types.indexOf(filterEquip) !== -1;
+        });
+      }
+
+      /* Sort */
+      carriers.sort(function (a, b) {
+        var av = getSortVal(a, carrierSortCol);
+        var bv = getSortVal(b, carrierSortCol);
+        if (typeof av === "string") return av.localeCompare(bv) * carrierSortDir;
+        return ((av || 0) - (bv || 0)) * carrierSortDir;
+      });
+
+      /* Update sort arrows */
+      document.querySelectorAll("#carriers-data-table thead th[data-sort]").forEach(function (th) {
+        var arrow = th.querySelector(".sort-arrow");
+        if (!arrow) { arrow = document.createElement("span"); arrow.className = "sort-arrow"; th.appendChild(arrow); }
+        if (th.dataset.sort === carrierSortCol) {
+          arrow.classList.add("active");
+          arrow.textContent = carrierSortDir > 0 ? " \u25B2" : " \u25BC";
+        } else {
+          arrow.classList.remove("active");
+          arrow.textContent = "";
+        }
+      });
+
+      var tbody = document.getElementById("carriers-tbody");
+      if (carriers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No carriers match filters</td></tr>';
+      } else {
+        tbody.innerHTML = carriers.map(function (row) {
+          var tierClass = "tier-" + (row.tier || "NONE");
+          var scoreColor = (row.score || 0) >= 95 ? "heatmap-dark-green" : (row.score || 0) >= 90 ? "heatmap-light-green" : (row.score || 0) >= 80 ? "heatmap-yellow" : "heatmap-red";
+          var otColor = (row.onTimePct || 0) >= 95 ? "heatmap-dark-green" : (row.onTimePct || 0) >= 90 ? "heatmap-light-green" : (row.onTimePct || 0) >= 80 ? "heatmap-yellow" : "heatmap-red";
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(row.name || row.company || "") + '</td>' +
+            '<td><span class="tier-badge ' + tierClass + '">' + (row.tier || "N/A") + '</span></td>' +
+            '<td><span class="heatmap-cell ' + scoreColor + '">' + (row.score || 0) + '</span></td>' +
+            '<td><span class="heatmap-cell ' + otColor + '">' + SRLAnalytics.fmtPct(row.onTimePct || 0) + '</span></td>' +
+            '<td>' + (row.loads || 0) + '</td>' +
+            '<td>' + (row.claimsCount || row.claims || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(row.revenue || 0) + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 6 — Shipper Scorecards
+       ══════════════════════════════════════════════════════════ */
+    function renderShippers(data) {
+      if (!data || !data.shippers) {
+        var tbody = document.getElementById("shippers-tbody");
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No shipper data available</td></tr>';
+        return;
+      }
+
+      var shippers = data.shippers.slice();
+
+      /* Sort */
+      shippers.sort(function (a, b) {
+        var av = getSortVal(a, shipperSortCol);
+        var bv = getSortVal(b, shipperSortCol);
+        if (typeof av === "string") return av.localeCompare(bv) * shipperSortDir;
+        return ((av || 0) - (bv || 0)) * shipperSortDir;
+      });
+
+      /* Update sort arrows */
+      document.querySelectorAll("#shippers-data-table thead th[data-sort]").forEach(function (th) {
+        var arrow = th.querySelector(".sort-arrow");
+        if (!arrow) { arrow = document.createElement("span"); arrow.className = "sort-arrow"; th.appendChild(arrow); }
+        if (th.dataset.sort === shipperSortCol) {
+          arrow.classList.add("active");
+          arrow.textContent = shipperSortDir > 0 ? " \u25B2" : " \u25BC";
+        } else {
+          arrow.classList.remove("active");
+          arrow.textContent = "";
+        }
+      });
+
+      var tbody = document.getElementById("shippers-tbody");
+      if (shippers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No shipper data available</td></tr>';
+      } else {
+        tbody.innerHTML = shippers.map(function (row) {
+          var mPct = row.marginPct || 0;
+          var hmClass = SRLAnalytics.heatmapClass(mPct);
+          var creditClass = getCreditClass(row.creditStatus || row.credit || "good");
+          var payDays = row.avgPayDays || row.payDays || 0;
+          var payColor = payDays <= 30 ? "heatmap-dark-green" : payDays <= 45 ? "heatmap-light-green" : payDays <= 60 ? "heatmap-yellow" : "heatmap-red";
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(row.name || row.company || "") + '</td>' +
+            '<td>' + (row.loads || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(row.revenue || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(row.margin || 0) + '</td>' +
+            '<td><span class="heatmap-cell ' + hmClass + '">' + SRLAnalytics.fmtPct(mPct) + '</span></td>' +
+            '<td><span class="heatmap-cell ' + payColor + '">' + Math.round(payDays) + ' days</span></td>' +
+            '<td><span class="' + creditClass + '">' + SRLAnalytics.esc(formatCredit(row.creditStatus || row.credit || "good")) + '</span></td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    function getCreditClass(status) {
+      var s = (status || "").toLowerCase();
+      if (s === "good" || s === "active") return "credit-good";
+      if (s === "watch") return "credit-watch";
+      if (s === "hold") return "credit-hold";
+      if (s === "blocked" || s === "suspended") return "credit-blocked";
+      return "credit-good";
+    }
+
+    function formatCredit(status) {
+      if (!status) return "Good";
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Shared Helpers
+       ══════════════════════════════════════════════════════════ */
+    function kpiCard(label, value, change) {
+      var arrow = "";
+      if (change && change.direction !== "neutral" && change.value > 0) {
+        var dir = change.direction;
+        var arrowChar = dir === "up" ? "\u25B2" : "\u25BC";
+        arrow = '<div class="kpi-change ' + dir + '">' + arrowChar + " " + change.value + "%</div>";
+      }
+      return '<div class="kpi-card">' +
+        '<div class="kpi-label">' + label + '</div>' +
+        '<div class="kpi-value">' + value + '</div>' +
+        arrow +
+      '</div>';
+    }
+
+    function formatRole(role) {
+      var m = { ADMIN: "Administrator", BROKER: "Account Executive", DISPATCH: "Dispatch", OPERATIONS: "Operations", CEO: "CEO", ACCOUNTING: "Accounting" };
+      return m[role] || role;
+    }
+
+    /* ── Sidebar toggle ── */
+    window.toggleSidebar = function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    };
+
+    window.handleLogout = function () {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    };
+  })();
+  </script>
+</body>
+</html>

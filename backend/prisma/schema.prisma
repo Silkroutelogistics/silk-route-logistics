@@ -456,6 +456,8 @@ model User {
   receivedMessages Message[]      @relation("MessageReceiver")
   notifications   Notification[]
   auditLogs       AuditLog[]
+  preferredTheme       String    @default("silk-route-classic")
+  darkMode             Boolean   @default(false)
   passwordChangedAt    DateTime?
   otpCodes             OtpCode[]
   rateConfirmations    RateConfirmation[] @relation("RateConfCreator")

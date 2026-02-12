@@ -1,0 +1,641 @@
+/* ═══════════════════════════════════════════════════════════
+   SRL Theme Engine — 6 Preset Themes × 2 Modes (Light/Dark)
+   CSS Variable Bridge Pattern
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── 1. SILK ROUTE CLASSIC ─ Light ──────────────────────── */
+html[data-theme="silk-route-classic"][data-mode="light"] {
+  --theme-primary: #C8963E;
+  --theme-primary-hover: #D4A64E;
+  --theme-primary-dim: rgba(200, 150, 62, 0.15);
+  --theme-sidebar-bg: #0D1B2A;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #94A3B8;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(200, 150, 62, 0.1);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #F8FAFC;
+  --theme-bg-alt: #F1F5F9;
+  --theme-text-primary: #334155;
+  --theme-text-secondary: #475569;
+  --theme-text-muted: #94A3B8;
+  --theme-text-heading: #0D1B2A;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #E2E8F0;
+  --theme-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --theme-border: #E2E8F0;
+  --theme-border-light: #F1F5F9;
+  --theme-input-bg: #FFFFFF;
+  --theme-input-border: #E2E8F0;
+  --theme-input-text: #334155;
+  --theme-panel-bg: #FFFFFF;
+  --theme-dropdown-bg: #1E293B;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #0F172A;
+}
+
+/* ─── 1. SILK ROUTE CLASSIC ─ Dark ───────────────────────── */
+html[data-theme="silk-route-classic"][data-mode="dark"] {
+  --theme-primary: #C8963E;
+  --theme-primary-hover: #D4A64E;
+  --theme-primary-dim: rgba(200, 150, 62, 0.15);
+  --theme-sidebar-bg: #0A1220;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #94A3B8;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(200, 150, 62, 0.1);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #0D1B2A;
+  --theme-bg-alt: #142236;
+  --theme-text-primary: #E2E8F0;
+  --theme-text-secondary: #CBD5E1;
+  --theme-text-muted: #94A3B8;
+  --theme-text-heading: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.03);
+  --theme-card-border: rgba(255, 255, 255, 0.06);
+  --theme-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --theme-border: #1E3A5F;
+  --theme-border-light: rgba(255, 255, 255, 0.06);
+  --theme-input-bg: rgba(255, 255, 255, 0.05);
+  --theme-input-border: #1E3A5F;
+  --theme-input-text: #E2E8F0;
+  --theme-panel-bg: #142236;
+  --theme-dropdown-bg: #1E293B;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #0D1B2A;
+}
+
+/* ─── 2. MIDNIGHT EXPRESS ─ Light ────────────────────────── */
+html[data-theme="midnight-express"][data-mode="light"] {
+  --theme-primary: #818CF8;
+  --theme-primary-hover: #A5B4FC;
+  --theme-primary-dim: rgba(129, 140, 248, 0.15);
+  --theme-sidebar-bg: #312E81;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #C7D2FE;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.1);
+  --theme-sidebar-active-bg: rgba(129, 140, 248, 0.15);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --theme-bg: #F5F5F7;
+  --theme-bg-alt: #EEF2FF;
+  --theme-text-primary: #1E1B4B;
+  --theme-text-secondary: #4338CA;
+  --theme-text-muted: #6366F1;
+  --theme-text-heading: #312E81;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #E0E7FF;
+  --theme-card-shadow: 0 4px 6px -1px rgba(49, 46, 129, 0.08), 0 2px 4px -2px rgba(49, 46, 129, 0.06);
+  --theme-border: #E0E7FF;
+  --theme-border-light: #EEF2FF;
+  --theme-input-bg: #FFFFFF;
+  --theme-input-border: #E0E7FF;
+  --theme-input-text: #1E1B4B;
+  --theme-panel-bg: #FFFFFF;
+  --theme-dropdown-bg: #312E81;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #312E81;
+}
+
+/* ─── 2. MIDNIGHT EXPRESS ─ Dark ─────────────────────────── */
+html[data-theme="midnight-express"][data-mode="dark"] {
+  --theme-primary: #818CF8;
+  --theme-primary-hover: #A5B4FC;
+  --theme-primary-dim: rgba(129, 140, 248, 0.15);
+  --theme-sidebar-bg: #1E1B4B;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #A5B4FC;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(129, 140, 248, 0.12);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #1E1B4B;
+  --theme-bg-alt: #312E81;
+  --theme-text-primary: #E0E7FF;
+  --theme-text-secondary: #C7D2FE;
+  --theme-text-muted: #A5B4FC;
+  --theme-text-heading: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.03);
+  --theme-card-border: rgba(255, 255, 255, 0.06);
+  --theme-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --theme-border: rgba(129, 140, 248, 0.2);
+  --theme-border-light: rgba(255, 255, 255, 0.06);
+  --theme-input-bg: rgba(255, 255, 255, 0.05);
+  --theme-input-border: rgba(129, 140, 248, 0.2);
+  --theme-input-text: #E0E7FF;
+  --theme-panel-bg: #312E81;
+  --theme-dropdown-bg: #1E1B4B;
+  --theme-dropdown-border: rgba(129, 140, 248, 0.2);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #1E1B4B;
+}
+
+/* ─── 3. DESERT ROUTE ─ Light ────────────────────────────── */
+html[data-theme="desert-route"][data-mode="light"] {
+  --theme-primary: #C2703E;
+  --theme-primary-hover: #D4843E;
+  --theme-primary-dim: rgba(194, 112, 62, 0.15);
+  --theme-sidebar-bg: #78350F;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #FCD34D;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.1);
+  --theme-sidebar-active-bg: rgba(194, 112, 62, 0.15);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --theme-bg: #FFFBEB;
+  --theme-bg-alt: #FEF3C7;
+  --theme-text-primary: #451A03;
+  --theme-text-secondary: #78350F;
+  --theme-text-muted: #92400E;
+  --theme-text-heading: #78350F;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #FDE68A;
+  --theme-card-shadow: 0 4px 6px -1px rgba(120, 53, 15, 0.08), 0 2px 4px -2px rgba(120, 53, 15, 0.06);
+  --theme-border: #FDE68A;
+  --theme-border-light: #FEF3C7;
+  --theme-input-bg: #FFFFFF;
+  --theme-input-border: #FDE68A;
+  --theme-input-text: #451A03;
+  --theme-panel-bg: #FFFFFF;
+  --theme-dropdown-bg: #78350F;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #78350F;
+}
+
+/* ─── 3. DESERT ROUTE ─ Dark ─────────────────────────────── */
+html[data-theme="desert-route"][data-mode="dark"] {
+  --theme-primary: #C2703E;
+  --theme-primary-hover: #D4843E;
+  --theme-primary-dim: rgba(194, 112, 62, 0.15);
+  --theme-sidebar-bg: #1C1917;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #A8A29E;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(194, 112, 62, 0.12);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #292524;
+  --theme-bg-alt: #44403C;
+  --theme-text-primary: #E7E5E4;
+  --theme-text-secondary: #D6D3D1;
+  --theme-text-muted: #A8A29E;
+  --theme-text-heading: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.03);
+  --theme-card-border: rgba(255, 255, 255, 0.06);
+  --theme-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --theme-border: rgba(194, 112, 62, 0.2);
+  --theme-border-light: rgba(255, 255, 255, 0.06);
+  --theme-input-bg: rgba(255, 255, 255, 0.05);
+  --theme-input-border: rgba(194, 112, 62, 0.2);
+  --theme-input-text: #E7E5E4;
+  --theme-panel-bg: #44403C;
+  --theme-dropdown-bg: #292524;
+  --theme-dropdown-border: rgba(194, 112, 62, 0.2);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #292524;
+}
+
+/* ─── 4. ARCTIC HAUL ─ Light ─────────────────────────────── */
+html[data-theme="arctic-haul"][data-mode="light"] {
+  --theme-primary: #0EA5E9;
+  --theme-primary-hover: #38BDF8;
+  --theme-primary-dim: rgba(14, 165, 233, 0.15);
+  --theme-sidebar-bg: #0C4A6E;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #BAE6FD;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.1);
+  --theme-sidebar-active-bg: rgba(14, 165, 233, 0.15);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --theme-bg: #F0F9FF;
+  --theme-bg-alt: #E0F2FE;
+  --theme-text-primary: #0C4A6E;
+  --theme-text-secondary: #075985;
+  --theme-text-muted: #0369A1;
+  --theme-text-heading: #0C4A6E;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #BAE6FD;
+  --theme-card-shadow: 0 4px 6px -1px rgba(12, 74, 110, 0.08), 0 2px 4px -2px rgba(12, 74, 110, 0.06);
+  --theme-border: #BAE6FD;
+  --theme-border-light: #E0F2FE;
+  --theme-input-bg: #FFFFFF;
+  --theme-input-border: #BAE6FD;
+  --theme-input-text: #0C4A6E;
+  --theme-panel-bg: #FFFFFF;
+  --theme-dropdown-bg: #0C4A6E;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #0C4A6E;
+}
+
+/* ─── 4. ARCTIC HAUL ─ Dark ──────────────────────────────── */
+html[data-theme="arctic-haul"][data-mode="dark"] {
+  --theme-primary: #0EA5E9;
+  --theme-primary-hover: #38BDF8;
+  --theme-primary-dim: rgba(14, 165, 233, 0.15);
+  --theme-sidebar-bg: #082F49;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #7DD3FC;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(14, 165, 233, 0.12);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #0C4A6E;
+  --theme-bg-alt: #075985;
+  --theme-text-primary: #E0F2FE;
+  --theme-text-secondary: #BAE6FD;
+  --theme-text-muted: #7DD3FC;
+  --theme-text-heading: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.03);
+  --theme-card-border: rgba(255, 255, 255, 0.06);
+  --theme-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --theme-border: rgba(14, 165, 233, 0.2);
+  --theme-border-light: rgba(255, 255, 255, 0.06);
+  --theme-input-bg: rgba(255, 255, 255, 0.05);
+  --theme-input-border: rgba(14, 165, 233, 0.2);
+  --theme-input-text: #E0F2FE;
+  --theme-panel-bg: #075985;
+  --theme-dropdown-bg: #0C4A6E;
+  --theme-dropdown-border: rgba(14, 165, 233, 0.2);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #0C4A6E;
+}
+
+/* ─── 5. HIGHWAY GREEN ─ Light ───────────────────────────── */
+html[data-theme="highway-green"][data-mode="light"] {
+  --theme-primary: #16A34A;
+  --theme-primary-hover: #22C55E;
+  --theme-primary-dim: rgba(22, 163, 74, 0.15);
+  --theme-sidebar-bg: #14532D;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #BBF7D0;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.1);
+  --theme-sidebar-active-bg: rgba(22, 163, 74, 0.15);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --theme-bg: #F0FDF4;
+  --theme-bg-alt: #DCFCE7;
+  --theme-text-primary: #14532D;
+  --theme-text-secondary: #166534;
+  --theme-text-muted: #15803D;
+  --theme-text-heading: #14532D;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #BBF7D0;
+  --theme-card-shadow: 0 4px 6px -1px rgba(20, 83, 45, 0.08), 0 2px 4px -2px rgba(20, 83, 45, 0.06);
+  --theme-border: #BBF7D0;
+  --theme-border-light: #DCFCE7;
+  --theme-input-bg: #FFFFFF;
+  --theme-input-border: #BBF7D0;
+  --theme-input-text: #14532D;
+  --theme-panel-bg: #FFFFFF;
+  --theme-dropdown-bg: #14532D;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #14532D;
+}
+
+/* ─── 5. HIGHWAY GREEN ─ Dark ────────────────────────────── */
+html[data-theme="highway-green"][data-mode="dark"] {
+  --theme-primary: #16A34A;
+  --theme-primary-hover: #22C55E;
+  --theme-primary-dim: rgba(22, 163, 74, 0.15);
+  --theme-sidebar-bg: #052E16;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #86EFAC;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(22, 163, 74, 0.12);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #14532D;
+  --theme-bg-alt: #166534;
+  --theme-text-primary: #DCFCE7;
+  --theme-text-secondary: #BBF7D0;
+  --theme-text-muted: #86EFAC;
+  --theme-text-heading: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.03);
+  --theme-card-border: rgba(255, 255, 255, 0.06);
+  --theme-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --theme-border: rgba(22, 163, 74, 0.2);
+  --theme-border-light: rgba(255, 255, 255, 0.06);
+  --theme-input-bg: rgba(255, 255, 255, 0.05);
+  --theme-input-border: rgba(22, 163, 74, 0.2);
+  --theme-input-text: #DCFCE7;
+  --theme-panel-bg: #166534;
+  --theme-dropdown-bg: #14532D;
+  --theme-dropdown-border: rgba(22, 163, 74, 0.2);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #14532D;
+}
+
+/* ─── 6. CHROME STEEL ─ Light ────────────────────────────── */
+html[data-theme="chrome-steel"][data-mode="light"] {
+  --theme-primary: #71717A;
+  --theme-primary-hover: #A1A1AA;
+  --theme-primary-dim: rgba(113, 113, 122, 0.15);
+  --theme-sidebar-bg: #27272A;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #A1A1AA;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(113, 113, 122, 0.15);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --theme-bg: #FAFAFA;
+  --theme-bg-alt: #F4F4F5;
+  --theme-text-primary: #27272A;
+  --theme-text-secondary: #3F3F46;
+  --theme-text-muted: #71717A;
+  --theme-text-heading: #18181B;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #E4E4E7;
+  --theme-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --theme-border: #E4E4E7;
+  --theme-border-light: #F4F4F5;
+  --theme-input-bg: #FFFFFF;
+  --theme-input-border: #E4E4E7;
+  --theme-input-text: #27272A;
+  --theme-panel-bg: #FFFFFF;
+  --theme-dropdown-bg: #27272A;
+  --theme-dropdown-border: rgba(255, 255, 255, 0.1);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #27272A;
+}
+
+/* ─── 6. CHROME STEEL ─ Dark ─────────────────────────────── */
+html[data-theme="chrome-steel"][data-mode="dark"] {
+  --theme-primary: #71717A;
+  --theme-primary-hover: #A1A1AA;
+  --theme-primary-dim: rgba(113, 113, 122, 0.15);
+  --theme-sidebar-bg: #09090B;
+  --theme-sidebar-text: #FFFFFF;
+  --theme-sidebar-muted: #A1A1AA;
+  --theme-sidebar-border: rgba(255, 255, 255, 0.08);
+  --theme-sidebar-active-bg: rgba(113, 113, 122, 0.12);
+  --theme-sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-bg: #18181B;
+  --theme-bg-alt: #27272A;
+  --theme-text-primary: #E4E4E7;
+  --theme-text-secondary: #D4D4D8;
+  --theme-text-muted: #A1A1AA;
+  --theme-text-heading: #FFFFFF;
+  --theme-card-bg: rgba(255, 255, 255, 0.03);
+  --theme-card-border: rgba(255, 255, 255, 0.06);
+  --theme-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --theme-border: rgba(113, 113, 122, 0.3);
+  --theme-border-light: rgba(255, 255, 255, 0.06);
+  --theme-input-bg: rgba(255, 255, 255, 0.05);
+  --theme-input-border: rgba(113, 113, 122, 0.3);
+  --theme-input-text: #E4E4E7;
+  --theme-panel-bg: #27272A;
+  --theme-dropdown-bg: #18181B;
+  --theme-dropdown-border: rgba(113, 113, 122, 0.3);
+  --theme-bell-bg: rgba(255, 255, 255, 0.08);
+  --theme-bell-border: rgba(255, 255, 255, 0.12);
+  --theme-bell-badge-border: #18181B;
+}
+
+/* ─── Status Colors (universal) ──────────────────────────── */
+html[data-theme] {
+  --theme-success: #22C55E;
+  --theme-success-bg: rgba(34, 197, 94, 0.1);
+  --theme-warning: #F59E0B;
+  --theme-warning-bg: rgba(245, 158, 11, 0.1);
+  --theme-danger: #EF4444;
+  --theme-danger-bg: rgba(239, 68, 68, 0.1);
+  --theme-info: #3B82F6;
+  --theme-info-bg: rgba(59, 130, 246, 0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BRIDGE — Maps legacy CSS vars to semantic theme vars
+   Existing CSS rules use var(--gold), var(--navy), etc.
+   This bridge makes them automatically pick up theme values.
+   ═══════════════════════════════════════════════════════════ */
+html[data-theme] {
+  /* Primary / Gold */
+  --gold: var(--theme-primary);
+  --gold-hover: var(--theme-primary-hover);
+  --gold-dim: var(--theme-primary-dim);
+  --gold-light: var(--theme-primary-hover);
+
+  /* Sidebar / Navy */
+  --navy: var(--theme-sidebar-bg);
+  --navy-light: var(--theme-bg-alt);
+  --navy-mid: var(--theme-sidebar-bg);
+
+  /* Page background & text */
+  --gray-50: var(--theme-bg);
+  --gray-100: var(--theme-border-light);
+  --gray-200: var(--theme-border);
+  --gray-300: var(--theme-border);
+  --gray-400: var(--theme-text-muted);
+  --gray-500: var(--theme-text-secondary);
+  --gray-600: var(--theme-text-secondary);
+  --gray-700: var(--theme-text-primary);
+  --white: var(--theme-card-bg);
+
+  /* Status colors */
+  --red: var(--theme-danger);
+  --red-bg: var(--theme-danger-bg);
+  --red-dim: var(--theme-danger-bg);
+  --amber: var(--theme-warning);
+  --amber-bg: var(--theme-warning-bg);
+  --amber-dim: var(--theme-warning-bg);
+  --green: var(--theme-success);
+  --green-bg: var(--theme-success-bg);
+  --green-dim: var(--theme-success-bg);
+  --blue: var(--theme-info);
+  --blue-dim: var(--theme-info-bg);
+
+  /* Carrier console specifics */
+  --border: var(--theme-border);
+  --card-bg: var(--theme-card-bg);
+  --card-border: var(--theme-card-border);
+  --shadow: var(--theme-card-shadow);
+  --slate: var(--theme-text-muted);
+  --slate-dark: var(--theme-text-secondary);
+}
+
+/* ─── Dark Mode body overrides ───────────────────────────── */
+html[data-mode="dark"] body {
+  background: var(--theme-bg);
+  color: var(--theme-text-primary);
+}
+
+html[data-mode="dark"] .sidebar {
+  background: var(--theme-sidebar-bg);
+}
+
+html[data-mode="dark"] .card {
+  background: var(--theme-card-bg);
+  border-color: var(--theme-card-border);
+}
+
+html[data-mode="dark"] .main-header h1,
+html[data-mode="dark"] .card-title,
+html[data-mode="dark"] .kpi-value,
+html[data-mode="dark"] .action-item-title {
+  color: var(--theme-text-heading);
+}
+
+html[data-mode="dark"] .card-header {
+  border-bottom-color: var(--theme-border-light);
+}
+
+html[data-mode="dark"] .action-item {
+  border-bottom-color: var(--theme-border-light);
+}
+
+html[data-mode="dark"] .main-footer {
+  border-top-color: var(--theme-border);
+}
+
+html[data-mode="dark"] .sidebar-logo {
+  border-bottom-color: var(--theme-sidebar-border);
+}
+
+html[data-mode="dark"] .sidebar-user {
+  border-bottom-color: var(--theme-sidebar-border);
+}
+
+html[data-mode="dark"] .sidebar-footer {
+  border-top-color: var(--theme-sidebar-border);
+}
+
+html[data-mode="dark"] .sidebar-nav a {
+  color: var(--theme-sidebar-muted);
+}
+
+html[data-mode="dark"] .sidebar-nav a:hover {
+  color: var(--theme-sidebar-text);
+  background: var(--theme-sidebar-hover-bg);
+}
+
+html[data-mode="dark"] .sidebar-nav a.active {
+  color: var(--theme-primary);
+  background: var(--theme-sidebar-active-bg);
+  border-right-color: var(--theme-primary);
+}
+
+/* Dark mode form controls */
+html[data-mode="dark"] .form-control,
+html[data-mode="dark"] input,
+html[data-mode="dark"] select,
+html[data-mode="dark"] textarea {
+  background: var(--theme-input-bg);
+  border-color: var(--theme-input-border);
+  color: var(--theme-input-text);
+}
+
+html[data-mode="dark"] .form-control:focus,
+html[data-mode="dark"] input:focus,
+html[data-mode="dark"] select:focus {
+  border-color: var(--theme-primary);
+}
+
+/* Dark mode table */
+html[data-mode="dark"] thead th {
+  color: var(--theme-text-muted);
+  border-bottom-color: var(--theme-border);
+}
+
+html[data-mode="dark"] tbody td {
+  color: var(--theme-text-secondary);
+  border-bottom-color: var(--theme-border-light);
+}
+
+html[data-mode="dark"] tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Dark mode buttons */
+html[data-mode="dark"] .btn-outline {
+  background: var(--theme-card-bg);
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border);
+}
+
+html[data-mode="dark"] .btn-navy {
+  background: var(--theme-sidebar-bg);
+}
+
+/* Dark mode tabs */
+html[data-mode="dark"] .tabs {
+  border-bottom-color: var(--theme-border);
+}
+
+html[data-mode="dark"] .tab-btn {
+  color: var(--theme-text-muted);
+}
+
+html[data-mode="dark"] .tab-btn:hover {
+  color: var(--theme-text-heading);
+}
+
+html[data-mode="dark"] .tab-btn.active {
+  color: var(--theme-primary);
+  border-bottom-color: var(--theme-primary);
+}
+
+/* Dark mode modal */
+html[data-mode="dark"] .modal {
+  background: var(--theme-panel-bg);
+  border-color: var(--theme-border);
+}
+
+html[data-mode="dark"] .modal-header h2 {
+  color: var(--theme-text-heading);
+}
+
+/* Dark mode pagination */
+html[data-mode="dark"] .pagination button {
+  background: var(--theme-card-bg);
+  border-color: var(--theme-border);
+  color: var(--theme-text-muted);
+}
+
+html[data-mode="dark"] .pagination button:hover {
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+}
+
+html[data-mode="dark"] .pagination button.active {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+}
+
+/* Light mode resets — ensure AE console picks up bridge vars */
+html[data-mode="light"] body {
+  background: var(--theme-bg);
+  color: var(--theme-text-primary);
+}
+
+html[data-mode="light"] .sidebar {
+  background: var(--theme-sidebar-bg);
+}
+
+html[data-mode="light"] .sidebar-nav a {
+  color: var(--theme-sidebar-muted);
+}
+
+html[data-mode="light"] .sidebar-nav a:hover {
+  color: var(--theme-sidebar-text);
+  background: var(--theme-sidebar-hover-bg);
+}
+
+html[data-mode="light"] .sidebar-nav a.active {
+  color: var(--theme-primary);
+  background: var(--theme-sidebar-active-bg);
+  border-right-color: var(--theme-primary);
+}
+
+html[data-mode="light"] .main-header h1,
+html[data-mode="light"] .card-title,
+html[data-mode="light"] .action-item-title {
+  color: var(--theme-text-heading);
+}

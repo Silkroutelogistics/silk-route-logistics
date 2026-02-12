@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounting Analytics - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/analytics.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    .sort-arrow { font-size: 10px; margin-left: 3px; opacity: 0.6; }
+    .sort-arrow.active { opacity: 1; color: var(--theme-primary, #c8963e); }
+
+    .export-card {
+      background: var(--theme-card-bg, #fff);
+      border: 1px solid var(--theme-card-border, #e2e8f0);
+      border-radius: 10px;
+      padding: 32px;
+      box-shadow: var(--theme-card-shadow, 0 1px 3px rgba(0,0,0,0.06));
+    }
+    .export-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--theme-text-heading, #0d1b2a);
+      margin-bottom: 20px;
+    }
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .export-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--theme-bg-alt, #f8fafc);
+      border-radius: 8px;
+      border: 1px solid var(--theme-border-light, #f1f5f9);
+    }
+    .export-item-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--theme-text-primary, #334155);
+    }
+    .export-item-actions { display: flex; gap: 6px; }
+    .export-item-actions button {
+      padding: 5px 12px;
+      border: 1px solid var(--theme-border, #e2e8f0);
+      background: var(--theme-card-bg, #fff);
+      color: var(--theme-text-primary, #334155);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .export-item-actions button:hover {
+      border-color: var(--theme-primary, #c8963e);
+      color: var(--theme-primary, #c8963e);
+    }
+
+    .access-denied {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--gray-400);
+    }
+    .access-denied h2 {
+      color: var(--red);
+      margin-bottom: 12px;
+      font-size: 22px;
+    }
+    .access-denied p {
+      font-size: 14px;
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .page-header-sub {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .status-PAID, .status-paid { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .status-UNPAID, .status-unpaid, .status-PENDING, .status-pending { background: rgba(245,158,11,0.12); color: #d97706; }
+    .status-OVERDUE, .status-overdue { background: rgba(239,68,68,0.12); color: #ef4444; }
+    .status-PARTIAL, .status-partial { background: rgba(59,130,246,0.12); color: #3b82f6; }
+    .status-SCHEDULED, .status-scheduled { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+
+    .utilization-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .utilization-bar .progress-bar-wrap {
+      flex: 1;
+      min-width: 60px;
+    }
+    .utilization-bar .utilization-pct {
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .export-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-layout">
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">Dashboard</a>
+        <a href="/ae/loads.html">Load Board</a>
+        <a href="/ae/caravan.html">The Caravan</a>
+        <a href="/ae/crm.html">CRM</a>
+        <a href="/ae/communications.html">Communications</a>
+        <a href="/ae/claims.html">Claims</a>
+        <a href="/ae/financials.html">Financials</a>
+        <a href="/ae/training.html">Training</a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+          <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
+          <a href="/ae/accounting/payable.html">Accounts Payable</a>
+          <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
+          <a href="/ae/accounting/fund.html">Factoring Fund</a>
+          <a href="/ae/accounting/reports.html">Reports</a>
+          <a href="/ae/accounting/approvals.html">Approvals</a>
+          <a href="/ae/accounting/analytics.html" class="active">Analytics</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer"><button onclick="handleLogout()">Sign Out</button></div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="main-content">
+      <!-- Access Denied Gate -->
+      <div id="access-denied" style="display:none">
+        <div class="access-denied">
+          <h2>Access Denied</h2>
+          <p>Accounting Analytics is restricted to Admin, CEO, and Accounting users.</p>
+          <p style="margin-top:16px"><a href="/ae/dashboard" style="color:var(--gold)">Return to main dashboard</a></p>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading-state" class="loading-state">
+        <div class="loading-spinner"></div>
+        <div>Verifying access...</div>
+      </div>
+
+      <!-- Analytics Content -->
+      <div id="analytics-content" style="display:none;padding:24px 32px;">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div>
+            <h1>Accounting Analytics</h1>
+            <div class="page-header-sub">Financial intelligence, aging analysis, and credit health</div>
+          </div>
+        </div>
+
+        <!-- Date Range Picker -->
+        <div id="date-picker"></div>
+
+        <!-- Tabs -->
+        <div class="analytics-tabs" id="analytics-tabs">
+          <button class="analytics-tab active" data-tab="tab-revenue">Revenue &amp; Margin</button>
+          <button class="analytics-tab" data-tab="tab-cashflow">Cash Flow</button>
+          <button class="analytics-tab" data-tab="tab-ar">AR Aging</button>
+          <button class="analytics-tab" data-tab="tab-ap">Accounts Payable</button>
+          <button class="analytics-tab" data-tab="tab-lanes">Lane Profitability</button>
+          <button class="analytics-tab" data-tab="tab-credit">Shipper Credit</button>
+          <button class="analytics-tab" data-tab="tab-export">Export</button>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 1: Revenue & Margin
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel active" id="tab-revenue">
+          <div id="revenue-kpis"></div>
+          <div class="chart-container">
+            <div class="chart-header">
+              <span class="chart-title">Revenue vs Cost Trend</span>
+              <div class="chart-actions">
+                <button class="chart-group-btn active" data-granularity="day">Day</button>
+                <button class="chart-group-btn" data-granularity="week">Week</button>
+                <button class="chart-group-btn" data-granularity="month">Month</button>
+              </div>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="revenue-trend-chart"></canvas></div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Revenue by Equipment Type</span></div>
+            <div class="chart-canvas-wrap"><canvas id="revenue-equipment-chart"></canvas></div>
+          </div>
+          <div class="export-row">
+            <button class="export-btn" onclick="SRLAnalytics.exportCSV('revenue')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 2: Cash Flow
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-cashflow">
+          <div id="cashflow-kpis"></div>
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Daily Cash Flow (Inflows vs Outflows)</span></div>
+            <div class="chart-canvas-wrap"><canvas id="cashflow-daily-chart"></canvas></div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header"><span class="chart-title">Monthly Cash Position</span></div>
+            <div class="chart-canvas-wrap"><canvas id="cashflow-monthly-chart"></canvas></div>
+          </div>
+          <div class="export-row">
+            <button class="export-btn" onclick="SRLAnalytics.exportCSV('cash-flow')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 3: AR Aging
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-ar">
+          <div id="ar-kpis"></div>
+          <div class="analytics-grid-2">
+            <div class="chart-container">
+              <div class="chart-header"><span class="chart-title">AR by Aging Bucket</span></div>
+              <div class="chart-canvas-wrap"><canvas id="ar-aging-chart"></canvas></div>
+            </div>
+            <div class="analytics-table-wrap" id="ar-table-wrap">
+              <div class="analytics-table-header"><span class="analytics-table-title">Top Overdue Invoices</span></div>
+              <table class="analytics-table">
+                <thead>
+                  <tr>
+                    <th>Shipper</th>
+                    <th>Invoice #</th>
+                    <th>Amount</th>
+                    <th>Days Out</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ar-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="export-row">
+            <button class="export-btn" onclick="SRLAnalytics.exportCSV('ar-aging')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 4: Accounts Payable
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-ap">
+          <div id="ap-kpis"></div>
+          <div class="analytics-grid-2">
+            <div class="chart-container">
+              <div class="chart-header"><span class="chart-title">AP by Status</span></div>
+              <div class="chart-canvas-wrap"><canvas id="ap-status-chart"></canvas></div>
+            </div>
+            <div class="analytics-table-wrap" id="ap-table-wrap">
+              <div class="analytics-table-header"><span class="analytics-table-title">Upcoming Payments</span></div>
+              <table class="analytics-table">
+                <thead>
+                  <tr>
+                    <th>Carrier</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ap-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="export-row">
+            <button class="export-btn" onclick="SRLAnalytics.exportCSV('ap')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 5: Lane Profitability
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-lanes">
+          <div id="lanes-kpis"></div>
+          <div class="analytics-table-wrap" id="lanes-table-wrap">
+            <div class="analytics-table-header"><span class="analytics-table-title">Lane Profitability Heatmap</span></div>
+            <table class="analytics-table" id="lanes-data-table">
+              <thead>
+                <tr>
+                  <th data-sort="lane">Lane</th>
+                  <th data-sort="loads">Loads</th>
+                  <th data-sort="revenue">Revenue</th>
+                  <th data-sort="cost">Cost</th>
+                  <th data-sort="marginPct">Margin %</th>
+                  <th data-sort="rpm">RPM</th>
+                </tr>
+              </thead>
+              <tbody id="lanes-tbody"></tbody>
+            </table>
+          </div>
+          <div class="export-row">
+            <button class="export-btn" onclick="SRLAnalytics.exportCSV('lanes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 6: Shipper Credit Health
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-credit">
+          <div id="credit-kpis"></div>
+          <div class="analytics-table-wrap" id="credit-table-wrap">
+            <div class="analytics-table-header"><span class="analytics-table-title">Shipper Credit Health</span></div>
+            <table class="analytics-table" id="credit-data-table">
+              <thead>
+                <tr>
+                  <th>Shipper Name</th>
+                  <th>Credit Limit</th>
+                  <th>Balance</th>
+                  <th>Utilization %</th>
+                  <th>Status</th>
+                  <th>Days Avg Pay</th>
+                </tr>
+              </thead>
+              <tbody id="credit-tbody"></tbody>
+            </table>
+          </div>
+          <div class="export-row">
+            <button class="export-btn" onclick="SRLAnalytics.exportCSV('shipper-credit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             TAB 7: Export
+             ══════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-export">
+          <div class="export-card">
+            <h3>Export Accounting Reports</h3>
+            <p style="color:var(--theme-text-muted,#94a3b8);font-size:13px;margin-bottom:24px">Download accounting analytics reports for the selected date range. CSV files open in Excel; PDF files are formatted for printing.</p>
+            <div class="export-grid">
+              <div class="export-item">
+                <span class="export-item-label">Revenue &amp; Margin</span>
+                <div class="export-item-actions">
+                  <button onclick="SRLAnalytics.exportCSV('revenue')">CSV</button>
+                  <button onclick="SRLAnalytics.exportPDF('revenue')">PDF</button>
+                </div>
+              </div>
+              <div class="export-item">
+                <span class="export-item-label">Cash Flow</span>
+                <div class="export-item-actions">
+                  <button onclick="SRLAnalytics.exportCSV('cash-flow')">CSV</button>
+                  <button onclick="SRLAnalytics.exportPDF('cash-flow')">PDF</button>
+                </div>
+              </div>
+              <div class="export-item">
+                <span class="export-item-label">AR Aging</span>
+                <div class="export-item-actions">
+                  <button onclick="SRLAnalytics.exportCSV('ar-aging')">CSV</button>
+                  <button onclick="SRLAnalytics.exportPDF('ar-aging')">PDF</button>
+                </div>
+              </div>
+              <div class="export-item">
+                <span class="export-item-label">AP Summary</span>
+                <div class="export-item-actions">
+                  <button onclick="SRLAnalytics.exportCSV('ap')">CSV</button>
+                  <button onclick="SRLAnalytics.exportPDF('ap')">PDF</button>
+                </div>
+              </div>
+              <div class="export-item">
+                <span class="export-item-label">Lane Profitability</span>
+                <div class="export-item-actions">
+                  <button onclick="SRLAnalytics.exportCSV('lanes')">CSV</button>
+                  <button onclick="SRLAnalytics.exportPDF('lanes')">PDF</button>
+                </div>
+              </div>
+              <div class="export-item">
+                <span class="export-item-label">Shipper Credit</span>
+                <div class="export-item-actions">
+                  <button onclick="SRLAnalytics.exportCSV('shipper-credit')">CSV</button>
+                  <button onclick="SRLAnalytics.exportPDF('shipper-credit')">PDF</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /analytics-content -->
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script src="/shared/js/analyticsHelpers.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    var token = localStorage.getItem("token");
+    if (!token) { window.location.href = "/auth/login"; return; }
+
+    /* ══════════════════════════════════════════════════════════
+       State
+       ══════════════════════════════════════════════════════════ */
+    var currentGranularity = "day";
+    var revenueData = null;
+    var cashFlowData = null;
+    var arData = null;
+    var apData = null;
+    var lanesRawData = null;
+    var creditData = null;
+
+    var laneSortCol = "marginPct";
+    var laneSortDir = -1;
+
+    /* ══════════════════════════════════════════════════════════
+       Auth & Init
+       ══════════════════════════════════════════════════════════ */
+    SRL.getMe().then(function (user) {
+      if (window.SRLTheme) SRLTheme.restoreFromUser(user);
+      document.getElementById("user-name").textContent = user.firstName + " " + user.lastName;
+      document.getElementById("user-role").textContent = formatRole(user.role);
+
+      if (user.role !== "ADMIN" && user.role !== "CEO" && user.role !== "ACCOUNTING") {
+        document.getElementById("loading-state").style.display = "none";
+        document.getElementById("access-denied").style.display = "block";
+        return;
+      }
+
+      document.getElementById("loading-state").style.display = "none";
+      document.getElementById("analytics-content").style.display = "block";
+
+      SRLAnalytics.initDatePicker("date-picker", function () { loadAllData(); });
+      SRLAnalytics.initTabs("analytics-tabs");
+
+      initGranularityToggle();
+      initLaneTableSort();
+
+      loadAllData();
+    }).catch(function () {
+      window.location.href = "/auth/login";
+    });
+
+    /* ══════════════════════════════════════════════════════════
+       Granularity Toggle (Revenue tab)
+       ══════════════════════════════════════════════════════════ */
+    function initGranularityToggle() {
+      document.querySelectorAll(".chart-group-btn[data-granularity]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".chart-group-btn[data-granularity]").forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          currentGranularity = btn.dataset.granularity;
+          fetchRevenue();
+        });
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Lane Table Sort
+       ══════════════════════════════════════════════════════════ */
+    function initLaneTableSort() {
+      document.querySelectorAll("#lanes-data-table thead th[data-sort]").forEach(function (th) {
+        th.addEventListener("click", function () {
+          var col = th.dataset.sort;
+          if (laneSortCol === col) { laneSortDir *= -1; } else { laneSortCol = col; laneSortDir = -1; }
+          renderLanes(lanesRawData);
+        });
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Data Loading
+       ══════════════════════════════════════════════════════════ */
+    function loadAllData() {
+      showAllSkeletons();
+      fetchRevenue();
+      fetchCashFlow();
+      fetchARaging();
+      fetchAP();
+      fetchLanes();
+      fetchShipperCredit();
+    }
+
+    function showAllSkeletons() {
+      SRLAnalytics.showSkeleton("revenue-kpis", "kpi");
+      SRLAnalytics.showSkeleton("cashflow-kpis", "kpi");
+      SRLAnalytics.showSkeleton("ar-kpis", "kpi");
+      SRLAnalytics.showSkeleton("ap-kpis", "kpi");
+      SRLAnalytics.showSkeleton("lanes-kpis", "kpi");
+      SRLAnalytics.showSkeleton("credit-kpis", "kpi");
+    }
+
+    /* ── Revenue ── */
+    function fetchRevenue() {
+      SRLAnalytics.showSkeleton("revenue-kpis", "kpi");
+      SRLAnalytics.fetch("/api/analytics/revenue?" + SRLAnalytics.dateQS() + "&group_by=" + currentGranularity)
+        .then(function (data) { revenueData = data; renderRevenue(data); })
+        .catch(function () { SRLAnalytics.showEmpty("revenue-kpis", "Unable to load revenue data"); });
+    }
+
+    /* ── Cash Flow ── */
+    function fetchCashFlow() {
+      SRLAnalytics.fetch("/api/analytics/cash-flow?" + SRLAnalytics.dateQS())
+        .then(function (data) { cashFlowData = data; renderCashFlow(data); })
+        .catch(function () { SRLAnalytics.showEmpty("cashflow-kpis", "Unable to load cash flow data"); });
+    }
+
+    /* ── AR Aging ── */
+    function fetchARaging() {
+      SRLAnalytics.fetch("/api/analytics/ar-aging")
+        .then(function (data) { arData = data; renderARAging(data); })
+        .catch(function () { SRLAnalytics.showEmpty("ar-kpis", "Unable to load AR aging data"); });
+    }
+
+    /* ── AP ── */
+    function fetchAP() {
+      SRLAnalytics.fetch("/api/analytics/ap?" + SRLAnalytics.dateQS())
+        .then(function (data) { apData = data; renderAP(data); })
+        .catch(function () { SRLAnalytics.showEmpty("ap-kpis", "Unable to load AP data"); });
+    }
+
+    /* ── Lanes ── */
+    function fetchLanes() {
+      SRLAnalytics.fetch("/api/analytics/lanes?" + SRLAnalytics.dateQS() + "&sort=margin&limit=50")
+        .then(function (data) { lanesRawData = data; renderLanes(data); })
+        .catch(function () { SRLAnalytics.showEmpty("lanes-kpis", "Unable to load lane data"); });
+    }
+
+    /* ── Shipper Credit ── */
+    function fetchShipperCredit() {
+      SRLAnalytics.fetch("/api/analytics/shipper-credit")
+        .then(function (data) { creditData = data; renderShipperCredit(data); })
+        .catch(function () { SRLAnalytics.showEmpty("credit-kpis", "Unable to load shipper credit data"); });
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 1 — Revenue & Margin
+       ══════════════════════════════════════════════════════════ */
+    function renderRevenue(data) {
+      if (!data || !data.summary) {
+        SRLAnalytics.showEmpty("revenue-kpis", "No revenue data for this period");
+        return;
+      }
+      var s = data.summary;
+      var prev = data.previous || {};
+
+      var revChange = SRLAnalytics.pctChange(s.totalRevenue || 0, prev.totalRevenue || 0);
+      var costChange = SRLAnalytics.pctChange(s.totalCost || 0, prev.totalCost || 0);
+      var marginChange = SRLAnalytics.pctChange(s.totalMargin || 0, prev.totalMargin || 0);
+      var marginPctChange = SRLAnalytics.pctChange(s.avgMarginPct || 0, prev.avgMarginPct || 0);
+      var loadCountChange = SRLAnalytics.pctChange(s.loadCount || s.totalLoads || 0, prev.loadCount || prev.totalLoads || 0);
+
+      document.getElementById("revenue-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total Revenue", SRLAnalytics.fmtMoney(s.totalRevenue || 0), revChange) +
+          kpiCard("Total Cost", SRLAnalytics.fmtMoney(s.totalCost || 0), costChange) +
+          kpiCard("Gross Margin", SRLAnalytics.fmtMoney(s.totalMargin || 0), marginChange) +
+          kpiCard("Margin %", SRLAnalytics.fmtPct(s.avgMarginPct || 0), marginPctChange) +
+          kpiCard("Load Count", SRLAnalytics.fmtNum(s.loadCount || s.totalLoads || 0), loadCountChange) +
+        '</div>';
+
+      /* Revenue vs Cost trend line chart */
+      var points = data.data || [];
+      if (points.length > 0) {
+        var labels = points.map(function (p) { return p.label || p.date || p.period || ""; });
+        var c = SRLAnalytics.chartColors();
+        SRLAnalytics.createLineChart("revenue-trend-chart", labels, [
+          { label: "Revenue", data: points.map(function (p) { return p.revenue || 0; }), borderColor: c.primary, backgroundColor: c.primaryDim, fill: true, tension: 0.3 },
+          { label: "Cost", data: points.map(function (p) { return p.cost || 0; }), borderColor: c.info, backgroundColor: "rgba(59,130,246,0.08)", fill: true, tension: 0.3 },
+        ], { money: true });
+      }
+
+      /* Revenue by equipment type bar chart */
+      var equipment = data.equipmentBreakdown || data.byEquipment || [];
+      if (equipment.length > 0) {
+        var eqLabels = equipment.map(function (e) { return e.type || e.label || e.equipmentType || ""; });
+        var eqValues = equipment.map(function (e) { return e.revenue || e.count || 0; });
+        var eqColors = equipment.map(function (_, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+        SRLAnalytics.createBarChart("revenue-equipment-chart", eqLabels, [{
+          label: "Revenue",
+          data: eqValues,
+          backgroundColor: eqColors,
+        }], { money: true });
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 2 — Cash Flow
+       ══════════════════════════════════════════════════════════ */
+    function renderCashFlow(data) {
+      if (!data || (!data.summary && !data.cashBalance && data.cashBalance !== 0)) {
+        SRLAnalytics.showEmpty("cashflow-kpis", "No cash flow data for this period");
+        return;
+      }
+      var s = data.summary || data;
+
+      var cashBalance = s.cashBalance || s.balance || 0;
+      var inflows30d = s.inflows || s.totalInflows || 0;
+      var outflows30d = s.outflows || s.totalOutflows || 0;
+      var netCashFlow = s.netCashFlow || (inflows30d - outflows30d);
+
+      var netDir = netCashFlow >= 0 ? "up" : "down";
+      var netChange = { value: Math.abs(netCashFlow) > 0 ? "100.0" : "0.0", direction: netDir };
+
+      document.getElementById("cashflow-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Cash Balance", SRLAnalytics.fmtMoney(cashBalance), { value: 0, direction: "neutral" }) +
+          kpiCard("Inflows (30d)", SRLAnalytics.fmtMoney(inflows30d), { value: 0, direction: "neutral" }) +
+          kpiCard("Outflows (30d)", SRLAnalytics.fmtMoney(outflows30d), { value: 0, direction: "neutral" }) +
+          kpiCard("Net Cash Flow", SRLAnalytics.fmtMoney(netCashFlow), netChange) +
+        '</div>';
+
+      /* Daily cash flow stacked line chart */
+      var daily = data.daily || data.trend || data.data || [];
+      if (daily.length > 0) {
+        var dailyLabels = daily.map(function (d) { return d.label || d.date || d.period || ""; });
+        var c = SRLAnalytics.chartColors();
+        SRLAnalytics.createLineChart("cashflow-daily-chart", dailyLabels, [
+          { label: "Inflows", data: daily.map(function (d) { return d.inflows || d.inflow || 0; }), borderColor: c.success, backgroundColor: "rgba(34,197,94,0.1)", fill: true, tension: 0.3 },
+          { label: "Outflows", data: daily.map(function (d) { return d.outflows || d.outflow || 0; }), borderColor: c.danger, backgroundColor: "rgba(239,68,68,0.1)", fill: true, tension: 0.3 },
+        ], { money: true });
+      }
+
+      /* Monthly cash position bar chart */
+      var monthly = data.monthly || [];
+      if (monthly.length > 0) {
+        var monthLabels = monthly.map(function (m) { return m.label || m.month || m.period || ""; });
+        var c2 = SRLAnalytics.chartColors();
+        SRLAnalytics.createBarChart("cashflow-monthly-chart", monthLabels, [{
+          label: "Cash Position",
+          data: monthly.map(function (m) { return m.balance || m.cashPosition || m.net || 0; }),
+          backgroundColor: monthly.map(function (m) {
+            var val = m.balance || m.cashPosition || m.net || 0;
+            return val >= 0 ? c2.success : c2.danger;
+          }),
+        }], { money: true });
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 3 — AR Aging
+       ══════════════════════════════════════════════════════════ */
+    function renderARAging(data) {
+      if (!data) {
+        SRLAnalytics.showEmpty("ar-kpis", "No AR aging data available");
+        return;
+      }
+
+      var s = data.summary || data;
+      var buckets = data.buckets || data.aging || [];
+
+      var totalAR = s.totalAR || s.total || 0;
+      var current = s.current || 0;
+      var overdue3160 = s.overdue || s.overdue3160 || 0;
+      var severe61 = s.severelyOverdue || s.overdue61plus || s.severe || 0;
+
+      /* If we have buckets, compute from them */
+      if (buckets.length > 0 && !s.totalAR) {
+        totalAR = 0; current = 0; overdue3160 = 0; severe61 = 0;
+        buckets.forEach(function (b) {
+          var amount = b.amount || b.total || 0;
+          totalAR += amount;
+          var label = (b.label || b.bucket || b.range || "").toLowerCase();
+          if (label.indexOf("0") !== -1 && label.indexOf("30") !== -1) current = amount;
+          else if (label.indexOf("31") !== -1 && label.indexOf("60") !== -1) overdue3160 = amount;
+          else if (label.indexOf("61") !== -1 || label.indexOf("90") !== -1 || label.indexOf("+") !== -1) severe61 += amount;
+        });
+      }
+
+      document.getElementById("ar-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total AR", SRLAnalytics.fmtMoney(totalAR), { value: 0, direction: "neutral" }) +
+          kpiCard("Current (0-30d)", SRLAnalytics.fmtMoney(current), { value: 0, direction: "neutral" }) +
+          kpiCard("Overdue (31-60d)", SRLAnalytics.fmtMoney(overdue3160), overdue3160 > 0 ? { value: "!", direction: "down" } : { value: 0, direction: "neutral" }) +
+          kpiCard("Severely Overdue (61+d)", SRLAnalytics.fmtMoney(severe61), severe61 > 0 ? { value: "!", direction: "down" } : { value: 0, direction: "neutral" }) +
+        '</div>';
+
+      /* Doughnut chart */
+      if (buckets.length > 0) {
+        var dLabels = buckets.map(function (b) { return b.label || b.bucket || b.range || ""; });
+        var dData = buckets.map(function (b) { return b.amount || b.total || 0; });
+        var dColors = [SRLAnalytics.chartColors().success, SRLAnalytics.chartColors().warning, "#f97316", SRLAnalytics.chartColors().danger];
+        SRLAnalytics.createDoughnutChart("ar-aging-chart", dLabels, dData, dColors.slice(0, dData.length));
+      } else if (totalAR > 0) {
+        /* Fallback: create from computed values */
+        var fallbackLabels = ["0-30 Days", "31-60 Days", "61+ Days"];
+        var fallbackData = [current, overdue3160, severe61];
+        SRLAnalytics.createDoughnutChart("ar-aging-chart", fallbackLabels, fallbackData,
+          [SRLAnalytics.chartColors().success, SRLAnalytics.chartColors().warning, SRLAnalytics.chartColors().danger]);
+      }
+
+      /* Top overdue invoices table */
+      var invoices = data.overdueInvoices || data.topOverdue || data.invoices || [];
+      var tbody = document.getElementById("ar-tbody");
+      if (invoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--theme-text-muted);padding:24px">No overdue invoices</td></tr>';
+      } else {
+        tbody.innerHTML = invoices.slice(0, 20).map(function (inv) {
+          var status = inv.status || "OVERDUE";
+          var statusClass = "status-" + status;
+          var daysOut = inv.daysOutstanding || inv.daysOverdue || inv.ageDays || 0;
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(inv.shipper || inv.shipperName || inv.company || "") + '</td>' +
+            '<td style="font-weight:600">' + SRLAnalytics.esc(inv.invoiceNumber || inv.invoiceNo || inv.number || "--") + '</td>' +
+            '<td style="font-weight:600;color:var(--theme-primary)">' + SRLAnalytics.fmtMoney(inv.amount || inv.total || 0) + '</td>' +
+            '<td>' + daysOut + ' days</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + SRLAnalytics.esc(status) + '</span></td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 4 — Accounts Payable
+       ══════════════════════════════════════════════════════════ */
+    function renderAP(data) {
+      if (!data) {
+        SRLAnalytics.showEmpty("ap-kpis", "No AP data available");
+        return;
+      }
+
+      var s = data.summary || data;
+      var totalAP = s.totalAP || s.total || 0;
+      var dueThisWeek = s.dueThisWeek || s.dueSoon || 0;
+      var overdue = s.overdue || s.overdueAmount || 0;
+      var avgDaysToPay = s.avgDaysToPay || s.avgPayDays || 0;
+
+      document.getElementById("ap-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total AP", SRLAnalytics.fmtMoney(totalAP), { value: 0, direction: "neutral" }) +
+          kpiCard("Due This Week", SRLAnalytics.fmtMoney(dueThisWeek), dueThisWeek > 0 ? { value: "!", direction: "down" } : { value: 0, direction: "neutral" }) +
+          kpiCard("Overdue", SRLAnalytics.fmtMoney(overdue), overdue > 0 ? { value: "!", direction: "down" } : { value: 0, direction: "neutral" }) +
+          kpiCard("Avg Days to Pay", Math.round(avgDaysToPay) + " days", { value: 0, direction: "neutral" }) +
+        '</div>';
+
+      /* AP by status doughnut */
+      var statusBreakdown = data.statusBreakdown || data.byStatus || [];
+      if (statusBreakdown.length > 0) {
+        var sLabels = statusBreakdown.map(function (sb) { return sb.status || sb.label || ""; });
+        var sData = statusBreakdown.map(function (sb) { return sb.amount || sb.total || sb.count || 0; });
+        var sColors = statusBreakdown.map(function (_, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+        SRLAnalytics.createDoughnutChart("ap-status-chart", sLabels, sData, sColors);
+      } else if (totalAP > 0) {
+        /* Fallback from computed values */
+        var paid = s.paid || 0;
+        var pending = totalAP - overdue - paid;
+        if (pending < 0) pending = 0;
+        SRLAnalytics.createDoughnutChart("ap-status-chart",
+          ["Pending", "Overdue", "Paid"],
+          [pending, overdue, paid],
+          [SRLAnalytics.chartColors().warning, SRLAnalytics.chartColors().danger, SRLAnalytics.chartColors().success]);
+      }
+
+      /* Upcoming payments table */
+      var payments = data.upcomingPayments || data.payments || data.upcoming || [];
+      var tbody = document.getElementById("ap-tbody");
+      if (payments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--theme-text-muted);padding:24px">No upcoming payments</td></tr>';
+      } else {
+        tbody.innerHTML = payments.slice(0, 20).map(function (p) {
+          var status = p.status || "PENDING";
+          var statusClass = "status-" + status;
+          var dueDate = p.dueDate || p.due || p.paymentDate || "";
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(p.carrier || p.carrierName || p.vendor || p.company || "") + '</td>' +
+            '<td style="font-weight:600;color:var(--theme-primary)">' + SRLAnalytics.fmtMoney(p.amount || p.total || 0) + '</td>' +
+            '<td>' + (dueDate ? formatDisplayDate(dueDate) : "--") + '</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + SRLAnalytics.esc(status) + '</span></td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 5 — Lane Profitability
+       ══════════════════════════════════════════════════════════ */
+    function renderLanes(data) {
+      if (!data || (!data.lanes && !Array.isArray(data))) {
+        document.getElementById("lanes-kpis").innerHTML =
+          '<div class="analytics-empty"><div class="empty-icon">&#128202;</div><h3>No Data Available</h3><p>No lane data for this period</p></div>';
+        var tbody = document.getElementById("lanes-tbody");
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--theme-text-muted);padding:24px">No lane data available</td></tr>';
+        return;
+      }
+
+      var lanes = data.lanes || data;
+      if (!Array.isArray(lanes)) lanes = [];
+
+      /* KPIs */
+      var topMargin = 0;
+      var totalMargin = 0;
+      lanes.forEach(function (l) {
+        var m = l.marginPct || 0;
+        if (m > topMargin) topMargin = m;
+        totalMargin += m;
+      });
+      var avgMargin = lanes.length > 0 ? totalMargin / lanes.length : 0;
+
+      document.getElementById("lanes-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Top Lane Margin", SRLAnalytics.fmtPct(topMargin), { value: 0, direction: "neutral" }) +
+          kpiCard("Avg Lane Margin", SRLAnalytics.fmtPct(avgMargin), { value: 0, direction: "neutral" }) +
+          kpiCard("Lanes Analyzed", SRLAnalytics.fmtNum(lanes.length), { value: 0, direction: "neutral" }) +
+        '</div>';
+
+      /* Sort */
+      var sorted = lanes.slice();
+      sorted.sort(function (a, b) {
+        var av = getLaneSortVal(a, laneSortCol);
+        var bv = getLaneSortVal(b, laneSortCol);
+        if (typeof av === "string") return av.localeCompare(bv) * laneSortDir;
+        return ((av || 0) - (bv || 0)) * laneSortDir;
+      });
+
+      /* Update sort arrows */
+      document.querySelectorAll("#lanes-data-table thead th[data-sort]").forEach(function (th) {
+        var arrow = th.querySelector(".sort-arrow");
+        if (!arrow) { arrow = document.createElement("span"); arrow.className = "sort-arrow"; th.appendChild(arrow); }
+        if (th.dataset.sort === laneSortCol) {
+          arrow.classList.add("active");
+          arrow.textContent = laneSortDir > 0 ? " \u25B2" : " \u25BC";
+        } else {
+          arrow.classList.remove("active");
+          arrow.textContent = "";
+        }
+      });
+
+      /* Table body */
+      var tbody = document.getElementById("lanes-tbody");
+      if (sorted.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--theme-text-muted);padding:24px">No lanes match criteria</td></tr>';
+      } else {
+        tbody.innerHTML = sorted.map(function (l) {
+          var mPct = l.marginPct || 0;
+          var hmClass = SRLAnalytics.heatmapClass(mPct);
+          var laneName = l.lane || ((l.originCity || l.originState || "") + " \u2192 " + (l.destCity || l.destState || "")) || "";
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(laneName) + '</td>' +
+            '<td>' + (l.loads || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(l.revenue || 0) + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(l.cost || 0) + '</td>' +
+            '<td><span class="heatmap-cell ' + hmClass + '">' + SRLAnalytics.fmtPct(mPct) + '</span></td>' +
+            '<td>$' + (l.revenuePerMile || l.rpm || 0).toFixed(2) + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    function getLaneSortVal(row, col) {
+      switch (col) {
+        case "lane": return row.lane || (row.originState + " " + row.destState) || "";
+        case "loads": return row.loads || 0;
+        case "revenue": return row.revenue || 0;
+        case "cost": return row.cost || 0;
+        case "marginPct": return row.marginPct || 0;
+        case "rpm": return row.revenuePerMile || row.rpm || 0;
+        default: return row[col] || 0;
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 6 — Shipper Credit Health
+       ══════════════════════════════════════════════════════════ */
+    function renderShipperCredit(data) {
+      if (!data) {
+        SRLAnalytics.showEmpty("credit-kpis", "No shipper credit data available");
+        return;
+      }
+
+      var s = data.summary || data;
+      var shippers = data.shippers || data.data || [];
+
+      var totalShippers = s.totalShippers || shippers.length || 0;
+      var goodCredit = s.goodCredit || s.good || 0;
+      var watchHold = s.watchHold || (s.watch || 0) + (s.hold || 0) || 0;
+      var blocked = s.blocked || 0;
+
+      /* Compute from shippers array if summary not present */
+      if (!s.totalShippers && shippers.length > 0) {
+        totalShippers = shippers.length;
+        goodCredit = 0; watchHold = 0; blocked = 0;
+        shippers.forEach(function (sh) {
+          var st = (sh.creditStatus || sh.status || "good").toLowerCase();
+          if (st === "good" || st === "active") goodCredit++;
+          else if (st === "watch" || st === "hold") watchHold++;
+          else if (st === "blocked" || st === "suspended") blocked++;
+          else goodCredit++;
+        });
+      }
+
+      document.getElementById("credit-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total Shippers", SRLAnalytics.fmtNum(totalShippers), { value: 0, direction: "neutral" }) +
+          kpiCard("Good Credit", SRLAnalytics.fmtNum(goodCredit), { value: 0, direction: "neutral" }) +
+          kpiCard("Watch / Hold", SRLAnalytics.fmtNum(watchHold), watchHold > 0 ? { value: "!", direction: "down" } : { value: 0, direction: "neutral" }) +
+          kpiCard("Blocked", SRLAnalytics.fmtNum(blocked), blocked > 0 ? { value: "!", direction: "down" } : { value: 0, direction: "neutral" }) +
+        '</div>';
+
+      /* Table */
+      var tbody = document.getElementById("credit-tbody");
+      if (shippers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--theme-text-muted);padding:24px">No shipper credit data</td></tr>';
+      } else {
+        tbody.innerHTML = shippers.map(function (sh) {
+          var status = sh.creditStatus || sh.status || "good";
+          var creditClass = getCreditClass(status);
+          var utilization = sh.utilization || sh.utilizationPct || 0;
+          if (!utilization && sh.creditLimit && sh.balance) {
+            utilization = (sh.balance / sh.creditLimit) * 100;
+          }
+          var utilColor = utilization >= 90 ? "var(--theme-danger, #ef4444)" : utilization >= 70 ? "var(--theme-warning, #f59e0b)" : "var(--theme-success, #22c55e)";
+          var avgPayDays = sh.avgPayDays || sh.daysAvgPay || sh.payDays || 0;
+
+          return '<tr>' +
+            '<td>' + SRLAnalytics.esc(sh.name || sh.shipperName || sh.company || "") + '</td>' +
+            '<td>' + SRLAnalytics.fmtMoney(sh.creditLimit || sh.limit || 0) + '</td>' +
+            '<td style="font-weight:600">' + SRLAnalytics.fmtMoney(sh.balance || sh.outstanding || 0) + '</td>' +
+            '<td>' +
+              '<div class="utilization-bar">' +
+                '<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + Math.min(utilization, 100) + '%;background:' + utilColor + '"></div></div>' +
+                '<span class="utilization-pct" style="color:' + utilColor + '">' + SRLAnalytics.fmtPct(utilization) + '</span>' +
+              '</div>' +
+            '</td>' +
+            '<td><span class="' + creditClass + '">' + SRLAnalytics.esc(formatCredit(status)) + '</span></td>' +
+            '<td>' + Math.round(avgPayDays) + ' days</td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Shared Helpers
+       ══════════════════════════════════════════════════════════ */
+    function kpiCard(label, value, change) {
+      var arrow = "";
+      if (change && change.direction !== "neutral" && change.value && change.value !== "0.0" && change.value !== 0) {
+        var dir = change.direction;
+        var arrowChar = dir === "up" ? "\u25B2" : "\u25BC";
+        var display = change.value === "!" ? "" : " " + change.value + "%";
+        arrow = '<div class="kpi-change ' + dir + '">' + arrowChar + display + '</div>';
+      }
+      return '<div class="kpi-card">' +
+        '<div class="kpi-label">' + label + '</div>' +
+        '<div class="kpi-value">' + value + '</div>' +
+        arrow +
+      '</div>';
+    }
+
+    function getCreditClass(status) {
+      var s = (status || "").toLowerCase();
+      if (s === "good" || s === "active") return "credit-good";
+      if (s === "watch") return "credit-watch";
+      if (s === "hold") return "credit-hold";
+      if (s === "blocked" || s === "suspended") return "credit-blocked";
+      return "credit-good";
+    }
+
+    function formatCredit(status) {
+      if (!status) return "Good";
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    }
+
+    function formatRole(role) {
+      var m = { ADMIN: "Administrator", BROKER: "Account Executive", DISPATCH: "Dispatch", OPERATIONS: "Operations", CEO: "CEO", ACCOUNTING: "Accounting" };
+      return m[role] || role;
+    }
+
+    function formatDisplayDate(dateStr) {
+      if (!dateStr) return "--";
+      var d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    /* ── Logout ── */
+    window.handleLogout = function () {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    };
+
+  })();
+  </script>
+  <script src="/ae/js/notification-bell.js"></script>
+  <script src="/shared/js/themeEngine.js"></script>
+</body>
+</html>

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Compliance | SRL Carrier Portal</title>
   <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
 </head>
 <body>
   <button class="hamburger" id="hamburger">&#9776;</button>
@@ -19,6 +21,7 @@
       <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
       <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
       <a href="/carrier/compliance.html" class="active"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/analytics.html"><span class="nav-icon">&#128202;</span> Analytics</a>
       <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help & SOPs</a>
     </nav>
     <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
@@ -169,6 +172,7 @@
 
     // Init sidebar
     CARRIER.getMe().then(function (u) {
+      if(window.SRLTheme)SRLTheme.restoreFromUser(u);
       if (u) {
         document.getElementById("sidebarUser").innerHTML =
           '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div><div class="user-role">CARRIER</div>' +
@@ -392,5 +396,6 @@
     });
   </script>
 <script src="/ae/js/notification-bell.js"></script>
+<script src="/shared/js/themeEngine.js"></script>
 </body>
 </html>

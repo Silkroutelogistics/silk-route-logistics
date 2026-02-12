@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/analytics.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    .export-card {
+      background: var(--theme-card-bg, #fff);
+      border: 1px solid var(--theme-card-border, #e2e8f0);
+      border-radius: 10px;
+      padding: 32px;
+      box-shadow: var(--theme-card-shadow, 0 1px 3px rgba(0,0,0,0.06));
+    }
+    .export-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--theme-text-heading, #0d1b2a);
+      margin-bottom: 20px;
+    }
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .export-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--theme-bg-alt, #f8fafc);
+      border-radius: 8px;
+      border: 1px solid var(--theme-border-light, #f1f5f9);
+    }
+    .export-item-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--theme-text-primary, #334155);
+    }
+    .export-item-actions { display: flex; gap: 6px; }
+    .export-item-actions button {
+      padding: 5px 12px;
+      border: 1px solid var(--theme-border, #e2e8f0);
+      background: var(--theme-card-bg, #fff);
+      color: var(--theme-text-primary, #334155);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .export-item-actions button:hover {
+      border-color: var(--theme-primary, #c8963e);
+      color: var(--theme-primary, #c8963e);
+    }
+    .export-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .gauge-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 640px) {
+      .gauge-row { grid-template-columns: 1fr; }
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-green { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .badge-gold { background: rgba(200,150,62,0.15); color: #c8963e; }
+    .badge-amber { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .badge-blue { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .badge-slate { background: rgba(148,163,184,0.15); color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <h2>SILK ROUTE</h2>
+      <p>Carrier Portal</p>
+    </div>
+    <div class="sidebar-user" id="sidebarUser">
+      <div class="user-name skeleton skeleton-line w75"></div>
+      <div class="user-role">CARRIER</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/analytics.html" class="active"><span class="nav-icon">&#128202;</span> Analytics</a>
+      <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help &amp; SOPs</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button onclick="CARRIER.logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Analytics</h1>
+        <p class="subtitle">Your earnings, performance, and load metrics</p>
+      </div>
+    </div>
+
+    <div id="date-picker"></div>
+
+    <div class="analytics-tabs" id="analytics-tabs">
+      <button class="analytics-tab active" data-tab="tab-earnings">My Earnings</button>
+      <button class="analytics-tab" data-tab="tab-performance">My Performance</button>
+      <button class="analytics-tab" data-tab="tab-loads">My Loads</button>
+      <button class="analytics-tab" data-tab="tab-export">Export</button>
+    </div>
+
+    <!-- TAB 1: My Earnings -->
+    <div class="tab-panel active" id="tab-earnings">
+      <div id="earnings-kpis"></div>
+      <div class="chart-container">
+        <div class="chart-header">
+          <span class="chart-title">Earnings Over Time</span>
+          <div class="chart-actions">
+            <button class="chart-group-btn active" data-granularity="day">Day</button>
+            <button class="chart-group-btn" data-granularity="week">Week</button>
+            <button class="chart-group-btn" data-granularity="month">Month</button>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="earnings-trend-chart"></canvas></div>
+      </div>
+      <div class="chart-container">
+        <div class="chart-header"><span class="chart-title">Earnings by Equipment Type</span></div>
+        <div class="chart-canvas-wrap"><canvas id="earnings-equipment-chart"></canvas></div>
+      </div>
+      <div class="export-row">
+        <button class="export-btn" onclick="SRLAnalytics.exportCSV('carrier-earnings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: My Performance -->
+    <div class="tab-panel" id="tab-performance">
+      <div id="performance-kpis"></div>
+      <div class="gauge-row">
+        <div class="chart-container">
+          <div class="gauge-container">
+            <div class="chart-title" style="margin-bottom:12px">On-Time Pickup</div>
+            <div class="gauge-canvas-wrap"><canvas id="pickup-gauge"></canvas></div>
+            <div class="gauge-value" id="pickup-gauge-value">--</div>
+            <div class="gauge-label">Pickup Rate</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div class="gauge-container">
+            <div class="chart-title" style="margin-bottom:12px">On-Time Delivery</div>
+            <div class="gauge-canvas-wrap"><canvas id="delivery-gauge"></canvas></div>
+            <div class="gauge-value" id="delivery-gauge-value">--</div>
+            <div class="gauge-label">Delivery Rate</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <div class="chart-header"><span class="chart-title">Performance Trend</span></div>
+        <div class="chart-canvas-wrap"><canvas id="performance-trend-chart"></canvas></div>
+      </div>
+      <div class="export-row">
+        <button class="export-btn" onclick="SRLAnalytics.exportCSV('carrier-performance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+      </div>
+    </div>
+
+    <!-- TAB 3: My Loads -->
+    <div class="tab-panel" id="tab-loads">
+      <div id="loads-kpis"></div>
+      <div class="analytics-grid-2">
+        <div class="chart-container">
+          <div class="chart-header"><span class="chart-title">Loads by Status</span></div>
+          <div class="chart-canvas-wrap"><canvas id="loads-status-chart"></canvas></div>
+        </div>
+        <div class="chart-container">
+          <div class="chart-header"><span class="chart-title">Loads by Equipment Type</span></div>
+          <div class="chart-canvas-wrap"><canvas id="loads-equipment-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="analytics-table-wrap" id="loads-table-wrap">
+        <div class="analytics-table-header"><span class="analytics-table-title">Recent Loads</span></div>
+        <table class="analytics-table">
+          <thead>
+            <tr>
+              <th>Ref #</th>
+              <th>Route</th>
+              <th>Status</th>
+              <th>Rate</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="loads-tbody"></tbody>
+        </table>
+      </div>
+      <div class="export-row">
+        <button class="export-btn" onclick="SRLAnalytics.exportCSV('carrier-loads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+      </div>
+    </div>
+
+    <!-- TAB 4: Export -->
+    <div class="tab-panel" id="tab-export">
+      <div class="export-card">
+        <h3>Export Reports</h3>
+        <p style="color:var(--theme-text-muted,#94a3b8);font-size:13px;margin-bottom:24px">Download your analytics reports for the selected date range. CSV files open in Excel; PDF files are formatted for printing.</p>
+        <div class="export-grid">
+          <div class="export-item">
+            <span class="export-item-label">Earnings Report</span>
+            <div class="export-item-actions">
+              <button onclick="SRLAnalytics.exportCSV('carrier-earnings')">CSV</button>
+              <button onclick="SRLAnalytics.exportPDF('carrier-earnings')">PDF</button>
+            </div>
+          </div>
+          <div class="export-item">
+            <span class="export-item-label">Performance Report</span>
+            <div class="export-item-actions">
+              <button onclick="SRLAnalytics.exportCSV('carrier-performance')">CSV</button>
+              <button onclick="SRLAnalytics.exportPDF('carrier-performance')">PDF</button>
+            </div>
+          </div>
+          <div class="export-item">
+            <span class="export-item-label">Load History</span>
+            <div class="export-item-actions">
+              <button onclick="SRLAnalytics.exportCSV('carrier-loads')">CSV</button>
+              <button onclick="SRLAnalytics.exportPDF('carrier-loads')">PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="main-footer">
+      Silk Route Logistics &middot; Carrier Portal &middot; Analytics
+    </footer>
+  </main>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script src="/shared/js/analyticsHelpers.js"></script>
+  <script src="/shared/js/themeEngine.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    /* ── Auth Check ── */
+    var token = localStorage.getItem("carrier_token");
+    if (!token) { window.location.href = "/carrier/login.html"; return; }
+
+    /* ── State ── */
+    var earningsGranularity = "day";
+    var earningsData = null;
+    var performanceData = null;
+    var loadsData = null;
+
+    /* ── Init ── */
+    CARRIER.getMe().then(function (user) {
+      if (window.SRLTheme && user) SRLTheme.restoreFromUser(user);
+
+      // Update sidebar user info
+      if (user) {
+        var sidebarUser = document.getElementById("sidebarUser");
+        sidebarUser.innerHTML =
+          '<div class="user-name">' + SRLAnalytics.esc(user.firstName + " " + user.lastName) + '</div>' +
+          '<div class="user-role">CARRIER</div>';
+      }
+
+      SRLAnalytics.initDatePicker("date-picker", function () { loadAllData(); });
+      SRLAnalytics.initTabs("analytics-tabs");
+
+      loadAllData();
+    }).catch(function () {
+      window.location.href = "/carrier/login.html";
+    });
+
+    /* ── Earnings granularity toggle ── */
+    document.querySelectorAll(".chart-group-btn[data-granularity]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll(".chart-group-btn[data-granularity]").forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        earningsGranularity = btn.dataset.granularity;
+        fetchEarnings();
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════════
+       Data Loading
+       ══════════════════════════════════════════════════════════ */
+    function loadAllData() {
+      SRLAnalytics.showSkeleton("earnings-kpis", "kpi");
+      SRLAnalytics.showSkeleton("performance-kpis", "kpi");
+      SRLAnalytics.showSkeleton("loads-kpis", "kpi");
+
+      fetchEarnings();
+      fetchPerformance();
+      fetchLoads();
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 1 — My Earnings
+       ══════════════════════════════════════════════════════════ */
+    function fetchEarnings() {
+      SRLAnalytics.fetch("/api/analytics/earnings?" + SRLAnalytics.dateQS() + "&group_by=" + earningsGranularity)
+        .then(function (data) { earningsData = data; renderEarnings(data); })
+        .catch(function () { SRLAnalytics.showEmpty("earnings-kpis", "Unable to load earnings data"); });
+    }
+
+    function renderEarnings(data) {
+      if (!data || !data.summary) {
+        SRLAnalytics.showEmpty("earnings-kpis", "No earnings data for this period");
+        return;
+      }
+      var s = data.summary;
+      var prev = data.previous || {};
+
+      var totalChange = SRLAnalytics.pctChange(s.totalEarnings || 0, prev.totalEarnings || 0);
+      var avgRateChange = SRLAnalytics.pctChange(s.avgRatePerLoad || 0, prev.avgRatePerLoad || 0);
+      var rpmChange = SRLAnalytics.pctChange(s.avgRatePerMile || 0, prev.avgRatePerMile || 0);
+      var milesChange = SRLAnalytics.pctChange(s.totalMiles || 0, prev.totalMiles || 0);
+      var loadsChange = SRLAnalytics.pctChange(s.loadsCompleted || 0, prev.loadsCompleted || 0);
+
+      document.getElementById("earnings-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total Earnings", SRLAnalytics.fmtMoney(s.totalEarnings || 0), totalChange) +
+          kpiCard("Avg Rate / Load", SRLAnalytics.fmtMoney(s.avgRatePerLoad || 0), avgRateChange) +
+          kpiCard("Avg Rate / Mile", "$" + ((s.avgRatePerMile || 0)).toFixed(2), rpmChange) +
+          kpiCard("Total Miles", SRLAnalytics.fmtNum(s.totalMiles || 0), milesChange) +
+          kpiCard("Loads Completed", SRLAnalytics.fmtNum(s.loadsCompleted || 0), loadsChange) +
+        '</div>';
+
+      /* Earnings trend line chart */
+      var points = data.data || data.trend || [];
+      if (points.length > 0) {
+        var labels = points.map(function (p) { return p.label || p.date || p.period || ""; });
+        var c = SRLAnalytics.chartColors();
+
+        SRLAnalytics.createLineChart("earnings-trend-chart", labels, [
+          {
+            label: "Earnings",
+            data: points.map(function (p) { return p.earnings || p.revenue || p.amount || 0; }),
+            borderColor: c.primary,
+            backgroundColor: c.primaryDim,
+            fill: true,
+            tension: 0.3
+          }
+        ], { money: true });
+      } else {
+        SRLAnalytics.showEmpty("earnings-trend-chart", "No trend data available");
+      }
+
+      /* Earnings by equipment type bar chart */
+      var equipment = data.equipmentBreakdown || data.byEquipment || [];
+      if (equipment.length > 0) {
+        var eqLabels = equipment.map(function (e) { return (e.type || e.equipmentType || e.label || "").replace(/_/g, " "); });
+        var eqValues = equipment.map(function (e) { return e.earnings || e.revenue || e.amount || 0; });
+        var eqColors = equipment.map(function (e, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+
+        SRLAnalytics.createBarChart("earnings-equipment-chart", eqLabels, [{
+          label: "Earnings",
+          data: eqValues,
+          backgroundColor: eqColors
+        }], { money: true });
+      } else {
+        SRLAnalytics.showEmpty("earnings-equipment-chart", "No equipment breakdown available");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 2 — My Performance
+       ══════════════════════════════════════════════════════════ */
+    function fetchPerformance() {
+      SRLAnalytics.fetch("/api/analytics/on-time?" + SRLAnalytics.dateQS())
+        .then(function (data) { performanceData = data; renderPerformance(data); })
+        .catch(function () { SRLAnalytics.showEmpty("performance-kpis", "Unable to load performance data"); });
+    }
+
+    function renderPerformance(data) {
+      if (!data || !data.summary) {
+        SRLAnalytics.showEmpty("performance-kpis", "No performance data for this period");
+        return;
+      }
+      var s = data.summary;
+      var prev = data.previous || {};
+
+      var pickupChange = SRLAnalytics.pctChange(s.onTimePickupPct || 0, prev.onTimePickupPct || 0);
+      var deliveryChange = SRLAnalytics.pctChange(s.onTimeDeliveryPct || 0, prev.onTimeDeliveryPct || 0);
+      var transitChange = SRLAnalytics.pctChange(s.avgTransitTime || 0, prev.avgTransitTime || 0);
+      var acceptChange = SRLAnalytics.pctChange(s.tenderAcceptRate || 0, prev.tenderAcceptRate || 0);
+      var tonuChange = SRLAnalytics.pctChange(s.tonuRate || 0, prev.tonuRate || 0);
+
+      document.getElementById("performance-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("On-Time Pickup", SRLAnalytics.fmtPct(s.onTimePickupPct || 0), pickupChange) +
+          kpiCard("On-Time Delivery", SRLAnalytics.fmtPct(s.onTimeDeliveryPct || 0), deliveryChange) +
+          kpiCard("Avg Transit Time", (s.avgTransitTime || 0).toFixed(1) + "h", transitChange) +
+          kpiCard("Tender Accept Rate", SRLAnalytics.fmtPct(s.tenderAcceptRate || 0), acceptChange) +
+          kpiCard("TONU Rate", SRLAnalytics.fmtPct(s.tonuRate || 0), tonuChange) +
+        '</div>';
+
+      /* Gauge charts */
+      var pickupPct = s.onTimePickupPct || 0;
+      var deliveryPct = s.onTimeDeliveryPct || 0;
+
+      SRLAnalytics.createGaugeChart("pickup-gauge", pickupPct, 100);
+      document.getElementById("pickup-gauge-value").textContent = SRLAnalytics.fmtPct(pickupPct);
+
+      SRLAnalytics.createGaugeChart("delivery-gauge", deliveryPct, 100);
+      document.getElementById("delivery-gauge-value").textContent = SRLAnalytics.fmtPct(deliveryPct);
+
+      /* Performance trend line chart */
+      var trend = data.trend || [];
+      if (trend.length > 0) {
+        var trendLabels = trend.map(function (t) { return t.label || t.period || t.date || ""; });
+        var c = SRLAnalytics.chartColors();
+
+        SRLAnalytics.createLineChart("performance-trend-chart", trendLabels, [
+          {
+            label: "On-Time Pickup %",
+            data: trend.map(function (t) { return t.onTimePickupPct || t.pickupPct || 0; }),
+            borderColor: c.success,
+            backgroundColor: "rgba(34,197,94,0.08)",
+            fill: false,
+            tension: 0.3
+          },
+          {
+            label: "On-Time Delivery %",
+            data: trend.map(function (t) { return t.onTimeDeliveryPct || t.deliveryPct || t.onTimePct || t.value || 0; }),
+            borderColor: c.primary,
+            backgroundColor: c.primaryDim,
+            fill: false,
+            tension: 0.3
+          },
+          {
+            label: "Tender Accept Rate",
+            data: trend.map(function (t) { return t.tenderAcceptRate || t.acceptRate || 0; }),
+            borderColor: c.info,
+            backgroundColor: "rgba(59,130,246,0.08)",
+            fill: false,
+            tension: 0.3
+          }
+        ], {
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: false,
+              min: 0,
+              max: 100,
+              grid: { color: SRLAnalytics.chartColors().border + "40" },
+              ticks: { callback: function (v) { return v + "%"; } }
+            }
+          }
+        });
+      } else {
+        SRLAnalytics.showEmpty("performance-trend-chart", "No trend data available");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 3 — My Loads
+       ══════════════════════════════════════════════════════════ */
+    function fetchLoads() {
+      SRLAnalytics.fetch("/api/analytics/loads?" + SRLAnalytics.dateQS())
+        .then(function (data) { loadsData = data; renderLoads(data); })
+        .catch(function () { SRLAnalytics.showEmpty("loads-kpis", "Unable to load data"); });
+    }
+
+    function renderLoads(data) {
+      if (!data || !data.summary) {
+        SRLAnalytics.showEmpty("loads-kpis", "No load data for this period");
+        return;
+      }
+      var s = data.summary;
+      var prev = data.previous || {};
+
+      var totalChange = SRLAnalytics.pctChange(s.totalLoads || 0, prev.totalLoads || 0);
+      var completedChange = SRLAnalytics.pctChange(s.completed || s.delivered || 0, prev.completed || prev.delivered || 0);
+      var transitChange = SRLAnalytics.pctChange(s.inTransit || 0, prev.inTransit || 0);
+      var distChange = SRLAnalytics.pctChange(s.avgDistance || s.avgMiles || 0, prev.avgDistance || prev.avgMiles || 0);
+
+      document.getElementById("loads-kpis").innerHTML =
+        '<div class="kpi-row">' +
+          kpiCard("Total Loads", SRLAnalytics.fmtNum(s.totalLoads || 0), totalChange) +
+          kpiCard("Completed", SRLAnalytics.fmtNum(s.completed || s.delivered || 0), completedChange) +
+          kpiCard("In Transit", SRLAnalytics.fmtNum(s.inTransit || 0), transitChange) +
+          kpiCard("Avg Distance", SRLAnalytics.fmtNum(s.avgDistance || s.avgMiles || 0) + " mi", distChange) +
+        '</div>';
+
+      /* Loads by status doughnut chart */
+      var statuses = data.statusBreakdown || [];
+      if (statuses.length > 0) {
+        var statusLabels = statuses.map(function (st) { return (st.status || st.label || "").replace(/_/g, " "); });
+        var statusValues = statuses.map(function (st) { return st.count || 0; });
+        var statusColors = statuses.map(function (st, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+
+        SRLAnalytics.createDoughnutChart("loads-status-chart", statusLabels, statusValues, statusColors);
+      } else {
+        SRLAnalytics.showEmpty("loads-status-chart", "No status data available");
+      }
+
+      /* Loads by equipment type bar chart */
+      var equipment = data.equipmentBreakdown || [];
+      if (equipment.length > 0) {
+        var eqLabels = equipment.map(function (e) { return (e.type || e.equipmentType || e.label || "").replace(/_/g, " "); });
+        var eqValues = equipment.map(function (e) { return e.count || 0; });
+        var eqColors = equipment.map(function (e, i) { return SRLAnalytics.PALETTE[i % SRLAnalytics.PALETTE.length]; });
+
+        SRLAnalytics.createBarChart("loads-equipment-chart", eqLabels, [{
+          label: "Loads",
+          data: eqValues,
+          backgroundColor: eqColors
+        }]);
+      } else {
+        SRLAnalytics.showEmpty("loads-equipment-chart", "No equipment data available");
+      }
+
+      /* Recent loads table */
+      var loads = data.recentLoads || data.loads || [];
+      var tbody = document.getElementById("loads-tbody");
+      if (loads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--theme-text-muted);padding:24px">No recent loads</td></tr>';
+      } else {
+        tbody.innerHTML = loads.slice(0, 20).map(function (l) {
+          var statusColors = {
+            POSTED: "blue", BOOKED: "gold", CONFIRMED: "gold", DISPATCHED: "amber",
+            AT_PICKUP: "amber", LOADED: "amber", IN_TRANSIT: "gold",
+            AT_DELIVERY: "amber", DELIVERED: "green", COMPLETED: "green",
+            INVOICED: "blue", CANCELLED: "red", TONU: "red"
+          };
+          var badgeColor = statusColors[(l.status || "")] || "slate";
+          var statusText = (l.status || "").replace(/_/g, " ");
+          var route = SRLAnalytics.esc((l.originCity || "") + ", " + (l.originState || "")) +
+                      " &rarr; " +
+                      SRLAnalytics.esc((l.destCity || l.destinationCity || "") + ", " + (l.destState || l.destinationState || ""));
+          var date = l.pickupDate || l.createdAt || l.date || "";
+          var fmtDateStr = date ? new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "--";
+
+          return '<tr>' +
+            '<td style="font-weight:600">' + SRLAnalytics.esc(l.referenceNumber || l.refNumber || l.ref || "--") + '</td>' +
+            '<td>' + route + '</td>' +
+            '<td><span class="status-badge badge-' + badgeColor + '">' + SRLAnalytics.esc(statusText) + '</span></td>' +
+            '<td>' + SRLAnalytics.fmtMoney(l.carrierRate || l.rate || 0) + '</td>' +
+            '<td>' + fmtDateStr + '</td>' +
+          '</tr>';
+        }).join("");
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Shared Helpers
+       ══════════════════════════════════════════════════════════ */
+    function kpiCard(label, value, change) {
+      var arrow = "";
+      if (change && change.direction !== "neutral" && change.value > 0) {
+        var dir = change.direction;
+        var arrowChar = dir === "up" ? "\u25B2" : "\u25BC";
+        arrow = '<div class="kpi-change ' + dir + '">' + arrowChar + " " + change.value + "%</div>";
+      }
+      return '<div class="kpi-card">' +
+        '<div class="kpi-label">' + label + '</div>' +
+        '<div class="kpi-value">' + value + '</div>' +
+        arrow +
+      '</div>';
+    }
+
+    /* ── Sidebar toggle ── */
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+  })();
+  </script>
+</body>
+</html>

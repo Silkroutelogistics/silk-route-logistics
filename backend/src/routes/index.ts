@@ -48,6 +48,7 @@ import claimRoutes from "./claims";
 import monitoringRoutes from "./monitoring";
 import mileageRoutes from "./mileage";
 import websiteRoutes from "./website";
+import analyticsRoutes from "./analytics";
 
 const router = Router();
 
@@ -184,5 +185,6 @@ router.use("/financials", financialRoutes);
 router.use("/claims", claimRoutes);
 router.use("/admin", monitoringRoutes);
 router.use("/mileage", mileageRoutes);
+router.use("/analytics", analyticsRoutes);
 
 export default router;

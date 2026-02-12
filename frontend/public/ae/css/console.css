@@ -91,7 +91,7 @@ a:hover {
   align-items: center;
   gap: 10px;
   padding: 20px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--theme-sidebar-border, rgba(255, 255, 255, 0.08));
 }
 
 .sidebar-logo img {
@@ -108,7 +108,7 @@ a:hover {
 
 .sidebar-user {
   padding: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--theme-sidebar-border, rgba(255, 255, 255, 0.08));
 }
 
 .sidebar-user-name {
@@ -141,13 +141,13 @@ a:hover {
 
 .sidebar-nav a:hover {
   color: var(--white);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--theme-sidebar-hover-bg, rgba(255, 255, 255, 0.05));
   text-decoration: none;
 }
 
 .sidebar-nav a.active {
   color: var(--gold);
-  background: rgba(200, 150, 62, 0.1);
+  background: var(--theme-sidebar-active-bg, rgba(200, 150, 62, 0.1));
   border-right: 3px solid var(--gold);
 }
 
@@ -160,7 +160,7 @@ a:hover {
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--theme-sidebar-border, rgba(255, 255, 255, 0.08));
 }
 
 .sidebar-logout {
@@ -180,7 +180,7 @@ a:hover {
 
 .sidebar-logout:hover {
   color: var(--red);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--theme-danger-bg, rgba(239, 68, 68, 0.1));
 }
 
 /* --- Hamburger (mobile) --- */

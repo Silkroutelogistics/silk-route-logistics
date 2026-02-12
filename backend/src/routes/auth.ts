@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, login, getProfile, updateProfile, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword } from "../controllers/authController";
+import { register, login, getProfile, updateProfile, updatePreferences, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword } from "../controllers/authController";
 import { authenticate, authorize } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { registerSchema, loginSchema } from "../validators/auth";
@@ -19,6 +19,12 @@ const updateProfileSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
+  preferredTheme: z.string().min(1).optional(),
+  darkMode: z.boolean().optional(),
+});
+const preferencesSchema = z.object({
+  preferredTheme: z.enum(["silk-route-classic", "midnight-express", "desert-route", "arctic-haul", "highway-green", "chrome-steel"]).optional(),
+  darkMode: z.boolean().optional(),
 });
 
 // Public routes
@@ -34,6 +40,7 @@ router.post("/force-change-password", authenticate, validateBody(z.object({ newP
 router.get("/me", authenticate, getProfile);
 router.get("/profile", authenticate, getProfile);
 router.patch("/profile", authenticate, validateBody(updateProfileSchema), updateProfile);
+router.patch("/preferences", authenticate, validateBody(preferencesSchema), updatePreferences);
 router.patch("/password", authenticate, validateBody(changePasswordSchema), changePassword);
 router.post("/refresh", authenticate, refreshToken);
 router.post("/logout", authenticate, logout);

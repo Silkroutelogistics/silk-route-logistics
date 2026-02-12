@@ -200,6 +200,7 @@ export async function getProfile(req: AuthRequest, res: Response) {
     select: {
       id: true, email: true, firstName: true, lastName: true,
       company: true, role: true, phone: true, isVerified: true, createdAt: true,
+      preferredTheme: true, darkMode: true,
       carrierProfile: { select: { mcNumber: true, dotNumber: true, tier: true } },
     },
   });
@@ -207,17 +208,33 @@ export async function getProfile(req: AuthRequest, res: Response) {
 }
 
 export async function updateProfile(req: AuthRequest, res: Response) {
-  const { firstName, lastName, phone, company } = req.body;
-  const data: Record<string, string> = {};
+  const { firstName, lastName, phone, company, preferredTheme, darkMode } = req.body;
+  const data: Record<string, any> = {};
   if (firstName) data.firstName = firstName;
   if (lastName) data.lastName = lastName;
   if (phone !== undefined) data.phone = phone;
   if (company !== undefined) data.company = company;
+  if (preferredTheme !== undefined) data.preferredTheme = preferredTheme;
+  if (darkMode !== undefined) data.darkMode = darkMode;
 
   const user = await prisma.user.update({
     where: { id: req.user!.id },
     data,
-    select: { id: true, email: true, firstName: true, lastName: true, company: true, role: true, phone: true },
+    select: { id: true, email: true, firstName: true, lastName: true, company: true, role: true, phone: true, preferredTheme: true, darkMode: true },
+  });
+  res.json(user);
+}
+
+export async function updatePreferences(req: AuthRequest, res: Response) {
+  const { preferredTheme, darkMode } = req.body;
+  const data: Record<string, any> = {};
+  if (preferredTheme !== undefined) data.preferredTheme = preferredTheme;
+  if (darkMode !== undefined) data.darkMode = darkMode;
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.id },
+    data,
+    select: { id: true, preferredTheme: true, darkMode: true },
   });
   res.json(user);
 }
