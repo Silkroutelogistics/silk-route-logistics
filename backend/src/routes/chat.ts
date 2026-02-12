@@ -1,20 +1,29 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { chat, publicChat } from "../controllers/chatController";
+import { chat, publicChat, getHistory, newConversation, getProactiveSuggestion } from "../controllers/chatController";
 import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
 const publicChatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 30,
   message: { error: "Too many requests, please try again later" },
 });
 
-// Public chat (no auth, no user context)
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  message: { error: "Rate limit reached. Please slow down." },
+});
+
+// Public chat (no auth, no tool calling, rate limited)
 router.post("/public", publicChatLimiter, publicChat);
 
-// Authenticated chat (full user context)
-router.post("/", authenticate, chat);
+// Authenticated endpoints
+router.post("/", authenticate, chatLimiter, chat);
+router.get("/history", authenticate, getHistory);
+router.post("/new-conversation", authenticate, newConversation);
+router.get("/proactive", authenticate, getProactiveSuggestion);
 
 export default router;

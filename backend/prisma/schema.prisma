@@ -485,6 +485,7 @@ model User {
   reviewedApprovals  ApprovalQueue[]    @relation("ApprovalReviewer")
   generatedReports   FinancialReport[]  @relation("ReportGenerator")
   errorLogs          ErrorLog[]         @relation("ErrorLogUser")
+  marcoPoloChats     MarcoPoloConversation[]
 
   @@index([email])
   @@index([role])
@@ -1977,4 +1978,22 @@ model WebsiteLead {
   @@index([status])
   @@index([createdAt])
   @@map("website_leads")
+}
+
+// ─── Marco Polo Chat Conversations ──────────────────────────────
+
+model MarcoPoloConversation {
+  id           String   @id @default(cuid())
+  userId       String
+  role         String   // user role at time of conversation
+  messagesJson Json     @default("[]") // array of {role, content, timestamp, actions?}
+  console      String   @default("ae") // ae, carrier, accounting, public
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([updatedAt])
+  @@map("marco_polo_conversations")
 }
