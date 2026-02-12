@@ -14,26 +14,37 @@ interface EmailAttachment {
 
 export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[]) {
   if (resend) {
-    try {
-      const { data, error } = await resend.emails.send({
-        from: `Silk Route Logistics <${fromEmail}>`,
-        to,
-        subject,
-        html,
-        attachments: attachments?.map((a) => ({
-          filename: a.filename,
-          content: a.content,
-          content_type: a.contentType || "application/pdf",
-        })),
-      });
-      if (error) {
-        console.error(`[Email] Resend error to ${to}: ${error.message}`);
-        throw new Error(error.message);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const { data, error } = await resend.emails.send({
+          from: `Silk Route Logistics <${fromEmail}>`,
+          to,
+          subject,
+          html,
+          attachments: attachments?.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+            content_type: a.contentType || "application/pdf",
+          })),
+        });
+        if (error) {
+          if (error.message.includes("rate limit") && attempt < 2) {
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
+          console.error(`[Email] Resend error to ${to}: ${error.message}`);
+          throw new Error(error.message);
+        }
+        console.log(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
+        return;
+      } catch (err: any) {
+        if (err.message?.includes("rate limit") && attempt < 2) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        console.error(`[Email] FAILED to send to ${to}: ${err.message}`);
+        throw err;
       }
-      console.log(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
-    } catch (err: any) {
-      console.error(`[Email] FAILED to send to ${to}: ${err.message}`);
-      throw err;
     }
   } else {
     console.log(`[Email][NoAPI] To: ${to} | Subject: ${subject}${attachments ? ` | ${attachments.length} attachment(s)` : ""}`);

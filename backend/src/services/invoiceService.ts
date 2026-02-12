@@ -118,15 +118,15 @@ export async function autoGenerateInvoice(loadId: string) {
     },
   });
 
-  // Send email to carrier
+  // Send email to carrier (non-critical — don't fail invoice creation if email fails)
   if (load.carrier) {
-    await sendAutoInvoiceEmail(
+    sendAutoInvoiceEmail(
       load.carrier.email,
       load.carrier.firstName || load.carrier.company || "Carrier",
       load.referenceNumber,
       invoiceNumber,
       totalAmount,
-    );
+    ).catch((e) => console.error(`[AutoInvoice] Email failed for ${invoiceNumber}: ${e.message}`));
   }
 
   return invoice;
