@@ -5,7 +5,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateDrivingDistance } from "../services/distanceService";
-import { sendShipperPickupEmail, sendShipperDeliveryEmail } from "../services/shipperNotificationService";
+import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 
 function generateRefNumber(): string {
   const d = new Date();
@@ -144,6 +144,9 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
   }
 
+  // Shipper milestone tracking email
+  sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
+
   res.json(load);
 }
 
@@ -206,6 +209,9 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   if (status === "LOADED") {
     sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
   }
+
+  // Shipper milestone tracking email
+  sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
 
   res.json(updated);
 }

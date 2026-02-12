@@ -404,6 +404,42 @@ var SRL = (function () {
     return request("/api/customers" + qs);
   }
 
+  // --- Claims ---
+  function getClaims(params) {
+    var qs = buildQuery(params);
+    return request("/api/claims" + qs);
+  }
+
+  function getClaimById(id) {
+    return request("/api/claims/" + id);
+  }
+
+  function createClaim(data) {
+    return request("/api/claims", { method: "POST", body: data });
+  }
+
+  function updateClaim(id, data) {
+    return request("/api/claims/" + id, { method: "PATCH", body: data });
+  }
+
+  // --- Invoices (D.2) ---
+  function generateInvoice(loadId) {
+    return request("/api/invoices/generate/" + loadId, { method: "POST" });
+  }
+
+  function markInvoicePaid(id, data) {
+    return request("/api/invoices/" + id + "/mark-paid", { method: "PATCH", body: data || {} });
+  }
+
+  function getInvoiceAging() {
+    return request("/api/invoices/aging");
+  }
+
+  // --- Financials (D.5) ---
+  function getFinancialSummary(period) {
+    return request("/api/financials/summary?period=" + (period || "month"));
+  }
+
   // --- Public API ---
   return {
     BASE: BASE,
@@ -453,5 +489,13 @@ var SRL = (function () {
     getRateConfirmationPdfUrl: getRateConfirmationPdfUrl,
     getLoadById: getLoadById,
     getCustomers: getCustomers,
+    getClaims: getClaims,
+    getClaimById: getClaimById,
+    createClaim: createClaim,
+    updateClaim: updateClaim,
+    generateInvoice: generateInvoice,
+    markInvoicePaid: markInvoicePaid,
+    getInvoiceAging: getInvoiceAging,
+    getFinancialSummary: getFinancialSummary,
   };
 })();

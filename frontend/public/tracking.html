@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Shipment - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-bottom: 3px solid #d4a574;
+      padding: 20px 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .header img { height: 44px; }
+    .header h1 { font-family: Georgia, serif; color: #d4a574; font-size: 22px; }
+    .header .subtitle { color: #94a3b8; font-size: 13px; margin-top: 2px; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+
+    .loading-state { text-align: center; padding: 80px 20px; color: #94a3b8; font-size: 16px; }
+    .error-state { text-align: center; padding: 80px 20px; }
+    .error-state h2 { color: #ef4444; margin-bottom: 12px; }
+    .error-state p { color: #94a3b8; }
+
+    /* Status Card */
+    .status-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 28px; margin-bottom: 24px;
+    }
+    .ref-number { font-size: 13px; color: #d4a574; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .route-line { font-size: 24px; font-weight: 700; color: #f8fafc; margin-bottom: 16px; }
+    .route-line .arrow { color: #d4a574; margin: 0 8px; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .info-item label { display: block; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .info-item span { font-size: 15px; color: #e2e8f0; font-weight: 500; }
+
+    /* Progress Bar */
+    .progress-section { margin-bottom: 24px; }
+    .progress-bar-container {
+      display: flex; align-items: center; justify-content: space-between;
+      position: relative; padding: 0 20px; margin: 32px 0 16px;
+    }
+    .progress-line {
+      position: absolute; top: 16px; left: 40px; right: 40px;
+      height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;
+    }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, #d4a574, #e8b988);
+      border-radius: 2px; transition: width 0.6s ease;
+    }
+    .progress-step {
+      position: relative; z-index: 2; text-align: center; flex: 1;
+    }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #1e293b; border: 3px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 8px; font-size: 14px; transition: all 0.3s;
+    }
+    .step-dot.completed { background: #d4a574; border-color: #d4a574; color: #0f172a; }
+    .step-dot.active { background: #0f172a; border-color: #d4a574; color: #d4a574; animation: pulse 2s infinite; }
+    .step-label { font-size: 11px; color: #64748b; }
+    .step-label.completed { color: #d4a574; }
+    .step-label.active { color: #d4a574; font-weight: 600; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(212,165,116,0.4); } 50% { box-shadow: 0 0 0 8px rgba(212,165,116,0); } }
+
+    /* Location & ETA */
+    .location-eta {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;
+    }
+    .loc-card, .eta-card {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 20px;
+    }
+    .loc-card h3, .eta-card h3 { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .loc-value { font-size: 18px; color: #f8fafc; font-weight: 600; }
+    .loc-time { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+    /* Milestone Timeline */
+    .timeline-section { margin-bottom: 24px; }
+    .timeline-section h3 { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before {
+      content: ''; position: absolute; left: 8px; top: 4px; bottom: 4px;
+      width: 2px; background: rgba(255,255,255,0.1);
+    }
+    .timeline-item { position: relative; padding-bottom: 20px; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot {
+      position: absolute; left: -24px; top: 4px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+    }
+    .timeline-dot.completed { background: #d4a574; }
+    .timeline-item .tl-label { font-size: 14px; color: #e2e8f0; font-weight: 500; }
+    .timeline-item .tl-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    /* Contact */
+    .contact-section {
+      background: rgba(212,165,116,0.08); border: 1px solid rgba(212,165,116,0.2);
+      border-radius: 10px; padding: 20px; text-align: center;
+    }
+    .contact-section h3 { color: #d4a574; font-size: 14px; margin-bottom: 8px; }
+    .contact-section p { color: #94a3b8; font-size: 13px; }
+    .contact-section a { color: #d4a574; text-decoration: none; font-weight: 600; }
+
+    /* Footer */
+    .footer { text-align: center; padding: 32px; color: #475569; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px; }
+
+    @media (max-width: 640px) {
+      .location-eta { grid-template-columns: 1fr; }
+      .route-line { font-size: 18px; }
+      .progress-bar-container { padding: 0 8px; }
+      .step-label { font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo.png" alt="SRL" onerror="this.style.display='none'">
+    <div>
+      <h1>Silk Route Logistics</h1>
+      <div class="subtitle">Shipment Tracking</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="loading" class="loading-state">Loading shipment information...</div>
+    <div id="error" class="error-state" style="display:none">
+      <h2>Shipment Not Found</h2>
+      <p>The tracking link may be invalid or expired. Please contact your Silk Route Logistics representative.</p>
+    </div>
+    <div id="content" style="display:none">
+      <!-- Status Card -->
+      <div class="status-card">
+        <div class="ref-number" id="refNum"></div>
+        <div class="route-line"><span id="originCity"></span><span class="arrow">→</span><span id="destCity"></span></div>
+        <div class="info-grid">
+          <div class="info-item"><label>Status</label><span id="statusBadge"></span></div>
+          <div class="info-item"><label>Equipment</label><span id="equipment"></span></div>
+          <div class="info-item"><label>Commodity</label><span id="commodity"></span></div>
+          <div class="info-item"><label>Weight</label><span id="weight"></span></div>
+          <div class="info-item"><label>Carrier</label><span id="carrier"></span></div>
+          <div class="info-item"><label>Shipper</label><span id="shipper"></span></div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-section">
+        <div class="progress-bar-container">
+          <div class="progress-line"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-step" id="step-booked"><div class="step-dot">1</div><div class="step-label">Booked</div></div>
+          <div class="progress-step" id="step-pickup"><div class="step-dot">2</div><div class="step-label">Picked Up</div></div>
+          <div class="progress-step" id="step-transit"><div class="step-dot">3</div><div class="step-label">In Transit</div></div>
+          <div class="progress-step" id="step-delivered"><div class="step-dot">4</div><div class="step-label">Delivered</div></div>
+        </div>
+      </div>
+
+      <!-- Location & ETA -->
+      <div class="location-eta">
+        <div class="loc-card">
+          <h3>Last Known Location</h3>
+          <div class="loc-value" id="lastLocation">—</div>
+          <div class="loc-time" id="lastLocationTime"></div>
+        </div>
+        <div class="eta-card">
+          <h3>Estimated Delivery</h3>
+          <div class="loc-value" id="eta">—</div>
+          <div class="loc-time" id="etaNote"></div>
+        </div>
+      </div>
+
+      <!-- Milestone Timeline -->
+      <div class="timeline-section">
+        <h3>Milestone Timeline</h3>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <!-- Contact -->
+      <div class="contact-section">
+        <h3>Need Help?</h3>
+        <p>Contact Silk Route Logistics at <a href="tel:+12695550100">+1 (269) 555-0100</a> or <a href="mailto:info@silkroutelogistics.ai">info@silkroutelogistics.ai</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 2026 Silk Route Logistics Inc. &bull; silkroutelogistics.ai
+  </div>
+
+  <script>
+    (function() {
+      var BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
+
+      var params = new URLSearchParams(window.location.search);
+      var token = params.get('token') || window.location.pathname.split('/tracking/')[1] || window.location.pathname.split('/tracking.html')[0].split('/').pop();
+
+      // Also try hash-based token
+      if (!token || token === 'tracking.html' || token === 'tracking') {
+        token = window.location.hash.replace('#', '') || null;
+      }
+
+      if (!token) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        return;
+      }
+
+      fetch(BASE + '/api/tracking/' + token)
+        .then(function(res) {
+          if (!res.ok) throw new Error('Not found');
+          return res.json();
+        })
+        .then(function(data) { renderTracking(data); })
+        .catch(function() {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('error').style.display = 'block';
+        });
+
+      function renderTracking(d) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+        document.getElementById('refNum').textContent = d.referenceNumber;
+        document.getElementById('originCity').textContent = d.origin.city + ', ' + d.origin.state;
+        document.getElementById('destCity').textContent = d.destination.city + ', ' + d.destination.state;
+        document.getElementById('statusBadge').textContent = d.status.replace(/_/g, ' ');
+        document.getElementById('equipment').textContent = d.equipment || '—';
+        document.getElementById('commodity').textContent = d.commodity || '—';
+        document.getElementById('weight').textContent = d.weight ? d.weight.toLocaleString() + ' lbs' : '—';
+        document.getElementById('carrier').textContent = d.carrierFirstName || '—';
+        document.getElementById('shipper').textContent = d.shipperName || '—';
+
+        // Progress bar
+        var statusMap = { BOOKED: 0, CONFIRMED: 0, TENDERED: 0, DISPATCHED: 0,
+          AT_PICKUP: 1, LOADED: 1, PICKED_UP: 1,
+          IN_TRANSIT: 2, AT_DELIVERY: 2,
+          DELIVERED: 3, POD_RECEIVED: 3, INVOICED: 3, COMPLETED: 3 };
+        var stepIndex = statusMap[d.status] !== undefined ? statusMap[d.status] : -1;
+        var steps = ['booked', 'pickup', 'transit', 'delivered'];
+        var pct = stepIndex >= 0 ? (stepIndex / (steps.length - 1)) * 100 : 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+
+        steps.forEach(function(s, i) {
+          var el = document.getElementById('step-' + s);
+          var dot = el.querySelector('.step-dot');
+          var label = el.querySelector('.step-label');
+          if (i < stepIndex) { dot.classList.add('completed'); label.classList.add('completed'); dot.innerHTML = '&#10003;'; }
+          else if (i === stepIndex) { dot.classList.add('active'); label.classList.add('active'); }
+        });
+
+        // Location
+        if (d.lastLocation) {
+          document.getElementById('lastLocation').textContent =
+            (d.lastLocation.city || '') + (d.lastLocation.state ? ', ' + d.lastLocation.state : '');
+          if (d.lastLocation.updatedAt) {
+            document.getElementById('lastLocationTime').textContent =
+              'Updated ' + new Date(d.lastLocation.updatedAt).toLocaleString();
+          }
+        }
+
+        // ETA
+        if (d.estimatedDelivery) {
+          document.getElementById('eta').textContent =
+            new Date(d.estimatedDelivery).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+        if (d.actualDelivery) {
+          document.getElementById('eta').textContent = 'Delivered';
+          document.getElementById('etaNote').textContent =
+            new Date(d.actualDelivery).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        // Timeline
+        var timelineEl = document.getElementById('timeline');
+        timelineEl.innerHTML = '';
+        if (d.milestones) {
+          d.milestones.forEach(function(m) {
+            var item = document.createElement('div');
+            item.className = 'timeline-item';
+            var dotClass = m.completed ? 'timeline-dot completed' : 'timeline-dot';
+            item.innerHTML = '<div class="' + dotClass + '"></div>' +
+              '<div class="tl-label">' + m.label + '</div>' +
+              '<div class="tl-sub">' + (m.completed ? 'Completed' : 'Pending') + '</div>';
+            timelineEl.appendChild(item);
+          });
+        }
+
+        // Check calls as additional timeline
+        if (d.checkCalls && d.checkCalls.length > 0) {
+          var ccHeader = document.createElement('h3');
+          ccHeader.style.cssText = 'font-size:14px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin:24px 0 16px;';
+          ccHeader.textContent = 'Recent Updates';
+          timelineEl.parentNode.appendChild(ccHeader);
+
+          var ccTimeline = document.createElement('div');
+          ccTimeline.className = 'timeline';
+          d.checkCalls.slice(0, 10).forEach(function(cc) {
+            var item = document.createElement('div');
+            item.className = 'timeline-item';
+            var loc = (cc.city || '') + (cc.state ? ', ' + cc.state : '');
+            item.innerHTML = '<div class="timeline-dot completed"></div>' +
+              '<div class="tl-label">' + (cc.status || 'Update') + (loc ? ' — ' + loc : '') + '</div>' +
+              '<div class="tl-sub">' + new Date(cc.timestamp).toLocaleString() + '</div>';
+            ccTimeline.appendChild(item);
+          });
+          timelineEl.parentNode.appendChild(ccTimeline);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

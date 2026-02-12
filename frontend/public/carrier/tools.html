@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tools | SRL Carrier Portal</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+  <style>
+    /* ─── Tools Page Styles ──────────────────────────── */
+    .tools-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tools-tabs .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      color: var(--slate);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tools-tabs .tab-btn:hover { color: #fff; }
+    .tools-tabs .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ─── Fuel Map ────────────────────────────────────── */
+    .fuel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .fuel-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .fuel-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .fuel-card .region-name {
+      font-size: 13px;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .fuel-card .fuel-price {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .fuel-card .fuel-label {
+      font-size: 11px;
+      color: var(--slate-dark);
+      margin-top: 4px;
+    }
+    .fuel-price.green { color: var(--green); }
+    .fuel-price.amber { color: var(--amber); }
+    .fuel-price.red { color: var(--red); }
+
+    .fuel-widget-placeholder {
+      background: rgba(255,255,255,0.03);
+      border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .fuel-widget-placeholder .widget-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    .fuel-widget-placeholder .widget-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .fuel-widget-placeholder .widget-sub {
+      font-size: 13px;
+      color: var(--slate);
+    }
+    .fuel-legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .fuel-legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--slate);
+    }
+    .fuel-legend .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .fuel-legend .dot.green { background: var(--green); }
+    .fuel-legend .dot.amber { background: var(--amber); }
+    .fuel-legend .dot.red { background: var(--red); }
+
+    /* ─── Weather ─────────────────────────────────────── */
+    .weather-inputs {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .weather-inputs .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
+    .weather-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .weather-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .weather-card .city-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .weather-card .weather-type {
+      font-size: 12px;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 16px;
+    }
+    .weather-card .temp-display {
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .weather-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+    }
+    .weather-detail-row .detail-label { color: var(--slate); }
+    .weather-detail-row .detail-value { color: #CBD5E1; font-weight: 500; }
+    .weather-alert-box {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .weather-alert-box .alert-icon { margin-right: 6px; }
+
+    /* ─── Detention ───────────────────────────────────── */
+    .detention-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .detention-summary {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .detention-summary .summary-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 14px;
+    }
+    .summary-row .row-label { color: var(--slate); }
+    .summary-row .row-value { color: #fff; font-weight: 600; }
+    .summary-row.total { border-top: 2px solid var(--gold-dim); border-bottom: none; padding-top: 12px; margin-top: 4px; }
+    .summary-row.total .row-value { color: var(--gold); font-size: 20px; }
+
+    /* ─── Maintenance ─────────────────────────────────── */
+    .reminders-list { margin-top: 20px; }
+    .reminder-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .reminder-item:hover { border-color: rgba(255,255,255,0.15); }
+    .reminder-info .reminder-truck {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .reminder-info .reminder-type {
+      font-size: 12px;
+      color: var(--slate);
+      margin-top: 2px;
+    }
+    .reminder-info .reminder-due {
+      font-size: 11px;
+      color: var(--slate-dark);
+      margin-top: 2px;
+    }
+    .reminder-countdown {
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      min-width: 80px;
+    }
+    .reminder-countdown .countdown-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .countdown-green { color: var(--green); }
+    .countdown-amber { color: var(--amber); }
+    .countdown-red { color: var(--red); }
+    .reminder-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .reminder-actions button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--slate);
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .reminder-actions button:hover { border-color: var(--red); color: var(--red); }
+
+    /* ─── Deadhead ────────────────────────────────────── */
+    .deadhead-inputs {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .deadhead-inputs .form-group { margin-bottom: 0; flex: 1; min-width: 240px; }
+    .backhaul-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .backhaul-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .backhaul-card:hover {
+      border-color: var(--gold-dim);
+      transform: translateY(-2px);
+    }
+    .backhaul-route {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .backhaul-route .route-arrow { color: var(--gold); margin: 0 6px; }
+    .backhaul-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .backhaul-meta .meta-item {
+      font-size: 12px;
+      color: var(--slate);
+    }
+    .backhaul-meta .meta-item strong {
+      color: #CBD5E1;
+      font-weight: 600;
+    }
+    .backhaul-meta .meta-item.rate strong { color: var(--gold); }
+    .backhaul-distance-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--gold-dim);
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    /* ─── Form inline grid ────────────────────────────── */
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ─── Responsive overrides ────────────────────────── */
+    @media (max-width: 768px) {
+      .detention-layout { grid-template-columns: 1fr; }
+      .form-grid-2 { grid-template-columns: 1fr; }
+      .weather-inputs, .deadhead-inputs { flex-direction: column; }
+      .tools-tabs .tab-btn { padding: 10px 14px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <button class="hamburger" id="hamburger">&#9776;</button>
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h2>SILK ROUTE</h2><p>Carrier Portal</p></div>
+    <div class="sidebar-user" id="sidebarUser">
+      <div class="user-name skeleton skeleton-line w75"></div>
+      <div class="user-role">CARRIER</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/carrier/dashboard.html"><span class="nav-icon">&#9673;</span> Dashboard</a>
+      <a href="/carrier/loads.html"><span class="nav-icon">&#9776;</span> My Loads</a>
+      <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
+      <a href="/carrier/tools.html" class="active"><span class="nav-icon">&#9881;</span> Tools</a>
+      <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
+      <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/help.html"><span class="nav-icon">&#63;</span> Help &amp; SOPs</a>
+    </nav>
+    <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Carrier Tools</h1>
+        <p class="subtitle">Value-add tools to optimize your operations</p>
+      </div>
+    </div>
+
+    <!-- ═══ TAB NAVIGATION ═══ -->
+    <div class="tools-tabs" id="toolsTabs">
+      <button class="tab-btn active" data-tab="fuel">&#9981; Fuel Prices</button>
+      <button class="tab-btn" data-tab="weather">&#9729; Weather Alerts</button>
+      <button class="tab-btn" data-tab="detention">&#9201; Detention Tracker</button>
+      <button class="tab-btn" data-tab="maintenance">&#128295; Maintenance</button>
+      <button class="tab-btn" data-tab="deadhead">&#10562; Deadhead Minimizer</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 1: FUEL PRICE MAP                              -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="panel-fuel">
+      <div class="fuel-widget-placeholder">
+        <div class="widget-icon">&#9981;</div>
+        <div class="widget-title">Live Fuel Price Map</div>
+        <div class="widget-sub">Fuel prices powered by GasBuddy / OPIS &mdash; coming soon</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Regional Diesel Averages</h3>
+          <span style="font-size:11px;color:var(--slate-dark)">Updated: <span id="fuelDate"></span></span>
+        </div>
+        <div class="fuel-grid" id="fuelGrid"></div>
+        <div class="fuel-legend">
+          <span><span class="dot green"></span> Below $3.50</span>
+          <span><span class="dot amber"></span> $3.50 &ndash; $4.00</span>
+          <span><span class="dot red"></span> Above $4.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 2: WEATHER ALERTS                              -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-weather">
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header"><h3>Route Weather Check</h3></div>
+        <div class="weather-inputs">
+          <div class="form-group">
+            <label>Pickup City</label>
+            <input type="text" class="form-control" id="weatherPickup" placeholder="e.g. Chicago, IL">
+          </div>
+          <div class="form-group">
+            <label>Delivery City</label>
+            <input type="text" class="form-control" id="weatherDelivery" placeholder="e.g. Dallas, TX">
+          </div>
+          <button class="btn btn-primary" onclick="checkWeather()" style="height:38px">Check Weather</button>
+        </div>
+        <div class="weather-cards" id="weatherCards">
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-icon">&#9729;</div>
+            <p>Enter pickup and delivery cities to check weather conditions</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 3: DETENTION PAY TRACKER                       -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-detention">
+      <div class="detention-layout">
+        <!-- Form -->
+        <div class="card">
+          <div class="card-header"><h3>Log Detention Time</h3></div>
+          <div class="form-group">
+            <label>Load Reference</label>
+            <input type="text" class="form-control" id="detLoadRef" placeholder="e.g. SRL-2026-0042">
+          </div>
+          <div class="form-group">
+            <label>Facility Name</label>
+            <input type="text" class="form-control" id="detFacility" placeholder="e.g. Amazon FBA - ONT8">
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Arrival Time</label>
+              <input type="datetime-local" class="form-control" id="detArrival">
+            </div>
+            <div class="form-group">
+              <label>Departure Time</label>
+              <input type="datetime-local" class="form-control" id="detDeparture">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="calculateDetention()" style="width:100%;margin-top:8px">Calculate Detention</button>
+        </div>
+
+        <!-- Summary -->
+        <div>
+          <div class="detention-summary" id="detentionSummary" style="margin-bottom:20px">
+            <div class="summary-title">Detention Calculation</div>
+            <div class="empty-state" style="padding:20px 0">
+              <div class="empty-icon">&#9201;</div>
+              <p style="font-size:13px">Fill in the form to calculate detention pay</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detention History -->
+      <div class="card" style="margin-top:24px">
+        <div class="card-header"><h3>Detention History</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Load Ref</th>
+                <th>Facility</th>
+                <th>Date</th>
+                <th>Total Time</th>
+                <th>Billable Hrs</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="detentionHistory"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 4: MAINTENANCE REMINDERS                       -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-maintenance">
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header"><h3>Add Reminder</h3></div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Truck / Trailer #</label>
+            <input type="text" class="form-control" id="maintUnit" placeholder="e.g. TRK-4821">
+          </div>
+          <div class="form-group">
+            <label>Reminder Type</label>
+            <select class="form-control" id="maintType">
+              <option value="Oil Change">Oil Change</option>
+              <option value="Tire Rotation">Tire Rotation</option>
+              <option value="DOT Inspection">DOT Inspection</option>
+              <option value="Annual Inspection">Annual Inspection</option>
+              <option value="Brake Check">Brake Check</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" class="form-control" id="maintDate">
+        </div>
+        <button class="btn btn-primary" onclick="addReminder()" style="width:100%;margin-top:4px">Add Reminder</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Active Reminders</h3>
+          <span style="font-size:12px;color:var(--slate)" id="reminderCount">0 reminders</span>
+        </div>
+        <div class="reminders-list" id="remindersList">
+          <div class="empty-state">
+            <div class="empty-icon">&#128295;</div>
+            <p>No maintenance reminders. Add one above to get started.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 5: DEADHEAD MINIMIZER                          -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-deadhead">
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header"><h3>Find Backhaul Loads</h3></div>
+        <div class="deadhead-inputs">
+          <div class="form-group">
+            <label>Current Delivery City / State</label>
+            <input type="text" class="form-control" id="deadheadCity" placeholder="e.g. Atlanta, GA">
+          </div>
+          <button class="btn btn-primary" onclick="findBackhaulLoads()" style="height:38px">Find Backhaul Loads</button>
+        </div>
+      </div>
+
+      <div id="backhaulResults">
+        <div class="empty-state">
+          <div class="empty-icon">&#10562;</div>
+          <p>Enter your current delivery location to find nearby backhaul loads and minimize deadhead miles</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="main-footer">
+      Silk Route Logistics &middot; Carrier Portal &middot; <span id="lastUpdated"></span>
+    </footer>
+  </main>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    /* ═══════════════════════════════════════════════════════
+       AUTH CHECK
+       ═══════════════════════════════════════════════════════ */
+    if (!CARRIER.isLoggedIn()) window.location.href = '/carrier/login.html';
+
+    /* ─── Helpers ─────────────────────────────────────── */
+    function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+    function money(n) { return "$" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    /* ─── Populate user sidebar ──────────────────────── */
+    CARRIER.getMe().then(function (u) {
+      if (!u) return;
+      document.getElementById("sidebarUser").innerHTML =
+        '<div class="user-name">' + esc(u.firstName + " " + u.lastName) + '</div>' +
+        '<div class="user-role">CARRIER</div>';
+    }).catch(function () {});
+
+    document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
+
+    /* ═══════════════════════════════════════════════════════
+       TAB SWITCHING
+       ═══════════════════════════════════════════════════════ */
+    (function () {
+      var tabs = document.querySelectorAll("#toolsTabs .tab-btn");
+      tabs.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          tabs.forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          var panels = document.querySelectorAll(".tab-panel");
+          panels.forEach(function (p) { p.classList.remove("active"); });
+          document.getElementById("panel-" + btn.getAttribute("data-tab")).classList.add("active");
+        });
+      });
+    })();
+
+    /* ═══════════════════════════════════════════════════════
+       TAB 1: FUEL PRICE MAP
+       ═══════════════════════════════════════════════════════ */
+    (function () {
+      var fuelData = [
+        { region: "Northeast", price: 3.89 },
+        { region: "Southeast", price: 3.54 },
+        { region: "Midwest",   price: 3.67 },
+        { region: "Southwest", price: 3.45 },
+        { region: "West Coast", price: 4.12 }
+      ];
+
+      document.getElementById("fuelDate").textContent = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+      var grid = document.getElementById("fuelGrid");
+      grid.innerHTML = fuelData.map(function (f) {
+        var colorClass;
+        if (f.price < 3.50) colorClass = "green";
+        else if (f.price <= 4.00) colorClass = "amber";
+        else colorClass = "red";
+
+        return '<div class="fuel-card">' +
+          '<div class="region-name">' + esc(f.region) + '</div>' +
+          '<div class="fuel-price ' + colorClass + '">$' + f.price.toFixed(2) + '</div>' +
+          '<div class="fuel-label">per gallon (diesel)</div>' +
+        '</div>';
+      }).join("");
+    })();
+
+    /* ═══════════════════════════════════════════════════════
+       TAB 2: WEATHER ALERTS
+       ═══════════════════════════════════════════════════════ */
+    var mockWeatherDB = {
+      "chicago":    { temp: 28, conditions: "Snow Showers", wind: 22, humidity: 78, visibility: "3 mi", severe: "Winter Storm Warning: Heavy snow expected, 6-10 inches. Hazardous driving conditions." },
+      "dallas":     { temp: 65, conditions: "Partly Cloudy", wind: 12, humidity: 45, visibility: "10 mi", severe: null },
+      "atlanta":    { temp: 58, conditions: "Rain", wind: 15, humidity: 82, visibility: "5 mi", severe: null },
+      "denver":     { temp: 35, conditions: "Clear", wind: 8, humidity: 30, visibility: "10 mi", severe: null },
+      "los angeles":{ temp: 72, conditions: "Sunny", wind: 6, humidity: 35, visibility: "10 mi", severe: null },
+      "phoenix":    { temp: 78, conditions: "Sunny", wind: 5, humidity: 15, visibility: "10 mi", severe: null },
+      "memphis":    { temp: 52, conditions: "Overcast", wind: 10, humidity: 65, visibility: "7 mi", severe: null },
+      "kansas city":{ temp: 42, conditions: "Fog", wind: 4, humidity: 92, visibility: "0.5 mi", severe: "Dense Fog Advisory: Visibility below 1 mile. Use low beams." },
+      "seattle":    { temp: 45, conditions: "Heavy Rain", wind: 28, humidity: 90, visibility: "2 mi", severe: "Flood Watch: Heavy rainfall may cause flooding in low-lying areas." },
+      "miami":      { temp: 80, conditions: "Thunderstorms", wind: 20, humidity: 88, visibility: "4 mi", severe: "Severe Thunderstorm Warning: Damaging winds up to 60 mph possible." },
+      "new york":   { temp: 34, conditions: "Sleet", wind: 18, humidity: 72, visibility: "2 mi", severe: "Winter Weather Advisory: Mixed precipitation, icy roads expected." },
+      "houston":    { temp: 70, conditions: "Partly Cloudy", wind: 9, humidity: 60, visibility: "10 mi", severe: null },
+      "detroit":    { temp: 30, conditions: "Light Snow", wind: 14, humidity: 75, visibility: "4 mi", severe: null },
+      "minneapolis":{ temp: 15, conditions: "Blizzard", wind: 35, humidity: 80, visibility: "0.25 mi", severe: "Blizzard Warning: Whiteout conditions with wind gusts to 50 mph. Do NOT travel." },
+      "nashville":  { temp: 55, conditions: "Cloudy", wind: 7, humidity: 55, visibility: "8 mi", severe: null }
+    };
+
+    function getWeatherIcon(conditions) {
+      var c = (conditions || "").toLowerCase();
+      if (c.indexOf("sun") >= 0 || c.indexOf("clear") >= 0) return "&#9728;";
+      if (c.indexOf("cloud") >= 0 || c.indexOf("overcast") >= 0) return "&#9925;";
+      if (c.indexOf("rain") >= 0 || c.indexOf("shower") >= 0) return "&#127783;";
+      if (c.indexOf("snow") >= 0 || c.indexOf("blizzard") >= 0 || c.indexOf("sleet") >= 0) return "&#127784;";
+      if (c.indexOf("thunder") >= 0 || c.indexOf("storm") >= 0) return "&#9928;";
+      if (c.indexOf("fog") >= 0) return "&#127787;";
+      return "&#9729;";
+    }
+
+    function buildWeatherCard(cityInput, label) {
+      var key = cityInput.toLowerCase().replace(/,.*$/, "").trim();
+      var data = mockWeatherDB[key];
+
+      if (!data) {
+        // Generate random weather for unknown cities
+        data = {
+          temp: Math.round(30 + Math.random() * 50),
+          conditions: ["Clear", "Partly Cloudy", "Overcast", "Light Rain"][Math.floor(Math.random() * 4)],
+          wind: Math.round(5 + Math.random() * 20),
+          humidity: Math.round(30 + Math.random() * 50),
+          visibility: "10 mi",
+          severe: null
+        };
+      }
+
+      var html = '<div class="weather-card">' +
+        '<div class="weather-type">' + esc(label) + '</div>' +
+        '<div class="city-name">' + getWeatherIcon(data.conditions) + ' ' + esc(cityInput) + '</div>' +
+        '<div class="temp-display">' + data.temp + '&deg;F</div>' +
+        '<div style="font-size:14px;color:#CBD5E1;margin-bottom:14px;font-weight:500">' + esc(data.conditions) + '</div>' +
+        '<div class="weather-detail-row"><span class="detail-label">Wind Speed</span><span class="detail-value">' + data.wind + ' mph</span></div>' +
+        '<div class="weather-detail-row"><span class="detail-label">Humidity</span><span class="detail-value">' + data.humidity + '%</span></div>' +
+        '<div class="weather-detail-row"><span class="detail-label">Visibility</span><span class="detail-value">' + esc(data.visibility) + '</span></div>';
+
+      if (data.severe) {
+        html += '<div class="weather-alert-box"><span class="alert-icon">&#9888;</span>' + esc(data.severe) + '</div>';
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function checkWeather() {
+      var pickup = document.getElementById("weatherPickup").value.trim();
+      var delivery = document.getElementById("weatherDelivery").value.trim();
+      var container = document.getElementById("weatherCards");
+
+      if (!pickup && !delivery) {
+        container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p style="color:var(--red)">Please enter at least one city</p></div>';
+        return;
+      }
+
+      var html = "";
+      if (pickup) html += buildWeatherCard(pickup, "Pickup Location");
+      if (delivery) html += buildWeatherCard(delivery, "Delivery Location");
+      container.innerHTML = html;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TAB 3: DETENTION PAY TRACKER
+       ═══════════════════════════════════════════════════════ */
+    var FREE_TIME_HOURS = 2;
+    var DETENTION_RATE = 75;
+
+    function calculateDetention() {
+      var loadRef = document.getElementById("detLoadRef").value.trim();
+      var facility = document.getElementById("detFacility").value.trim();
+      var arrival = document.getElementById("detArrival").value;
+      var departure = document.getElementById("detDeparture").value;
+      var summary = document.getElementById("detentionSummary");
+
+      if (!loadRef || !facility || !arrival || !departure) {
+        summary.innerHTML = '<div class="summary-title">Detention Calculation</div>' +
+          '<div style="padding:12px 0;color:var(--red);font-size:13px">&#9888; Please fill in all fields</div>';
+        return;
+      }
+
+      var arrivalDate = new Date(arrival);
+      var departureDate = new Date(departure);
+      var diffMs = departureDate - arrivalDate;
+
+      if (diffMs <= 0) {
+        summary.innerHTML = '<div class="summary-title">Detention Calculation</div>' +
+          '<div style="padding:12px 0;color:var(--red);font-size:13px">&#9888; Departure must be after arrival</div>';
+        return;
+      }
+
+      var totalMinutes = diffMs / (1000 * 60);
+      var totalHours = totalMinutes / 60;
+      var freeTimeMinutes = FREE_TIME_HOURS * 60;
+      var billableMinutes = Math.max(0, totalMinutes - freeTimeMinutes);
+      var billableHours = Math.ceil(billableMinutes / 60);
+      var totalPay = billableHours * DETENTION_RATE;
+
+      function formatDuration(mins) {
+        var h = Math.floor(mins / 60);
+        var m = Math.round(mins % 60);
+        return h + "h " + m + "m";
+      }
+
+      summary.innerHTML =
+        '<div class="summary-title">Detention Calculation</div>' +
+        '<div style="padding:6px 0;font-size:13px;color:var(--slate);margin-bottom:8px">' + esc(loadRef) + ' &mdash; ' + esc(facility) + '</div>' +
+        '<div class="summary-row"><span class="row-label">Arrival</span><span class="row-value" style="font-size:13px">' + arrivalDate.toLocaleString() + '</span></div>' +
+        '<div class="summary-row"><span class="row-label">Departure</span><span class="row-value" style="font-size:13px">' + departureDate.toLocaleString() + '</span></div>' +
+        '<div class="summary-row"><span class="row-label">Total Time at Facility</span><span class="row-value">' + formatDuration(totalMinutes) + '</span></div>' +
+        '<div class="summary-row"><span class="row-label">Free Time (standard)</span><span class="row-value">' + FREE_TIME_HOURS + 'h 0m</span></div>' +
+        '<div class="summary-row"><span class="row-label">Billable Hours</span><span class="row-value">' + billableHours + ' hr' + (billableHours !== 1 ? 's' : '') + '</span></div>' +
+        '<div class="summary-row"><span class="row-label">Rate</span><span class="row-value">$' + DETENTION_RATE + '/hr</span></div>' +
+        '<div class="summary-row total"><span class="row-label" style="font-size:16px;font-weight:600">Detention Pay</span><span class="row-value">' + money(totalPay) + '</span></div>' +
+        (totalPay > 0
+          ? '<button class="btn btn-success" onclick="submitDetentionClaim(\'' + esc(loadRef) + '\', \'' + esc(facility) + '\', ' + totalHours.toFixed(2) + ', ' + billableHours + ', ' + totalPay + ')" style="width:100%;margin-top:16px">Submit for Payment</button>'
+          : '<div style="padding:10px 0;text-align:center;color:var(--green);font-size:13px">&#10003; Within free time. No detention pay applicable.</div>');
+    }
+
+    function submitDetentionClaim(loadRef, facility, totalHrs, billableHrs, amount) {
+      alert("Detention claim submitted for " + loadRef + " — " + money(amount) + "\n\nYour broker will review and process this claim.");
+    }
+
+    // Mock detention history
+    (function () {
+      var history = [
+        { ref: "SRL-2026-0038", facility: "Walmart DC #7024", date: "2026-02-08", totalTime: "4h 35m", billable: 3, amount: 225, status: "APPROVED" },
+        { ref: "SRL-2026-0031", facility: "Target DC - Savannah", date: "2026-02-03", totalTime: "3h 12m", billable: 2, amount: 150, status: "PENDING" },
+        { ref: "SRL-2026-0025", facility: "Amazon FBA - ONT8", date: "2026-01-28", totalTime: "5h 48m", billable: 4, amount: 300, status: "APPROVED" },
+        { ref: "SRL-2026-0019", facility: "Costco Depot - Atlanta", date: "2026-01-21", totalTime: "1h 45m", billable: 0, amount: 0, status: "N/A" },
+        { ref: "SRL-2026-0014", facility: "Home Depot RDC - Dallas", date: "2026-01-15", totalTime: "6h 10m", billable: 5, amount: 375, status: "PAID" }
+      ];
+
+      var statusColors = { APPROVED: "green", PENDING: "amber", PAID: "blue", "N/A": "slate" };
+
+      document.getElementById("detentionHistory").innerHTML = history.map(function (h) {
+        return '<tr>' +
+          '<td style="font-weight:600;color:#fff">' + esc(h.ref) + '</td>' +
+          '<td>' + esc(h.facility) + '</td>' +
+          '<td>' + esc(h.date) + '</td>' +
+          '<td>' + esc(h.totalTime) + '</td>' +
+          '<td>' + h.billable + ' hrs</td>' +
+          '<td style="color:var(--gold);font-weight:600">' + (h.amount > 0 ? money(h.amount) : '—') + '</td>' +
+          '<td><span class="badge badge-' + (statusColors[h.status] || "slate") + '">' + esc(h.status) + '</span></td>' +
+        '</tr>';
+      }).join("");
+    })();
+
+    /* ═══════════════════════════════════════════════════════
+       TAB 4: MAINTENANCE REMINDERS (localStorage)
+       ═══════════════════════════════════════════════════════ */
+    var STORAGE_KEY = "srl_maintenance_reminders";
+
+    function getReminders() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      } catch (e) { return []; }
+    }
+
+    function saveReminders(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+
+    function addReminder() {
+      var unit = document.getElementById("maintUnit").value.trim();
+      var type = document.getElementById("maintType").value;
+      var date = document.getElementById("maintDate").value;
+
+      if (!unit || !date) {
+        alert("Please enter a truck/trailer number and due date.");
+        return;
+      }
+
+      var reminders = getReminders();
+      reminders.push({
+        id: Date.now(),
+        unit: unit,
+        type: type,
+        dueDate: date
+      });
+      saveReminders(reminders);
+
+      // Clear form
+      document.getElementById("maintUnit").value = "";
+      document.getElementById("maintDate").value = "";
+
+      renderReminders();
+    }
+
+    function deleteReminder(id) {
+      var reminders = getReminders().filter(function (r) { return r.id !== id; });
+      saveReminders(reminders);
+      renderReminders();
+    }
+
+    function renderReminders() {
+      var reminders = getReminders();
+      var container = document.getElementById("remindersList");
+      var countEl = document.getElementById("reminderCount");
+
+      countEl.textContent = reminders.length + " reminder" + (reminders.length !== 1 ? "s" : "");
+
+      if (reminders.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128295;</div><p>No maintenance reminders. Add one above to get started.</p></div>';
+        return;
+      }
+
+      // Sort by due date ascending
+      reminders.sort(function (a, b) { return new Date(a.dueDate) - new Date(b.dueDate); });
+
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      container.innerHTML = reminders.map(function (r) {
+        var due = new Date(r.dueDate + "T00:00:00");
+        var diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+
+        var colorClass, countdownText;
+        if (diffDays < 0) {
+          colorClass = "countdown-red";
+          countdownText = Math.abs(diffDays) + ' <div class="countdown-label">days overdue</div>';
+        } else if (diffDays === 0) {
+          colorClass = "countdown-red";
+          countdownText = 'TODAY <div class="countdown-label">due now</div>';
+        } else if (diffDays < 7) {
+          colorClass = "countdown-red";
+          countdownText = diffDays + ' <div class="countdown-label">days left</div>';
+        } else if (diffDays <= 30) {
+          colorClass = "countdown-amber";
+          countdownText = diffDays + ' <div class="countdown-label">days left</div>';
+        } else {
+          colorClass = "countdown-green";
+          countdownText = diffDays + ' <div class="countdown-label">days left</div>';
+        }
+
+        var dueDateFormatted = due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+        return '<div class="reminder-item">' +
+          '<div class="reminder-info">' +
+            '<div class="reminder-truck">' + esc(r.unit) + '</div>' +
+            '<div class="reminder-type">' + esc(r.type) + '</div>' +
+            '<div class="reminder-due">Due: ' + esc(dueDateFormatted) + '</div>' +
+          '</div>' +
+          '<div class="reminder-countdown ' + colorClass + '">' + countdownText + '</div>' +
+          '<div class="reminder-actions">' +
+            '<button onclick="deleteReminder(' + r.id + ')" title="Delete">&times;</button>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    // Initial render
+    renderReminders();
+
+    /* ═══════════════════════════════════════════════════════
+       TAB 5: DEADHEAD MINIMIZER
+       ═══════════════════════════════════════════════════════ */
+    function findBackhaulLoads() {
+      var city = document.getElementById("deadheadCity").value.trim();
+      var container = document.getElementById("backhaulResults");
+
+      if (!city) {
+        container.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Please enter your current delivery city</p></div>';
+        return;
+      }
+
+      container.innerHTML = '<div class="empty-state"><div class="skeleton skeleton-line w75" style="margin:0 auto"></div><div class="skeleton skeleton-line w50" style="margin:8px auto 0"></div><p style="margin-top:12px;font-size:13px">Searching for loads near ' + esc(city) + '...</p></div>';
+
+      CARRIER.getAvailableLoads({ limit: 20 }).then(function (data) {
+        var loads = data && data.loads ? data.loads : [];
+
+        if (loads.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#10562;</div><p>No available loads found at this time. Check back soon.</p></div>';
+          return;
+        }
+
+        // Simulate distance from current location (random for demo)
+        var enriched = loads.map(function (l) {
+          return Object.assign({}, l, {
+            deadheadMiles: Math.round(10 + Math.random() * 150)
+          });
+        });
+
+        // Sort by deadhead distance
+        enriched.sort(function (a, b) { return a.deadheadMiles - b.deadheadMiles; });
+
+        var html = '<div style="margin-bottom:16px;font-size:13px;color:var(--slate)">' +
+          'Found <strong style="color:#fff">' + enriched.length + '</strong> loads near <strong style="color:var(--gold)">' + esc(city) + '</strong>, sorted by deadhead distance' +
+        '</div><div class="backhaul-grid">';
+
+        html += enriched.map(function (l) {
+          var eqType = (l.equipmentType || "DRY_VAN").replace(/_/g, " ");
+          return '<div class="backhaul-card">' +
+            '<div class="backhaul-distance-badge">' + l.deadheadMiles + ' mi deadhead</div>' +
+            '<div class="backhaul-route">' +
+              esc(l.originCity + ', ' + l.originState) +
+              '<span class="route-arrow">&#10142;</span>' +
+              esc(l.destCity + ', ' + l.destState) +
+            '</div>' +
+            '<div class="backhaul-meta">' +
+              '<div class="meta-item rate">Rate: <strong>' + money(l.carrierRate || l.rate || 0) + '</strong></div>' +
+              '<div class="meta-item">Distance: <strong>' + (l.distance || '—') + ' mi</strong></div>' +
+              '<div class="meta-item">Equipment: <strong>' + esc(eqType) + '</strong></div>' +
+              (l.pickupDate ? '<div class="meta-item">Pickup: <strong>' + new Date(l.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + '</strong></div>' : '') +
+            '</div>' +
+          '</div>';
+        }).join("");
+
+        html += '</div>';
+        container.innerHTML = html;
+      }).catch(function (err) {
+        container.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Error loading available loads. Please try again.</p></div>';
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SIDEBAR TOGGLE (mobile)
+       ═══════════════════════════════════════════════════════ */
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("show");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      this.classList.remove("show");
+    });
+  </script>
+</body>
+</html>

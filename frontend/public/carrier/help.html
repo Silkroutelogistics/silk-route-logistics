@@ -68,6 +68,7 @@
       <a href="/carrier/loads.html?tab=available"><span class="nav-icon">&#10149;</span> Available Loads</a>
       <a href="/carrier/payments.html"><span class="nav-icon">&#36;</span> Payments</a>
       <a href="/carrier/compliance.html"><span class="nav-icon">&#9888;</span> Compliance</a>
+      <a href="/carrier/tools.html"><span class="nav-icon">&#9881;</span> Tools</a>
       <a href="/carrier/help.html" class="active"><span class="nav-icon">&#63;</span> Help & SOPs</a>
     </nav>
     <div class="sidebar-footer"><button onclick="CARRIER.logout()">Sign Out</button></div>
@@ -90,6 +91,7 @@
         <a href="#" onclick="filterSOPs('compliance')">Compliance</a>
         <a href="#" onclick="filterSOPs('srcpp')">SRCPP Program</a>
         <a href="#" onclick="filterSOPs('automation')">Automation</a>
+        <a href="#" onclick="filterSOPs('tools')">Carrier Tools</a>
       </div>
 
       <div class="sop-content" id="sopContent">
@@ -272,6 +274,53 @@
             <li>Maintaining a clean record with zero fall-offs and prompt communication is the fastest path to higher SRCPP tiers</li>
           </ol>
           <div class="tip-box"><strong>Pro Tip:</strong> If you have an issue with a load (truck breakdown, weather delay), call your broker immediately. Proactive communication is always better than going silent.</div>
+        </div>
+
+        <!-- SOP-019: Using the Detention Pay Tracker -->
+        <div class="sop-card" data-category="tools" id="sop-019">
+          <h2>SOP-019: Using the Detention Pay Tracker</h2>
+          <div class="sop-meta"><span>Carrier</span> Tools</div>
+          <div class="when-box">When to use: When you've waited more than 2 hours at a pickup or delivery facility.</div>
+          <ol class="step-list">
+            <li>Navigate to <strong>Tools</strong> from the sidebar, then click the <strong>Detention Tracker</strong> tab</li>
+            <li>Enter the Load Reference number (e.g., SRL-2026-0042) and the Facility Name</li>
+            <li>Enter your Arrival Time and Departure Time using the date/time pickers</li>
+            <li>Click <strong>Calculate Detention</strong>. The system shows: total time, free time (2 hours), billable hours, and detention pay at $75/hour</li>
+            <li>If detention pay is owed, click <strong>Submit for Payment</strong> to send the claim to your broker for review</li>
+            <li>Track your detention history at the bottom of the page — see status of previous claims (Pending, Approved, Paid)</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Always note the exact arrival and departure times. Take a photo of the facility check-in/check-out log as evidence for detention claims.</div>
+        </div>
+
+        <!-- SOP-020: Using the Deadhead Minimizer -->
+        <div class="sop-card" data-category="tools" id="sop-020">
+          <h2>SOP-020: Using the Deadhead Minimizer</h2>
+          <div class="sop-meta"><span>Carrier</span> Tools</div>
+          <div class="when-box">When to use: After delivering a load, to find nearby loads and reduce empty miles.</div>
+          <ol class="step-list">
+            <li>Navigate to <strong>Tools</strong> from the sidebar, then click the <strong>Deadhead Minimizer</strong> tab</li>
+            <li>Enter your current delivery city and state (e.g., "Atlanta, GA")</li>
+            <li>Click <strong>Find Backhaul Loads</strong>. The system searches all available POSTED loads</li>
+            <li>Results are sorted by deadhead distance (closest first). Each card shows: origin, destination, rate, distance, equipment type, and pickup date</li>
+            <li>Found a good match? Go to <strong>Available Loads</strong> to accept the load directly</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Check the Deadhead Minimizer before every delivery trip ends. Planning your backhaul in advance maximizes revenue per mile and minimizes downtime.</div>
+        </div>
+
+        <!-- SOP-021: Using Maintenance Reminders -->
+        <div class="sop-card" data-category="tools" id="sop-021">
+          <h2>SOP-021: Using Maintenance Reminders</h2>
+          <div class="sop-meta"><span>Carrier</span> Tools</div>
+          <div class="when-box">When to use: To set up and track maintenance schedules for your trucks and trailers.</div>
+          <ol class="step-list">
+            <li>Navigate to <strong>Tools</strong> from the sidebar, then click the <strong>Maintenance</strong> tab</li>
+            <li>To add a reminder: enter the Truck/Trailer number, select the Reminder Type (Oil Change, Tire Rotation, DOT Inspection, etc.), and set the Due Date</li>
+            <li>Click <strong>Add Reminder</strong>. The reminder appears in the Active Reminders list below</li>
+            <li>Reminders are color-coded: <strong style="color:#22C55E">Green</strong> (30+ days), <strong style="color:#F59E0B">Amber</strong> (7-30 days), <strong style="color:#EF4444">Red</strong> (less than 7 days or overdue)</li>
+            <li>Click the &times; button next to a reminder to delete it after completing the maintenance</li>
+            <li>Reminders are saved locally in your browser — they persist between sessions on the same device</li>
+          </ol>
+          <div class="tip-box"><strong>Pro Tip:</strong> Set up reminders for ALL required maintenance when you first start using the tool. This creates a complete maintenance calendar that helps prevent breakdowns and DOT violations.</div>
         </div>
 
       </div>

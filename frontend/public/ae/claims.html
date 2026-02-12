@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claims Management - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Claims Management Styles ========== */
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-pill {
+      padding: 6px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      background: var(--white);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--gray-500);
+      transition: all 0.15s;
+    }
+    .filter-pill:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .filter-pill.active {
+      background: var(--navy);
+      color: var(--white);
+      border-color: var(--navy);
+    }
+    .filter-spacer { flex: 1; }
+    .filter-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .filter-bar select:focus { border-color: var(--gold); }
+    .filter-bar input[type="text"] {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      width: 200px;
+      outline: none;
+    }
+    .filter-bar input:focus { border-color: var(--gold); }
+
+    /* --- Buttons --- */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--gold); color: var(--white);
+      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; text-decoration: none;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--white); color: var(--navy);
+      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
+      font-weight: 500; cursor: pointer;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-danger {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; background: var(--white); color: var(--red);
+      border: 1px solid var(--red-bg); border-radius: 6px; font-size: 12px;
+      font-weight: 500; cursor: pointer;
+    }
+    .btn-danger:hover { background: var(--red-bg); }
+
+    /* --- Claims Table --- */
+    .table-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+    }
+    .claims-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .claims-table th {
+      text-align: left; padding: 10px 12px; font-weight: 600;
+      color: var(--gray-500); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap; cursor: pointer; user-select: none;
+    }
+    .claims-table th:hover { color: var(--navy); }
+    .claims-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700); white-space: nowrap;
+    }
+    .claims-table tr.clickable:hover td { background: var(--gray-50); cursor: pointer; }
+    .claims-table .claim-number {
+      font-weight: 600; color: var(--navy);
+    }
+    .claims-table .claim-number:hover { color: var(--gold); }
+    .claims-table .value-col {
+      font-weight: 600; color: var(--navy);
+    }
+
+    /* --- Status Badges --- */
+    .status-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .status-FILED { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .status-UNDER_REVIEW { background: rgba(245,158,11,0.1); color: #B45309; }
+    .status-INVESTIGATING { background: rgba(168,85,247,0.1); color: #9333EA; }
+    .status-RESOLVED { background: rgba(34,197,94,0.1); color: #15803D; }
+    .status-CLOSED { background: rgba(100,116,139,0.1); color: var(--gray-600); }
+
+    /* --- Type Badges --- */
+    .type-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 500; background: var(--gray-100);
+      color: var(--gray-600);
+    }
+
+    /* --- Detail Slide Panel --- */
+    .detail-panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 580px; max-width: 100vw;
+      background: var(--white);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      z-index: 300;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-panel.open { transform: translateX(0); }
+    .detail-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+      z-index: 290; display: none;
+    }
+    .detail-overlay.open { display: block; }
+    .dp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+    }
+    .dp-header h3 { font-size: 17px; color: var(--navy); }
+    .dp-close {
+      background: none; border: none; font-size: 22px;
+      cursor: pointer; color: var(--gray-400); padding: 4px; line-height: 1;
+    }
+    .dp-close:hover { color: var(--red); }
+    .dp-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+    }
+    .dp-section { margin-bottom: 20px; }
+    .dp-section-title {
+      font-size: 12px; font-weight: 700; color: var(--gray-500);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px; padding-bottom: 4px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .dp-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
+    }
+    .dp-field label {
+      display: block; font-size: 11px; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .dp-field span {
+      font-size: 14px; color: var(--navy); font-weight: 500;
+    }
+    .dp-footer {
+      padding: 16px 20px; border-top: 1px solid var(--gray-100);
+      display: flex; gap: 8px; align-items: center;
+    }
+
+    /* --- Timeline --- */
+    .timeline { list-style: none; position: relative; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: var(--gray-200);
+    }
+    .timeline-item {
+      position: relative;
+      padding-left: 32px;
+      margin-bottom: 16px;
+    }
+    .timeline-item:last-child { margin-bottom: 0; }
+    .timeline-dot {
+      position: absolute;
+      left: 4px; top: 2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--gray-300);
+      background: var(--white);
+    }
+    .timeline-dot.dot-blue { border-color: #3B82F6; background: rgba(59,130,246,0.2); }
+    .timeline-dot.dot-amber { border-color: #F59E0B; background: rgba(245,158,11,0.2); }
+    .timeline-dot.dot-purple { border-color: #9333EA; background: rgba(168,85,247,0.2); }
+    .timeline-dot.dot-green { border-color: #22C55E; background: rgba(34,197,94,0.2); }
+    .timeline-dot.dot-gray { border-color: var(--gray-400); background: var(--gray-200); }
+    .timeline-dot.dot-gold { border-color: var(--gold); background: var(--gold-dim); }
+    .timeline-meta {
+      font-size: 11px; color: var(--gray-400); margin-bottom: 2px;
+    }
+    .timeline-text {
+      font-size: 13px; color: var(--gray-700);
+    }
+    .timeline-text strong { color: var(--navy); }
+
+    /* --- Add Note Form (inline in detail) --- */
+    .add-note-form {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 12px; background: var(--gray-50); border-radius: 8px;
+      margin-top: 12px;
+    }
+    .add-note-form textarea {
+      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 6px;
+      font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px;
+      outline: none;
+    }
+    .add-note-form textarea:focus { border-color: var(--gold); }
+    .add-note-form .note-actions {
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+
+    /* --- Status Updater --- */
+    .status-updater {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .status-updater select {
+      padding: 6px 10px; border: 1px solid var(--gray-200); border-radius: 6px;
+      font-size: 12px; outline: none;
+    }
+    .status-updater select:focus { border-color: var(--gold); }
+
+    /* --- Document Upload Placeholder --- */
+    .doc-upload-placeholder {
+      border: 2px dashed var(--gray-300); border-radius: 8px;
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .doc-upload-placeholder:hover {
+      border-color: var(--gold); background: var(--gold-dim);
+    }
+    .doc-upload-placeholder p { color: var(--gray-500); font-size: 13px; }
+    .doc-upload-placeholder .doc-icon {
+      font-size: 24px; color: var(--gray-400); margin-bottom: 4px;
+    }
+
+    /* --- Modals --- */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 500; align-items: flex-start; justify-content: center;
+      padding: 40px 20px; overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg); width: 100%; max-width: 580px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
+    }
+    .modal-header h3 { font-size: 18px; color: var(--navy); font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-400); }
+    .modal-close:hover { color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 16px 24px; border-top: 1px solid var(--gray-100);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
+    .form-group label .req { color: var(--red); }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 6px;
+      font-size: 13px; color: var(--gray-700); outline: none; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--gold); }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-error { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
+    .form-error.visible { display: block; }
+
+    /* --- Summary Cards --- */
+    .claims-summary {
+      display: flex; gap: 16px; padding: 20px 32px;
+      flex-wrap: wrap;
+    }
+    .summary-card {
+      flex: 1; min-width: 120px;
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .summary-card-value {
+      font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1.2;
+    }
+    .summary-card-label {
+      font-size: 12px; color: var(--gray-500); margin-top: 4px;
+    }
+    .summary-card.sc-filed .summary-card-value { color: #3B82F6; }
+    .summary-card.sc-review .summary-card-value { color: #B45309; }
+    .summary-card.sc-investigating .summary-card-value { color: #9333EA; }
+    .summary-card.sc-resolved .summary-card-value { color: #15803D; }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--white);
+      z-index: 9999; transform: translateY(80px); opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    /* --- Responsive --- */
+    @media (max-width: 1024px) {
+      .filter-bar { padding: 12px 20px; }
+      .table-wrap { padding: 0 20px 20px; }
+      .claims-summary { padding: 16px 20px; }
+      .detail-panel { width: 100%; }
+    }
+    @media (max-width: 640px) {
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar input[type="text"] { width: 100%; }
+      .filter-spacer { display: none; }
+      .form-grid { grid-template-columns: 1fr; }
+      .dp-grid { grid-template-columns: 1fr; }
+      .claims-summary { flex-direction: column; }
+      .summary-card { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+        <a href="/ae/loads.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Load Board</a>
+        <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
+        <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
+        <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/claims.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="13" y2="11"/></svg>Claims</a>
+        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financials</a>
+        <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+      </div>
+    </aside>
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1>Claims Management</h1>
+          <p id="claims-subtitle">Track and resolve freight claims</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-primary" onclick="openNewClaimModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Claim
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="claims-summary" id="claims-summary">
+        <div class="summary-card sc-filed">
+          <div class="summary-card-value" id="sum-filed">0</div>
+          <div class="summary-card-label">Filed</div>
+        </div>
+        <div class="summary-card sc-review">
+          <div class="summary-card-value" id="sum-review">0</div>
+          <div class="summary-card-label">Under Review</div>
+        </div>
+        <div class="summary-card sc-investigating">
+          <div class="summary-card-value" id="sum-investigating">0</div>
+          <div class="summary-card-label">Investigating</div>
+        </div>
+        <div class="summary-card sc-resolved">
+          <div class="summary-card-value" id="sum-resolved">0</div>
+          <div class="summary-card-label">Resolved</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-value" id="sum-total-value">$0</div>
+          <div class="summary-card-label">Total Est. Value</div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-pills" id="status-filters">
+          <button class="filter-pill active" data-status="">All</button>
+          <button class="filter-pill" data-status="FILED">Filed</button>
+          <button class="filter-pill" data-status="UNDER_REVIEW">Under Review</button>
+          <button class="filter-pill" data-status="INVESTIGATING">Investigating</button>
+          <button class="filter-pill" data-status="RESOLVED">Resolved</button>
+          <button class="filter-pill" data-status="CLOSED">Closed</button>
+        </div>
+        <select id="filter-type" onchange="applyFilters()">
+          <option value="">All Types</option>
+          <option value="DAMAGE">Damage</option>
+          <option value="SHORTAGE">Shortage</option>
+          <option value="LATE">Late</option>
+          <option value="NO_SHOW">No Show</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <input type="text" id="filter-search" placeholder="Search claims..." oninput="debounceSearch()">
+        <div class="filter-spacer"></div>
+        <span id="count-label" style="font-size:12px;color:var(--gray-400)"></span>
+      </div>
+
+      <!-- Claims Table -->
+      <div class="table-wrap">
+        <table class="claims-table">
+          <thead>
+            <tr>
+              <th>Claim #</th>
+              <th>Load Ref</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Est. Value</th>
+              <th>Filed By</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="claims-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gray-400)">Loading claims...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail Slide Panel -->
+  <div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div class="dp-header">
+      <h3 id="dp-title">--</h3>
+      <button class="dp-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="dp-body" id="dp-body"></div>
+    <div class="dp-footer" id="dp-footer"></div>
+  </div>
+
+  <!-- New Claim Modal -->
+  <div class="modal-backdrop" id="new-claim-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>File New Claim</h3>
+        <button class="modal-close" onclick="closeNewClaimModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="claim-error" class="form-error"></div>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Load Reference <span class="req">*</span></label>
+            <input id="cf-loadRef" type="text" placeholder="Search by load number or reference..." oninput="debounceLoadSearch()">
+            <div id="load-search-results" style="display:none;position:relative;">
+              <div id="load-results-list" style="position:absolute;top:0;left:0;right:0;max-height:160px;overflow-y:auto;background:var(--white);border:1px solid var(--gray-200);border-radius:6px;box-shadow:var(--shadow-md);z-index:10;"></div>
+            </div>
+            <input id="cf-loadId" type="hidden">
+          </div>
+          <div class="form-group">
+            <label>Claim Type <span class="req">*</span></label>
+            <select id="cf-type">
+              <option value="">Select type...</option>
+              <option value="DAMAGE">Damage</option>
+              <option value="SHORTAGE">Shortage</option>
+              <option value="LATE">Late Delivery</option>
+              <option value="NO_SHOW">No Show</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estimated Value <span class="req">*</span></label>
+            <input id="cf-value" type="number" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="form-group full-width">
+            <label>Description <span class="req">*</span></label>
+            <textarea id="cf-description" placeholder="Describe the claim in detail..."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Photo URLs <span style="font-weight:400;color:var(--gray-400)">(one per line)</span></label>
+            <textarea id="cf-photos" placeholder="https://example.com/photo1.jpg&#10;https://example.com/photo2.jpg" style="min-height:60px"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeNewClaimModal()">Cancel</button>
+        <button class="btn-primary" id="submit-claim-btn" onclick="submitNewClaim()">File Claim</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* ======== STATE ======== */
+    var STATUSES = ["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED", "CLOSED"];
+    var STATUS_LABELS = {
+      FILED: "Filed",
+      UNDER_REVIEW: "Under Review",
+      INVESTIGATING: "Investigating",
+      RESOLVED: "Resolved",
+      CLOSED: "Closed"
+    };
+    var TYPE_LABELS = {
+      DAMAGE: "Damage",
+      SHORTAGE: "Shortage",
+      LATE: "Late Delivery",
+      NO_SHOW: "No Show",
+      OTHER: "Other"
+    };
+
+    var state = {
+      claims: [],
+      filtered: [],
+      statusFilter: "",
+      typeFilter: "",
+      searchQuery: "",
+      selectedClaim: null,
+      searchTimer: null,
+      loadSearchTimer: null
+    };
+
+    /* ======== INIT ======== */
+    (function init() {
+      // Auth check
+      var token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      loadUser();
+      fetchClaims();
+      bindStatusFilters();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function(){});
+    }
+
+    function bindStatusFilters() {
+      var pills = document.querySelectorAll("#status-filters .filter-pill");
+      pills.forEach(function(pill) {
+        pill.addEventListener("click", function() {
+          pills.forEach(function(p) { p.classList.remove("active"); });
+          pill.classList.add("active");
+          state.statusFilter = pill.dataset.status;
+          applyFilters();
+        });
+      });
+    }
+
+    /* ======== FETCH CLAIMS ======== */
+    function fetchClaims() {
+      SRL.request("/api/claims").then(function(res) {
+        state.claims = res.claims || res || [];
+        if (!Array.isArray(state.claims)) state.claims = [];
+        applyFilters();
+        updateSummary();
+      }).catch(function(err) {
+        console.error("Fetch claims error:", err);
+        document.getElementById("claims-tbody").innerHTML =
+          '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gray-400)">No claims found</td></tr>';
+      });
+    }
+
+    /* ======== FILTERS ======== */
+    function applyFilters() {
+      var statusF = state.statusFilter;
+      var typeF = document.getElementById("filter-type").value;
+      var search = (document.getElementById("filter-search").value || "").toLowerCase().trim();
+
+      state.filtered = state.claims.filter(function(c) {
+        if (statusF && c.status !== statusF) return false;
+        if (typeF && c.type !== typeF) return false;
+        if (search) {
+          var hay = (
+            (c.claimNumber || "") + " " +
+            (c.loadReference || c.loadRef || "") + " " +
+            (c.type || "") + " " +
+            (c.description || "") + " " +
+            (c.filedByName || c.filedBy || "")
+          ).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+
+      document.getElementById("count-label").textContent = state.filtered.length + " claim(s)";
+      renderTable();
+    }
+
+    function debounceSearch() {
+      clearTimeout(state.searchTimer);
+      state.searchTimer = setTimeout(applyFilters, 300);
+    }
+
+    /* ======== SUMMARY ======== */
+    function updateSummary() {
+      var counts = { FILED: 0, UNDER_REVIEW: 0, INVESTIGATING: 0, RESOLVED: 0, CLOSED: 0 };
+      var totalValue = 0;
+      state.claims.forEach(function(c) {
+        if (counts[c.status] !== undefined) counts[c.status]++;
+        totalValue += parseFloat(c.estimatedValue || c.estValue || 0);
+      });
+      document.getElementById("sum-filed").textContent = counts.FILED;
+      document.getElementById("sum-review").textContent = counts.UNDER_REVIEW;
+      document.getElementById("sum-investigating").textContent = counts.INVESTIGATING;
+      document.getElementById("sum-resolved").textContent = counts.RESOLVED;
+      document.getElementById("sum-total-value").textContent = "$" + shortNum(totalValue);
+    }
+
+    /* ======== TABLE RENDER ======== */
+    function renderTable() {
+      var tbody = document.getElementById("claims-tbody");
+      if (state.filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gray-400)">No claims found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.filtered.map(function(c) {
+        var claimNum = esc(c.claimNumber || c.id || "--");
+        var loadRef = esc(c.loadReference || c.loadRef || "--");
+        var type = c.type || "OTHER";
+        var status = c.status || "FILED";
+        var value = parseFloat(c.estimatedValue || c.estValue || 0);
+        var filedBy = esc(c.filedByName || c.filedBy || "--");
+        var date = shortDate(c.createdAt || c.filedDate);
+
+        return '<tr class="clickable" onclick="openDetail(\'' + (c.id || "") + '\')">' +
+          '<td><span class="claim-number">' + claimNum + '</span></td>' +
+          '<td>' + loadRef + '</td>' +
+          '<td><span class="type-badge">' + esc(TYPE_LABELS[type] || type) + '</span></td>' +
+          '<td><span class="status-badge status-' + status + '">' + esc(STATUS_LABELS[status] || status) + '</span></td>' +
+          '<td class="value-col">$' + formatCurrency(value) + '</td>' +
+          '<td>' + filedBy + '</td>' +
+          '<td>' + date + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    /* ======== DETAIL PANEL ======== */
+    function openDetail(id) {
+      if (!id) return;
+      SRL.request("/api/claims/" + id).then(function(claim) {
+        state.selectedClaim = claim;
+        document.getElementById("dp-title").textContent = "Claim " + (claim.claimNumber || claim.id);
+        renderDetailBody(claim);
+        renderDetailFooter(claim);
+        document.getElementById("detail-panel").classList.add("open");
+        document.getElementById("detail-overlay").classList.add("open");
+      }).catch(function(err) {
+        showToast("Failed to load claim: " + err.message, "error");
+      });
+    }
+
+    function closeDetail() {
+      document.getElementById("detail-panel").classList.remove("open");
+      document.getElementById("detail-overlay").classList.remove("open");
+      state.selectedClaim = null;
+    }
+
+    function renderDetailBody(c) {
+      var html = "";
+
+      // Status + Type header
+      html += '<div class="dp-section">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+      html += '<span class="status-badge status-' + (c.status || "FILED") + '">' + esc(STATUS_LABELS[c.status] || c.status || "Filed") + '</span>';
+      html += '<span class="type-badge">' + esc(TYPE_LABELS[c.type] || c.type || "Other") + '</span>';
+      html += '</div>';
+
+      // Status Updater
+      html += '<div class="status-updater">';
+      html += '<label style="font-size:12px;font-weight:600;color:var(--gray-600)">Update Status:</label>';
+      html += '<select id="dp-status-select" onchange="updateClaimStatus()">';
+      STATUSES.forEach(function(s) {
+        html += '<option value="' + s + '"' + (s === c.status ? ' selected' : '') + '>' + STATUS_LABELS[s] + '</option>';
+      });
+      html += '</select>';
+      html += '</div>';
+      html += '</div>';
+
+      // Claim Info
+      html += '<div class="dp-section">';
+      html += '<div class="dp-section-title">Claim Information</div>';
+      html += '<div class="dp-grid">';
+      html += dpField("Claim #", c.claimNumber || c.id);
+      html += dpField("Load Ref", c.loadReference || c.loadRef || "--");
+      html += dpField("Type", TYPE_LABELS[c.type] || c.type || "--");
+      html += dpField("Status", STATUS_LABELS[c.status] || c.status || "--");
+      html += dpField("Est. Value", "$" + formatCurrency(parseFloat(c.estimatedValue || c.estValue || 0)));
+      html += dpField("Filed By", c.filedByName || c.filedBy || "--");
+      html += dpField("Filed Date", shortDate(c.createdAt || c.filedDate));
+      html += dpField("Last Updated", shortDate(c.updatedAt));
+      html += '</div></div>';
+
+      // Description
+      html += '<div class="dp-section">';
+      html += '<div class="dp-section-title">Description</div>';
+      html += '<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap;line-height:1.6">' + esc(c.description || "No description provided.") + '</div>';
+      html += '</div>';
+
+      // Photos
+      if (c.photos && c.photos.length > 0) {
+        html += '<div class="dp-section">';
+        html += '<div class="dp-section-title">Photos / Evidence</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+        c.photos.forEach(function(url) {
+          html += '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="display:inline-block;padding:6px 12px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gold);border:1px solid var(--gray-200);text-decoration:none">';
+          html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+          html += 'Photo</a>';
+        });
+        html += '</div></div>';
+      }
+
+      // Timeline / Notes
+      html += '<div class="dp-section">';
+      html += '<div class="dp-section-title">Activity Timeline</div>';
+      var notes = c.notes || c.timeline || [];
+      if (notes.length > 0) {
+        html += '<ul class="timeline">';
+        notes.forEach(function(note) {
+          var dotClass = getDotClass(note.type || note.action || "note");
+          html += '<li class="timeline-item">';
+          html += '<div class="timeline-dot ' + dotClass + '"></div>';
+          html += '<div class="timeline-meta">' + esc(note.authorName || note.author || "System") + ' &middot; ' + shortDateTime(note.createdAt || note.date) + '</div>';
+          html += '<div class="timeline-text">' + esc(note.text || note.content || note.message || "") + '</div>';
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<div style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">No activity yet</div>';
+      }
+
+      // Add Note Form
+      html += '<div class="add-note-form">';
+      html += '<textarea id="dp-note-text" placeholder="Add a note or update..."></textarea>';
+      html += '<div class="note-actions">';
+      html += '<button class="btn-primary btn-sm" onclick="addNote()">Add Note</button>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      // Document Upload Placeholder
+      html += '<div class="dp-section">';
+      html += '<div class="dp-section-title">Documents</div>';
+      html += '<div class="doc-upload-placeholder" onclick="showToast(\'Document upload coming soon\', \'error\')">';
+      html += '<div class="doc-icon">';
+      html += '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+      html += '</div>';
+      html += '<p>Click to upload supporting documents</p>';
+      html += '<p style="font-size:11px;color:var(--gray-400);margin-top:2px">PDF, images, or text files</p>';
+      html += '</div>';
+      html += '</div>';
+
+      document.getElementById("dp-body").innerHTML = html;
+    }
+
+    function renderDetailFooter(c) {
+      var html = '';
+      html += '<button class="btn-secondary btn-sm" onclick="closeDetail()">Close</button>';
+      html += '<div style="flex:1"></div>';
+      if (c.status !== "CLOSED") {
+        html += '<button class="btn-danger" onclick="closeClaim()">Close Claim</button>';
+      }
+      document.getElementById("dp-footer").innerHTML = html;
+    }
+
+    function getDotClass(type) {
+      var t = (type || "").toLowerCase();
+      if (t === "filed" || t === "created") return "dot-blue";
+      if (t === "review" || t === "under_review") return "dot-amber";
+      if (t === "investigating" || t === "investigation") return "dot-purple";
+      if (t === "resolved" || t === "resolution") return "dot-green";
+      if (t === "closed") return "dot-gray";
+      if (t === "status_change") return "dot-gold";
+      return "dot-gold";
+    }
+
+    /* ======== STATUS UPDATE ======== */
+    function updateClaimStatus() {
+      if (!state.selectedClaim) return;
+      var newStatus = document.getElementById("dp-status-select").value;
+      if (newStatus === state.selectedClaim.status) return;
+
+      SRL.request("/api/claims/" + state.selectedClaim.id, {
+        method: "PATCH",
+        body: { status: newStatus }
+      }).then(function(updated) {
+        state.selectedClaim.status = newStatus;
+        if (updated) state.selectedClaim = Object.assign(state.selectedClaim, updated);
+        // Update the local list too
+        var idx = state.claims.findIndex(function(cl) { return cl.id === state.selectedClaim.id; });
+        if (idx !== -1) state.claims[idx].status = newStatus;
+        renderDetailBody(state.selectedClaim);
+        renderDetailFooter(state.selectedClaim);
+        applyFilters();
+        updateSummary();
+        showToast("Status updated to " + STATUS_LABELS[newStatus], "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    function closeClaim() {
+      if (!state.selectedClaim) return;
+      SRL.request("/api/claims/" + state.selectedClaim.id, {
+        method: "PATCH",
+        body: { status: "CLOSED" }
+      }).then(function(updated) {
+        state.selectedClaim.status = "CLOSED";
+        if (updated) state.selectedClaim = Object.assign(state.selectedClaim, updated);
+        var idx = state.claims.findIndex(function(cl) { return cl.id === state.selectedClaim.id; });
+        if (idx !== -1) state.claims[idx].status = "CLOSED";
+        renderDetailBody(state.selectedClaim);
+        renderDetailFooter(state.selectedClaim);
+        applyFilters();
+        updateSummary();
+        showToast("Claim closed", "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    /* ======== ADD NOTE ======== */
+    function addNote() {
+      if (!state.selectedClaim) return;
+      var text = document.getElementById("dp-note-text").value.trim();
+      if (!text) {
+        showToast("Please enter a note", "error");
+        return;
+      }
+      SRL.request("/api/claims/" + state.selectedClaim.id, {
+        method: "PATCH",
+        body: { note: text }
+      }).then(function(updated) {
+        if (updated) state.selectedClaim = Object.assign(state.selectedClaim, updated);
+        // Re-fetch for fresh timeline
+        return SRL.request("/api/claims/" + state.selectedClaim.id);
+      }).then(function(freshClaim) {
+        state.selectedClaim = freshClaim;
+        renderDetailBody(freshClaim);
+        showToast("Note added", "success");
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
+      });
+    }
+
+    /* ======== NEW CLAIM MODAL ======== */
+    function openNewClaimModal() {
+      clearClaimForm();
+      document.getElementById("new-claim-modal").classList.add("open");
+    }
+
+    function closeNewClaimModal() {
+      document.getElementById("new-claim-modal").classList.remove("open");
+      document.getElementById("claim-error").className = "form-error";
+    }
+
+    function clearClaimForm() {
+      document.getElementById("cf-loadRef").value = "";
+      document.getElementById("cf-loadId").value = "";
+      document.getElementById("cf-type").selectedIndex = 0;
+      document.getElementById("cf-value").value = "";
+      document.getElementById("cf-description").value = "";
+      document.getElementById("cf-photos").value = "";
+      document.getElementById("claim-error").className = "form-error";
+      document.getElementById("load-search-results").style.display = "none";
+    }
+
+    /* --- Load Search for New Claim --- */
+    function debounceLoadSearch() {
+      clearTimeout(state.loadSearchTimer);
+      state.loadSearchTimer = setTimeout(searchLoads, 400);
+    }
+
+    function searchLoads() {
+      var query = document.getElementById("cf-loadRef").value.trim();
+      if (query.length < 2) {
+        document.getElementById("load-search-results").style.display = "none";
+        return;
+      }
+      SRL.request("/api/loads?search=" + encodeURIComponent(query) + "&limit=8").then(function(res) {
+        var loads = res.loads || [];
+        var container = document.getElementById("load-results-list");
+        if (loads.length === 0) {
+          container.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--gray-400);text-align:center">No loads found</div>';
+        } else {
+          container.innerHTML = loads.map(function(l) {
+            var ref = l.referenceNumber || l.id;
+            var origin = (l.originCity || "?") + ", " + (l.originState || "?");
+            var dest = (l.destinationCity || "?") + ", " + (l.destinationState || "?");
+            return '<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--gray-100);transition:background 0.1s" ' +
+              'onmouseover="this.style.background=\'var(--gray-50)\'" onmouseout="this.style.background=\'var(--white)\'" ' +
+              'onclick="selectLoad(\'' + esc(l.id) + '\',\'' + esc(ref) + '\')">' +
+              '<div style="font-weight:600;color:var(--navy)">' + esc(ref) + '</div>' +
+              '<div style="font-size:11px;color:var(--gray-500)">' + esc(origin) + ' &rarr; ' + esc(dest) + '</div>' +
+            '</div>';
+          }).join("");
+        }
+        document.getElementById("load-search-results").style.display = "block";
+      }).catch(function() {
+        document.getElementById("load-search-results").style.display = "none";
+      });
+    }
+
+    function selectLoad(id, ref) {
+      document.getElementById("cf-loadRef").value = ref;
+      document.getElementById("cf-loadId").value = id;
+      document.getElementById("load-search-results").style.display = "none";
+    }
+
+    /* --- Submit New Claim --- */
+    function submitNewClaim() {
+      var errEl = document.getElementById("claim-error");
+      errEl.className = "form-error";
+
+      var loadRef = document.getElementById("cf-loadRef").value.trim();
+      var loadId = document.getElementById("cf-loadId").value.trim();
+      var type = document.getElementById("cf-type").value;
+      var value = document.getElementById("cf-value").value;
+      var description = document.getElementById("cf-description").value.trim();
+      var photosRaw = document.getElementById("cf-photos").value.trim();
+
+      // Validation
+      if (!loadRef) {
+        errEl.textContent = "Load reference is required.";
+        errEl.className = "form-error visible";
+        return;
+      }
+      if (!type) {
+        errEl.textContent = "Claim type is required.";
+        errEl.className = "form-error visible";
+        return;
+      }
+      if (!value || parseFloat(value) <= 0) {
+        errEl.textContent = "Please enter a valid estimated value.";
+        errEl.className = "form-error visible";
+        return;
+      }
+      if (!description) {
+        errEl.textContent = "Description is required.";
+        errEl.className = "form-error visible";
+        return;
+      }
+
+      var photos = [];
+      if (photosRaw) {
+        photos = photosRaw.split("\n").map(function(u) { return u.trim(); }).filter(function(u) { return u.length > 0; });
+      }
+
+      var body = {
+        loadReference: loadRef,
+        type: type,
+        estimatedValue: parseFloat(value),
+        description: description,
+        status: "FILED"
+      };
+      if (loadId) body.loadId = loadId;
+      if (photos.length > 0) body.photos = photos;
+
+      var btn = document.getElementById("submit-claim-btn");
+      btn.disabled = true;
+      btn.textContent = "Filing...";
+
+      SRL.request("/api/claims", { method: "POST", body: body }).then(function(newClaim) {
+        showToast("Claim filed successfully", "success");
+        closeNewClaimModal();
+        fetchClaims();
+      }).catch(function(err) {
+        errEl.textContent = err.message || "Failed to file claim";
+        errEl.className = "form-error visible";
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "File Claim";
+      });
+    }
+
+    /* ======== HELPERS ======== */
+    function dpField(label, value) {
+      return '<div class="dp-field"><label>' + label + '</label><span>' + esc(value || '--') + '</span></div>';
+    }
+
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    function shortDate(d) {
+      if (!d) return "--";
+      return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function shortDateTime(d) {
+      if (!d) return "--";
+      return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+    }
+
+    function formatCurrency(n) {
+      if (!n && n !== 0) return "0.00";
+      return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function shortNum(n) {
+      if (!n) return "0";
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+      if (n >= 1000) return (n / 1000).toFixed(1) + "K";
+      return formatCurrency(n);
+    }
+
+    function formatRole(role) {
+      var m = { ADMIN: "Administrator", BROKER: "Account Executive", DISPATCH: "Dispatch", OPERATIONS: "Operations", CEO: "CEO" };
+      return m[role] || role;
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function() { el.classList.remove("show"); }, 3000);
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+
+    // Close load search results when clicking outside
+    document.addEventListener("click", function(e) {
+      var searchResults = document.getElementById("load-search-results");
+      var searchInput = document.getElementById("cf-loadRef");
+      if (searchResults && !searchResults.contains(e.target) && e.target !== searchInput) {
+        searchResults.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>

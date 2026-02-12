@@ -1018,3 +1018,14 @@ export function generateSettlementPDF(settlement: SettlementPDFData): PDFDoc {
   doc.end();
   return doc;
 }
+
+/** Generate invoice PDF and return as Buffer */
+export async function generateInvoicePdf(invoice: InvoiceData): Promise<Buffer> {
+  const doc = generateInvoicePDF(invoice);
+  return new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+  });
+}

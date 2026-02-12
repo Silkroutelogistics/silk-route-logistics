@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import {
   sendEmail,
+  wrap,
   shipperPickupHtml,
   shipperTransitHtml,
   shipperDeliveryHtml,
@@ -221,6 +222,66 @@ export async function validateAndNotifyPOD(loadId: string, documentId: string) {
 
     console.log(`[ShipperNotify] POD uploaded for ${load.referenceNumber} — pending manual validation`);
   }
+}
+
+/**
+ * Send milestone email to shipper on each status change.
+ * Triggered from loadController on any status update.
+ */
+export async function sendShipperMilestoneEmail(loadId: string, newStatus: string) {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    include: {
+      customer: { select: { name: true, email: true } },
+      carrier: { select: { firstName: true, company: true } },
+    },
+  });
+  if (!load?.customer?.email) return;
+
+  const milestoneLabels: Record<string, string> = {
+    BOOKED: "Carrier Assigned",
+    DISPATCHED: "Dispatched",
+    AT_PICKUP: "At Pickup",
+    LOADED: "Picked Up",
+    IN_TRANSIT: "In Transit",
+    AT_DELIVERY: "At Delivery",
+    DELIVERED: "Delivered",
+    POD_RECEIVED: "POD Received",
+    INVOICED: "Invoiced",
+  };
+
+  const label = milestoneLabels[newStatus];
+  if (!label) return; // Not a trackable milestone
+
+  const trackingUrl = load.trackingToken
+    ? `https://silkroutelogistics.ai/tracking/${load.trackingToken}`
+    : null;
+
+  const origin = `${load.originCity}, ${load.originState}`;
+  const dest = `${load.destCity}, ${load.destState}`;
+  const carrierName = load.carrier?.company || load.carrier?.firstName || "Carrier";
+
+  const body = `
+    <h2 style="color:#1e293b;margin:0 0 8px">Shipment Update: ${label}</h2>
+    <p style="color:#64748b;margin:0 0 20px">Your shipment <strong>${load.referenceNumber}</strong> has reached a new milestone.</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:140px">Status</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#d4a574">${label}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Reference</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${load.referenceNumber}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Route</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Carrier</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${carrierName}</td></tr>
+      <tr><td style="padding:8px 12px;color:#64748b">Est. Delivery</td>
+          <td style="padding:8px 12px">${load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</td></tr>
+    </table>
+    ${trackingUrl ? `<p style="text-align:center"><a href="${trackingUrl}" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Track Shipment</a></p>` : ""}
+    <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because you have an active shipment with Silk Route Logistics.</p>
+  `;
+
+  await sendEmail(load.customer.email, `Shipment ${label}: ${load.referenceNumber}`, wrap(body));
+  console.log(`[ShipperNotify] Milestone email "${label}" sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
 
 /**

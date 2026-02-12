@@ -227,6 +227,79 @@
       .sop-header-left { flex-direction: column; align-items: flex-start; gap: 4px; }
       .sop-meta { margin-top: 4px; }
     }
+
+    /* --- Last Updated Badge --- */
+    .sop-updated {
+      font-size: 10px;
+      color: var(--gray-400);
+      margin-left: 8px;
+      font-weight: 400;
+    }
+
+    /* --- Keyboard Shortcuts --- */
+    .shortcuts-section {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+      padding: 20px 24px;
+      border-left: 4px solid var(--navy);
+    }
+    .shortcuts-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+    .shortcuts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    .shortcut-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--gray-50);
+      border-radius: 6px;
+    }
+    .shortcut-key {
+      display: inline-block;
+      padding: 3px 8px;
+      background: var(--navy);
+      color: var(--gold);
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: monospace;
+      min-width: 28px;
+      text-align: center;
+    }
+    .shortcut-desc {
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+
+    /* --- Print Styles --- */
+    @media print {
+      .sidebar, .hamburger, .overlay, .cat-sidebar, .search-bar { display: none !important; }
+      .page { display: block; }
+      .main { margin: 0; padding: 0; }
+      .main-header { padding: 10px 0; }
+      .training-layout { display: block; }
+      .training-content { padding: 0; background: #fff; overflow: visible; }
+      .sop-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 12px; border: 1px solid #ddd; box-shadow: none; }
+      .sop-card .sop-body { display: block !important; }
+      .sop-header { cursor: default; }
+      .sop-chevron { display: none; }
+      .shortcuts-section { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+      body { font-size: 12px; color: #000; background: #fff; }
+      .sop-number { background: #eee; color: #333; }
+      .sop-title { color: #000; }
+      .step-tip { background: #f5f5f5; color: #666; }
+      .sop-step::before { background: #333; color: #fff; }
+    }
   </style>
 </head>
 <body>
@@ -244,6 +317,8 @@
         <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
         <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
         <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/claims.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Claims</a>
+        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financials</a>
         <a href="/ae/training.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
       </nav>
       <div class="sidebar-footer">
@@ -289,6 +364,7 @@
       { id: "docs", label: "Documents", icon: "&#128196;" },
       { id: "compliance", label: "Compliance", icon: "&#128737;" },
       { id: "automation", label: "Automation (C)", icon: "&#9881;" },
+      { id: "scale", label: "Scale (D)", icon: "&#128200;" },
       { id: "all", label: "All Procedures", icon: "&#128218;" }
     ];
 
@@ -757,6 +833,120 @@
           { title: "Sequence Performance", detail: "View active email sequences and their progress (step X of 4). Track overall open rates and reply rates to optimize outreach messaging.", tip: null },
           { title: "Cron Job Schedule", detail: "Check-calls process every 15 min. Risk flagging every 30 min. Email sequences every hour. Pre-tracing hourly. Late detection every 30 min. All use distributed locks to prevent duplicate execution.", tip: null }
         ]
+      },
+      {
+        id: "SOP-021",
+        title: "Generating and Sending an Invoice",
+        category: "scale",
+        who: "AE",
+        whoClass: "who-ae",
+        lastUpdated: "2026-02-12",
+        context: "After a load is delivered and POD received, generate a professional invoice and send it to the shipper for payment.",
+        steps: [
+          { title: "Verify Load is Delivered", detail: "Navigate to Load Board and find the load. Ensure the status is DELIVERED and a POD document has been uploaded.", tip: null },
+          { title: "Go to Financials", detail: "Navigate to /ae/financials.html or open the load detail view and look for the 'Generate Invoice' action.", tip: null },
+          { title: "Generate Invoice", detail: "Click 'Generate Invoice' for the load. The system creates an invoice with all load details, shipper rate, accessorials, and payment terms. A PDF is auto-generated.", tip: "Tip: The invoice number follows the format INV-XXXX and auto-increments. The PDF uses SRL branding with navy/gold theme." },
+          { title: "Review the Invoice", detail: "Check the generated invoice: verify the shipper name, load reference, route, rates, and total amount match the agreed terms.", tip: null },
+          { title: "Send to Shipper", detail: "The system auto-sends a branded email to the shipper's email on file with the invoice PDF attached. Status changes to SENT.", tip: "Tip: If the shipper email is missing, add it in CRM first. Invoices without a recipient email are saved but not sent." },
+          { title: "Track Payment", detail: "Monitor invoice status: DRAFT → SENT → PAID. Use the aging report to follow up on overdue invoices (30/60/90 day buckets).", tip: null }
+        ]
+      },
+      {
+        id: "SOP-022",
+        title: "Filing and Managing a Claim",
+        category: "scale",
+        who: "AE",
+        whoClass: "who-ae",
+        lastUpdated: "2026-02-12",
+        context: "When freight is damaged, short, delivered late, or the carrier is a no-show, file a claim to initiate resolution and protect SRL and the shipper.",
+        steps: [
+          { title: "Navigate to Claims", detail: "Go to /ae/claims.html. Click the '+ New Claim' button in the header.", tip: null },
+          { title: "Select the Load", detail: "Search for and select the load reference. The system links the claim to the load's carrier and shipper records.", tip: null },
+          { title: "Choose Claim Type", detail: "Select the type: Damage, Shortage, Late Delivery, No Show, or Other. This categorizes the claim for reporting.", tip: "Tip: DAMAGE claims require the most documentation. Gather photos, BOL, POD, and delivery receipts before filing." },
+          { title: "Enter Details", detail: "Provide a detailed description (minimum 10 characters) and estimated value. Add photo URLs if available.", tip: null },
+          { title: "Submit the Claim", detail: "Click 'File Claim'. The system auto-generates a CLM-XXXX number and sends email notifications to both the carrier and shipper.", tip: null },
+          { title: "Manage the Claim", detail: "Use the detail panel to update status through the workflow: Filed → Under Review → Investigating → Resolved → Closed. Add notes at each stage for audit trail.", tip: "Tip: Always add a note when changing status. This creates a timeline that's visible to all team members and useful for dispute resolution." },
+          { title: "Resolve and Close", detail: "When investigation is complete, set the resolved value (actual payout) and change status to Resolved. Once payment is processed, change to Closed.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-023",
+        title: "Reading the Financial Dashboard",
+        category: "scale",
+        who: "Admin",
+        whoClass: "who-admin",
+        lastUpdated: "2026-02-12",
+        context: "The Financial Dashboard provides a comprehensive view of SRL's revenue, margins, and financial health. Available to ADMIN, CEO, and ACCOUNTING roles only.",
+        steps: [
+          { title: "Access the Dashboard", detail: "Navigate to /ae/financials.html. This page is restricted to ADMIN, CEO, and ACCOUNTING roles. Other roles will see an access denied message.", tip: null },
+          { title: "Select Time Period", detail: "Use the period toggle (Week / Month / Quarter) to adjust the reporting window. All KPI cards and charts update accordingly.", tip: null },
+          { title: "Review KPI Cards", detail: "Top row shows 5 key metrics: Total Revenue, Total Margin $, Average Margin %, Total Loads, and QuickPay Revenue. Compare these against your targets.", tip: "Tip: Target margin should be 15%+. If average margin drops below 12%, investigate which lanes or carriers are pulling it down." },
+          { title: "Analyze Charts", detail: "Revenue Trend (line) shows daily revenue. Margin Trend (line) shows daily margin %. Top 5 Lanes, Carriers, and Shippers (bar charts) identify your most profitable segments.", tip: null },
+          { title: "Check Invoice Aging", detail: "The aging grid shows invoices in Current, 30-day, 60-day, and 90-day buckets with amounts and counts. Red buckets need immediate follow-up.", tip: "Tip: Any invoice over 60 days should trigger a collection call. Use the Communications Hub to contact the shipper." },
+          { title: "Review Carrier Cost Analysis", detail: "The bottom table shows lane-level profitability: average carrier rate, customer rate, margin, and load count per lane. Identify underperforming lanes.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-024",
+        title: "Shipper Tracking Links",
+        category: "scale",
+        who: "AE",
+        whoClass: "who-ae",
+        lastUpdated: "2026-02-12",
+        context: "Every load automatically gets a unique tracking link that shippers can use to monitor their shipment status in real time without needing a login.",
+        steps: [
+          { title: "Understand Auto-Generation", detail: "When a load is created, the system auto-generates a unique tracking token (UUID). This creates a public URL: /tracking?token=xxxxx.", tip: null },
+          { title: "Share the Link", detail: "The tracking URL is included in milestone emails sent to the shipper (pickup, in-transit, delivery notifications). You can also copy and share it manually.", tip: "Tip: The tracking page is public — no login required. Share it with anyone who needs visibility: shipper, consignee, or logistics coordinators." },
+          { title: "What Shippers See", detail: "The public tracking page shows: current status, origin/destination, 4-step progress bar, last known location, ETA, milestone timeline, and check-call history.", tip: null },
+          { title: "Milestone Emails", detail: "The system auto-sends branded emails to the shipper on each status change: Booked, Dispatched, At Pickup, Loaded, In Transit, At Delivery, Delivered, and Invoiced.", tip: null },
+          { title: "Privacy Controls", detail: "The tracking page only shows the carrier's first name (not full details), the load reference, and operational status. Financial data (rates, margins) is never exposed.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-025",
+        title: "Using the Detention Pay Tracker (Carrier Tool)",
+        category: "scale",
+        who: "AE",
+        whoClass: "who-ae",
+        lastUpdated: "2026-02-12",
+        context: "Understand the Carrier Portal's Detention Pay Tracker so you can support carriers with detention claims and verify their submissions.",
+        steps: [
+          { title: "Carrier Access", detail: "Carriers access the Detention Pay Tracker at /carrier/tools.html → Detention Pay tab. It calculates detention based on SRL's policy: 2 hours free time, then $75/hour.", tip: null },
+          { title: "How Carriers Log Detention", detail: "Carriers enter: Load Reference, Facility Name, Arrival Time, and Departure Time. The system auto-calculates billable hours and detention pay amount.", tip: null },
+          { title: "Detention Calculation", detail: "Formula: Total time - 2 hours free time = Billable hours (rounded up). Billable hours x $75/hr = Detention pay. Example: 4h 30m at facility = 3 billable hours = $225.", tip: "Tip: If a carrier claims excessive detention (>6 hours), verify with the facility before approving. Check the load's check-call timestamps for corroboration." },
+          { title: "Reviewing Claims", detail: "Carriers can submit detention claims for payment. Review them in the carrier's payment queue. Verify the timestamps match the load's status updates.", tip: null },
+          { title: "Detention History", detail: "The carrier sees their detention history with status (Pending, Approved, Paid). As AE, you can see all detention submissions in the carrier's profile.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-026",
+        title: "Using the Deadhead Minimizer (Carrier Tool)",
+        category: "scale",
+        who: "AE",
+        whoClass: "who-ae",
+        lastUpdated: "2026-02-12",
+        context: "The Deadhead Minimizer helps carriers find backhaul loads near their delivery destination, reducing empty miles and increasing profitability.",
+        steps: [
+          { title: "Carrier Access", detail: "Carriers go to /carrier/tools.html → Deadhead Minimizer tab. They enter their current delivery city/state.", tip: null },
+          { title: "How It Works", detail: "The system queries all POSTED loads and sorts them by proximity to the carrier's current location. Results show origin, destination, rate, distance, equipment type, and deadhead miles.", tip: null },
+          { title: "Benefit to SRL", detail: "Carriers who minimize deadhead are more cost-efficient and may accept lower rates. This tool increases carrier engagement with SRL's load board and improves coverage.", tip: "Tip: Encourage carriers to check the Deadhead Minimizer after every delivery. It builds a habit of looking for SRL loads first." },
+          { title: "KPI Tracking", detail: "The tool tracks: Average deadhead miles, Miles saved YTD, and Available loads near the carrier. Lower average deadhead = better carrier profitability.", tip: null }
+        ]
+      },
+      {
+        id: "SOP-027",
+        title: "Maintenance Reminders (Carrier Tool)",
+        category: "scale",
+        who: "AE",
+        whoClass: "who-ae",
+        lastUpdated: "2026-02-12",
+        context: "The Maintenance Reminders tool helps carriers track vehicle maintenance schedules, ensuring fleet compliance and reducing roadside breakdowns.",
+        steps: [
+          { title: "Carrier Access", detail: "Carriers go to /carrier/tools.html → Maintenance tab. They can add reminders for oil changes, tire rotations, DOT inspections, annual inspections, and brake checks.", tip: null },
+          { title: "Adding Reminders", detail: "Carrier enters: Truck/Trailer number, Reminder type, and Due date. Reminders are stored locally and show countdown days with color coding (green > 30d, amber 7-30d, red < 7d).", tip: null },
+          { title: "Pre-Built Schedule", detail: "The tool shows standard maintenance items: Oil Change (every 25K mi), Tire Rotation (50K mi), Brake Inspection (30K mi), DOT Annual Inspection, Coolant Flush (60K mi), DEF System Check (20K mi).", tip: "Tip: If a carrier has overdue maintenance items, it may indicate reliability risk. Factor this into carrier selection decisions." },
+          { title: "Why It Matters for AE", detail: "A carrier with a well-maintained fleet has fewer breakdowns and fall-offs. When reviewing carrier profiles, note their maintenance compliance as a soft factor in assignment decisions.", tip: null }
+        ]
       }
     ];
 
@@ -815,12 +1005,24 @@
         return;
       }
 
-      container.innerHTML = filtered.map(function(sop) {
+      var html = "";
+
+      // Show keyboard shortcuts at the top when "all" category or searching
+      if (activeCategory === "all" && !search) {
+        html += '<div class="shortcuts-section"><div class="shortcuts-title">Keyboard Shortcuts</div><div class="shortcuts-grid">' +
+          shortcut("N", "New Load") + shortcut("P", "New Prospect") + shortcut("R", "Rate Calculator") +
+          shortcut("/", "Search / Filter") + shortcut("Esc", "Close Modal") + shortcut("Tab", "Next Field") +
+          shortcut("?", "Open Training") + shortcut("D", "Dashboard") +
+        '</div></div>';
+      }
+
+      html += filtered.map(function(sop) {
+        var updatedHtml = sop.lastUpdated ? '<span class="sop-updated">Updated ' + sop.lastUpdated + '</span>' : '';
         return '<div class="sop-card" id="sop-' + sop.id + '">' +
           '<div class="sop-header" onclick="toggleSOP(\'' + sop.id + '\')">' +
             '<div class="sop-header-left">' +
               '<span class="sop-number">' + sop.id + '</span>' +
-              '<span class="sop-title">' + sop.title + '</span>' +
+              '<span class="sop-title">' + sop.title + updatedHtml + '</span>' +
             '</div>' +
             '<div class="sop-meta">' +
               '<span class="sop-who ' + sop.whoClass + '">' + sop.who + '</span>' +
@@ -841,6 +1043,12 @@
           '</div>' +
         '</div>';
       }).join("");
+
+      container.innerHTML = html;
+    }
+
+    function shortcut(key, desc) {
+      return '<div class="shortcut-item"><span class="shortcut-key">' + key + '</span><span class="shortcut-desc">' + desc + '</span></div>';
     }
 
     function toggleSOP(id) {

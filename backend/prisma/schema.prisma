@@ -299,6 +299,22 @@ enum ReconciliationStatus {
   DISCREPANCY
 }
 
+enum ClaimStatus {
+  FILED
+  UNDER_REVIEW
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum ClaimType {
+  DAMAGE
+  SHORTAGE
+  LATE
+  NO_SHOW
+  OTHER
+}
+
 enum LogType {
   API_CALL
   ERROR
@@ -431,6 +447,8 @@ model User {
   factoringEntries   FactoringFund[]    @relation("FactoringCreator")
   reconciliations    BankReconciliation[] @relation("ReconciliationUser")
   communications     Communication[]
+  filedClaims        Claim[]            @relation("ClaimFiler")
+  assignedClaims     Claim[]            @relation("ClaimAssignee")
 
   @@index([email])
   @@index([role])
@@ -697,6 +715,9 @@ model Load {
 
   notes           String?
 
+  // Shipper Tracking
+  trackingToken   String?    @unique @default(uuid())
+
   // DAT Load Board
   datPostId       String?
   datPostedAt     DateTime?
@@ -740,6 +761,7 @@ model Load {
   checkCallSchedules CheckCallSchedule[]
   riskLogs        RiskLog[]
   fallOffEvents   FallOffEvent[]
+  claims          Claim[]
 
   @@index([status])
   @@index([loadNumber])
@@ -1718,6 +1740,35 @@ model EmailSequence {
   @@index([prospectId])
   @@index([status, nextSendAt])
   @@map("email_sequences")
+}
+
+// ─── Claims ───
+
+model Claim {
+  id              String      @id @default(cuid())
+  claimNumber     String      @unique
+  loadId          String
+  load            Load        @relation(fields: [loadId], references: [id])
+  claimType       ClaimType
+  status          ClaimStatus @default(FILED)
+  description     String      @db.Text
+  estimatedValue  Float?
+  resolvedValue   Float?
+  photos          String[]
+  notes           Json?       // Array of {date, author, text}
+  filedById       String
+  filedBy         User        @relation("ClaimFiler", fields: [filedById], references: [id])
+  assignedToId    String?
+  assignedTo      User?       @relation("ClaimAssignee", fields: [assignedToId], references: [id])
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([loadId])
+  @@index([status])
+  @@index([claimType])
+  @@map("claims")
 }
 
 // ─── Scheduler Locks ───

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Dashboard - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    .fin-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-card {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 20px; text-align: center; border-top: 3px solid var(--gold);
+    }
+    .kpi-label { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: var(--navy); }
+    .kpi-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+
+    .period-toggle { display: flex; gap: 4px; margin-bottom: 20px; }
+    .period-btn {
+      padding: 6px 16px; border-radius: 6px; border: 1px solid var(--gray-200);
+      background: var(--white); color: var(--gray-500); font-size: 13px; cursor: pointer;
+    }
+    .period-btn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .chart-card {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 20px;
+    }
+    .chart-card h3 { font-size: 14px; color: var(--navy); margin-bottom: 12px; }
+    .chart-card canvas { max-height: 280px; }
+
+    .chart-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
+
+    /* Aging Table */
+    .aging-section { margin-bottom: 24px; }
+    .aging-section h3 { font-size: 16px; color: var(--navy); margin-bottom: 12px; }
+    .aging-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .aging-card {
+      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+      padding: 16px; text-align: center; cursor: pointer; transition: transform 0.1s;
+    }
+    .aging-card:hover { transform: translateY(-2px); }
+    .aging-card .aging-label { font-size: 12px; color: var(--gray-400); margin-bottom: 6px; }
+    .aging-card .aging-amount { font-size: 22px; font-weight: 700; color: var(--navy); }
+    .aging-card .aging-count { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+    .aging-card.amber { border-left: 4px solid var(--amber); }
+    .aging-card.red { border-left: 4px solid var(--red); }
+    .aging-card.green { border-left: 4px solid var(--green); }
+
+    .admin-only-msg {
+      text-align: center; padding: 80px 20px; color: var(--gray-400);
+    }
+    .admin-only-msg h2 { color: var(--red); margin-bottom: 12px; }
+
+    /* Carrier Cost */
+    .cost-table { width: 100%; border-collapse: collapse; }
+    .cost-table th { text-align: left; padding: 10px 12px; font-size: 12px; color: var(--gray-400); border-bottom: 2px solid var(--gray-200); }
+    .cost-table td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--gray-100); }
+
+    @media (max-width: 1200px) { .fin-grid { grid-template-columns: repeat(3, 1fr); } .chart-row-3 { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .fin-grid { grid-template-columns: 1fr 1fr; } .chart-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="page-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">Dashboard</a>
+        <a href="/ae/loads.html">Load Board</a>
+        <a href="/ae/caravan.html">The Caravan</a>
+        <a href="/ae/crm.html">CRM</a>
+        <a href="/ae/communications.html">Communications</a>
+        <a href="/ae/claims.html">Claims</a>
+        <a href="/ae/financials.html" class="active">Financials</a>
+        <a href="/ae/training.html">Training</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button onclick="handleLogout()">Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Financial Dashboard</h1>
+        <div class="page-header-actions">
+          <div class="period-toggle">
+            <button class="period-btn" data-period="week">Week</button>
+            <button class="period-btn active" data-period="month">Month</button>
+            <button class="period-btn" data-period="quarter">Quarter</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="admin-gate" style="display:none">
+        <div class="admin-only-msg">
+          <h2>Access Restricted</h2>
+          <p>The Financial Dashboard is available to Admin users only.</p>
+        </div>
+      </div>
+
+      <div id="dashboard-content">
+        <!-- KPI Cards -->
+        <div class="fin-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Revenue</div>
+            <div class="kpi-value" id="kpi-revenue">$0</div>
+            <div class="kpi-sub" id="kpi-revenue-sub">This month</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Margin</div>
+            <div class="kpi-value" id="kpi-margin">$0</div>
+            <div class="kpi-sub" id="kpi-margin-sub">Gross profit</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Margin %</div>
+            <div class="kpi-value" id="kpi-margin-pct">0%</div>
+            <div class="kpi-sub">Target: 15%+</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Loads</div>
+            <div class="kpi-value" id="kpi-loads">0</div>
+            <div class="kpi-sub" id="kpi-loads-sub">This period</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">QuickPay Revenue</div>
+            <div class="kpi-value" id="kpi-quickpay">$0</div>
+            <div class="kpi-sub">Fee income</div>
+          </div>
+        </div>
+
+        <!-- Charts Row 1: Revenue + Margin -->
+        <div class="chart-row">
+          <div class="chart-card">
+            <h3>Revenue Trend</h3>
+            <canvas id="revenueChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Margin % Trend</h3>
+            <canvas id="marginChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Charts Row 2: Top Lanes, Carriers, Shippers -->
+        <div class="chart-row-3">
+          <div class="chart-card">
+            <h3>Top 5 Lanes by Revenue</h3>
+            <canvas id="lanesChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Top 5 Carriers by Loads</h3>
+            <canvas id="carriersChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Top 5 Shippers by Revenue</h3>
+            <canvas id="shippersChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Invoice Aging -->
+        <div class="aging-section">
+          <h3>Invoice Aging</h3>
+          <div class="aging-grid">
+            <div class="aging-card green">
+              <div class="aging-label">Current</div>
+              <div class="aging-amount" id="aging-current">$0</div>
+              <div class="aging-count" id="aging-current-count">0 invoices</div>
+            </div>
+            <div class="aging-card">
+              <div class="aging-label">30 Day</div>
+              <div class="aging-amount" id="aging-30">$0</div>
+              <div class="aging-count" id="aging-30-count">0 invoices</div>
+            </div>
+            <div class="aging-card amber">
+              <div class="aging-label">60 Day</div>
+              <div class="aging-amount" id="aging-60">$0</div>
+              <div class="aging-count" id="aging-60-count">0 invoices</div>
+            </div>
+            <div class="aging-card red">
+              <div class="aging-label">90+ Day</div>
+              <div class="aging-amount" id="aging-90">$0</div>
+              <div class="aging-count" id="aging-90-count">0 invoices</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carrier Cost Analysis -->
+        <div class="chart-card" style="margin-bottom: 24px;">
+          <h3>Carrier Cost Analysis</h3>
+          <table class="cost-table" id="cost-table">
+            <thead>
+              <tr><th>Lane</th><th>Avg Carrier Rate</th><th>Avg Customer Rate</th><th>Avg Margin</th><th>Loads</th></tr>
+            </thead>
+            <tbody id="cost-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    (function() {
+      var token = localStorage.getItem('token');
+      if (!token) { window.location.href = '/auth/login'; return; }
+
+      var currentPeriod = 'month';
+      var revenueChartInst, marginChartInst, lanesChartInst, carriersChartInst, shippersChartInst;
+
+      // Auth & role check
+      SRL.getMe().then(function(user) {
+        document.getElementById('user-name').textContent = user.firstName + ' ' + user.lastName;
+        document.getElementById('user-role').textContent = user.role;
+
+        if (user.role !== 'ADMIN' && user.role !== 'CEO' && user.role !== 'ACCOUNTING') {
+          document.getElementById('admin-gate').style.display = 'block';
+          document.getElementById('dashboard-content').style.display = 'none';
+          return;
+        }
+
+        loadDashboard();
+      }).catch(function() {
+        window.location.href = '/auth/login';
+      });
+
+      // Period toggle
+      document.querySelectorAll('.period-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          currentPeriod = btn.dataset.period;
+          loadDashboard();
+        });
+      });
+
+      function loadDashboard() {
+        Promise.allSettled([
+          SRL.getFinancialSummary(currentPeriod),
+          SRL.getInvoiceAging(),
+          SRL.getLoads({ limit: 200 }),
+        ]).then(function(results) {
+          var summary = results[0].status === 'fulfilled' ? results[0].value : null;
+          var aging = results[1].status === 'fulfilled' ? results[1].value : null;
+          var loadsData = results[2].status === 'fulfilled' ? results[2].value : null;
+
+          if (summary) renderKPIs(summary);
+          if (aging) renderAging(aging.summary);
+          if (loadsData) {
+            renderCharts(loadsData.loads || []);
+            renderCostTable(loadsData.loads || []);
+          }
+        });
+      }
+
+      function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+
+      function renderKPIs(s) {
+        document.getElementById('kpi-revenue').textContent = fmt(s.totalRevenue);
+        document.getElementById('kpi-margin').textContent = fmt(s.totalMargin);
+        var pct = s.avgMarginPct || 0;
+        var pctEl = document.getElementById('kpi-margin-pct');
+        pctEl.textContent = pct.toFixed(1) + '%';
+        pctEl.style.color = pct >= 15 ? '#22c55e' : pct >= 10 ? '#f59e0b' : '#ef4444';
+        document.getElementById('kpi-loads').textContent = s.loadsCount;
+        document.getElementById('kpi-quickpay').textContent = fmt(s.quickPayFees);
+        var labels = { week: 'This week', month: 'This month', quarter: 'This quarter' };
+        document.getElementById('kpi-revenue-sub').textContent = labels[currentPeriod] || '';
+        document.getElementById('kpi-loads-sub').textContent = labels[currentPeriod] || '';
+      }
+
+      function renderAging(a) {
+        if (!a) return;
+        document.getElementById('aging-current').textContent = fmt(a.current.amount);
+        document.getElementById('aging-current-count').textContent = a.current.count + ' invoices';
+        document.getElementById('aging-30').textContent = fmt(a.over30.amount);
+        document.getElementById('aging-30-count').textContent = a.over30.count + ' invoices';
+        document.getElementById('aging-60').textContent = fmt(a.over60.amount);
+        document.getElementById('aging-60-count').textContent = a.over60.count + ' invoices';
+        document.getElementById('aging-90').textContent = fmt(a.over90.amount);
+        document.getElementById('aging-90-count').textContent = a.over90.count + ' invoices';
+      }
+
+      function renderCharts(loads) {
+        // Group by month for trends
+        var byMonth = {};
+        loads.forEach(function(l) {
+          var d = new Date(l.createdAt);
+          var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+          if (!byMonth[key]) byMonth[key] = { revenue: 0, margin: 0, count: 0 };
+          byMonth[key].revenue += (l.customerRate || l.rate || 0);
+          byMonth[key].margin += (l.marginPercent || 0);
+          byMonth[key].count += 1;
+        });
+        var months = Object.keys(byMonth).sort();
+        var revData = months.map(function(m) { return byMonth[m].revenue; });
+        var margData = months.map(function(m) { return byMonth[m].count > 0 ? byMonth[m].margin / byMonth[m].count : 0; });
+        var monthLabels = months.map(function(m) { var p = m.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1])-1] + ' ' + p[0].slice(2); });
+
+        // Revenue Chart
+        if (revenueChartInst) revenueChartInst.destroy();
+        revenueChartInst = new Chart(document.getElementById('revenueChart'), {
+          type: 'line',
+          data: { labels: monthLabels, datasets: [{ label: 'Revenue', data: revData, borderColor: '#C8963E', backgroundColor: 'rgba(200,150,62,0.1)', fill: true, tension: 0.3 }] },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v) { return '$' + (v/1000).toFixed(0) + 'k'; } } } } }
+        });
+
+        // Margin Chart
+        if (marginChartInst) marginChartInst.destroy();
+        marginChartInst = new Chart(document.getElementById('marginChart'), {
+          type: 'line',
+          data: { labels: monthLabels, datasets: [{ label: 'Margin %', data: margData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 }] },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v) { return v.toFixed(0) + '%'; } } } } }
+        });
+
+        // Top Lanes
+        var laneMap = {};
+        loads.forEach(function(l) {
+          var lane = l.originState + ' → ' + l.destState;
+          if (!laneMap[lane]) laneMap[lane] = 0;
+          laneMap[lane] += (l.customerRate || l.rate || 0);
+        });
+        var topLanes = Object.entries(laneMap).sort(function(a,b) { return b[1] - a[1]; }).slice(0, 5);
+
+        if (lanesChartInst) lanesChartInst.destroy();
+        lanesChartInst = new Chart(document.getElementById('lanesChart'), {
+          type: 'bar',
+          data: { labels: topLanes.map(function(l) { return l[0]; }), datasets: [{ label: 'Revenue', data: topLanes.map(function(l) { return l[1]; }), backgroundColor: '#C8963E' }] },
+          options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: function(v) { return '$' + (v/1000).toFixed(0) + 'k'; } } } } }
+        });
+
+        // Top Carriers
+        var carrierMap = {};
+        loads.forEach(function(l) {
+          if (!l.carrier) return;
+          var name = l.carrier.company || (l.carrier.firstName + ' ' + l.carrier.lastName);
+          if (!carrierMap[name]) carrierMap[name] = 0;
+          carrierMap[name] += 1;
+        });
+        var topCarriers = Object.entries(carrierMap).sort(function(a,b) { return b[1] - a[1]; }).slice(0, 5);
+
+        if (carriersChartInst) carriersChartInst.destroy();
+        carriersChartInst = new Chart(document.getElementById('carriersChart'), {
+          type: 'bar',
+          data: { labels: topCarriers.map(function(c) { return c[0]; }), datasets: [{ label: 'Loads', data: topCarriers.map(function(c) { return c[1]; }), backgroundColor: '#3b82f6' }] },
+          options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        // Top Shippers
+        var shipperMap = {};
+        loads.forEach(function(l) {
+          var name = l.poster ? (l.poster.company || (l.poster.firstName + ' ' + l.poster.lastName)) : 'Unknown';
+          if (!shipperMap[name]) shipperMap[name] = 0;
+          shipperMap[name] += (l.customerRate || l.rate || 0);
+        });
+        var topShippers = Object.entries(shipperMap).sort(function(a,b) { return b[1] - a[1]; }).slice(0, 5);
+
+        if (shippersChartInst) shippersChartInst.destroy();
+        shippersChartInst = new Chart(document.getElementById('shippersChart'), {
+          type: 'bar',
+          data: { labels: topShippers.map(function(s) { return s[0]; }), datasets: [{ label: 'Revenue', data: topShippers.map(function(s) { return s[1]; }), backgroundColor: '#8b5cf6' }] },
+          options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: function(v) { return '$' + (v/1000).toFixed(0) + 'k'; } } } } }
+        });
+      }
+
+      function renderCostTable(loads) {
+        var laneData = {};
+        loads.forEach(function(l) {
+          if (!l.carrierRate) return;
+          var lane = l.originState + ' → ' + l.destState;
+          if (!laneData[lane]) laneData[lane] = { carrierRates: [], customerRates: [], count: 0 };
+          laneData[lane].carrierRates.push(l.carrierRate);
+          laneData[lane].customerRates.push(l.customerRate || l.rate);
+          laneData[lane].count += 1;
+        });
+
+        var rows = Object.entries(laneData)
+          .sort(function(a,b) { return b[1].count - a[1].count; })
+          .slice(0, 10);
+
+        var tbody = document.getElementById('cost-tbody');
+        tbody.innerHTML = '';
+
+        if (rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:20px">No carrier cost data available</td></tr>';
+          return;
+        }
+
+        rows.forEach(function(r) {
+          var lane = r[0], d = r[1];
+          var avgCarrier = d.carrierRates.reduce(function(a,b){return a+b;},0) / d.carrierRates.length;
+          var avgCustomer = d.customerRates.reduce(function(a,b){return a+b;},0) / d.customerRates.length;
+          var avgMargin = avgCustomer - avgCarrier;
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td>' + lane + '</td><td>' + fmt(avgCarrier) + '</td><td>' + fmt(avgCustomer) + '</td><td style="color:' + (avgMargin >= 0 ? '#22c55e' : '#ef4444') + '">' + fmt(avgMargin) + '</td><td>' + d.count + '</td>';
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Logout
+      window.handleLogout = function() {
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      };
+    })();
+  </script>
+</body>
+</html>

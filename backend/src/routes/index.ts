@@ -42,6 +42,9 @@ import carrierPaymentRoutes from "./carrierPayments";
 import datRoutes from "./dat";
 import carrierMatchRoutes from "./carrierMatch";
 import automationRoutes from "./automation";
+import trackingRoutes from "./tracking";
+import financialRoutes from "./financials";
+import claimRoutes from "./claims";
 
 const router = Router();
 
@@ -127,6 +130,9 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
   }
 });
 
+// --- Public Routes (no auth) ---
+router.use("/tracking", trackingRoutes);
+
 // --- API Routes ---
 router.use("/auth", authRoutes);
 router.use("/chat", chatRoutes);
@@ -170,5 +176,7 @@ router.use("/webhooks", webhookRoutes);
 router.use("/email", emailRoutes);
 router.use("/srcpp", srcppRoutes);
 router.use("/automation", automationRoutes);
+router.use("/financials", financialRoutes);
+router.use("/claims", claimRoutes);
 
 export default router;

@@ -8,6 +8,8 @@ export interface AuthRequest extends Request<any, any, any, any> {
     id: string;
     email: string;
     role: string;
+    firstName?: string;
+    lastName?: string;
   };
 }
 
@@ -24,7 +26,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     const payload = jwt.verify(token, env.JWT_SECRET) as { userId: string };
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, role: true, firstName: true, lastName: true },
     });
 
     if (!user) {
