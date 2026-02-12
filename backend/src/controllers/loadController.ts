@@ -6,6 +6,7 @@ import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../va
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateDrivingDistance } from "../services/distanceService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
+import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
 
 function generateRefNumber(): string {
   const d = new Date();
@@ -16,6 +17,16 @@ function generateRefNumber(): string {
 
 export async function createLoad(req: AuthRequest, res: Response) {
   const data = createLoadSchema.parse(req.body);
+
+  // Enforce shipper credit limit if customer is specified
+  if (data.customerId) {
+    const creditCheck = await enforceShipperCredit(data.customerId);
+    if (!creditCheck.allowed) {
+      res.status(403).json({ error: `Shipper credit blocked: ${creditCheck.reason}` });
+      return;
+    }
+  }
+
   const load = await prisma.load.create({
     data: {
       ...data,
@@ -125,6 +136,8 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
     sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
+    // Integration: create AP, update shipper credit, recalc SRCPP
+    onLoadDelivered(load.id).catch((e) => console.error("[Integration] onLoadDelivered error:", e.message));
 
     if (load.posterId) {
       await prisma.notification.create({
@@ -137,6 +150,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
         },
       });
     }
+  }
+
+  // Create check-call schedule when dispatched
+  if (status === "DISPATCHED") {
+    onLoadDispatched(load.id).catch((e) => console.error("[Integration] onLoadDispatched error:", e.message));
   }
 
   // Shipper pickup notification on LOADED
@@ -199,10 +217,12 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
     });
   }
 
-  // If delivered, trigger auto-invoice + shipper email
+  // If delivered, trigger auto-invoice + shipper email + integration
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
     sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
+    // Integration: create AP, update shipper credit, recalc SRCPP
+    onLoadDelivered(load.id).catch((e) => console.error("[Integration] onLoadDelivered error:", e.message));
   }
 
   // Shipper pickup notification on LOADED

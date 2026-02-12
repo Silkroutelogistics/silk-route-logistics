@@ -6,6 +6,7 @@ import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { calculateTier, getBonusPercentage } from "../services/tierService";
+import { onCarrierApproved } from "../services/integrationService";
 
 export async function registerCarrier(req: Request, res: Response) {
   const data = carrierRegisterSchema.parse(req.body);
@@ -141,6 +142,9 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
         actionUrl: "/dashboard/overview",
       },
     });
+
+    // Integration: create initial SRCPP scorecard + GUEST tier
+    onCarrierApproved(profile.id).catch((e) => console.error("[Integration] onCarrierApproved error:", e.message));
   }
 
   res.json(updated);

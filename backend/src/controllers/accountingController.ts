@@ -466,6 +466,10 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
       });
     }
 
+    // Integration: credit factoring fund + release shipper credit
+    const { onInvoicePaid } = await import("../services/integrationService");
+    onInvoicePaid(id, amountPaid).catch((e: any) => console.error("[Integration] onInvoicePaid error:", e.message));
+
     res.json(invoice);
   } catch (error: any) {
     console.error("markInvoicePaid error:", error);

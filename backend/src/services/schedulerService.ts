@@ -7,6 +7,7 @@ import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
 import { processShipperTransitUpdates } from "./shipperNotificationService";
 import { processARReminders } from "../controllers/accountingController";
+import { processAllSRCPPRecalculations } from "./integrationService";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -401,6 +402,15 @@ export function startSchedulers() {
         },
       });
       console.log(`[Scheduler] Monthly report generated for ${monthName}`);
+    });
+  });
+
+  // SRCPP: Weekly tier recalculation — Sunday 6 AM ET (11:00 UTC)
+  cron.schedule("0 11 * * 0", async () => {
+    console.log("[Scheduler] Running weekly SRCPP tier recalculation...");
+    await withLock("srcpp-weekly-recalc", 30 * 60 * 1000, async () => {
+      const result = await processAllSRCPPRecalculations();
+      console.log(`[Scheduler] SRCPP recalc: ${result.recalculated}/${result.total} carriers processed`);
     });
   });
 

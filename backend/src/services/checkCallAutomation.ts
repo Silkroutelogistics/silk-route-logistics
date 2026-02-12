@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { env } from "../config/env";
+import { autoGenerateInvoice } from "./invoiceService";
 
 /**
  * C.2 — Check-Call Automation
@@ -223,8 +224,21 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
 
   console.log(`[CheckCall] Response received for load ${schedule.load.referenceNumber}: ${mapping.label}`);
 
-  // If delivered, prompt POD upload (via notification)
+  // If delivered, trigger full delivery pipeline (invoice, AP, SRCPP, etc.)
   if (mapping.status === "DELIVERED") {
+    // Auto-generate invoice
+    autoGenerateInvoice(schedule.loadId).catch((e) =>
+      console.error("[CheckCall] autoGenerateInvoice error:", e.message)
+    );
+
+    // Integration: AP, credit, SRCPP
+    import("./integrationService").then(({ onLoadDelivered }) =>
+      onLoadDelivered(schedule.loadId).catch((e) =>
+        console.error("[CheckCall] onLoadDelivered error:", e.message)
+      )
+    );
+
+    // Prompt POD upload
     const load = await prisma.load.findUnique({
       where: { id: schedule.loadId },
       select: { carrierId: true },
