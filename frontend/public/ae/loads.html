@@ -714,6 +714,14 @@
       .detail-header { flex-wrap: wrap; }
       .detail-header-actions { margin-left: 0; width: 100%; margin-top: 8px; }
     }
+
+    /* Mileage Badges */
+    .mileage-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:12px; font-size:13px; font-weight:600; }
+    .mileage-badge small { font-weight:400; opacity:.8; font-size:11px; }
+    .mileage-estimated { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .mileage-practical { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
+    .mileage-detail { display:flex; gap:16px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:var(--slate); }
+    .mileage-detail span { display:flex; align-items:center; gap:4px; }
   </style>
 </head>
 <body>
@@ -1212,6 +1220,28 @@
 
       // Right panel
       renderDetailRight(load);
+
+      // Auto-fetch mileage from mileage service
+      if (load.originCity && load.destCity) {
+        var origin = load.originCity + ", " + load.originState + " " + (load.originZip || "");
+        var dest = load.destCity + ", " + load.destState + " " + (load.destZip || "");
+        var badgeEl = document.getElementById("mileage-badge-" + load.id);
+        if (badgeEl) {
+          badgeEl.innerHTML = '<span style="font-size:12px;color:var(--slate)">Calculating mileage...</span>';
+          SRL.getMileage(origin, dest, { equipment: load.equipmentType }).then(function(m) {
+            var html = '<label style="font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;display:block">Mileage Service</label>';
+            html += SRL.renderMileageBadge(m);
+            html += '<div class="mileage-detail">';
+            html += '<span>&#9201; Drive: ' + m.drive_time_hours + 'h</span>';
+            if (m.toll_cost !== null) html += '<span>&#128176; Tolls: $' + m.toll_cost.toFixed(2) + '</span>';
+            html += '<span>&#128268; Source: ' + m.source + (m.cached ? ' (cached)' : '') + '</span>';
+            html += '</div>';
+            badgeEl.innerHTML = html;
+          }).catch(function() {
+            badgeEl.innerHTML = '';
+          });
+        }
+      }
     }
 
     function renderStatusSelect(load) {
@@ -1268,6 +1298,7 @@
       html += field("Origin", esc(load.originCity) + ', ' + esc(load.originState) + ' ' + esc(load.originZip));
       html += field("Destination", esc(load.destCity) + ', ' + esc(load.destState) + ' ' + esc(load.destZip));
       html += field("Distance", load.distance ? num(load.distance) + ' mi' : '--');
+      html += '<div class="detail-field" id="mileage-badge-' + load.id + '" style="grid-column:1/-1"></div>';
       html += field("Equipment", esc(formatEquip(load.equipmentType)));
       html += field("Weight", load.weight ? num(load.weight) + ' lbs' : '--');
       html += field("Commodity", esc(load.commodity || '--'));

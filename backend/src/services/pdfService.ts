@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import * as path from "path";
 import * as fs from "fs";
+import { calculateMileage, MileageResult } from "./mileageService";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -328,7 +329,9 @@ export function generateRateConfirmation(load: LoadData): PDFDoc {
   y += 35;
   labelValue(doc, "Commodity", load.commodity || "General Freight", 50, y);
   if (load.weight) labelValue(doc, "Weight", `${load.weight.toLocaleString()} lbs`, 200, y);
-  if (load.distance) labelValue(doc, "Distance", `${load.distance.toLocaleString()} mi`, 350, y);
+  if (load.distance) {
+    labelValue(doc, "Distance", `${load.distance.toLocaleString()} mi`, 350, y);
+  }
 
   y += 45;
   doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
@@ -367,6 +370,22 @@ export function generateRateConfirmation(load: LoadData): PDFDoc {
   addFooter(doc);
   doc.end();
   return doc;
+}
+
+// ─── Mileage-aware distance label for PDFs ──────────────────
+
+export function getMileageLabel(distance: number | null | undefined, source?: string): string {
+  if (!distance) return "—";
+  if (source === "pcmiler") return `${distance.toLocaleString()} mi (PC*Miler Practical Miles)`;
+  if (source === "milemaker") return `${distance.toLocaleString()} mi (MileMaker Practical Miles)`;
+  return `~${distance.toLocaleString()} mi (estimated)`;
+}
+
+export function getMileageFootnote(source?: string): string | null {
+  if (!source || source === "google_estimated" || source === "google") {
+    return "* Mileage: estimated via routing software. Final billing subject to industry-standard practical truck miles.";
+  }
+  return null;
 }
 
 // ─── Enhanced Multi-Page Rate Confirmation ───────────────────
@@ -506,8 +525,23 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   if (fd.dims) labelValue(doc, "Dimensions", fd.dims, 200, y);
   if (fd.hazmat) labelValue(doc, "Hazmat", "Yes", 380, y);
   if (fd.tempRequirements) labelValue(doc, "Temp Req", fd.tempRequirements, 450, y);
+  y += 20;
+  // Distance — mileage-service-aware label
+  if (load.distance) {
+    const mileageSource = fd.mileageSource || "google_estimated";
+    const distLabel = mileageSource === "google_estimated"
+      ? `~${load.distance.toLocaleString()} mi (estimated)`
+      : mileageSource === "pcmiler"
+      ? `${load.distance.toLocaleString()} mi (PC*Miler Practical)`
+      : mileageSource === "milemaker"
+      ? `${load.distance.toLocaleString()} mi (MileMaker Practical)`
+      : `${load.distance.toLocaleString()} mi`;
+    labelValue(doc, "Distance", distLabel, 50, y);
+    if (fd.driveTimeHours) labelValue(doc, "Drive Time", `${fd.driveTimeHours}h`, 300, y);
+    if (fd.tollCost) labelValue(doc, "Est. Tolls", `$${Number(fd.tollCost).toFixed(2)}`, 430, y);
+  }
 
-  y += 35;
+  y += 25;
 
   // Section 6 — Dates & Times
   y = checkPageBreak(doc, y, 50);
@@ -644,6 +678,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.fontSize(7).fillColor("#888888");
   doc.text(fd.brokerSignDate || "Date: _______________", 50, y);
   doc.text(fd.carrierSignDate || "Date: _______________", 310, y);
+
+  // Mileage footnote (only for estimated/Google sources)
+  const mileageNote = getMileageFootnote(fd.mileageSource);
+  if (mileageNote) {
+    y += 25;
+    y = checkPageBreak(doc, y, 20);
+    doc.fontSize(6.5).fillColor("#999999").text(mileageNote, 50, y, { width: 510 });
+  }
 
   addFooter(doc);
   doc.end();

@@ -23,6 +23,10 @@ const envSchema = z.object({
   DAT_API_KEY: z.string().optional(),
   DAT_API_SECRET: z.string().optional(),
   DAT_API_URL: z.string().optional().default("https://freight.dat.com/api/v2"),
+  MILEAGE_PROVIDER: z.enum(["google", "milemaker", "pcmiler"]).default("google"),
+  MILEMAKER_CLIENT_ID: z.string().optional(),
+  MILEMAKER_CLIENT_SECRET: z.string().optional(),
+  PCMILER_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

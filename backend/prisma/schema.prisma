@@ -1897,6 +1897,29 @@ model CronRegistry {
   @@map("cron_registry")
 }
 
+// ─── Mileage Cache ───
+
+model MileageCache {
+  id              String   @id @default(cuid())
+  originHash      String   @map("origin_hash")
+  destinationHash String   @map("destination_hash")
+  originText      String   @map("origin_text")
+  destinationText String   @map("destination_text")
+  provider        String   // google, milemaker, pcmiler
+  practicalMiles  Float    @map("practical_miles")
+  shortestMiles   Float?   @map("shortest_miles")
+  driveTimeHours  Float    @map("drive_time_hours")
+  tollCost        Float?   @map("toll_cost")
+  routeType       String   @map("route_type") // estimated, practical
+  cachedAt        DateTime @default(now()) @map("cached_at")
+  expiresAt       DateTime @map("expires_at")
+
+  @@unique([originHash, destinationHash, provider])
+  @@index([originHash, destinationHash])
+  @@index([expiresAt])
+  @@map("mileage_cache")
+}
+
 // ─── Error Log ───
 
 model ErrorLog {

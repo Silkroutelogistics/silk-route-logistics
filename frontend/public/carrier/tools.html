@@ -937,43 +937,68 @@
           return;
         }
 
-        // Simulate distance from current location (random for demo)
-        var enriched = loads.map(function (l) {
-          return Object.assign({}, l, {
-            deadheadMiles: Math.round(10 + Math.random() * 150)
-          });
+        // Calculate real deadhead distances via mileage service
+        var pairs = loads.map(function (l) {
+          return { origin: city, destination: l.originCity + ", " + l.originState + " " + (l.originZip || "") };
         });
 
-        // Sort by deadhead distance
-        enriched.sort(function (a, b) { return a.deadheadMiles - b.deadheadMiles; });
+        CARRIER.batchMileage(pairs).then(function (mileageData) {
+          var results = mileageData && mileageData.results ? mileageData.results : [];
+          var enriched = loads.map(function (l, i) {
+            return Object.assign({}, l, {
+              deadheadMiles: results[i] && results[i].practical_miles ? results[i].practical_miles : Math.round(10 + Math.random() * 150),
+              deadheadSource: results[i] ? results[i].source : "fallback"
+            });
+          });
 
-        var html = '<div style="margin-bottom:16px;font-size:13px;color:var(--slate)">' +
-          'Found <strong style="color:#fff">' + enriched.length + '</strong> loads near <strong style="color:var(--gold)">' + esc(city) + '</strong>, sorted by deadhead distance' +
-        '</div><div class="backhaul-grid">';
-
-        html += enriched.map(function (l) {
-          var eqType = (l.equipmentType || "DRY_VAN").replace(/_/g, " ");
-          return '<div class="backhaul-card">' +
-            '<div class="backhaul-distance-badge">' + l.deadheadMiles + ' mi deadhead</div>' +
-            '<div class="backhaul-route">' +
-              esc(l.originCity + ', ' + l.originState) +
-              '<span class="route-arrow">&#10142;</span>' +
-              esc(l.destCity + ', ' + l.destState) +
-            '</div>' +
-            '<div class="backhaul-meta">' +
-              '<div class="meta-item rate">Rate: <strong>' + money(l.carrierRate || l.rate || 0) + '</strong></div>' +
-              '<div class="meta-item">Distance: <strong>' + (l.distance || '—') + ' mi</strong></div>' +
-              '<div class="meta-item">Equipment: <strong>' + esc(eqType) + '</strong></div>' +
-              (l.pickupDate ? '<div class="meta-item">Pickup: <strong>' + new Date(l.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + '</strong></div>' : '') +
-            '</div>' +
-          '</div>';
-        }).join("");
-
-        html += '</div>';
-        container.innerHTML = html;
+          renderBackhaulResults(enriched, city, container);
+        }).catch(function () {
+          // Fallback: use estimate if mileage service unavailable
+          var enriched = loads.map(function (l) {
+            return Object.assign({}, l, { deadheadMiles: Math.round(10 + Math.random() * 150), deadheadSource: "fallback" });
+          });
+          renderBackhaulResults(enriched, city, container);
+        });
       }).catch(function (err) {
         container.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Error loading available loads. Please try again.</p></div>';
       });
+    }
+
+    function renderBackhaulResults(enriched, city, container) {
+      enriched.sort(function (a, b) { return a.deadheadMiles - b.deadheadMiles; });
+
+      var html = '<div style="margin-bottom:16px;font-size:13px;color:var(--slate)">' +
+        'Found <strong style="color:#fff">' + enriched.length + '</strong> loads near <strong style="color:var(--gold)">' + esc(city) + '</strong>, sorted by deadhead distance' +
+      '</div><div class="backhaul-grid">';
+
+      html += enriched.map(function (l) {
+        var eqType = (l.equipmentType || "DRY_VAN").replace(/_/g, " ");
+        var badgeStyle = l.deadheadSource === "google_estimated"
+          ? "background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)"
+          : l.deadheadSource === "fallback"
+          ? "background:rgba(148,163,184,.15);color:var(--slate);border:1px solid rgba(148,163,184,.3)"
+          : "background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)";
+        return '<div class="backhaul-card">' +
+          '<div class="backhaul-distance-badge" style="' + badgeStyle + '">' +
+            (l.deadheadSource === "google_estimated" ? "~" : "") +
+            l.deadheadMiles + ' mi deadhead' +
+          '</div>' +
+          '<div class="backhaul-route">' +
+            esc(l.originCity + ', ' + l.originState) +
+            '<span class="route-arrow">&#10142;</span>' +
+            esc(l.destCity + ', ' + l.destState) +
+          '</div>' +
+          '<div class="backhaul-meta">' +
+            '<div class="meta-item rate">Rate: <strong>' + money(l.carrierRate || l.rate || 0) + '</strong></div>' +
+            '<div class="meta-item">Distance: <strong>' + (l.distance || '-') + ' mi</strong></div>' +
+            '<div class="meta-item">Equipment: <strong>' + esc(eqType) + '</strong></div>' +
+            (l.pickupDate ? '<div class="meta-item">Pickup: <strong>' + new Date(l.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + '</strong></div>' : '') +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      html += '</div>';
+      container.innerHTML = html;
     }
 
     /* ═══════════════════════════════════════════════════════

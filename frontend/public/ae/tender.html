@@ -262,6 +262,10 @@
       .section-tab.active { border-bottom-color: var(--gold); border-left: none; }
       .profit-summary { width: 100%; border-left: none; border-top: 1px solid var(--gray-200); }
     }
+    .mileage-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:12px; font-size:13px; font-weight:600; }
+    .mileage-badge small { font-weight:400; opacity:.8; font-size:11px; }
+    .mileage-estimated { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .mileage-practical { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
   </style>
 </head>
 <body>
@@ -423,6 +427,26 @@
       renderAllSections();
       renderProfitSummary();
       switchSection(0);
+
+      // Fetch mileage and display badge
+      if (state.load.originCity && state.load.destCity) {
+        var orig = state.load.originCity + ", " + state.load.originState + " " + (state.load.originZip || "");
+        var dest = state.load.destCity + ", " + state.load.destState + " " + (state.load.destZip || "");
+        SRL.getMileage(orig, dest, { equipment: state.load.equipmentType }).then(function(m) {
+          state.mileage = m;
+          var el = document.getElementById("tender-mileage-badge");
+          if (el) {
+            el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
+              '<span style="font-size:11px;color:var(--gray-400);text-transform:uppercase">Mileage:</span>' +
+              SRL.renderMileageBadge(m) +
+              (m.drive_time_hours ? '<span style="font-size:12px;color:var(--gray-400)">&#9201; ' + m.drive_time_hours + 'h</span>' : '') +
+              (m.toll_cost !== null ? '<span style="font-size:12px;color:var(--gray-400)">Tolls: $' + m.toll_cost.toFixed(2) + '</span>' : '') +
+            '</div>';
+          }
+          // Update profit summary with mileage data
+          renderProfitSummary();
+        }).catch(function() {});
+      }
     }).catch(function(err) {
       document.querySelector(".form-area").innerHTML = '<div style="padding:40px;text-align:center;color:var(--red)">Error loading data: ' + esc(err.message) + '</div>';
     });
@@ -592,6 +616,7 @@
           infoRow("Origin", esc(l.originCity) + ", " + esc(l.originState) + " " + esc(l.originZip) + (l.originCompany ? " (" + esc(l.originCompany) + ")" : "")) +
           infoRow("Destination", esc(l.destCity) + ", " + esc(l.destState) + " " + esc(l.destZip) + (l.destCompany ? " (" + esc(l.destCompany) + ")" : "")) +
           infoRow("Distance", l.distance ? num(l.distance) + " mi" : "--") +
+          '<div id="tender-mileage-badge" style="padding:4px 0"></div>' +
           infoRow("Equipment", formatEquip(l.equipmentType)) +
           infoRow("Weight", l.weight ? num(l.weight) + " lbs" : "--") +
           infoRow("Pieces", l.pieces || "--") +
@@ -905,7 +930,7 @@
       var totalCarrier = lineHaul + fuel + accTotal + extraStop;
       var margin = custRate - totalCarrier;
       var marginPct = custRate > 0 ? ((margin / custRate) * 100) : 0;
-      var dist = l ? (l.distance || 0) : 0;
+      var dist = (state.mileage && state.mileage.practical_miles) ? state.mileage.practical_miles : (l ? (l.distance || 0) : 0);
       var revPerMile = dist > 0 ? (custRate / dist) : 0;
       var costPerMile = dist > 0 ? (totalCarrier / dist) : 0;
       var marginPerMile = dist > 0 ? (margin / dist) : 0;

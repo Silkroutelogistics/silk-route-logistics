@@ -488,6 +488,26 @@ var SRL = (function () {
   function acctDeleteReport(id) { return request("/api/accounting/reports/" + id, { method: "DELETE" }); }
   function acctExport(data) { return request("/api/accounting/export", { method: "POST", body: data }); }
 
+  // --- Mileage Service ---
+  function getMileage(origin, destination, opts) {
+    var qs = "?origin=" + encodeURIComponent(origin) + "&destination=" + encodeURIComponent(destination);
+    if (opts && opts.equipment) qs += "&equipment=" + encodeURIComponent(opts.equipment);
+    if (opts && opts.hazmat) qs += "&hazmat=true";
+    return request("/api/mileage/calculate" + qs);
+  }
+  function getMileageProvider() { return request("/api/mileage/provider"); }
+  function batchMileage(pairs) { return request("/api/mileage/batch", { method: "POST", body: { pairs: pairs } }); }
+  function renderMileageBadge(result) {
+    if (!result || !result.practical_miles) return '<span style="color:var(--slate)">--</span>';
+    if (result.source === "google_estimated" || result.route_type === "estimated") {
+      return '<span class="mileage-badge mileage-estimated" title="Estimated via Google Maps routing (car distance, not truck-rated)">~' +
+        result.practical_miles.toLocaleString() + ' mi <small>(estimated)</small></span>';
+    }
+    return '<span class="mileage-badge mileage-practical" title="' +
+      (result.source === "pcmiler" ? "PC*Miler" : "MileMaker") + ' practical truck miles">' +
+      result.practical_miles.toLocaleString() + ' mi <small>(practical)</small></span>';
+  }
+
   // --- Public API ---
   return {
     BASE: BASE,
@@ -591,5 +611,9 @@ var SRL = (function () {
     acctGenerateReport: acctGenerateReport,
     acctDeleteReport: acctDeleteReport,
     acctExport: acctExport,
+    getMileage: getMileage,
+    getMileageProvider: getMileageProvider,
+    batchMileage: batchMileage,
+    renderMileageBadge: renderMileageBadge,
   };
 })();

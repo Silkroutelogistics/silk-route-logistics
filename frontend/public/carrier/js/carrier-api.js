@@ -142,6 +142,11 @@ var CARRIER = (function () {
     return request("/api/carrier/bonuses");
   }
 
+  // --- Mileage ---
+  function batchMileage(pairs) {
+    return request("/api/mileage/batch", { method: "POST", body: { pairs: pairs } });
+  }
+
   // --- Loads ---
   function getAvailableLoads(params) {
     return request("/api/carrier-loads/available" + buildQuery(params));
@@ -317,5 +322,6 @@ var CARRIER = (function () {
     getOnboardingStatus: getOnboardingStatus,
     fetchDashboardData: fetchDashboardData,
     startAutoRefresh: startAutoRefresh,
+    batchMileage: batchMileage,
   };
 })();

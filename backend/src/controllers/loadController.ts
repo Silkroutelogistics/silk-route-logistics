@@ -4,7 +4,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
-import { calculateDrivingDistance } from "../services/distanceService";
+import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
 
@@ -352,12 +352,11 @@ export async function getDistance(req: AuthRequest, res: Response) {
   const origin = `${query.originCity}, ${query.originState} ${query.originZip}`;
   const destination = `${query.destCity}, ${query.destState} ${query.destZip}`;
 
-  const result = await calculateDrivingDistance(origin, destination);
+  const result = await calculateMileage(origin, destination);
 
-  if (result.error && !result.distanceMiles) {
-    res.status(400).json({ error: result.error });
-    return;
-  }
-
-  res.json({ distanceMiles: result.distanceMiles, durationMinutes: result.durationMinutes });
+  res.json({
+    distanceMiles: result.practical_miles,
+    durationMinutes: Math.round(result.drive_time_hours * 60),
+    mileage: result,
+  });
 }
