@@ -358,6 +358,52 @@ var SRL = (function () {
     return request("/api/automation/summary");
   }
 
+  // --- Rate Confirmation / Tender ---
+  function createRateConfirmation(data) {
+    return request("/api/rate-confirmations", { method: "POST", body: data });
+  }
+
+  function updateRateConfirmation(id, data) {
+    return request("/api/rate-confirmations/" + id, { method: "PUT", body: data });
+  }
+
+  function getRateConfirmation(id) {
+    return request("/api/rate-confirmations/" + id);
+  }
+
+  function getRateConfirmationsByLoad(loadId) {
+    return request("/api/rate-confirmations/load/" + loadId);
+  }
+
+  function sendRateConfirmationToCarrier(id, data) {
+    return request("/api/rate-confirmations/" + id + "/send", { method: "POST", body: data });
+  }
+
+  function sendRateConfirmationToShipper(id, data) {
+    return request("/api/rate-confirmations/" + id + "/send-shipper", { method: "POST", body: data });
+  }
+
+  function signRateConfirmation(id, data) {
+    return request("/api/rate-confirmations/" + id + "/sign", { method: "POST", body: data });
+  }
+
+  function finalizeRateConfirmation(id) {
+    return request("/api/rate-confirmations/" + id + "/finalize", { method: "POST", body: {} });
+  }
+
+  function getRateConfirmationPdfUrl(id) {
+    return BASE + "/api/rate-confirmations/" + id + "/pdf";
+  }
+
+  function getLoadById(loadId) {
+    return request("/api/loads/" + loadId);
+  }
+
+  function getCustomers(params) {
+    var qs = buildQuery(params);
+    return request("/api/customers" + qs);
+  }
+
   // --- Public API ---
   return {
     BASE: BASE,
@@ -396,5 +442,16 @@ var SRL = (function () {
     stopEmailSequence: stopEmailSequence,
     getActiveSequences: getActiveSequences,
     getAutomationSummary: getAutomationSummary,
+    createRateConfirmation: createRateConfirmation,
+    updateRateConfirmation: updateRateConfirmation,
+    getRateConfirmation: getRateConfirmation,
+    getRateConfirmationsByLoad: getRateConfirmationsByLoad,
+    sendRateConfirmationToCarrier: sendRateConfirmationToCarrier,
+    sendRateConfirmationToShipper: sendRateConfirmationToShipper,
+    signRateConfirmation: signRateConfirmation,
+    finalizeRateConfirmation: finalizeRateConfirmation,
+    getRateConfirmationPdfUrl: getRateConfirmationPdfUrl,
+    getLoadById: getLoadById,
+    getCustomers: getCustomers,
   };
 })();

@@ -5,6 +5,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateDrivingDistance } from "../services/distanceService";
+import { sendShipperPickupEmail, sendShipperDeliveryEmail } from "../services/shipperNotificationService";
 
 function generateRefNumber(): string {
   const d = new Date();
@@ -123,6 +124,7 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // Auto-generate invoice and notify when delivered
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
+    sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
 
     if (load.posterId) {
       await prisma.notification.create({
@@ -135,6 +137,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
         },
       });
     }
+  }
+
+  // Shipper pickup notification on LOADED
+  if (status === "LOADED") {
+    sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
   }
 
   res.json(load);
@@ -189,9 +196,15 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
     });
   }
 
-  // If delivered, trigger auto-invoice
+  // If delivered, trigger auto-invoice + shipper email
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
+    sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
+  }
+
+  // Shipper pickup notification on LOADED
+  if (status === "LOADED") {
+    sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
   }
 
   res.json(updated);

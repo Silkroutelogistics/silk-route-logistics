@@ -5,6 +5,7 @@ import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder } f
 import { processDueCheckCalls } from "./checkCallAutomation";
 import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
+import { processShipperTransitUpdates } from "./shipperNotificationService";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -324,6 +325,18 @@ export function startSchedulers() {
   cron.schedule("10 * * * *", async () => {
     console.log("[Scheduler] Processing due email sequences...");
     await withLock("email-sequences", 5 * 60 * 1000, processDueSequences);
+  });
+
+  // Shipper transit updates: 9 AM ET (14:00 UTC) daily
+  cron.schedule("0 14 * * *", async () => {
+    console.log("[Scheduler] Running shipper transit updates (9 AM ET)...");
+    await withLock("shipper-transit-am", 10 * 60 * 1000, processShipperTransitUpdates);
+  });
+
+  // Shipper transit updates: 4 PM ET (21:00 UTC) daily
+  cron.schedule("0 21 * * *", async () => {
+    console.log("[Scheduler] Running shipper transit updates (4 PM ET)...");
+    await withLock("shipper-transit-pm", 10 * 60 * 1000, processShipperTransitUpdates);
   });
 
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);

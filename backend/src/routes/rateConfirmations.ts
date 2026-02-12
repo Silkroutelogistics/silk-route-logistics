@@ -6,6 +6,9 @@ import {
   updateRateConfirmation,
   sendRateConfirmation,
   downloadRateConfirmationPdf,
+  signRateConfirmation,
+  sendToShipper,
+  finalizeRateConfirmation,
 } from "../controllers/rateConfirmationController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
@@ -19,5 +22,8 @@ router.get("/:id", getRateConfirmationById);
 router.put("/:id", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "RateConfirmation"), updateRateConfirmation);
 router.post("/:id/send", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("SEND", "RateConfirmation"), sendRateConfirmation);
 router.get("/:id/pdf", downloadRateConfirmationPdf);
+router.post("/:id/sign", auditLog("UPDATE", "RateConfirmation"), signRateConfirmation);
+router.post("/:id/send-shipper", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("SEND", "RateConfirmation"), sendToShipper);
+router.post("/:id/finalize", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "RateConfirmation"), finalizeRateConfirmation);
 
 export default router;

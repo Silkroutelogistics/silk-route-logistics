@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tender / Dispatch - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <style>
+    /* ========== Tender Page Styles ========== */
+    .tender-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      height: calc(100vh - 0px);
+    }
+
+    /* Section Tabs (left vertical nav) */
+    .section-tabs {
+      width: 220px;
+      background: var(--white);
+      border-right: 1px solid var(--gray-200);
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 16px 0;
+    }
+    .section-tab {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--gray-600);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .section-tab:hover { background: var(--gray-50); color: var(--navy); text-decoration: none; }
+    .section-tab.active {
+      background: var(--gold-dim);
+      color: var(--gold);
+      border-left-color: var(--gold);
+      font-weight: 600;
+    }
+    .section-tab .tab-num {
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      font-size: 11px; font-weight: 700;
+      background: var(--gray-100);
+      color: var(--gray-500);
+      flex-shrink: 0;
+    }
+    .section-tab.active .tab-num { background: var(--gold); color: #fff; }
+    .section-tab.completed .tab-num { background: var(--green); color: #fff; }
+
+    /* Center: form area */
+    .form-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+      background: var(--gray-50);
+    }
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+    .form-section h3 {
+      font-size: 18px;
+      color: var(--navy);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--gold);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--gold); }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-group input[readonly],
+    .form-group textarea[readonly] { background: var(--gray-50); color: var(--gray-500); }
+
+    /* Right: profit summary */
+    .profit-summary {
+      width: 280px;
+      background: var(--white);
+      border-left: 1px solid var(--gray-200);
+      padding: 20px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .profit-summary h4 {
+      font-size: 14px;
+      color: var(--navy);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--gold);
+    }
+    .profit-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+    .profit-row.total {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--navy);
+      border-top: 1px solid var(--gray-200);
+      margin-top: 8px;
+      padding-top: 10px;
+    }
+    .profit-row .val { font-weight: 600; }
+    .margin-green { color: var(--green) !important; }
+    .margin-amber { color: var(--amber) !important; }
+    .margin-red { color: var(--red) !important; }
+
+    .profit-summary .action-btns {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .profit-summary .action-btns button,
+    .profit-summary .action-btns a {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-gold { background: var(--gold); color: #fff; }
+    .btn-gold:hover { background: var(--gold-hover); }
+    .btn-outline { background: var(--white); color: var(--navy); border: 1px solid var(--gray-200) !important; }
+    .btn-outline:hover { border-color: var(--gold) !important; color: var(--gold); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { opacity: 0.9; }
+
+    /* Read-only info cards */
+    .info-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .info-card .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .info-card .info-row .label { color: var(--gray-500); }
+    .info-card .info-row .value { color: var(--navy); font-weight: 500; }
+
+    /* Stops */
+    .stop-card {
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: var(--white);
+      position: relative;
+    }
+    .stop-card .stop-remove {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: none; border: none;
+      color: var(--red); cursor: pointer;
+      font-size: 18px; line-height: 1;
+    }
+    .stop-card h5 { font-size: 13px; color: var(--gold); margin-bottom: 10px; }
+
+    /* Accessorial row */
+    .acc-row {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 8px;
+    }
+    .acc-row select, .acc-row input { flex: 1; }
+    .acc-row .acc-remove {
+      background: none; border: none;
+      color: var(--red); cursor: pointer;
+      font-size: 16px; padding: 8px;
+    }
+
+    /* Review summary */
+    .review-section {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .review-section h4 {
+      font-size: 14px;
+      color: var(--gold);
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--gray-100);
+      padding-bottom: 6px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 20px; right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 9999;
+      animation: slideIn 0.3s ease;
+      color: #fff;
+    }
+    .toast.success { background: var(--green); }
+    .toast.error { background: var(--red); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .nav-btns { display: flex; gap: 8px; margin-top: 24px; }
+
+    @media (max-width: 1100px) {
+      .section-tabs { width: 180px; }
+      .profit-summary { width: 240px; }
+    }
+    @media (max-width: 900px) {
+      .tender-layout { flex-direction: column; }
+      .section-tabs { width: 100%; flex-direction: row; overflow-x: auto; display: flex; padding: 8px; border-right: none; border-bottom: 1px solid var(--gray-200); }
+      .section-tab { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; padding: 8px 12px; }
+      .section-tab.active { border-bottom-color: var(--gold); border-left: none; }
+      .profit-summary { width: 100%; border-left: none; border-top: 1px solid var(--gray-200); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/logo.png" alt="SRL">
+        <span>SRL Command</span>
+      </div>
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main" style="display:flex;flex-direction:column;overflow:hidden">
+      <!-- Top bar -->
+      <div style="padding:12px 24px;background:var(--white);border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:12px;">
+        <a href="/ae/loads.html" style="color:var(--gray-500);font-size:13px;text-decoration:none;display:flex;align-items:center;gap:4px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Load Board
+        </a>
+        <span style="color:var(--gray-300)">|</span>
+        <h2 style="font-size:16px;color:var(--navy);font-weight:700" id="page-title">Tender / Dispatch</h2>
+        <span id="load-ref-badge" style="font-size:12px;background:var(--gold-dim);color:var(--gold);padding:3px 10px;border-radius:12px;font-weight:600"></span>
+        <span id="rc-status-badge" style="font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;margin-left:4px"></span>
+      </div>
+
+      <div class="tender-layout">
+        <!-- Section Tabs -->
+        <div class="section-tabs" id="section-tabs"></div>
+
+        <!-- Form Area -->
+        <div class="form-area" id="form-area"></div>
+
+        <!-- Profit Summary -->
+        <div class="profit-summary" id="profit-summary"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+  (function() {
+    "use strict";
+
+    // ─── State ─────────────────────────────────────
+    var state = {
+      load: null,
+      user: null,
+      rc: null,       // existing RateConfirmation (if any)
+      rcId: null,
+      formData: {},
+      activeSection: 0,
+      carriers: [],
+    };
+
+    var SECTIONS = [
+      { num: 1, label: "Broker Info" },
+      { num: 2, label: "Load Details" },
+      { num: 3, label: "Shipper / Pickup" },
+      { num: 4, label: "Consignee / Delivery" },
+      { num: 5, label: "Stops" },
+      { num: 6, label: "Carrier / Driver" },
+      { num: 7, label: "Financials" },
+      { num: 8, label: "Payment Terms" },
+      { num: 9, label: "Terms & Conditions" },
+      { num: 10, label: "Review & Send" },
+    ];
+
+    var ACCESSORIAL_TYPES = [
+      "Detention", "Lumper", "TONU", "Layover", "Fuel Surcharge Adj",
+      "Toll Reimbursement", "Stop-Off Charge", "Re-delivery", "Inside Delivery",
+      "Liftgate", "Residential Delivery", "Limited Access", "Sort & Segregate",
+      "Pallet Exchange", "Driver Assist", "Hazmat Fee", "Reefer Fuel",
+      "Tarping", "Overweight", "Escort / Permit", "Other"
+    ];
+
+    var DEFAULT_TERMS = "Carrier agrees to transport the above-described shipment under the terms and conditions set forth herein. " +
+      "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit. " +
+      "Carrier shall comply with all applicable federal, state, and local laws and regulations. " +
+      "This rate confirmation, when signed by both parties, constitutes a binding contract. " +
+      "Payment terms are as specified in the Payment Terms section of this document. " +
+      "Carrier may not broker, co-broker, or re-broker this load without written consent from Silk Route Logistics. " +
+      "Carrier shall provide tracking updates at intervals specified by the broker.";
+
+    // ─── Init ──────────────────────────────────────
+    var params = new URLSearchParams(window.location.search);
+    var loadId = params.get("loadId");
+    if (!loadId) {
+      document.querySelector(".form-area").innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray-400)">No load ID specified. <a href="/ae/loads.html">Go back</a></div>';
+      return;
+    }
+
+    Promise.all([
+      SRL.getMe(),
+      SRL.getLoadById(loadId),
+      SRL.getRateConfirmationsByLoad(loadId),
+    ]).then(function(results) {
+      state.user = results[0];
+      state.load = results[1];
+      var rcs = results[2];
+
+      document.getElementById("user-name").textContent = state.user.firstName + " " + state.user.lastName;
+      document.getElementById("user-role").textContent = state.user.role;
+      document.getElementById("load-ref-badge").textContent = state.load.referenceNumber;
+
+      // If there's an existing RC (most recent non-finalized), load it
+      if (rcs && rcs.length > 0) {
+        state.rc = rcs[0];
+        state.rcId = rcs[0].id;
+        state.formData = rcs[0].formData || {};
+        showRCStatus(rcs[0].status);
+      }
+
+      // Auto-populate formData from load
+      autoPopulate();
+
+      // Render
+      renderSectionTabs();
+      renderAllSections();
+      renderProfitSummary();
+      switchSection(0);
+    }).catch(function(err) {
+      document.querySelector(".form-area").innerHTML = '<div style="padding:40px;text-align:center;color:var(--red)">Error loading data: ' + esc(err.message) + '</div>';
+    });
+
+    function showRCStatus(status) {
+      var badge = document.getElementById("rc-status-badge");
+      var colors = { DRAFT: "var(--gray-100);color:var(--gray-600)", SENT: "#dbeafe;color:#2563eb", SIGNED: "#dcfce7;color:#16a34a", FINALIZED: "#d4a574;color:#0f172a" };
+      badge.textContent = status || "NEW";
+      badge.style.background = (colors[status] || colors.DRAFT).split(";")[0];
+      badge.style.color = (colors[status] || colors.DRAFT).split("color:")[1] || "var(--gray-600)";
+    }
+
+    // ─── Auto Populate ─────────────────────────────
+    function autoPopulate() {
+      var l = state.load;
+      var fd = state.formData;
+
+      // Section 1 — Broker
+      if (!fd.brokerName) fd.brokerName = "Silk Route Logistics Inc.";
+      if (!fd.brokerContact && state.user) fd.brokerContact = state.user.firstName + " " + state.user.lastName;
+      if (!fd.brokerEmail && state.user) fd.brokerEmail = state.user.email;
+      if (!fd.referenceNumber) fd.referenceNumber = l.referenceNumber;
+
+      // Section 2 — Load Details (read-only)
+      // Section 3 — Shipper
+      if (!fd.shipperName && l.customer) fd.shipperName = l.customer.name;
+      if (!fd.shipperAddress && l.customer) fd.shipperAddress = l.customer.address || "";
+      if (!fd.shipperCity) fd.shipperCity = l.customer ? l.customer.city || l.originCity : l.originCity;
+      if (!fd.shipperState) fd.shipperState = l.customer ? l.customer.state || l.originState : l.originState;
+      if (!fd.shipperZip) fd.shipperZip = l.customer ? l.customer.zip || l.originZip : l.originZip;
+      if (!fd.shipperContact && l.customer) fd.shipperContact = l.customer.contactName || "";
+      if (!fd.shipperPhone && l.customer) fd.shipperPhone = l.customer.phone || "";
+      if (!fd.pickupNumber) fd.pickupNumber = l.pickupNumber || "";
+      if (!fd.pickupHours) fd.pickupHours = l.pickupHours || "";
+      if (!fd.loadingType) fd.loadingType = l.loadingType || "";
+      if (!fd.poNumber) fd.poNumber = l.shipperPoNumber || "";
+      if (!fd.pickupInstructions) fd.pickupInstructions = l.pickupInstructions || "";
+
+      // Section 4 — Consignee
+      if (!fd.consigneeName) fd.consigneeName = l.destCompany || "";
+      if (!fd.consigneeAddress) fd.consigneeAddress = l.destAddress || "";
+      if (!fd.consigneeCity) fd.consigneeCity = l.destCity;
+      if (!fd.consigneeState) fd.consigneeState = l.destState;
+      if (!fd.consigneeZip) fd.consigneeZip = l.destZip;
+      if (!fd.consigneeContact) fd.consigneeContact = l.destContactName || "";
+      if (!fd.consigneePhone) fd.consigneePhone = l.destContactPhone || "";
+      if (!fd.deliveryRef) fd.deliveryRef = l.deliveryReference || "";
+      if (!fd.appointmentNumber) fd.appointmentNumber = l.deliveryAppointment || "";
+      if (!fd.deliveryHours) fd.deliveryHours = l.deliveryHours || "";
+      if (!fd.unloadingType) fd.unloadingType = l.unloadingType || "";
+      if (!fd.deliveryInstructions) fd.deliveryInstructions = l.deliveryInstructions || "";
+
+      // Section 5 — Stops
+      if (fd.isMultiStop === undefined) fd.isMultiStop = l.isMultiStop || false;
+      if (!fd.stops) fd.stops = l.stops || [];
+      if (!fd.extraStopPay && fd.extraStopPay !== 0) fd.extraStopPay = l.extraStopPay || 0;
+
+      // Section 6 — Carrier
+      if (!fd.assignmentType) fd.assignmentType = l.assignmentType || "PARTNER_CARRIER";
+      if (l.carrier) {
+        if (!fd.carrierName) fd.carrierName = l.carrier.company || l.carrier.firstName + " " + l.carrier.lastName;
+        if (!fd.carrierPhone) fd.carrierPhone = l.carrier.phone || "";
+      }
+      if (!fd.driverName) fd.driverName = l.driverName || "";
+      if (!fd.driverPhone) fd.driverPhone = l.driverPhone || "";
+      if (!fd.truckNumber) fd.truckNumber = l.truckNumber || "";
+      if (!fd.trailerNumber) fd.trailerNumber = l.trailerNumber || "";
+      if (!fd.dispatcherName) fd.dispatcherName = l.carrierDispatcherName || "";
+      if (!fd.dispatcherPhone) fd.dispatcherPhone = l.carrierDispatcherPhone || "";
+
+      // Equipment
+      if (!fd.equipmentType) fd.equipmentType = l.equipmentType;
+      if (!fd.commodity) fd.commodity = l.commodity || "";
+      if (!fd.weight && l.weight) fd.weight = l.weight;
+      if (!fd.pieces && l.pieces) fd.pieces = l.pieces;
+
+      // Section 6 — Dates
+      if (!fd.pickupDate) fd.pickupDate = l.pickupDate ? l.pickupDate.split("T")[0] : "";
+      if (!fd.pickupTimeWindow) fd.pickupTimeWindow = (l.pickupTimeStart || "") + (l.pickupTimeEnd ? " - " + l.pickupTimeEnd : "");
+      if (!fd.deliveryDate) fd.deliveryDate = l.deliveryDate ? l.deliveryDate.split("T")[0] : "";
+      if (!fd.deliveryTimeWindow) fd.deliveryTimeWindow = (l.deliveryTimeStart || "") + (l.deliveryTimeEnd ? " - " + l.deliveryTimeEnd : "");
+
+      // Section 7 — Financials
+      if (!fd.customerRate && fd.customerRate !== 0) fd.customerRate = l.customerRate || l.rate || 0;
+      if (!fd.lineHaulRate && fd.lineHaulRate !== 0) fd.lineHaulRate = l.carrierRate || 0;
+      if (!fd.rateType) fd.rateType = l.rateType || "FLAT";
+      if (!fd.fuelSurcharge && fd.fuelSurcharge !== 0) fd.fuelSurcharge = l.fuelSurcharge || 0;
+      if (!fd.fuelSurchargeType) fd.fuelSurchargeType = l.fuelSurchargeType || "FLAT";
+      if (!fd.accessorials) fd.accessorials = [];
+
+      // Section 8 — Payment
+      if (!fd.carrierPaymentTier) fd.carrierPaymentTier = l.carrierPaymentTier || "STANDARD";
+      if (!fd.quickPayFeePercent && fd.quickPayFeePercent !== 0) fd.quickPayFeePercent = l.quickPayFeePercent || 0;
+
+      // Section 9 — Terms
+      if (!fd.customTerms) fd.customTerms = l.termsConditions || DEFAULT_TERMS;
+      if (!fd.specialInstructions) fd.specialInstructions = l.specialInstructions || "";
+
+      state.formData = fd;
+    }
+
+    // ─── Section Tabs ──────────────────────────────
+    function renderSectionTabs() {
+      var html = "";
+      SECTIONS.forEach(function(s, i) {
+        html += '<a class="section-tab' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" onclick="window._switchSection(' + i + ')">';
+        html += '<span class="tab-num">' + s.num + '</span>';
+        html += '<span>' + s.label + '</span>';
+        html += '</a>';
+      });
+      document.getElementById("section-tabs").innerHTML = html;
+    }
+
+    function switchSection(idx) {
+      state.activeSection = idx;
+      // Update tabs
+      var tabs = document.querySelectorAll(".section-tab");
+      tabs.forEach(function(t, i) { t.classList.toggle("active", i === idx); });
+      // Update form sections
+      var sections = document.querySelectorAll(".form-section");
+      sections.forEach(function(s, i) { s.classList.toggle("active", i === idx); });
+    }
+    window._switchSection = switchSection;
+
+    // ─── Render All Sections ───────────────────────
+    function renderAllSections() {
+      var area = document.getElementById("form-area");
+      area.innerHTML = "";
+      area.innerHTML += renderSection1();
+      area.innerHTML += renderSection2();
+      area.innerHTML += renderSection3();
+      area.innerHTML += renderSection4();
+      area.innerHTML += renderSection5();
+      area.innerHTML += renderSection6();
+      area.innerHTML += renderSection7();
+      area.innerHTML += renderSection8();
+      area.innerHTML += renderSection9();
+      area.innerHTML += renderSection10();
+
+      // Bind all form inputs to state.formData
+      bindFormInputs();
+    }
+
+    // Section 1 — Broker Info (read-only)
+    function renderSection1() {
+      var fd = state.formData;
+      return '<div class="form-section" data-section="0">' +
+        '<h3>1. Broker Information</h3>' +
+        '<div class="info-card">' +
+          infoRow("Company", "Silk Route Logistics Inc.") +
+          infoRow("Broker / AE", fd.brokerContact || "--") +
+          infoRow("Email", fd.brokerEmail || "--") +
+          infoRow("Phone", "+1 (269) 555-0100") +
+          infoRow("Reference #", fd.referenceNumber || "--") +
+          infoRow("Date", new Date().toLocaleDateString()) +
+        '</div>' +
+        navBtns(0) +
+      '</div>';
+    }
+
+    // Section 2 — Load Details (read-only from load)
+    function renderSection2() {
+      var l = state.load;
+      return '<div class="form-section" data-section="1">' +
+        '<h3>2. Load Details</h3>' +
+        '<div class="info-card">' +
+          infoRow("Origin", esc(l.originCity) + ", " + esc(l.originState) + " " + esc(l.originZip) + (l.originCompany ? " (" + esc(l.originCompany) + ")" : "")) +
+          infoRow("Destination", esc(l.destCity) + ", " + esc(l.destState) + " " + esc(l.destZip) + (l.destCompany ? " (" + esc(l.destCompany) + ")" : "")) +
+          infoRow("Distance", l.distance ? num(l.distance) + " mi" : "--") +
+          infoRow("Equipment", formatEquip(l.equipmentType)) +
+          infoRow("Weight", l.weight ? num(l.weight) + " lbs" : "--") +
+          infoRow("Pieces", l.pieces || "--") +
+          infoRow("Commodity", l.commodity || "--") +
+          infoRow("Pickup", fmtDate(l.pickupDate) + (l.pickupTimeStart ? " (" + l.pickupTimeStart + " - " + (l.pickupTimeEnd || "") + ")" : "")) +
+          infoRow("Delivery", fmtDate(l.deliveryDate) + (l.deliveryTimeStart ? " (" + l.deliveryTimeStart + " - " + (l.deliveryTimeEnd || "") + ")" : "")) +
+          (l.hazmat ? infoRow("Hazmat", "Yes — Class " + (l.hazmatClass || "N/A")) : "") +
+          (l.temperatureControlled ? infoRow("Temp Control", (l.tempMin || "") + " - " + (l.tempMax || "") + " F") : "") +
+        '</div>' +
+        navBtns(1) +
+      '</div>';
+    }
+
+    // Section 3 — Shipper / Pickup
+    function renderSection3() {
+      var fd = state.formData;
+      return '<div class="form-section" data-section="2">' +
+        '<h3>3. Shipper / Pickup</h3>' +
+        '<div class="form-grid">' +
+          formField("Company", "shipperName", fd.shipperName) +
+          formField("Contact", "shipperContact", fd.shipperContact) +
+          formField("Address", "shipperAddress", fd.shipperAddress, "full-width") +
+          formField("City", "shipperCity", fd.shipperCity) +
+          formField("State", "shipperState", fd.shipperState) +
+          formField("Zip", "shipperZip", fd.shipperZip) +
+          formField("Phone", "shipperPhone", fd.shipperPhone) +
+          formField("PO Number", "poNumber", fd.poNumber) +
+          formField("Pickup Number", "pickupNumber", fd.pickupNumber) +
+          formField("Pickup Hours", "pickupHours", fd.pickupHours) +
+          formSelect("Loading Type", "loadingType", fd.loadingType, ["", "Live Load", "Drop & Hook", "Preloaded"]) +
+          formField("Est. Loading Time", "estLoadingTime", fd.estLoadingTime) +
+          formArea("Pickup Instructions", "pickupInstructions", fd.pickupInstructions, "full-width") +
+        '</div>' +
+        navBtns(2) +
+      '</div>';
+    }
+
+    // Section 4 — Consignee / Delivery
+    function renderSection4() {
+      var fd = state.formData;
+      return '<div class="form-section" data-section="3">' +
+        '<h3>4. Consignee / Delivery</h3>' +
+        '<div class="form-grid">' +
+          formField("Company", "consigneeName", fd.consigneeName) +
+          formField("Contact", "consigneeContact", fd.consigneeContact) +
+          formField("Address", "consigneeAddress", fd.consigneeAddress, "full-width") +
+          formField("City", "consigneeCity", fd.consigneeCity) +
+          formField("State", "consigneeState", fd.consigneeState) +
+          formField("Zip", "consigneeZip", fd.consigneeZip) +
+          formField("Phone", "consigneePhone", fd.consigneePhone) +
+          formField("Delivery Ref", "deliveryRef", fd.deliveryRef) +
+          formField("Appointment #", "appointmentNumber", fd.appointmentNumber) +
+          formField("Delivery Hours", "deliveryHours", fd.deliveryHours) +
+          formSelect("Unloading Type", "unloadingType", fd.unloadingType, ["", "Live Unload", "Drop & Hook", "Driver Assist"]) +
+          formField("Est. Unloading Time", "estUnloadingTime", fd.estUnloadingTime) +
+          formArea("Delivery Instructions", "deliveryInstructions", fd.deliveryInstructions, "full-width") +
+        '</div>' +
+        navBtns(3) +
+      '</div>';
+    }
+
+    // Section 5 — Stops
+    function renderSection5() {
+      var fd = state.formData;
+      var stops = fd.stops || [];
+      var html = '<div class="form-section" data-section="4">' +
+        '<h3>5. Stops</h3>' +
+        '<div class="form-grid" style="margin-bottom:16px">' +
+          '<div class="form-group"><label>Route Type</label>' +
+          '<select data-field="isMultiStop" onchange="window._toggleMultiStop(this.value)">' +
+            '<option value="false"' + (!fd.isMultiStop ? ' selected' : '') + '>Direct (Origin to Destination)</option>' +
+            '<option value="true"' + (fd.isMultiStop ? ' selected' : '') + '>Multi-Stop</option>' +
+          '</select></div>' +
+          formField("Extra Stop Pay $", "extraStopPay", fd.extraStopPay || 0, "", "number") +
+        '</div>';
+
+      html += '<div id="stops-container">';
+      if (fd.isMultiStop && stops.length > 0) {
+        stops.forEach(function(stop, i) {
+          html += renderStopCard(stop, i);
+        });
+      }
+      html += '</div>';
+
+      if (fd.isMultiStop) {
+        html += '<button class="btn-outline" style="margin-top:8px;padding:8px 16px;font-size:13px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._addStop()">+ Add Stop</button>';
+      }
+
+      html += navBtns(4) + '</div>';
+      return html;
+    }
+
+    function renderStopCard(stop, idx) {
+      return '<div class="stop-card" data-stop="' + idx + '">' +
+        '<button class="stop-remove" onclick="window._removeStop(' + idx + ')">&times;</button>' +
+        '<h5>Stop ' + (idx + 1) + '</h5>' +
+        '<div class="form-grid">' +
+          formSelect("Type", "stop_" + idx + "_type", stop.type || "", ["PICKUP", "DELIVERY"], true) +
+          formField("Company", "stop_" + idx + "_company", stop.company || "", "", "text", true) +
+          formField("Address", "stop_" + idx + "_address", stop.address || "", "full-width", "text", true) +
+          formField("City", "stop_" + idx + "_city", stop.city || "", "", "text", true) +
+          formField("State", "stop_" + idx + "_state", stop.state || "", "", "text", true) +
+          formField("Contact", "stop_" + idx + "_contact", stop.contact || "", "", "text", true) +
+          formField("Phone", "stop_" + idx + "_phone", stop.phone || "", "", "text", true) +
+          formField("Ref #", "stop_" + idx + "_refNumber", stop.refNumber || "", "", "text", true) +
+          formArea("Instructions", "stop_" + idx + "_instructions", stop.instructions || "", "full-width", true) +
+        '</div></div>';
+    }
+
+    window._toggleMultiStop = function(val) {
+      state.formData.isMultiStop = val === "true";
+      if (state.formData.isMultiStop && (!state.formData.stops || state.formData.stops.length === 0)) {
+        state.formData.stops = [{ type: "PICKUP", company: "", address: "", city: "", state: "" }];
+      }
+      renderAllSections();
+      switchSection(4);
+      renderProfitSummary();
+    };
+
+    window._addStop = function() {
+      if (!state.formData.stops) state.formData.stops = [];
+      if (state.formData.stops.length >= 5) { showToast("Maximum 5 stops", "error"); return; }
+      state.formData.stops.push({ type: "DELIVERY", company: "", address: "", city: "", state: "" });
+      renderAllSections();
+      switchSection(4);
+    };
+
+    window._removeStop = function(idx) {
+      state.formData.stops.splice(idx, 1);
+      renderAllSections();
+      switchSection(4);
+      renderProfitSummary();
+    };
+
+    // Section 6 — Carrier / Driver
+    function renderSection6() {
+      var fd = state.formData;
+      var l = state.load;
+      return '<div class="form-section" data-section="5">' +
+        '<h3>6. Carrier / Driver Assignment</h3>' +
+        '<div class="form-grid" style="margin-bottom:20px">' +
+          formSelect("Assignment Type", "assignmentType", fd.assignmentType, ["COMPANY_DRIVER", "PARTNER_CARRIER"]) +
+        '</div>' +
+        '<div class="form-grid">' +
+          formField("Carrier Name", "carrierName", fd.carrierName) +
+          formField("MC Number", "carrierMcNumber", fd.carrierMcNumber || (l.carrier && l.carrier.carrierProfile ? l.carrier.carrierProfile.mcNumber : "")) +
+          formField("DOT Number", "carrierDotNumber", fd.carrierDotNumber || (l.carrier && l.carrier.carrierProfile ? l.carrier.carrierProfile.dotNumber : "")) +
+          formField("Carrier Phone", "carrierPhone", fd.carrierPhone) +
+          formField("Carrier Email", "carrierEmail", fd.carrierEmail) +
+          formField("Dispatcher Name", "dispatcherName", fd.dispatcherName) +
+          formField("Dispatcher Phone", "dispatcherPhone", fd.dispatcherPhone) +
+          formField("Driver Name", "driverName", fd.driverName) +
+          formField("Driver Phone", "driverPhone", fd.driverPhone) +
+          formField("Truck #", "truckNumber", fd.truckNumber) +
+          formField("Trailer #", "trailerNumber", fd.trailerNumber) +
+        '</div>' +
+        navBtns(5) +
+      '</div>';
+    }
+
+    // Section 7 — Financials
+    function renderSection7() {
+      var fd = state.formData;
+      var accHtml = '<div id="accessorials-container">';
+      (fd.accessorials || []).forEach(function(acc, i) {
+        accHtml += '<div class="acc-row" data-acc="' + i + '">' +
+          '<select data-acc-field="type" data-acc-idx="' + i + '" onchange="window._updateAcc(' + i + ',\'type\',this.value)">' +
+            ACCESSORIAL_TYPES.map(function(t) { return '<option' + (acc.type === t || acc.description === t ? ' selected' : '') + '>' + t + '</option>'; }).join("") +
+          '</select>' +
+          '<input type="number" step="0.01" value="' + (acc.amount || 0) + '" data-acc-field="amount" data-acc-idx="' + i + '" oninput="window._updateAcc(' + i + ',\'amount\',this.value)" style="max-width:120px">' +
+          '<button class="acc-remove" onclick="window._removeAcc(' + i + ')">&times;</button>' +
+        '</div>';
+      });
+      accHtml += '</div>';
+
+      return '<div class="form-section" data-section="6">' +
+        '<h3>7. Financials</h3>' +
+        '<div class="form-grid">' +
+          formField("Customer Rate $", "customerRate", fd.customerRate, "", "number") +
+          formField("Carrier Line Haul $", "lineHaulRate", fd.lineHaulRate, "", "number") +
+          formSelect("Rate Type", "rateType", fd.rateType, ["FLAT", "PER_MILE"]) +
+          formField("Fuel Surcharge $", "fuelSurcharge", fd.fuelSurcharge, "", "number") +
+          formSelect("Fuel Surcharge Type", "fuelSurchargeType", fd.fuelSurchargeType, ["FLAT", "PERCENTAGE"]) +
+          formField("Detention Rate $/hr", "detentionRate", fd.detentionRate || 0, "", "number") +
+        '</div>' +
+        '<div style="margin-top:20px">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Accessorials</label>' +
+          accHtml +
+          '<button class="btn-outline" style="padding:6px 14px;font-size:12px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;margin-top:4px" onclick="window._addAcc()">+ Add Accessorial</button>' +
+        '</div>' +
+        navBtns(6) +
+      '</div>';
+    }
+
+    window._addAcc = function() {
+      if (!state.formData.accessorials) state.formData.accessorials = [];
+      state.formData.accessorials.push({ type: "Detention", description: "Detention", amount: 0 });
+      renderAllSections();
+      switchSection(6);
+    };
+    window._removeAcc = function(idx) {
+      state.formData.accessorials.splice(idx, 1);
+      renderAllSections();
+      switchSection(6);
+      renderProfitSummary();
+    };
+    window._updateAcc = function(idx, field, val) {
+      var acc = state.formData.accessorials[idx];
+      if (field === "amount") { acc.amount = parseFloat(val) || 0; acc.description = acc.type || acc.description; }
+      else if (field === "type") { acc.type = val; acc.description = val; }
+      renderProfitSummary();
+    };
+
+    // Section 8 — Payment Terms
+    function renderSection8() {
+      var fd = state.formData;
+      return '<div class="form-section" data-section="7">' +
+        '<h3>8. Payment Terms</h3>' +
+        '<div class="form-grid">' +
+          formSelect("Payment Tier", "carrierPaymentTier", fd.carrierPaymentTier, ["FLASH", "EXPRESS", "PRIORITY", "PARTNER", "ELITE", "STANDARD"]) +
+          formField("QuickPay Fee %", "quickPayFeePercent", fd.quickPayFeePercent, "", "number") +
+          formField("Factoring Company", "factoringCompany", fd.factoringCompany || "") +
+          formField("Factoring Contact", "factoringContact", fd.factoringContact || "") +
+          formField("Factoring Email", "factoringEmail", fd.factoringEmail || "") +
+          formSelect("Payment Terms", "paymentTerms", fd.paymentTerms || "Net 30", ["Net 15", "Net 30", "Net 60", "QuickPay", "COD"]) +
+        '</div>' +
+        '<div style="margin-top:20px">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Document Checklist</label>' +
+          '<div class="form-grid">' +
+            checkbox("Signed Rate Con", "docChecklist_signedRateCon", fd.docChecklist ? fd.docChecklist.signedRateCon : true) +
+            checkbox("Signed BOL", "docChecklist_signedBol", fd.docChecklist ? fd.docChecklist.signedBol : true) +
+            checkbox("Proof of Delivery", "docChecklist_pod", fd.docChecklist ? fd.docChecklist.pod : true) +
+            checkbox("Carrier Invoice", "docChecklist_carrierInvoice", fd.docChecklist ? fd.docChecklist.carrierInvoice : true) +
+            checkbox("Lumper Receipt", "docChecklist_lumperReceipt", fd.docChecklist ? fd.docChecklist.lumperReceipt : false) +
+            checkbox("Scale Ticket", "docChecklist_scaleTicket", fd.docChecklist ? fd.docChecklist.scaleTicket : false) +
+            checkbox("Temperature Log", "docChecklist_tempLog", fd.docChecklist ? fd.docChecklist.tempLog : false) +
+          '</div>' +
+        '</div>' +
+        navBtns(7) +
+      '</div>';
+    }
+
+    // Section 9 — Terms & Conditions
+    function renderSection9() {
+      var fd = state.formData;
+      return '<div class="form-section" data-section="8">' +
+        '<h3>9. Terms & Conditions</h3>' +
+        formArea("Standard Terms (editable)", "customTerms", fd.customTerms, "full-width") +
+        '<div class="form-grid" style="margin-top:16px">' +
+          formArea("Special Instructions", "specialInstructions", fd.specialInstructions, "full-width") +
+        '</div>' +
+        navBtns(8) +
+      '</div>';
+    }
+
+    // Section 10 — Review & Send
+    function renderSection10() {
+      var fd = state.formData;
+      var l = state.load;
+      var custRate = Number(fd.customerRate) || 0;
+      var carrierCost = calcTotalCarrierCost();
+      var margin = custRate - carrierCost;
+      var marginPct = custRate > 0 ? ((margin / custRate) * 100).toFixed(1) : "0.0";
+      var dist = l.distance || 0;
+
+      return '<div class="form-section" data-section="9">' +
+        '<h3>10. Review & Send</h3>' +
+
+        '<div class="review-section">' +
+          '<h4>Route</h4>' +
+          infoRow("Origin", esc(l.originCity) + ", " + esc(l.originState)) +
+          infoRow("Destination", esc(l.destCity) + ", " + esc(l.destState)) +
+          infoRow("Distance", dist ? num(dist) + " mi" : "--") +
+          infoRow("Pickup", fmtDate(l.pickupDate)) +
+          infoRow("Delivery", fmtDate(l.deliveryDate)) +
+        '</div>' +
+
+        '<div class="review-section">' +
+          '<h4>Carrier</h4>' +
+          infoRow("Carrier", esc(fd.carrierName || "--")) +
+          infoRow("Driver", esc(fd.driverName || "--")) +
+          infoRow("Truck / Trailer", esc(fd.truckNumber || "--") + " / " + esc(fd.trailerNumber || "--")) +
+        '</div>' +
+
+        '<div class="review-section">' +
+          '<h4>Financials</h4>' +
+          infoRow("Customer Rate", "$" + num(custRate)) +
+          infoRow("Carrier Cost", "$" + num(carrierCost)) +
+          infoRow("Gross Margin", "$" + num(margin) + " (" + marginPct + "%)") +
+        '</div>' +
+
+        '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:24px">' +
+          '<button class="btn-gold" onclick="window._saveDraft()" style="padding:10px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none">Save Draft</button>' +
+          '<button class="btn-outline" onclick="window._generatePdf()" style="padding:10px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Generate PDF</button>' +
+          '<button class="btn-outline" onclick="window._sendToCarrier()" style="padding:10px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #3b82f6;color:#3b82f6">Send to Carrier</button>' +
+          '<button class="btn-outline" onclick="window._sendToShipper()" style="padding:10px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #8b5cf6;color:#8b5cf6">Send to Shipper</button>' +
+          '<button class="btn-green" onclick="window._finalize()" style="padding:10px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none">Finalize & Dispatch</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // ─── Profit Summary (always visible right panel) ──────────
+    function renderProfitSummary() {
+      var fd = state.formData;
+      var l = state.load;
+      var custRate = Number(fd.customerRate) || 0;
+      var lineHaul = Number(fd.lineHaulRate) || 0;
+      var fuel = Number(fd.fuelSurcharge) || 0;
+      var accTotal = (fd.accessorials || []).reduce(function(s, a) { return s + (Number(a.amount) || 0); }, 0);
+      var extraStop = Number(fd.extraStopPay) || 0;
+      var totalCarrier = lineHaul + fuel + accTotal + extraStop;
+      var margin = custRate - totalCarrier;
+      var marginPct = custRate > 0 ? ((margin / custRate) * 100) : 0;
+      var dist = l ? (l.distance || 0) : 0;
+      var revPerMile = dist > 0 ? (custRate / dist) : 0;
+      var costPerMile = dist > 0 ? (totalCarrier / dist) : 0;
+      var marginPerMile = dist > 0 ? (margin / dist) : 0;
+
+      var marginClass = marginPct >= 15 ? "margin-green" : marginPct >= 10 ? "margin-amber" : "margin-red";
+
+      var html = '<h4>Profit Summary</h4>';
+      html += profitRow("Customer Rate", "$" + num(custRate));
+      html += profitRow("Carrier Line Haul", "$" + num(lineHaul));
+      html += profitRow("Fuel Surcharge", "$" + num(fuel));
+      if (accTotal > 0) html += profitRow("Accessorials", "$" + num(accTotal));
+      if (extraStop > 0) html += profitRow("Extra Stop Pay", "$" + num(extraStop));
+      html += '<div class="profit-row total"><span>Total Carrier Cost</span><span class="val">$' + num(totalCarrier) + '</span></div>';
+      html += '<div class="profit-row total ' + marginClass + '"><span>Gross Margin</span><span class="val">$' + num(margin) + '</span></div>';
+      html += '<div class="profit-row ' + marginClass + '"><span>Margin %</span><span class="val">' + marginPct.toFixed(1) + '%</span></div>';
+      if (dist > 0) {
+        html += '<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--gray-200)">';
+        html += profitRow("Revenue / Mile", "$" + revPerMile.toFixed(2));
+        html += profitRow("Cost / Mile", "$" + costPerMile.toFixed(2));
+        html += '<div class="profit-row ' + marginClass + '"><span>Margin / Mile</span><span class="val">$' + marginPerMile.toFixed(2) + '</span></div>';
+        html += '</div>';
+      }
+
+      html += '<div class="action-btns">';
+      html += '<button class="btn-gold" onclick="window._saveDraft()">Save Draft</button>';
+      html += '<button class="btn-outline" onclick="window._generatePdf()">Generate PDF</button>';
+      html += '<button class="btn-green" onclick="window._finalize()">Finalize</button>';
+      html += '</div>';
+
+      document.getElementById("profit-summary").innerHTML = html;
+    }
+
+    function calcTotalCarrierCost() {
+      var fd = state.formData;
+      var lineHaul = Number(fd.lineHaulRate) || 0;
+      var fuel = Number(fd.fuelSurcharge) || 0;
+      var accTotal = (fd.accessorials || []).reduce(function(s, a) { return s + (Number(a.amount) || 0); }, 0);
+      var extraStop = Number(fd.extraStopPay) || 0;
+      return lineHaul + fuel + accTotal + extraStop;
+    }
+
+    // ─── Form Binding ──────────────────────────────
+    function bindFormInputs() {
+      var inputs = document.querySelectorAll("[data-field]");
+      inputs.forEach(function(el) {
+        var field = el.getAttribute("data-field");
+        el.addEventListener("input", function() {
+          var val = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
+          if (el.type === "checkbox") val = el.checked;
+          state.formData[field] = val;
+          renderProfitSummary();
+        });
+        el.addEventListener("change", function() {
+          var val = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
+          if (el.type === "checkbox") val = el.checked;
+          state.formData[field] = val;
+          renderProfitSummary();
+        });
+      });
+
+      // Bind stop fields
+      var stopInputs = document.querySelectorAll("[data-stop-field]");
+      stopInputs.forEach(function(el) {
+        el.addEventListener("input", function() { syncStopField(el); });
+        el.addEventListener("change", function() { syncStopField(el); });
+      });
+    }
+
+    function syncStopField(el) {
+      var idx = parseInt(el.getAttribute("data-stop-idx"));
+      var field = el.getAttribute("data-stop-field");
+      if (!state.formData.stops[idx]) return;
+      state.formData.stops[idx][field] = el.value;
+    }
+
+    // ─── Actions ───────────────────────────────────
+    function collectFormData() {
+      var fd = Object.assign({}, state.formData);
+      fd.totalCharges = calcTotalCarrierCost();
+
+      // Collect docChecklist from checkboxes
+      fd.docChecklist = {};
+      ["signedRateCon", "signedBol", "pod", "carrierInvoice", "lumperReceipt", "scaleTicket", "tempLog"].forEach(function(key) {
+        var el = document.querySelector('[data-field="docChecklist_' + key + '"]');
+        fd.docChecklist[key] = el ? el.checked : false;
+      });
+
+      return fd;
+    }
+
+    window._saveDraft = function() {
+      var fd = collectFormData();
+      var payload = { loadId: state.load.id, formData: fd };
+
+      var promise;
+      if (state.rcId) {
+        promise = SRL.updateRateConfirmation(state.rcId, payload);
+      } else {
+        promise = SRL.createRateConfirmation(payload);
+      }
+
+      promise.then(function(rc) {
+        state.rcId = rc.id;
+        state.rc = rc;
+        showRCStatus(rc.status);
+        showToast("Draft saved", "success");
+      }).catch(function(err) {
+        showToast("Save failed: " + err.message, "error");
+      });
+    };
+
+    window._generatePdf = function() {
+      if (!state.rcId) {
+        showToast("Save draft first", "error");
+        return;
+      }
+      var url = SRL.getRateConfirmationPdfUrl(state.rcId);
+      var token = localStorage.getItem("token");
+      window.open(url + "?token=" + token, "_blank");
+    };
+
+    window._sendToCarrier = function() {
+      if (!state.rcId) { showToast("Save draft first", "error"); return; }
+      var fd = state.formData;
+      var email = fd.carrierEmail || prompt("Enter carrier email:");
+      if (!email) return;
+      var name = fd.carrierName || "Carrier";
+      SRL.sendRateConfirmationToCarrier(state.rcId, { recipientEmail: email, recipientName: name })
+        .then(function() {
+          showRCStatus("SENT");
+          showToast("Rate confirmation sent to carrier", "success");
+        })
+        .catch(function(err) { showToast("Send failed: " + err.message, "error"); });
+    };
+
+    window._sendToShipper = function() {
+      if (!state.rcId) { showToast("Save draft first", "error"); return; }
+      var fd = state.formData;
+      var l = state.load;
+      var email = (l.customer && l.customer.email) || fd.shipperEmail || prompt("Enter shipper email:");
+      if (!email) return;
+      var name = fd.shipperName || (l.customer ? l.customer.name : "Shipper");
+      SRL.sendRateConfirmationToShipper(state.rcId, { recipientEmail: email, recipientName: name })
+        .then(function() { showToast("Load confirmation sent to shipper", "success"); })
+        .catch(function(err) { showToast("Send failed: " + err.message, "error"); });
+    };
+
+    window._finalize = function() {
+      if (!state.rcId) { showToast("Save draft first", "error"); return; }
+      if (!confirm("Finalize this rate confirmation and dispatch the load?")) return;
+      SRL.finalizeRateConfirmation(state.rcId)
+        .then(function(result) {
+          showRCStatus("FINALIZED");
+          showToast("Rate confirmation finalized. Load status: " + result.load.status, "success");
+        })
+        .catch(function(err) { showToast("Finalize failed: " + err.message, "error"); });
+    };
+
+    // ─── HTML Helpers ──────────────────────────────
+    function esc(s) { if (!s) return ""; var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+    function num(n) { return Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    function fmtDate(d) { if (!d) return "--"; return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+    function formatEquip(e) { return (e || "").replace(/_/g, " "); }
+
+    function infoRow(label, value) {
+      return '<div class="info-row"><span class="label">' + label + '</span><span class="value">' + (value || "--") + '</span></div>';
+    }
+
+    function profitRow(label, value) {
+      return '<div class="profit-row"><span>' + label + '</span><span class="val">' + value + '</span></div>';
+    }
+
+    function formField(label, field, value, extraClass, type, isStop) {
+      var cls = "form-group" + (extraClass ? " " + extraClass : "");
+      var t = type || "text";
+      var attr = isStop ? 'data-stop-field="' + field.split("_").pop() + '" data-stop-idx="' + field.split("_")[1] + '"' : 'data-field="' + field + '"';
+      return '<div class="' + cls + '"><label>' + label + '</label><input type="' + t + '" ' + attr + ' value="' + esc(String(value !== undefined && value !== null ? value : "")) + '"' + (t === "number" ? ' step="0.01"' : '') + '></div>';
+    }
+
+    function formArea(label, field, value, extraClass, isStop) {
+      var cls = "form-group" + (extraClass ? " " + extraClass : "");
+      var attr = isStop ? 'data-stop-field="' + field.split("_").pop() + '" data-stop-idx="' + field.split("_")[1] + '"' : 'data-field="' + field + '"';
+      return '<div class="' + cls + '"><label>' + label + '</label><textarea ' + attr + '>' + esc(value || "") + '</textarea></div>';
+    }
+
+    function formSelect(label, field, value, options, isStop) {
+      var cls = "form-group";
+      var attr = isStop ? 'data-stop-field="' + field.split("_").pop() + '" data-stop-idx="' + field.split("_")[1] + '"' : 'data-field="' + field + '"';
+      var html = '<div class="' + cls + '"><label>' + label + '</label><select ' + attr + '>';
+      options.forEach(function(opt) {
+        var sel = (opt === value || opt === String(value)) ? " selected" : "";
+        html += '<option value="' + opt + '"' + sel + '>' + (opt || "-- Select --") + '</option>';
+      });
+      html += '</select></div>';
+      return html;
+    }
+
+    function checkbox(label, field, checked) {
+      return '<div class="form-group" style="flex-direction:row;align-items:center;gap:8px">' +
+        '<input type="checkbox" data-field="' + field + '"' + (checked ? ' checked' : '') + ' style="width:16px;height:16px">' +
+        '<label style="text-transform:none;font-weight:500;font-size:13px;color:var(--gray-700)">' + label + '</label>' +
+      '</div>';
+    }
+
+    function navBtns(sectionIdx) {
+      var html = '<div class="nav-btns">';
+      if (sectionIdx > 0) {
+        html += '<button class="btn-outline" style="padding:8px 20px;font-size:13px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._switchSection(' + (sectionIdx - 1) + ')">Previous</button>';
+      }
+      if (sectionIdx < SECTIONS.length - 1) {
+        html += '<button class="btn-gold" style="padding:8px 20px;font-size:13px;border-radius:6px;cursor:pointer;border:none" onclick="window._switchSection(' + (sectionIdx + 1) + ')">Next</button>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function showToast(msg, type) {
+      var el = document.createElement("div");
+      el.className = "toast " + (type || "success");
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(function() { el.remove(); }, 3500);
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+    window.handleLogout = handleLogout;
+
+  })();
+  </script>
+</body>
+</html>

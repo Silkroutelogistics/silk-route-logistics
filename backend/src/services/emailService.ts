@@ -12,7 +12,7 @@ interface EmailAttachment {
   contentType?: string;
 }
 
-async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[]) {
+export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[]) {
   if (resend) {
     try {
       const { data, error } = await resend.emails.send({
@@ -50,7 +50,7 @@ const brandFooter = `
     <p style="margin:0">Silk Route Logistics &bull; silkroutelogistics.ai</p>
   </div>`;
 
-function wrap(body: string) {
+export function wrap(body: string) {
   return `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
     ${brandHeader}
     <div style="padding:24px">${body}</div>
@@ -252,6 +252,80 @@ export async function sendSequenceEmail(
   // Send via the standard sendEmail function
   await sendEmail(to, subject, html);
   console.log(`[Sequence][Email] Sent to ${to}: ${subject} (seq: ${sequenceId})`);
+}
+
+// ─── Shipper Notification Templates ──────────────────────────
+
+export function shipperPickupHtml(loadRef: string, origin: string, dest: string, carrierName: string, eta: string) {
+  return wrap(`
+    <h2 style="color:#0f172a">Shipment Picked Up</h2>
+    <p>Your shipment <strong>${loadRef}</strong> has been picked up and is now in transit.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${loadRef}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Origin</td><td style="padding:8px;border:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Destination</td><td style="padding:8px;border:1px solid #e2e8f0">${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Carrier</td><td style="padding:8px;border:1px solid #e2e8f0">${carrierName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">ETA</td><td style="padding:8px;border:1px solid #e2e8f0">${eta}</td></tr>
+    </table>
+    <p>You will receive regular transit updates throughout the journey.</p>
+  `);
+}
+
+export function shipperTransitHtml(
+  loadRef: string, origin: string, dest: string, lastLocation: string,
+  etaStr: string, percentComplete: number,
+  checkCalls: { location: string; status: string; createdAt: string }[],
+) {
+  const ccRows = checkCalls.map(
+    (cc) => `<tr><td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:13px">${cc.createdAt}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:13px">${cc.location || "—"}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:13px">${cc.status}</td></tr>`
+  ).join("");
+
+  const barColor = percentComplete >= 75 ? "#22c55e" : percentComplete >= 40 ? "#f59e0b" : "#3b82f6";
+  return wrap(`
+    <h2 style="color:#0f172a">Transit Update — ${loadRef}</h2>
+    <p>Here is the latest tracking update for your shipment.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Current Location</td><td style="padding:8px;border:1px solid #e2e8f0">${lastLocation}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">ETA</td><td style="padding:8px;border:1px solid #e2e8f0">${etaStr}</td></tr>
+    </table>
+    <div style="margin:16px 0">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:4px">Progress: ${percentComplete}%</div>
+      <div style="background:#e2e8f0;border-radius:8px;height:12px;overflow:hidden">
+        <div style="background:${barColor};height:100%;width:${percentComplete}%;border-radius:8px"></div>
+      </div>
+    </div>
+    ${checkCalls.length > 0 ? `
+    <h3 style="color:#0f172a;font-size:14px;margin-top:20px">Recent Check Calls</h3>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0">
+      <tr style="background:#f8fafc"><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;font-size:12px">Time</th><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;font-size:12px">Location</th><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;font-size:12px">Status</th></tr>
+      ${ccRows}
+    </table>` : ""}
+  `);
+}
+
+export function shipperDeliveryHtml(loadRef: string, origin: string, dest: string, deliveredAt: string) {
+  return wrap(`
+    <h2 style="color:#22c55e">Shipment Delivered</h2>
+    <p>Your shipment <strong>${loadRef}</strong> has been delivered successfully.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${loadRef}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Delivered At</td><td style="padding:8px;border:1px solid #e2e8f0">${deliveredAt}</td></tr>
+    </table>
+    <p>Proof of Delivery (POD) will be sent to you once it has been validated.</p>
+  `);
+}
+
+export function shipperPODHtml(loadRef: string, podUrl: string) {
+  return wrap(`
+    <h2 style="color:#0f172a">Proof of Delivery Available — ${loadRef}</h2>
+    <p>The Proof of Delivery for shipment <strong>${loadRef}</strong> has been validated and is now available.</p>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${podUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Download POD</a>
+    </div>
+    <p style="color:#64748b;font-size:13px">If you have any questions about this delivery, please contact your account representative.</p>
+  `);
 }
 
 export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {

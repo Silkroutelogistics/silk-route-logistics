@@ -4,6 +4,7 @@ import fs from "fs";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
+import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 
 // ─── POST /api/documents/upload ───────────────────────
 export async function uploadDocuments(req: AuthRequest, res: Response) {
@@ -33,6 +34,13 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
       })
     )
   );
+
+  // If POD uploaded for a load, trigger validation and shipper notification
+  if (docType === "POD" && loadId) {
+    for (const doc of documents) {
+      validateAndNotifyPOD(loadId, doc.id).catch((e) => console.error("[ShipperNotify] POD validation error:", e.message));
+    }
+  }
 
   res.status(201).json(documents);
 }

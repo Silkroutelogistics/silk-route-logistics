@@ -848,6 +848,10 @@
           <h2 id="detail-ref">--</h2>
           <span id="detail-status-badge" class="status-badge"></span>
           <div class="detail-header-actions">
+            <a id="tender-dispatch-btn" class="btn-primary btn-sm" style="display:none" href="#" target="_blank">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Tender / Dispatch
+            </a>
             <select id="detail-status-select" class="btn-secondary btn-sm" style="padding-right:28px" onchange="changeLoadStatus()">
               <option value="">Change Status...</option>
             </select>
@@ -1185,6 +1189,16 @@
       var badge = document.getElementById("detail-status-badge");
       badge.textContent = STATUS_LABELS[load.status] || load.status;
       badge.className = "status-badge status-" + load.status.toLowerCase();
+
+      // Tender/Dispatch button — show for POSTED/BOOKED/CONFIRMED/TENDERED
+      var tenderBtn = document.getElementById("tender-dispatch-btn");
+      var tenderStatuses = ["POSTED", "BOOKED", "CONFIRMED", "TENDERED"];
+      if (tenderStatuses.indexOf(load.status) !== -1) {
+        tenderBtn.style.display = "inline-flex";
+        tenderBtn.href = "/ae/tender.html?loadId=" + load.id;
+      } else {
+        tenderBtn.style.display = "none";
+      }
 
       // Status select
       renderStatusSelect(load);

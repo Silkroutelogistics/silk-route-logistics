@@ -471,6 +471,30 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
 
   y += 85;
 
+  // Multi-Stop Section (if applicable)
+  if (fd.isMultiStop && fd.stops && Array.isArray(fd.stops) && fd.stops.length > 0) {
+    y = checkPageBreak(doc, y, 40 + fd.stops.length * 35);
+    y = sectionTitle(doc, "ADDITIONAL STOPS", y);
+    for (let i = 0; i < fd.stops.length; i++) {
+      const stop = fd.stops[i];
+      y = checkPageBreak(doc, y, 35);
+      doc.fontSize(9).fillColor("#D4A843").text(`Stop ${i + 1} — ${stop.type || "STOP"}`, 50, y);
+      y += 12;
+      doc.fontSize(9).fillColor("#1E1E2F");
+      doc.text(stop.company || "—", 50, y);
+      if (stop.address) doc.text(stop.address, 200, y);
+      if (stop.city) doc.text(`${stop.city}, ${stop.state || ""} ${stop.zip || ""}`, 350, y);
+      y += 14;
+      if (stop.contact) { doc.text(`Contact: ${stop.contact}${stop.phone ? " | " + stop.phone : ""}`, 50, y); y += 12; }
+      if (stop.refNumber) { doc.text(`Ref: ${stop.refNumber}`, 50, y); y += 12; }
+      if (stop.instructions) { doc.text(`Instructions: ${stop.instructions}`, 50, y, { width: 510 }); y += 12; }
+    }
+    if (fd.extraStopPay) {
+      doc.fontSize(9).fillColor("#1E1E2F").text(`Extra Stop Pay: $${Number(fd.extraStopPay).toLocaleString()}`, 50, y);
+      y += 16;
+    }
+  }
+
   // Section 5 — Equipment & Commodity
   y = checkPageBreak(doc, y, 60);
   y = sectionTitle(doc, "EQUIPMENT & COMMODITY", y);
@@ -546,6 +570,43 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     if (fd.appointmentRequired) { doc.fillColor("#dc2626").text("** APPOINTMENT REQUIRED **", 50, y); y += 16; }
   }
 
+  // Payment Terms
+  if (fd.carrierPaymentTier || fd.paymentTerms || fd.factoringCompany) {
+    y = checkPageBreak(doc, y, 80);
+    y = sectionTitle(doc, "PAYMENT TERMS", y);
+    doc.fontSize(9).fillColor("#1E1E2F");
+    if (fd.carrierPaymentTier) { doc.text(`Payment Tier: ${fd.carrierPaymentTier}`, 50, y); y += 14; }
+    if (fd.quickPayFeePercent) { doc.text(`QuickPay Fee: ${fd.quickPayFeePercent}%`, 50, y); y += 14; }
+    if (fd.paymentTerms) { doc.text(`Terms: ${fd.paymentTerms}`, 50, y); y += 14; }
+    if (fd.factoringCompany) {
+      doc.text(`Factoring Company: ${fd.factoringCompany}`, 50, y); y += 14;
+      if (fd.factoringContact) { doc.text(`Factoring Contact: ${fd.factoringContact}`, 50, y); y += 14; }
+      if (fd.factoringEmail) { doc.text(`Factoring Email: ${fd.factoringEmail}`, 50, y); y += 14; }
+    }
+
+    // Document Checklist
+    if (fd.docChecklist) {
+      y += 4;
+      doc.fontSize(8).fillColor("#888888").text("Required Documents:", 50, y); y += 12;
+      const checks = fd.docChecklist;
+      const items = [
+        { key: "signedRateCon", label: "Signed Rate Confirmation" },
+        { key: "signedBol", label: "Signed BOL" },
+        { key: "pod", label: "Proof of Delivery" },
+        { key: "carrierInvoice", label: "Carrier Invoice" },
+        { key: "lumperReceipt", label: "Lumper Receipt" },
+        { key: "scaleTicket", label: "Scale Ticket" },
+        { key: "tempLog", label: "Temperature Log" },
+      ];
+      for (const item of items) {
+        if (checks[item.key]) {
+          doc.fontSize(8).fillColor("#1E1E2F").text(`  \u2713 ${item.label}`, 50, y); y += 11;
+        }
+      }
+    }
+    y += 8;
+  }
+
   // Section 9 — Terms & Conditions
   y = checkPageBreak(doc, y, 100);
   y = sectionTitle(doc, "TERMS & CONDITIONS", y);
@@ -583,6 +644,107 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.fontSize(7).fillColor("#888888");
   doc.text(fd.brokerSignDate || "Date: _______________", 50, y);
   doc.text(fd.carrierSignDate || "Date: _______________", 310, y);
+
+  addFooter(doc);
+  doc.end();
+  return doc;
+}
+
+/**
+ * Shipper-facing Load Confirmation PDF — omits all carrier cost/rate information.
+ */
+export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): InstanceType<typeof PDFDocument> {
+  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+  const fd = formData || {};
+
+  addHeader(doc, "LOAD CONFIRMATION");
+
+  let y = 155;
+
+  // Reference & Date
+  labelValue(doc, "Reference Number", fd.referenceNumber || load.referenceNumber, 50, y);
+  labelValue(doc, "Date", new Date().toLocaleDateString(), 450, y);
+
+  y += 40;
+  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  y += 10;
+
+  // Broker Info
+  y = sectionTitle(doc, "BROKER", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(COMPANY.name, 50, y);
+  doc.text(`${COMPANY.address}, ${COMPANY.cityStateZip}`, 50, y + 14);
+  doc.text(`${COMPANY.phone} | ${COMPANY.email}`, 50, y + 28);
+  y += 50;
+
+  // Shipper / Origin
+  y = checkPageBreak(doc, y, 80);
+  y = sectionTitle(doc, "SHIPPER / ORIGIN", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(fd.shipperName || load.customer?.name || "—", 50, y);
+  if (fd.shipperAddress || load.customer?.address) doc.text(fd.shipperAddress || load.customer?.address || "", 50, y + 14);
+  const shipperCSZ = fd.shipperCity || load.customer?.city
+    ? `${fd.shipperCity || load.customer?.city || ""}, ${fd.shipperState || load.customer?.state || ""} ${fd.shipperZip || load.customer?.zip || ""}`
+    : `${load.originCity}, ${load.originState} ${load.originZip}`;
+  doc.text(shipperCSZ, 50, y + 28);
+  y += 55;
+
+  // Consignee / Destination
+  y = checkPageBreak(doc, y, 80);
+  y = sectionTitle(doc, "CONSIGNEE / DESTINATION", y);
+  doc.fontSize(10).fillColor("#1E1E2F");
+  doc.text(fd.consigneeName || "—", 50, y);
+  if (fd.consigneeAddress) doc.text(fd.consigneeAddress, 50, y + 14);
+  const consigneeCSZ = fd.consigneeCity
+    ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`
+    : `${load.destCity}, ${load.destState} ${load.destZip}`;
+  doc.text(consigneeCSZ, 50, y + 28);
+  y += 55;
+
+  // Equipment & Commodity
+  y = checkPageBreak(doc, y, 50);
+  y = sectionTitle(doc, "EQUIPMENT & COMMODITY", y);
+  labelValue(doc, "Equipment", fd.equipmentType || load.equipmentType, 50, y);
+  labelValue(doc, "Commodity", fd.commodity || load.commodity || "General Freight", 200, y);
+  labelValue(doc, "Weight", load.weight ? `${load.weight.toLocaleString()} lbs` : "—", 380, y);
+  y += 35;
+
+  // Dates
+  y = checkPageBreak(doc, y, 50);
+  y = sectionTitle(doc, "SCHEDULE", y);
+  labelValue(doc, "Pickup Date", fd.pickupDate || load.pickupDate.toLocaleDateString(), 50, y);
+  labelValue(doc, "Pickup Window", fd.pickupTimeWindow || "—", 200, y);
+  labelValue(doc, "Delivery Date", fd.deliveryDate || load.deliveryDate.toLocaleDateString(), 350, y);
+  labelValue(doc, "Delivery Window", fd.deliveryTimeWindow || "—", 500, y);
+  y += 35;
+
+  // Shipper Rate (customer-facing, NO carrier cost)
+  y = checkPageBreak(doc, y, 60);
+  y = sectionTitle(doc, "RATE", y);
+  const shipperRate = fd.customerRate ?? load.customer ? (load as any).customerRate || load.rate : load.rate;
+  doc.fontSize(12).fillColor("#1E1E2F").text("Agreed Rate:", 50, y);
+  doc.text(`$${Number(shipperRate).toLocaleString()}`, 200, y);
+  y += 30;
+
+  // Special Instructions
+  const instructions = fd.specialInstructions || load.specialInstructions || load.notes;
+  if (instructions) {
+    y = checkPageBreak(doc, y, 60);
+    y = sectionTitle(doc, "SPECIAL INSTRUCTIONS", y);
+    doc.fontSize(9).fillColor("#1E1E2F").text(instructions, 50, y, { width: 510 });
+    y += doc.heightOfString(instructions, { width: 510 }) + 15;
+  }
+
+  // Signatures
+  y = checkPageBreak(doc, y, 80);
+  y = sectionTitle(doc, "AUTHORIZATION", y);
+  y += 10;
+  doc.fontSize(8).fillColor("#888888");
+  doc.text("Authorized by Silk Route Logistics", 50, y);
+  doc.text("Acknowledged by Shipper", 310, y);
+  y += 30;
+  doc.moveTo(50, y).lineTo(250, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
+  doc.moveTo(310, y).lineTo(550, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
 
   addFooter(doc);
   doc.end();
