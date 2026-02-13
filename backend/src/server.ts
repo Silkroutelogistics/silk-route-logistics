@@ -53,6 +53,7 @@ app.use(securityHeaders);
 const allowedOrigins = [
   "https://silkroutelogistics.ai",
   "https://www.silkroutelogistics.ai",
+  "https://silk-route-logistics.pages.dev",
   "http://localhost:3000",
   "http://localhost:5173",
   "http://localhost:4000",
@@ -69,7 +70,9 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (server-to-server, health checks)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) return callback(null, true);
+      // Exact match or *.pages.dev preview deploys
+      if (allowedOrigins.includes(origin) || /\.pages\.dev$/.test(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -77,7 +80,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     maxAge: 86400,
   })
 );
