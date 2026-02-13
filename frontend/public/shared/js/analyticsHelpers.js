@@ -202,7 +202,7 @@ var SRLAnalytics = (function () {
   }
   function showEmpty(id, msg) {
     var el = document.getElementById(id);
-    if (el) el.innerHTML = '<div class="analytics-empty"><div class="empty-icon">📊</div><h3>No Data Available</h3><p>' + (msg || "Try adjusting the date range") + '</p></div>';
+    if (el) el.innerHTML = '<div class="analytics-empty"><div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></div><h3>No Data Available</h3><p>' + (msg || "Try adjusting the date range") + '</p></div>';
   }
   function repeat(s, n) { var r = ""; for (var i = 0; i < n; i++) r += s; return r; }
 

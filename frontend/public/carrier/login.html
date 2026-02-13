@@ -51,7 +51,7 @@
       background:rgba(200,150,62,0.04);border:1px solid rgba(200,150,62,0.08);transition:all .3s ease;
     }
     .feature-pill:hover{background:rgba(200,150,62,0.08);border-color:rgba(200,150,62,0.15);transform:translateY(-1px)}
-    .feature-pill .icon{font-size:16px}
+    .feature-pill .icon{display:inline-flex;color:#c8a951;line-height:0}
     .feature-pill .label{font-size:12.5px;color:#b0bec5;font-weight:500;letter-spacing:.3px}
 
     .tagline{font-size:13.5px;color:#5a7a9a;line-height:1.75;margin-bottom:40px;max-width:440px}
@@ -62,7 +62,6 @@
       background:linear-gradient(135deg,rgba(200,150,62,0.05) 0%,rgba(200,150,62,0.02) 100%);
       border-left:3px solid #c8a951;
     }
-    .insight-bg-icon{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:72px;opacity:.04;pointer-events:none}
     .insight-content{position:relative;z-index:1}
     .insight-label{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#c8a951;margin-bottom:10px}
     .insight-text{font-size:14.5px;color:#cdd6de;line-height:1.7;font-style:italic;max-width:380px}
@@ -162,16 +161,15 @@
         <div class="portal-subtitle">Your loads, payments, and rewards in one place</div>
 
         <div class="features-grid">
-          <div class="feature-pill"><span class="icon">📦</span><span class="label">Available Loads</span></div>
-          <div class="feature-pill"><span class="icon">📍</span><span class="label">Real-Time Tracking</span></div>
-          <div class="feature-pill"><span class="icon">🏆</span><span class="label">Caravan Rewards</span></div>
-          <div class="feature-pill"><span class="icon">⚡</span><span class="label">Instant Pay</span></div>
+          <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg></span><span class="label">Available Loads</span></div>
+          <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span class="label">Real-Time Tracking</span></div>
+          <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span><span class="label">Caravan Rewards</span></div>
+          <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span class="label">Instant Pay</span></div>
         </div>
 
         <p class="tagline">Join our carrier network for priority loads, fast payment, and AI-powered dispatch from Kalamazoo, Michigan.</p>
 
         <div class="insight-card">
-          <div id="insightBgIcon" class="insight-bg-icon"></div>
           <div class="insight-content">
             <div id="insightLabel" class="insight-label"></div>
             <div id="insightText" class="insight-text"></div>
@@ -218,7 +216,7 @@
         </form>
 
         <div class="divider"><div class="divider-line"></div><span class="divider-text">or</span><div class="divider-line"></div></div>
-        <a href="/auth/login" class="btn-secondary">💼 Employee Login</a>
+        <a href="/auth/login" class="btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg> Employee Login</a>
 
         <div class="bottom-links">
           New to SRL? <a href="/carrier/register.html">Register as a Carrier</a>
@@ -333,46 +331,36 @@
   <script>
     (function() {
       var carrierFacts = [
-        { icon:"💰", cat:"CARRIER TIP", text:"Owner-operators who diversify across 3+ quality brokerages see 23% higher annual revenue.", src:"OOIDA Foundation Survey, 2024" },
-        { icon:"📈", cat:"CARRIER INSIGHT", text:"Carriers with 95%+ on-time delivery rates earn 12% more per mile through premium load access.", src:"DAT Solutions" },
-        { icon:"🏆", cat:"CARAVAN REWARDS", text:"Carriers in the Caravan Partner Program earn priority loads and reduced Quick Pay fees.", src:"Silk Route Logistics" },
-        { icon:"⛽", cat:"MONEY SAVER", text:"Proper tire inflation alone can improve fuel efficiency by up to 3.3%, saving over $2,000 per year.", src:"U.S. DOE / FMCSA" },
-        { icon:"🚛", cat:"DID YOU KNOW", text:"The average Class 8 truck travels 45,000\u2013100,000 miles per year depending on operation type.", src:"FMCSA" },
-        { icon:"📊", cat:"INDUSTRY FACT", text:"Owner-operators\u2019 average gross income is $220,000\u2013$350,000 per year before expenses.", src:"OOIDA / ATRI" },
-        { icon:"🛡️", cat:"COMPLIANCE TIP", text:"Pre-trip inspections take 15 minutes but prevent 30% of roadside violations. Protect your CSA score.", src:"FMCSA" },
-        { icon:"📱", cat:"TECH TIP", text:"Carriers using digital document upload have 50% fewer payment delays — upload PODs same day.", src:"TriumphPay" },
-        { icon:"💳", cat:"QUICK PAY", text:"Quick Pay improves cash flow by 25+ days. SRL offers Quick Pay at 1.5\u20133% depending on your CPP tier.", src:"Silk Route Logistics" },
-        { icon:"🔧", cat:"MAINTENANCE", text:"Preventive maintenance reduces breakdowns by 25% and extends truck life by 3\u20135 years.", src:"TMC/ATA" },
-        { icon:"📦", cat:"DID YOU KNOW", text:"Every item in your home was on a truck at some point — drivers are the backbone of the economy.", src:"ATA" },
-        { icon:"⚡", cat:"EFFICIENCY", text:"Planning routes to avoid congestion saves the average carrier 8,000 miles and $12,000 in fuel per year.", src:"ATRI" },
-        { icon:"📋", cat:"COMPLIANCE", text:"Keeping insurance, authority, and drug testing current means zero interruptions to earning.", src:"FMCSA" },
-        { icon:"🤝", cat:"PARTNERSHIP", text:"SRL pays carriers within terms, every time. No excuses, no delays. Your cash flow is our priority.", src:"Silk Route Logistics" },
-        { icon:"❤️", cat:"DRIVER WELLNESS", text:"Taking a 15-minute walk at every fuel stop reduces back pain risk by 40% and boosts alertness.", src:"NIOSH" },
-        { icon:"😴", cat:"SAFETY FIRST", text:"Drowsy driving causes 13% of all large truck crashes. Rest when tired — no load is worth your life.", src:"FMCSA" },
-        { icon:"🥗", cat:"DRIVER WELLNESS", text:"Meal prepping for the road saves $200+/month vs truck stop dining and helps maintain energy.", src:"Rolling Strong" },
-        { icon:"💧", cat:"DRIVER WELLNESS", text:"Drinking 8 glasses of water daily reduces fatigue by 25% — keep a refillable bottle in your cab.", src:"CDC" },
-        { icon:"🧘", cat:"DRIVER WELLNESS", text:"5 minutes of stretching before driving reduces muscle strain injuries by 35% over a year.", src:"NIOSH" },
-        { icon:"💡", cat:"MOTIVATION", text:"The road to success and the road to failure are almost the same — persistence is the difference.", src:"Colin R. Davis" },
-        { icon:"🔥", cat:"MOTIVATION", text:"Every mile you drive is a mile closer to your goals. Keep moving.", src:"Silk Route Logistics" },
-        { icon:"🎯", cat:"MOTIVATION", text:"Small daily improvements over time lead to stunning results.", src:"Robin Sharma" },
-        { icon:"💪", cat:"MOTIVATION", text:"You don\u2019t have to be great to start, but you have to start to be great.", src:"Zig Ziglar" },
-        { icon:"🏔️", cat:"MOTIVATION", text:"Be not afraid of going slowly; be afraid only of standing still.", src:"Chinese Proverb" },
-        { icon:"🐫", cat:"SILK ROAD HISTORY", text:"Ancient Silk Road merchants traveled in caravans of up to 1,000 camels — the original fleet operations.", src:"UNESCO / Britannica" },
-        { icon:"🗺️", cat:"SILK ROAD HISTORY", text:"Marco Polo called Silk Road merchants \u2018the bravest men alive\u2019 — today\u2019s drivers carry that spirit.", src:"The Travels of Marco Polo" },
-        { icon:"🤝", cat:"SRL PROMISE", text:"At Silk Route, carriers aren\u2019t a number — you\u2019re a partner. Fair rates, fast pay, a voice that matters.", src:"Silk Route Logistics" },
-        { icon:"🛡️", cat:"SRL VALUES", text:"Zero double-brokering. Period. Your load stays your load, and your rate stays your rate.", src:"Silk Route Logistics" },
-        { icon:"📡", cat:"SRL VISION", text:"We\u2019re building the brokerage we wished existed when we were on the other side of the phone.", src:"Silk Route Logistics" }
+        { cat:"CARRIER TIP", text:"Owner-operators who diversify across 3+ quality brokerages see 23% higher annual revenue.", src:"OOIDA Foundation Survey, 2024" },
+        { cat:"CARRIER INSIGHT", text:"Carriers with 95%+ on-time delivery rates earn 12% more per mile through premium load access.", src:"DAT Solutions" },
+        { cat:"CARAVAN REWARDS", text:"Carriers in the Caravan Partner Program earn priority loads and reduced Quick Pay fees.", src:"Silk Route Logistics" },
+        { cat:"MONEY SAVER", text:"Proper tire inflation alone can improve fuel efficiency by up to 3.3%, saving over $2,000 per year.", src:"U.S. DOE / FMCSA" },
+        { cat:"DID YOU KNOW", text:"The average Class 8 truck travels 45,000\u2013100,000 miles per year depending on operation type.", src:"FMCSA" },
+        { cat:"INDUSTRY FACT", text:"Owner-operators\u2019 average gross income is $220,000\u2013$350,000 per year before expenses.", src:"OOIDA / ATRI" },
+        { cat:"COMPLIANCE TIP", text:"Pre-trip inspections take 15 minutes but prevent 30% of roadside violations. Protect your CSA score.", src:"FMCSA" },
+        { cat:"TECH TIP", text:"Carriers using digital document upload have 50% fewer payment delays \u2014 upload PODs same day.", src:"TriumphPay" },
+        { cat:"QUICK PAY", text:"Quick Pay improves cash flow by 25+ days. SRL offers Quick Pay at 1.5\u20133% depending on your CPP tier.", src:"Silk Route Logistics" },
+        { cat:"MAINTENANCE", text:"Preventive maintenance reduces breakdowns by 25% and extends truck life by 3\u20135 years.", src:"TMC/ATA" },
+        { cat:"DID YOU KNOW", text:"Every item in your home was on a truck at some point \u2014 drivers are the backbone of the economy.", src:"ATA" },
+        { cat:"EFFICIENCY", text:"Planning routes to avoid congestion saves the average carrier 8,000 miles and $12,000 in fuel per year.", src:"ATRI" },
+        { cat:"COMPLIANCE", text:"Keeping insurance, authority, and drug testing current means zero interruptions to earning.", src:"FMCSA" },
+        { cat:"PARTNERSHIP", text:"SRL pays carriers within terms, every time. No excuses, no delays. Your cash flow is our priority.", src:"Silk Route Logistics" },
+        { cat:"DRIVER WELLNESS", text:"Taking a 15-minute walk at every fuel stop reduces back pain risk by 40% and boosts alertness.", src:"NIOSH" },
+        { cat:"SAFETY FIRST", text:"Drowsy driving causes 13% of all large truck crashes. Rest when tired \u2014 no load is worth your life.", src:"FMCSA" },
+        { cat:"DRIVER WELLNESS", text:"Meal prepping for the road saves $200+/month vs truck stop dining and helps maintain energy.", src:"Rolling Strong" },
+        { cat:"DRIVER WELLNESS", text:"Drinking 8 glasses of water daily reduces fatigue by 25% \u2014 keep a refillable bottle in your cab.", src:"CDC" },
+        { cat:"DRIVER WELLNESS", text:"5 minutes of stretching before driving reduces muscle strain injuries by 35% over a year.", src:"NIOSH" },
+        { cat:"MOTIVATION", text:"The road to success and the road to failure are almost the same \u2014 persistence is the difference.", src:"Colin R. Davis" },
+        { cat:"MOTIVATION", text:"Every mile you drive is a mile closer to your goals. Keep moving.", src:"Silk Route Logistics" },
+        { cat:"MOTIVATION", text:"Small daily improvements over time lead to stunning results.", src:"Robin Sharma" },
+        { cat:"MOTIVATION", text:"You don\u2019t have to be great to start, but you have to start to be great.", src:"Zig Ziglar" },
+        { cat:"MOTIVATION", text:"Be not afraid of going slowly; be afraid only of standing still.", src:"Chinese Proverb" },
+        { cat:"SILK ROAD HISTORY", text:"Ancient Silk Road merchants traveled in caravans of up to 1,000 camels \u2014 the original fleet operations.", src:"UNESCO / Britannica" },
+        { cat:"SILK ROAD HISTORY", text:"Marco Polo called Silk Road merchants \u2018the bravest men alive\u2019 \u2014 today\u2019s drivers carry that spirit.", src:"The Travels of Marco Polo" },
+        { cat:"SRL PROMISE", text:"At Silk Route, carriers aren\u2019t a number \u2014 you\u2019re a partner. Fair rates, fast pay, a voice that matters.", src:"Silk Route Logistics" },
+        { cat:"SRL VALUES", text:"Zero double-brokering. Period. Your load stays your load, and your rate stays your rate.", src:"Silk Route Logistics" },
+        { cat:"SRL VISION", text:"We\u2019re building the brokerage we wished existed when we were on the other side of the phone.", src:"Silk Route Logistics" }
       ];
-
-      var categoryIcons = {
-        "CARRIER TIP":"💡","CARRIER INSIGHT":"📊","CARAVAN REWARDS":"🏆",
-        "MONEY SAVER":"💰","DID YOU KNOW":"💭","INDUSTRY FACT":"🏭",
-        "COMPLIANCE TIP":"📋","TECH TIP":"📱","QUICK PAY":"⚡",
-        "MAINTENANCE":"🔧","EFFICIENCY":"🎯","COMPLIANCE":"✅",
-        "PARTNERSHIP":"🤝","DRIVER WELLNESS":"❤️","SAFETY FIRST":"🛡️",
-        "MOTIVATION":"🏔️","SILK ROAD HISTORY":"🐫",
-        "SRL PROMISE":"⚖️","SRL VALUES":"⭐","SRL VISION":"📡"
-      };
 
       var today = new Date();
       var start = new Date(today.getFullYear(), 0, 0);
@@ -382,7 +370,6 @@
       document.getElementById('insightLabel').textContent = f.cat;
       document.getElementById('insightText').textContent = '\u201c' + f.text + '\u201d';
       document.getElementById('insightSource').textContent = '\u2014 ' + f.src;
-      document.getElementById('insightBgIcon').textContent = categoryIcons[f.cat] || '🚛';
     })();
   </script>
 </body>
