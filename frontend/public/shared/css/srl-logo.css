@@ -1,5 +1,7 @@
 /* ═══════════════════════════════════════════════════════
-   SRL Animated Logo + Penguin Walking on Road
+   SRL Animated Logo + Penguin Walking Northward
+   Inspired by the viral penguin journey — always heading north
+   Penguin stays strictly within the compass arch (N-S center gap)
    ═══════════════════════════════════════════════════════ */
 
 /* ─── Logo Container ─────────────────────────────────── */
@@ -7,7 +9,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
   color: inherit;
 }
@@ -15,7 +17,7 @@
 .srl-logo-wrap:hover { text-decoration: none; }
 
 .srl-logo-img {
-  height: 44px;
+  height: 56px;
   width: auto;
   border-radius: 6px;
   position: relative;
@@ -24,9 +26,9 @@
 
 .srl-logo-text {
   font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.8px;
   text-transform: uppercase;
   color: #fff;
   line-height: 1.2;
@@ -34,9 +36,9 @@
 
 .srl-logo-text span {
   display: block;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 500;
-  letter-spacing: 2.5px;
+  letter-spacing: 2.8px;
   color: #94A3B8;
 }
 
@@ -49,12 +51,15 @@
 }
 
 /* ─── Penguin SVG ────────────────────────────────────── */
+/* The penguin-zone overlays the logo exactly and clips to it.
+   The penguin walks along the vertical center arch of the compass
+   (the narrow gap between the two compass halves). */
 .srl-penguin-zone {
   position: absolute;
   top: 0;
   left: 0;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   pointer-events: none;
   z-index: 2;
   overflow: hidden;
@@ -63,9 +68,9 @@
 
 .srl-penguin {
   position: absolute;
-  width: 12px;
-  height: 14px;
-  animation: penguin-path 6s ease-in-out infinite;
+  width: 10px;
+  height: 12px;
+  animation: penguin-north 4.5s linear infinite;
 }
 
 /* Waddle rotation on the penguin body */
@@ -75,151 +80,117 @@
   animation: waddle 0.4s ease-in-out infinite;
 }
 
-/* ─── Path Animation ─────────────────────────────────── */
-/* The golden road in the SRL compass logo curves from
-   bottom-left to upper-right through the compass circle.
-   Penguin walks up, turns, walks back down. */
-@keyframes penguin-path {
+/* ─── One-Way Northward Path (56px logo) ─────────────── */
+/* The compass arch runs vertically through the center (~x=23).
+   Penguin walks straight up the center gap from south to north.
+   Tiny x-drift (±2px) gives a natural waddle feel while staying
+   strictly within the arch corridor. */
+@keyframes penguin-north {
   0% {
-    left: 6px;
-    top: 30px;
-    transform: scaleX(1);
+    left: 22px;
+    top: 48px;
+    opacity: 0;
   }
-  15% {
-    left: 12px;
-    top: 22px;
-    transform: scaleX(1);
+  5% {
+    left: 23px;
+    top: 44px;
+    opacity: 1;
   }
-  30% {
-    left: 18px;
-    top: 16px;
-    transform: scaleX(1);
+  20% {
+    left: 24px;
+    top: 36px;
+    opacity: 1;
   }
-  45% {
-    left: 26px;
-    top: 10px;
-    transform: scaleX(1);
+  40% {
+    left: 22px;
+    top: 27px;
+    opacity: 1;
   }
-  49% {
-    left: 28px;
-    top: 8px;
-    transform: scaleX(1);
-  }
-  50% {
-    left: 28px;
-    top: 8px;
-    transform: scaleX(-1);
-  }
-  65% {
-    left: 20px;
-    top: 16px;
-    transform: scaleX(-1);
+  60% {
+    left: 24px;
+    top: 19px;
+    opacity: 1;
   }
   80% {
-    left: 12px;
-    top: 22px;
-    transform: scaleX(-1);
+    left: 23px;
+    top: 11px;
+    opacity: 1;
   }
-  95% {
-    left: 6px;
-    top: 30px;
-    transform: scaleX(-1);
+  92% {
+    left: 23px;
+    top: 4px;
+    opacity: 1;
   }
-  99% {
-    left: 6px;
-    top: 30px;
-    transform: scaleX(-1);
+  97% {
+    left: 23px;
+    top: 1px;
+    opacity: 0;
+  }
+  98% {
+    left: 22px;
+    top: 48px;
+    opacity: 0;
   }
   100% {
-    left: 6px;
-    top: 30px;
-    transform: scaleX(1);
+    left: 22px;
+    top: 48px;
+    opacity: 0;
   }
 }
 
 @keyframes waddle {
-  0%, 100% { transform: rotate(-4deg); }
-  50% { transform: rotate(4deg); }
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
 }
 
-/* ─── Mobile: Tablet ─────────────────────────────────── */
+/* ─── Mobile: Tablet (44px logo) ─────────────────────── */
 @media (max-width: 768px) {
-  .srl-logo-img {
-    height: 36px;
-  }
-  .srl-penguin-zone {
-    width: 36px;
-    height: 36px;
-  }
-  .srl-penguin {
-    width: 10px;
-    height: 12px;
-  }
-  .srl-logo-text {
-    font-size: 13px;
-    letter-spacing: 1px;
-  }
-  .srl-logo-text span {
-    font-size: 9px;
-    letter-spacing: 1.5px;
-  }
-  .srl-logo-wrap {
-    gap: 8px;
-  }
-  /* Scale penguin path for 36px container */
-  @keyframes penguin-path {
-    0% { left: 5px; top: 24px; transform: scaleX(1); }
-    15% { left: 10px; top: 18px; transform: scaleX(1); }
-    30% { left: 15px; top: 13px; transform: scaleX(1); }
-    49% { left: 22px; top: 6px; transform: scaleX(1); }
-    50% { left: 22px; top: 6px; transform: scaleX(-1); }
-    65% { left: 15px; top: 13px; transform: scaleX(-1); }
-    80% { left: 10px; top: 18px; transform: scaleX(-1); }
-    99% { left: 5px; top: 24px; transform: scaleX(-1); }
-    100% { left: 5px; top: 24px; transform: scaleX(1); }
+  .srl-logo-img { height: 44px; }
+  .srl-penguin-zone { width: 44px; height: 44px; }
+  .srl-penguin { width: 8px; height: 10px; }
+  .srl-logo-text { font-size: 14px; letter-spacing: 1.2px; }
+  .srl-logo-text span { font-size: 9.5px; letter-spacing: 2px; }
+  .srl-logo-wrap { gap: 10px; }
+
+  @keyframes penguin-north {
+    0%   { left: 17px; top: 38px; opacity: 0; }
+    5%   { left: 18px; top: 34px; opacity: 1; }
+    20%  { left: 19px; top: 28px; opacity: 1; }
+    40%  { left: 17px; top: 21px; opacity: 1; }
+    60%  { left: 19px; top: 15px; opacity: 1; }
+    80%  { left: 18px; top: 9px; opacity: 1; }
+    92%  { left: 18px; top: 3px; opacity: 1; }
+    97%  { left: 18px; top: 0px; opacity: 0; }
+    98%  { left: 17px; top: 38px; opacity: 0; }
+    100% { left: 17px; top: 38px; opacity: 0; }
   }
 }
 
-/* ─── Mobile: Small Phone ────────────────────────────── */
+/* ─── Mobile: Small Phone (36px logo) ────────────────── */
 @media (max-width: 480px) {
-  .srl-logo-img {
-    height: 32px;
-  }
-  .srl-penguin-zone {
-    width: 32px;
-    height: 32px;
-  }
-  .srl-penguin {
-    width: 8px;
-    height: 10px;
-  }
-  .srl-logo-text {
-    font-size: 11px;
-    letter-spacing: 0.8px;
-  }
-  .srl-logo-text span {
-    font-size: 8px;
-    letter-spacing: 1px;
-  }
-  .srl-logo-wrap {
-    gap: 6px;
-  }
-  /* Scale penguin path for 32px container */
-  @keyframes penguin-path {
-    0% { left: 4px; top: 22px; transform: scaleX(1); }
-    15% { left: 8px; top: 16px; transform: scaleX(1); }
-    30% { left: 13px; top: 11px; transform: scaleX(1); }
-    49% { left: 20px; top: 5px; transform: scaleX(1); }
-    50% { left: 20px; top: 5px; transform: scaleX(-1); }
-    65% { left: 13px; top: 11px; transform: scaleX(-1); }
-    80% { left: 8px; top: 16px; transform: scaleX(-1); }
-    99% { left: 4px; top: 22px; transform: scaleX(-1); }
-    100% { left: 4px; top: 22px; transform: scaleX(1); }
+  .srl-logo-img { height: 36px; }
+  .srl-penguin-zone { width: 36px; height: 36px; }
+  .srl-penguin { width: 7px; height: 9px; }
+  .srl-logo-text { font-size: 11px; letter-spacing: 0.8px; }
+  .srl-logo-text span { font-size: 8px; letter-spacing: 1px; }
+  .srl-logo-wrap { gap: 7px; }
+
+  @keyframes penguin-north {
+    0%   { left: 14px; top: 30px; opacity: 0; }
+    5%   { left: 14px; top: 28px; opacity: 1; }
+    20%  { left: 15px; top: 23px; opacity: 1; }
+    40%  { left: 14px; top: 17px; opacity: 1; }
+    60%  { left: 15px; top: 12px; opacity: 1; }
+    80%  { left: 14px; top: 7px; opacity: 1; }
+    92%  { left: 14px; top: 3px; opacity: 1; }
+    97%  { left: 14px; top: 0px; opacity: 0; }
+    98%  { left: 14px; top: 30px; opacity: 0; }
+    100% { left: 14px; top: 30px; opacity: 0; }
   }
 }
 
 /* ─── Reduced Motion ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .srl-penguin { animation: none; top: 20px; left: 16px; }
+  .srl-penguin { animation: none; top: 24px; left: 23px; opacity: 1; }
   .srl-penguin svg { animation: none; }
 }
