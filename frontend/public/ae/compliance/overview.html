@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compliance Overview - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <style>
+    /* ========== Compliance Overview Page Styles ========== */
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .filter-bar select,
+    .filter-bar input {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .filter-bar select:focus,
+    .filter-bar input:focus {
+      border-color: var(--gold);
+    }
+    .filter-spacer { flex: 1; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--gold);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--white);
+      color: var(--navy);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* --- Summary Bar --- */
+    .summary-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .summary-text {
+      font-size: 14px;
+      color: var(--gray-700);
+      font-weight: 500;
+    }
+    .summary-text strong {
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .summary-distribution {
+      flex: 1;
+      max-width: 400px;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      background: var(--gray-100);
+    }
+    .summary-distribution .seg-compliant {
+      background: var(--green);
+      transition: width 0.3s;
+    }
+    .summary-distribution .seg-expiring {
+      background: var(--amber);
+      transition: width 0.3s;
+    }
+    .summary-distribution .seg-noncompliant {
+      background: var(--red);
+      transition: width 0.3s;
+    }
+    .summary-legend {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .summary-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .legend-dot-green { background: var(--green); }
+    .legend-dot-amber { background: var(--amber); }
+    .legend-dot-red { background: var(--red); }
+
+    /* --- Matrix Table --- */
+    .table-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+    }
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 900px;
+    }
+    .matrix-table th {
+      text-align: center;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .matrix-table th:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: var(--white);
+      z-index: 10;
+      min-width: 220px;
+    }
+    .matrix-table th:last-child { text-align: center; }
+    .matrix-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700);
+      white-space: nowrap;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .matrix-table td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: var(--white);
+      z-index: 5;
+    }
+    .matrix-table tr.clickable-row { cursor: pointer; }
+    .matrix-table tr.clickable-row:hover td { background: var(--gray-50); }
+    .matrix-table tr.clickable-row:hover td:first-child { background: var(--gray-50); }
+    .matrix-table tr:nth-child(even) td { background: var(--gray-50); }
+    .matrix-table tr:nth-child(even) td:first-child { background: var(--gray-50); }
+    .matrix-table tr:nth-child(even):hover td { background: rgba(241, 245, 249, 0.8); }
+    .matrix-table tr:nth-child(even):hover td:first-child { background: rgba(241, 245, 249, 0.8); }
+
+    /* --- Carrier Cell --- */
+    .carrier-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .carrier-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+      line-height: 1.3;
+    }
+    .carrier-mc {
+      font-size: 11px;
+      color: var(--gray-400);
+    }
+    .carrier-cell-badges {
+      display: flex;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    /* --- Tier Badge --- */
+    .tier-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .tier-PLATINUM { background: linear-gradient(135deg, #E5E7EB, #D1D5DB); color: #374151; }
+    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
+    .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
+    .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
+    .tier-GUEST { background: rgba(107,114,128,0.1); color: #6B7280; }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+
+    /* --- Status Cells --- */
+    .status-cell {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      position: relative;
+      cursor: default;
+    }
+    .status-valid {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+    .status-expiring {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+    .status-expired {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+    .status-na {
+      background: var(--gray-100);
+      color: var(--gray-400);
+    }
+
+    /* --- Tooltip --- */
+    .tooltip-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+    .tooltip-wrap .tooltip-box {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--navy);
+      color: var(--white);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 50;
+      pointer-events: none;
+      box-shadow: var(--shadow-md);
+    }
+    .tooltip-wrap .tooltip-box::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--navy);
+    }
+    .tooltip-wrap:hover .tooltip-box {
+      display: block;
+    }
+
+    /* --- Issues Count --- */
+    .issues-count {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .issues-0 {
+      background: var(--green-bg);
+      color: #15803D;
+    }
+    .issues-warn {
+      background: var(--amber-bg);
+      color: #B45309;
+    }
+    .issues-critical {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    /* --- Empty / Loading States --- */
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+      gap: 16px;
+    }
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+    .error-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--red);
+      font-size: 14px;
+    }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      box-shadow: var(--shadow-lg);
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast-success {
+      background: var(--green);
+      color: #fff;
+    }
+    .toast-error {
+      background: var(--red);
+      color: #fff;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s; }
+      .sidebar.open { transform: translateX(0); }
+      .overlay.open { display: block; }
+      .main { margin-left: 0; }
+      .main-header { padding: 16px 16px 0; padding-top: 56px; }
+      .filter-bar { padding: 12px 16px; }
+      .summary-bar { padding: 12px 16px; flex-wrap: wrap; }
+      .table-wrap { padding: 0 16px 16px; }
+      .summary-distribution { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/logo.png" alt="SRL">
+        <span>SRL Command</span>
+      </div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">&nbsp;</div>
+        <div class="sidebar-user-role" id="user-role">&nbsp;</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+        <a href="/ae/analytics.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          Analytics
+        </a>
+        <a href="/ae/accounting/dashboard.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>
+          Accounting
+        </a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+          <a href="/ae/compliance/dashboard.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Dashboard
+          </a>
+          <a href="/ae/compliance/overview.html" class="active">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Overview
+          </a>
+          <a href="/ae/compliance/alerts.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Alerts
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Hamburger (mobile) -->
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="main-header">
+        <h1>Compliance Overview</h1>
+        <p>Carrier compliance matrix &mdash; all items at a glance</p>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <select id="filter-sort">
+          <option value="issues">Sort: Most Issues</option>
+          <option value="expiring">Sort: Expiring Soonest</option>
+          <option value="alpha">Sort: Alphabetical</option>
+        </select>
+        <select id="filter-status">
+          <option value="">Status: All</option>
+          <option value="compliant">Compliant</option>
+          <option value="expiring">Expiring</option>
+          <option value="non-compliant">Non-Compliant</option>
+        </select>
+        <select id="filter-tier">
+          <option value="">Tier: All</option>
+          <option value="PLATINUM">Platinum</option>
+          <option value="GOLD">Gold</option>
+          <option value="SILVER">Silver</option>
+          <option value="BRONZE">Bronze</option>
+        </select>
+        <div class="filter-spacer"></div>
+        <button class="btn-secondary" id="btn-export" onclick="exportCSV()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+
+      <!-- Summary Bar -->
+      <div class="summary-bar" id="summary-bar" style="display:none;">
+        <div class="summary-text" id="summary-text"></div>
+        <div class="summary-distribution" id="summary-dist"></div>
+        <div class="summary-legend">
+          <span><span class="legend-dot legend-dot-green"></span> Compliant</span>
+          <span><span class="legend-dot legend-dot-amber"></span> Expiring</span>
+          <span><span class="legend-dot legend-dot-red"></span> Non-Compliant</span>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <div id="loading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <div>Loading compliance data...</div>
+        </div>
+        <div id="error-state" class="error-state" style="display:none;"></div>
+        <div id="empty-state" class="empty-state" style="display:none;">No carriers found.</div>
+        <table class="matrix-table" id="matrix-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Carrier</th>
+              <th>Authority</th>
+              <th>Auto Insurance</th>
+              <th>Cargo Insurance</th>
+              <th>W9</th>
+              <th>COI</th>
+              <th>Authority Doc</th>
+              <th>FMCSA Status</th>
+              <th>Issues</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-body"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* =========================================
+       STATE
+       ========================================= */
+    var state = {
+      allCarriers: [],
+      filteredCarriers: [],
+      complianceMap: {}
+    };
+
+    /* =========================================
+       COMPLIANCE FIELD DEFINITIONS
+       ========================================= */
+    var COMPLIANCE_FIELDS = [
+      { key: "authority",     label: "Authority",       expiryKey: "authorityExpiry" },
+      { key: "autoInsurance", label: "Auto Insurance",  expiryKey: "autoInsuranceExpiry" },
+      { key: "cargoInsurance",label: "Cargo Insurance", expiryKey: "cargoInsuranceExpiry" },
+      { key: "w9",            label: "W9",              expiryKey: "w9Expiry" },
+      { key: "coi",           label: "COI",             expiryKey: "coiExpiry" },
+      { key: "authorityDoc",  label: "Authority Doc",   expiryKey: "authorityDocExpiry" },
+      { key: "fmcsaStatus",   label: "FMCSA Status",    expiryKey: null }
+    ];
+
+    /* =========================================
+       INIT
+       ========================================= */
+    (function init() {
+      loadUser();
+      fetchComplianceData();
+
+      document.getElementById("filter-sort").addEventListener("change", applyFilters);
+      document.getElementById("filter-status").addEventListener("change", applyFilters);
+      document.getElementById("filter-tier").addEventListener("change", applyFilters);
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        if (window.SRLTheme) SRLTheme.restoreFromUser(u);
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function() {});
+    }
+
+    /* =========================================
+       FETCH COMPLIANCE DATA
+       ========================================= */
+    function fetchComplianceData() {
+      document.getElementById("loading").style.display = "flex";
+      document.getElementById("matrix-table").style.display = "none";
+      document.getElementById("error-state").style.display = "none";
+      document.getElementById("empty-state").style.display = "none";
+
+      SRL.getCarriers({ limit: 500, status: "APPROVED" }).then(function(res) {
+        var carriers = res.carriers || [];
+        state.allCarriers = carriers.map(function(c) {
+          return enrichCarrierCompliance(c);
+        });
+        applyFilters();
+        document.getElementById("loading").style.display = "none";
+      }).catch(function(err) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("error-state").style.display = "block";
+        document.getElementById("error-state").textContent = "Error loading compliance data: " + (err.message || "Unknown error");
+      });
+    }
+
+    /* =========================================
+       ENRICH CARRIER WITH COMPLIANCE DATA
+       ========================================= */
+    function enrichCarrierCompliance(carrier) {
+      var now = Date.now();
+      var sixtyDays = 60 * 24 * 60 * 60 * 1000;
+      var comp = {};
+      var issueCount = 0;
+      var hasExpiring = false;
+      var hasExpired = false;
+
+      // Authority — from carrier.authorityStatus or operating authority expiry
+      comp.authority = evaluateField(carrier.authorityExpiry || carrier.operatingAuthorityExpiry, now, sixtyDays);
+      // Auto Insurance
+      comp.autoInsurance = evaluateField(carrier.autoInsuranceExpiry || carrier.insuranceAutoExpiry, now, sixtyDays);
+      // Cargo Insurance
+      comp.cargoInsurance = evaluateField(carrier.cargoInsuranceExpiry || carrier.insuranceCargoExpiry, now, sixtyDays);
+      // W9
+      comp.w9 = evaluateDocField(carrier.w9OnFile || carrier.w9Received, carrier.w9Expiry, now, sixtyDays);
+      // COI
+      comp.coi = evaluateField(carrier.coiExpiry || carrier.certificateOfInsuranceExpiry, now, sixtyDays);
+      // Authority Doc
+      comp.authorityDoc = evaluateDocField(carrier.authorityDocOnFile || carrier.authorityDocReceived, carrier.authorityDocExpiry, now, sixtyDays);
+      // FMCSA Status
+      comp.fmcsaStatus = evaluateFMCSA(carrier.fmcsaStatus || carrier.authorityStatus);
+
+      // Count issues
+      COMPLIANCE_FIELDS.forEach(function(f) {
+        var s = comp[f.key];
+        if (s && s.status === "expired") { issueCount++; hasExpired = true; }
+        if (s && s.status === "expiring") { issueCount++; hasExpiring = true; }
+      });
+
+      carrier._compliance = comp;
+      carrier._issueCount = issueCount;
+      carrier._overallStatus = hasExpired ? "non-compliant" : (hasExpiring ? "expiring" : "compliant");
+      carrier._earliestExpiry = getEarliestExpiry(comp);
+
+      return carrier;
+    }
+
+    function evaluateField(expiryDate, now, threshold) {
+      if (!expiryDate) return { status: "na", label: "No data", expiry: null, daysRemaining: null };
+      var expMs = new Date(expiryDate).getTime();
+      if (isNaN(expMs)) return { status: "na", label: "Invalid date", expiry: null, daysRemaining: null };
+      var daysRemaining = Math.ceil((expMs - now) / (24 * 60 * 60 * 1000));
+      if (daysRemaining < 0) {
+        return { status: "expired", label: "Expired " + Math.abs(daysRemaining) + "d ago", expiry: expiryDate, daysRemaining: daysRemaining };
+      }
+      if (daysRemaining <= 60) {
+        return { status: "expiring", label: "Expires in " + daysRemaining + "d", expiry: expiryDate, daysRemaining: daysRemaining };
+      }
+      return { status: "valid", label: "Valid, expires " + formatDate(expiryDate), expiry: expiryDate, daysRemaining: daysRemaining };
+    }
+
+    function evaluateDocField(onFile, expiryDate, now, threshold) {
+      if (!onFile && !expiryDate) return { status: "na", label: "Not on file", expiry: null, daysRemaining: null };
+      if (onFile && !expiryDate) return { status: "valid", label: "On file (no expiry)", expiry: null, daysRemaining: null };
+      return evaluateField(expiryDate, now, threshold);
+    }
+
+    function evaluateFMCSA(status) {
+      if (!status) return { status: "na", label: "Not checked", expiry: null, daysRemaining: null };
+      var s = String(status).toUpperCase();
+      if (s === "AUTHORIZED" || s === "ACTIVE" || s === "A") {
+        return { status: "valid", label: "Authorized", expiry: null, daysRemaining: null };
+      }
+      if (s === "PENDING" || s === "CONDITIONAL") {
+        return { status: "expiring", label: s.charAt(0) + s.slice(1).toLowerCase(), expiry: null, daysRemaining: null };
+      }
+      return { status: "expired", label: s.charAt(0) + s.slice(1).toLowerCase(), expiry: null, daysRemaining: null };
+    }
+
+    function getEarliestExpiry(comp) {
+      var earliest = Infinity;
+      Object.keys(comp).forEach(function(k) {
+        var f = comp[k];
+        if (f && f.daysRemaining !== null && f.daysRemaining < earliest) {
+          earliest = f.daysRemaining;
+        }
+      });
+      return earliest === Infinity ? 99999 : earliest;
+    }
+
+    /* =========================================
+       FILTERS & SORTING
+       ========================================= */
+    function applyFilters() {
+      var sort = document.getElementById("filter-sort").value;
+      var statusFilter = document.getElementById("filter-status").value;
+      var tierFilter = document.getElementById("filter-tier").value;
+
+      var list = state.allCarriers.slice();
+
+      // Filter by status
+      if (statusFilter) {
+        list = list.filter(function(c) {
+          return c._overallStatus === statusFilter;
+        });
+      }
+
+      // Filter by tier
+      if (tierFilter) {
+        list = list.filter(function(c) {
+          return (c.tier || "NONE") === tierFilter;
+        });
+      }
+
+      // Sort
+      if (sort === "issues") {
+        list.sort(function(a, b) { return b._issueCount - a._issueCount; });
+      } else if (sort === "expiring") {
+        list.sort(function(a, b) { return a._earliestExpiry - b._earliestExpiry; });
+      } else if (sort === "alpha") {
+        list.sort(function(a, b) {
+          var nameA = (a.companyName || a.name || "").toLowerCase();
+          var nameB = (b.companyName || b.name || "").toLowerCase();
+          return nameA < nameB ? -1 : (nameA > nameB ? 1 : 0);
+        });
+      }
+
+      state.filteredCarriers = list;
+      renderSummary();
+      renderTable(list);
+    }
+
+    /* =========================================
+       RENDER SUMMARY
+       ========================================= */
+    function renderSummary() {
+      var total = state.allCarriers.length;
+      if (total === 0) {
+        document.getElementById("summary-bar").style.display = "none";
+        return;
+      }
+
+      var compliant = 0, expiring = 0, nonCompliant = 0;
+      state.allCarriers.forEach(function(c) {
+        if (c._overallStatus === "compliant") compliant++;
+        else if (c._overallStatus === "expiring") expiring++;
+        else nonCompliant++;
+      });
+
+      var pct = Math.round((compliant / total) * 100);
+      document.getElementById("summary-text").innerHTML =
+        "<strong>" + compliant + " of " + total + "</strong> carriers fully compliant (" + pct + "%)";
+
+      var distEl = document.getElementById("summary-dist");
+      distEl.innerHTML =
+        '<div class="seg-compliant" style="width:' + ((compliant / total) * 100) + '%"></div>' +
+        '<div class="seg-expiring" style="width:' + ((expiring / total) * 100) + '%"></div>' +
+        '<div class="seg-noncompliant" style="width:' + ((nonCompliant / total) * 100) + '%"></div>';
+
+      document.getElementById("summary-bar").style.display = "flex";
+    }
+
+    /* =========================================
+       RENDER TABLE
+       ========================================= */
+    function renderTable(carriers) {
+      var tbody = document.getElementById("matrix-body");
+      var table = document.getElementById("matrix-table");
+      var empty = document.getElementById("empty-state");
+
+      if (carriers.length === 0) {
+        table.style.display = "none";
+        empty.style.display = "block";
+        return;
+      }
+
+      table.style.display = "table";
+      empty.style.display = "none";
+
+      var html = "";
+      carriers.forEach(function(c) {
+        var carrierId = c.id || c.userId || "";
+        var companyName = esc(c.companyName || c.name || "Unknown Carrier");
+        var mc = c.mcNumber || c.mc || "";
+        var tier = c.tier || "NONE";
+
+        html += '<tr class="clickable-row" onclick="goToCarrier(\'' + esc(carrierId) + '\')">';
+
+        // Carrier column (sticky)
+        html += '<td><div class="carrier-info">';
+        html += '<div class="carrier-name">' + companyName + '</div>';
+        html += '<div class="carrier-mc">MC# ' + esc(mc) + '</div>';
+        html += '<div class="carrier-cell-badges"><span class="tier-badge tier-' + esc(tier) + '">' + esc(tier) + '</span></div>';
+        html += '</div></td>';
+
+        // Compliance fields
+        COMPLIANCE_FIELDS.forEach(function(f) {
+          var comp = c._compliance[f.key];
+          html += '<td>' + renderStatusCell(comp) + '</td>';
+        });
+
+        // Issues column
+        var ic = c._issueCount;
+        var icClass = ic === 0 ? "issues-0" : (ic <= 2 ? "issues-warn" : "issues-critical");
+        html += '<td><span class="issues-count ' + icClass + '">' + ic + ' issue' + (ic !== 1 ? 's' : '') + '</span></td>';
+
+        html += '</tr>';
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function renderStatusCell(comp) {
+      if (!comp) return '<span class="status-cell status-na">&mdash;</span>';
+
+      var icon, cls;
+      switch (comp.status) {
+        case "valid":
+          icon = "&#10003;";
+          cls = "status-valid";
+          break;
+        case "expiring":
+          icon = "&#9200;";
+          cls = "status-expiring";
+          break;
+        case "expired":
+          icon = "&#10007;";
+          cls = "status-expired";
+          break;
+        default:
+          icon = "&mdash;";
+          cls = "status-na";
+      }
+
+      var tooltipText = esc(comp.label || "");
+      if (comp.expiry) {
+        tooltipText += " | Exp: " + formatDate(comp.expiry);
+      }
+
+      return '<div class="tooltip-wrap">' +
+        '<span class="status-cell ' + cls + '">' + icon + '</span>' +
+        '<div class="tooltip-box">' + tooltipText + '</div>' +
+        '</div>';
+    }
+
+    /* =========================================
+       NAVIGATION
+       ========================================= */
+    function goToCarrier(id) {
+      if (id) {
+        window.location.href = "/ae/compliance/carrier.html?id=" + encodeURIComponent(id);
+      }
+    }
+
+    /* =========================================
+       EXPORT CSV
+       ========================================= */
+    function exportCSV() {
+      var carriers = state.filteredCarriers;
+      if (carriers.length === 0) {
+        showToast("No data to export", "error");
+        return;
+      }
+
+      var headers = ["Carrier Name", "MC#", "Tier"];
+      COMPLIANCE_FIELDS.forEach(function(f) {
+        headers.push(f.label + " Status");
+        headers.push(f.label + " Expiry");
+      });
+      headers.push("Issue Count");
+
+      var rows = [headers.join(",")];
+
+      carriers.forEach(function(c) {
+        var row = [];
+        row.push(csvEscape(c.companyName || c.name || ""));
+        row.push(csvEscape(c.mcNumber || c.mc || ""));
+        row.push(c.tier || "NONE");
+
+        COMPLIANCE_FIELDS.forEach(function(f) {
+          var comp = c._compliance[f.key];
+          if (comp) {
+            row.push(comp.status || "na");
+            row.push(comp.expiry ? formatDate(comp.expiry) : "");
+          } else {
+            row.push("na");
+            row.push("");
+          }
+        });
+
+        row.push(c._issueCount);
+        rows.push(row.join(","));
+      });
+
+      var csv = rows.join("\n");
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "compliance_overview_" + new Date().toISOString().slice(0, 10) + ".csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("CSV exported successfully", "success");
+    }
+
+    function csvEscape(str) {
+      if (!str) return "";
+      str = String(str);
+      if (str.indexOf(",") !== -1 || str.indexOf('"') !== -1 || str.indexOf("\n") !== -1) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    /* =========================================
+       HELPERS
+       ========================================= */
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    function formatDate(d) {
+      if (!d) return "--";
+      return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function formatRole(role) {
+      var m = { ADMIN: "Administrator", BROKER: "Account Executive", DISPATCH: "Dispatch", OPERATIONS: "Operations", CEO: "CEO", CARRIER: "Carrier", ACCOUNTING: "Accounting" };
+      return m[role] || role;
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function() { el.classList.remove("show"); }, 3500);
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+<script src="/ae/js/notification-bell.js"></script>
+<script src="/shared/js/themeEngine.js"></script>
+<script src="/shared/js/marco-polo.js"></script>
+</body>
+</html>

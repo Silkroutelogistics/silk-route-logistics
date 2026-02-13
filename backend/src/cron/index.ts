@@ -189,5 +189,29 @@ export function initCronJobs() {
     }
   });
 
+  // ─── Weekly (Monday 3 AM): FMCSA compliance scan ─────────
+  cron.schedule("0 3 * * 1", async () => {
+    try {
+      console.log("[Cron Weekly] Starting FMCSA compliance scan...");
+      const { weeklyFmcsaScan } = require("../services/complianceMonitorService");
+      const result = await weeklyFmcsaScan();
+      console.log("[Cron Weekly] FMCSA scan complete:", result);
+    } catch (err) {
+      console.error("[Cron Weekly] FMCSA scan error:", err);
+    }
+  });
+
+  // ─── Daily (5 AM): Compliance reminder emails ──────────────
+  cron.schedule("0 5 * * *", async () => {
+    try {
+      console.log("[Cron Daily] Sending compliance reminders...");
+      const { dailyComplianceReminders } = require("../services/complianceMonitorService");
+      const result = await dailyComplianceReminders();
+      console.log("[Cron Daily] Compliance reminders sent:", result);
+    } catch (err) {
+      console.error("[Cron Daily] Compliance reminder error:", err);
+    }
+  });
+
   console.log("[Cron] All scheduled jobs initialized");
 }

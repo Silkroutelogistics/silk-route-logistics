@@ -609,6 +609,12 @@
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>
           Accounting
         </a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+          <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
+          <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
+          <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
+        </div>
       </nav>
       <div class="sidebar-footer">
         <button class="sidebar-logout" onclick="handleLogout()">
@@ -664,7 +670,7 @@
           <div class="kpi-sub" id="kpi-score-sub"></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Compliance Issues</div>
+          <div class="kpi-label">Compliance Health</div>
           <div class="kpi-value" id="kpi-compliance">--</div>
           <div class="kpi-sub" id="kpi-compliance-sub"></div>
         </div>
@@ -702,6 +708,12 @@
           <option value="REVIEW">Under Review</option>
           <option value="REJECTED">Rejected</option>
           <option value="SUSPENDED">Suspended</option>
+        </select>
+        <select id="filter-compliance" onchange="applyFilters()">
+          <option value="">All Compliance</option>
+          <option value="compliant">Compliant</option>
+          <option value="expiring">Expiring Soon</option>
+          <option value="non-compliant">Non-Compliant</option>
         </select>
         <input type="text" id="filter-search" placeholder="Search company, MC#, DOT#, contact..." oninput="debounceSearch()">
         <div class="filter-spacer"></div>
@@ -867,11 +879,14 @@
         ? scored.reduce(function(sum, c){ return sum + (c.performance.overallScore || 0); }, 0) / scored.length
         : 0;
 
-      // Compliance issues
-      var complianceIssues = carriers.filter(function(c){
-        if (!c.insuranceExpiry) return true;
-        return new Date(c.insuranceExpiry) < new Date();
+      // Compliance health
+      var now = new Date();
+      var thirtyDays = new Date(now.getTime() + 30 * 86400000);
+      var compliantCount = carriers.filter(function(c) {
+        if (!c.insuranceExpiry) return false;
+        return new Date(c.insuranceExpiry) > thirtyDays;
       }).length;
+      var compliancePct = approved > 0 ? Math.round((compliantCount / approved) * 100) : 0;
 
       document.getElementById("kpi-total").textContent = total;
       document.getElementById("kpi-total-sub").textContent = approved + " approved";
@@ -881,8 +896,8 @@
       document.getElementById("kpi-guest-sub").textContent = "eligible for promotion";
       document.getElementById("kpi-score").textContent = avgScore > 0 ? avgScore.toFixed(1) + "%" : "N/A";
       document.getElementById("kpi-score-sub").textContent = scored.length + " scored carriers";
-      document.getElementById("kpi-compliance").textContent = complianceIssues;
-      document.getElementById("kpi-compliance-sub").textContent = complianceIssues > 0 ? "need attention" : "all clear";
+      document.getElementById("kpi-compliance").textContent = compliancePct + "%";
+      document.getElementById("kpi-compliance-sub").textContent = compliantCount + " of " + approved + " fully compliant";
     }
 
     function tierBreakdown(carriers) {
@@ -917,6 +932,15 @@
           if (status === "APPROVED" && c.onboardingStatus !== "APPROVED") return false;
           if (status === "REJECTED" && c.onboardingStatus !== "REJECTED") return false;
           if (status === "SUSPENDED" && c.status !== "SUSPENDED") return false;
+        }
+        var compliance = document.getElementById("filter-compliance").value;
+        if (compliance) {
+          var thirtyDays = new Date(Date.now() + 30 * 86400000);
+          var now = new Date();
+          var insExp = c.insuranceExpiry ? new Date(c.insuranceExpiry) : null;
+          if (compliance === "compliant" && (!insExp || insExp <= thirtyDays)) return false;
+          if (compliance === "expiring" && (!insExp || insExp <= now || insExp > thirtyDays)) return false;
+          if (compliance === "non-compliant" && insExp && insExp > now) return false;
         }
         if (search) {
           var haystack = [
@@ -1119,6 +1143,7 @@
         html += '<button class="btn-secondary btn-sm" style="border-color:var(--amber);color:var(--amber)" onclick="doEmergencyApprove(\'' + c.id + '\')">Emergency Approve</button>';
       }
       html += '<button class="btn-secondary btn-sm" onclick="window.location.href=\'/ae/loads.html\'">Find Loads</button>';
+      html += '<button class="btn-secondary btn-sm" style="border-color:var(--green);color:var(--green)" onclick="window.location.href=\'/ae/compliance/carrier.html?id=' + c.id + '\'">View Compliance</button>';
       html += '</div>';
 
       document.getElementById("detail-body").innerHTML = html;

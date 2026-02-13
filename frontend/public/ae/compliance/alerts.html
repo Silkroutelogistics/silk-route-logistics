@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compliance Alerts - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <style>
+    /* ========== Compliance Alerts Styles ========== */
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-pill {
+      padding: 6px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      background: var(--white);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--gray-500);
+      transition: all 0.15s;
+    }
+    .filter-pill:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .filter-pill.active {
+      background: var(--navy);
+      color: var(--white);
+      border-color: var(--navy);
+    }
+    .filter-pill.pill-critical.active {
+      background: #EF4444;
+      border-color: #EF4444;
+      color: #fff;
+    }
+    .filter-pill.pill-warning.active {
+      background: #F59E0B;
+      border-color: #F59E0B;
+      color: #fff;
+    }
+    .filter-pill.pill-info.active {
+      background: #3B82F6;
+      border-color: #3B82F6;
+      color: #fff;
+    }
+    .filter-spacer { flex: 1; }
+    .filter-bar select,
+    .filter-bar input {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-700);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .filter-bar select:focus,
+    .filter-bar input:focus {
+      border-color: var(--gold);
+    }
+    .filter-bar input[type="text"] { width: 200px; }
+    .filter-bar input[type="date"] { width: 150px; }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* --- Buttons --- */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--gold); color: var(--white);
+      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--white); color: var(--navy);
+      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
+      font-weight: 500; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-danger {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; background: var(--white); color: var(--red);
+      border: 1px solid var(--red-bg); border-radius: 6px; font-size: 12px;
+      font-weight: 500; cursor: pointer;
+    }
+    .btn-danger:hover { background: var(--red-bg); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; background: none; color: var(--gray-500);
+      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 12px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* --- Stats Strip --- */
+    .stats-strip {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+    .stat-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .stat-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .stat-dot.dot-red { background: #EF4444; }
+    .stat-dot.dot-amber { background: #F59E0B; }
+    .stat-dot.dot-blue { background: #3B82F6; }
+
+    /* --- Bulk Actions Bar --- */
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 32px;
+      background: var(--navy);
+      color: var(--white);
+      font-size: 13px;
+    }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar .bulk-count { font-weight: 700; }
+    .bulk-bar .btn-bulk {
+      padding: 5px 14px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--white);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .bulk-bar .btn-bulk:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.6);
+    }
+    .bulk-bar select {
+      padding: 5px 10px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--white);
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    .bulk-bar select option { color: var(--navy); background: var(--white); }
+
+    /* --- Alerts Table --- */
+    .table-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+    }
+    .alerts-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .alerts-table th {
+      text-align: left; padding: 10px 12px; font-weight: 600;
+      color: var(--gray-500); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap; user-select: none;
+    }
+    .alerts-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700); white-space: nowrap;
+    }
+    .alerts-table tr:hover td { background: var(--gray-50); }
+    .alerts-table th.th-checkbox,
+    .alerts-table td.td-checkbox { width: 40px; text-align: center; }
+
+    /* Row severity highlights */
+    .row-critical td { background: rgba(239,68,68,0.05); }
+    .row-critical:hover td { background: rgba(239,68,68,0.08) !important; }
+    .row-warning td { background: rgba(245,158,11,0.05); }
+    .row-warning:hover td { background: rgba(245,158,11,0.08) !important; }
+    .row-info td { background: rgba(59,130,246,0.05); }
+    .row-info:hover td { background: rgba(59,130,246,0.08) !important; }
+
+    /* Severity dot */
+    .severity-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .severity-CRITICAL { background: #EF4444; }
+    .severity-WARNING { background: #F59E0B; }
+    .severity-INFO { background: #3B82F6; }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .status-ACTIVE { background: rgba(34,197,94,0.1); color: #15803D; }
+    .status-SNOOZED { background: var(--gray-100); color: var(--gray-500); }
+    .status-DISMISSED { background: var(--gray-100); color: var(--gray-400); }
+
+    /* Carrier link */
+    .carrier-link {
+      color: var(--navy);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .carrier-link:hover { color: var(--gold); }
+
+    /* Days remaining */
+    .days-overdue { color: #EF4444; font-weight: 600; }
+    .days-warn { color: #F59E0B; font-weight: 600; }
+    .days-ok { color: var(--gray-600); }
+
+    /* Checkbox styling */
+    .alerts-table input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--gold);
+    }
+
+    /* Actions cell */
+    .actions-cell {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* --- Pagination --- */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 32px;
+    }
+    .pagination button {
+      padding: 6px 12px;
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--gray-600);
+    }
+    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+    .pagination .page-info { font-size: 13px; color: var(--gray-500); }
+
+    /* --- Empty State --- */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+    .empty-state svg { margin-bottom: 12px; }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--white);
+      z-index: 9999; transform: translateY(80px); opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    /* --- Loading Skeleton --- */
+    .skeleton-row td {
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton-bar {
+      display: inline-block;
+      height: 12px;
+      border-radius: 4px;
+      background: var(--gray-100);
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 1024px) {
+      .filter-bar { padding: 12px 20px; }
+      .table-wrap { padding: 0 20px 20px; }
+      .bulk-bar { padding: 10px 20px; }
+    }
+    @media (max-width: 640px) {
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar input[type="text"] { width: 100%; }
+      .filter-bar input[type="date"] { width: 100%; }
+      .filter-spacer { display: none; }
+      .stats-strip { flex-wrap: wrap; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+        <a href="/ae/loads.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Load Board</a>
+        <a href="/ae/caravan.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>The Caravan</a>
+        <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
+        <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
+        <a href="/ae/claims.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="13" y2="11"/></svg>Claims</a>
+        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financials</a>
+        <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
+        <a href="/ae/analytics.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</a>
+        <a href="/ae/accounting/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>Accounting</a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+          <a href="/ae/compliance/dashboard.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Dashboard
+          </a>
+          <a href="/ae/compliance/overview.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Overview
+          </a>
+          <a href="/ae/compliance/alerts.html" class="active">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Alerts
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+      </div>
+    </aside>
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1>Compliance Alerts</h1>
+          <p style="color:var(--gray-500);font-size:14px;margin-top:4px;">Active compliance alerts across all carriers</p>
+        </div>
+        <div class="stats-strip" id="stats-strip">
+          <span class="stat-item"><span class="stat-dot dot-red"></span><span id="stat-critical">0</span> Critical</span>
+          <span style="color:var(--gray-300);">&middot;</span>
+          <span class="stat-item"><span class="stat-dot dot-amber"></span><span id="stat-warning">0</span> Warnings</span>
+          <span style="color:var(--gray-300);">&middot;</span>
+          <span class="stat-item"><span class="stat-dot dot-blue"></span><span id="stat-info">0</span> Info</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <span class="filter-label">Severity</span>
+        <div class="filter-pills" id="severity-filters">
+          <button class="filter-pill active" data-severity="">All</button>
+          <button class="filter-pill pill-critical" data-severity="CRITICAL">Critical</button>
+          <button class="filter-pill pill-warning" data-severity="WARNING">Warning</button>
+          <button class="filter-pill pill-info" data-severity="INFO">Info</button>
+        </div>
+        <span class="filter-label" style="margin-left:8px;">Type</span>
+        <select id="filter-type" onchange="applyFiltersAndFetch()">
+          <option value="">All Types</option>
+          <option value="INSURANCE">Insurance</option>
+          <option value="AUTHORITY">Authority</option>
+          <option value="INSPECTION">Inspection</option>
+          <option value="IFTA">IFTA</option>
+          <option value="LICENSE">License</option>
+          <option value="MEDICAL">Medical</option>
+          <option value="REGISTRATION">Registration</option>
+        </select>
+        <span class="filter-label" style="margin-left:8px;">Carrier</span>
+        <input type="text" id="filter-carrier" placeholder="Search carrier..." oninput="debounceCarrierSearch()">
+        <span class="filter-label" style="margin-left:8px;">Date Range</span>
+        <input type="date" id="filter-from" onchange="applyFiltersAndFetch()">
+        <input type="date" id="filter-to" onchange="applyFiltersAndFetch()">
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div class="bulk-bar" id="bulk-bar">
+        <span><span class="bulk-count" id="bulk-count">0</span> selected</span>
+        <button class="btn-bulk" onclick="bulkDismiss()">Dismiss</button>
+        <select id="snooze-days" onchange="bulkSnooze()">
+          <option value="" disabled selected>Snooze...</option>
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+          <option value="30">30 days</option>
+        </select>
+        <button class="btn-bulk" onclick="bulkSendReminder()">Send Reminder</button>
+        <div style="flex:1;"></div>
+        <button class="btn-bulk" onclick="clearSelection()" style="opacity:0.7;">Clear Selection</button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table class="alerts-table">
+          <thead>
+            <tr>
+              <th class="th-checkbox"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"></th>
+              <th>Severity</th>
+              <th>Carrier Name</th>
+              <th>Alert Type</th>
+              <th>Entity</th>
+              <th>Expiry Date</th>
+              <th>Days Remaining</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-tbody">
+            <tr><td colspan="9" class="empty-state">Loading alerts...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <button id="btn-prev" onclick="goPage(-1)" disabled>&laquo; Previous</button>
+        <span class="page-info" id="page-info">Page 1 of 1</span>
+        <button id="btn-next" onclick="goPage(1)" disabled>Next &raquo;</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/ae/js/api.js"></script>
+  <script>
+    /* ======== STATE ======== */
+    var state = {
+      alerts: [],
+      totalCount: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      severityFilter: "",
+      typeFilter: "",
+      carrierSearch: "",
+      dateFrom: "",
+      dateTo: "",
+      selected: {},  // id -> true
+      searchTimer: null
+    };
+
+    var ALERT_TYPE_LABELS = {
+      INSURANCE_EXPIRY: "Insurance Expiry",
+      INSURANCE_EXPIRED: "Insurance Expired",
+      AUTHORITY_REVOKED: "Authority Revoked",
+      AUTHORITY_EXPIRY: "Authority Expiry",
+      FMCSA_OUT_OF_SERVICE: "FMCSA Out-of-Service",
+      FMCSA_OOS: "FMCSA Out-of-Service",
+      INSPECTION_DUE: "Inspection Due",
+      INSPECTION_OVERDUE: "Inspection Overdue",
+      IFTA_EXPIRY: "IFTA Expiry",
+      IFTA_EXPIRED: "IFTA Expired",
+      LICENSE_EXPIRY: "License Expiry",
+      LICENSE_EXPIRED: "License Expired",
+      MEDICAL_CARD_EXPIRY: "Medical Card Expiry",
+      MEDICAL_EXPIRY: "Medical Card Expiry",
+      MEDICAL_EXPIRED: "Medical Card Expired",
+      REGISTRATION_EXPIRY: "Registration Expiry",
+      REGISTRATION_EXPIRED: "Registration Expired",
+      SAFETY_RATING_DOWNGRADE: "Safety Rating Downgrade",
+      CSA_SCORE_BREACH: "CSA Score Threshold Breach",
+      DOCUMENT_PENDING: "Document Pending Review",
+      FMCSA_RECHECK: "FMCSA Re-check Completed"
+    };
+
+    var SEVERITY_LABELS = {
+      CRITICAL: "Critical",
+      WARNING: "Warning",
+      INFO: "Info"
+    };
+
+    /* ======== INIT ======== */
+    (function init() {
+      var token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      loadUser();
+      bindSeverityFilters();
+      readUrlParams();
+      fetchAlerts();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        if (window.SRLTheme) SRLTheme.restoreFromUser(u);
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = formatRole(u.role);
+      }).catch(function() {});
+    }
+
+    function readUrlParams() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("severity")) {
+        state.severityFilter = params.get("severity");
+        updateSeverityPills();
+      }
+      if (params.get("type")) {
+        state.typeFilter = params.get("type");
+        document.getElementById("filter-type").value = state.typeFilter;
+      }
+      if (params.get("carrier")) {
+        state.carrierSearch = params.get("carrier");
+        document.getElementById("filter-carrier").value = state.carrierSearch;
+      }
+      if (params.get("from")) {
+        state.dateFrom = params.get("from");
+        document.getElementById("filter-from").value = state.dateFrom;
+      }
+      if (params.get("to")) {
+        state.dateTo = params.get("to");
+        document.getElementById("filter-to").value = state.dateTo;
+      }
+      if (params.get("page")) {
+        state.page = parseInt(params.get("page"), 10) || 1;
+      }
+    }
+
+    function bindSeverityFilters() {
+      var pills = document.querySelectorAll("#severity-filters .filter-pill");
+      pills.forEach(function(pill) {
+        pill.addEventListener("click", function() {
+          pills.forEach(function(p) { p.classList.remove("active"); });
+          pill.classList.add("active");
+          state.severityFilter = pill.dataset.severity;
+          state.page = 1;
+          fetchAlerts();
+        });
+      });
+    }
+
+    function updateSeverityPills() {
+      var pills = document.querySelectorAll("#severity-filters .filter-pill");
+      pills.forEach(function(p) {
+        p.classList.remove("active");
+        if (p.dataset.severity === state.severityFilter) p.classList.add("active");
+      });
+    }
+
+    function applyFiltersAndFetch() {
+      state.typeFilter = document.getElementById("filter-type").value;
+      state.dateFrom = document.getElementById("filter-from").value;
+      state.dateTo = document.getElementById("filter-to").value;
+      state.page = 1;
+      fetchAlerts();
+    }
+
+    function debounceCarrierSearch() {
+      clearTimeout(state.searchTimer);
+      state.searchTimer = setTimeout(function() {
+        state.carrierSearch = document.getElementById("filter-carrier").value.trim();
+        state.page = 1;
+        fetchAlerts();
+      }, 400);
+    }
+
+    /* ======== FETCH ALERTS ======== */
+    function fetchAlerts() {
+      var params = {
+        status: "ACTIVE",
+        page: state.page,
+        limit: state.limit
+      };
+      if (state.severityFilter) params.severity = state.severityFilter;
+      if (state.typeFilter) params.type = state.typeFilter;
+      if (state.carrierSearch) params.carrier = state.carrierSearch;
+      if (state.dateFrom) params.from = state.dateFrom;
+      if (state.dateTo) params.to = state.dateTo;
+
+      var qs = buildQuery(params);
+      updateUrlParams();
+
+      // Show loading skeletons
+      renderSkeletons();
+
+      SRL.request("/api/compliance/alerts" + qs).then(function(res) {
+        state.alerts = res.alerts || res.data || res || [];
+        if (!Array.isArray(state.alerts)) state.alerts = [];
+        state.totalCount = res.total || res.totalCount || state.alerts.length;
+        state.totalPages = Math.ceil(state.totalCount / state.limit) || 1;
+
+        // Extract severity counts from response or compute locally
+        var counts = res.counts || res.severityCounts || computeSeverityCounts(state.alerts, state.totalCount);
+        document.getElementById("stat-critical").textContent = counts.critical || 0;
+        document.getElementById("stat-warning").textContent = counts.warning || 0;
+        document.getElementById("stat-info").textContent = counts.info || 0;
+
+        renderTable();
+        renderPagination();
+      }).catch(function(err) {
+        console.error("Fetch alerts error:", err);
+        document.getElementById("alerts-tbody").innerHTML =
+          '<tr><td colspan="9" class="empty-state">' +
+          '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+          '<div style="margin-top:8px;">No compliance alerts found</div>' +
+          '</td></tr>';
+      });
+    }
+
+    function computeSeverityCounts(alerts, total) {
+      var counts = { critical: 0, warning: 0, info: 0 };
+      alerts.forEach(function(a) {
+        var sev = (a.severity || "").toUpperCase();
+        if (sev === "CRITICAL") counts.critical++;
+        else if (sev === "WARNING") counts.warning++;
+        else if (sev === "INFO") counts.info++;
+      });
+      return counts;
+    }
+
+    /* ======== RENDER TABLE ======== */
+    function renderTable() {
+      var tbody = document.getElementById("alerts-tbody");
+
+      if (!state.alerts.length) {
+        tbody.innerHTML =
+          '<tr><td colspan="9" class="empty-state">' +
+          '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>' +
+          '<div style="margin-top:8px;">No compliance alerts match your filters</div>' +
+          '</td></tr>';
+        return;
+      }
+
+      var html = "";
+      state.alerts.forEach(function(alert) {
+        var severity = (alert.severity || "INFO").toUpperCase();
+        var rowClass = severity === "CRITICAL" ? "row-critical" :
+                       severity === "WARNING" ? "row-warning" : "row-info";
+        var isChecked = state.selected[alert.id] ? "checked" : "";
+
+        var alertType = formatAlertType(alert.alertType || alert.type || "");
+        var carrierName = esc(alert.carrierName || alert.carrier || "--");
+        var carrierId = alert.carrierId || alert.carrier_id || "";
+        var entity = esc(alert.entityName || alert.entity || "--");
+        var expiryDate = alert.expiryDate || alert.expiry || alert.expiresAt || "";
+        var expiryFormatted = expiryDate ? formatDate(expiryDate) : "--";
+        var daysRemaining = computeDaysRemaining(expiryDate);
+        var daysHtml = formatDaysRemaining(daysRemaining, expiryDate);
+        var status = (alert.status || "ACTIVE").toUpperCase();
+
+        html += '<tr class="' + rowClass + '" data-id="' + alert.id + '">';
+        html += '<td class="td-checkbox"><input type="checkbox" ' + isChecked + ' onchange="toggleSelect(\'' + alert.id + '\', this.checked)" data-alert-id="' + alert.id + '"></td>';
+        html += '<td><span class="severity-dot severity-' + severity + '" title="' + severity + '"></span></td>';
+        html += '<td>' + (carrierId ? '<a href="/ae/caravan.html?carrier=' + carrierId + '" class="carrier-link">' + carrierName + '</a>' : carrierName) + '</td>';
+        html += '<td>' + alertType + '</td>';
+        html += '<td>' + entity + '</td>';
+        html += '<td>' + expiryFormatted + '</td>';
+        html += '<td>' + daysHtml + '</td>';
+        html += '<td><span class="status-badge status-' + status + '">' + status + '</span></td>';
+        html += '<td><div class="actions-cell">';
+        html += '<button class="btn-ghost btn-sm" onclick="dismissAlert(\'' + alert.id + '\')" title="Dismiss">Dismiss</button>';
+        html += '<button class="btn-ghost btn-sm" onclick="snoozeAlert(\'' + alert.id + '\', 7)" title="Snooze 7 days">Snooze</button>';
+        if (carrierId) {
+          html += '<a href="/ae/caravan.html?carrier=' + carrierId + '" class="btn-ghost btn-sm" style="text-decoration:none;" title="View Carrier">View</a>';
+        }
+        html += '</div></td>';
+        html += '</tr>';
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function renderSkeletons() {
+      var html = "";
+      for (var i = 0; i < 8; i++) {
+        html += '<tr class="skeleton-row">';
+        html += '<td class="td-checkbox"><span class="skeleton-bar" style="width:16px;height:16px;border-radius:3px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:10px;height:10px;border-radius:50%;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:' + (80 + Math.random() * 60) + 'px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:' + (70 + Math.random() * 50) + 'px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:' + (60 + Math.random() * 40) + 'px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:80px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:40px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:60px;"></span></td>';
+        html += '<td><span class="skeleton-bar" style="width:100px;"></span></td>';
+        html += '</tr>';
+      }
+      document.getElementById("alerts-tbody").innerHTML = html;
+    }
+
+    /* ======== PAGINATION ======== */
+    function renderPagination() {
+      var prevBtn = document.getElementById("btn-prev");
+      var nextBtn = document.getElementById("btn-next");
+      var pageInfo = document.getElementById("page-info");
+
+      prevBtn.disabled = state.page <= 1;
+      nextBtn.disabled = state.page >= state.totalPages;
+      pageInfo.textContent = "Page " + state.page + " of " + state.totalPages;
+    }
+
+    function goPage(delta) {
+      var newPage = state.page + delta;
+      if (newPage < 1 || newPage > state.totalPages) return;
+      state.page = newPage;
+      fetchAlerts();
+      // Scroll to top of table
+      document.querySelector(".table-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    /* ======== SELECTION / BULK ======== */
+    function toggleSelect(id, checked) {
+      if (checked) {
+        state.selected[id] = true;
+      } else {
+        delete state.selected[id];
+      }
+      updateBulkBar();
+    }
+
+    function toggleSelectAll(checkbox) {
+      var checked = checkbox.checked;
+      state.alerts.forEach(function(a) {
+        if (checked) {
+          state.selected[a.id] = true;
+        } else {
+          delete state.selected[a.id];
+        }
+      });
+      // Update all row checkboxes
+      var boxes = document.querySelectorAll("#alerts-tbody input[type='checkbox']");
+      boxes.forEach(function(b) { b.checked = checked; });
+      updateBulkBar();
+    }
+
+    function clearSelection() {
+      state.selected = {};
+      var boxes = document.querySelectorAll("#alerts-tbody input[type='checkbox']");
+      boxes.forEach(function(b) { b.checked = false; });
+      document.getElementById("select-all").checked = false;
+      updateBulkBar();
+    }
+
+    function updateBulkBar() {
+      var ids = Object.keys(state.selected);
+      var bar = document.getElementById("bulk-bar");
+      if (ids.length > 0) {
+        bar.classList.add("visible");
+        document.getElementById("bulk-count").textContent = ids.length;
+      } else {
+        bar.classList.remove("visible");
+      }
+    }
+
+    function getSelectedIds() {
+      return Object.keys(state.selected);
+    }
+
+    /* ======== ACTIONS ======== */
+    function dismissAlert(id) {
+      SRL.request("/api/compliance/alerts/" + id + "/dismiss", { method: "PATCH" })
+        .then(function() {
+          showToast("Alert dismissed");
+          fetchAlerts();
+        })
+        .catch(function(err) {
+          showToast("Failed to dismiss: " + err.message, "error");
+        });
+    }
+
+    function snoozeAlert(id, days) {
+      SRL.request("/api/compliance/alerts/" + id + "/snooze", {
+        method: "POST",
+        body: { days: days }
+      }).then(function() {
+        showToast("Alert snoozed for " + days + " days");
+        fetchAlerts();
+      }).catch(function(err) {
+        showToast("Failed to snooze: " + err.message, "error");
+      });
+    }
+
+    function bulkDismiss() {
+      var ids = getSelectedIds();
+      if (!ids.length) return;
+      var promises = ids.map(function(id) {
+        return SRL.request("/api/compliance/alerts/" + id + "/dismiss", { method: "PATCH" });
+      });
+      Promise.allSettled(promises).then(function(results) {
+        var success = results.filter(function(r) { return r.status === "fulfilled"; }).length;
+        var failed = results.length - success;
+        showToast(success + " alert(s) dismissed" + (failed > 0 ? ", " + failed + " failed" : ""));
+        clearSelection();
+        fetchAlerts();
+      });
+    }
+
+    function bulkSnooze() {
+      var select = document.getElementById("snooze-days");
+      var days = parseInt(select.value, 10);
+      if (!days) return;
+      select.value = "";
+
+      var ids = getSelectedIds();
+      if (!ids.length) return;
+
+      var promises = ids.map(function(id) {
+        return SRL.request("/api/compliance/alerts/" + id + "/snooze", {
+          method: "POST",
+          body: { days: days }
+        });
+      });
+      Promise.allSettled(promises).then(function(results) {
+        var success = results.filter(function(r) { return r.status === "fulfilled"; }).length;
+        var failed = results.length - success;
+        showToast(success + " alert(s) snoozed for " + days + " days" + (failed > 0 ? ", " + failed + " failed" : ""));
+        clearSelection();
+        fetchAlerts();
+      });
+    }
+
+    function bulkSendReminder() {
+      var ids = getSelectedIds();
+      if (!ids.length) return;
+
+      // Gather unique carrier IDs from selected alerts
+      var carrierIds = {};
+      ids.forEach(function(id) {
+        var alert = state.alerts.find(function(a) { return a.id === id; });
+        if (alert) {
+          var cid = alert.carrierId || alert.carrier_id;
+          if (cid) carrierIds[cid] = true;
+        }
+      });
+
+      var uniqueCarrierIds = Object.keys(carrierIds);
+      if (!uniqueCarrierIds.length) {
+        showToast("No carrier IDs found for selected alerts", "error");
+        return;
+      }
+
+      var promises = uniqueCarrierIds.map(function(carrierId) {
+        return SRL.request("/api/compliance/carrier/" + carrierId + "/send-reminder", { method: "POST" });
+      });
+      Promise.allSettled(promises).then(function(results) {
+        var success = results.filter(function(r) { return r.status === "fulfilled"; }).length;
+        var failed = results.length - success;
+        showToast("Reminders sent to " + success + " carrier(s)" + (failed > 0 ? ", " + failed + " failed" : ""));
+        clearSelection();
+      });
+    }
+
+    /* ======== HELPERS ======== */
+    function buildQuery(params) {
+      if (!params) return "";
+      var parts = [];
+      Object.keys(params).forEach(function(key) {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== "") {
+          parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(params[key]));
+        }
+      });
+      return parts.length ? "?" + parts.join("&") : "";
+    }
+
+    function updateUrlParams() {
+      var params = new URLSearchParams();
+      if (state.severityFilter) params.set("severity", state.severityFilter);
+      if (state.typeFilter) params.set("type", state.typeFilter);
+      if (state.carrierSearch) params.set("carrier", state.carrierSearch);
+      if (state.dateFrom) params.set("from", state.dateFrom);
+      if (state.dateTo) params.set("to", state.dateTo);
+      if (state.page > 1) params.set("page", state.page);
+      var qs = params.toString();
+      var newUrl = window.location.pathname + (qs ? "?" + qs : "");
+      history.replaceState(null, "", newUrl);
+    }
+
+    function formatAlertType(type) {
+      if (ALERT_TYPE_LABELS[type]) return ALERT_TYPE_LABELS[type];
+      // Fallback: convert SNAKE_CASE to Title Case
+      return type.replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "--";
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function computeDaysRemaining(dateStr) {
+      if (!dateStr) return null;
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      var now = new Date();
+      now.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    }
+
+    function formatDaysRemaining(days, dateStr) {
+      if (days === null || days === undefined) return '<span class="days-ok">--</span>';
+      if (days < 0) {
+        return '<span class="days-overdue">' + days + ' (overdue)</span>';
+      } else if (days === 0) {
+        return '<span class="days-overdue">Today</span>';
+      } else if (days <= 30) {
+        return '<span class="days-warn">' + days + ' days</span>';
+      } else {
+        return '<span class="days-ok">' + days + ' days</span>';
+      }
+    }
+
+    function esc(str) {
+      if (!str) return "";
+      var div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatRole(role) {
+      var m = { ADMIN: "Administrator", BROKER: "Account Executive", DISPATCH: "Dispatch", OPERATIONS: "Operations", CEO: "CEO" };
+      return m[role] || role;
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function() { el.classList.remove("show"); }, 3000);
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+  <script src="/ae/js/notification-bell.js"></script>
+  <script src="/shared/js/themeEngine.js"></script>
+  <script src="/shared/js/marco-polo.js"></script>
+</body>
+</html>

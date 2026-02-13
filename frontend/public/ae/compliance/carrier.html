@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrier Compliance Profile - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <style>
+    /* --- Page Header --- */
+    .page-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--gold);
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+    .page-back:hover { text-decoration: underline; }
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .page-title-row h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-badge-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .status-badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+    .status-badge-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+    /* --- Two-Column Layout --- */
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 35% 65%;
+      gap: 24px;
+      margin-top: 24px;
+    }
+    @media (max-width: 1024px) {
+      .profile-layout { grid-template-columns: 1fr; }
+    }
+
+    /* --- Carrier Info Card --- */
+    .info-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 24px;
+      position: sticky;
+      top: 24px;
+      align-self: start;
+    }
+    .info-card-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .info-card-ids {
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-bottom: 16px;
+    }
+    .info-card-ids span { margin-right: 14px; }
+    .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .tier-PLATINUM { background: linear-gradient(135deg, #E5E7EB, #D1D5DB); color: #374151; }
+    .tier-GOLD { background: linear-gradient(135deg, var(--gold-dim), rgba(200,150,62,0.3)); color: var(--gold); }
+    .tier-SILVER { background: linear-gradient(135deg, #E2E8F0, #CBD5E1); color: #475569; }
+    .tier-BRONZE { background: linear-gradient(135deg, #FDE68A33, #F59E0B22); color: #92400E; }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row-label { color: var(--gray-500); font-weight: 500; }
+    .info-row-value { color: var(--navy); font-weight: 600; text-align: right; }
+    .safety-score-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--gray-200);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .safety-score-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .contact-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--gray-200);
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+    }
+    .contact-item svg { flex-shrink: 0; color: var(--gray-400); }
+
+    /* --- Tab Bar --- */
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid var(--gray-200);
+      margin-bottom: 20px;
+      gap: 0;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-500);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn:hover { color: var(--navy); }
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* --- Accordion --- */
+    .accordion-item {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .accordion-item.expanded {
+      border-left: 3px solid var(--gold);
+      box-shadow: var(--shadow-sm);
+    }
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .accordion-header:hover { background: var(--gray-50); }
+    .accordion-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .accordion-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .accordion-chevron {
+      transition: transform 0.2s;
+      color: var(--gray-400);
+    }
+    .accordion-item.expanded .accordion-chevron { transform: rotate(180deg); }
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .accordion-item.expanded .accordion-body {
+      max-height: 600px;
+      padding: 0 16px 16px;
+    }
+    .accordion-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .accordion-field label {
+      display: block;
+      font-size: 10px;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+    .accordion-field span {
+      font-size: 14px;
+      color: var(--navy);
+      font-weight: 500;
+    }
+
+    /* --- Status Dot --- */
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green { background: var(--green); }
+    .dot-amber { background: var(--amber); }
+    .dot-red { background: var(--red); }
+    .dot-gray { background: var(--gray-400); }
+
+    /* --- BASIC Scores --- */
+    .basic-score-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .basic-label {
+      width: 150px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-600);
+      flex-shrink: 0;
+    }
+    .basic-track {
+      flex: 1;
+      height: 8px;
+      background: var(--gray-200);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .basic-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .basic-fill.green { background: var(--green); }
+    .basic-fill.amber { background: var(--amber); }
+    .basic-fill.red { background: var(--red); }
+    .basic-value {
+      width: 40px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    /* --- Timeline --- */
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--gray-200);
+    }
+    .timeline-item {
+      position: relative;
+      padding: 12px 0 20px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -24px;
+      top: 16px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--white);
+      box-shadow: 0 0 0 2px var(--gray-300);
+    }
+    .timeline-dot.passed { background: var(--green); box-shadow: 0 0 0 2px var(--green); }
+    .timeline-dot.flagged { background: var(--amber); box-shadow: 0 0 0 2px var(--amber); }
+    .timeline-dot.failed { background: var(--red); box-shadow: 0 0 0 2px var(--red); }
+    .timeline-date {
+      font-size: 11px;
+      color: var(--gray-400);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .timeline-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 2px;
+    }
+    .timeline-desc {
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .timeline-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .timeline-badge-passed { background: var(--green-bg); color: var(--green); }
+    .timeline-badge-flagged { background: var(--amber-bg); color: var(--amber); }
+    .timeline-badge-failed { background: var(--red-bg); color: var(--red); }
+
+    /* --- Admin Actions Grid --- */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 640px) { .action-grid { grid-template-columns: 1fr; } }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      border: none;
+    }
+    .action-btn:active { transform: scale(0.98); }
+    .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-gold { background: var(--gold); color: var(--white); }
+    .btn-gold:hover { background: var(--gold-hover); }
+    .btn-blue-outline { background: transparent; color: #3B82F6; border: 1.5px solid #3B82F6; }
+    .btn-blue-outline:hover { background: rgba(59,130,246,0.08); }
+    .btn-amber { background: var(--amber); color: var(--white); }
+    .btn-amber:hover { background: #D97706; }
+    .btn-red-outline { background: transparent; color: var(--red); border: 1.5px solid var(--red); }
+    .btn-red-outline:hover { background: var(--red-bg); }
+    .btn-red-solid { background: var(--red); color: var(--white); border: none; }
+    .btn-red-solid:hover { background: #DC2626; }
+
+    /* --- Override Card --- */
+    .override-card {
+      background: var(--amber-bg);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .override-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .override-reason { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .override-meta { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+    .override-time {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--amber);
+    }
+
+    /* --- Notes --- */
+    .note-compose {
+      margin-bottom: 20px;
+    }
+    .note-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--gray-700);
+      background: var(--gray-50);
+      resize: vertical;
+      transition: border-color 0.15s;
+    }
+    .note-textarea:focus { outline: none; border-color: var(--gold); }
+    .note-submit-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    .note-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .note-item:last-child { border-bottom: none; }
+    .note-author { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .note-date { font-size: 11px; color: var(--gray-400); margin-left: 10px; }
+    .note-content { font-size: 13px; color: var(--gray-600); margin-top: 6px; line-height: 1.5; }
+
+    /* --- Alerts Section --- */
+    .alerts-section {
+      margin-top: 24px;
+    }
+    .alerts-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 16px;
+    }
+    .alerts-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .alerts-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--gray-200);
+      background: var(--gray-50);
+    }
+    .alerts-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700);
+      vertical-align: middle;
+    }
+    .alert-action-btn {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--gray-300);
+      background: var(--white);
+      color: var(--gray-600);
+      margin-right: 4px;
+      transition: border-color 0.15s;
+    }
+    .alert-action-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* --- Modal --- */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 500;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 80px 20px;
+      overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .modal-header h3 {
+      font-size: 18px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--gray-400);
+    }
+    .modal-close:hover { color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-body label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .modal-body textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-size: 14px;
+      color: var(--gray-700);
+      background: var(--gray-50);
+      font-family: inherit;
+      resize: vertical;
+      min-height: 80px;
+      transition: border-color 0.15s;
+    }
+    .modal-body textarea:focus { outline: none; border-color: var(--gold); }
+    .modal-hint {
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .modal-btn {
+      padding: 10px 24px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s;
+    }
+    .modal-btn-cancel {
+      background: var(--gray-100);
+      color: var(--gray-600);
+    }
+    .modal-btn-cancel:hover { background: var(--gray-200); }
+    .modal-btn-submit {
+      background: var(--gold);
+      color: var(--white);
+    }
+    .modal-btn-submit:hover { background: var(--gold-hover); }
+    .modal-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .modal-btn-danger {
+      background: var(--red);
+      color: var(--white);
+    }
+    .modal-btn-danger:hover { background: #DC2626; }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+      z-index: 9999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    /* --- Empty State --- */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+
+    /* --- Card wrapper for right column --- */
+    .compliance-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+    }
+
+    /* --- Alerts full width card --- */
+    .full-width-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    /* --- Overrides Section --- */
+    .overrides-section {
+      margin-top: 24px;
+    }
+    .overrides-section h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+
+    /* --- Loading skeleton --- */
+    .skeleton {
+      background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-200) 50%, var(--gray-100) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    .skeleton-line { height: 14px; margin-bottom: 8px; }
+    .skeleton-block { height: 60px; margin-bottom: 8px; }
+    .w-75 { width: 75%; }
+    .w-100 { width: 100%; }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .page-title-row h1 { font-size: 18px; }
+      .accordion-detail-grid { grid-template-columns: 1fr; }
+      .action-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/claims.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="13" y2="11"/></svg>
+          Claims
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+        <a href="/ae/analytics.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          Analytics
+        </a>
+        <a href="/ae/accounting/dashboard.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>
+          Accounting
+        </a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+          <a href="/ae/compliance/dashboard.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Dashboard
+          </a>
+          <a href="/ae/compliance/overview.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Overview
+          </a>
+          <a href="/ae/compliance/alerts.html">
+            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Alerts
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Hamburger (mobile) -->
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="main">
+      <div class="main-header">
+        <a href="/ae/caravan.html" class="page-back" id="back-link">&larr; Back to Overview</a>
+        <div class="page-title-row">
+          <h1 id="page-title">Loading Compliance Profile...</h1>
+          <span class="status-badge status-badge-green" id="overall-badge" style="display:none"></span>
+        </div>
+      </div>
+
+      <!-- Two-Column Layout -->
+      <div class="profile-layout">
+        <!-- LEFT: Carrier Info Card -->
+        <div class="info-card" id="carrier-info-card">
+          <div class="skeleton skeleton-line w-75"></div>
+          <div class="skeleton skeleton-line w-100"></div>
+          <div class="skeleton skeleton-block"></div>
+          <div class="skeleton skeleton-line w-75"></div>
+          <div class="skeleton skeleton-block"></div>
+        </div>
+
+        <!-- RIGHT: Compliance Details -->
+        <div class="compliance-card">
+          <div class="tab-bar">
+            <button class="tab-btn active" data-tab="items" onclick="switchTab('items')">Items</button>
+            <button class="tab-btn" data-tab="history" onclick="switchTab('history')">Verification History</button>
+            <button class="tab-btn" data-tab="actions" onclick="switchTab('actions')">Admin Actions</button>
+            <button class="tab-btn" data-tab="notes" onclick="switchTab('notes')">Notes</button>
+          </div>
+
+          <!-- ITEMS TAB -->
+          <div class="tab-panel active" id="tab-items">
+            <div id="accordion-container">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-block"></div>
+            </div>
+          </div>
+
+          <!-- VERIFICATION HISTORY TAB -->
+          <div class="tab-panel" id="tab-history">
+            <div id="timeline-container">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-line w-75"></div>
+            </div>
+          </div>
+
+          <!-- ADMIN ACTIONS TAB -->
+          <div class="tab-panel" id="tab-actions">
+            <div class="action-grid">
+              <button class="action-btn btn-gold" id="btn-fmcsa-check" onclick="runFMCSACheck()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Run FMCSA Check Now
+              </button>
+              <button class="action-btn btn-blue-outline" id="btn-send-reminder" onclick="sendReminder()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Send Compliance Reminder
+              </button>
+              <button class="action-btn btn-amber" onclick="openOverrideModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                Override Block
+              </button>
+              <button class="action-btn btn-red-outline" onclick="openSuspendModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                Suspend Carrier
+              </button>
+              <button class="action-btn btn-red-solid" onclick="openDeactivateModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                Deactivate Carrier
+              </button>
+            </div>
+
+            <!-- Active Overrides -->
+            <div class="overrides-section">
+              <h4>Active Overrides</h4>
+              <div id="overrides-list">
+                <div class="empty-state">No active overrides</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NOTES TAB -->
+          <div class="tab-panel" id="tab-notes">
+            <div class="note-compose">
+              <textarea class="note-textarea" id="note-input" placeholder="Add a compliance note..."></textarea>
+              <div class="note-submit-row">
+                <button class="action-btn btn-gold" style="padding:8px 20px" onclick="submitNote()">Add Note</button>
+              </div>
+            </div>
+            <div id="notes-list">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-line w-75"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Alerts for this Carrier (full width) -->
+      <div class="full-width-card alerts-section" id="alerts-section" style="display:none">
+        <h2 id="alerts-title">Active Alerts</h2>
+        <div class="table-wrap" style="overflow-x:auto">
+          <table class="alerts-table">
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Alert Type</th>
+                <th>Entity</th>
+                <th>Expiry Date</th>
+                <th>Days Remaining</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="main-footer">
+        <span>&copy; 2026 Silk Route Logistics. All rights reserved.</span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Override Modal -->
+  <div class="modal-backdrop" id="override-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Override Compliance Block</h3>
+        <button class="modal-close" onclick="closeModal('override-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="override-reason">Override Reason</label>
+        <textarea id="override-reason" placeholder="Explain why this override is necessary..."></textarea>
+        <div class="modal-hint">
+          This override expires in 24 hours.<br>
+          Max 2 overrides per carrier per month.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('override-modal')">Cancel</button>
+        <button class="modal-btn modal-btn-submit" id="override-submit-btn" onclick="submitOverride()">Submit Override</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Suspend Modal -->
+  <div class="modal-backdrop" id="suspend-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Suspend Carrier</h3>
+        <button class="modal-close" onclick="closeModal('suspend-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:14px;color:var(--gray-600);margin-bottom:16px">
+          Are you sure you want to suspend this carrier? They will be unable to receive new load assignments until reactivated.
+        </p>
+        <label for="suspend-reason">Reason (optional)</label>
+        <textarea id="suspend-reason" placeholder="Suspension reason..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('suspend-modal')">Cancel</button>
+        <button class="modal-btn modal-btn-danger" onclick="confirmSuspend()">Suspend Carrier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deactivate Modal -->
+  <div class="modal-backdrop" id="deactivate-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Deactivate Carrier</h3>
+        <button class="modal-close" onclick="closeModal('deactivate-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:14px;color:var(--red);font-weight:600;margin-bottom:12px">
+          This action will permanently deactivate this carrier.
+        </p>
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px">
+          The carrier will lose access to the platform and all pending loads will need to be reassigned. This action cannot be easily undone.
+        </p>
+        <label for="deactivate-reason">Reason (required)</label>
+        <textarea id="deactivate-reason" placeholder="Deactivation reason..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('deactivate-modal')">Cancel</button>
+        <button class="modal-btn modal-btn-danger" id="deactivate-submit-btn" onclick="confirmDeactivate()">Deactivate Carrier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- API Client -->
+  <script src="/ae/js/api.js"></script>
+
+  <!-- Page Logic -->
+  <script>
+    /* =========================================
+       STATE
+       ========================================= */
+    var carrierId = new URLSearchParams(location.search).get("id");
+    var carrierData = null;
+    var scanData = [];
+    var notesData = [];
+
+    if (!carrierId) {
+      document.getElementById("page-title").textContent = "No carrier specified";
+      throw new Error("Missing carrier ID");
+    }
+
+    /* =========================================
+       HELPERS
+       ========================================= */
+    function esc(s) {
+      var d = document.createElement("div");
+      d.textContent = s || "";
+      return d.innerHTML;
+    }
+
+    function shortDate(d) {
+      return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "--";
+    }
+
+    function money(n) {
+      return "$" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function daysUntil(dateStr) {
+      if (!dateStr) return null;
+      var diff = new Date(dateStr).getTime() - Date.now();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    function statusColor(dateStr, uploaded) {
+      if (uploaded === false) return "gray";
+      if (!dateStr) return "gray";
+      var days = daysUntil(dateStr);
+      if (days === null) return "gray";
+      if (days < 0) return "red";
+      if (days <= 30) return "amber";
+      return "green";
+    }
+
+    function statusLabel(color) {
+      if (color === "green") return "Valid";
+      if (color === "amber") return "Expiring Soon";
+      if (color === "red") return "Expired";
+      return "Missing";
+    }
+
+    function overallStatus(data) {
+      if (!data) return "gray";
+      var items = data.complianceItems || {};
+      var hasRed = false;
+      var hasAmber = false;
+      Object.keys(items).forEach(function(key) {
+        var item = items[key];
+        if (item.status === "EXPIRED" || item.status === "NON_COMPLIANT") hasRed = true;
+        if (item.status === "EXPIRING_SOON") hasAmber = true;
+        var c = statusColor(item.expiryDate, item.uploaded);
+        if (c === "red") hasRed = true;
+        if (c === "amber") hasAmber = true;
+      });
+      if (hasRed) return "red";
+      if (hasAmber) return "amber";
+      return "green";
+    }
+
+    function overallLabel(color) {
+      if (color === "green") return "Compliant";
+      if (color === "amber") return "Expiring";
+      return "Non-Compliant";
+    }
+
+    function safetyScoreColor(score) {
+      if (score >= 80) return "var(--green)";
+      if (score >= 60) return "var(--amber)";
+      return "var(--red)";
+    }
+
+    function tierClass(tier) {
+      return "tier-" + (tier || "BRONZE").toUpperCase();
+    }
+
+    function timeRemaining(expiresAt) {
+      if (!expiresAt) return "--";
+      var diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) return "Expired";
+      var hours = Math.floor(diff / (1000 * 60 * 60));
+      var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      return hours + "h " + minutes + "m remaining";
+    }
+
+    /* =========================================
+       INIT
+       ========================================= */
+    (function init() {
+      loadUser();
+      loadCarrierData();
+      loadScanHistory();
+      loadNotes();
+    })();
+
+    function loadUser() {
+      SRL.getMe().then(function(u) {
+        if (window.SRLTheme) SRLTheme.restoreFromUser(u);
+        document.getElementById("user-name").textContent = u.firstName + " " + u.lastName;
+        document.getElementById("user-role").textContent = u.role || "AE";
+      }).catch(function() {});
+    }
+
+    /* =========================================
+       DATA LOADING
+       ========================================= */
+    function loadCarrierData() {
+      SRL.request("/api/compliance/carrier/" + carrierId).then(function(data) {
+        carrierData = data;
+        renderCarrierInfo(data);
+        renderComplianceItems(data);
+        renderAlerts(data);
+        renderOverrides(data);
+      }).catch(function(err) {
+        document.getElementById("page-title").textContent = "Error Loading Carrier";
+        document.getElementById("carrier-info-card").innerHTML =
+          '<div class="empty-state" style="color:var(--red)">Failed to load carrier data: ' + esc(err.message) + '</div>';
+      });
+    }
+
+    function loadScanHistory() {
+      SRL.request("/api/compliance/scans/" + carrierId).then(function(data) {
+        scanData = data.scans || data || [];
+        renderTimeline(scanData);
+      }).catch(function() {
+        scanData = [];
+        renderTimeline([]);
+      });
+    }
+
+    function loadNotes() {
+      SRL.request("/api/compliance/carrier/" + carrierId + "/notes").then(function(data) {
+        notesData = data.notes || data || [];
+        renderNotes(notesData);
+      }).catch(function() {
+        notesData = [];
+        renderNotes([]);
+      });
+    }
+
+    /* =========================================
+       RENDER: Carrier Info Card
+       ========================================= */
+    function renderCarrierInfo(data) {
+      var carrier = data.carrier || {};
+      var compliance = data.compliance || data;
+      var performance = carrier.performance || {};
+
+      // Page title
+      var name = carrier.companyName || carrier.name || "Unknown Carrier";
+      document.getElementById("page-title").textContent = name + " \u2014 Compliance Profile";
+      document.title = name + " | Compliance - SRL";
+
+      // Overall status badge
+      var os = overallStatus(data);
+      var badge = document.getElementById("overall-badge");
+      badge.className = "status-badge status-badge-" + os;
+      badge.textContent = overallLabel(os);
+      badge.style.display = "inline-flex";
+
+      var safetyScore = compliance.safetyScore || carrier.safetyScore || performance.overallScore || 0;
+      var tier = carrier.tier || carrier.srcppTier || "BRONZE";
+      var onboardingStatus = carrier.onboardingStatus || carrier.status || "UNKNOWN";
+
+      var html = '';
+      html += '<div class="info-card-name">' + esc(name) + '</div>';
+      html += '<div class="info-card-ids">';
+      html += '<span>MC# ' + esc(carrier.mcNumber || "--") + '</span>';
+      html += '<span>DOT# ' + esc(carrier.dotNumber || "--") + '</span>';
+      html += '</div>';
+      html += '<div class="tier-badge ' + tierClass(tier) + '">' + esc(tier) + ' Tier</div>';
+
+      html += '<div class="info-row"><span class="info-row-label">Active Since</span><span class="info-row-value">' + shortDate(carrier.createdAt || carrier.activeSince) + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">Loads Completed</span><span class="info-row-value">' + (carrier.totalLoads || performance.totalLoads || 0) + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">Status</span><span class="info-row-value">' + esc(onboardingStatus.replace(/_/g, " ")) + '</span></div>';
+
+      // Safety score
+      var scoreColor = safetyScoreColor(safetyScore);
+      html += '<div class="info-row" style="flex-direction:column;align-items:stretch">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<span class="info-row-label">Safety Score</span>';
+      html += '<span class="info-row-value" style="color:' + scoreColor + '">' + safetyScore.toFixed(0) + ' / 100</span>';
+      html += '</div>';
+      html += '<div class="safety-score-bar"><div class="safety-score-fill" style="width:' + Math.min(100, safetyScore) + '%;background:' + scoreColor + '"></div></div>';
+      html += '</div>';
+
+      // Contact
+      var email = carrier.contactEmail || carrier.email || "";
+      var phone = carrier.contactPhone || carrier.phone || "";
+      if (email || phone) {
+        html += '<div class="contact-section">';
+        if (email) {
+          html += '<div class="contact-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' + esc(email) + '</div>';
+        }
+        if (phone) {
+          html += '<div class="contact-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + esc(phone) + '</div>';
+        }
+        html += '</div>';
+      }
+
+      document.getElementById("carrier-info-card").innerHTML = html;
+    }
+
+    /* =========================================
+       RENDER: Compliance Items (Accordion)
+       ========================================= */
+    function renderComplianceItems(data) {
+      var items = data.complianceItems || data.items || {};
+      var compliance = data.compliance || data;
+      var carrier = data.carrier || {};
+      var fmcsa = compliance.fmcsa || {};
+      var insurance = compliance.insurance || {};
+      var documents = compliance.documents || {};
+      var basicScores = fmcsa.basicScores || compliance.basicScores || {};
+
+      var sections = [];
+
+      // 1. Authority Status
+      var authStatus = fmcsa.authorityStatus || items.authority?.status || "UNKNOWN";
+      var authColor = authStatus === "AUTHORIZED" ? "green" : authStatus === "NOT AUTHORIZED" ? "red" : "gray";
+      sections.push({
+        title: "Authority Status",
+        dotColor: authColor,
+        rightText: "Checked: " + shortDate(fmcsa.lastChecked || items.authority?.lastChecked),
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>FMCSA Authority</label><span>' + esc(authStatus) + '</span></div>' +
+          '<div class="accordion-field"><label>Last Checked</label><span>' + shortDate(fmcsa.lastChecked || items.authority?.lastChecked) + '</span></div>' +
+          '<div class="accordion-field"><label>MC Number</label><span>' + esc(carrier.mcNumber || "--") + '</span></div>' +
+          '<div class="accordion-field"><label>DOT Number</label><span>' + esc(carrier.dotNumber || "--") + '</span></div>' +
+        '</div>'
+      });
+
+      // 2. Auto Liability Insurance
+      var autoLiab = insurance.autoLiability || items.autoLiability || {};
+      var autoColor = statusColor(autoLiab.expiryDate || insurance.expiry, true);
+      sections.push({
+        title: "Auto Liability Insurance",
+        dotColor: autoColor,
+        rightText: autoLiab.expiryDate || insurance.expiry ? "Expires: " + shortDate(autoLiab.expiryDate || insurance.expiry) : "",
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>Status</label><span>' + statusLabel(autoColor) + '</span></div>' +
+          '<div class="accordion-field"><label>Expiry Date</label><span>' + shortDate(autoLiab.expiryDate || insurance.expiry) + '</span></div>' +
+          '<div class="accordion-field"><label>Coverage Amount</label><span>' + money(autoLiab.amount || insurance.autoLiability) + '</span></div>' +
+          '<div class="accordion-field"><label>Insurance Company</label><span>' + esc(autoLiab.company || insurance.company || "--") + '</span></div>' +
+          '<div class="accordion-field"><label>Policy Number</label><span>' + esc(autoLiab.policyNumber || insurance.policyNumber || "--") + '</span></div>' +
+        '</div>'
+      });
+
+      // 3. Cargo Insurance
+      var cargoIns = insurance.cargo || items.cargoInsurance || {};
+      var cargoColor = statusColor(cargoIns.expiryDate, true);
+      sections.push({
+        title: "Cargo Insurance",
+        dotColor: cargoColor,
+        rightText: cargoIns.expiryDate ? "Expires: " + shortDate(cargoIns.expiryDate) : "",
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>Status</label><span>' + statusLabel(cargoColor) + '</span></div>' +
+          '<div class="accordion-field"><label>Expiry Date</label><span>' + shortDate(cargoIns.expiryDate) + '</span></div>' +
+          '<div class="accordion-field"><label>Coverage Amount</label><span>' + money(cargoIns.amount || insurance.cargoAmount) + '</span></div>' +
+        '</div>'
+      });
+
+      // 4. W-9 Form
+      var w9 = documents.w9 || items.w9 || {};
+      var w9Uploaded = w9.uploaded || w9 === true;
+      sections.push({
+        title: "W-9 Form",
+        dotColor: w9Uploaded ? "green" : "gray",
+        rightText: w9Uploaded ? "Uploaded" : "Missing",
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>Uploaded</label><span>' + (w9Uploaded ? "Yes" : "No") + '</span></div>' +
+          '<div class="accordion-field"><label>Upload Date</label><span>' + shortDate(w9.uploadDate || w9.createdAt) + '</span></div>' +
+        '</div>'
+      });
+
+      // 5. Certificate of Insurance
+      var coi = documents.insuranceCert || documents.coi || items.coi || {};
+      var coiUploaded = coi.uploaded || coi === true;
+      sections.push({
+        title: "Certificate of Insurance",
+        dotColor: coiUploaded ? "green" : "gray",
+        rightText: coiUploaded ? "Uploaded" : "Missing",
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>Uploaded</label><span>' + (coiUploaded ? "Yes" : "No") + '</span></div>' +
+          '<div class="accordion-field"><label>Upload Date</label><span>' + shortDate(coi.uploadDate || coi.createdAt) + '</span></div>' +
+        '</div>'
+      });
+
+      // 6. Authority Letter
+      var authDoc = documents.authorityDoc || documents.authorityLetter || items.authorityLetter || {};
+      var authDocUploaded = authDoc.uploaded || authDoc === true;
+      sections.push({
+        title: "Authority Letter",
+        dotColor: authDocUploaded ? "green" : "gray",
+        rightText: authDocUploaded ? "Uploaded" : "Missing",
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>Uploaded</label><span>' + (authDocUploaded ? "Yes" : "No") + '</span></div>' +
+          '<div class="accordion-field"><label>Upload Date</label><span>' + shortDate(authDoc.uploadDate || authDoc.createdAt) + '</span></div>' +
+        '</div>'
+      });
+
+      // 7. FMCSA Safety Rating
+      var safetyRating = fmcsa.safetyRating || items.safetyRating?.value || "NOT RATED";
+      var safetyColor = safetyRating === "SATISFACTORY" ? "green" : safetyRating === "CONDITIONAL" ? "amber" : safetyRating === "UNSATISFACTORY" ? "red" : "gray";
+      sections.push({
+        title: "FMCSA Safety Rating",
+        dotColor: safetyColor,
+        rightText: "Rating: " + safetyRating,
+        body: '<div class="accordion-detail-grid">' +
+          '<div class="accordion-field"><label>Rating</label><span>' + esc(safetyRating) + '</span></div>' +
+          '<div class="accordion-field"><label>Last Checked</label><span>' + shortDate(fmcsa.lastChecked) + '</span></div>' +
+        '</div>'
+      });
+
+      // 8. FMCSA BASIC Scores
+      var basicLabels = {
+        unsafeDriving: "Unsafe Driving",
+        hoursOfService: "Hours of Service",
+        driverFitness: "Driver Fitness",
+        controlledSubstances: "Drug & Alcohol",
+        vehicleMaintenance: "Vehicle Maintenance",
+        hazmat: "HazMat",
+        crashIndicator: "Crash Indicator"
+      };
+      var hasBasic = Object.keys(basicScores).length > 0;
+      var basicHtml = '';
+      if (hasBasic) {
+        Object.keys(basicLabels).forEach(function(key) {
+          var val = basicScores[key] || 0;
+          var bColor = val > 75 ? "red" : val > 50 ? "amber" : "green";
+          basicHtml += '<div class="basic-score-row">' +
+            '<span class="basic-label">' + basicLabels[key] + '</span>' +
+            '<div class="basic-track"><div class="basic-fill ' + bColor + '" style="width:' + Math.min(100, val) + '%"></div></div>' +
+            '<span class="basic-value">' + val + '%</span>' +
+          '</div>';
+        });
+      } else {
+        basicHtml = '<div class="empty-state" style="padding:12px">No BASIC score data available</div>';
+      }
+
+      var worstBasic = 0;
+      Object.keys(basicScores).forEach(function(key) {
+        if ((basicScores[key] || 0) > worstBasic) worstBasic = basicScores[key];
+      });
+      var basicDotColor = !hasBasic ? "gray" : worstBasic > 75 ? "red" : worstBasic > 50 ? "amber" : "green";
+
+      sections.push({
+        title: "FMCSA BASIC Scores",
+        dotColor: basicDotColor,
+        rightText: hasBasic ? "7 categories" : "No data",
+        body: basicHtml
+      });
+
+      // Render all accordion items
+      var container = document.getElementById("accordion-container");
+      container.innerHTML = sections.map(function(s, i) {
+        return '<div class="accordion-item" data-index="' + i + '">' +
+          '<div class="accordion-header" onclick="toggleAccordion(' + i + ')">' +
+            '<div class="accordion-header-left">' +
+              '<span class="status-dot dot-' + s.dotColor + '"></span>' +
+              '<span style="font-size:14px;font-weight:600;color:var(--navy)">' + esc(s.title) + '</span>' +
+            '</div>' +
+            '<div class="accordion-header-right">' +
+              '<span>' + esc(s.rightText) + '</span>' +
+              '<svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+            '</div>' +
+          '</div>' +
+          '<div class="accordion-body">' + s.body + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    /* =========================================
+       RENDER: Verification History (Timeline)
+       ========================================= */
+    function renderTimeline(scans) {
+      var container = document.getElementById("timeline-container");
+      if (!scans || scans.length === 0) {
+        container.innerHTML = '<div class="empty-state">No scans recorded yet</div>';
+        return;
+      }
+
+      var sorted = scans.slice().sort(function(a, b) {
+        return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date);
+      });
+
+      container.innerHTML = '<div class="timeline">' + sorted.map(function(scan) {
+        var status = (scan.status || "PASSED").toUpperCase();
+        var dotClass = status === "PASSED" ? "passed" : status === "FLAGGED" ? "flagged" : "failed";
+        var badgeClass = "timeline-badge-" + dotClass;
+        return '<div class="timeline-item">' +
+          '<div class="timeline-dot ' + dotClass + '"></div>' +
+          '<div class="timeline-date">' + shortDate(scan.createdAt || scan.date) + '</div>' +
+          '<div class="timeline-title">' + esc(scan.scanType || scan.type || "FMCSA Scan") + '</div>' +
+          '<div class="timeline-desc">' + esc(scan.changesDetected || scan.description || "No changes detected") + '</div>' +
+          '<span class="timeline-badge ' + badgeClass + '">' + esc(status) + '</span>' +
+        '</div>';
+      }).join("") + '</div>';
+    }
+
+    /* =========================================
+       RENDER: Notes
+       ========================================= */
+    function renderNotes(notes) {
+      var container = document.getElementById("notes-list");
+      if (!notes || notes.length === 0) {
+        container.innerHTML = '<div class="empty-state">No notes yet</div>';
+        return;
+      }
+
+      var sorted = notes.slice().sort(function(a, b) {
+        return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date);
+      });
+
+      container.innerHTML = sorted.map(function(note) {
+        return '<div class="note-item">' +
+          '<span class="note-author">' + esc(note.authorName || note.author || "Unknown") + '</span>' +
+          '<span class="note-date">' + shortDate(note.createdAt || note.date) + '</span>' +
+          '<div class="note-content">' + esc(note.content || note.text || "") + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    /* =========================================
+       RENDER: Active Alerts
+       ========================================= */
+    function renderAlerts(data) {
+      var alerts = data.alerts || [];
+      var section = document.getElementById("alerts-section");
+      var tbody = document.getElementById("alerts-tbody");
+      var carrierName = (data.carrier || {}).companyName || (data.carrier || {}).name || "this carrier";
+
+      document.getElementById("alerts-title").textContent = "Active Alerts for " + carrierName;
+
+      if (alerts.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      tbody.innerHTML = alerts.map(function(a) {
+        var sevColor = a.severity === "CRITICAL" ? "red" : a.severity === "WARNING" ? "amber" : "green";
+        var days = daysUntil(a.expiryDate);
+        var daysText = days !== null ? (days < 0 ? Math.abs(days) + " days overdue" : days + " days") : "--";
+        return '<tr>' +
+          '<td><span class="status-dot dot-' + sevColor + '"></span> ' + esc(a.severity) + '</td>' +
+          '<td>' + esc((a.type || "").replace(/_/g, " ")) + '</td>' +
+          '<td>' + esc(a.entityName || a.entity || "--") + '</td>' +
+          '<td>' + shortDate(a.expiryDate) + '</td>' +
+          '<td>' + daysText + '</td>' +
+          '<td>' +
+            '<button class="alert-action-btn" onclick="dismissAlert(\'' + (a.id || "") + '\')">Dismiss</button>' +
+            '<button class="alert-action-btn" onclick="snoozeAlert(\'' + (a.id || "") + '\')">Snooze</button>' +
+          '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    /* =========================================
+       RENDER: Active Overrides
+       ========================================= */
+    function renderOverrides(data) {
+      var overrides = data.activeOverrides || data.overrides || [];
+      var container = document.getElementById("overrides-list");
+
+      // Filter to only active (not expired)
+      var now = Date.now();
+      var active = overrides.filter(function(o) {
+        return !o.expiresAt || new Date(o.expiresAt).getTime() > now;
+      });
+
+      if (active.length === 0) {
+        container.innerHTML = '<div class="empty-state">No active overrides</div>';
+        return;
+      }
+
+      container.innerHTML = active.map(function(o) {
+        return '<div class="override-card">' +
+          '<div class="override-card-header">' +
+            '<span class="override-reason">' + esc(o.reason || "No reason provided") + '</span>' +
+            '<span class="override-time">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' +
+              timeRemaining(o.expiresAt) +
+            '</span>' +
+          '</div>' +
+          '<div class="override-meta">' +
+            'By ' + esc(o.adminName || o.createdBy || "Admin") +
+            ' &middot; Created ' + shortDate(o.createdAt) +
+            ' &middot; Expires ' + shortDate(o.expiresAt) +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    /* =========================================
+       TABS
+       ========================================= */
+    function switchTab(tab) {
+      document.querySelectorAll(".tab-btn").forEach(function(btn) { btn.classList.remove("active"); });
+      document.querySelector('[data-tab="' + tab + '"]').classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(function(panel) { panel.classList.remove("active"); });
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    /* =========================================
+       ACCORDION
+       ========================================= */
+    function toggleAccordion(index) {
+      var item = document.querySelector('.accordion-item[data-index="' + index + '"]');
+      if (!item) return;
+      var wasExpanded = item.classList.contains("expanded");
+      // Close all
+      document.querySelectorAll(".accordion-item").forEach(function(el) {
+        el.classList.remove("expanded");
+      });
+      // Toggle clicked
+      if (!wasExpanded) {
+        item.classList.add("expanded");
+      }
+    }
+
+    /* =========================================
+       ADMIN ACTIONS
+       ========================================= */
+    function runFMCSACheck() {
+      var btn = document.getElementById("btn-fmcsa-check");
+      btn.disabled = true;
+      btn.textContent = "Running...";
+      SRL.request("/api/compliance/carrier/" + carrierId + "/run-fmcsa-check", { method: "POST" }).then(function(res) {
+        showToast("FMCSA check completed successfully", "success");
+        loadCarrierData();
+        loadScanHistory();
+      }).catch(function(err) {
+        showToast("FMCSA check failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Run FMCSA Check Now';
+      });
+    }
+
+    function sendReminder() {
+      var btn = document.getElementById("btn-send-reminder");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+      SRL.request("/api/compliance/carrier/" + carrierId + "/send-reminder", { method: "POST" }).then(function() {
+        showToast("Compliance reminder sent successfully", "success");
+      }).catch(function(err) {
+        showToast("Failed to send reminder: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Send Compliance Reminder';
+      });
+    }
+
+    function openOverrideModal() { openModal("override-modal"); }
+    function openSuspendModal() { openModal("suspend-modal"); }
+    function openDeactivateModal() { openModal("deactivate-modal"); }
+
+    function submitOverride() {
+      var reason = document.getElementById("override-reason").value.trim();
+      if (!reason) {
+        showToast("Please provide an override reason", "error");
+        return;
+      }
+      var btn = document.getElementById("override-submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
+      SRL.request("/api/compliance/carrier/" + carrierId + "/override-block", {
+        method: "POST",
+        body: { reason: reason }
+      }).then(function() {
+        showToast("Override applied successfully (expires in 24 hours)", "success");
+        closeModal("override-modal");
+        document.getElementById("override-reason").value = "";
+        loadCarrierData();
+      }).catch(function(err) {
+        showToast("Override failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "Submit Override";
+      });
+    }
+
+    function confirmSuspend() {
+      SRL.request("/api/compliance/carrier/" + carrierId + "/suspend", { method: "POST" }).then(function() {
+        showToast("Carrier suspended successfully", "success");
+        closeModal("suspend-modal");
+        loadCarrierData();
+      }).catch(function(err) {
+        showToast("Suspension failed: " + err.message, "error");
+      });
+    }
+
+    function confirmDeactivate() {
+      var reason = document.getElementById("deactivate-reason").value.trim();
+      if (!reason) {
+        showToast("Please provide a deactivation reason", "error");
+        return;
+      }
+      var btn = document.getElementById("deactivate-submit-btn");
+      btn.disabled = true;
+      SRL.request("/api/compliance/carrier/" + carrierId + "/deactivate", {
+        method: "POST",
+        body: { reason: reason }
+      }).then(function() {
+        showToast("Carrier deactivated", "success");
+        closeModal("deactivate-modal");
+        loadCarrierData();
+      }).catch(function(err) {
+        showToast("Deactivation failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+      });
+    }
+
+    /* =========================================
+       NOTES
+       ========================================= */
+    function submitNote() {
+      var content = document.getElementById("note-input").value.trim();
+      if (!content) {
+        showToast("Please enter a note", "error");
+        return;
+      }
+      SRL.request("/api/compliance/carrier/" + carrierId + "/notes", {
+        method: "POST",
+        body: { content: content }
+      }).then(function() {
+        showToast("Note added successfully", "success");
+        document.getElementById("note-input").value = "";
+        loadNotes();
+      }).catch(function(err) {
+        showToast("Failed to add note: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       ALERT ACTIONS
+       ========================================= */
+    function dismissAlert(alertId) {
+      if (!alertId) return;
+      SRL.request("/api/compliance/alerts/" + alertId + "/dismiss", { method: "POST" }).then(function() {
+        showToast("Alert dismissed", "success");
+        loadCarrierData();
+      }).catch(function(err) {
+        showToast("Failed to dismiss alert: " + err.message, "error");
+      });
+    }
+
+    function snoozeAlert(alertId) {
+      if (!alertId) return;
+      SRL.request("/api/compliance/alerts/" + alertId + "/snooze", { method: "POST" }).then(function() {
+        showToast("Alert snoozed for 24 hours", "success");
+        loadCarrierData();
+      }).catch(function(err) {
+        showToast("Failed to snooze alert: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       MODALS
+       ========================================= */
+    function openModal(id) {
+      document.getElementById(id).classList.add("open");
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+
+    // Close modals on backdrop click
+    document.querySelectorAll(".modal-backdrop").forEach(function(backdrop) {
+      backdrop.addEventListener("click", function(e) {
+        if (e.target === backdrop) {
+          backdrop.classList.remove("open");
+        }
+      });
+    });
+
+    // Close modals on Escape key
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".modal-backdrop.open").forEach(function(m) {
+          m.classList.remove("open");
+        });
+      }
+    });
+
+    /* =========================================
+       TOAST
+       ========================================= */
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function() { el.classList.remove("show"); }, 3000);
+    }
+
+    /* =========================================
+       SIDEBAR
+       ========================================= */
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+  </script>
+
+  <!-- Footer Scripts -->
+  <script src="/shared/js/themeEngine.js"></script>
+  <script src="/shared/js/marco-polo.js"></script>
+  <script src="/ae/js/notification-bell.js"></script>
+</body>
+</html>

@@ -2,6 +2,8 @@ import { Response } from "express";
 import { z } from "zod";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
+import * as complianceMonitorService from "../services/complianceMonitorService";
+import { sendEmail } from "../services/emailService";
 
 const alertQuerySchema = z.object({
   status: z.string().optional(),
@@ -269,4 +271,424 @@ export async function getComplianceStats(req: AuthRequest, res: Response) {
     },
     upcomingExpirations,
   });
+}
+
+// ─── New Compliance Console Endpoints ───────────────────────
+
+// GET /compliance/dashboard
+export async function getDashboard(req: AuthRequest, res: Response) {
+  try {
+    const data = await complianceMonitorService.getDashboardData();
+    res.json(data);
+  } catch (err) {
+    console.error("[Compliance] Dashboard error:", err);
+    res.status(500).json({ error: "Failed to load dashboard data" });
+  }
+}
+
+// GET /compliance/overview
+export async function getOverview(req: AuthRequest, res: Response) {
+  try {
+    const filters = {
+      sortBy: req.query.sortBy as string | undefined,
+      status: req.query.status as string | undefined,
+      tier: req.query.tier as string | undefined,
+    };
+    const data = await complianceMonitorService.getOverviewMatrix(filters);
+    res.json(data);
+  } catch (err) {
+    console.error("[Compliance] Overview error:", err);
+    res.status(500).json({ error: "Failed to load overview data" });
+  }
+}
+
+// GET /compliance/carrier/:carrierId
+export async function getCarrierDetail(req: AuthRequest, res: Response) {
+  try {
+    const data = await complianceMonitorService.getCarrierCompliance(req.params.carrierId);
+    if (!data) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+    res.json(data);
+  } catch (err) {
+    console.error("[Compliance] Carrier detail error:", err);
+    res.status(500).json({ error: "Failed to load carrier compliance data" });
+  }
+}
+
+// POST /compliance/alerts/:id/snooze
+export async function snoozeAlert(req: AuthRequest, res: Response) {
+  try {
+    const { days } = req.body;
+    const validDays = [7, 14, 30];
+    if (!validDays.includes(days)) {
+      res.status(400).json({ error: "Days must be 7, 14, or 30" });
+      return;
+    }
+
+    const alert = await prisma.complianceAlert.findUnique({ where: { id: req.params.id } });
+    if (!alert) {
+      res.status(404).json({ error: "Alert not found" });
+      return;
+    }
+
+    const snoozedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const updated = await prisma.complianceAlert.update({
+      where: { id: req.params.id },
+      data: {
+        status: "SNOOZED",
+        snoozedUntil,
+        notifiedAt: new Date(),
+      },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error("[Compliance] Snooze error:", err);
+    res.status(500).json({ error: "Failed to snooze alert" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/send-reminder
+export async function sendReminder(req: AuthRequest, res: Response) {
+  try {
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: req.params.carrierId },
+      include: {
+        user: { select: { company: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    const carrierName = carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #0f172a;">Silk Route Logistics - Compliance Reminder</h2>
+        <p>Dear ${carrierName},</p>
+        <p>This is a reminder to review and update your compliance documents in the SRL carrier portal.</p>
+        <p>Please ensure the following are current:</p>
+        <ul>
+          <li>Certificate of Insurance (COI)</li>
+          <li>W-9 Form</li>
+          <li>Authority Documentation</li>
+        </ul>
+        ${carrier.insuranceExpiry ? `<p><strong>Insurance Expiry:</strong> ${carrier.insuranceExpiry.toISOString().split("T")[0]}</p>` : ""}
+        <p>Log into your carrier portal to upload any updated documents.</p>
+        <p>Thank you,<br/>SRL Compliance Team</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail(carrier.user.email, `Compliance Reminder - ${carrierName}`, html);
+    } catch {
+      console.log(`[Compliance] Email send failed for ${carrier.user.email}`);
+    }
+
+    // Record the reminder
+    await prisma.complianceReminder.create({
+      data: {
+        carrierId: carrier.id,
+        itemType: "MANUAL_REMINDER",
+        tier: "MANUAL",
+        emailStatus: "SENT",
+      },
+    });
+
+    res.json({ success: true, message: `Reminder sent to ${carrier.user.email}` });
+  } catch (err) {
+    console.error("[Compliance] Send reminder error:", err);
+    res.status(500).json({ error: "Failed to send reminder" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/run-fmcsa-check
+export async function runFmcsaCheck(req: AuthRequest, res: Response) {
+  try {
+    const result = await complianceMonitorService.runFmcsaScan(req.params.carrierId);
+    res.json(result);
+  } catch (err: any) {
+    console.error("[Compliance] FMCSA check error:", err);
+    res.status(500).json({ error: err.message || "Failed to run FMCSA check" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/override-block
+export async function overrideBlock(req: AuthRequest, res: Response) {
+  try {
+    const { reason } = req.body;
+    if (!reason || reason.trim().length < 10) {
+      res.status(400).json({ error: "Override reason must be at least 10 characters" });
+      return;
+    }
+
+    const carrierId = req.params.carrierId;
+    const adminId = req.user!.id;
+
+    // Check: max 2 overrides per carrier per month
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentOverrides = await prisma.complianceOverride.count({
+      where: {
+        carrierId,
+        createdAt: { gte: thirtyDaysAgo },
+      },
+    });
+
+    if (recentOverrides >= 2) {
+      res.status(429).json({
+        error: "Maximum 2 overrides per carrier per month. Contact VP of Operations for additional overrides.",
+      });
+      return;
+    }
+
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: carrierId },
+      include: { user: { select: { company: true, firstName: true, lastName: true } } },
+    });
+
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    // Create override with 24hr expiry
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const override = await prisma.complianceOverride.create({
+      data: {
+        carrierId,
+        reason: reason.trim(),
+        adminId,
+        expiresAt,
+      },
+    });
+
+    // Create audit trail entry
+    await prisma.auditTrail.create({
+      data: {
+        action: "COMPLIANCE_OVERRIDE",
+        entityType: "CarrierProfile",
+        entityId: carrierId,
+        performedById: adminId,
+        changedFields: {
+          reason: reason.trim(),
+          overrideId: override.id,
+          expiresAt: expiresAt.toISOString(),
+          carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,
+        } as any,
+      },
+    });
+
+    res.json({
+      override,
+      message: `Override created. Expires at ${expiresAt.toISOString()}`,
+    });
+  } catch (err) {
+    console.error("[Compliance] Override error:", err);
+    res.status(500).json({ error: "Failed to create override" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/suspend
+export async function suspendCarrier(req: AuthRequest, res: Response) {
+  try {
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: req.params.carrierId },
+      include: { user: { select: { company: true, firstName: true, lastName: true } } },
+    });
+
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    const updated = await prisma.carrierProfile.update({
+      where: { id: req.params.carrierId },
+      data: { onboardingStatus: "SUSPENDED" },
+    });
+
+    // Create audit trail
+    await prisma.auditTrail.create({
+      data: {
+        action: "CARRIER_SUSPENDED",
+        entityType: "CarrierProfile",
+        entityId: carrier.id,
+        performedById: req.user!.id,
+        changedFields: {
+          carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,
+          previousStatus: carrier.onboardingStatus,
+        } as any,
+      },
+    });
+
+    res.json({ success: true, carrier: updated });
+  } catch (err) {
+    console.error("[Compliance] Suspend error:", err);
+    res.status(500).json({ error: "Failed to suspend carrier" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/notes
+export async function addNote(req: AuthRequest, res: Response) {
+  try {
+    const { content } = req.body;
+    if (!content || content.trim().length === 0) {
+      res.status(400).json({ error: "Note content is required" });
+      return;
+    }
+
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: req.params.carrierId },
+    });
+
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    const note = await prisma.complianceNote.create({
+      data: {
+        carrierId: req.params.carrierId,
+        authorId: req.user!.id,
+        content: content.trim(),
+      },
+      include: {
+        author: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    res.json(note);
+  } catch (err) {
+    console.error("[Compliance] Add note error:", err);
+    res.status(500).json({ error: "Failed to add note" });
+  }
+}
+
+// GET /compliance/carrier/:carrierId/notes
+export async function getNotes(req: AuthRequest, res: Response) {
+  try {
+    const notes = await prisma.complianceNote.findMany({
+      where: { carrierId: req.params.carrierId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        author: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    res.json(notes);
+  } catch (err) {
+    console.error("[Compliance] Get notes error:", err);
+    res.status(500).json({ error: "Failed to load notes" });
+  }
+}
+
+// GET /compliance/export
+export async function exportCSV(req: AuthRequest, res: Response) {
+  try {
+    const matrixData = await complianceMonitorService.getOverviewMatrix();
+
+    const headers = [
+      "Carrier Name",
+      "Email",
+      "MC Number",
+      "DOT Number",
+      "Tier",
+      "Status",
+      "Authority",
+      "Insurance Auto",
+      "Insurance Cargo",
+      "W9",
+      "COI",
+      "Authority Doc",
+      "FMCSA Status",
+      "Insurance Expiry",
+      "Last FMCSA Check",
+    ];
+
+    const rows = matrixData.carriers.map((c) => [
+      `"${c.name}"`,
+      c.email,
+      c.mcNumber || "",
+      c.dotNumber || "",
+      c.tier,
+      c.overallStatus,
+      c.items.authority,
+      c.items.insuranceAuto,
+      c.items.insuranceCargo,
+      c.items.w9,
+      c.items.coi,
+      c.items.authorityDoc,
+      c.items.fmcsaStatus,
+      c.insuranceExpiry ? c.insuranceExpiry.toISOString().split("T")[0] : "",
+      c.fmcsaLastChecked ? c.fmcsaLastChecked.toISOString().split("T")[0] : "",
+    ]);
+
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=compliance-export-${new Date().toISOString().split("T")[0]}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error("[Compliance] Export error:", err);
+    res.status(500).json({ error: "Failed to export compliance data" });
+  }
+}
+
+// GET /compliance/scans/:carrierId
+export async function getScanHistory(req: AuthRequest, res: Response) {
+  try {
+    const scans = await prisma.complianceScan.findMany({
+      where: { carrierId: req.params.carrierId },
+      orderBy: { scannedAt: "desc" },
+      take: 50,
+    });
+
+    res.json(scans);
+  } catch (err) {
+    console.error("[Compliance] Scan history error:", err);
+    res.status(500).json({ error: "Failed to load scan history" });
+  }
+}
+
+// GET /compliance/scans/latest
+export async function getLatestScan(req: AuthRequest, res: Response) {
+  try {
+    const latestScans = await prisma.complianceScan.findMany({
+      orderBy: { scannedAt: "desc" },
+      take: 20,
+      include: {
+        carrier: {
+          include: {
+            user: { select: { company: true, firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    res.json(
+      latestScans.map((s) => ({
+        ...s,
+        carrierName:
+          s.carrier.user.company ||
+          `${s.carrier.user.firstName} ${s.carrier.user.lastName}`,
+      }))
+    );
+  } catch (err) {
+    console.error("[Compliance] Latest scan error:", err);
+    res.status(500).json({ error: "Failed to load latest scans" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/check
+export async function checkCarrier(req: AuthRequest, res: Response) {
+  try {
+    const result = await complianceMonitorService.complianceCheck(req.params.carrierId);
+    res.json(result);
+  } catch (err) {
+    console.error("[Compliance] Check carrier error:", err);
+    res.status(500).json({ error: "Failed to check carrier compliance" });
+  }
 }

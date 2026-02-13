@@ -73,6 +73,7 @@ enum OnboardingStatus {
   UNDER_REVIEW
   APPROVED
   REJECTED
+  SUSPENDED
 }
 
 enum ScorecardPeriod {
@@ -372,6 +373,11 @@ enum AuditAction {
   REJECT
   LOGIN
   EXPORT
+  COMPLIANCE_OVERRIDE
+  CARRIER_SUSPENDED
+  SCAN
+  DISMISS
+  RESOLVE
 }
 
 enum NotificationType {
@@ -486,6 +492,8 @@ model User {
   generatedReports   FinancialReport[]  @relation("ReportGenerator")
   errorLogs          ErrorLog[]         @relation("ErrorLogUser")
   marcoPoloChats     MarcoPoloConversation[]
+  complianceNotes     ComplianceNote[]     @relation("ComplianceNotes")
+  complianceOverrides ComplianceOverride[] @relation("ComplianceOverrides")
 
   @@index([email])
   @@index([role])
@@ -564,6 +572,11 @@ model CarrierProfile {
   scorecards  CarrierScorecard[]
   bonuses     CarrierBonus[]
   tenders     LoadTender[]
+
+  complianceScans     ComplianceScan[]
+  complianceReminders ComplianceReminder[]
+  complianceNotes     ComplianceNote[]
+  complianceOverrides ComplianceOverride[]
 
   @@index([mcNumber])
   @@index([dotNumber])
@@ -1621,14 +1634,73 @@ model ComplianceAlert {
   expiryDate  DateTime
   status      String   @default("ACTIVE")
   severity    String   @default("WARNING")
-  notifiedAt  DateTime?
-  resolvedAt  DateTime?
-  createdAt   DateTime @default(now())
+  notifiedAt   DateTime?
+  resolvedAt   DateTime?
+  snoozedUntil DateTime?
+  createdAt    DateTime @default(now())
 
   @@index([status, severity])
   @@index([entityType, entityId])
   @@index([expiryDate])
   @@map("compliance_alerts")
+}
+
+model ComplianceScan {
+  id              String   @id @default(cuid())
+  carrierId       String
+  scanType        String   @default("FMCSA_AUTO")
+  fmcsaData       Json?
+  previousData    Json?
+  changesDetected Json?
+  status          String   @default("PASSED")
+  scannedAt       DateTime @default(now())
+  carrier         CarrierProfile @relation(fields: [carrierId], references: [id])
+
+  @@index([carrierId])
+  @@index([scannedAt])
+  @@map("compliance_scans")
+}
+
+model ComplianceReminder {
+  id          String   @id @default(cuid())
+  carrierId   String
+  itemType    String
+  tier        String
+  sentAt      DateTime @default(now())
+  emailStatus String   @default("SENT")
+  carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
+
+  @@index([carrierId])
+  @@index([sentAt])
+  @@map("compliance_reminders")
+}
+
+model ComplianceNote {
+  id        String   @id @default(cuid())
+  carrierId String
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
+  author    User     @relation("ComplianceNotes", fields: [authorId], references: [id])
+
+  @@index([carrierId])
+  @@map("compliance_notes")
+}
+
+model ComplianceOverride {
+  id        String   @id @default(cuid())
+  carrierId String
+  reason    String   @db.Text
+  adminId   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
+  admin     User     @relation("ComplianceOverrides", fields: [adminId], references: [id])
+
+  @@index([carrierId])
+  @@index([expiresAt])
+  @@map("compliance_overrides")
 }
 
 // ─── Communication Log ──────────────────────────────────
