@@ -902,64 +902,20 @@
       margin: 0 auto;
     }
 
-    .map-container {
+    .network-map-container {
       position: relative;
-      max-width: 900px;
+      width: 100%;
+      max-width: 1100px;
       margin: 0 auto;
+      padding: 20px 0;
+      overflow: hidden;
     }
 
-    .map-container svg {
+    #networkMapCanvas {
       width: 100%;
       height: auto;
-    }
-
-    .map-dot {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--gold);
-      transform: translate(-50%, -50%);
-      z-index: 2;
-    }
-
-    .map-dot::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--gold);
-      animation: pulse 2.5s ease infinite;
-    }
-
-    .map-dot.hq {
-      width: 16px;
-      height: 16px;
-    }
-
-    .map-dot.hq::before {
-      width: 16px;
-      height: 16px;
-    }
-
-    .map-dot .dot-label {
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: rgba(255,255,255,0.75);
-      letter-spacing: 0.03em;
-    }
-
-    .map-dot.hq .dot-label {
-      color: var(--gold);
-      font-size: 0.75rem;
+      display: block;
+      border-radius: 12px;
     }
 
     .coverage-caption {
@@ -1804,8 +1760,8 @@
         <h2 class="headline headline-lg text-white">Connecting North America</h2>
         <p>From Vancouver to Mexico City, our network spans the continent.</p>
       </div>
-      <div class="map-container reveal">
-        <img src="/hero-map.svg" alt="North America coverage map" style="width:100%;height:auto;border-radius:12px;">
+      <div class="network-map-container reveal">
+        <canvas id="networkMapCanvas"></canvas>
       </div>
       <p class="coverage-caption reveal">
         Asset-based and brokerage operations spanning all 48 contiguous states, 10 Canadian provinces, and Mexican cross-border lanes.
@@ -2302,6 +2258,7 @@
     })();
   </script>
 
+<script src="/js/networkMap.js"></script>
 <script src="/shared/js/marco-polo.js"></script>
 </body>
 </html>
