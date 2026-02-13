@@ -32,7 +32,7 @@ export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
     },
   });
 
-  if (!profile || (profile.tier !== "GUEST" && profile.srcppTier !== "GUEST")) return false;
+  if (!profile || (profile.tier !== "GUEST" && profile.cppTier !== "GUEST")) return false;
 
   const completedLoads = await prisma.load.count({
     where: { carrierId: profile.userId, status: { in: ["DELIVERED", "COMPLETED"] } },
@@ -46,7 +46,7 @@ export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
   // Promote to Bronze
   await prisma.carrierProfile.update({
     where: { id: carrierId },
-    data: { tier: "BRONZE", srcppTier: "BRONZE", source: "caravan" },
+    data: { tier: "BRONZE", cppTier: "BRONZE", source: "caravan" },
   });
 
   // Send notification

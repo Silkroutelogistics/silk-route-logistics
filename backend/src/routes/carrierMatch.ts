@@ -46,7 +46,7 @@ router.get("/:loadId", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIO
     breakdown.region = regionMatch ? 15 : 0;
     score += breakdown.region;
 
-    // SRCPP score (0-25 pts, scaled from carrier's overall score)
+    // CPP score (0-25 pts, scaled from carrier's overall score)
     const carrierScore = c.scorecards[0]?.overallScore || 0;
     breakdown.performance = Math.round((carrierScore / 100) * 25);
     score += breakdown.performance;
@@ -85,13 +85,13 @@ router.get("/:loadId", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIO
       mcNumber: c.mcNumber,
       dotNumber: c.dotNumber,
       tier: c.tier,
-      srcppTier: c.srcppTier,
+      cppTier: c.cppTier,
       source: c.source || "caravan",
       equipmentTypes: c.equipmentTypes,
       operatingRegions: c.operatingRegions,
       overallScore: carrierScore,
       safetyScore: c.safetyScore,
-      totalLoads: c.srcppTotalLoads,
+      totalLoads: c.cppTotalLoads,
       complianceStatus,
       equipmentMatch: equipMatch,
       matchScore: score,
@@ -190,7 +190,7 @@ router.post("/import-from-dat", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", 
           onboardingStatus: "UNDER_REVIEW",
           status: "REVIEW",
           tier: "GUEST",
-          srcppTier: "GUEST",
+          cppTier: "GUEST",
           source: "dat",
         },
       },
@@ -305,14 +305,14 @@ router.post("/:id/promote-to-bronze", authorize("ADMIN", "CEO", "BROKER"), async
     return;
   }
 
-  if (profile.tier !== "GUEST" && profile.srcppTier !== "GUEST") {
+  if (profile.tier !== "GUEST" && profile.cppTier !== "GUEST") {
     res.status(400).json({ error: "Carrier is not a Guest tier" });
     return;
   }
 
   await prisma.carrierProfile.update({
     where: { id: profile.id },
-    data: { tier: "BRONZE", srcppTier: "BRONZE", source: "caravan" },
+    data: { tier: "BRONZE", cppTier: "BRONZE", source: "caravan" },
   });
 
   await prisma.notification.create({

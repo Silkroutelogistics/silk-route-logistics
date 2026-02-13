@@ -255,7 +255,7 @@ export async function getOverviewMatrix(filters?: {
   const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   const where: Record<string, unknown> = { onboardingStatus: "APPROVED" };
-  if (filters?.tier) where.srcppTier = filters.tier;
+  if (filters?.tier) where.cppTier = filters.tier;
 
   const carriers = await prisma.carrierProfile.findMany({
     where,
@@ -310,7 +310,7 @@ export async function getOverviewMatrix(filters?: {
       email: c.user.email,
       mcNumber: c.mcNumber,
       dotNumber: c.dotNumber,
-      tier: c.srcppTier,
+      tier: c.cppTier,
       onboardingStatus: c.onboardingStatus,
       overallStatus,
       items,
@@ -466,7 +466,7 @@ export async function getCarrierCompliance(carrierId: string) {
       phone: carrier.user.phone,
       mcNumber: carrier.mcNumber,
       dotNumber: carrier.dotNumber,
-      tier: carrier.srcppTier,
+      tier: carrier.cppTier,
       onboardingStatus: carrier.onboardingStatus,
       insuranceExpiry: carrier.insuranceExpiry,
       insuranceCompany: carrier.insuranceCompany,

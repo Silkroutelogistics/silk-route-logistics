@@ -136,7 +136,7 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
     sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
-    // Integration: create AP, update shipper credit, recalc SRCPP
+    // Integration: create AP, update shipper credit, recalc CPP
     onLoadDelivered(load.id).catch((e) => console.error("[Integration] onLoadDelivered error:", e.message));
 
     if (load.posterId) {
@@ -221,7 +221,7 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
     sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
-    // Integration: create AP, update shipper credit, recalc SRCPP
+    // Integration: create AP, update shipper credit, recalc CPP
     onLoadDelivered(load.id).catch((e) => console.error("[Integration] onLoadDelivered error:", e.message));
   }
 

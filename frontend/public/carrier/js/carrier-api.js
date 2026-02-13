@@ -188,9 +188,9 @@ var CARRIER = (function () {
     return request("/api/carrier-loads/" + id + "/status", { method: "POST", body: { status: status, note: note } });
   }
 
-  // --- SRCPP ---
-  function getSrcppStatus() {
-    return request("/api/srcpp/my-status");
+  // --- CPP ---
+  function getCppStatus() {
+    return request("/api/cpp/my-status");
   }
 
   // --- Payments ---
@@ -244,7 +244,7 @@ var CARRIER = (function () {
       getDashboard(),                    // 1
       getMyLoads({ limit: 5 }),          // 2
       getAvailableLoads({ limit: 5 }),   // 3
-      getSrcppStatus(),                  // 4
+      getCppStatus(),                  // 4
       getPaymentSummary(),               // 5
       getComplianceOverview(),           // 6
       getNotifications(),                // 7
@@ -254,7 +254,7 @@ var CARRIER = (function () {
         dashboard: unwrap(results[1]),
         myLoads: unwrap(results[2]),
         availableLoads: unwrap(results[3]),
-        srcpp: unwrap(results[4]),
+        cpp: unwrap(results[4]),
         payments: unwrap(results[5]),
         compliance: unwrap(results[6]),
         notifications: unwrap(results[7]),
@@ -321,7 +321,7 @@ var CARRIER = (function () {
     declineLoad: declineLoad,
     updateLoadDriver: updateLoadDriver,
     updateLoadStatus: updateLoadStatus,
-    getSrcppStatus: getSrcppStatus,
+    getCppStatus: getCppStatus,
     getPayments: getPayments,
     getPaymentSummary: getPaymentSummary,
     getPaymentDetail: getPaymentDetail,

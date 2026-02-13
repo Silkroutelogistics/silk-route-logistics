@@ -390,7 +390,7 @@ enum NotificationType {
   INVOICE_OVERDUE
   FUND_ALERT
   CREDIT_LIMIT
-  SRCPP_UPGRADE
+  CPP_UPGRADE
   DISPUTE_FILED
   POD_RECEIVED
   SYSTEM_ERROR
@@ -546,11 +546,11 @@ model CarrierProfile {
   paymentPreference     PaymentTier?
   eldProvider           String?
 
-  // SRCPP Loyalty
-  srcppTier             CarrierTier             @default(NONE)
-  srcppTotalLoads       Int                     @default(0)
-  srcppTotalMiles       Float                   @default(0)
-  srcppJoinedDate       DateTime?
+  // CPP Loyalty
+  cppTier             CarrierTier             @default(NONE)
+  cppTotalLoads       Int                     @default(0)
+  cppTotalMiles       Float                   @default(0)
+  cppJoinedDate       DateTime?
 
   // FMCSA
   safetyRating          String?
@@ -586,7 +586,7 @@ model CarrierProfile {
   @@index([mcNumber])
   @@index([dotNumber])
   @@index([status])
-  @@index([srcppTier])
+  @@index([cppTier])
   @@index([source])
   @@map("carrier_profiles")
 }
@@ -1426,8 +1426,8 @@ model Driver {
   hosCycleUsed    Float        @default(0)
   hosCycleLimit   Float        @default(70)
 
-  // SRCPP miles
-  srcppMilesEarned Float       @default(0)
+  // CPP miles
+  cppMilesEarned Float       @default(0)
 
   assignedTruckId     String?  @unique
   assignedTruck       Truck?   @relation("TruckDriver", fields: [assignedTruckId], references: [id])
@@ -1780,7 +1780,7 @@ model MatchResult {
   matchScore      Float
   laneScore       Float    @default(0)
   rateScore       Float    @default(0)
-  srcppScore      Float    @default(0)
+  cppScore      Float    @default(0)
   availabilityScore Float  @default(0)
   breakdown       Json?
   rank            Int      @default(0)

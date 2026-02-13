@@ -285,7 +285,7 @@ export async function getCarrierScorecard(range: DateRange, filters: AnalyticsFi
     where,
     select: {
       id: true, carrierId: true, deliveryDate: true, actualDeliveryDatetime: true,
-      carrier: { select: { id: true, firstName: true, lastName: true, company: true, carrierProfile: { select: { mcNumber: true, tier: true, srcppTier: true, srcppTotalLoads: true } } } },
+      carrier: { select: { id: true, firstName: true, lastName: true, company: true, carrierProfile: { select: { mcNumber: true, tier: true, cppTier: true, cppTotalLoads: true } } } },
     },
   });
 
@@ -304,7 +304,7 @@ export async function getCarrierScorecard(range: DateRange, filters: AnalyticsFi
         id: l.carrierId,
         name: l.carrier.company || `${l.carrier.firstName} ${l.carrier.lastName}`,
         mc: l.carrier.carrierProfile?.mcNumber || "",
-        tier: l.carrier.carrierProfile?.srcppTier || l.carrier.carrierProfile?.tier || "NONE",
+        tier: l.carrier.carrierProfile?.cppTier || l.carrier.carrierProfile?.tier || "NONE",
         loads: 0, onTime: 0, claims: 0, lastLoadDate: null,
       };
     }

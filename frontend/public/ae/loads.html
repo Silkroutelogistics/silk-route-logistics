@@ -1028,6 +1028,7 @@
   <div class="toast" id="toast"></div>
 
   <!-- API Client -->
+  <script src="/js/auth.js"></script>
   <script src="/ae/js/api.js"></script>
 
   <script>
@@ -1516,7 +1517,7 @@
           html += '<span class="tier-badge tier-' + (m.tier || 'NONE') + '">' + (m.tier || 'NONE') + '</span>';
           html += '<span class="source-' + (m.source || 'caravan') + '">' + (m.source === 'dat' ? 'DAT' : 'Caravan') + '</span>';
           html += '<span>MC# ' + esc(m.mcNumber || 'N/A') + '</span>';
-          if (m.overallScore > 0) html += '<span>SRCPP ' + m.overallScore.toFixed(0) + '%</span>';
+          if (m.overallScore > 0) html += '<span>CPP ' + m.overallScore.toFixed(0) + '%</span>';
           html += '</div>';
 
           // Score breakdown tooltip

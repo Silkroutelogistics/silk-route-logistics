@@ -147,7 +147,7 @@
     if (type.includes("PAYMENT") || type.includes("INVOICE")) return "💰";
     if (type.includes("ERROR") || type.includes("SYSTEM")) return "⚠️";
     if (type.includes("CREDIT")) return "💳";
-    if (type.includes("SRCPP")) return "⭐";
+    if (type.includes("CPP")) return "⭐";
     if (type.includes("POD")) return "📋";
     if (type.includes("FUND")) return "🏦";
     return "🔔";

@@ -75,28 +75,28 @@ export function initCronJobs() {
     }
   });
 
-  // ─── Daily at 6 AM: DSO calculation, SRCPP tier updates ─────
+  // ─── Daily at 6 AM: DSO calculation, CPP tier updates ─────
   cron.schedule("0 6 * * *", async () => {
     try {
-      // Update SRCPP tiers based on total loads completed
+      // Update CPP tiers based on total loads completed
       const carriers = await prisma.carrierProfile.findMany({
-        select: { id: true, srcppTotalLoads: true, srcppTier: true },
+        select: { id: true, cppTotalLoads: true, cppTier: true },
       });
 
       for (const carrier of carriers) {
-        const loads = carrier.srcppTotalLoads || 0;
+        const loads = carrier.cppTotalLoads || 0;
         let newTier: "PLATINUM" | "GOLD" | "SILVER" | "BRONZE";
         if (loads >= 100) newTier = "PLATINUM";
         else if (loads >= 50) newTier = "GOLD";
         else if (loads >= 20) newTier = "SILVER";
         else newTier = "BRONZE";
 
-        if (newTier !== carrier.srcppTier) {
+        if (newTier !== carrier.cppTier) {
           await prisma.carrierProfile.update({
             where: { id: carrier.id },
-            data: { srcppTier: newTier },
+            data: { cppTier: newTier },
           });
-          console.log(`[Cron Daily] Updated carrier ${carrier.id} tier: ${carrier.srcppTier} → ${newTier}`);
+          console.log(`[Cron Daily] Updated carrier ${carrier.id} tier: ${carrier.cppTier} → ${newTier}`);
         }
       }
 

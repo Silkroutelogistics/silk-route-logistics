@@ -314,7 +314,7 @@ a:hover { color: var(--gold-light); }
 .kpi-tile.blue .kpi-value { color: var(--blue); }
 .kpi-tile.amber .kpi-value { color: var(--amber); }
 
-/* ─── SRCPP Tier Card ─────────────────────────────── */
+/* ─── CPP Tier Card ─────────────────────────────── */
 .tier-card {
   background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
   border: 1px solid var(--gold-dim);

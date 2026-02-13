@@ -673,7 +673,7 @@
           <div class="kpi-sub" id="kpi-guest-sub"></div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Avg SRCPP Score</div>
+          <div class="kpi-label">Avg CPP Score</div>
           <div class="kpi-value" id="kpi-score">--</div>
           <div class="kpi-sub" id="kpi-score-sub"></div>
         </div>
@@ -747,7 +747,7 @@
               <th>DOT#</th>
               <th>Source</th>
               <th>Tier</th>
-              <th>SRCPP Score</th>
+              <th>CPP Score</th>
               <th>Equipment</th>
               <th>Regions</th>
               <th>Loads</th>
@@ -826,6 +826,7 @@
   <div class="toast" id="toast"></div>
 
   <!-- API Client -->
+  <script src="/js/auth.js"></script>
   <script src="/ae/js/api.js"></script>
 
   <script>
@@ -881,7 +882,7 @@
       var caravan = carriers.filter(function(c){ return (!c.source || c.source === "caravan") && c.tier !== "GUEST" && c.tier !== "NONE"; }).length;
       var guest = carriers.filter(function(c){ return c.source === "dat" || c.tier === "GUEST"; }).length;
 
-      // Average SRCPP score from scorecards
+      // Average CPP score from scorecards
       var scored = carriers.filter(function(c){ return c.performance && c.performance.overallScore > 0; });
       var avgScore = scored.length > 0
         ? scored.reduce(function(sum, c){ return sum + (c.performance.overallScore || 0); }, 0) / scored.length
@@ -1021,7 +1022,7 @@
           '<div class="carrier-card-meta">' +
             '<div><div class="meta-label">MC#</div><div class="meta-value">' + esc(c.mcNumber || "N/A") + '</div></div>' +
             '<div><div class="meta-label">DOT#</div><div class="meta-value">' + esc(c.dotNumber || "N/A") + '</div></div>' +
-            '<div><div class="meta-label">SRCPP Score</div><div class="meta-value">' +
+            '<div><div class="meta-label">CPP Score</div><div class="meta-value">' +
               '<div class="score-bar">' +
                 '<div class="score-bar-track"><div class="score-bar-fill" style="width:' + score + '%;background:' + scoreColor + '"></div></div>' +
                 '<span class="score-bar-label" style="color:' + scoreColor + '">' + (score > 0 ? score.toFixed(0) + '%' : '--') + '</span>' +
@@ -1054,7 +1055,7 @@
         if ((c.equipmentTypes || []).length > 2) equip += " +" + ((c.equipmentTypes || []).length - 2);
         var regions = (c.operatingRegions || []).slice(0,2).join(", ");
         if ((c.operatingRegions || []).length > 2) regions += " +" + ((c.operatingRegions || []).length - 2);
-        var loads = c.srcppTotalLoads || 0;
+        var loads = c.cppTotalLoads || 0;
         var complianceOk = c.insuranceExpiry ? new Date(c.insuranceExpiry) > new Date() : false;
         var complianceClass = !complianceOk ? "compliance-red" : (c.insuranceExpiry && new Date(c.insuranceExpiry) < new Date(Date.now() + 30*86400000) ? "compliance-amber" : "compliance-green");
         var statusLabel = c.onboardingStatus === "APPROVED" ? "Approved" : c.onboardingStatus === "REJECTED" ? "Rejected" : c.status || "Pending";
@@ -1110,13 +1111,13 @@
       html += dField("Status", esc(c.onboardingStatus || c.status || "Unknown"));
       html += '</div></div>';
 
-      // SRCPP Performance
+      // CPP Performance
       html += '<div class="detail-section">';
-      html += '<div class="detail-section-title">SRCPP Performance</div>';
+      html += '<div class="detail-section-title">CPP Performance</div>';
       html += '<div class="detail-grid">';
       html += dField("Overall Score", score > 0 ? '<span style="font-size:18px;font-weight:700;color:' + (score >= 95 ? 'var(--green)' : score >= 85 ? 'var(--gold)' : 'var(--amber)') + '">' + score.toFixed(1) + '%</span>' : '--');
       html += dField("Tier", '<span class="tier-badge tier-' + tier + '">' + tier + '</span>');
-      html += dField("Total Loads", String(c.srcppTotalLoads || 0));
+      html += dField("Total Loads", String(c.cppTotalLoads || 0));
       html += dField("Safety Score", c.safetyScore ? c.safetyScore.toFixed(1) : '--');
       html += '</div></div>';
 

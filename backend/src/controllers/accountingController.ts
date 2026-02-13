@@ -663,7 +663,7 @@ export async function getPaymentById(req: AuthRequest, res: Response) {
             company: true,
             email: true,
             carrierProfile: {
-              select: { paymentPreference: true, srcppTier: true },
+              select: { paymentPreference: true, cppTier: true },
             },
           },
         },
@@ -747,7 +747,7 @@ export async function preparePayment(req: AuthRequest, res: Response) {
     const acc = accessorialsTotal ?? 0;
     const grossAmount = lh + fs + acc;
 
-    // Calculate quick-pay discount based on SRCPP tier
+    // Calculate quick-pay discount based on CPP tier
     const tier = paymentTier ?? "STANDARD";
     let quickPayFeePercent = 0;
     if (tier === "FLASH") quickPayFeePercent = 5;
@@ -3276,10 +3276,10 @@ export async function getAPAging(req: AuthRequest, res: Response) {
 }
 
 // ============================================================
-// 57. SRCPP TIER FEE SCHEDULE
+// 57. CPP TIER FEE SCHEDULE
 // ============================================================
 
-export async function getSRCPPTierSchedule(_req: AuthRequest, res: Response) {
+export async function getCPPTierSchedule(_req: AuthRequest, res: Response) {
   res.json({
     tiers: [
       { tier: "FLASH", feePercent: 5, slaHours: 2, description: "Flash Pay — Same day, 2-hour SLA" },

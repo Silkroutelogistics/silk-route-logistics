@@ -297,9 +297,9 @@ export async function getCarrierInfo(ctx: UserContext, carrierId?: string) {
         phone: profile.user.phone || profile.contactPhone,
         mcNumber: profile.mcNumber,
         dotNumber: profile.dotNumber,
-        tier: profile.srcppTier !== "NONE" ? profile.srcppTier : profile.tier,
-        srcppTotalLoads: profile.srcppTotalLoads,
-        srcppTotalMiles: profile.srcppTotalMiles,
+        tier: profile.cppTier !== "NONE" ? profile.cppTier : profile.tier,
+        cppTotalLoads: profile.cppTotalLoads,
+        cppTotalMiles: profile.cppTotalMiles,
         equipmentTypes: profile.equipmentTypes,
         operatingRegions: profile.operatingRegions,
         insuranceExpiry: profile.insuranceExpiry,
@@ -1004,9 +1004,9 @@ export async function searchCarriers(ctx: UserContext, query: string) {
           name: p.companyName || `${p.user.firstName} ${p.user.lastName}`,
           mcNumber: p.mcNumber,
           dotNumber: p.dotNumber,
-          tier: p.srcppTier !== "NONE" ? p.srcppTier : p.tier,
-          srcppTotalLoads: p.srcppTotalLoads,
-          srcppTotalMiles: p.srcppTotalMiles,
+          tier: p.cppTier !== "NONE" ? p.cppTier : p.tier,
+          cppTotalLoads: p.cppTotalLoads,
+          cppTotalMiles: p.cppTotalMiles,
           equipmentTypes: p.equipmentTypes,
           operatingRegions: p.operatingRegions,
           applicationStatus: p.status,
@@ -1367,7 +1367,7 @@ export async function getMyScore(ctx: UserContext) {
       return { error: "Carrier profile not found." };
     }
 
-    const currentTier = profile.srcppTier !== "NONE" ? profile.srcppTier : profile.tier;
+    const currentTier = profile.cppTier !== "NONE" ? profile.cppTier : profile.tier;
     const latestScorecard = profile.scorecards[0];
 
     // Calculate bonus percentage
@@ -1415,8 +1415,8 @@ export async function getMyScore(ctx: UserContext) {
         gpsCompliancePct: latestScorecard?.gpsCompliancePct || 0,
       },
       stats: {
-        totalLoads: profile.srcppTotalLoads,
-        totalMiles: profile.srcppTotalMiles,
+        totalLoads: profile.cppTotalLoads,
+        totalMiles: profile.cppTotalMiles,
         bonusPercentage: bonusPercent,
         totalBonusEarned,
       },
@@ -1470,7 +1470,7 @@ export async function getCarrierScore(ctx: UserContext, carrierId: string) {
       return { error: "Carrier profile not found." };
     }
 
-    const currentTier = profile.srcppTier !== "NONE" ? profile.srcppTier : profile.tier;
+    const currentTier = profile.cppTier !== "NONE" ? profile.cppTier : profile.tier;
     const latestScorecard = profile.scorecards[0];
 
     const bonusPercent = (() => {
@@ -1510,8 +1510,8 @@ export async function getCarrierScore(ctx: UserContext, carrierId: string) {
         gpsCompliancePct: latestScorecard?.gpsCompliancePct || 0,
       },
       stats: {
-        totalLoads: profile.srcppTotalLoads,
-        totalMiles: profile.srcppTotalMiles,
+        totalLoads: profile.cppTotalLoads,
+        totalMiles: profile.cppTotalMiles,
         bonusPercentage: bonusPercent,
       },
       nextTierInfo,
@@ -1560,7 +1560,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "getCarrierInfo",
-    description: "Get detailed carrier profile information including tier, SRCPP score, compliance alerts, equipment types, and recent load count. Can look up by carrier profile ID, user ID, MC number, or DOT number.",
+    description: "Get detailed carrier profile information including tier, CPP score, compliance alerts, equipment types, and recent load count. Can look up by carrier profile ID, user ID, MC number, or DOT number.",
     parameters: {
       type: "object",
       properties: {
@@ -1677,7 +1677,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "getMyScore",
-    description: "Get SRCPP score and tier information. For carrier users: their own score, tier, total loads, total miles, bonus percentage, and next tier requirements. For AE/Admin: requires a carrier_id parameter to look up a specific carrier's score.",
+    description: "Get CPP score and tier information. For carrier users: their own score, tier, total loads, total miles, bonus percentage, and next tier requirements. For AE/Admin: requires a carrier_id parameter to look up a specific carrier's score.",
     parameters: {
       type: "object",
       properties: {

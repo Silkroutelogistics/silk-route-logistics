@@ -50,7 +50,7 @@ export async function runComplianceForecastCycle(): Promise<{
       fmcsaBasicScores: true,
       fmcsaLastChecked: true,
       safetyRating: true,
-      srcppTier: true,
+      cppTier: true,
     },
   });
 

@@ -143,7 +143,7 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
       },
     });
 
-    // Integration: create initial SRCPP scorecard + GUEST tier
+    // Integration: create initial CPP scorecard + GUEST tier
     onCarrierApproved(profile.id).catch((e) => console.error("[Integration] onCarrierApproved error:", e.message));
   }
 

@@ -224,14 +224,14 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
 
   console.log(`[CheckCall] Response received for load ${schedule.load.referenceNumber}: ${mapping.label}`);
 
-  // If delivered, trigger full delivery pipeline (invoice, AP, SRCPP, etc.)
+  // If delivered, trigger full delivery pipeline (invoice, AP, CPP, etc.)
   if (mapping.status === "DELIVERED") {
     // Auto-generate invoice
     autoGenerateInvoice(schedule.loadId).catch((e) =>
       console.error("[CheckCall] autoGenerateInvoice error:", e.message)
     );
 
-    // Integration: AP, credit, SRCPP
+    // Integration: AP, credit, CPP
     import("./integrationService").then(({ onLoadDelivered }) =>
       onLoadDelivered(schedule.loadId).catch((e) =>
         console.error("[CheckCall] onLoadDelivered error:", e.message)

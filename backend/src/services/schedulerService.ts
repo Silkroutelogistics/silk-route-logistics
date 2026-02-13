@@ -7,7 +7,7 @@ import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
 import { processShipperTransitUpdates } from "./shipperNotificationService";
 import { processARReminders } from "../controllers/accountingController";
-import { processAllSRCPPRecalculations } from "./integrationService";
+import { processAllCPPRecalculations } from "./integrationService";
 import { processQueue } from "./aiLearningLoop/feedbackCollector";
 import { runAnomalyScan } from "./aiLearningLoop/anomalyDetector";
 import { runFullTrainingCycle } from "./aiLearningLoop/modelTrainer";
@@ -409,12 +409,12 @@ export function startSchedulers() {
     });
   });
 
-  // SRCPP: Weekly tier recalculation — Sunday 6 AM ET (11:00 UTC)
+  // CPP: Weekly tier recalculation — Sunday 6 AM ET (11:00 UTC)
   cron.schedule("0 11 * * 0", async () => {
-    console.log("[Scheduler] Running weekly SRCPP tier recalculation...");
-    await withLock("srcpp-weekly-recalc", 30 * 60 * 1000, async () => {
-      const result = await processAllSRCPPRecalculations();
-      console.log(`[Scheduler] SRCPP recalc: ${result.recalculated}/${result.total} carriers processed`);
+    console.log("[Scheduler] Running weekly CPP tier recalculation...");
+    await withLock("cpp-weekly-recalc", 30 * 60 * 1000, async () => {
+      const result = await processAllCPPRecalculations();
+      console.log(`[Scheduler] CPP recalc: ${result.recalculated}/${result.total} carriers processed`);
     });
   });
 

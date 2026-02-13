@@ -18,35 +18,35 @@
     .page-header p { font-size: 14px; color: var(--gray-500); margin-top: 4px; }
     .content-area { padding: 24px 32px; }
 
-    /* --- SRCPP Tier Banner --- */
-    .srcpp-banner {
+    /* --- CPP Tier Banner --- */
+    .cpp-banner {
       background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
       padding: 20px 24px; margin-bottom: 24px; border-top: 3px solid var(--gold);
     }
-    .srcpp-banner h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 14px; }
-    .srcpp-tiers-grid {
+    .cpp-banner h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 14px; }
+    .cpp-tiers-grid {
       display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
     }
-    .srcpp-tier-card {
+    .cpp-tier-card {
       border-radius: var(--radius); padding: 14px 12px; text-align: center;
       border: 1px solid var(--gray-200); transition: transform 0.1s;
     }
-    .srcpp-tier-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-    .srcpp-tier-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .srcpp-tier-fee { font-size: 22px; font-weight: 700; color: var(--navy); }
-    .srcpp-tier-sla { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+    .cpp-tier-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .cpp-tier-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .cpp-tier-fee { font-size: 22px; font-weight: 700; color: var(--navy); }
+    .cpp-tier-sla { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
     .tier-flash { border-color: #EF4444; background: rgba(239, 68, 68, 0.05); }
-    .tier-flash .srcpp-tier-name { color: #EF4444; }
+    .tier-flash .cpp-tier-name { color: #EF4444; }
     .tier-express { border-color: #F97316; background: rgba(249, 115, 22, 0.05); }
-    .tier-express .srcpp-tier-name { color: #F97316; }
+    .tier-express .cpp-tier-name { color: #F97316; }
     .tier-priority { border-color: #F59E0B; background: rgba(245, 158, 11, 0.05); }
-    .tier-priority .srcpp-tier-name { color: #F59E0B; }
+    .tier-priority .cpp-tier-name { color: #F59E0B; }
     .tier-partner { border-color: #3B82F6; background: rgba(59, 130, 246, 0.05); }
-    .tier-partner .srcpp-tier-name { color: #3B82F6; }
+    .tier-partner .cpp-tier-name { color: #3B82F6; }
     .tier-elite { border-color: #22C55E; background: rgba(34, 197, 94, 0.05); }
-    .tier-elite .srcpp-tier-name { color: #22C55E; }
+    .tier-elite .cpp-tier-name { color: #22C55E; }
     .tier-standard { border-color: var(--gray-300); background: var(--gray-50); }
-    .tier-standard .srcpp-tier-name { color: var(--gray-500); }
+    .tier-standard .cpp-tier-name { color: var(--gray-500); }
 
     /* --- Filter Bar --- */
     .filter-bar {
@@ -235,7 +235,7 @@
 
     /* --- Responsive --- */
     @media (max-width: 1200px) {
-      .srcpp-tiers-grid { grid-template-columns: repeat(3, 1fr); }
+      .cpp-tiers-grid { grid-template-columns: repeat(3, 1fr); }
       .aging-grid { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 1024px) {
@@ -244,7 +244,7 @@
       .page-header { padding: 64px 16px 0; }
     }
     @media (max-width: 768px) {
-      .srcpp-tiers-grid { grid-template-columns: repeat(2, 1fr); }
+      .cpp-tiers-grid { grid-template-columns: repeat(2, 1fr); }
       .aging-grid { grid-template-columns: 1fr 1fr; }
       .filter-bar { flex-direction: column; align-items: stretch; }
       .filter-actions { margin-left: 0; }
@@ -297,20 +297,20 @@
     <main class="main-content">
       <div class="page-header">
         <h1>Accounts Payable</h1>
-        <p>Manage carrier payments, SRCPP tiers, and quick-pay processing</p>
+        <p>Manage carrier payments, CPP tiers, and quick-pay processing</p>
       </div>
 
       <div class="content-area">
-        <!-- SRCPP Tier Fee Schedule Banner -->
-        <div class="srcpp-banner">
-          <h3>SRCPP Tier Fee Schedule</h3>
-          <div class="srcpp-tiers-grid" id="srcpp-tiers">
-            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
-            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
-            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
-            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
-            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
-            <div class="srcpp-tier-card skeleton" style="height:90px"></div>
+        <!-- CPP Tier Fee Schedule Banner -->
+        <div class="cpp-banner">
+          <h3>CPP Tier Fee Schedule</h3>
+          <div class="cpp-tiers-grid" id="cpp-tiers">
+            <div class="cpp-tier-card skeleton" style="height:90px"></div>
+            <div class="cpp-tier-card skeleton" style="height:90px"></div>
+            <div class="cpp-tier-card skeleton" style="height:90px"></div>
+            <div class="cpp-tier-card skeleton" style="height:90px"></div>
+            <div class="cpp-tier-card skeleton" style="height:90px"></div>
+            <div class="cpp-tier-card skeleton" style="height:90px"></div>
           </div>
         </div>
 
@@ -499,6 +499,7 @@
     </main>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script src="/ae/js/api.js"></script>
   <script>
     /* =========================================
@@ -545,7 +546,7 @@
 
     // --- Load All Data ---
     function loadAll() {
-      loadSRCPPTiers();
+      loadCPPTiers();
       loadAPAging();
       loadPayments();
     }
@@ -593,9 +594,9 @@
       return Math.max(0, Math.min(100, (elapsed / totalMs) * 100));
     }
 
-    // --- SRCPP Tier Banner ---
-    function loadSRCPPTiers() {
-      SRL.acctSRCPPTiers().then(function (res) {
+    // --- CPP Tier Banner ---
+    function loadCPPTiers() {
+      SRL.acctCPPTiers().then(function (res) {
         var tiers = res.tiers || [];
         if (res.approvalThreshold) approvalThreshold = res.approvalThreshold;
 
@@ -618,13 +619,13 @@
         displayTiers.forEach(function (t) {
           var cls = tierClassMap[t.tier] || 'tier-standard';
           var slaLabel = t.description || formatSLA(t.slaHours);
-          html += '<div class="srcpp-tier-card ' + cls + '">' +
-            '<div class="srcpp-tier-name">' + escHtml(t.tier) + '</div>' +
-            '<div class="srcpp-tier-fee">' + t.feePercent + '%</div>' +
-            '<div class="srcpp-tier-sla">' + escHtml(slaLabel) + '</div>' +
+          html += '<div class="cpp-tier-card ' + cls + '">' +
+            '<div class="cpp-tier-name">' + escHtml(t.tier) + '</div>' +
+            '<div class="cpp-tier-fee">' + t.feePercent + '%</div>' +
+            '<div class="cpp-tier-sla">' + escHtml(slaLabel) + '</div>' +
             '</div>';
         });
-        document.getElementById('srcpp-tiers').innerHTML = html;
+        document.getElementById('cpp-tiers').innerHTML = html;
       }).catch(function () {
         // Show default tiers on error
         var defaults = [
@@ -637,13 +638,13 @@
         ];
         var html = '';
         defaults.forEach(function (t) {
-          html += '<div class="srcpp-tier-card ' + t.cls + '">' +
-            '<div class="srcpp-tier-name">' + t.tier + '</div>' +
-            '<div class="srcpp-tier-fee">' + t.fee + '</div>' +
-            '<div class="srcpp-tier-sla">' + t.sla + '</div>' +
+          html += '<div class="cpp-tier-card ' + t.cls + '">' +
+            '<div class="cpp-tier-name">' + t.tier + '</div>' +
+            '<div class="cpp-tier-fee">' + t.fee + '</div>' +
+            '<div class="cpp-tier-sla">' + t.sla + '</div>' +
             '</div>';
         });
-        document.getElementById('srcpp-tiers').innerHTML = html;
+        document.getElementById('cpp-tiers').innerHTML = html;
       });
     }
 

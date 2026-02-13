@@ -16,7 +16,7 @@ interface MatchCandidate {
   matchScore: number;
   laneScore: number;
   rateScore: number;
-  srcppScore: number;
+  cppScore: number;
   availabilityScore: number;
   sourceScore: number;
   breakdown: Record<string, any>;
@@ -24,7 +24,7 @@ interface MatchCandidate {
 
 /**
  * C.1 — Smart Carrier Matching
- * Score = lane_score(0-30) + rate_score(0-25) + srcpp_score(0-25) + availability_score(0-20) + source_score(0-5)
+ * Score = lane_score(0-30) + rate_score(0-25) + cpp_score(0-25) + availability_score(0-20) + source_score(0-5)
  */
 export async function matchCarriersForLoad(loadId: string): Promise<{
   load: any;
@@ -191,14 +191,14 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
     }
     breakdown.rate = rateScore;
 
-    // --- SRCPP Score (0-25) ---
-    let srcppScore = 0;
+    // --- CPP Score (0-25) ---
+    let cppScore = 0;
     const tierScores: Record<string, number> = {
       PLATINUM: 25, GOLD: 20, SILVER: 15, BRONZE: 10, GUEST: 0, NONE: 0,
     };
-    srcppScore = tierScores[c.tier] || 0;
-    breakdown.srcpp = srcppScore;
-    breakdown.srcppDetail = `Tier: ${c.tier}`;
+    cppScore = tierScores[c.tier] || 0;
+    breakdown.cpp = cppScore;
+    breakdown.cppDetail = `Tier: ${c.tier}`;
 
     // --- Availability Score (0-20) ---
     let availabilityScore = 0;
@@ -222,7 +222,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
     breakdown.source = sourceScore;
     breakdown.sourceDetail = c.source === "dat" ? "DAT import (+0)" : "Caravan member (+5)";
 
-    const matchScore = laneScore + rateScore + srcppScore + availabilityScore + sourceScore;
+    const matchScore = laneScore + rateScore + cppScore + availabilityScore + sourceScore;
 
     return {
       carrierId: c.id,
@@ -240,7 +240,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
       matchScore,
       laneScore,
       rateScore,
-      srcppScore,
+      cppScore,
       availabilityScore,
       sourceScore,
       breakdown,
@@ -262,7 +262,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
         matchScore: m.matchScore,
         laneScore: m.laneScore,
         rateScore: m.rateScore,
-        srcppScore: m.srcppScore,
+        cppScore: m.cppScore,
         availabilityScore: m.availabilityScore,
         breakdown: m.breakdown as any,
         rank: i + 1,

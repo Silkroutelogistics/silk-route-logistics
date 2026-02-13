@@ -50,7 +50,7 @@ import {
   generateFinancialReport,
   deleteFinancialReport,
   getAPAging,
-  getSRCPPTierSchedule,
+  getCPPTierSchedule,
   getAccountingDashboardEnhanced,
 } from "../controllers/accountingController";
 
@@ -76,7 +76,7 @@ router.post("/invoices/:id/void", authorize("ADMIN", "CEO"), voidInvoice);
 // --- Carrier Payments (AP) ---
 router.get("/payments/queue", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPaymentQueue);
 router.get("/payments/aging", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getAPAging);
-router.get("/payments/srcpp-tiers", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getSRCPPTierSchedule);
+router.get("/payments/cpp-tiers", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getCPPTierSchedule);
 router.get("/payments", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPayments);
 router.get("/payments/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPaymentById);
 router.post("/payments/prepare", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), preparePayment);

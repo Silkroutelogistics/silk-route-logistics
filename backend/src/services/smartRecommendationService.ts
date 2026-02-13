@@ -60,8 +60,8 @@ export async function getRecommendationsForLoad(
     select: {
       id: true,
       companyName: true,
-      srcppTier: true,
-      srcppTotalLoads: true,
+      cppTier: true,
+      cppTotalLoads: true,
       equipmentTypes: true,
     },
     take: 200,
@@ -118,7 +118,7 @@ export async function getRecommendationsForLoad(
       SILVER: 8,
       BRONZE: 4,
     };
-    factors.tierBonus = tierScores[carrier.srcppTier || "BRONZE"] ?? 4;
+    factors.tierBonus = tierScores[carrier.cppTier || "BRONZE"] ?? 4;
 
     // Factor 5: Fall-off risk penalty (0 to -10)
     const fallOffRisk = globalIntel?.fallOffRisk ?? 0.1;
@@ -148,7 +148,7 @@ export async function getRecommendationsForLoad(
       carrierId: carrier.id,
       companyName: carrier.companyName || "Unknown",
       matchScore: Math.round((totalScore / maxPossible) * 100),
-      tier: carrier.srcppTier || "BRONZE",
+      tier: carrier.cppTier || "BRONZE",
       reliabilityScore: reliability,
       laneExperience: laneLoads,
       estimatedRate: rateIntel?.avgRate ?? null,

@@ -317,7 +317,7 @@ function CarrierList({ title, carriers, badge, badgeColor }: { title: string; ca
             <div key={c.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
               <div className="min-w-0">
                 <p className="text-sm text-white truncate">{c.carrier?.companyName ?? "Unknown"}</p>
-                <p className="text-xs text-slate-500">{c.carrier?.srcppTier ?? "—"}</p>
+                <p className="text-xs text-slate-500">{c.carrier?.cppTier ?? "—"}</p>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded bg-${badgeColor}-500/20 text-${badgeColor}-400 shrink-0`}>
                 {badge === "RISK" ? `${(c.fallOffRisk * 100).toFixed(0)}%`

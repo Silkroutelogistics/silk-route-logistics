@@ -514,6 +514,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="/js/auth.js"></script>
   <script src="/ae/js/api.js"></script>
   <script>
     /* ======== STATE ======== */
@@ -725,7 +726,7 @@
         html += '<div class="info-section-title">Carrier Details</div>';
         if (d.mcNumber) html += '<div class="info-field"><label>MC#</label><span>' + esc(d.mcNumber) + '</span></div>';
         if (d.dotNumber) html += '<div class="info-field"><label>DOT#</label><span>' + esc(d.dotNumber) + '</span></div>';
-        if (d.tier) html += '<div class="info-field"><label>SRCPP Tier</label><span class="tier-badge tier-' + d.tier + '">' + d.tier + '</span></div>';
+        if (d.tier) html += '<div class="info-field"><label>CPP Tier</label><span class="tier-badge tier-' + d.tier + '">' + d.tier + '</span></div>';
         if (d.numberOfTrucks) html += '<div class="info-field"><label>Trucks</label><span>' + d.numberOfTrucks + '</span></div>';
         if (d.equipmentTypes && d.equipmentTypes.length) html += '<div class="info-field"><label>Equipment</label><span>' + d.equipmentTypes.join(", ") + '</span></div>';
         html += '</div>';

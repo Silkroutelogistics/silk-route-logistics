@@ -4,14 +4,134 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carrier Login | Silk Route Logistics</title>
-  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+  <link rel="icon" href="/logo.png" type="image/png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #E2E8F0;
+      min-height: 100vh;
+      display: flex;
+    }
+    a { color: #C8963E; text-decoration: none; }
+    a:hover { color: #E5B96A; }
+    .left-panel {
+      width: 55%; background: #0D1B2A;
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .left-inner {
+      display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+      height: 100vh; padding: 60px; max-width: 560px; margin: 0 auto;
+    }
+    .right-panel {
+      width: 45%; background: #111d2e;
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .login-card { width: 100%; max-width: 400px; padding: 40px 36px; }
+    .brand-logo img { height: 40px; margin-bottom: 16px; border-radius: 8px; }
+    .brand-name { font-size: 28px; font-weight: 700; color: #C8963E; letter-spacing: 1px; margin: 0; }
+    .brand-sub { font-size: 15px; color: #8899aa; margin-top: 4px; }
+    .pills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin: 32px 0; }
+    .pill {
+      display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+      background: rgba(200,150,62,0.08); border: 1px solid rgba(200,150,62,0.15); border-radius: 10px;
+    }
+    .pill-icon { font-size: 18px; }
+    .pill-text { font-size: 13px; color: #d4d4d4; font-weight: 500; }
+    .tagline { font-size: 14px; color: #7a8a9a; line-height: 1.7; margin-bottom: 36px; }
+    .daily-fact {
+      width: 100%; padding: 20px 24px;
+      border-left: 3px solid #C8963E; background: rgba(200,150,62,0.04); border-radius: 0 8px 8px 0;
+    }
+    .fact-icon { font-size: 20px; margin-bottom: 6px; }
+    .fact-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: #C8963E; margin-bottom: 8px; font-weight: 600; }
+    .fact-text { font-size: 15px; color: #e0e0e0; line-height: 1.65; font-style: italic; }
+    .fact-src { font-size: 11px; color: #556677; margin-top: 10px; }
+    .left-footer { font-size: 11px; color: #445566; margin-top: auto; padding-top: 24px; }
+
+    /* Right panel form styles */
+    .card-logo { text-align: center; margin-bottom: 28px; }
+    .card-logo img { width: 48px; height: 48px; border-radius: 10px; }
+    .card-logo h1 { font-size: 20px; font-weight: 700; color: #C8963E; margin-top: 10px; }
+    .card-logo p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .form-control {
+      width: 100%; padding: 12px 14px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; color: #E2E8F0; font-size: 15px; outline: none; transition: border-color 0.2s;
+    }
+    .form-control:focus { border-color: #C8963E; }
+    .form-control::placeholder { color: #475569; }
+    .btn-gold {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #C8963E, #B8860B);
+      color: #fff; font-size: 15px; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-gold:hover { opacity: 0.9; }
+    .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-error { color: #ef4444; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
+    .expired-msg { color: #f59e0b; font-size: 13px; margin-bottom: 16px; text-align: center; padding: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; }
+    .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: -4px; }
+    .remember-row label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
+    .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #C8963E; cursor: pointer; }
+    .links { text-align: center; margin-top: 24px; font-size: 12px; color: #64748b; }
+    .links a { color: #94a3b8; }
+    .links a:hover { color: #C8963E; }
+
+    /* Change password modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-backdrop.show { display: flex; }
+    .modal { background: #1a2332; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; }
+    .modal h2 { color: #C8963E; font-size: 18px; margin-bottom: 8px; }
+
+    @media (max-width: 900px) {
+      .left-panel { display: none; }
+      .right-panel { width: 100%; background: #0D1B2A; }
+    }
+  </style>
 </head>
 <body>
-  <div class="login-page">
-    <div class="login-card">
-      <h1>SILK ROUTE LOGISTICS</h1>
-      <p class="login-subtitle">Carrier Portal</p>
+  <!-- Left Panel — Branding + Daily Fact -->
+  <div class="left-panel">
+    <div class="left-inner">
+      <div class="brand-logo">
+        <img src="/logo.png" alt="SRL">
+      </div>
+      <h1 class="brand-name">SILK ROUTE LOGISTICS</h1>
+      <p class="brand-sub">Carrier Portal</p>
 
+      <div class="pills-grid">
+        <div class="pill"><span class="pill-icon">📦</span><span class="pill-text">Available Loads</span></div>
+        <div class="pill"><span class="pill-icon">📍</span><span class="pill-text">Real-Time Tracking</span></div>
+        <div class="pill"><span class="pill-icon">🏆</span><span class="pill-text">Caravan Rewards</span></div>
+        <div class="pill"><span class="pill-icon">⚡</span><span class="pill-text">Instant Pay</span></div>
+      </div>
+
+      <p class="tagline">Join our carrier network for priority loads, fast payment, and AI-powered dispatch from Kalamazoo, Michigan.</p>
+
+      <div class="daily-fact">
+        <div class="fact-icon" id="factIcon"></div>
+        <div class="fact-cat" id="factCategory"></div>
+        <div class="fact-text" id="factText"></div>
+        <div class="fact-src" id="factSource"></div>
+      </div>
+
+      <p class="left-footer">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</p>
+    </div>
+  </div>
+
+  <!-- Right Panel — Login Form -->
+  <div class="right-panel">
+    <div class="login-card">
+      <div class="card-logo">
+        <img src="/logo.png" alt="SRL">
+        <h1>Carrier Portal</h1>
+        <p>Sign in to access your loads &amp; payments</p>
+      </div>
+
+      <div id="expired-banner" class="expired-msg" style="display:none;">Session expired due to inactivity. Please sign in again.</div>
       <div id="loginError" class="login-error"></div>
 
       <form id="loginForm">
@@ -23,33 +143,25 @@
           <label for="password">Password</label>
           <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 4px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--slate);cursor:pointer">
-            <input type="checkbox" id="rememberMe" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer"> Remember me
-          </label>
+        <div class="remember-row">
+          <label><input type="checkbox" id="rememberMe"> Remember me</label>
           <a href="/carrier/forgot-password" style="font-size:13px">Forgot password?</a>
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" id="loginBtn">
-          Sign In
-        </button>
+        <button type="submit" class="btn-gold" id="loginBtn">Sign In</button>
       </form>
 
-      <p style="margin-top:24px;font-size:12px;color:var(--slate)">
-        New carrier? <a href="/carrier/register.html">Register here</a>
-      </p>
-      <p style="margin-top:8px;font-size:12px;color:var(--slate)">
-        <a href="/auth/login">Employee Login</a>
-      </p>
+      <div class="links">
+        <p style="margin-top:24px;">New carrier? <a href="/carrier/register.html">Register here</a></p>
+        <p style="margin-top:8px;"><a href="/auth/login">Employee Login</a></p>
+      </div>
     </div>
   </div>
 
   <!-- Change Password Modal -->
   <div class="modal-backdrop" id="changePassModal">
     <div class="modal">
-      <div class="modal-header">
-        <h2>Set New Password</h2>
-      </div>
-      <p style="color:var(--slate);font-size:13px;margin-bottom:20px">
+      <h2>Set New Password</h2>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">
         For security, please set a new password on first login.
       </p>
       <form id="changePassForm">
@@ -62,7 +174,7 @@
           <input type="password" id="confirmPass" class="form-control" minlength="8" required>
         </div>
         <div id="changePassError" class="login-error"></div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Set Password & Continue</button>
+        <button type="submit" class="btn-gold">Set Password &amp; Continue</button>
       </form>
     </div>
   </div>
@@ -70,6 +182,11 @@
   <script src="/js/auth.js"></script>
   <script src="/carrier/js/carrier-api.js"></script>
   <script>
+    // Show expired banner if redirected from auto-logout
+    if (new URLSearchParams(window.location.search).get('expired') === '1') {
+      document.getElementById('expired-banner').style.display = 'block';
+    }
+
     // Auto-fill remembered email
     var savedCarrierEmail = SRLAuth.getRememberedEmail('carrier');
     if (savedCarrierEmail) {
@@ -94,7 +211,6 @@
 
       var email = document.getElementById("email").value;
       var password = document.getElementById("password").value;
-
       var remember = document.getElementById("rememberMe").checked;
 
       CARRIER.login(email, password, remember)
@@ -141,6 +257,57 @@
           errEl.style.display = "block";
         });
     });
+  </script>
+
+  <!-- Daily Fact — deterministic by day-of-year -->
+  <script>
+    (function() {
+      var facts = [
+        { icon: "\ud83d\udcb0", cat: "CARRIER TIP", text: "Owner-operators who diversify across 3+ quality brokerages see 23% higher annual revenue.", src: "OOIDA Foundation Survey, 2024" },
+        { icon: "\ud83d\udcc8", cat: "CARRIER INSIGHT", text: "Carriers with 95%+ on-time delivery rates earn an average of 12% more per mile through premium load access.", src: "DAT Solutions Carrier Benchmark" },
+        { icon: "\ud83c\udfc6", cat: "CARAVAN REWARDS", text: "Carriers enrolled in the Caravan Partner Program earn priority load access and reduced Quick Pay fees.", src: "Silk Route Logistics" },
+        { icon: "\u26fd", cat: "MONEY SAVER", text: "Proper tire inflation alone can improve fuel efficiency by up to 3.3%, saving over $2,000 per year.", src: "U.S. Department of Energy, FMCSA" },
+        { icon: "\ud83d\ude9b", cat: "DID YOU KNOW", text: "The average Class 8 truck travels 45,000\u2013100,000 miles per year depending on operation type.", src: "FMCSA Motor Carrier Census" },
+        { icon: "\ud83d\udcca", cat: "INDUSTRY FACT", text: "Owner-operators' average gross income is $220,000\u2013$350,000 per year before expenses.", src: "OOIDA, ATRI Owner-Operator Survey" },
+        { icon: "\ud83d\udee1\ufe0f", cat: "COMPLIANCE TIP", text: "Pre-trip inspections take 15 minutes but prevent 30% of roadside violations. Protect your CSA score.", src: "FMCSA Safety Analysis" },
+        { icon: "\ud83d\udcf1", cat: "TECH TIP", text: "Carriers using digital document upload have 50% fewer payment delays \u2014 upload PODs the same day.", src: "TriumphPay, Relay Payments Data" },
+        { icon: "\ud83d\udcb3", cat: "QUICK PAY", text: "Quick Pay improves cash flow by 25+ days. SRL offers Quick Pay at 1.5\u20133% depending on your CPP tier.", src: "Silk Route Logistics" },
+        { icon: "\ud83d\udd27", cat: "MAINTENANCE", text: "Preventive maintenance reduces breakdowns by 25% and extends truck life by 3\u20135 years on average.", src: "TMC/ATA Recommended Practices" },
+        { icon: "\ud83d\udce6", cat: "DID YOU KNOW", text: "The average American depends on truck deliveries for food, medicine, fuel, and clothes \u2014 you make life possible.", src: "American Trucking Associations" },
+        { icon: "\u26a1", cat: "EFFICIENCY", text: "Planning routes to avoid congestion saves the average carrier 8,000 miles and $12,000 in fuel per year.", src: "ATRI Congestion Cost Report" },
+        { icon: "\ud83d\udcca", cat: "INDUSTRY FACT", text: "The trucking industry has a 94% driver turnover rate at large carriers \u2014 owner-operators who stay independent thrive.", src: "ATA Driver Turnover Report" },
+        { icon: "\ud83c\udfe0", cat: "DID YOU KNOW", text: "Every single item in your home was on a truck at some point \u2014 drivers are the backbone of the economy.", src: "ATA" },
+        { icon: "\ud83d\udccb", cat: "COMPLIANCE", text: "Keeping your insurance, authority, and drug testing current means zero interruptions to your earning potential.", src: "FMCSA Safety Requirements" },
+        { icon: "\ud83e\udd1d", cat: "PARTNERSHIP", text: "SRL pays carriers within terms, every time. No excuses, no delays. Your cash flow is our priority.", src: "Silk Route Logistics" },
+        { icon: "\u2764\ufe0f", cat: "DRIVER WELLNESS", text: "Taking a 15-minute walk at every fuel stop reduces back pain risk by 40% and boosts alertness.", src: "NIOSH Trucking Safety & Health Study" },
+        { icon: "\ud83d\ude34", cat: "SAFETY FIRST", text: "Drowsy driving causes 13% of all large truck crashes. Rest when tired \u2014 no load is worth your life.", src: "FMCSA Large Truck Crash Causation Study" },
+        { icon: "\ud83e\udd57", cat: "DRIVER WELLNESS", text: "Meal prepping for the road saves $200+/month compared to truck stop dining and helps maintain energy.", src: "Rolling Strong Wellness Program" },
+        { icon: "\ud83d\udca7", cat: "DRIVER WELLNESS", text: "Drinking 8 glasses of water daily reduces fatigue by 25% \u2014 keep a refillable bottle in your cab.", src: "CDC Hydration Guidelines" },
+        { icon: "\ud83e\uddd8", cat: "DRIVER WELLNESS", text: "5 minutes of stretching before driving reduces muscle strain injuries by 35% over a year.", src: "NIOSH, American Chiropractic Association" },
+        { icon: "\ud83d\udca1", cat: "MOTIVATION", text: "The road to success and the road to failure are almost exactly the same \u2014 persistence is the difference.", src: "Colin R. Davis" },
+        { icon: "\ud83d\udd25", cat: "MOTIVATION", text: "Every mile you drive is a mile closer to your goals. Keep moving.", src: "Silk Route Logistics" },
+        { icon: "\ud83c\udfaf", cat: "MOTIVATION", text: "Small daily improvements over time lead to stunning results.", src: "Robin Sharma" },
+        { icon: "\u2b50", cat: "MOTIVATION", text: "The harder you work for something, the greater you'll feel when you achieve it.", src: "Unknown" },
+        { icon: "\ud83c\udfd4\ufe0f", cat: "MOTIVATION", text: "Be not afraid of going slowly; be afraid only of standing still.", src: "Chinese Proverb" },
+        { icon: "\ud83d\udcaa", cat: "MOTIVATION", text: "You don't have to be great to start, but you have to start to be great.", src: "Zig Ziglar" },
+        { icon: "\ud83d\udc2b", cat: "SILK ROAD HISTORY", text: "Ancient Silk Road merchants traveled in caravans of up to 1,000 camels \u2014 the original fleet operations.", src: "UNESCO, Encyclop\u00e6dia Britannica" },
+        { icon: "\ud83d\uddfa\ufe0f", cat: "SILK ROAD HISTORY", text: "Marco Polo called the Silk Road merchants 'the bravest men alive' \u2014 today's truck drivers carry that same spirit.", src: "The Travels of Marco Polo" },
+        { icon: "\ud83c\udfdb\ufe0f", cat: "SILK ROAD HISTORY", text: "The word 'trade' comes from the same root as 'tread' \u2014 those who walk the path create the value.", src: "Oxford English Dictionary" },
+        { icon: "\ud83e\udd1d", cat: "SRL PROMISE", text: "At Silk Route, carriers aren't a number \u2014 you're a partner. Fair rates, fast pay, and a voice that matters.", src: "Silk Route Logistics" },
+        { icon: "\ud83d\udee1\ufe0f", cat: "SRL VALUES", text: "Zero double-brokering. Period. Your load stays your load, and your rate stays your rate.", src: "Silk Route Logistics" },
+        { icon: "\ud83d\udce1", cat: "SRL VISION", text: "We're building the brokerage we wished existed when we were on the other side of the phone.", src: "Silk Route Logistics" }
+      ];
+
+      var today = new Date();
+      var start = new Date(today.getFullYear(), 0, 0);
+      var dayOfYear = Math.floor((today - start) / 86400000);
+      var f = facts[dayOfYear % facts.length];
+
+      document.getElementById('factIcon').textContent = f.icon;
+      document.getElementById('factCategory').textContent = f.cat;
+      document.getElementById('factText').textContent = '\u201c' + f.text + '\u201d';
+      document.getElementById('factSource').textContent = '\u2014 ' + f.src;
+    })();
   </script>
 </body>
 </html>

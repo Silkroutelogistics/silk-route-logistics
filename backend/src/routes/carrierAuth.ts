@@ -81,7 +81,7 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
     carrier: {
       id: profile.id,
       tier: profile.tier,
-      srcppTier: profile.srcppTier,
+      cppTier: profile.cppTier,
       onboardingStatus: profile.onboardingStatus,
       status: profile.status,
       equipmentTypes: profile.equipmentTypes,

@@ -9,109 +9,183 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: #0D1B2A;
       color: #E2E8F0;
       min-height: 100vh;
       display: flex;
+    }
+    .left-panel {
+      width: 55%;
+      background: #0D1B2A;
+      display: flex;
       align-items: center;
       justify-content: center;
+      min-height: 100vh;
+    }
+    .left-inner {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      height: 100vh;
+      padding: 60px;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .right-panel {
+      width: 45%;
+      background: #111d2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
     .login-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 48px 40px;
       width: 100%;
-      max-width: 420px;
-      backdrop-filter: blur(12px);
+      max-width: 400px;
+      padding: 40px 36px;
     }
-    .logo { text-align: center; margin-bottom: 32px; }
-    .logo img { width: 56px; height: 56px; border-radius: 12px; }
-    .logo h1 { font-size: 22px; font-weight: 700; color: #C8963E; margin-top: 12px; }
-    .logo p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .brand-logo img { height: 40px; margin-bottom: 16px; border-radius: 8px; }
+    .brand-name { font-size: 28px; font-weight: 700; color: #C8963E; letter-spacing: 1px; margin: 0; }
+    .brand-sub { font-size: 15px; color: #8899aa; margin-top: 4px; }
+    .pills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin: 32px 0; }
+    .pill {
+      display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+      background: rgba(200,150,62,0.08); border: 1px solid rgba(200,150,62,0.15); border-radius: 10px;
+    }
+    .pill-icon { font-size: 18px; }
+    .pill-text { font-size: 13px; color: #d4d4d4; font-weight: 500; }
+    .tagline { font-size: 14px; color: #7a8a9a; line-height: 1.7; margin-bottom: 36px; }
+    .daily-fact {
+      width: 100%; padding: 20px 24px;
+      border-left: 3px solid #C8963E;
+      background: rgba(200,150,62,0.04);
+      border-radius: 0 8px 8px 0;
+    }
+    .fact-icon { font-size: 20px; margin-bottom: 6px; }
+    .fact-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: #C8963E; margin-bottom: 8px; font-weight: 600; }
+    .fact-text { font-size: 15px; color: #e0e0e0; line-height: 1.65; font-style: italic; }
+    .fact-src { font-size: 11px; color: #556677; margin-top: 10px; }
+    .left-footer { font-size: 11px; color: #445566; margin-top: auto; padding-top: 24px; }
+
+    /* Right panel form styles */
+    .card-logo { text-align: center; margin-bottom: 28px; }
+    .card-logo img { width: 48px; height: 48px; border-radius: 10px; }
+    .card-logo h1 { font-size: 20px; font-weight: 700; color: #C8963E; margin-top: 10px; }
+    .card-logo p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
     .form-group input {
-      width: 100%;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      color: #E2E8F0;
-      font-size: 15px;
-      outline: none;
-      transition: border-color 0.2s;
+      width: 100%; padding: 12px 14px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; color: #E2E8F0; font-size: 15px; outline: none; transition: border-color 0.2s;
     }
     .form-group input:focus { border-color: #C8963E; }
     .form-group input::placeholder { color: #475569; }
     .btn {
-      width: 100%;
-      padding: 13px;
+      width: 100%; padding: 13px;
       background: linear-gradient(135deg, #C8963E, #B8860B);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: opacity 0.2s;
+      color: #fff; font-size: 15px; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
     }
     .btn:hover { opacity: 0.9; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .error-msg { color: #ef4444; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
+    .info-msg { color: #22c55e; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
+    .expired-msg { color: #f59e0b; font-size: 13px; margin-bottom: 16px; text-align: center; padding: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; }
     .otp-section { display: none; }
     .otp-section.show { display: block; }
     .email-section.hide { display: none; }
     .back-link { text-align: center; margin-top: 16px; }
     .back-link a { color: #94a3b8; font-size: 13px; cursor: pointer; text-decoration: underline; }
     .back-link a:hover { color: #C8963E; }
-    .info-msg { color: #22c55e; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
     .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: -4px; }
     .remember-row label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
-    .remember-row input[type="checkbox"] {
-      width: 16px; height: 16px; accent-color: #C8963E; cursor: pointer;
-      border-radius: 3px; border: 1px solid rgba(255,255,255,0.2);
-    }
+    .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #C8963E; cursor: pointer; }
     .remember-row a { color: #C8963E; font-size: 13px; text-decoration: none; }
     .remember-row a:hover { text-decoration: underline; }
+    .carrier-link { text-align: center; margin-top: 24px; font-size: 12px; color: #64748b; }
+    .carrier-link a { color: #94a3b8; text-decoration: none; }
+    .carrier-link a:hover { color: #C8963E; }
+
+    @media (max-width: 900px) {
+      .left-panel { display: none; }
+      .right-panel { width: 100%; background: #0D1B2A; }
+    }
   </style>
 </head>
 <body>
-  <div class="login-card">
-    <div class="logo">
-      <img src="/logo.png" alt="SRL">
-      <h1>Silk Route Logistics</h1>
-      <p>AE Command Center</p>
+  <!-- Left Panel — Branding + Daily Fact -->
+  <div class="left-panel">
+    <div class="left-inner">
+      <div class="brand-logo">
+        <img src="/logo.png" alt="SRL">
+      </div>
+      <h1 class="brand-name">SILK ROUTE LOGISTICS</h1>
+      <p class="brand-sub">Account Executive Portal</p>
+
+      <div class="pills-grid">
+        <div class="pill"><span class="pill-icon">🚛</span><span class="pill-text">Fleet Management</span></div>
+        <div class="pill"><span class="pill-icon">🔒</span><span class="pill-text">Secure Payments</span></div>
+        <div class="pill"><span class="pill-icon">🤝</span><span class="pill-text">Carrier Network</span></div>
+        <div class="pill"><span class="pill-icon">📊</span><span class="pill-text">Live Analytics</span></div>
+      </div>
+
+      <p class="tagline">Asset-based trucking and freight brokerage powered by technology. Real-time tracking, automated invoicing, and AI-driven operations from Kalamazoo, Michigan.</p>
+
+      <div class="daily-fact">
+        <div class="fact-icon" id="factIcon"></div>
+        <div class="fact-cat" id="factCategory"></div>
+        <div class="fact-text" id="factText"></div>
+        <div class="fact-src" id="factSource"></div>
+      </div>
+
+      <p class="left-footer">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</p>
     </div>
+  </div>
 
-    <div id="error" class="error-msg"></div>
-    <div id="info" class="info-msg"></div>
+  <!-- Right Panel — Login Form -->
+  <div class="right-panel">
+    <div class="login-card">
+      <div class="card-logo">
+        <img src="/logo.png" alt="SRL">
+        <h1>Welcome Back</h1>
+        <p>Sign in to your AE Command Center</p>
+      </div>
 
-    <!-- Step 1: Email + Password -->
-    <div id="email-section" class="email-section">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="email" placeholder="you@silkroutelogistics.ai" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
-      </div>
-      <div class="remember-row">
-        <label><input type="checkbox" id="rememberMe"> Remember me</label>
-        <a href="/auth/forgot-password">Forgot password?</a>
-      </div>
-      <button class="btn" id="login-btn" onclick="handleLogin()">Sign In</button>
-    </div>
+      <div id="expired-banner" class="expired-msg" style="display:none;">Session expired due to inactivity. Please sign in again.</div>
+      <div id="error" class="error-msg"></div>
+      <div id="info" class="info-msg"></div>
 
-    <!-- Step 2: OTP -->
-    <div id="otp-section" class="otp-section">
-      <div class="form-group">
-        <label>Verification Code</label>
-        <input type="text" id="otp" placeholder="Enter 8-digit code" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
+      <!-- Step 1: Email + Password -->
+      <div id="email-section" class="email-section">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="you@silkroutelogistics.ai" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" id="rememberMe"> Remember me</label>
+          <a href="/auth/forgot-password">Forgot password?</a>
+        </div>
+        <button class="btn" id="login-btn" onclick="handleLogin()">Sign In</button>
       </div>
-      <button class="btn" id="otp-btn" onclick="handleOtp()">Verify</button>
-      <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
+
+      <!-- Step 2: OTP -->
+      <div id="otp-section" class="otp-section">
+        <div class="form-group">
+          <label>Verification Code</label>
+          <input type="text" id="otp" placeholder="Enter 8-digit code" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
+        </div>
+        <button class="btn" id="otp-btn" onclick="handleOtp()">Verify</button>
+        <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
+      </div>
+
+      <div class="carrier-link">
+        Carrier? <a href="/carrier/login.html">Sign in to Carrier Portal</a>
+      </div>
     </div>
   </div>
 
@@ -120,6 +194,11 @@
     var BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
     var pendingEmail = '';
+
+    // Show expired banner if redirected from auto-logout
+    if (new URLSearchParams(window.location.search).get('expired') === '1') {
+      document.getElementById('expired-banner').style.display = 'block';
+    }
 
     // Auto-fill remembered email
     var savedEmail = SRLAuth.getRememberedEmail('ae');
@@ -256,6 +335,60 @@
       showError('');
       showInfo('');
     }
+  </script>
+
+  <!-- Daily Fact — deterministic by day-of-year -->
+  <script>
+    (function() {
+      var facts = [
+        { icon: "\ud83d\udcca", cat: "INDUSTRY FACT", text: "The U.S. trucking industry generates over $940.8 billion in gross freight revenue annually.", src: "American Trucking Associations, 2024 Report" },
+        { icon: "\ud83d\ude9b", cat: "DID YOU KNOW", text: "Trucks move 72.6% of all freight tonnage in the United States \u2014 11.46 billion tons per year.", src: "American Trucking Associations" },
+        { icon: "\ud83d\udc77", cat: "INDUSTRY FACT", text: "There are approximately 3.54 million professional truck drivers in America making deliveries possible every day.", src: "Bureau of Labor Statistics" },
+        { icon: "\ud83d\udcc8", cat: "GROWTH", text: "Freight volumes are projected to grow 25.6% by 2034, creating massive opportunities for tech-forward brokerages.", src: "ATA U.S. Freight Transportation Forecast" },
+        { icon: "\ud83d\udcb0", cat: "OPERATIONS", text: "The average marginal cost to operate a commercial truck is $2.27 per mile, with fuel at 29% of total costs.", src: "ATRI Operational Costs of Trucking, 2024" },
+        { icon: "\ud83c\udf0d", cat: "PERSPECTIVE", text: "If the trucking industry were a country, its revenue would make it the 18th largest economy in the world.", src: "World Bank GDP Rankings / ATA" },
+        { icon: "\ud83c\udfe0", cat: "DID YOU KNOW", text: "Over 80% of U.S. communities depend exclusively on trucks for delivery of their goods and daily necessities.", src: "American Trucking Associations" },
+        { icon: "\u26fd", cat: "OPERATIONS", text: "The trucking industry purchases over 54 billion gallons of diesel fuel annually in the United States.", src: "ATA, U.S. Energy Information Administration" },
+        { icon: "\ud83d\udee3\ufe0f", cat: "DID YOU KNOW", text: "American trucks travel over 327.5 billion miles per year \u2014 enough to make 683,000 trips to the moon.", src: "Federal Highway Administration" },
+        { icon: "\ud83d\udce6", cat: "PERSPECTIVE", text: "Without trucks, grocery store shelves would be empty within 3 days and hospitals within 24 hours.", src: "ATA: When Trucks Stop, America Stops" },
+        { icon: "\ud83c\udfd7\ufe0f", cat: "INDUSTRY FACT", text: "There are over 1.1 million trucking companies in the U.S., with 97% operating 20 or fewer trucks.", src: "FMCSA Registration Data" },
+        { icon: "\ud83d\udcca", cat: "BROKERAGE", text: "Average broker gross margin in 2024 was 15\u201318% on spot freight and 10\u201312% on contract freight.", src: "DAT Freight & Analytics, Brush Pass Research" },
+        { icon: "\ud83e\udd1d", cat: "BROKERAGE", text: "The top 10 freight brokerages control only 15% of the $200+ billion brokerage market \u2014 opportunity is everywhere.", src: "Transport Topics Top 100, Armstrong & Associates" },
+        { icon: "\u26a1", cat: "TECHNOLOGY", text: "Brokerages using AI-powered carrier matching report 35\u201340% faster load coverage and 15% lower fall-off rates.", src: "FreightWaves, McKinsey Logistics Report" },
+        { icon: "\ud83d\udcb3", cat: "PAYMENTS", text: "Carriers who receive payment within 7 days are 3x more likely to accept future loads from the same broker.", src: "TriumphPay Carrier Payment Index, 2024" },
+        { icon: "\ud83d\udcf1", cat: "TECHNOLOGY", text: "Digital freight matching platforms have grown 300% since 2020, transforming how loads meet carriers.", src: "FreightWaves Market Report" },
+        { icon: "\ud83d\udca1", cat: "MOTIVATION", text: "The secret of getting ahead is getting started.", src: "Mark Twain" },
+        { icon: "\ud83d\udd25", cat: "MOTIVATION", text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", src: "Winston Churchill" },
+        { icon: "\ud83c\udfaf", cat: "MOTIVATION", text: "The only way to do great work is to love what you do.", src: "Steve Jobs" },
+        { icon: "\u2b50", cat: "MOTIVATION", text: "Don't watch the clock; do what it does. Keep going.", src: "Sam Levenson" },
+        { icon: "\ud83c\udfd4\ufe0f", cat: "MOTIVATION", text: "It always seems impossible until it's done.", src: "Nelson Mandela" },
+        { icon: "\ud83d\ude80", cat: "MOTIVATION", text: "The best time to plant a tree was 20 years ago. The second best time is now.", src: "Chinese Proverb" },
+        { icon: "\ud83d\udcaa", cat: "MOTIVATION", text: "Hard work beats talent when talent doesn't work hard.", src: "Tim Notke" },
+        { icon: "\ud83c\udf1f", cat: "MOTIVATION", text: "Your limitation \u2014 it's only your imagination.", src: "Unknown" },
+        { icon: "\ud83e\udded", cat: "MOTIVATION", text: "A journey of a thousand miles begins with a single step.", src: "Lao Tzu" },
+        { icon: "\ud83d\udd11", cat: "MOTIVATION", text: "Opportunities don't happen. You create them.", src: "Chris Grosser" },
+        { icon: "\ud83d\udc2b", cat: "SILK ROAD HISTORY", text: "The Silk Road stretched over 4,000 miles, connecting Chang'an to Constantinople for over 1,500 years.", src: "UNESCO World Heritage, Encyclop\u00e6dia Britannica" },
+        { icon: "\ud83d\uddfa\ufe0f", cat: "SILK ROAD HISTORY", text: "Marco Polo traveled the Silk Road for 24 years, documenting trade routes that inspired global commerce forever.", src: "The Travels of Marco Polo, National Geographic" },
+        { icon: "\ud83c\udfdb\ufe0f", cat: "SILK ROAD HISTORY", text: "The Silk Road didn't just move silk \u2014 it carried spices, gold, ideas, religions, and technology between civilizations.", src: "Encyclop\u00e6dia Britannica" },
+        { icon: "\u2693", cat: "SILK ROAD HISTORY", text: "Caravansaries \u2014 ancient rest stops every 20 miles \u2014 were the original truck stops, providing shelter and trade for merchants.", src: "UNESCO Heritage Studies" },
+        { icon: "\ud83c\udf0f", cat: "SILK ROAD HISTORY", text: "The Silk Road was the world's first global supply chain, proving that trade builds bridges between nations.", src: "Peter Frankopan, The Silk Roads (2015)" },
+        { icon: "\ud83d\udcdc", cat: "SILK ROAD HISTORY", text: "Paper, gunpowder, the compass, and printing \u2014 all reached the West via Silk Road trade routes.", src: "Joseph Needham, Science and Civilisation in China" },
+        { icon: "\ud83c\udfc6", cat: "SRL PHILOSOPHY", text: "Carriers first. Earn shipper trust. Non-stop communication. That's the Silk Route way.", src: "Silk Route Logistics" },
+        { icon: "\ud83e\udd1d", cat: "SRL MISSION", text: "We don't just move freight \u2014 we build partnerships that move North America forward.", src: "Silk Route Logistics" },
+        { icon: "\ud83d\udce1", cat: "SRL VISION", text: "Technology serves people, not the other way around. Every tool we build starts with the carrier experience.", src: "Silk Route Logistics" },
+        { icon: "\ud83d\udee1\ufe0f", cat: "SRL PROMISE", text: "Transparent rates. Fast payment. Zero double-brokering. Your freight, our word.", src: "Silk Route Logistics" }
+      ];
+
+      var today = new Date();
+      var start = new Date(today.getFullYear(), 0, 0);
+      var dayOfYear = Math.floor((today - start) / 86400000);
+      var f = facts[dayOfYear % facts.length];
+
+      document.getElementById('factIcon').textContent = f.icon;
+      document.getElementById('factCategory').textContent = f.cat;
+      document.getElementById('factText').textContent = '\u201c' + f.text + '\u201d';
+      document.getElementById('factSource').textContent = '\u2014 ' + f.src;
+    })();
   </script>
 </body>
 </html>

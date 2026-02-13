@@ -33,7 +33,7 @@ export async function getCarrierPrediction(carrierId: string): Promise<CarrierPr
     }),
     prisma.carrierProfile.findUnique({
       where: { id: carrierId },
-      select: { companyName: true, srcppTier: true },
+      select: { companyName: true, cppTier: true },
     }),
   ]);
 
@@ -92,8 +92,8 @@ export async function runCarrierLearningCycle(): Promise<{
     select: {
       id: true,
       companyName: true,
-      srcppTier: true,
-      srcppTotalLoads: true,
+      cppTier: true,
+      cppTotalLoads: true,
       createdAt: true,
     },
   });
@@ -177,11 +177,11 @@ export async function runCarrierLearningCycle(): Promise<{
     const fallOffRisk = Math.min(1, fallOffRate * 2 + recentFallOffs * 0.15);
 
     // Predicted next tier
-    const totalLoads = carrier.srcppTotalLoads || 0;
+    const totalLoads = carrier.cppTotalLoads || 0;
     let predictedNextTier: string | null = null;
-    if (carrier.srcppTier === "BRONZE" && totalLoads >= 15) predictedNextTier = "SILVER";
-    else if (carrier.srcppTier === "SILVER" && totalLoads >= 40) predictedNextTier = "GOLD";
-    else if (carrier.srcppTier === "GOLD" && totalLoads >= 85) predictedNextTier = "PLATINUM";
+    if (carrier.cppTier === "BRONZE" && totalLoads >= 15) predictedNextTier = "SILVER";
+    else if (carrier.cppTier === "SILVER" && totalLoads >= 40) predictedNextTier = "GOLD";
+    else if (carrier.cppTier === "GOLD" && totalLoads >= 85) predictedNextTier = "PLATINUM";
 
     // Overall reliability score (0-100)
     const reliabilityScore = Math.round(
@@ -272,19 +272,19 @@ export async function getCarrierIntelligenceDashboard() {
       where: { laneKey: "__global__", fallOffRisk: { gte: 0.25 } },
       orderBy: { fallOffRisk: "desc" },
       take: 10,
-      include: { carrier: { select: { companyName: true, srcppTier: true } } },
+      include: { carrier: { select: { companyName: true, cppTier: true } } },
     }),
     prisma.carrierIntelligence.findMany({
       where: { laneKey: "__global__", reliabilityScore: { gte: 85 } },
       orderBy: { reliabilityScore: "desc" },
       take: 10,
-      include: { carrier: { select: { companyName: true, srcppTier: true } } },
+      include: { carrier: { select: { companyName: true, cppTier: true } } },
     }),
     prisma.carrierIntelligence.findMany({
       where: { laneKey: "__global__", performanceTrend: "DECLINING" },
       orderBy: { reliabilityScore: "asc" },
       take: 10,
-      include: { carrier: { select: { companyName: true, srcppTier: true } } },
+      include: { carrier: { select: { companyName: true, cppTier: true } } },
     }),
     prisma.aILearningCycle.findFirst({
       where: { serviceName: "carrier_intelligence" },

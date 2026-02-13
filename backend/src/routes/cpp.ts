@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(authenticate);
 
-// GET /api/srcpp/my-status — Carrier's SRCPP loyalty status
+// GET /api/cpp/my-status — Carrier's CPP loyalty status
 router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
   const profile = await prisma.carrierProfile.findUnique({
     where: { userId: req.user!.id },
@@ -24,7 +24,7 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
 
   const latestScore = profile.scorecards[0];
   const currentScore = latestScore?.overallScore || 0;
-  const currentTier = profile.srcppTier !== "NONE" ? profile.srcppTier : profile.tier;
+  const currentTier = profile.cppTier !== "NONE" ? profile.cppTier : profile.tier;
 
   // Tier thresholds
   const tiers = [
@@ -45,9 +45,9 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   res.json({
     tier: currentTier,
     score: currentScore,
-    totalLoads: profile.srcppTotalLoads,
-    totalMiles: profile.srcppTotalMiles,
-    joinedDate: profile.srcppJoinedDate,
+    totalLoads: profile.cppTotalLoads,
+    totalMiles: profile.cppTotalMiles,
+    joinedDate: profile.cppJoinedDate,
     bonusPercentage: getBonusPercentage(currentTier as any),
     totalBonusEarned,
     pendingBonuses,
@@ -64,7 +64,7 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   });
 });
 
-// POST /api/srcpp/recalculate — Admin: recalculate all carrier tiers
+// POST /api/cpp/recalculate — Admin: recalculate all carrier tiers
 router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carriers = await prisma.carrierProfile.findMany({
     where: { onboardingStatus: "APPROVED" },
@@ -80,12 +80,12 @@ router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, 
     if (!latestScore) continue;
 
     const newTier = calculateTier(latestScore.overallScore);
-    const oldTier = carrier.srcppTier !== "NONE" ? carrier.srcppTier : carrier.tier;
+    const oldTier = carrier.cppTier !== "NONE" ? carrier.cppTier : carrier.tier;
 
     if (newTier !== oldTier) {
       await prisma.carrierProfile.update({
         where: { id: carrier.id },
-        data: { tier: newTier, srcppTier: newTier },
+        data: { tier: newTier, cppTier: newTier },
       });
 
       // Notify carrier of tier change
@@ -93,8 +93,8 @@ router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, 
         data: {
           userId: carrier.user.id,
           type: "GENERAL",
-          title: "SRCPP Tier Updated",
-          message: `Your SRCPP tier has changed from ${oldTier} to ${newTier}.`,
+          title: "CPP Tier Updated",
+          message: `Your CPP tier has changed from ${oldTier} to ${newTier}.`,
           actionUrl: "/carrier/dashboard.html",
         },
       });
@@ -106,7 +106,7 @@ router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, 
   res.json({ totalCarriers: carriers.length, tiersUpdated: updated });
 });
 
-// GET /api/srcpp/leaderboard — Top carriers by score (employee view)
+// GET /api/cpp/leaderboard — Top carriers by score (employee view)
 router.get("/leaderboard", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
   const limit = Math.min(50, parseInt(req.query.limit as string) || 20);
 
@@ -116,17 +116,17 @@ router.get("/leaderboard", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPER
       user: { select: { firstName: true, lastName: true, company: true } },
       scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
     },
-    orderBy: { srcppTotalLoads: "desc" },
+    orderBy: { cppTotalLoads: "desc" },
     take: limit,
   });
 
   const leaderboard = carriers.map((c, idx) => ({
     rank: idx + 1,
     company: c.user.company || `${c.user.firstName} ${c.user.lastName}`,
-    tier: c.srcppTier !== "NONE" ? c.srcppTier : c.tier,
+    tier: c.cppTier !== "NONE" ? c.cppTier : c.tier,
     score: c.scorecards[0]?.overallScore || 0,
-    totalLoads: c.srcppTotalLoads,
-    totalMiles: c.srcppTotalMiles,
+    totalLoads: c.cppTotalLoads,
+    totalMiles: c.cppTotalMiles,
     bonusPercentage: getBonusPercentage(c.tier),
   }));
 

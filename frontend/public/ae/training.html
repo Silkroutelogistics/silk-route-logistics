@@ -396,6 +396,7 @@
     </main>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script src="/ae/js/api.js"></script>
   <script>
     /* ======== SOP DATABASE ======== */
@@ -476,7 +477,7 @@
           {
             title: "Review Available Carriers",
             detail: "In the right panel under 'Carrier Assignment', the dropdown shows carriers filtered by matching equipment type. Review their MC#, truck count, and performance score.",
-            tip: "Tip: Prioritize carriers with higher SRCPP tier (Platinum > Gold > Silver > Bronze). They have proven reliability."
+            tip: "Tip: Prioritize carriers with higher CPP tier (Platinum > Gold > Silver > Bronze). They have proven reliability."
           },
           {
             title: "Verify Carrier Compliance",
@@ -723,16 +724,16 @@
       },
       {
         id: "SOP-010",
-        title: "SRCPP Loyalty Program Management",
+        title: "CPP Loyalty Program Management",
         category: "carrier",
         who: "AE",
         whoClass: "who-ae",
         pdfUrl: "/api/sops/pdf/SOP-010",
-        context: "The Silk Route Carrier Performance Program (SRCPP) rewards carriers with tier-based perks including bonus payments and reduced QuickPay fees.",
+        context: "The Caravan Partner Program (CPP) rewards carriers with tier-based perks including bonus payments and reduced QuickPay fees.",
         steps: [
           { title: "Understand Tiers", detail: "Bronze (0-89), Silver (90-94), Gold (95-97), Platinum (98+). Score is weighted: on-time pickup 20%, on-time delivery 20%, GPS compliance 15%, claims 15%, communication 10%, docs 10%, acceptance rate 10%.", tip: null },
           { title: "Review Carrier Scorecards", detail: "Access via Carriers list → carrier detail → Scorecard. Shows latest score, component breakdown, and history.", tip: null },
-          { title: "Tier Recalculation", detail: "Admin can trigger tier recalculation via the SRCPP admin panel. This re-evaluates all carriers and sends notifications for tier changes.", tip: "Tip: Recalculate tiers monthly after the scorecard period closes." },
+          { title: "Tier Recalculation", detail: "Admin can trigger tier recalculation via the CPP admin panel. This re-evaluates all carriers and sends notifications for tier changes.", tip: "Tip: Recalculate tiers monthly after the scorecard period closes." },
           { title: "Perks Communication", detail: "Gold carriers get 1.5% bonus on loads and reduced QuickPay (1.5%). Platinum gets 3% bonus, instant QuickPay (1%), and dedicated account manager.", tip: null }
         ]
       },
@@ -777,7 +778,7 @@
         steps: [
           { title: "Check BASIC Scores", detail: "Carrier's CSA BASIC scores are synced from FMCSA: Unsafe Driving, Hours of Service, Driver Fitness, Drug & Alcohol, Vehicle Maintenance, HazMat, Crash Indicator.", tip: null },
           { title: "Identify At-Risk Carriers", detail: "Scores above 65% (75% for some categories) indicate the carrier may face FMCSA intervention. Flag these carriers for review.", tip: "Tip: A carrier with high CSA scores is a liability risk. Consider placing them on probation or restricting load access." },
-          { title: "Review SRL Metrics", detail: "SRL tracks its own metrics: on-time pickup/delivery, communication, claims ratio, document timeliness. These feed into the SRCPP score.", tip: null },
+          { title: "Review SRL Metrics", detail: "SRL tracks its own metrics: on-time pickup/delivery, communication, claims ratio, document timeliness. These feed into the CPP score.", tip: null },
           { title: "Take Action", detail: "For carriers with consistently poor scores: schedule a performance review call, adjust their tier manually if needed, or suspend their account.", tip: null }
         ]
       },
@@ -803,12 +804,12 @@
         who: "AE",
         whoClass: "who-ae",
         pdfUrl: "/api/sops/pdf/SOP-015",
-        context: "When assigning a carrier to a posted load, use Smart Match to find the best-fit carrier based on lane history, rate competitiveness, SRCPP tier, and availability.",
+        context: "When assigning a carrier to a posted load, use Smart Match to find the best-fit carrier based on lane history, rate competitiveness, CPP tier, and availability.",
         steps: [
           { title: "Open Load Detail", detail: "From the Load Board, click a load in POSTED status to open the detail panel.", tip: null },
           { title: "Click 'Caravan Match' Tab", detail: "In the right panel, switch to the 'Caravan Match' tab. Click the 'Run Smart Match' button to trigger the matching algorithm.", tip: null },
-          { title: "Review Match Results", detail: "The system returns up to 10 ranked carriers. Each card shows: match score (0-100), lane score, rate score, SRCPP tier score, and availability score.", tip: "Tip: Lane Score (0-30) is the biggest differentiator. Carriers who have completed the exact same lane get 30 points." },
-          { title: "Understand the Scoring", detail: "Lane: exact lane=30, preferred=25, origin state=20, dest state=15. Rate: within 5%=25, 10%=20, 15%=15. SRCPP: Platinum=25, Gold=20, Silver=15, Bronze=10. Availability: no conflicts=20, delivering near origin=15.", tip: null },
+          { title: "Review Match Results", detail: "The system returns up to 10 ranked carriers. Each card shows: match score (0-100), lane score, rate score, CPP tier score, and availability score.", tip: "Tip: Lane Score (0-30) is the biggest differentiator. Carriers who have completed the exact same lane get 30 points." },
+          { title: "Understand the Scoring", detail: "Lane: exact lane=30, preferred=25, origin state=20, dest state=15. Rate: within 5%=25, 10%=20, 15%=15. CPP: Platinum=25, Gold=20, Silver=15, Bronze=10. Availability: no conflicts=20, delivering near origin=15.", tip: null },
           { title: "Assign the Carrier", detail: "Click 'Assign' on the best match. The system assigns the carrier, changes load status to BOOKED, and auto-creates check-call schedules.", tip: "Tip: If fewer than 3 Caravan matches appear, the system suggests posting to DAT for wider coverage." },
           { title: "Self-Learning", detail: "The system tracks which matched carrier was assigned and whether the load completed successfully. Over time, match accuracy improves.", tip: null }
         ]

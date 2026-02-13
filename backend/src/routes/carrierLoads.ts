@@ -177,12 +177,12 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     });
   }
 
-  // Update SRCPP stats
+  // Update CPP stats
   await prisma.carrierProfile.update({
     where: { id: profile.id },
     data: {
-      srcppTotalLoads: { increment: 1 },
-      srcppTotalMiles: { increment: load.distance || 0 },
+      cppTotalLoads: { increment: 1 },
+      cppTotalMiles: { increment: load.distance || 0 },
     },
   });
 

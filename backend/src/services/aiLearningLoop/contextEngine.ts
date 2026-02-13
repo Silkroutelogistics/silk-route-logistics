@@ -91,7 +91,7 @@ export async function buildCarrierContext(
   const [carrier, intel] = await Promise.all([
     prisma.carrierProfile.findUnique({
       where: { id: carrierId },
-      select: { companyName: true, srcppTier: true, srcppTotalLoads: true },
+      select: { companyName: true, cppTier: true, cppTotalLoads: true },
     }),
     prisma.carrierIntelligence.findFirst({
       where: { carrierId, laneKey: "__global__" },
@@ -112,9 +112,9 @@ export async function buildCarrierContext(
     reliabilityScore: intel?.reliabilityScore ?? 50,
     fallOffRisk: intel?.fallOffRisk ?? 0.1,
     churnRisk: intel?.churnRisk ?? 0.1,
-    tier: carrier.srcppTier || "BRONZE",
+    tier: carrier.cppTier || "BRONZE",
     performanceTrend: intel?.performanceTrend ?? "STABLE",
-    totalLoadsCompleted: carrier.srcppTotalLoads || 0,
+    totalLoadsCompleted: carrier.cppTotalLoads || 0,
     preferredLanes,
   };
 }

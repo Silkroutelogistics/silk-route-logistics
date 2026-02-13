@@ -66,7 +66,7 @@ var MarcoPolo = (function () {
     },
     carrier: function (name) {
       var n = name ? "Welcome back, " + escapeHtml(name) + "!" : "Welcome back!";
-      return n + " I'm Marco Polo. I can help you find loads, check payments, review your SRCPP score, and navigate the carrier portal. What do you need?";
+      return n + " I'm Marco Polo. I can help you find loads, check payments, review your CPP score, and navigate the carrier portal. What do you need?";
     },
     accounting: function (name) {
       var n = name ? "Good day, " + escapeHtml(name) + "!" : "Good day!";

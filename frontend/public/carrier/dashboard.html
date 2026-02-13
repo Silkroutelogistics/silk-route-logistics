@@ -51,7 +51,7 @@
       </div>
     </div>
 
-    <!-- SRCPP Tier Card -->
+    <!-- CPP Tier Card -->
     <div class="tier-card" id="tierCard" style="margin-bottom:24px">
       <div class="skeleton skeleton-line w50"></div>
       <div class="skeleton skeleton-box"></div>
@@ -124,6 +124,7 @@
     </footer>
   </main>
 
+  <script src="/js/auth.js"></script>
   <script src="/carrier/js/carrier-api.js"></script>
   <script>
     if (!CARRIER.requireAuth()) throw new Error("Not authenticated");
@@ -158,8 +159,8 @@
         document.getElementById("welcomeMsg").textContent = "Welcome back, " + u.firstName;
       }
 
-      // SRCPP Tier Card
-      renderTierCard(data.srcpp, data.dashboard);
+      // CPP Tier Card
+      renderTierCard(data.cpp, data.dashboard);
 
       // KPIs
       renderKPIs(data.dashboard, data.payments);
@@ -184,19 +185,19 @@
 
     var _carrierTier = "BRONZE"; // tracked globally for rate visibility
 
-    function renderTierCard(srcpp, dashboard) {
+    function renderTierCard(cpp, dashboard) {
       var card = document.getElementById("tierCard");
-      if (!srcpp) {
-        card.innerHTML = '<div style="text-align:center;color:var(--slate);padding:20px">SRCPP data loading...</div>';
+      if (!cpp) {
+        card.innerHTML = '<div style="text-align:center;color:var(--slate);padding:20px">CPP data loading...</div>';
         return;
       }
 
-      var tier = srcpp.tier || "BRONZE";
+      var tier = cpp.tier || "BRONZE";
       _carrierTier = tier;
-      var score = srcpp.score || 0;
-      var nextTier = srcpp.nextTier;
+      var score = cpp.score || 0;
+      var nextTier = cpp.nextTier;
       var progressPct = Math.min(100, score);
-      var totalLoads = srcpp.totalLoads || 0;
+      var totalLoads = cpp.totalLoads || 0;
 
       // Guest tier: show 3-load conversion progress
       if (tier === "GUEST") {
@@ -228,8 +229,8 @@
           : '<div class="next-tier">Top tier reached!</div>') +
         '<div style="margin-top:12px;display:flex;gap:24px;font-size:12px;color:var(--slate)">' +
           '<span>Loads: <strong style="color:#fff">' + (totalLoads) + '</strong></span>' +
-          '<span>Miles: <strong style="color:#fff">' + Math.round(srcpp.totalMiles || 0).toLocaleString() + '</strong></span>' +
-          '<span>Bonus Rate: <strong style="color:var(--gold)">' + (srcpp.bonusPercentage || 0) + '%</strong></span>' +
+          '<span>Miles: <strong style="color:#fff">' + Math.round(cpp.totalMiles || 0).toLocaleString() + '</strong></span>' +
+          '<span>Bonus Rate: <strong style="color:var(--gold)">' + (cpp.bonusPercentage || 0) + '%</strong></span>' +
         '</div>';
 
       renderCaravanBanner(tier, totalLoads);

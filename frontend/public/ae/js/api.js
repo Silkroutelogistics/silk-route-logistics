@@ -288,9 +288,9 @@ var SRL = (function () {
     return request("/api/dat/responses/" + loadId);
   }
 
-  // --- SRCPP ---
-  function getSRCPPLeaderboard() {
-    return request("/api/srcpp/leaderboard");
+  // --- CPP ---
+  function getCPPLeaderboard() {
+    return request("/api/cpp/leaderboard");
   }
 
   // --- Phase C: Automation ---
@@ -462,7 +462,7 @@ var SRL = (function () {
   function acctBulkApprove(ids) { return request("/api/accounting/payments/bulk-approve", { method: "POST", body: { paymentIds: ids } }); }
   function acctPaymentQueue(params) { return request("/api/accounting/payments/queue?" + new URLSearchParams(params || {}).toString()); }
   function acctAPAging() { return request("/api/accounting/payments/aging"); }
-  function acctSRCPPTiers() { return request("/api/accounting/payments/srcpp-tiers"); }
+  function acctCPPTiers() { return request("/api/accounting/payments/cpp-tiers"); }
   function acctDisputes(params) { return request("/api/accounting/disputes?" + new URLSearchParams(params || {}).toString()); }
   function acctDisputeById(id) { return request("/api/accounting/disputes/" + id); }
   function acctFileDispute(data) { return request("/api/accounting/disputes", { method: "POST", body: data }); }
@@ -534,7 +534,7 @@ var SRL = (function () {
     postToDATAdvanced: postToDATAdvanced,
     removeFromDAT: removeFromDAT,
     getDATResponses: getDATResponses,
-    getSRCPPLeaderboard: getSRCPPLeaderboard,
+    getCPPLeaderboard: getCPPLeaderboard,
     smartMatchCarriers: smartMatchCarriers,
     assignMatchedCarrier: assignMatchedCarrier,
     getCheckCallSchedule: getCheckCallSchedule,
@@ -586,7 +586,7 @@ var SRL = (function () {
     acctBulkApprove: acctBulkApprove,
     acctPaymentQueue: acctPaymentQueue,
     acctAPAging: acctAPAging,
-    acctSRCPPTiers: acctSRCPPTiers,
+    acctCPPTiers: acctCPPTiers,
     acctDisputes: acctDisputes,
     acctDisputeById: acctDisputeById,
     acctFileDispute: acctFileDispute,

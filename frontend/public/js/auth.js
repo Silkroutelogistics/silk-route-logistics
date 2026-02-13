@@ -112,3 +112,48 @@ var SRLAuth = (function () {
     wasRemembered: wasRemembered
   };
 })();
+
+/**
+ * Auto-logout after 1 hour of inactivity
+ * Runs on all /ae/ and /carrier/ console pages
+ */
+(function initInactivityTimer() {
+  var isConsole = window.location.pathname.startsWith("/ae") || window.location.pathname.startsWith("/carrier");
+  // Only run on console pages, not login/public pages
+  if (!isConsole) return;
+  // Don't run on login pages
+  if (window.location.pathname.indexOf("login") !== -1) return;
+
+  var TIMEOUT = 60 * 60 * 1000; // 1 hour
+  var timer;
+
+  function resetTimer() {
+    clearTimeout(timer);
+    timer = setTimeout(logoutInactive, TIMEOUT);
+    sessionStorage.setItem("srl_last_activity", Date.now().toString());
+  }
+
+  function logoutInactive() {
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
+    localStorage.removeItem("carrier_token");
+    localStorage.removeItem("carrier_user");
+    sessionStorage.removeItem("carrier_token");
+    sessionStorage.removeItem("carrier_user");
+    sessionStorage.removeItem("srl_last_activity");
+    var isCarrier = window.location.pathname.startsWith("/carrier");
+    window.location.href = isCarrier ? "/carrier/login.html?expired=1" : "/auth/login?expired=1";
+  }
+
+  // Check if already expired on page load
+  var lastActivity = sessionStorage.getItem("srl_last_activity");
+  if (lastActivity && (Date.now() - parseInt(lastActivity, 10)) > TIMEOUT) {
+    logoutInactive();
+    return;
+  }
+
+  ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"].forEach(function (evt) {
+    document.addEventListener(evt, resetTimer, { passive: true });
+  });
+  resetTimer();
+})();

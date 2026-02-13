@@ -114,10 +114,10 @@ export function CarrierFleetOverview() {
 
       {/* Two Column: Tier Breakdown + Equipment Distribution */}
       <div className="grid grid-cols-2 gap-6">
-        {/* SRCPP Tier Breakdown */}
+        {/* CPP Tier Breakdown */}
         <div className="bg-white/5 border border-white/5 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <Award className="w-4 h-4 text-[#C8963E]" /> SRCPP Tier Distribution
+            <Award className="w-4 h-4 text-[#C8963E]" /> CPP Tier Distribution
           </h2>
           <div className="space-y-3">
             {Object.entries(tierCounts).map(([tier, count]) => {

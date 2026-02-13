@@ -5,11 +5,11 @@ import { createCheckCallSchedule } from "./checkCallAutomation";
 /**
  * Cross-System Integration Service
  * Closes every data loop: Carrier Lifecycle, Load Lifecycle,
- * Factoring Fund, Shipper Credit, SRCPP Rewards.
+ * Factoring Fund, Shipper Credit, CPP Rewards.
  */
 
 // ──────────────────────────────────────────────────
-// LOOP 1 — Carrier Lifecycle: on approval → SRCPP scorecard + tier
+// LOOP 1 — Carrier Lifecycle: on approval → CPP scorecard + tier
 // ──────────────────────────────────────────────────
 
 export async function onCarrierApproved(carrierProfileId: string) {
@@ -19,7 +19,7 @@ export async function onCarrierApproved(carrierProfileId: string) {
   });
   if (!profile) return;
 
-  // Create initial SRCPP scorecard with baseline scores
+  // Create initial CPP scorecard with baseline scores
   await prisma.carrierScorecard.create({
     data: {
       carrierId: profile.id,
@@ -42,8 +42,8 @@ export async function onCarrierApproved(carrierProfileId: string) {
     where: { id: profile.id },
     data: {
       tier: "GUEST",
-      srcppTier: "GUEST",
-      srcppJoinedDate: new Date(),
+      cppTier: "GUEST",
+      cppJoinedDate: new Date(),
       source: "caravan",
     },
   });
@@ -61,7 +61,7 @@ export async function onLoadDispatched(loadId: string) {
 }
 
 // ──────────────────────────────────────────────────
-// LOOP 2+3+4+5 — on delivered: AP, fund, credit, SRCPP
+// LOOP 2+3+4+5 — on delivered: AP, fund, credit, CPP
 // ──────────────────────────────────────────────────
 
 export async function onLoadDelivered(loadId: string) {
@@ -73,7 +73,7 @@ export async function onLoadDelivered(loadId: string) {
           id: true, company: true, firstName: true, lastName: true,
           carrierProfile: {
             select: {
-              id: true, tier: true, srcppTier: true, srcppTotalLoads: true, srcppTotalMiles: true,
+              id: true, tier: true, cppTier: true, cppTotalLoads: true, cppTotalMiles: true,
               paymentPreference: true,
             },
           },
@@ -100,25 +100,25 @@ export async function onLoadDelivered(loadId: string) {
     await updateShipperCreditOnDelivery(load);
   }
 
-  // ── SRCPP: Recalculate on load completion ──
+  // ── CPP: Recalculate on load completion ──
   if (load.carrier?.carrierProfile) {
     // Increment total loads + miles
     const profileId = load.carrier.carrierProfile.id;
     await prisma.carrierProfile.update({
       where: { id: profileId },
       data: {
-        srcppTotalLoads: { increment: 1 },
-        srcppTotalMiles: { increment: load.distance || 0 },
+        cppTotalLoads: { increment: 1 },
+        cppTotalMiles: { increment: load.distance || 0 },
       },
     });
 
-    // Fire-and-forget SRCPP recalculation
-    recalculateCarrierSRCPP(profileId).catch((e) =>
-      console.error(`[Integration] SRCPP recalc error for ${profileId}:`, e.message)
+    // Fire-and-forget CPP recalculation
+    recalculateCarrierCPP(profileId).catch((e) =>
+      console.error(`[Integration] CPP recalc error for ${profileId}:`, e.message)
     );
   }
 
-  console.log(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + SRCPP triggered`);
+  console.log(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + CPP triggered`);
 }
 
 // ── Create Carrier Pay entry on delivery ──
@@ -138,7 +138,7 @@ async function createCarrierPayOnDelivery(load: any) {
   const accessorials = rc?.accessorialTotal || 0;
   const grossAmount = lineHaul + fuelSurcharge + accessorials;
 
-  // Determine payment tier from carrier's SRCPP tier or preference
+  // Determine payment tier from carrier's CPP tier or preference
   const tierMap: Record<string, string> = {
     PLATINUM: "ELITE", GOLD: "PARTNER", SILVER: "PRIORITY", BRONZE: "STANDARD", GUEST: "STANDARD", NONE: "STANDARD",
   };
@@ -384,10 +384,10 @@ export async function onPODUploaded(loadId: string) {
 }
 
 // ──────────────────────────────────────────────────
-// LOOP 5 — SRCPP: Recalculate score + tier evaluation
+// LOOP 5 — CPP: Recalculate score + tier evaluation
 // ──────────────────────────────────────────────────
 
-export async function recalculateCarrierSRCPP(carrierProfileId: string) {
+export async function recalculateCarrierCPP(carrierProfileId: string) {
   const profile = await prisma.carrierProfile.findUnique({
     where: { id: carrierProfileId },
     include: {
@@ -398,7 +398,7 @@ export async function recalculateCarrierSRCPP(carrierProfileId: string) {
   if (!profile) return;
 
   // Check guest → bronze promotion first
-  if (profile.tier === "GUEST" || profile.srcppTier === "GUEST") {
+  if (profile.tier === "GUEST" || profile.cppTier === "GUEST") {
     const promoted = await checkGuestPromotion(carrierProfileId);
     if (promoted) return; // Promotion handled
   }
@@ -527,7 +527,7 @@ export async function recalculateCarrierSRCPP(carrierProfileId: string) {
   if (newTier !== oldTier) {
     await prisma.carrierProfile.update({
       where: { id: profile.id },
-      data: { tier: newTier, srcppTier: newTier },
+      data: { tier: newTier, cppTier: newTier },
     });
 
     // Create tier change notification
@@ -542,13 +542,13 @@ export async function recalculateCarrierSRCPP(carrierProfileId: string) {
       data: {
         userId: profile.userId,
         type: "GENERAL",
-        title: `SRCPP Tier ${direction === "upgraded" ? "Upgrade" : "Change"}: ${tierNames[newTier]}`,
-        message: `Your SRCPP tier has been ${direction} from ${tierNames[oldTier] || oldTier} to ${tierNames[newTier]}. Score: ${overallScore}. ${direction === "upgraded" ? "Congratulations!" : "Keep improving your performance metrics."}`,
+        title: `CPP Tier ${direction === "upgraded" ? "Upgrade" : "Change"}: ${tierNames[newTier]}`,
+        message: `Your CPP tier has been ${direction} from ${tierNames[oldTier] || oldTier} to ${tierNames[newTier]}. Score: ${overallScore}. ${direction === "upgraded" ? "Congratulations!" : "Keep improving your performance metrics."}`,
         actionUrl: "/carrier/dashboard.html",
       },
     });
 
-    console.log(`[Integration] SRCPP tier change: ${oldTier} → ${newTier} (score: ${overallScore}) for carrier ${profile.id}`);
+    console.log(`[Integration] CPP tier change: ${oldTier} → ${newTier} (score: ${overallScore}) for carrier ${profile.id}`);
   }
 
   // Create bonus if earned
@@ -565,7 +565,7 @@ export async function recalculateCarrierSRCPP(carrierProfileId: string) {
     });
   }
 
-  console.log(`[Integration] SRCPP recalculated for carrier ${profile.id}: score=${overallScore}, tier=${newTier}`);
+  console.log(`[Integration] CPP recalculated for carrier ${profile.id}: score=${overallScore}, tier=${newTier}`);
 }
 
 // ──────────────────────────────────────────────────
@@ -598,10 +598,10 @@ export async function enforceShipperCredit(customerId: string): Promise<{ allowe
 }
 
 // ──────────────────────────────────────────────────
-// Cron: SRCPP tier recalculation for all active carriers
+// Cron: CPP tier recalculation for all active carriers
 // ──────────────────────────────────────────────────
 
-export async function processAllSRCPPRecalculations() {
+export async function processAllCPPRecalculations() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
@@ -613,13 +613,13 @@ export async function processAllSRCPPRecalculations() {
   let recalculated = 0;
   for (const carrier of carriers) {
     try {
-      await recalculateCarrierSRCPP(carrier.id);
+      await recalculateCarrierCPP(carrier.id);
       recalculated++;
     } catch (e: any) {
-      console.error(`[Integration] SRCPP recalc failed for ${carrier.id}:`, e.message);
+      console.error(`[Integration] CPP recalc failed for ${carrier.id}:`, e.message);
     }
   }
 
-  console.log(`[Integration] SRCPP batch recalculation: ${recalculated}/${carriers.length} carriers processed`);
+  console.log(`[Integration] CPP batch recalculation: ${recalculated}/${carriers.length} carriers processed`);
   return { total: carriers.length, recalculated };
 }
