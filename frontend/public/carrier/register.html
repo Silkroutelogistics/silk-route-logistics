@@ -259,6 +259,8 @@
       }
       .register-nav {
         padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
       }
       .form-row {
         grid-template-columns: 1fr;
@@ -272,6 +274,39 @@
       .step-connector {
         width: 24px;
         margin: 0 6px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .register-nav {
+        padding: 10px 12px;
+      }
+      .register-card {
+        padding: 20px;
+        margin: 16px;
+      }
+      .register-card h1 {
+        font-size: 20px;
+      }
+      .form-group input,
+      .form-group select {
+        font-size: 16px; /* prevents iOS auto-zoom on focus */
+      }
+      .form-nav {
+        gap: 8px;
+      }
+      .form-nav .btn {
+        min-width: 100px;
+        font-size: 13px;
+      }
+      .step-circle {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .step-connector {
+        width: 20px;
+        margin: 0 4px;
       }
     }
   </style>

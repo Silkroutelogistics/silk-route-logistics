@@ -142,6 +142,82 @@
   50% { transform: rotate(4deg); }
 }
 
+/* ─── Mobile: Tablet ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .srl-logo-img {
+    height: 36px;
+  }
+  .srl-penguin-zone {
+    width: 36px;
+    height: 36px;
+  }
+  .srl-penguin {
+    width: 10px;
+    height: 12px;
+  }
+  .srl-logo-text {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+  .srl-logo-text span {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+  }
+  .srl-logo-wrap {
+    gap: 8px;
+  }
+  /* Scale penguin path for 36px container */
+  @keyframes penguin-path {
+    0% { left: 5px; top: 24px; transform: scaleX(1); }
+    15% { left: 10px; top: 18px; transform: scaleX(1); }
+    30% { left: 15px; top: 13px; transform: scaleX(1); }
+    49% { left: 22px; top: 6px; transform: scaleX(1); }
+    50% { left: 22px; top: 6px; transform: scaleX(-1); }
+    65% { left: 15px; top: 13px; transform: scaleX(-1); }
+    80% { left: 10px; top: 18px; transform: scaleX(-1); }
+    99% { left: 5px; top: 24px; transform: scaleX(-1); }
+    100% { left: 5px; top: 24px; transform: scaleX(1); }
+  }
+}
+
+/* ─── Mobile: Small Phone ────────────────────────────── */
+@media (max-width: 480px) {
+  .srl-logo-img {
+    height: 32px;
+  }
+  .srl-penguin-zone {
+    width: 32px;
+    height: 32px;
+  }
+  .srl-penguin {
+    width: 8px;
+    height: 10px;
+  }
+  .srl-logo-text {
+    font-size: 11px;
+    letter-spacing: 0.8px;
+  }
+  .srl-logo-text span {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .srl-logo-wrap {
+    gap: 6px;
+  }
+  /* Scale penguin path for 32px container */
+  @keyframes penguin-path {
+    0% { left: 4px; top: 22px; transform: scaleX(1); }
+    15% { left: 8px; top: 16px; transform: scaleX(1); }
+    30% { left: 13px; top: 11px; transform: scaleX(1); }
+    49% { left: 20px; top: 5px; transform: scaleX(1); }
+    50% { left: 20px; top: 5px; transform: scaleX(-1); }
+    65% { left: 13px; top: 11px; transform: scaleX(-1); }
+    80% { left: 8px; top: 16px; transform: scaleX(-1); }
+    99% { left: 4px; top: 22px; transform: scaleX(-1); }
+    100% { left: 4px; top: 22px; transform: scaleX(1); }
+  }
+}
+
 /* ─── Reduced Motion ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .srl-penguin { animation: none; top: 20px; left: 16px; }
