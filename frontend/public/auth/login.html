@@ -108,7 +108,7 @@
     <div id="otp-section" class="otp-section">
       <div class="form-group">
         <label>Verification Code</label>
-        <input type="text" id="otp" placeholder="Enter 6-digit code" maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+        <input type="text" id="otp" placeholder="Enter 8-digit code" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
       </div>
       <button class="btn" id="otp-btn" onclick="handleOtp()">Verify</button>
       <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
@@ -208,7 +208,7 @@
 
     function handleOtp() {
       var code = document.getElementById('otp').value.trim();
-      if (!code || code.length < 6) { showError('Please enter the 6-digit code'); return; }
+      if (!code || code.length < 8) { showError('Please enter the 8-digit code'); return; }
 
       var btn = document.getElementById('otp-btn');
       btn.disabled = true;
