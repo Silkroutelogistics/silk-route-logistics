@@ -11,9 +11,10 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a1628;color:#e0e0e0;overflow:hidden;height:100vh}
 
+    /* === SPLIT LAYOUT === */
     .login-container{display:flex;height:100vh}
 
-    /* LEFT PANEL */
+    /* === LEFT PANEL === */
     .left-panel{
       width:55%;position:relative;overflow:hidden;
       background:linear-gradient(165deg,#0D1B2A 0%,#12263e 50%,#0f2035 100%);
@@ -47,8 +48,7 @@
     .features-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:36px}
     .feature-pill{
       display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;
-      background:rgba(200,150,62,0.04);border:1px solid rgba(200,150,62,0.08);
-      transition:all .3s ease;
+      background:rgba(200,150,62,0.04);border:1px solid rgba(200,150,62,0.08);transition:all .3s ease;
     }
     .feature-pill:hover{background:rgba(200,150,62,0.08);border-color:rgba(200,150,62,0.15);transform:translateY(-1px)}
     .feature-pill .icon{font-size:16px}
@@ -56,6 +56,7 @@
 
     .tagline{font-size:13.5px;color:#5a7a9a;line-height:1.75;margin-bottom:40px;max-width:440px}
 
+    /* === DAILY INSIGHT CARD === */
     .insight-card{
       padding:24px 28px;border-radius:12px;position:relative;overflow:hidden;
       background:linear-gradient(135deg,rgba(200,150,62,0.05) 0%,rgba(200,150,62,0.02) 100%);
@@ -70,12 +71,11 @@
     .silk-road-line{margin-top:auto;padding-top:40px;opacity:.12}
     .left-footer{font-size:11px;color:#3a4f60;margin-top:16px}
 
-    /* RIGHT PANEL */
+    /* === RIGHT PANEL === */
     .right-panel{
       width:45%;display:flex;align-items:center;justify-content:center;
       background:linear-gradient(180deg,#101d2e 0%,#0c1825 100%);
-      border-left:1px solid rgba(200,150,62,0.06);position:relative;
-      overflow-y:auto;
+      border-left:1px solid rgba(200,150,62,0.06);position:relative;overflow-y:auto;
     }
     .login-card{width:100%;max-width:380px;padding:40px}
 
@@ -108,8 +108,7 @@
     .btn-submit{
       width:100%;padding:14px;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;
       background:linear-gradient(135deg,#c8a951 0%,#b8963e 100%);
-      color:#0D1B2A;border:none;border-radius:8px;cursor:pointer;
-      transition:all .25s ease;position:relative;overflow:hidden;
+      color:#0D1B2A;border:none;border-radius:8px;cursor:pointer;transition:all .25s ease;
     }
     .btn-submit:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(200,150,62,0.25)}
     .btn-submit:active{transform:translateY(0)}
@@ -146,6 +145,7 @@
 </head>
 <body>
   <div class="login-container">
+    <!-- LEFT PANEL -->
     <div class="left-panel">
       <div class="particle" style="width:4px;height:4px;top:15%;left:20%;animation-delay:0s;animation-duration:22s"></div>
       <div class="particle" style="width:3px;height:3px;top:45%;left:75%;animation-delay:3s;animation-duration:28s"></div>
@@ -188,16 +188,18 @@
       </div>
     </div>
 
+    <!-- RIGHT PANEL -->
     <div class="right-panel">
       <div class="login-card">
         <div class="form-logo">
           <img src="/logo.png" alt="Silk Route Logistics">
           <h2>Welcome Back</h2>
-          <p>Sign in to your AE Command Center</p>
+          <p>Sign in to your account</p>
         </div>
 
         <div id="alertBanner" class="alert-banner"></div>
 
+        <!-- Step 1: Email + Password -->
         <div id="email-section" class="email-section">
           <div class="field-group">
             <label class="field-label">Email Address</label>
@@ -214,6 +216,7 @@
           <button id="loginBtn" class="btn-submit" onclick="handleLogin()">Sign In</button>
         </div>
 
+        <!-- Step 2: OTP Verification -->
         <div id="otp-section" class="otp-section">
           <div class="field-group">
             <label class="field-label">Verification Code</label>
@@ -302,8 +305,8 @@
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
-          if (remember) { SRLAuth.setRememberedEmail(email, 'ae'); }
-          else { SRLAuth.setRememberedEmail('', 'ae'); }
+          if (remember) SRLAuth.setRememberedEmail(email, 'ae');
+          else SRLAuth.setRememberedEmail('', 'ae');
           window.location.href = '/ae/dashboard/index.html';
         }
       })
@@ -333,8 +336,8 @@
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
-          if (remember) { SRLAuth.setRememberedEmail(pendingEmail, 'ae'); }
-          else { SRLAuth.setRememberedEmail('', 'ae'); }
+          if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');
+          else SRLAuth.setRememberedEmail('', 'ae');
           var redirect = new URLSearchParams(window.location.search).get('redirect');
           window.location.href = redirect || '/ae/dashboard/index.html';
         }
@@ -353,64 +356,62 @@
     }
   </script>
 
-  <!-- Daily Insight -->
+  <!-- Daily Insight System -->
   <script>
     (function() {
-      var facts = [
-        { icon: "\ud83d\udcca", cat: "INDUSTRY FACT", text: "The U.S. trucking industry generates over $940.8 billion in gross freight revenue annually.", src: "American Trucking Associations, 2024 Report" },
-        { icon: "\ud83d\ude9b", cat: "DID YOU KNOW", text: "Trucks move 72.6% of all freight tonnage in the United States \u2014 11.46 billion tons per year.", src: "American Trucking Associations" },
-        { icon: "\ud83d\udc77", cat: "INDUSTRY FACT", text: "There are approximately 3.54 million professional truck drivers in America making deliveries possible every day.", src: "Bureau of Labor Statistics" },
-        { icon: "\ud83d\udcc8", cat: "GROWTH", text: "Freight volumes are projected to grow 25.6% by 2034, creating massive opportunities for tech-forward brokerages.", src: "ATA U.S. Freight Transportation Forecast" },
-        { icon: "\ud83d\udcb0", cat: "OPERATIONS", text: "The average marginal cost to operate a commercial truck is $2.27 per mile, with fuel at 29% of total costs.", src: "ATRI Operational Costs of Trucking, 2024" },
-        { icon: "\ud83c\udf0d", cat: "PERSPECTIVE", text: "If the trucking industry were a country, its revenue would make it the 18th largest economy in the world.", src: "World Bank GDP Rankings / ATA" },
-        { icon: "\ud83c\udfe0", cat: "DID YOU KNOW", text: "Over 80% of U.S. communities depend exclusively on trucks for delivery of their goods and daily necessities.", src: "American Trucking Associations" },
-        { icon: "\u26fd", cat: "OPERATIONS", text: "The trucking industry purchases over 54 billion gallons of diesel fuel annually in the United States.", src: "ATA, U.S. Energy Information Administration" },
-        { icon: "\ud83d\udee3\ufe0f", cat: "DID YOU KNOW", text: "American trucks travel over 327.5 billion miles per year \u2014 enough to make 683,000 trips to the moon.", src: "Federal Highway Administration" },
-        { icon: "\ud83d\udce6", cat: "PERSPECTIVE", text: "Without trucks, grocery store shelves would be empty within 3 days and hospitals within 24 hours.", src: "ATA: When Trucks Stop, America Stops" },
-        { icon: "\ud83c\udfd7\ufe0f", cat: "INDUSTRY FACT", text: "There are over 1.1 million trucking companies in the U.S., with 97% operating 20 or fewer trucks.", src: "FMCSA Registration Data" },
-        { icon: "\ud83d\udcca", cat: "BROKERAGE", text: "Average broker gross margin in 2024 was 15\u201318% on spot freight and 10\u201312% on contract freight.", src: "DAT Freight & Analytics, Brush Pass Research" },
-        { icon: "\ud83e\udd1d", cat: "BROKERAGE", text: "The top 10 freight brokerages control only 15% of the $200+ billion brokerage market \u2014 opportunity is everywhere.", src: "Transport Topics Top 100, Armstrong & Associates" },
-        { icon: "\u26a1", cat: "TECHNOLOGY", text: "Brokerages using AI-powered carrier matching report 35\u201340% faster load coverage and 15% lower fall-off rates.", src: "FreightWaves, McKinsey Logistics Report" },
-        { icon: "\ud83d\udcb3", cat: "PAYMENTS", text: "Carriers who receive payment within 7 days are 3x more likely to accept future loads from the same broker.", src: "TriumphPay Carrier Payment Index, 2024" },
-        { icon: "\ud83d\udcf1", cat: "TECHNOLOGY", text: "Digital freight matching platforms have grown 300% since 2020, transforming how loads meet carriers.", src: "FreightWaves Market Report" },
-        { icon: "\ud83d\udca1", cat: "MOTIVATION", text: "The secret of getting ahead is getting started.", src: "Mark Twain" },
-        { icon: "\ud83d\udd25", cat: "MOTIVATION", text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", src: "Winston Churchill" },
-        { icon: "\ud83c\udfaf", cat: "MOTIVATION", text: "The only way to do great work is to love what you do.", src: "Steve Jobs" },
-        { icon: "\u2b50", cat: "MOTIVATION", text: "Don\u2019t watch the clock; do what it does. Keep going.", src: "Sam Levenson" },
-        { icon: "\ud83c\udfd4\ufe0f", cat: "MOTIVATION", text: "It always seems impossible until it\u2019s done.", src: "Nelson Mandela" },
-        { icon: "\ud83d\ude80", cat: "MOTIVATION", text: "The best time to plant a tree was 20 years ago. The second best time is now.", src: "Chinese Proverb" },
-        { icon: "\ud83d\udcaa", cat: "MOTIVATION", text: "Hard work beats talent when talent doesn\u2019t work hard.", src: "Tim Notke" },
-        { icon: "\ud83c\udf1f", cat: "MOTIVATION", text: "Your limitation \u2014 it\u2019s only your imagination.", src: "Unknown" },
-        { icon: "\ud83e\udded", cat: "MOTIVATION", text: "A journey of a thousand miles begins with a single step.", src: "Lao Tzu" },
-        { icon: "\ud83d\udd11", cat: "MOTIVATION", text: "Opportunities don\u2019t happen. You create them.", src: "Chris Grosser" },
-        { icon: "\ud83d\udc2b", cat: "SILK ROAD HISTORY", text: "The Silk Road stretched over 4,000 miles, connecting Chang\u2019an to Constantinople for over 1,500 years.", src: "UNESCO World Heritage, Encyclop\u00e6dia Britannica" },
-        { icon: "\ud83d\uddfa\ufe0f", cat: "SILK ROAD HISTORY", text: "Marco Polo traveled the Silk Road for 24 years, documenting trade routes that inspired global commerce forever.", src: "The Travels of Marco Polo, National Geographic" },
-        { icon: "\ud83c\udfdb\ufe0f", cat: "SILK ROAD HISTORY", text: "The Silk Road didn\u2019t just move silk \u2014 it carried spices, gold, ideas, religions, and technology between civilizations.", src: "Encyclop\u00e6dia Britannica" },
-        { icon: "\u2693", cat: "SILK ROAD HISTORY", text: "Caravansaries \u2014 ancient rest stops every 20 miles \u2014 were the original truck stops, providing shelter and trade for merchants.", src: "UNESCO Heritage Studies" },
-        { icon: "\ud83c\udf0f", cat: "SILK ROAD HISTORY", text: "The Silk Road was the world\u2019s first global supply chain, proving that trade builds bridges between nations.", src: "Peter Frankopan, The Silk Roads (2015)" },
-        { icon: "\ud83d\udcdc", cat: "SILK ROAD HISTORY", text: "Paper, gunpowder, the compass, and printing \u2014 all reached the West via Silk Road trade routes.", src: "Joseph Needham, Science and Civilisation in China" },
-        { icon: "\ud83c\udfc6", cat: "SRL PHILOSOPHY", text: "Carriers first. Earn shipper trust. Non-stop communication. That\u2019s the Silk Route way.", src: "Silk Route Logistics" },
-        { icon: "\ud83e\udd1d", cat: "SRL MISSION", text: "We don\u2019t just move freight \u2014 we build partnerships that move North America forward.", src: "Silk Route Logistics" },
-        { icon: "\ud83d\udce1", cat: "SRL VISION", text: "Technology serves people, not the other way around. Every tool we build starts with the carrier experience.", src: "Silk Route Logistics" },
-        { icon: "\ud83d\udee1\ufe0f", cat: "SRL PROMISE", text: "Transparent rates. Fast payment. Zero double-brokering. Your freight, our word.", src: "Silk Route Logistics" }
+      var aeFacts = [
+        { icon:"📊", cat:"INDUSTRY FACT", text:"The U.S. trucking industry generates over $940.8 billion in gross freight revenue annually.", src:"American Trucking Associations, 2024" },
+        { icon:"🚛", cat:"DID YOU KNOW", text:"Trucks move 72.6% of all freight tonnage in the United States — 11.46 billion tons per year.", src:"American Trucking Associations" },
+        { icon:"👷", cat:"INDUSTRY FACT", text:"There are approximately 3.54 million professional truck drivers in America making deliveries possible every day.", src:"Bureau of Labor Statistics" },
+        { icon:"📈", cat:"GROWTH", text:"Freight volumes are projected to grow 25.6% by 2034, creating massive opportunities for tech-forward brokerages.", src:"ATA Freight Transportation Forecast" },
+        { icon:"💰", cat:"OPERATIONS", text:"The average marginal cost to operate a commercial truck is $2.27 per mile, with fuel at 29% of total costs.", src:"ATRI Operational Costs of Trucking, 2024" },
+        { icon:"🌍", cat:"PERSPECTIVE", text:"If the trucking industry were a country, its revenue would make it the 18th largest economy in the world.", src:"World Bank / ATA" },
+        { icon:"🏘️", cat:"DID YOU KNOW", text:"Over 80% of U.S. communities depend exclusively on trucks for delivery of their goods and daily necessities.", src:"American Trucking Associations" },
+        { icon:"⛽", cat:"OPERATIONS", text:"The trucking industry purchases over 54 billion gallons of diesel fuel annually in the United States.", src:"ATA / U.S. Energy Information Administration" },
+        { icon:"🛣️", cat:"DID YOU KNOW", text:"American trucks travel over 327.5 billion miles per year — enough to make 683,000 trips to the moon.", src:"Federal Highway Administration" },
+        { icon:"📦", cat:"PERSPECTIVE", text:"Without trucks, grocery store shelves would be empty within 3 days and hospitals within 24 hours.", src:"ATA: When Trucks Stop, America Stops" },
+        { icon:"🏗️", cat:"INDUSTRY FACT", text:"There are over 1.1 million trucking companies in the U.S., with 97% operating 20 or fewer trucks.", src:"FMCSA Registration Data" },
+        { icon:"📊", cat:"BROKERAGE", text:"Average broker gross margin in 2024 was 15\u201318% on spot freight and 10\u201312% on contract freight.", src:"DAT Freight & Analytics" },
+        { icon:"🤝", cat:"BROKERAGE", text:"The top 10 freight brokerages control only 15% of the $200+ billion brokerage market — opportunity is everywhere.", src:"Transport Topics Top 100" },
+        { icon:"⚡", cat:"TECHNOLOGY", text:"Brokerages using AI-powered carrier matching report 35\u201340% faster load coverage and 15% lower fall-off rates.", src:"FreightWaves / McKinsey" },
+        { icon:"💳", cat:"PAYMENTS", text:"Carriers who receive payment within 7 days are 3x more likely to accept future loads from the same broker.", src:"TriumphPay, 2024" },
+        { icon:"📱", cat:"TECHNOLOGY", text:"Digital freight matching platforms have grown 300% since 2020, transforming how loads meet carriers.", src:"FreightWaves" },
+        { icon:"💡", cat:"MOTIVATION", text:"The secret of getting ahead is getting started.", src:"Mark Twain" },
+        { icon:"🔥", cat:"MOTIVATION", text:"Success is not final, failure is not fatal: it is the courage to continue that counts.", src:"Winston Churchill" },
+        { icon:"🎯", cat:"MOTIVATION", text:"The only way to do great work is to love what you do.", src:"Steve Jobs" },
+        { icon:"⭐", cat:"MOTIVATION", text:"Don\u2019t watch the clock; do what it does. Keep going.", src:"Sam Levenson" },
+        { icon:"🏔️", cat:"MOTIVATION", text:"It always seems impossible until it\u2019s done.", src:"Nelson Mandela" },
+        { icon:"🚀", cat:"MOTIVATION", text:"The best time to plant a tree was 20 years ago. The second best time is now.", src:"Chinese Proverb" },
+        { icon:"💪", cat:"MOTIVATION", text:"Hard work beats talent when talent doesn\u2019t work hard.", src:"Tim Notke" },
+        { icon:"🧭", cat:"MOTIVATION", text:"A journey of a thousand miles begins with a single step.", src:"Lao Tzu" },
+        { icon:"🔑", cat:"MOTIVATION", text:"Opportunities don\u2019t happen. You create them.", src:"Chris Grosser" },
+        { icon:"🐫", cat:"SILK ROAD HISTORY", text:"The Silk Road stretched over 4,000 miles, connecting Chang\u2019an to Constantinople for over 1,500 years.", src:"UNESCO / Britannica" },
+        { icon:"🗺️", cat:"SILK ROAD HISTORY", text:"Marco Polo traveled the Silk Road for 24 years, documenting trade routes that inspired global commerce.", src:"National Geographic" },
+        { icon:"🏛️", cat:"SILK ROAD HISTORY", text:"The Silk Road carried spices, gold, ideas, religions, and technology between civilizations.", src:"Encyclop\u00e6dia Britannica" },
+        { icon:"⚓", cat:"SILK ROAD HISTORY", text:"Caravansaries — ancient rest stops every 20 miles — were the original truck stops for merchants.", src:"UNESCO Heritage Studies" },
+        { icon:"🌏", cat:"SILK ROAD HISTORY", text:"The Silk Road was the world\u2019s first global supply chain, proving trade builds bridges between nations.", src:"Peter Frankopan, The Silk Roads" },
+        { icon:"🏆", cat:"SRL PHILOSOPHY", text:"Carriers first. Earn shipper trust. Non-stop communication. That\u2019s the Silk Route way.", src:"Silk Route Logistics" },
+        { icon:"🤝", cat:"SRL MISSION", text:"We don\u2019t just move freight — we build partnerships that move North America forward.", src:"Silk Route Logistics" },
+        { icon:"📡", cat:"SRL VISION", text:"Technology serves people, not the other way around. Every tool we build starts with the carrier experience.", src:"Silk Route Logistics" },
+        { icon:"🛡️", cat:"SRL PROMISE", text:"Transparent rates. Fast payment. Zero double-brokering. Your freight, our word.", src:"Silk Route Logistics" }
       ];
 
       var categoryIcons = {
-        "INDUSTRY FACT":"\ud83c\udfed","DID YOU KNOW":"\ud83d\udcad","GROWTH":"\ud83d\udcc8","OPERATIONS":"\u2699\ufe0f",
-        "PERSPECTIVE":"\ud83c\udf0e","BROKERAGE":"\ud83e\udd1d","TECHNOLOGY":"\ud83d\udcbb","PAYMENTS":"\ud83d\udcb5",
-        "MOTIVATION":"\ud83c\udfd4\ufe0f","SILK ROAD HISTORY":"\ud83d\udc2b","SRL PHILOSOPHY":"\ud83d\udee1\ufe0f",
-        "SRL MISSION":"\ud83d\ude9b","SRL VISION":"\ud83d\udce1","SRL PROMISE":"\u2696\ufe0f"
+        "INDUSTRY FACT":"🏭","DID YOU KNOW":"💭","GROWTH":"📈","OPERATIONS":"⚙️",
+        "PERSPECTIVE":"🌎","BROKERAGE":"🤝","TECHNOLOGY":"💻","PAYMENTS":"💵",
+        "MOTIVATION":"🏔️","SILK ROAD HISTORY":"🐫","SRL PHILOSOPHY":"🛡️",
+        "SRL MISSION":"🚛","SRL VISION":"📡","SRL PROMISE":"⚖️"
       };
 
       var today = new Date();
       var start = new Date(today.getFullYear(), 0, 0);
       var dayOfYear = Math.floor((today - start) / 86400000);
-      var f = facts[dayOfYear % facts.length];
+      var f = aeFacts[dayOfYear % aeFacts.length];
 
       document.getElementById('insightLabel').textContent = f.cat;
       document.getElementById('insightText').textContent = '\u201c' + f.text + '\u201d';
       document.getElementById('insightSource').textContent = '\u2014 ' + f.src;
-      document.getElementById('insightBgIcon').textContent = categoryIcons[f.cat] || '\ud83d\ude9b';
+      document.getElementById('insightBgIcon').textContent = categoryIcons[f.cat] || '🚛';
     })();
   </script>
 </body>
