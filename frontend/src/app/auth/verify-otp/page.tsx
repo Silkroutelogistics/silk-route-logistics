@@ -7,7 +7,7 @@ import { Logo } from "@/components/ui/Logo";
 import { Shield } from "lucide-react";
 import LoginSplash from "@/components/auth/LoginSplash";
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 8;
 const OTP_EXPIRY_SECONDS = 5 * 60;
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -156,7 +156,7 @@ export default function VerifyOtpPage() {
           </div>
           <h1 className="text-2xl font-bold text-white">Enter Verification Code</h1>
           <p className="text-sm text-slate-400 mt-2 text-center">
-            A 6-digit code was sent to <span className="text-[#d4a574] font-medium">{maskEmail(email)}</span>
+            An 8-digit code was sent to <span className="text-[#d4a574] font-medium">{maskEmail(email)}</span>
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export default function VerifyOtpPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* OTP Input Boxes */}
-          <div className="flex justify-center gap-3" onPaste={handlePaste}>
+          <div className="flex justify-center gap-2" onPaste={handlePaste}>
             {digits.map((digit, i) => (
               <input
                 key={i}
@@ -176,7 +176,7 @@ export default function VerifyOtpPage() {
                 value={digit}
                 onChange={(e) => handleDigitChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-12 h-14 text-center text-2xl font-bold bg-white/5 border-2 border-white/10 rounded-xl text-white focus:border-[#d4a574] focus:ring-2 focus:ring-[#d4a574]/30 outline-none transition"
+                className="w-10 h-12 text-center text-xl font-bold bg-white/5 border-2 border-white/10 rounded-xl text-white focus:border-[#d4a574] focus:ring-2 focus:ring-[#d4a574]/30 outline-none transition"
                 autoFocus={i === 0}
               />
             ))}
