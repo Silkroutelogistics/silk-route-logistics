@@ -493,7 +493,7 @@
     function fetchOnTime() {
       SRLAnalytics.fetch("/api/analytics/on-time?" + SRLAnalytics.dateQS())
         .then(function (data) { ontimeData = data; renderOnTime(data); })
-        .catch(function () { });
+        .catch(function () { SRLAnalytics.showEmpty("ontime-gauge", "Unable to load on-time data"); });
     }
 
     function fetchLanes() {

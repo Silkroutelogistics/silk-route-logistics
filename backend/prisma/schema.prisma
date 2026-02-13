@@ -2063,12 +2063,28 @@ model CarrierIntelligence {
   churnRisk           Float    @default(0.1) @map("churn_risk") // 0-1 probability carrier leaves
   totalDataPoints     Int      @default(0) @map("total_data_points")
   lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+
+  // Merged: aggregate carrier scoring fields
+  compositeScore      Float    @default(50) @map("composite_score")
+  onTimeRate          Float    @default(0) @map("on_time_rate")
+  tenderAcceptRate    Float    @default(0) @map("tender_accept_rate")
+  avgResponseMinutes  Float    @default(0) @map("avg_response_minutes")
+  damageRate          Float    @default(0) @map("damage_rate")
+  claimRate           Float    @default(0) @map("claim_rate")
+  totalLoadsCompleted Int      @default(0) @map("total_loads_completed")
+  tier                String   @default("GOOD")
+  scoreHistoryJson    Json     @default("[]") @map("score_history_json")
+  weightConfigJson    Json     @default("{}") @map("weight_config_json")
+  lastFullRecalc      DateTime? @map("last_full_recalc")
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@unique([carrierId, laneKey])
   @@index([carrierId])
   @@index([reliabilityScore])
+  @@index([compositeScore])
+  @@index([tier])
   @@map("carrier_intelligence")
 }
 
@@ -2122,11 +2138,20 @@ model CustomerIntelligence {
   engagementScore     Float    @default(50) @map("engagement_score") // 0-100
   recommendedAction   String?  @map("recommended_action") // UPSELL, RETAIN, RE-ENGAGE, NURTURE
   lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+
+  // Merged: shipper intelligence fields
+  paymentScore        Float    @default(50) @map("payment_score")
+  disputeRate         Float    @default(0) @map("dispute_rate")
+  volumeTrend         String   @default("STABLE") @map("volume_trend")
+  creditScore         Float    @default(50) @map("credit_score")
+  totalLoads          Int      @default(0) @map("total_loads")
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@index([churnRisk])
   @@index([engagementScore])
+  @@index([creditScore])
   @@map("customer_intelligence")
 }
 
@@ -2294,4 +2319,282 @@ model NewsSource {
   lastFetched DateTime?
   articleCount Int     @default(0)
   createdAt   DateTime @default(now())
+}
+
+// ─── Competitive Features & AI Learning Models ──────────────────────
+
+model FacilityRating {
+  id              String   @id @default(uuid())
+  facilityName    String
+  facilityAddress String
+  facilityCity    String
+  facilityState   String
+  facilityZip     String
+  carrierId       String
+  loadId          String
+  locationType    String   // PICKUP or DELIVERY
+  waitTimeMinutes Int?
+  dockAccess      Int      // 1-5
+  communication   Int      // 1-5
+  safety          Int      // 1-5
+  overall         Int      // 1-5
+  comments        String?
+  createdAt       DateTime @default(now())
+
+  @@index([facilityAddress])
+  @@index([facilityZip])
+  @@index([carrierId])
+  @@map("facility_ratings")
+}
+
+model FacilityProfile {
+  id               String    @id @default(uuid())
+  facilityName     String
+  address          String
+  city             String
+  state            String
+  zip              String
+  avgWaitTime      Float     @default(0)
+  avgDockAccess    Float     @default(0)
+  avgCommunication Float     @default(0)
+  avgSafety        Float     @default(0)
+  avgOverall       Float     @default(0)
+  totalRatings     Int       @default(0)
+  lastRatedAt      DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([address, city, state])
+  @@index([zip])
+  @@index([avgOverall])
+  @@map("facility_profiles")
+}
+
+model CarrierPreferences {
+  id                 String   @id @default(uuid())
+  carrierId          String   @unique
+  preferredLanes     Json     @default("[]")
+  preferredRegions   Json     @default("[]")
+  avoidRegions       Json     @default("[]")
+  preferredLoadTypes Json     @default("[]")
+  minRatePerMile     Float?
+  maxDeadheadMiles   Int      @default(150)
+  preferredPayTerms  String?
+  homeBaseLat        Float?
+  homeBaseLng        Float?
+  typicalRadiusMiles Int      @default(500)
+  notifyMethod       String   @default("EMAIL")
+  notifyFrequency    String   @default("IMMEDIATE")
+  autoLearned        Json     @default("{}")
+  lastUpdatedBy      String   @default("SYSTEM")
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+
+  @@map("carrier_preferences")
+}
+
+model LaneRateIntelligence {
+  id               String   @id @default(uuid())
+  originZip        String
+  destZip          String
+  equipmentType    String   @default("DRY_VAN")
+  avgRatePerMile   Float    @default(0)
+  minAccepted      Float?
+  maxRejected      Float?
+  acceptanceRate   Float    @default(0)
+  sampleSize       Int      @default(0)
+  volatility       Float    @default(0)
+  trend            String   @default("STABLE")
+  seasonalJson     Json     @default("{}")
+  confidence       String   @default("LOW")
+  lastQuotedRate   Float?
+  lastAcceptedRate Float?
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@unique([originZip, destZip, equipmentType])
+  @@index([confidence])
+  @@index([updatedAt])
+  @@map("lane_rate_intelligence")
+}
+
+model CarrierScoreEvent {
+  id        String   @id @default(uuid())
+  carrierId String
+  eventType String
+  adjustment Float
+  reason    String
+  loadId    String?
+  createdAt DateTime @default(now())
+
+  @@index([carrierId])
+  @@index([createdAt])
+  @@map("carrier_score_events")
+}
+
+model DemandForecast {
+  id              String   @id @default(uuid())
+  laneKey         String
+  equipmentType   String   @default("DRY_VAN")
+  forecastDate    DateTime
+  predictedVolume Float
+  actualVolume    Float?
+  confidence      String   @default("LOW")
+  trend           String   @default("STABLE")
+  modelVersion    String   @default("v1")
+  createdAt       DateTime @default(now())
+
+  @@unique([laneKey, equipmentType, forecastDate])
+  @@index([forecastDate])
+  @@index([confidence])
+  @@map("demand_forecasts")
+}
+
+model MatchingOutcome {
+  id         String   @id @default(uuid())
+  loadId     String
+  carrierId  String
+  matchScore Float
+  outcome    String
+  factors    Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([outcome])
+  @@index([createdAt])
+  @@map("matching_outcomes")
+}
+
+model AnomalyLog {
+  id          String    @id @default(uuid())
+  entityType  String
+  entityId    String
+  anomalyType String
+  severity    String
+  description String
+  dataJson    Json      @default("{}")
+  status      String    @default("NEW")
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([severity])
+  @@index([status])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("anomaly_logs")
+}
+
+model LearningEventQueue {
+  id          String    @id @default(uuid())
+  eventType   String
+  payload     Json
+  attempts    Int       @default(0)
+  lastError   String?
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("learning_event_queue")
+}
+
+model AILearningLog {
+  id          String   @id @default(uuid())
+  serviceName String
+  eventType   String
+  dataJson    Json     @default("{}")
+  outcome     String?
+  confidence  Float?
+  durationMs  Int?
+  createdAt   DateTime @default(now())
+
+  @@index([serviceName])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("ai_learning_logs")
+}
+
+model AIApiUsage {
+  id           String   @id @default(uuid())
+  provider     String
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Float
+  latencyMs    Int
+  queryType    String
+  source       String
+  success      Boolean
+  errorType    String?
+  userId       String?
+  createdAt    DateTime @default(now())
+
+  @@index([provider])
+  @@index([createdAt])
+  @@index([source])
+  @@map("ai_api_usage")
+}
+
+model EmailQuoteLog {
+  id                      String   @id @default(uuid())
+  emailSubject            String?
+  sender                  String?
+  classification          String?
+  classificationConfidence Float?
+  extractedDataJson       Json     @default("{}")
+  generatedRate           Float?
+  rateConfidence          String?
+  outcome                 String   @default("PENDING")
+  processingTimeMs        Int?
+  createdAt               DateTime @default(now())
+
+  @@index([outcome])
+  @@index([createdAt])
+  @@map("email_quote_logs")
+}
+
+model RecommendationLog {
+  id            String    @id @default(uuid())
+  loadId        String
+  carrierId     String
+  matchScore    Float
+  factors       Json      @default("{}")
+  outcome       String    @default("PENDING")
+  recommendedAt DateTime  @default(now())
+  respondedAt   DateTime?
+
+  @@index([carrierId])
+  @@index([loadId])
+  @@index([outcome])
+  @@map("recommendation_logs")
+}
+
+model InstantBookLog {
+  id                String   @id @default(uuid())
+  loadId            String
+  postedRate        Float
+  accepted          Boolean  @default(false)
+  carrierId         String?
+  timeToBookSeconds Int?
+  createdAt         DateTime @default(now())
+
+  @@index([loadId])
+  @@index([accepted])
+  @@map("instant_book_logs")
+}
+
+model ShipmentRiskLog {
+  id             String   @id @default(uuid())
+  loadId         String
+  riskScore      Int
+  riskLevel      String   // GREEN, AMBER, RED
+  riskFactorsJson Json    @default("{}")
+  alertSent      Boolean  @default(false)
+  scannedAt      DateTime @default(now())
+
+  @@index([loadId])
+  @@index([riskLevel])
+  @@index([scannedAt])
+  @@map("shipment_risk_logs")
 }

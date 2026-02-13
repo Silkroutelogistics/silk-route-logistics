@@ -111,7 +111,7 @@ var MarcoPolo = (function () {
     if (window.CARRIER && window.CARRIER.BASE) return window.CARRIER.BASE;
     return (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
       ? "http://localhost:4000"
-      : "https://silk-route-logistics.onrender.com";
+      : "https://api.silkroutelogistics.ai";
   }
 
   function getToken() {
