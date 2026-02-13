@@ -6,6 +6,17 @@ import { getLaneAnalysis, getBackhaulSuggestions, getLaneDashboard, runLaneLearn
 import { getCustomerInsights, getCustomerDashboard, runCustomerLearningCycle } from "../services/customerIntelligenceService";
 import { getCarrierForecast, runComplianceForecastCycle } from "../services/complianceForecastService";
 import { getAIDashboard, runSystemOptimizationCycle } from "../services/systemOptimizerService";
+import { getRecentAnomalies, acknowledgeAnomaly, runAnomalyScan } from "../services/aiLearningLoop/anomalyDetector";
+import { getLatestTrainingStatus, runFullTrainingCycle } from "../services/aiLearningLoop/modelTrainer";
+import { getPerformanceReport } from "../services/aiLearningLoop/performanceTracker";
+import { getRecommendationsForLoad, recordRecommendationOutcome, getRecommendationPerformance } from "../services/smartRecommendationService";
+import { submitFacilityRating, getFacilityDashboard, searchFacilities } from "../services/facilityRatingService";
+import { getCarrierPreferences, updateCarrierPreferences, autoLearnPreferences } from "../services/carrierPreferenceService";
+import { scanActiveShipments, assessLoadRisk, getRiskDashboard } from "../services/shipmentMonitorService";
+import { findBackhaulLoads, getDeadheadAnalytics } from "../services/deadheadOptimizerService";
+import { canInstantBook, isLoadInstantBookable, instantBook, getInstantBookAnalytics } from "../services/instantBookService";
+import { processQuoteEmail, getEmailQuoteAnalytics } from "../services/emailQuoteService";
+import { getCostSummary, getTodaySpend, checkBudget } from "../services/aiRouter/costTracker";
 
 const router = Router();
 router.use(authenticate);
@@ -182,6 +193,299 @@ router.post("/learn/:service", authorize("ADMIN", "CEO") as any, async (req: Aut
     res.json({ success: true, service, result });
   } catch (err) {
     res.status(500).json({ error: "Learning cycle failed", details: String(err) });
+  }
+});
+
+// ─── Anomaly Detection ──────────────────────────────────────────
+router.get("/anomalies/recent", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = parseInt(String(req.query.limit)) || 50;
+    const anomalies = await getRecentAnomalies(limit);
+    res.json(anomalies);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch anomalies", details: String(err) });
+  }
+});
+
+router.post("/anomalies/:id/acknowledge", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await acknowledgeAnomaly(req.params.id, req.user!.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to acknowledge anomaly", details: String(err) });
+  }
+});
+
+router.post("/anomalies/scan", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await runAnomalyScan();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Anomaly scan failed", details: String(err) });
+  }
+});
+
+// ─── Learning Status & Training ─────────────────────────────────
+router.get("/learning/status", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const status = await getLatestTrainingStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch training status", details: String(err) });
+  }
+});
+
+router.post("/learning/full-cycle", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await runFullTrainingCycle();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Full training cycle failed", details: String(err) });
+  }
+});
+
+router.get("/learning/performance", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const report = await getPerformanceReport();
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: "Performance report failed", details: String(err) });
+  }
+});
+
+// ─── Smart Recommendations ──────────────────────────────────────
+router.get("/recommendations/load/:loadId", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = parseInt(String(req.query.limit)) || 10;
+    const recs = await getRecommendationsForLoad(req.params.loadId, limit);
+    res.json(recs);
+  } catch (err) {
+    res.status(500).json({ error: "Recommendations failed", details: String(err) });
+  }
+});
+
+router.post("/recommendations/outcome", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const { loadId, carrierId, outcome } = req.body;
+    await recordRecommendationOutcome(loadId, carrierId, outcome);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to record outcome", details: String(err) });
+  }
+});
+
+router.get("/recommendations/performance", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const days = parseInt(String(req.query.days)) || 30;
+    const perf = await getRecommendationPerformance(days);
+    res.json(perf);
+  } catch (err) {
+    res.status(500).json({ error: "Performance data failed", details: String(err) });
+  }
+});
+
+// ─── Facility Ratings ───────────────────────────────────────────
+router.post("/facilities/rate", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await submitFacilityRating(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to submit rating", details: String(err) });
+  }
+});
+
+router.get("/facilities/dashboard", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const dashboard = await getFacilityDashboard();
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: "Facility dashboard failed", details: String(err) });
+  }
+});
+
+router.get("/facilities/search", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { state, city, zip, minRating } = req.query;
+    const facilities = await searchFacilities({
+      state: state as string,
+      city: city as string,
+      zip: zip as string,
+      minRating: minRating ? parseFloat(String(minRating)) : undefined,
+    });
+    res.json(facilities);
+  } catch (err) {
+    res.status(500).json({ error: "Facility search failed", details: String(err) });
+  }
+});
+
+// ─── Carrier Preferences ────────────────────────────────────────
+router.get("/preferences/:carrierId", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const prefs = await getCarrierPreferences(req.params.carrierId);
+    res.json(prefs);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch preferences", details: String(err) });
+  }
+});
+
+router.put("/preferences/:carrierId", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await updateCarrierPreferences({ carrierId: req.params.carrierId, ...req.body });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update preferences", details: String(err) });
+  }
+});
+
+router.post("/preferences/:carrierId/auto-learn", authorize("ADMIN", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await autoLearnPreferences(req.params.carrierId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Auto-learn failed", details: String(err) });
+  }
+});
+
+// ─── Shipment Monitor ───────────────────────────────────────────
+router.get("/monitor/scan", authorize("ADMIN", "DISPATCH", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await scanActiveShipments();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Shipment scan failed", details: String(err) });
+  }
+});
+
+router.get("/monitor/load/:loadId", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const risk = await assessLoadRisk(req.params.loadId);
+    res.json(risk);
+  } catch (err) {
+    res.status(500).json({ error: "Risk assessment failed", details: String(err) });
+  }
+});
+
+router.get("/monitor/dashboard", authorize("ADMIN", "DISPATCH", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const dashboard = await getRiskDashboard();
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: "Risk dashboard failed", details: String(err) });
+  }
+});
+
+// ─── Deadhead Optimizer ─────────────────────────────────────────
+router.get("/deadhead/backhaul", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentState, carrierId, equipmentType, maxDeadheadMiles } = req.query;
+    if (!currentState) return res.status(400).json({ error: "currentState is required" });
+    const loads = await findBackhaulLoads({
+      currentState: String(currentState),
+      carrierId: carrierId as string,
+      equipmentType: equipmentType as string,
+      maxDeadheadMiles: maxDeadheadMiles ? parseInt(String(maxDeadheadMiles)) : undefined,
+    });
+    res.json(loads);
+  } catch (err) {
+    res.status(500).json({ error: "Backhaul search failed", details: String(err) });
+  }
+});
+
+router.get("/deadhead/analytics", authorize("ADMIN", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const analytics = await getDeadheadAnalytics();
+    res.json(analytics);
+  } catch (err) {
+    res.status(500).json({ error: "Deadhead analytics failed", details: String(err) });
+  }
+});
+
+// ─── Instant Book ───────────────────────────────────────────────
+router.get("/instant-book/eligible/:carrierId", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await canInstantBook(req.params.carrierId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Eligibility check failed", details: String(err) });
+  }
+});
+
+router.get("/instant-book/load/:loadId", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await isLoadInstantBookable(req.params.loadId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Load check failed", details: String(err) });
+  }
+});
+
+router.post("/instant-book", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { loadId, carrierId } = req.body;
+    const result = await instantBook(loadId, carrierId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Instant book failed", details: String(err) });
+  }
+});
+
+router.get("/instant-book/analytics", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const days = parseInt(String(req.query.days)) || 30;
+    const analytics = await getInstantBookAnalytics(days);
+    res.json(analytics);
+  } catch (err) {
+    res.status(500).json({ error: "Analytics failed", details: String(err) });
+  }
+});
+
+// ─── Email Quote Processing ─────────────────────────────────────
+router.post("/email-quote/process", authorize("ADMIN", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const { subject, body, sender } = req.body;
+    const result = await processQuoteEmail(subject, body, sender);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Email processing failed", details: String(err) });
+  }
+});
+
+router.get("/email-quote/analytics", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const days = parseInt(String(req.query.days)) || 30;
+    const analytics = await getEmailQuoteAnalytics(days);
+    res.json(analytics);
+  } catch (err) {
+    res.status(500).json({ error: "Analytics failed", details: String(err) });
+  }
+});
+
+// ─── AI Cost Monitoring ─────────────────────────────────────────
+router.get("/costs/summary", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const days = parseInt(String(req.query.days)) || 30;
+    const summary = await getCostSummary(days);
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: "Cost summary failed", details: String(err) });
+  }
+});
+
+router.get("/costs/today", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const today = await getTodaySpend();
+    res.json(today);
+  } catch (err) {
+    res.status(500).json({ error: "Today spend failed", details: String(err) });
+  }
+});
+
+router.get("/costs/budget", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const budget = await checkBudget();
+    res.json(budget);
+  } catch (err) {
+    res.status(500).json({ error: "Budget check failed", details: String(err) });
   }
 });
 

@@ -8,6 +8,10 @@ import { processDueSequences } from "./emailSequenceService";
 import { processShipperTransitUpdates } from "./shipperNotificationService";
 import { processARReminders } from "../controllers/accountingController";
 import { processAllSRCPPRecalculations } from "./integrationService";
+import { processQueue } from "./aiLearningLoop/feedbackCollector";
+import { runAnomalyScan } from "./aiLearningLoop/anomalyDetector";
+import { runFullTrainingCycle } from "./aiLearningLoop/modelTrainer";
+import { scanActiveShipments } from "./shipmentMonitorService";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -411,6 +415,44 @@ export function startSchedulers() {
     await withLock("srcpp-weekly-recalc", 30 * 60 * 1000, async () => {
       const result = await processAllSRCPPRecalculations();
       console.log(`[Scheduler] SRCPP recalc: ${result.recalculated}/${result.total} carriers processed`);
+    });
+  });
+
+  // ─── AI Learning Loop Crons ────────────────────────────────────
+
+  // AI Queue Processor: every 10 minutes
+  cron.schedule("*/10 * * * *", async () => {
+    console.log("[Scheduler] Processing AI learning queue...");
+    await withLock("ai-queue-processor", 5 * 60 * 1000, async () => {
+      const result = await processQueue();
+      console.log(`[Scheduler] AI queue: ${result.processed} processed, ${result.failed} failed, ${result.dead} dead-lettered`);
+    });
+  });
+
+  // Anomaly Scanner: every 2 hours
+  cron.schedule("15 */2 * * *", async () => {
+    console.log("[Scheduler] Running anomaly scan...");
+    await withLock("ai-anomaly-scan", 10 * 60 * 1000, async () => {
+      const result = await runAnomalyScan();
+      console.log(`[Scheduler] Anomaly scan: ${result.totalAnomalies} anomalies found`);
+    });
+  });
+
+  // Full AI Training Cycle: daily 2 AM ET (07:00 UTC)
+  cron.schedule("0 7 * * *", async () => {
+    console.log("[Scheduler] Running full AI training cycle...");
+    await withLock("ai-full-training", 60 * 60 * 1000, async () => {
+      const result = await runFullTrainingCycle();
+      console.log(`[Scheduler] AI training: ${result.results.filter(r => r.success).length}/${result.results.length} services, ${result.totalDurationMs}ms`);
+    });
+  });
+
+  // Shipment Risk Monitor: every 30 minutes
+  cron.schedule("20,50 * * * *", async () => {
+    console.log("[Scheduler] Running shipment risk monitor...");
+    await withLock("ai-shipment-monitor", 10 * 60 * 1000, async () => {
+      const result = await scanActiveShipments();
+      console.log(`[Scheduler] Risk scan: ${result.scanned} loads, ${result.critical} critical, ${result.highRisk} high`);
     });
   });
 

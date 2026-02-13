@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen, CreditCard,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
-  Shield, Package, ClipboardList, Menu, X, ClipboardEdit,
+  Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -31,6 +31,7 @@ const employeeNav = [
   { href: "/dashboard/payables", label: "Payables", icon: CreditCard },
   { href: "/dashboard/settlements", label: "Settlements", icon: ClipboardList },
   { href: "/dashboard/market", label: "Market Intel", icon: Activity },
+  { href: "/dashboard/ai-insights", label: "AI Insights", icon: Brain },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
@@ -61,6 +62,8 @@ const aeViewNav = [
   { href: "/dashboard/settlements", label: "Settlements", icon: ClipboardList },
   { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/market", label: "Market Intel", icon: Activity },
+  { href: "/dashboard/ai-insights", label: "AI Insights", icon: Brain },
+  { href: "/dashboard/ai-costs", label: "AI Costs", icon: Cpu },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },

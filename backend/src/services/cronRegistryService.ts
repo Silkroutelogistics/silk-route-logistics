@@ -176,6 +176,10 @@ export async function seedCronRegistry() {
     { jobName: "srcpp-weekly-recalc", schedule: "0 11 * * 0", description: "SRCPP tier recalculation weekly Sunday 6 AM ET" },
     { jobName: "monthly-report-gen", schedule: "0 13 1 * *", description: "Monthly financial report auto-generation 1st of month 8 AM ET" },
     { jobName: "monthly-invoice-reminders", schedule: "0 6 1 * *", description: "Invoice reminder emails monthly 1st 6 AM" },
+    { jobName: "ai-queue-processor", schedule: "*/10 * * * *", description: "AI learning event queue processor every 10 minutes" },
+    { jobName: "ai-anomaly-scan", schedule: "15 */2 * * *", description: "AI anomaly detection scanner every 2 hours" },
+    { jobName: "ai-full-training", schedule: "0 7 * * *", description: "Full AI model training cycle daily 2 AM ET" },
+    { jobName: "ai-shipment-monitor", schedule: "20,50 * * * *", description: "AI shipment risk monitor every 30 minutes" },
   ];
 
   for (const job of jobs) {
