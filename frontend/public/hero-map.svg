@@ -29,7 +29,7 @@
     </filter>
 
     <!-- Midwest radial glow around Kalamazoo -->
-    <radialGradient id="midwestGlow" cx="640" cy="290" r="180" gradientUnits="userSpaceOnUse">
+    <radialGradient id="midwestGlow" cx="615" cy="310" r="180" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#D4A843" stop-opacity="0.12"/>
       <stop offset="50%" stop-color="#D4A843" stop-opacity="0.04"/>
       <stop offset="100%" stop-color="#D4A843" stop-opacity="0"/>
@@ -61,7 +61,7 @@
   <rect width="1200" height="800" fill="url(#grid)" opacity="0.5"/>
 
   <!-- Midwest radial glow -->
-  <circle cx="640" cy="290" r="180" fill="url(#midwestGlow)"/>
+  <circle cx="615" cy="310" r="180" fill="url(#midwestGlow)"/>
 
   <!-- ===== CANADA OUTLINE (simplified) ===== -->
   <path d="
@@ -133,32 +133,32 @@
   <!-- Primary routes FROM Kalamazoo (HQ: 640, 320) -->
 
   <!-- Kalamazoo -> Chicago (560, 348) -->
-  <line x1="640" y1="320" x2="560" y2="348" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
+  <line x1="615" y1="340" x2="560" y2="348" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
     <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2s" repeatCount="indefinite"/>
   </line>
 
   <!-- Kalamazoo -> Detroit (685, 310) -->
-  <line x1="640" y1="320" x2="685" y2="310" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
+  <line x1="615" y1="340" x2="685" y2="310" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
     <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.8s" repeatCount="indefinite"/>
   </line>
 
   <!-- Kalamazoo -> Grand Rapids (615, 300) -->
-  <line x1="640" y1="320" x2="615" y2="300" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
+  <line x1="615" y1="340" x2="615" y2="300" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
     <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.5s" repeatCount="indefinite"/>
   </line>
 
   <!-- Kalamazoo -> Indianapolis (605, 385) -->
-  <line x1="640" y1="320" x2="605" y2="385" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
+  <line x1="615" y1="340" x2="605" y2="385" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
     <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2.2s" repeatCount="indefinite"/>
   </line>
 
   <!-- Kalamazoo -> Columbus (700, 365) -->
-  <line x1="640" y1="320" x2="700" y2="365" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
+  <line x1="615" y1="340" x2="700" y2="365" stroke="#D4A843" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5" filter="url(#lineGlow)">
     <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2.1s" repeatCount="indefinite"/>
   </line>
 
   <!-- Kalamazoo -> Milwaukee (540, 320) -->
-  <line x1="640" y1="320" x2="540" y2="320" stroke="#D4A843" stroke-width="1.2" stroke-dasharray="5,5" opacity="0.35" filter="url(#lineGlow)">
+  <line x1="615" y1="340" x2="540" y2="320" stroke="#D4A843" stroke-width="1.2" stroke-dasharray="5,5" opacity="0.35" filter="url(#lineGlow)">
     <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2.5s" repeatCount="indefinite"/>
   </line>
 
@@ -388,28 +388,28 @@
 
   <!-- ===== KALAMAZOO HQ ===== -->
   <!-- Outer pulsing ring -->
-  <circle cx="640" cy="320" r="16" fill="none" stroke="#D4A843" stroke-width="0.8" opacity="0.3">
+  <circle cx="615" cy="340" r="16" fill="none" stroke="#D4A843" stroke-width="0.8" opacity="0.3">
     <animate attributeName="r" values="16;28;16" dur="3s" repeatCount="indefinite"/>
     <animate attributeName="opacity" values="0.3;0;0.3" dur="3s" repeatCount="indefinite"/>
   </circle>
   <!-- Second pulsing ring (staggered) -->
-  <circle cx="640" cy="320" r="22" fill="none" stroke="#D4A843" stroke-width="0.5" opacity="0.2">
+  <circle cx="615" cy="340" r="22" fill="none" stroke="#D4A843" stroke-width="0.5" opacity="0.2">
     <animate attributeName="r" values="22;34;22" dur="3s" begin="1.5s" repeatCount="indefinite"/>
     <animate attributeName="opacity" values="0.2;0;0.2" dur="3s" begin="1.5s" repeatCount="indefinite"/>
   </circle>
   <!-- HQ glow base -->
-  <circle cx="640" cy="320" r="12" fill="#D4A843" opacity="0.15" filter="url(#hqGlow)"/>
+  <circle cx="615" cy="340" r="12" fill="#D4A843" opacity="0.15" filter="url(#hqGlow)"/>
   <!-- HQ main dot -->
-  <circle cx="640" cy="320" r="8" fill="#D4A843" filter="url(#hqGlow)" opacity="0.95">
+  <circle cx="615" cy="340" r="8" fill="#D4A843" filter="url(#hqGlow)" opacity="0.95">
     <animate attributeName="opacity" values="0.85;1;0.85" dur="2s" repeatCount="indefinite"/>
   </circle>
   <!-- HQ inner bright dot -->
-  <circle cx="640" cy="320" r="3" fill="#fff" opacity="0.6"/>
+  <circle cx="615" cy="340" r="3" fill="#fff" opacity="0.6"/>
 
   <!-- HQ Label -->
-  <text x="640" y="346" text-anchor="middle" fill="#D4A843" font-family="Arial,sans-serif" font-size="11" font-weight="bold" letter-spacing="2" opacity="0.95">KALAMAZOO</text>
+  <text x="615" y="366" text-anchor="middle" fill="#D4A843" font-family="Arial,sans-serif" font-size="11" font-weight="bold" letter-spacing="2" opacity="0.95">KALAMAZOO</text>
 
   <!-- HQ Badge -->
-  <rect x="622" y="350" width="36" height="16" rx="3" fill="#D4A843" opacity="0.9"/>
-  <text x="640" y="362" text-anchor="middle" fill="#0D1B2A" font-family="Arial,sans-serif" font-size="9" font-weight="bold">HQ</text>
+  <rect x="597" y="370" width="36" height="16" rx="3" fill="#D4A843" opacity="0.9"/>
+  <text x="615" y="382" text-anchor="middle" fill="#0D1B2A" font-family="Arial,sans-serif" font-size="9" font-weight="bold">HQ</text>
 </svg>

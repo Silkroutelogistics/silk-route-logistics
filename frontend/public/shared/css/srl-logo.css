@@ -1,0 +1,149 @@
+/* ═══════════════════════════════════════════════════════
+   SRL Animated Logo + Penguin Walking on Road
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Logo Container ─────────────────────────────────── */
+.srl-logo-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.srl-logo-wrap:hover { text-decoration: none; }
+
+.srl-logo-img {
+  height: 44px;
+  width: auto;
+  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.srl-logo-text {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.srl-logo-text span {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 2.5px;
+  color: #94A3B8;
+}
+
+/* Gold variant for light backgrounds */
+.srl-logo-text-gold {
+  color: #C8963E;
+}
+.srl-logo-text-gold span {
+  color: #6B7280;
+}
+
+/* ─── Penguin SVG ────────────────────────────────────── */
+.srl-penguin-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.srl-penguin {
+  position: absolute;
+  width: 12px;
+  height: 14px;
+  animation: penguin-path 6s ease-in-out infinite;
+}
+
+/* Waddle rotation on the penguin body */
+.srl-penguin svg {
+  width: 100%;
+  height: 100%;
+  animation: waddle 0.4s ease-in-out infinite;
+}
+
+/* ─── Path Animation ─────────────────────────────────── */
+/* The golden road in the SRL compass logo curves from
+   bottom-left to upper-right through the compass circle.
+   Penguin walks up, turns, walks back down. */
+@keyframes penguin-path {
+  0% {
+    left: 6px;
+    top: 30px;
+    transform: scaleX(1);
+  }
+  15% {
+    left: 12px;
+    top: 22px;
+    transform: scaleX(1);
+  }
+  30% {
+    left: 18px;
+    top: 16px;
+    transform: scaleX(1);
+  }
+  45% {
+    left: 26px;
+    top: 10px;
+    transform: scaleX(1);
+  }
+  49% {
+    left: 28px;
+    top: 8px;
+    transform: scaleX(1);
+  }
+  50% {
+    left: 28px;
+    top: 8px;
+    transform: scaleX(-1);
+  }
+  65% {
+    left: 20px;
+    top: 16px;
+    transform: scaleX(-1);
+  }
+  80% {
+    left: 12px;
+    top: 22px;
+    transform: scaleX(-1);
+  }
+  95% {
+    left: 6px;
+    top: 30px;
+    transform: scaleX(-1);
+  }
+  99% {
+    left: 6px;
+    top: 30px;
+    transform: scaleX(-1);
+  }
+  100% {
+    left: 6px;
+    top: 30px;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes waddle {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+/* ─── Reduced Motion ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .srl-penguin { animation: none; top: 20px; left: 16px; }
+  .srl-penguin svg { animation: none; }
+}

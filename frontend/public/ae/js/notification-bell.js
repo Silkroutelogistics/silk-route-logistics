@@ -96,7 +96,7 @@
       }
       .notif-dropdown-header {
         display: flex; justify-content: space-between; align-items: center; padding: 14px 16px;
-        border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 14px; font-weight: 600; color: var(--theme-text-heading, #f1f5f9);
+        border-bottom: 1px solid var(--theme-border-light, rgba(255,255,255,0.08)); font-size: 14px; font-weight: 600; color: var(--theme-text-heading, #f1f5f9);
       }
       .notif-mark-all {
         background: none; border: none; color: var(--theme-primary, #c8963e); cursor: pointer; font-size: 11px;
@@ -105,10 +105,10 @@
       .notif-mark-all:hover { background: var(--theme-primary-dim, rgba(200,150,62,0.15)); }
       .notif-list { max-height: 360px; overflow-y: auto; }
       .notif-item {
-        padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
+        padding: 12px 16px; border-bottom: 1px solid var(--theme-border-light, rgba(255,255,255,0.05)); cursor: pointer;
         transition: background 0.15s; display: flex; gap: 10px;
       }
-      .notif-item:hover { background: rgba(255,255,255,0.05); }
+      .notif-item:hover { background: var(--theme-sidebar-hover-bg, rgba(255,255,255,0.05)); }
       .notif-item.unread { background: var(--theme-primary-dim, rgba(200,150,62,0.06)); border-left: 3px solid var(--theme-primary, #c8963e); }
       .notif-item.unread .notif-title { color: var(--theme-text-heading, #f1f5f9); }
       .notif-icon {
@@ -125,7 +125,7 @@
       .notif-time { font-size: 10px; color: var(--theme-text-secondary, #475569); margin-top: 4px; }
       .notif-empty { padding: 40px 16px; text-align: center; color: var(--theme-text-secondary, #64748b); font-size: 13px; }
       .notif-dropdown-footer {
-        padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;
+        padding: 10px 16px; border-top: 1px solid var(--theme-border-light, rgba(255,255,255,0.08)); text-align: center;
       }
       .notif-see-all { color: var(--theme-primary, #c8963e); text-decoration: none; font-size: 12px; font-weight: 500; }
       .notif-see-all:hover { text-decoration: underline; }

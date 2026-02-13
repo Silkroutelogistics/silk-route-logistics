@@ -393,12 +393,12 @@ a:hover {
 
 .badge-green {
   background: var(--green-bg);
-  color: #15803D;
+  color: var(--theme-success, #15803D);
 }
 
 .badge-navy {
-  background: rgba(13, 27, 42, 0.08);
-  color: var(--navy);
+  background: var(--theme-primary-dim, rgba(13, 27, 42, 0.08));
+  color: var(--theme-text-heading, var(--navy));
 }
 
 .card-body {
@@ -435,8 +435,8 @@ a:hover {
 }
 
 .action-item-icon.icon-load {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
+  background: var(--theme-info-bg, rgba(59, 130, 246, 0.1));
+  color: var(--theme-info, #3B82F6);
 }
 
 .action-item-icon.icon-carrier {
