@@ -451,7 +451,7 @@
   (function () {
     "use strict";
 
-    var token = localStorage.getItem("token");
+    var token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) { window.location.href = "/auth/login"; return; }
 
     /* ══════════════════════════════════════════════════════════
@@ -1029,6 +1029,7 @@
     /* ── Logout ── */
     window.handleLogout = function () {
       localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       window.location.href = "/auth/login";
     };
 

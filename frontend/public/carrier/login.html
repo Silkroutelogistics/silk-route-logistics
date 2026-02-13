@@ -23,6 +23,12 @@
           <label for="password">Password</label>
           <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
         </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 4px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--slate);cursor:pointer">
+            <input type="checkbox" id="rememberMe" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer"> Remember me
+          </label>
+          <a href="/carrier/forgot-password" style="font-size:13px">Forgot password?</a>
+        </div>
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" id="loginBtn">
           Sign In
         </button>
@@ -61,8 +67,16 @@
     </div>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script src="/carrier/js/carrier-api.js"></script>
   <script>
+    // Auto-fill remembered email
+    var savedCarrierEmail = SRLAuth.getRememberedEmail('carrier');
+    if (savedCarrierEmail) {
+      document.getElementById('email').value = savedCarrierEmail;
+      document.getElementById('rememberMe').checked = true;
+    }
+
     // If already logged in, go to dashboard
     if (CARRIER.isLoggedIn()) {
       window.location.href = "/carrier/dashboard.html";
@@ -81,10 +95,16 @@
       var email = document.getElementById("email").value;
       var password = document.getElementById("password").value;
 
-      CARRIER.login(email, password)
+      var remember = document.getElementById("rememberMe").checked;
+
+      CARRIER.login(email, password, remember)
         .then(function (data) {
+          if (remember) {
+            SRLAuth.setRememberedEmail(email, 'carrier');
+          } else {
+            SRLAuth.setRememberedEmail('', 'carrier');
+          }
           if (data.mustChangePassword) {
-            // Show change password modal
             document.getElementById("changePassModal").classList.add("show");
             window._tempToken = data.token;
           } else {

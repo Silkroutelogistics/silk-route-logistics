@@ -581,7 +581,7 @@
     /* ======== INIT ======== */
     (function init() {
       // Auth check
-      var token = localStorage.getItem("token");
+      var token = sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
         window.location.href = "/auth/login";
         return;
@@ -1091,6 +1091,7 @@
 
     function handleLogout() {
       localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       window.location.href = "/auth/login";
     }
 

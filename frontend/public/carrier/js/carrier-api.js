@@ -19,7 +19,7 @@ var CARRIER = (function () {
   function request(path, opts) {
     opts = opts || {};
     var url = BASE + path;
-    var token = localStorage.getItem("carrier_token");
+    var token = sessionStorage.getItem("carrier_token") || localStorage.getItem("carrier_token");
 
     var headers = Object.assign({}, opts.headers || {});
     if (!(opts.body instanceof FormData)) {
@@ -43,6 +43,8 @@ var CARRIER = (function () {
       if (res.status === 401) {
         localStorage.removeItem("carrier_token");
         localStorage.removeItem("carrier_user");
+        sessionStorage.removeItem("carrier_token");
+        sessionStorage.removeItem("carrier_user");
         window.location.href = "/carrier/login.html";
         return Promise.reject(new Error("Unauthorized"));
       }
@@ -64,13 +66,14 @@ var CARRIER = (function () {
   }
 
   // --- Auth ---
-  function login(email, password) {
+  function login(email, password, remember) {
     return request("/api/carrier-auth/login", {
       method: "POST",
       body: { email: email, password: password },
     }).then(function (data) {
-      localStorage.setItem("carrier_token", data.token);
-      localStorage.setItem("carrier_user", JSON.stringify(data.user));
+      var storage = remember ? localStorage : sessionStorage;
+      storage.setItem("carrier_token", data.token);
+      storage.setItem("carrier_user", JSON.stringify(data.user));
       return data;
     });
   }
@@ -79,6 +82,8 @@ var CARRIER = (function () {
     return request("/api/carrier-auth/logout", { method: "POST" }).finally(function () {
       localStorage.removeItem("carrier_token");
       localStorage.removeItem("carrier_user");
+      sessionStorage.removeItem("carrier_token");
+      sessionStorage.removeItem("carrier_user");
       window.location.href = "/carrier/login.html";
     });
   }
@@ -88,7 +93,10 @@ var CARRIER = (function () {
       method: "POST",
       body: { currentPassword: currentPassword, newPassword: newPassword },
     }).then(function (data) {
-      if (data.token) localStorage.setItem("carrier_token", data.token);
+      if (data.token) {
+        var storage = sessionStorage.getItem("carrier_token") ? sessionStorage : localStorage;
+        storage.setItem("carrier_token", data.token);
+      }
       return data;
     });
   }
@@ -98,7 +106,10 @@ var CARRIER = (function () {
       method: "POST",
       body: { newPassword: newPassword },
     }).then(function (data) {
-      if (data.token) localStorage.setItem("carrier_token", data.token);
+      if (data.token) {
+        var storage = sessionStorage.getItem("carrier_token") ? sessionStorage : localStorage;
+        storage.setItem("carrier_token", data.token);
+      }
       return data;
     });
   }
@@ -109,12 +120,13 @@ var CARRIER = (function () {
 
   function getUser() {
     try {
-      return JSON.parse(localStorage.getItem("carrier_user") || "null");
-    } catch { return null; }
+      var raw = sessionStorage.getItem("carrier_user") || localStorage.getItem("carrier_user");
+      return JSON.parse(raw || "null");
+    } catch (e) { return null; }
   }
 
   function isLoggedIn() {
-    return !!localStorage.getItem("carrier_token");
+    return !!(sessionStorage.getItem("carrier_token") || localStorage.getItem("carrier_token"));
   }
 
   function requireAuth() {

@@ -691,7 +691,7 @@
   <script src="/ae/js/api.js"></script>
   <script>
     (function() {
-      var token = localStorage.getItem('token');
+      var token = sessionStorage.getItem('token') || localStorage.getItem('token');
       if (!token) { window.location.href = '/auth/login'; return; }
 
       var revenueCostChartInst = null;
@@ -1171,6 +1171,7 @@
       // ========== LOGOUT ==========
       window.handleLogout = function() {
         localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         window.location.href = '/auth/login';
       };
 

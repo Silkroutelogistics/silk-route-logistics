@@ -1284,6 +1284,7 @@
 
     function handleLogout() {
       localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       window.location.href = "/auth/login";
     }
   </script>

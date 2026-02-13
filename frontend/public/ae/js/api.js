@@ -20,7 +20,7 @@ var SRL = (function () {
   function request(path, opts) {
     opts = opts || {};
     var url = BASE + path;
-    var token = localStorage.getItem("token");
+    var token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
     var headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
     if (token) {
@@ -35,6 +35,7 @@ var SRL = (function () {
     }).then(function (res) {
       if (res.status === 401) {
         localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         window.location.href = "/auth/login";
         return Promise.reject(new Error("Unauthorized"));
       }

@@ -851,6 +851,7 @@
       // ========== LOGOUT ==========
       window.handleLogout = function() {
         localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         window.location.href = '/auth/login';
       };
 

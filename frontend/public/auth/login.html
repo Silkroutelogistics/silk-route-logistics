@@ -66,6 +66,14 @@
     .back-link a { color: #94a3b8; font-size: 13px; cursor: pointer; text-decoration: underline; }
     .back-link a:hover { color: #C8963E; }
     .info-msg { color: #22c55e; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
+    .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: -4px; }
+    .remember-row label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
+    .remember-row input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: #C8963E; cursor: pointer;
+      border-radius: 3px; border: 1px solid rgba(255,255,255,0.2);
+    }
+    .remember-row a { color: #C8963E; font-size: 13px; text-decoration: none; }
+    .remember-row a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -89,6 +97,10 @@
         <label>Password</label>
         <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
       </div>
+      <div class="remember-row">
+        <label><input type="checkbox" id="rememberMe"> Remember me</label>
+        <a href="/auth/forgot-password">Forgot password?</a>
+      </div>
       <button class="btn" id="login-btn" onclick="handleLogin()">Sign In</button>
     </div>
 
@@ -103,15 +115,22 @@
     </div>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script>
     var BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
     var pendingEmail = '';
 
+    // Auto-fill remembered email
+    var savedEmail = SRLAuth.getRememberedEmail('ae');
+    if (savedEmail) {
+      document.getElementById('email').value = savedEmail;
+      document.getElementById('rememberMe').checked = true;
+    }
+
     // If already logged in, redirect
-    var existingToken = localStorage.getItem('token');
+    var existingToken = SRLAuth.getToken('token');
     if (existingToken) {
-      // Quick check if valid
       fetch(BASE + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + existingToken } })
         .then(function(r) { if (r.ok) window.location.href = '/ae/dashboard/index.html'; });
     }
@@ -170,7 +189,13 @@
         }
 
         if (data.token) {
-          localStorage.setItem('token', data.token);
+          var remember = document.getElementById('rememberMe').checked;
+          SRLAuth.setToken('token', data.token, remember);
+          if (remember) {
+            SRLAuth.setRememberedEmail(email, 'ae');
+          } else {
+            SRLAuth.setRememberedEmail('', 'ae');
+          }
           window.location.href = '/ae/dashboard/index.html';
         }
       })
@@ -206,8 +231,13 @@
         }
 
         if (data.token) {
-          localStorage.setItem('token', data.token);
-          // Redirect to where user was trying to go, or dashboard
+          var remember = document.getElementById('rememberMe').checked;
+          SRLAuth.setToken('token', data.token, remember);
+          if (remember) {
+            SRLAuth.setRememberedEmail(pendingEmail, 'ae');
+          } else {
+            SRLAuth.setRememberedEmail('', 'ae');
+          }
           var redirect = new URLSearchParams(window.location.search).get('redirect');
           window.location.href = redirect || '/ae/dashboard/index.html';
         }

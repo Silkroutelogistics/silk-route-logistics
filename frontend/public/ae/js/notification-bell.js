@@ -9,7 +9,7 @@
   const API = window.SRL_API_BASE || (window.SRL && SRL.base) || "https://api.silkroutelogistics.ai/api";
 
   function getToken() {
-    return localStorage.getItem("srl_token") || localStorage.getItem("token") || "";
+    return sessionStorage.getItem("token") || localStorage.getItem("srl_token") || localStorage.getItem("token") || "";
   }
 
   async function apiFetch(path) {
