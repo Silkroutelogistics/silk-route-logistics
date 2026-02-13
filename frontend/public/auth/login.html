@@ -3,188 +3,233 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In - Silk Route Logistics</title>
+  <title>Silk Route Logistics — Account Executive Portal</title>
   <link rel="icon" href="/logo.png" type="image/png">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      color: #E2E8F0;
-      min-height: 100vh;
-      display: flex;
-    }
-    .left-panel {
-      width: 55%;
-      background: #0D1B2A;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .left-inner {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-      height: 100vh;
-      padding: 60px;
-      max-width: 560px;
-      margin: 0 auto;
-    }
-    .right-panel {
-      width: 45%;
-      background: #111d2e;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .login-card {
-      width: 100%;
-      max-width: 400px;
-      padding: 40px 36px;
-    }
-    .brand-logo img { height: 40px; margin-bottom: 16px; border-radius: 8px; }
-    .brand-name { font-size: 28px; font-weight: 700; color: #C8963E; letter-spacing: 1px; margin: 0; }
-    .brand-sub { font-size: 15px; color: #8899aa; margin-top: 4px; }
-    .pills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin: 32px 0; }
-    .pill {
-      display: flex; align-items: center; gap: 10px; padding: 14px 16px;
-      background: rgba(200,150,62,0.08); border: 1px solid rgba(200,150,62,0.15); border-radius: 10px;
-    }
-    .pill-icon { font-size: 18px; }
-    .pill-text { font-size: 13px; color: #d4d4d4; font-weight: 500; }
-    .tagline { font-size: 14px; color: #7a8a9a; line-height: 1.7; margin-bottom: 36px; }
-    .daily-fact {
-      width: 100%; padding: 20px 24px;
-      border-left: 3px solid #C8963E;
-      background: rgba(200,150,62,0.04);
-      border-radius: 0 8px 8px 0;
-    }
-    .fact-icon { font-size: 20px; margin-bottom: 6px; }
-    .fact-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: #C8963E; margin-bottom: 8px; font-weight: 600; }
-    .fact-text { font-size: 15px; color: #e0e0e0; line-height: 1.65; font-style: italic; }
-    .fact-src { font-size: 11px; color: #556677; margin-top: 10px; }
-    .left-footer { font-size: 11px; color: #445566; margin-top: auto; padding-top: 24px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Right panel form styles */
-    .card-logo { text-align: center; margin-bottom: 28px; }
-    .card-logo img { width: 48px; height: 48px; border-radius: 10px; }
-    .card-logo h1 { font-size: 20px; font-weight: 700; color: #C8963E; margin-top: 10px; }
-    .card-logo p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .form-group input {
-      width: 100%; padding: 12px 14px;
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px; color: #E2E8F0; font-size: 15px; outline: none; transition: border-color 0.2s;
-    }
-    .form-group input:focus { border-color: #C8963E; }
-    .form-group input::placeholder { color: #475569; }
-    .btn {
-      width: 100%; padding: 13px;
-      background: linear-gradient(135deg, #C8963E, #B8860B);
-      color: #fff; font-size: 15px; font-weight: 600;
-      border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
-    }
-    .btn:hover { opacity: 0.9; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .error-msg { color: #ef4444; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
-    .info-msg { color: #22c55e; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
-    .expired-msg { color: #f59e0b; font-size: 13px; margin-bottom: 16px; text-align: center; padding: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; }
-    .otp-section { display: none; }
-    .otp-section.show { display: block; }
-    .email-section.hide { display: none; }
-    .back-link { text-align: center; margin-top: 16px; }
-    .back-link a { color: #94a3b8; font-size: 13px; cursor: pointer; text-decoration: underline; }
-    .back-link a:hover { color: #C8963E; }
-    .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: -4px; }
-    .remember-row label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
-    .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #C8963E; cursor: pointer; }
-    .remember-row a { color: #C8963E; font-size: 13px; text-decoration: none; }
-    .remember-row a:hover { text-decoration: underline; }
-    .carrier-link { text-align: center; margin-top: 24px; font-size: 12px; color: #64748b; }
-    .carrier-link a { color: #94a3b8; text-decoration: none; }
-    .carrier-link a:hover { color: #C8963E; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a1628;color:#e0e0e0;overflow:hidden;height:100vh}
 
-    @media (max-width: 900px) {
-      .left-panel { display: none; }
-      .right-panel { width: 100%; background: #0D1B2A; }
+    .login-container{display:flex;height:100vh}
+
+    /* LEFT PANEL */
+    .left-panel{
+      width:55%;position:relative;overflow:hidden;
+      background:linear-gradient(165deg,#0D1B2A 0%,#12263e 50%,#0f2035 100%);
+      display:flex;align-items:center;justify-content:center;
     }
+    .left-panel::before{
+      content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+      background:radial-gradient(ellipse at 30% 50%,rgba(200,150,62,0.03) 0%,transparent 50%),
+                 radial-gradient(ellipse at 70% 80%,rgba(200,150,62,0.02) 0%,transparent 50%);
+      animation:gradientShift 20s ease-in-out infinite alternate;
+    }
+    @keyframes gradientShift{0%{transform:translate(0,0) rotate(0deg)}100%{transform:translate(30px,-20px) rotate(2deg)}}
+
+    .particle{position:absolute;border-radius:50%;background:rgba(200,150,62,0.12);animation:float 25s ease-in-out infinite}
+    @keyframes float{
+      0%,100%{transform:translateY(0) translateX(0);opacity:.1}
+      25%{transform:translateY(-30px) translateX(10px);opacity:.2}
+      50%{transform:translateY(-15px) translateX(-10px);opacity:.15}
+      75%{transform:translateY(-40px) translateX(5px);opacity:.1}
+    }
+
+    .left-content{
+      position:relative;z-index:2;padding:60px;max-width:520px;width:100%;
+      display:flex;flex-direction:column;justify-content:center;min-height:100vh;
+    }
+    .brand-logo{height:36px;margin-bottom:32px;opacity:.9;border-radius:8px}
+    .brand-name{font-size:13px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:#c8a951;margin-bottom:4px}
+    .portal-name{font-size:28px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-.5px}
+    .portal-subtitle{font-size:14px;color:#5a7a9a;font-weight:400;margin-bottom:40px}
+
+    .features-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:36px}
+    .feature-pill{
+      display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;
+      background:rgba(200,150,62,0.04);border:1px solid rgba(200,150,62,0.08);
+      transition:all .3s ease;
+    }
+    .feature-pill:hover{background:rgba(200,150,62,0.08);border-color:rgba(200,150,62,0.15);transform:translateY(-1px)}
+    .feature-pill .icon{font-size:16px}
+    .feature-pill .label{font-size:12.5px;color:#b0bec5;font-weight:500;letter-spacing:.3px}
+
+    .tagline{font-size:13.5px;color:#5a7a9a;line-height:1.75;margin-bottom:40px;max-width:440px}
+
+    .insight-card{
+      padding:24px 28px;border-radius:12px;position:relative;overflow:hidden;
+      background:linear-gradient(135deg,rgba(200,150,62,0.05) 0%,rgba(200,150,62,0.02) 100%);
+      border-left:3px solid #c8a951;
+    }
+    .insight-bg-icon{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:72px;opacity:.04;pointer-events:none}
+    .insight-content{position:relative;z-index:1}
+    .insight-label{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#c8a951;margin-bottom:10px}
+    .insight-text{font-size:14.5px;color:#cdd6de;line-height:1.7;font-style:italic;max-width:380px}
+    .insight-source{font-size:11px;color:#4a6070;margin-top:12px;font-style:normal}
+
+    .silk-road-line{margin-top:auto;padding-top:40px;opacity:.12}
+    .left-footer{font-size:11px;color:#3a4f60;margin-top:16px}
+
+    /* RIGHT PANEL */
+    .right-panel{
+      width:45%;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#101d2e 0%,#0c1825 100%);
+      border-left:1px solid rgba(200,150,62,0.06);position:relative;
+      overflow-y:auto;
+    }
+    .login-card{width:100%;max-width:380px;padding:40px}
+
+    .form-logo{display:flex;flex-direction:column;align-items:center;margin-bottom:32px}
+    .form-logo img{height:48px;margin-bottom:14px;border-radius:10px}
+    .form-logo h2{font-size:20px;font-weight:600;color:#c8a951}
+    .form-logo p{font-size:13px;color:#6a8090;margin-top:4px}
+
+    .alert-banner{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:20px;display:none;text-align:center;line-height:1.5}
+    .alert-error{background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);color:#f87171}
+    .alert-warning{background:rgba(202,138,4,0.08);border:1px solid rgba(202,138,4,0.2);color:#fbbf24}
+    .alert-success{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#4ade80}
+
+    .field-group{margin-bottom:18px}
+    .field-label{font-size:11.5px;font-weight:500;color:#8899aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:block}
+    .field-input{
+      width:100%;padding:13px 16px;font-size:14.5px;font-family:'Inter',sans-serif;
+      background:#162236;border:1px solid #243447;border-radius:8px;color:#e8edf2;
+      outline:none;transition:all .25s ease;
+    }
+    .field-input:focus{border-color:#c8a951;box-shadow:0 0 0 3px rgba(200,150,62,0.1);background:#1a2840}
+    .field-input::placeholder{color:#4a5e70}
+
+    .form-options{display:flex;align-items:center;justify-content:space-between;margin:4px 0 24px}
+    .remember-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#8899aa}
+    .remember-label input[type="checkbox"]{width:15px;height:15px;accent-color:#c8a951;cursor:pointer}
+    .forgot-link{font-size:13px;color:#c8a951;text-decoration:none;font-weight:500;transition:opacity .2s}
+    .forgot-link:hover{opacity:.8}
+
+    .btn-submit{
+      width:100%;padding:14px;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;
+      background:linear-gradient(135deg,#c8a951 0%,#b8963e 100%);
+      color:#0D1B2A;border:none;border-radius:8px;cursor:pointer;
+      transition:all .25s ease;position:relative;overflow:hidden;
+    }
+    .btn-submit:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(200,150,62,0.25)}
+    .btn-submit:active{transform:translateY(0)}
+    .btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+
+    .divider{display:flex;align-items:center;margin:20px 0;gap:12px}
+    .divider-line{flex:1;height:1px;background:#1f3044}
+    .divider-text{font-size:12px;color:#4a5e70}
+
+    .btn-secondary{
+      width:100%;padding:13px;font-size:14px;font-weight:500;font-family:'Inter',sans-serif;
+      background:transparent;color:#c8a951;text-decoration:none;
+      border:1px solid rgba(200,150,62,0.25);border-radius:8px;cursor:pointer;
+      transition:all .25s ease;display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn-secondary:hover{background:rgba(200,150,62,0.05);border-color:rgba(200,150,62,0.4)}
+
+    .security-badge{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:28px;font-size:11px;color:#3a5060}
+    .security-badge svg{opacity:.4}
+
+    .otp-section{display:none}
+    .otp-section.show{display:block}
+    .email-section.hide{display:none}
+    .back-link{text-align:center;margin-top:16px}
+    .back-link a{color:#6a8090;font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Inter',sans-serif}
+    .back-link a:hover{color:#c8a951}
+
+    @media(max-width:900px){.left-panel{display:none}.right-panel{width:100%;border-left:none}}
+    @media(max-width:480px){.login-card{padding:24px 20px}}
+
+    .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(13,27,42,0.3);border-top-color:#0D1B2A;border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
-  <!-- Left Panel — Branding + Daily Fact -->
-  <div class="left-panel">
-    <div class="left-inner">
-      <div class="brand-logo">
-        <img src="/logo.png" alt="SRL">
+  <div class="login-container">
+    <div class="left-panel">
+      <div class="particle" style="width:4px;height:4px;top:15%;left:20%;animation-delay:0s;animation-duration:22s"></div>
+      <div class="particle" style="width:3px;height:3px;top:45%;left:75%;animation-delay:3s;animation-duration:28s"></div>
+      <div class="particle" style="width:5px;height:5px;top:70%;left:35%;animation-delay:7s;animation-duration:25s"></div>
+      <div class="particle" style="width:3px;height:3px;top:25%;left:60%;animation-delay:12s;animation-duration:30s"></div>
+      <div class="particle" style="width:4px;height:4px;top:80%;left:80%;animation-delay:5s;animation-duration:26s"></div>
+
+      <div class="left-content">
+        <img src="/logo.png" alt="SRL" class="brand-logo">
+        <div class="brand-name">SILK ROUTE LOGISTICS</div>
+        <div class="portal-name">Account Executive Portal</div>
+        <div class="portal-subtitle">Command center for freight operations</div>
+
+        <div class="features-grid">
+          <div class="feature-pill"><span class="icon">🚛</span><span class="label">Fleet Management</span></div>
+          <div class="feature-pill"><span class="icon">🔒</span><span class="label">Secure Payments</span></div>
+          <div class="feature-pill"><span class="icon">🤝</span><span class="label">Carrier Network</span></div>
+          <div class="feature-pill"><span class="icon">📊</span><span class="label">Live Analytics</span></div>
+        </div>
+
+        <p class="tagline">Asset-based trucking and freight brokerage powered by technology. Real-time tracking, automated invoicing, and AI-driven operations from Kalamazoo, Michigan.</p>
+
+        <div class="insight-card">
+          <div id="insightBgIcon" class="insight-bg-icon"></div>
+          <div class="insight-content">
+            <div id="insightLabel" class="insight-label"></div>
+            <div id="insightText" class="insight-text"></div>
+            <div id="insightSource" class="insight-source"></div>
+          </div>
+        </div>
+
+        <svg class="silk-road-line" width="100%" height="24" viewBox="0 0 500 24">
+          <path d="M0,12 Q60,4 120,12 Q180,20 240,12 Q300,4 360,12 Q420,20 480,12 L500,12" stroke="#c8a951" stroke-width="1.5" fill="none" stroke-dasharray="8,6"/>
+          <circle cx="0" cy="12" r="2.5" fill="#c8a951" opacity="0.6"/>
+          <circle cx="250" cy="12" r="2" fill="#c8a951" opacity="0.4"/>
+          <circle cx="500" cy="12" r="2.5" fill="#c8a951" opacity="0.6"/>
+        </svg>
+
+        <div class="left-footer">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</div>
       </div>
-      <h1 class="brand-name">SILK ROUTE LOGISTICS</h1>
-      <p class="brand-sub">Account Executive Portal</p>
-
-      <div class="pills-grid">
-        <div class="pill"><span class="pill-icon">🚛</span><span class="pill-text">Fleet Management</span></div>
-        <div class="pill"><span class="pill-icon">🔒</span><span class="pill-text">Secure Payments</span></div>
-        <div class="pill"><span class="pill-icon">🤝</span><span class="pill-text">Carrier Network</span></div>
-        <div class="pill"><span class="pill-icon">📊</span><span class="pill-text">Live Analytics</span></div>
-      </div>
-
-      <p class="tagline">Asset-based trucking and freight brokerage powered by technology. Real-time tracking, automated invoicing, and AI-driven operations from Kalamazoo, Michigan.</p>
-
-      <div class="daily-fact">
-        <div class="fact-icon" id="factIcon"></div>
-        <div class="fact-cat" id="factCategory"></div>
-        <div class="fact-text" id="factText"></div>
-        <div class="fact-src" id="factSource"></div>
-      </div>
-
-      <p class="left-footer">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</p>
     </div>
-  </div>
 
-  <!-- Right Panel — Login Form -->
-  <div class="right-panel">
-    <div class="login-card">
-      <div class="card-logo">
-        <img src="/logo.png" alt="SRL">
-        <h1>Welcome Back</h1>
-        <p>Sign in to your AE Command Center</p>
-      </div>
-
-      <div id="expired-banner" class="expired-msg" style="display:none;">Session expired due to inactivity. Please sign in again.</div>
-      <div id="error" class="error-msg"></div>
-      <div id="info" class="info-msg"></div>
-
-      <!-- Step 1: Email + Password -->
-      <div id="email-section" class="email-section">
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="email" placeholder="you@silkroutelogistics.ai" autocomplete="email">
+    <div class="right-panel">
+      <div class="login-card">
+        <div class="form-logo">
+          <img src="/logo.png" alt="Silk Route Logistics">
+          <h2>Welcome Back</h2>
+          <p>Sign in to your AE Command Center</p>
         </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
-        </div>
-        <div class="remember-row">
-          <label><input type="checkbox" id="rememberMe"> Remember me</label>
-          <a href="/auth/forgot-password">Forgot password?</a>
-        </div>
-        <button class="btn" id="login-btn" onclick="handleLogin()">Sign In</button>
-      </div>
 
-      <!-- Step 2: OTP -->
-      <div id="otp-section" class="otp-section">
-        <div class="form-group">
-          <label>Verification Code</label>
-          <input type="text" id="otp" placeholder="Enter 8-digit code" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
-        </div>
-        <button class="btn" id="otp-btn" onclick="handleOtp()">Verify</button>
-        <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
-      </div>
+        <div id="alertBanner" class="alert-banner"></div>
 
-      <div class="carrier-link">
-        Carrier? <a href="/carrier/login.html">Sign in to Carrier Portal</a>
+        <div id="email-section" class="email-section">
+          <div class="field-group">
+            <label class="field-label">Email Address</label>
+            <input type="email" id="email" class="field-input" placeholder="you@silkroutelogistics.ai" autocomplete="email">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Password</label>
+            <input type="password" id="password" class="field-input" placeholder="Enter your password" autocomplete="current-password">
+          </div>
+          <div class="form-options">
+            <label class="remember-label"><input type="checkbox" id="rememberMe"> Remember me</label>
+            <a href="/auth/forgot-password.html" class="forgot-link">Forgot password?</a>
+          </div>
+          <button id="loginBtn" class="btn-submit" onclick="handleLogin()">Sign In</button>
+        </div>
+
+        <div id="otp-section" class="otp-section">
+          <div class="field-group">
+            <label class="field-label">Verification Code</label>
+            <input type="text" id="otp" class="field-input" placeholder="Enter 8-digit code" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
+          </div>
+          <button id="otpBtn" class="btn-submit" onclick="handleOtp()">Verify</button>
+          <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
+        </div>
+
+        <div class="divider"><div class="divider-line"></div><span class="divider-text">or</span><div class="divider-line"></div></div>
+        <a href="/carrier/login.html" class="btn-secondary">🚛 Carrier Login</a>
+
+        <div class="security-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          256-bit SSL encrypted &bull; SOC 2 compliant
+        </div>
       </div>
     </div>
   </div>
@@ -195,9 +240,11 @@
       ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
     var pendingEmail = '';
 
-    // Show expired banner if redirected from auto-logout
+    // Session expired banner
     if (new URLSearchParams(window.location.search).get('expired') === '1') {
-      document.getElementById('expired-banner').style.display = 'block';
+      var b = document.getElementById('alertBanner');
+      b.className = 'alert-banner alert-warning'; b.style.display = 'block';
+      b.textContent = 'Session expired due to inactivity. Please sign in again.';
     }
 
     // Auto-fill remembered email
@@ -219,29 +266,21 @@
     document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
     document.getElementById('otp').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleOtp(); });
 
-    function showError(msg) {
-      var el = document.getElementById('error');
-      el.textContent = msg;
+    function showAlert(msg, type) {
+      var el = document.getElementById('alertBanner');
+      el.className = 'alert-banner alert-' + type;
       el.style.display = msg ? 'block' : 'none';
-      document.getElementById('info').style.display = 'none';
-    }
-
-    function showInfo(msg) {
-      var el = document.getElementById('info');
       el.textContent = msg;
-      el.style.display = msg ? 'block' : 'none';
-      document.getElementById('error').style.display = 'none';
     }
 
     function handleLogin() {
       var email = document.getElementById('email').value.trim();
       var password = document.getElementById('password').value;
-      if (!email || !password) { showError('Please enter email and password'); return; }
+      if (!email || !password) { showAlert('Please enter your email and password.', 'error'); return; }
 
-      var btn = document.getElementById('login-btn');
-      btn.disabled = true;
-      btn.textContent = 'Signing in...';
-      showError('');
+      var btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      showAlert('', 'error');
 
       fetch(BASE + '/api/auth/login', {
         method: 'POST',
@@ -250,49 +289,37 @@
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        btn.disabled = false;
-        btn.textContent = 'Sign In';
-
-        if (data.error) {
-          showError(data.error);
-          return;
-        }
-
+        btn.disabled = false; btn.textContent = 'Sign In';
+        if (data.error) { showAlert(data.error, 'error'); return; }
         if (data.pendingOtp) {
           pendingEmail = email;
           document.getElementById('email-section').classList.add('hide');
           document.getElementById('otp-section').classList.add('show');
-          showInfo('A verification code has been sent to your email');
+          showAlert('A verification code has been sent to your email.', 'success');
           setTimeout(function() { document.getElementById('otp').focus(); }, 100);
           return;
         }
-
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
-          if (remember) {
-            SRLAuth.setRememberedEmail(email, 'ae');
-          } else {
-            SRLAuth.setRememberedEmail('', 'ae');
-          }
+          if (remember) { SRLAuth.setRememberedEmail(email, 'ae'); }
+          else { SRLAuth.setRememberedEmail('', 'ae'); }
           window.location.href = '/ae/dashboard/index.html';
         }
       })
-      .catch(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Sign In';
-        showError('Connection error. Please try again.');
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Sign In';
+        showAlert('Unable to connect to server. Please try again.', 'error');
       });
     }
 
     function handleOtp() {
       var code = document.getElementById('otp').value.trim();
-      if (!code || code.length < 8) { showError('Please enter the 8-digit code'); return; }
+      if (!code || code.length < 8) { showAlert('Please enter the 8-digit code.', 'error'); return; }
 
-      var btn = document.getElementById('otp-btn');
-      btn.disabled = true;
-      btn.textContent = 'Verifying...';
-      showError('');
+      var btn = document.getElementById('otpBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      showAlert('', 'error');
 
       fetch(BASE + '/api/auth/verify-otp', {
         method: 'POST',
@@ -301,30 +328,20 @@
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        btn.disabled = false;
-        btn.textContent = 'Verify';
-
-        if (data.error) {
-          showError(data.error);
-          return;
-        }
-
+        btn.disabled = false; btn.textContent = 'Verify';
+        if (data.error) { showAlert(data.error, 'error'); return; }
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
-          if (remember) {
-            SRLAuth.setRememberedEmail(pendingEmail, 'ae');
-          } else {
-            SRLAuth.setRememberedEmail('', 'ae');
-          }
+          if (remember) { SRLAuth.setRememberedEmail(pendingEmail, 'ae'); }
+          else { SRLAuth.setRememberedEmail('', 'ae'); }
           var redirect = new URLSearchParams(window.location.search).get('redirect');
           window.location.href = redirect || '/ae/dashboard/index.html';
         }
       })
-      .catch(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Verify';
-        showError('Connection error. Please try again.');
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Verify';
+        showAlert('Unable to connect to server. Please try again.', 'error');
       });
     }
 
@@ -332,12 +349,11 @@
       document.getElementById('email-section').classList.remove('hide');
       document.getElementById('otp-section').classList.remove('show');
       document.getElementById('otp').value = '';
-      showError('');
-      showInfo('');
+      showAlert('', 'error');
     }
   </script>
 
-  <!-- Daily Fact — deterministic by day-of-year -->
+  <!-- Daily Insight -->
   <script>
     (function() {
       var facts = [
@@ -360,34 +376,41 @@
         { icon: "\ud83d\udca1", cat: "MOTIVATION", text: "The secret of getting ahead is getting started.", src: "Mark Twain" },
         { icon: "\ud83d\udd25", cat: "MOTIVATION", text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", src: "Winston Churchill" },
         { icon: "\ud83c\udfaf", cat: "MOTIVATION", text: "The only way to do great work is to love what you do.", src: "Steve Jobs" },
-        { icon: "\u2b50", cat: "MOTIVATION", text: "Don't watch the clock; do what it does. Keep going.", src: "Sam Levenson" },
-        { icon: "\ud83c\udfd4\ufe0f", cat: "MOTIVATION", text: "It always seems impossible until it's done.", src: "Nelson Mandela" },
+        { icon: "\u2b50", cat: "MOTIVATION", text: "Don\u2019t watch the clock; do what it does. Keep going.", src: "Sam Levenson" },
+        { icon: "\ud83c\udfd4\ufe0f", cat: "MOTIVATION", text: "It always seems impossible until it\u2019s done.", src: "Nelson Mandela" },
         { icon: "\ud83d\ude80", cat: "MOTIVATION", text: "The best time to plant a tree was 20 years ago. The second best time is now.", src: "Chinese Proverb" },
-        { icon: "\ud83d\udcaa", cat: "MOTIVATION", text: "Hard work beats talent when talent doesn't work hard.", src: "Tim Notke" },
-        { icon: "\ud83c\udf1f", cat: "MOTIVATION", text: "Your limitation \u2014 it's only your imagination.", src: "Unknown" },
+        { icon: "\ud83d\udcaa", cat: "MOTIVATION", text: "Hard work beats talent when talent doesn\u2019t work hard.", src: "Tim Notke" },
+        { icon: "\ud83c\udf1f", cat: "MOTIVATION", text: "Your limitation \u2014 it\u2019s only your imagination.", src: "Unknown" },
         { icon: "\ud83e\udded", cat: "MOTIVATION", text: "A journey of a thousand miles begins with a single step.", src: "Lao Tzu" },
-        { icon: "\ud83d\udd11", cat: "MOTIVATION", text: "Opportunities don't happen. You create them.", src: "Chris Grosser" },
-        { icon: "\ud83d\udc2b", cat: "SILK ROAD HISTORY", text: "The Silk Road stretched over 4,000 miles, connecting Chang'an to Constantinople for over 1,500 years.", src: "UNESCO World Heritage, Encyclop\u00e6dia Britannica" },
+        { icon: "\ud83d\udd11", cat: "MOTIVATION", text: "Opportunities don\u2019t happen. You create them.", src: "Chris Grosser" },
+        { icon: "\ud83d\udc2b", cat: "SILK ROAD HISTORY", text: "The Silk Road stretched over 4,000 miles, connecting Chang\u2019an to Constantinople for over 1,500 years.", src: "UNESCO World Heritage, Encyclop\u00e6dia Britannica" },
         { icon: "\ud83d\uddfa\ufe0f", cat: "SILK ROAD HISTORY", text: "Marco Polo traveled the Silk Road for 24 years, documenting trade routes that inspired global commerce forever.", src: "The Travels of Marco Polo, National Geographic" },
-        { icon: "\ud83c\udfdb\ufe0f", cat: "SILK ROAD HISTORY", text: "The Silk Road didn't just move silk \u2014 it carried spices, gold, ideas, religions, and technology between civilizations.", src: "Encyclop\u00e6dia Britannica" },
+        { icon: "\ud83c\udfdb\ufe0f", cat: "SILK ROAD HISTORY", text: "The Silk Road didn\u2019t just move silk \u2014 it carried spices, gold, ideas, religions, and technology between civilizations.", src: "Encyclop\u00e6dia Britannica" },
         { icon: "\u2693", cat: "SILK ROAD HISTORY", text: "Caravansaries \u2014 ancient rest stops every 20 miles \u2014 were the original truck stops, providing shelter and trade for merchants.", src: "UNESCO Heritage Studies" },
-        { icon: "\ud83c\udf0f", cat: "SILK ROAD HISTORY", text: "The Silk Road was the world's first global supply chain, proving that trade builds bridges between nations.", src: "Peter Frankopan, The Silk Roads (2015)" },
+        { icon: "\ud83c\udf0f", cat: "SILK ROAD HISTORY", text: "The Silk Road was the world\u2019s first global supply chain, proving that trade builds bridges between nations.", src: "Peter Frankopan, The Silk Roads (2015)" },
         { icon: "\ud83d\udcdc", cat: "SILK ROAD HISTORY", text: "Paper, gunpowder, the compass, and printing \u2014 all reached the West via Silk Road trade routes.", src: "Joseph Needham, Science and Civilisation in China" },
-        { icon: "\ud83c\udfc6", cat: "SRL PHILOSOPHY", text: "Carriers first. Earn shipper trust. Non-stop communication. That's the Silk Route way.", src: "Silk Route Logistics" },
-        { icon: "\ud83e\udd1d", cat: "SRL MISSION", text: "We don't just move freight \u2014 we build partnerships that move North America forward.", src: "Silk Route Logistics" },
+        { icon: "\ud83c\udfc6", cat: "SRL PHILOSOPHY", text: "Carriers first. Earn shipper trust. Non-stop communication. That\u2019s the Silk Route way.", src: "Silk Route Logistics" },
+        { icon: "\ud83e\udd1d", cat: "SRL MISSION", text: "We don\u2019t just move freight \u2014 we build partnerships that move North America forward.", src: "Silk Route Logistics" },
         { icon: "\ud83d\udce1", cat: "SRL VISION", text: "Technology serves people, not the other way around. Every tool we build starts with the carrier experience.", src: "Silk Route Logistics" },
         { icon: "\ud83d\udee1\ufe0f", cat: "SRL PROMISE", text: "Transparent rates. Fast payment. Zero double-brokering. Your freight, our word.", src: "Silk Route Logistics" }
       ];
+
+      var categoryIcons = {
+        "INDUSTRY FACT":"\ud83c\udfed","DID YOU KNOW":"\ud83d\udcad","GROWTH":"\ud83d\udcc8","OPERATIONS":"\u2699\ufe0f",
+        "PERSPECTIVE":"\ud83c\udf0e","BROKERAGE":"\ud83e\udd1d","TECHNOLOGY":"\ud83d\udcbb","PAYMENTS":"\ud83d\udcb5",
+        "MOTIVATION":"\ud83c\udfd4\ufe0f","SILK ROAD HISTORY":"\ud83d\udc2b","SRL PHILOSOPHY":"\ud83d\udee1\ufe0f",
+        "SRL MISSION":"\ud83d\ude9b","SRL VISION":"\ud83d\udce1","SRL PROMISE":"\u2696\ufe0f"
+      };
 
       var today = new Date();
       var start = new Date(today.getFullYear(), 0, 0);
       var dayOfYear = Math.floor((today - start) / 86400000);
       var f = facts[dayOfYear % facts.length];
 
-      document.getElementById('factIcon').textContent = f.icon;
-      document.getElementById('factCategory').textContent = f.cat;
-      document.getElementById('factText').textContent = '\u201c' + f.text + '\u201d';
-      document.getElementById('factSource').textContent = '\u2014 ' + f.src;
+      document.getElementById('insightLabel').textContent = f.cat;
+      document.getElementById('insightText').textContent = '\u201c' + f.text + '\u201d';
+      document.getElementById('insightSource').textContent = '\u2014 ' + f.src;
+      document.getElementById('insightBgIcon').textContent = categoryIcons[f.cat] || '\ud83d\ude9b';
     })();
   </script>
 </body>

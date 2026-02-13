@@ -14,7 +14,7 @@ const passwordChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, mess
 
 const otpSchema = z.object({ email: z.string().email(), code: z.string().length(8) });
 const resendOtpSchema = z.object({ email: z.string().email() });
-const resetPasswordSchema = z.object({ token: z.string().min(1), password: z.string().min(8) });
+const resetPasswordSchema = z.object({ token: z.string().min(1), email: z.string().email(), newPassword: z.string().min(8) });
 const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
 const updateProfileSchema = z.object({
   firstName: z.string().min(1).optional(),
