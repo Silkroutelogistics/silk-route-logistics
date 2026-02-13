@@ -8,8 +8,12 @@ import { AuthRequest } from "../middleware/auth";
 import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt, createPasswordResetToken, verifyPasswordResetToken } from "../services/otpService";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/emailService";
 import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
+import { blacklistToken } from "../utils/tokenBlacklist";
 
 const PASSWORD_EXPIRY_DAYS = 60;
+function signToken(userId: string): string {
+  return jwt.sign({ userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+}
 
 export async function register(req: Request, res: Response) {
   const data = registerSchema.parse(req.body);
@@ -26,7 +30,7 @@ export async function register(req: Request, res: Response) {
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
 
-  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  const token = signToken(user.id);
   setTokenCookie(res, token);
   res.status(201).json({ user, token });
 }
@@ -39,15 +43,30 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
+  if (!user.isActive) {
+    res.status(403).json({ error: "Account has been deactivated" });
+    return;
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    // Log failed login for security monitoring
+    await prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "WARNING",
+        source: "authController",
+        message: `Failed login attempt for ${email}`,
+        ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+      },
+    }).catch(() => {});
+
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
 
   // Send OTP instead of issuing JWT
   const code = await createOtp(user.id);
-  // Fire-and-forget email send so SMTP issues don't block the response
   sendOtpEmail(user.email, user.firstName, code).catch((err) =>
     console.error("[OTP Email] Failed to send:", err.message),
   );
@@ -68,9 +87,29 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     return;
   }
 
-  const isValid = await verifyOtpCode(user.id, code);
-  if (!isValid) {
-    res.status(401).json({ error: "Invalid or expired code" });
+  const result = await verifyOtpCode(user.id, code);
+
+  if (result.locked) {
+    // Log lockout event
+    await prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "ERROR",
+        source: "authController",
+        message: `OTP lockout triggered for ${email} — too many failed attempts`,
+        ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+      },
+    }).catch(() => {});
+
+    res.status(429).json({ error: "Too many failed attempts. Please request a new code in 15 minutes." });
+    return;
+  }
+
+  if (!result.success) {
+    const msg = result.attemptsRemaining !== undefined && result.attemptsRemaining > 0
+      ? `Invalid code. ${result.attemptsRemaining} attempt(s) remaining.`
+      : "Invalid or expired code";
+    res.status(401).json({ error: msg });
     return;
   }
 
@@ -79,21 +118,20 @@ export async function handleVerifyOtp(req: Request, res: Response) {
   const daysSinceChange = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24);
 
   if (daysSinceChange >= PASSWORD_EXPIRY_DAYS) {
-    // Issue a short-lived temp token for force-change only
     const tempToken = jwt.sign(
       { userId: user.id, purpose: "force-change-password" },
       env.JWT_SECRET,
-      { expiresIn: "10m" } as jwt.SignOptions,
+      { algorithm: "HS256", expiresIn: "10m" } as jwt.SignOptions,
     );
     res.json({ passwordExpired: true, tempToken });
     return;
   }
 
   // Issue full JWT + audit log
-  const ipAddress = req.headers["x-forwarded-for"] as string || req.ip || "";
+  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
   const userAgent = req.headers["user-agent"] || "";
 
-  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  const token = signToken(user.id);
 
   await prisma.auditLog.create({
     data: {
@@ -151,7 +189,7 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
   if (header?.startsWith("Bearer ")) {
     const token = header.split(" ")[1];
     try {
-      const payload = jwt.verify(token, env.JWT_SECRET) as { userId: string; purpose?: string };
+      const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId: string; purpose?: string };
       if (payload.purpose !== "force-change-password") {
         res.status(403).json({ error: "Invalid token for this operation" });
         return;
@@ -168,11 +206,10 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
     data: { passwordHash, passwordChangedAt: new Date() },
   });
 
-  // Issue full JWT
-  const ipAddress = req.headers["x-forwarded-for"] as string || req.ip || "";
+  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
   const userAgent = req.headers["user-agent"] || "";
 
-  const fullToken = jwt.sign({ userId: req.user!.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  const fullToken = signToken(req.user!.id);
 
   await prisma.auditLog.create({
     data: {
@@ -240,12 +277,33 @@ export async function updatePreferences(req: AuthRequest, res: Response) {
 }
 
 export async function refreshToken(req: AuthRequest, res: Response) {
-  const token = jwt.sign({ userId: req.user!.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  // Blacklist the old token before issuing new one (rotation)
+  if (req.token) {
+    await blacklistToken(req.token, req.user!.id, "refresh-rotation").catch(() => {});
+  }
+
+  const token = signToken(req.user!.id);
   setTokenCookie(res, token);
   res.json({ token });
 }
 
-export async function logout(_req: AuthRequest, res: Response) {
+export async function logout(req: AuthRequest, res: Response) {
+  // Blacklist the current token so it can't be reused
+  if (req.token) {
+    await blacklistToken(req.token, req.user!.id, "logout").catch(() => {});
+  }
+
+  // Log logout event
+  await prisma.auditLog.create({
+    data: {
+      userId: req.user!.id,
+      action: "LOGOUT",
+      entity: "Session",
+      ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+      userAgent: req.headers["user-agent"] || "",
+    },
+  }).catch(() => {});
+
   clearTokenCookie(res);
   res.json({ message: "Logged out successfully" });
 }
@@ -310,7 +368,6 @@ export async function resetPassword(req: Request, res: Response) {
     return;
   }
 
-  // Verify the token belongs to the email provided
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.email !== email) {
     res.status(400).json({ error: "Invalid or expired reset link" });

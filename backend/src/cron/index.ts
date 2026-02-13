@@ -100,6 +100,13 @@ export function initCronJobs() {
         }
       }
 
+      // Clean expired JWT blacklist entries
+      const { cleanupBlacklist } = require("../utils/tokenBlacklist");
+      const blacklistCleaned = await cleanupBlacklist();
+      if (blacklistCleaned > 0) {
+        console.log(`[Cron Daily] Cleaned ${blacklistCleaned} expired blacklist entries`);
+      }
+
       // Clean old system logs (keep 90 days)
       const cutoff = new Date(Date.now() - 90 * 86_400_000);
       const deleted = await prisma.systemLog.deleteMany({
@@ -286,6 +293,24 @@ export function initCronJobs() {
       console.error("[Cron AI] System Optimizer error:", err);
     }
   });
+
+  // ─── Every 4 hours: Fetch latest trucking news ──────────────
+  cron.schedule("0 */4 * * *", async () => {
+    try {
+      console.log("[Cron] Fetching trucking news feeds...");
+      const { fetchAllFeeds } = require("../services/newsAggregatorService");
+      const result = await fetchAllFeeds();
+      console.log("[Cron] News fetch complete:", result);
+    } catch (err) {
+      console.error("[Cron] News fetch error:", err);
+    }
+  });
+
+  // Seed news sources on startup
+  try {
+    const { seedNewsSources } = require("../services/newsAggregatorService");
+    seedNewsSources().catch((e: any) => console.error("[Cron] News source seed error:", e.message));
+  } catch {}
 
   console.log("[Cron] All scheduled jobs initialized (including AI learning cycles)");
 }

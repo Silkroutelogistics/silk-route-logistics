@@ -9,8 +9,10 @@ import { z } from "zod";
 const router = Router();
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: "Too many login attempts, please try again later" } });
+const otpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, message: { error: "Too many verification attempts. Please wait 15 minutes." } });
+const passwordChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { error: "Too many password change attempts. Please try again later." } });
 
-const otpSchema = z.object({ email: z.string().email(), code: z.string().min(4).max(8) });
+const otpSchema = z.object({ email: z.string().email(), code: z.string().min(6).max(8) });
 const resendOtpSchema = z.object({ email: z.string().email() });
 const resetPasswordSchema = z.object({ token: z.string().min(1), password: z.string().min(8) });
 const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
@@ -31,9 +33,9 @@ const preferencesSchema = z.object({
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", loginLimiter, validateBody(loginSchema), login);
 router.post("/forgot-password", loginLimiter, validateBody(z.object({ email: z.string().email() })), forgotPassword);
-router.post("/reset-password", validateBody(resetPasswordSchema), resetPassword);
-router.post("/verify-otp", validateBody(otpSchema), handleVerifyOtp);
-router.post("/resend-otp", validateBody(resendOtpSchema), handleResendOtp);
+router.post("/reset-password", passwordChangeLimiter, validateBody(resetPasswordSchema), resetPassword);
+router.post("/verify-otp", otpVerifyLimiter, validateBody(otpSchema), handleVerifyOtp);
+router.post("/resend-otp", loginLimiter, validateBody(resendOtpSchema), handleResendOtp);
 
 // Authenticated routes
 router.post("/force-change-password", authenticate, validateBody(z.object({ newPassword: z.string().min(8) })), forceChangePassword);

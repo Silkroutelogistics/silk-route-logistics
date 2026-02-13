@@ -350,6 +350,7 @@ enum LogType {
   API_CALL
   ERROR
   AUTH
+  SECURITY
   PAYMENT
   STATUS_CHANGE
   CRON_JOB
@@ -1737,6 +1738,21 @@ model Communication {
   @@map("communications")
 }
 
+// ─── JWT Blacklist (Token Revocation on Logout) ────────────
+
+model TokenBlacklist {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  reason    String   @default("logout")
+  createdAt DateTime @default(now())
+
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("token_blacklist")
+}
+
 // ─── OTP Codes ──────────────────────────────────────────
 
 model OtpCode {
@@ -1745,8 +1761,9 @@ model OtpCode {
   user      User     @relation(fields: [userId], references: [id])
   code      String
   expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  used           Boolean  @default(false)
+  failedAttempts Int      @default(0)
+  createdAt      DateTime @default(now())
 
   @@index([userId, used])
   @@map("otp_codes")
@@ -2242,4 +2259,39 @@ model MarcoPoloConversation {
   @@index([userId])
   @@index([updatedAt])
   @@map("marco_polo_conversations")
+}
+
+// ─── News Aggregation ──────────────────────────────────────────
+
+model NewsArticle {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  excerpt      String   @db.Text
+  content      String?  @db.Text
+  sourceUrl    String   @unique
+  sourceName   String
+  sourceIcon   String?
+  imageUrl     String?
+  category     String   @default("Industry")
+  tags         String[] @default([])
+  publishedAt  DateTime
+  fetchedAt    DateTime @default(now())
+  featured     Boolean  @default(false)
+
+  @@index([category])
+  @@index([publishedAt])
+  @@index([featured])
+}
+
+model NewsSource {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  feedUrl     String
+  iconUrl     String?
+  category    String   @default("Industry")
+  isActive    Boolean  @default(true)
+  lastFetched DateTime?
+  articleCount Int     @default(0)
+  createdAt   DateTime @default(now())
 }

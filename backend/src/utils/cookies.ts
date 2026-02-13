@@ -15,7 +15,7 @@ export function setTokenCookie(res: Response, token: string, maxAgeMs?: number) 
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "strict" : "lax",
-    maxAge: maxAgeMs || 7 * 24 * 60 * 60 * 1000, // 7 days default
+    maxAge: maxAgeMs || 2 * 24 * 60 * 60 * 1000, // 48 hours default (reduced from 7 days)
     path: "/",
     ...(isProduction ? { domain: ".silkroutelogistics.ai" } : {}),
   });

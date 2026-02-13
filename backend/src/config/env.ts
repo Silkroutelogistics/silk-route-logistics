@@ -18,7 +18,7 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default("noreply@silkroutelogistics.ai"),
   FMCSA_WEB_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  ENCRYPTION_KEY: z.string().optional(),
+  ENCRYPTION_KEY: z.string().min(16, "ENCRYPTION_KEY must be at least 16 characters"),
   OPENPHONE_WEBHOOK_SECRET: z.string().optional(),
   DAT_API_KEY: z.string().optional(),
   DAT_API_SECRET: z.string().optional(),

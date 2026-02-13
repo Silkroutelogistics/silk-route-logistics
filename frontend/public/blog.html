@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog — The Freight Insider | Silk Route Logistics</title>
-  <meta name="description" content="The Freight Insider — industry insights, technology updates, and logistics best practices from the Silk Route Logistics team. Coming soon.">
-  <meta name="keywords" content="freight blog, logistics insights, supply chain blog, Silk Route Logistics blog, freight industry news">
+  <title>The Freight Insider | Silk Route Logistics Blog</title>
+  <meta name="description" content="The Freight Insider — latest trucking and logistics news, curated daily by AI. Industry updates, market trends, regulations, and technology from Silk Route Logistics.">
+  <meta name="keywords" content="freight news, trucking news, logistics blog, supply chain news, freight industry, Silk Route Logistics">
   <meta name="author" content="Silk Route Logistics LLC">
   <meta property="og:title" content="The Freight Insider — Silk Route Logistics Blog">
-  <meta property="og:description" content="Industry insights, technology updates, and logistics best practices. Coming soon.">
+  <meta property="og:description" content="Latest trucking and logistics news, curated daily by AI.">
   <meta property="og:type" content="website">
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
@@ -65,7 +65,7 @@
     }
 
     .section-title {
-      font-size: clamp(32px, 5vw, 48px);
+      font-size: clamp(28px, 4vw, 40px);
       color: #FFFFFF;
       margin-bottom: 20px;
     }
@@ -86,7 +86,7 @@
     .fade-in-delay-3 { transition-delay: 0.3s; }
     .fade-in-delay-4 { transition-delay: 0.4s; }
 
-    /* NAVIGATION */
+    /* ── NAVIGATION ── */
     .navbar {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -259,10 +259,10 @@
       font-size: 16px;
     }
 
-    /* HERO */
+    /* ── HERO ── */
     .hero {
       position: relative;
-      padding: 180px 0 100px;
+      padding: 160px 0 60px;
       overflow: hidden;
       text-align: center;
     }
@@ -326,231 +326,479 @@
       color: #8899AA;
       line-height: 1.8;
       max-width: 620px;
+      margin: 0 auto 40px;
+    }
+
+    /* ── SEARCH BAR ── */
+    .search-wrapper {
+      max-width: 560px;
       margin: 0 auto;
-    }
-
-    .hero-divider {
-      width: 60px;
-      height: 3px;
-      background: linear-gradient(90deg, #C8963E, #E8B85E);
-      border-radius: 2px;
-      margin: 40px auto 0;
-    }
-
-    /* COMING SOON / SIGNUP */
-    .blog-coming-section {
-      padding: 0 0 100px;
-      text-align: center;
-    }
-
-    .blog-coming-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 24px;
-      padding: 70px 40px;
       position: relative;
-      overflow: hidden;
-      max-width: 700px;
-      margin: 0 auto;
     }
 
-    .blog-coming-box::before {
-      content: '';
-      position: absolute;
-      top: -100px; left: 50%;
-      transform: translateX(-50%);
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(200, 150, 62, 0.06) 0%, transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .blog-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 20px;
-      background: rgba(200, 150, 62, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 28px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .blog-coming-box h2 {
-      font-size: clamp(28px, 4vw, 36px);
-      color: #FFFFFF;
-      margin-bottom: 16px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .blog-coming-box > p {
-      font-size: 16px;
-      color: #8899AA;
-      line-height: 1.8;
-      margin-bottom: 36px;
-      position: relative;
-      z-index: 1;
-      max-width: 520px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    /* EMAIL SIGNUP */
-    .blog-signup {
-      position: relative;
-      z-index: 1;
-      max-width: 460px;
-      margin: 0 auto;
-    }
-
-    .blog-signup-form {
-      display: flex;
-      gap: 12px;
-    }
-
-    .blog-signup-input {
-      flex: 1;
-      padding: 14px 20px;
+    .search-input {
+      width: 100%;
+      padding: 16px 52px 16px 24px;
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
+      border: 1px solid rgba(200, 150, 62, 0.4);
+      border-radius: 12px;
       color: #FFFFFF;
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 14px;
+      font-size: 15px;
       outline: none;
       transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .blog-signup-input::placeholder {
+    .search-input::placeholder {
       color: #667788;
     }
 
-    .blog-signup-input:focus {
-      border-color: rgba(200, 150, 62, 0.5);
-      box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.1);
+    .search-input:focus {
+      border-color: #C8963E;
+      box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.15);
     }
 
-    .blog-signup-btn {
-      padding: 14px 28px;
-      background: #C8963E;
-      color: #FFFFFF;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
-      white-space: nowrap;
-    }
-
-    .blog-signup-btn:hover {
-      background: #B8862E;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(200, 150, 62, 0.3);
-    }
-
-    .blog-signup-btn:focus-visible {
-      outline: 2px solid #C8963E;
-      outline-offset: 4px;
-    }
-
-    .blog-signup-note {
-      font-size: 12px;
-      color: #4A5568;
-      margin-top: 12px;
-      position: relative;
-      z-index: 1;
-    }
-
-    /* PREVIEW TOPICS */
-    .topics-section {
-      padding: 0 0 100px;
-      position: relative;
-    }
-
-    .topics-section::before {
-      content: '';
+    .search-icon {
       position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, transparent 0%, rgba(200, 150, 62, 0.02) 50%, transparent 100%);
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #C8963E;
       pointer-events: none;
     }
 
-    .topics-header {
-      text-align: center;
-      margin-bottom: 60px;
+    /* ── CATEGORY PILLS ── */
+    .category-bar {
+      padding: 0 0 48px;
       position: relative;
       z-index: 1;
     }
 
-    .topics-grid {
+    .category-pills {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 0 12px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(200, 150, 62, 0.3) transparent;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .category-pills::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .category-pills::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .category-pills::-webkit-scrollbar-thumb {
+      background: rgba(200, 150, 62, 0.3);
+      border-radius: 2px;
+    }
+
+    .category-pill {
+      flex-shrink: 0;
+      padding: 10px 22px;
+      border-radius: 100px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      color: #8899AA;
+      white-space: nowrap;
+    }
+
+    .category-pill:hover {
+      border-color: rgba(200, 150, 62, 0.4);
+      color: #FFFFFF;
+    }
+
+    .category-pill.active {
+      background: #C8963E;
+      border-color: #C8963E;
+      color: #FFFFFF;
+    }
+
+    .category-pill .pill-count {
+      display: inline-block;
+      margin-left: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.7;
+    }
+
+    /* ── FEATURED SECTION ── */
+    .featured-section {
+      padding: 0 0 64px;
+    }
+
+    .featured-header {
+      margin-bottom: 32px;
+    }
+
+    .featured-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 28px;
-      position: relative;
-      z-index: 1;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
     }
 
-    .topic-card {
+    .featured-card {
+      display: block;
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 16px;
-      padding: 36px 28px;
       transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+      text-decoration: none;
+      color: inherit;
     }
 
-    .topic-card:hover {
+    .featured-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(200, 150, 62, 0.25);
-      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+      border-color: rgba(200, 150, 62, 0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     }
 
-    .topic-card-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: rgba(200, 150, 62, 0.1);
+    .featured-img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .featured-gradient {
+      width: 100%;
+      height: 200px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 1px;
     }
 
-    .topic-card h3 {
+    .gradient-1 { background: linear-gradient(135deg, #1a2a3a 0%, #2a3a4a 50%, #1a3040 100%); }
+    .gradient-2 { background: linear-gradient(135deg, #2a1a1a 0%, #3a2a1a 50%, #2a2a1a 100%); }
+    .gradient-3 { background: linear-gradient(135deg, #1a1a2a 0%, #1a2a3a 50%, #2a1a3a 100%); }
+    .gradient-4 { background: linear-gradient(135deg, #1a2a2a 0%, #1a3a2a 50%, #2a3a2a 100%); }
+    .gradient-5 { background: linear-gradient(135deg, #2a2a1a 0%, #3a3a1a 50%, #3a2a2a 100%); }
+    .gradient-6 { background: linear-gradient(135deg, #1a2a2a 0%, #2a1a2a 50%, #2a2a3a 100%); }
+
+    .featured-body {
+      padding: 24px;
+    }
+
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(200, 150, 62, 0.12);
+      color: #C8963E;
+      border: 1px solid rgba(200, 150, 62, 0.2);
+      margin-bottom: 14px;
+    }
+
+    .source-badge img {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+    }
+
+    .featured-body h3 {
       font-size: 20px;
+      color: #FFFFFF;
+      margin-bottom: 10px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .featured-body .excerpt {
+      font-size: 14px;
+      color: #8899AA;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .featured-meta {
+      font-size: 12px;
+      color: #556677;
+    }
+
+    /* ── ARTICLE GRID ── */
+    .articles-section {
+      padding: 0 0 80px;
+    }
+
+    .articles-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .articles-header .result-count {
+      font-size: 14px;
+      color: #667788;
+    }
+
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .article-card {
+      display: flex;
+      flex-direction: column;
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .article-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(200, 150, 62, 0.25);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .article-thumb {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .article-thumb-placeholder {
+      width: 100%;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 0.5px;
+    }
+
+    .article-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .article-body .source-badge {
+      margin-bottom: 12px;
+      align-self: flex-start;
+    }
+
+    .article-body h3 {
+      font-size: 17px;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .article-body .excerpt {
+      font-size: 13px;
+      color: #8899AA;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 16px;
+      flex: 1;
+    }
+
+    .article-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .article-date {
+      font-size: 12px;
+      color: #556677;
+    }
+
+    .category-tag {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      background: rgba(200, 150, 62, 0.08);
+      color: #C8963E;
+      border: 1px solid rgba(200, 150, 62, 0.15);
+    }
+
+    /* ── LOAD MORE ── */
+    .load-more-wrapper {
+      text-align: center;
+      padding: 40px 0 0;
+    }
+
+    .load-more-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(200, 150, 62, 0.3);
+      border-radius: 10px;
+      color: #C8963E;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .load-more-btn:hover {
+      background: rgba(200, 150, 62, 0.1);
+      border-color: #C8963E;
+      transform: translateY(-1px);
+    }
+
+    .load-more-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .load-more-btn .spinner {
+      display: none;
+    }
+
+    .load-more-btn.loading .spinner {
+      display: inline-block;
+    }
+
+    .load-more-btn.loading .btn-text {
+      display: none;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+    }
+
+    .empty-state .spinner-large {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(200, 150, 62, 0.2);
+      border-top-color: #C8963E;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+
+    .empty-state h3 {
+      font-size: 24px;
       color: #FFFFFF;
       margin-bottom: 12px;
     }
 
-    .topic-card p {
-      font-size: 14px;
-      color: #8899AA;
+    .empty-state p {
+      font-size: 16px;
+      color: #667788;
+      max-width: 400px;
+      margin: 0 auto;
       line-height: 1.7;
     }
 
-    .topic-badge {
-      display: inline-block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #C8963E;
-      background: rgba(200, 150, 62, 0.1);
-      padding: 4px 12px;
-      border-radius: 20px;
-      margin-bottom: 16px;
+    /* ── SPINNER ── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    /* FOOTER */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(200, 150, 62, 0.3);
+      border-top-color: #C8963E;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ── LOADING SKELETON ── */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .skeleton-card {
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .skeleton-thumb {
+      width: 100%;
+      height: 160px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-body {
+      padding: 20px;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      margin-bottom: 10px;
+    }
+
+    .skeleton-line.short { width: 60%; }
+    .skeleton-line.medium { width: 80%; }
+    .skeleton-line.tiny { width: 35%; margin-top: 16px; }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── FOOTER ── */
     .footer {
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding: 80px 0 40px;
@@ -639,36 +887,34 @@
 
     .footer-bottom-links a:hover { color: #C8963E; }
 
-    /* RESPONSIVE */
+    /* ── RESPONSIVE ── */
     @media (max-width: 1024px) {
-      .topics-grid { grid-template-columns: repeat(2, 1fr); }
-      .topics-grid .topic-card:last-child {
-        grid-column: 1 / -1;
-        max-width: 500px;
-        margin: 0 auto;
-      }
+      .featured-grid { grid-template-columns: repeat(2, 1fr); }
+      .articles-grid { grid-template-columns: repeat(2, 1fr); }
+      .skeleton-grid { grid-template-columns: repeat(2, 1fr); }
       .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
     }
 
     @media (max-width: 768px) {
       .navbar-links, .navbar-cta-desktop { display: none; }
       .hamburger { display: flex; }
-      .hero { padding: 140px 0 70px; }
+      .hero { padding: 130px 0 40px; }
       .hero-text { font-size: 16px; }
-      .blog-coming-section { padding: 0 0 70px; }
-      .blog-coming-box { padding: 40px 24px; }
-      .blog-signup-form { flex-direction: column; }
-      .topics-section { padding: 0 0 70px; }
-      .topics-grid { grid-template-columns: 1fr; }
-      .topics-grid .topic-card:last-child { max-width: 100%; }
+      .featured-grid { grid-template-columns: 1fr; }
+      .articles-grid { grid-template-columns: 1fr; }
+      .skeleton-grid { grid-template-columns: 1fr; }
       .footer-grid { grid-template-columns: 1fr; gap: 32px; }
       .footer-bottom { flex-direction: column; text-align: center; }
+      .featured-section { padding: 0 0 40px; }
+      .articles-section { padding: 0 0 60px; }
     }
 
     @media (max-width: 480px) {
       .hero h1 { font-size: 34px; }
       .navbar-inner { padding: 0 16px; }
       .container { padding: 0 16px; }
+      .featured-body h3 { font-size: 18px; }
+      .featured-img, .featured-gradient { height: 160px; }
     }
 
     .skip-link {
@@ -688,8 +934,10 @@
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .fade-in { opacity: 1; transform: none; transition: none; }
-      .topic-card { transition: none; }
+      .article-card, .featured-card { transition: none; }
       .navbar-links a::after { transition: none; }
+      .skeleton-thumb, .skeleton-line { animation: none; }
+      .spinner, .spinner-large, .empty-state .spinner-large { animation: none; }
     }
   </style>
 </head>
@@ -697,6 +945,7 @@
 
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
+  <!-- ── NAVIGATION ── -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="navbar-inner">
       <a href="/" class="navbar-logo" aria-label="Silk Route Logistics - Home">
@@ -736,6 +985,7 @@
     </div>
   </nav>
 
+  <!-- ── MAIN CONTENT ── -->
   <main id="main-content">
 
     <!-- HERO -->
@@ -745,94 +995,95 @@
         <p class="hero-label fade-in">Blog</p>
         <h1 id="hero-heading" class="fade-in fade-in-delay-1">The Freight <em>Insider</em></h1>
         <p class="hero-text fade-in fade-in-delay-2">
-          Our blog is launching soon. Stay tuned for industry insights, technology updates, and logistics best practices from the SRL team.
+          Latest trucking and logistics news, curated daily by AI
         </p>
-        <div class="hero-divider fade-in fade-in-delay-3" aria-hidden="true"></div>
-      </div>
-    </section>
-
-    <!-- COMING SOON / SIGNUP -->
-    <section class="blog-coming-section" aria-labelledby="signup-heading">
-      <div class="container">
-        <div class="blog-coming-box fade-in">
-          <div class="blog-icon" aria-hidden="true">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        <div class="search-wrapper fade-in fade-in-delay-3">
+          <input
+            type="text"
+            class="search-input"
+            id="search-input"
+            placeholder="Search articles..."
+            aria-label="Search articles"
+            autocomplete="off"
+          >
+          <div class="search-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </div>
-          <h2 id="signup-heading">Coming Soon</h2>
-          <p>
-            We are putting the finishing touches on The Freight Insider. Be the first to know when we publish by signing up below.
-          </p>
-          <div class="blog-signup">
-            <form class="blog-signup-form" onsubmit="handleBlogSignup(event)">
-              <input type="email" class="blog-signup-input" placeholder="Enter your email address" aria-label="Email address for blog notifications" required>
-              <button type="submit" class="blog-signup-btn">Notify Me</button>
-            </form>
-            <p class="blog-signup-note">No spam. Unsubscribe anytime. We respect your inbox.</p>
-          </div>
         </div>
       </div>
     </section>
 
-    <!-- UPCOMING TOPICS -->
-    <section class="topics-section" aria-labelledby="topics-heading">
+    <!-- CATEGORY FILTER BAR -->
+    <section class="category-bar" aria-label="Category filters">
       <div class="container">
-        <div class="topics-header">
-          <p class="section-label fade-in">What to Expect</p>
-          <h2 id="topics-heading" class="section-title fade-in fade-in-delay-1">Topics We'll Cover</h2>
+        <div class="category-pills" id="category-pills" role="tablist">
+          <button class="category-pill active" data-category="All" role="tab" aria-selected="true">All</button>
         </div>
-        <div class="topics-grid">
+      </div>
+    </section>
 
-          <div class="topic-card fade-in fade-in-delay-1" role="article">
-            <div class="topic-card-icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-            </div>
-            <span class="topic-badge">Market Analysis</span>
-            <h3>Industry Trends</h3>
-            <p>
-              Freight market updates, rate forecasts, capacity analysis, and economic factors shaping the logistics industry.
-            </p>
+    <!-- FEATURED ARTICLES -->
+    <section class="featured-section" id="featured-section" aria-labelledby="featured-heading">
+      <div class="container">
+        <div class="featured-header">
+          <p class="section-label">Featured</p>
+          <h2 id="featured-heading" class="section-title">Top Stories</h2>
+        </div>
+        <div class="featured-grid" id="featured-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ARTICLES GRID -->
+    <section class="articles-section" aria-labelledby="articles-heading">
+      <div class="container">
+        <div class="articles-header">
+          <div>
+            <p class="section-label">Latest</p>
+            <h2 id="articles-heading" class="section-title">All Articles</h2>
           </div>
+          <p class="result-count" id="result-count"></p>
+        </div>
 
-          <div class="topic-card fade-in fade-in-delay-2" role="article">
-            <div class="topic-card-icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
-              </svg>
-            </div>
-            <span class="topic-badge">Innovation</span>
-            <h3>Technology Updates</h3>
-            <p>
-              Deep dives into Marco Polo AI, platform features, EDI integration, and how technology is transforming freight brokerage.
-            </p>
-          </div>
+        <!-- Loading skeleton -->
+        <div class="skeleton-grid" id="loading-skeleton">
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line tiny"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line tiny"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line tiny"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line tiny"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line tiny"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line tiny"></div></div></div>
+        </div>
 
-          <div class="topic-card fade-in fade-in-delay-3" role="article">
-            <div class="topic-card-icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-            </div>
-            <span class="topic-badge">Education</span>
-            <h3>Best Practices</h3>
-            <p>
-              Practical guides for shippers and carriers covering compliance, cost optimization, safety, and operational efficiency.
-            </p>
-          </div>
+        <!-- Empty state -->
+        <div class="empty-state" id="empty-state" style="display:none;">
+          <div class="spinner-large"></div>
+          <h3>Fetching the Latest News</h3>
+          <p>News articles are being fetched. Check back soon!</p>
+        </div>
 
+        <!-- Article grid -->
+        <div class="articles-grid" id="articles-grid" style="display:none;">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Load More -->
+        <div class="load-more-wrapper" id="load-more-wrapper" style="display:none;">
+          <button class="load-more-btn" id="load-more-btn">
+            <span class="btn-text">Load More Articles</span>
+            <div class="spinner"></div>
+          </button>
         </div>
       </div>
     </section>
 
   </main>
 
+  <!-- ── FOOTER ── -->
   <footer class="footer" role="contentinfo">
     <div class="container">
       <div class="footer-grid">
@@ -892,6 +1143,319 @@
     (function() {
       'use strict';
 
+      // ── API Base URL ──
+      var API = window.location.hostname === 'localhost'
+        ? 'http://localhost:4000/api'
+        : 'https://silk-route-logistics.onrender.com/api';
+
+      // ── State ──
+      var state = {
+        currentPage: 1,
+        totalPages: 1,
+        totalArticles: 0,
+        currentCategory: 'All',
+        currentSearch: '',
+        isLoading: false,
+        articles: []
+      };
+
+      // ── DOM Refs ──
+      var searchInput = document.getElementById('search-input');
+      var categoryPills = document.getElementById('category-pills');
+      var featuredGrid = document.getElementById('featured-grid');
+      var featuredSection = document.getElementById('featured-section');
+      var articlesGrid = document.getElementById('articles-grid');
+      var loadingSkeleton = document.getElementById('loading-skeleton');
+      var emptyState = document.getElementById('empty-state');
+      var loadMoreWrapper = document.getElementById('load-more-wrapper');
+      var loadMoreBtn = document.getElementById('load-more-btn');
+      var resultCount = document.getElementById('result-count');
+
+      // ── Gradient classes for placeholders ──
+      var gradientClasses = ['gradient-1', 'gradient-2', 'gradient-3', 'gradient-4', 'gradient-5', 'gradient-6'];
+
+      function getGradientClass(index) {
+        return gradientClasses[index % gradientClasses.length];
+      }
+
+      // ── Date Formatter ──
+      function formatDate(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+      }
+
+      // ── Escape HTML ──
+      function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // ── Build Featured Card HTML ──
+      function buildFeaturedCard(article, index) {
+        var imageHtml;
+        if (article.imageUrl) {
+          imageHtml = '<img class="featured-img" src="' + escapeHtml(article.imageUrl) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;featured-gradient ' + getGradientClass(index) + '&quot;>' + escapeHtml(article.sourceName || 'News') + '</div>\'">';
+        } else {
+          imageHtml = '<div class="featured-gradient ' + getGradientClass(index) + '">' + escapeHtml(article.sourceName || 'News') + '</div>';
+        }
+
+        var sourceIconHtml = '';
+        if (article.sourceIcon) {
+          sourceIconHtml = '<img src="' + escapeHtml(article.sourceIcon) + '" alt="" onerror="this.style.display=\'none\'">';
+        }
+
+        return '<a class="featured-card" href="' + escapeHtml(article.sourceUrl) + '" target="_blank" rel="noopener noreferrer">'
+          + imageHtml
+          + '<div class="featured-body">'
+          + '<div class="source-badge">' + sourceIconHtml + escapeHtml(article.sourceName) + '</div>'
+          + '<h3>' + escapeHtml(article.title) + '</h3>'
+          + '<p class="excerpt">' + escapeHtml(article.excerpt) + '</p>'
+          + '<p class="featured-meta">' + formatDate(article.publishedAt) + '</p>'
+          + '</div>'
+          + '</a>';
+      }
+
+      // ── Build Article Card HTML ──
+      function buildArticleCard(article, index) {
+        var imageHtml;
+        if (article.imageUrl) {
+          imageHtml = '<img class="article-thumb" src="' + escapeHtml(article.imageUrl) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;article-thumb-placeholder ' + getGradientClass(index) + '&quot;>' + escapeHtml(article.sourceName || 'News') + '</div>\'">';
+        } else {
+          imageHtml = '<div class="article-thumb-placeholder ' + getGradientClass(index) + '">' + escapeHtml(article.sourceName || 'News') + '</div>';
+        }
+
+        var sourceIconHtml = '';
+        if (article.sourceIcon) {
+          sourceIconHtml = '<img src="' + escapeHtml(article.sourceIcon) + '" alt="" onerror="this.style.display=\'none\'">';
+        }
+
+        return '<a class="article-card" href="' + escapeHtml(article.sourceUrl) + '" target="_blank" rel="noopener noreferrer">'
+          + imageHtml
+          + '<div class="article-body">'
+          + '<div class="source-badge">' + sourceIconHtml + escapeHtml(article.sourceName) + '</div>'
+          + '<h3>' + escapeHtml(article.title) + '</h3>'
+          + '<p class="excerpt">' + escapeHtml(article.excerpt) + '</p>'
+          + '<div class="article-footer">'
+          + '<span class="article-date">' + formatDate(article.publishedAt) + '</span>'
+          + '<span class="category-tag">' + escapeHtml(article.category) + '</span>'
+          + '</div>'
+          + '</div>'
+          + '</a>';
+      }
+
+      // ── Fetch Featured Articles ──
+      function fetchFeatured() {
+        fetch(API + '/blog/posts/featured?limit=4')
+          .then(function(res) { return res.json(); })
+          .then(function(articles) {
+            if (!articles || !articles.length) {
+              featuredSection.style.display = 'none';
+              return;
+            }
+            featuredSection.style.display = '';
+            var html = '';
+            for (var i = 0; i < articles.length; i++) {
+              html += buildFeaturedCard(articles[i], i);
+            }
+            featuredGrid.innerHTML = html;
+          })
+          .catch(function(err) {
+            console.error('Error fetching featured articles:', err);
+            featuredSection.style.display = 'none';
+          });
+      }
+
+      // ── Fetch Categories ──
+      function fetchCategories() {
+        fetch(API + '/blog/categories')
+          .then(function(res) { return res.json(); })
+          .then(function(categories) {
+            if (!categories || !categories.length) return;
+
+            // Compute total count for "All"
+            var allCount = 0;
+            for (var i = 0; i < categories.length; i++) {
+              allCount += categories[i].count;
+            }
+
+            var html = '<button class="category-pill active" data-category="All" role="tab" aria-selected="true">All <span class="pill-count">(' + allCount + ')</span></button>';
+
+            // Define the desired pill order
+            var ordered = ['Industry', 'Technology', 'Regulations', 'Market', 'Equipment', 'Safety'];
+            var catMap = {};
+            for (var j = 0; j < categories.length; j++) {
+              catMap[categories[j].category] = categories[j].count;
+            }
+
+            for (var k = 0; k < ordered.length; k++) {
+              var cat = ordered[k];
+              var count = catMap[cat];
+              if (count !== undefined) {
+                html += '<button class="category-pill" data-category="' + escapeHtml(cat) + '" role="tab" aria-selected="false">'
+                  + escapeHtml(cat) + ' <span class="pill-count">(' + count + ')</span></button>';
+              }
+            }
+
+            // Add any categories not in the ordered list
+            for (var m = 0; m < categories.length; m++) {
+              if (ordered.indexOf(categories[m].category) === -1) {
+                html += '<button class="category-pill" data-category="' + escapeHtml(categories[m].category) + '" role="tab" aria-selected="false">'
+                  + escapeHtml(categories[m].category) + ' <span class="pill-count">(' + categories[m].count + ')</span></button>';
+              }
+            }
+
+            categoryPills.innerHTML = html;
+            bindCategoryClicks();
+          })
+          .catch(function(err) {
+            console.error('Error fetching categories:', err);
+          });
+      }
+
+      // ── Bind Category Pill Clicks ──
+      function bindCategoryClicks() {
+        var pills = categoryPills.querySelectorAll('.category-pill');
+        for (var i = 0; i < pills.length; i++) {
+          pills[i].addEventListener('click', function() {
+            var cat = this.getAttribute('data-category');
+            if (cat === state.currentCategory) return;
+
+            // Update active state
+            var allPills = categoryPills.querySelectorAll('.category-pill');
+            for (var j = 0; j < allPills.length; j++) {
+              allPills[j].classList.remove('active');
+              allPills[j].setAttribute('aria-selected', 'false');
+            }
+            this.classList.add('active');
+            this.setAttribute('aria-selected', 'true');
+
+            state.currentCategory = cat;
+            state.currentPage = 1;
+            state.articles = [];
+            articlesGrid.innerHTML = '';
+            fetchArticles(false);
+          });
+        }
+      }
+
+      // ── Fetch Articles ──
+      function fetchArticles(append) {
+        if (state.isLoading) return;
+        state.isLoading = true;
+
+        if (!append) {
+          loadingSkeleton.style.display = '';
+          articlesGrid.style.display = 'none';
+          emptyState.style.display = 'none';
+          loadMoreWrapper.style.display = 'none';
+        } else {
+          loadMoreBtn.classList.add('loading');
+          loadMoreBtn.disabled = true;
+        }
+
+        var url = API + '/blog/posts?page=' + state.currentPage + '&limit=12';
+        if (state.currentCategory && state.currentCategory !== 'All') {
+          url += '&category=' + encodeURIComponent(state.currentCategory);
+        }
+        if (state.currentSearch) {
+          url += '&search=' + encodeURIComponent(state.currentSearch);
+        }
+
+        fetch(url)
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            state.isLoading = false;
+            state.totalPages = data.totalPages || 1;
+            state.totalArticles = data.total || 0;
+            loadingSkeleton.style.display = 'none';
+
+            if (!data.articles || data.articles.length === 0) {
+              if (!append) {
+                emptyState.style.display = '';
+                articlesGrid.style.display = 'none';
+                loadMoreWrapper.style.display = 'none';
+                resultCount.textContent = '';
+              }
+              loadMoreBtn.classList.remove('loading');
+              loadMoreBtn.disabled = false;
+              return;
+            }
+
+            emptyState.style.display = 'none';
+            articlesGrid.style.display = '';
+
+            // Update result count
+            resultCount.textContent = state.totalArticles + ' article' + (state.totalArticles !== 1 ? 's' : '');
+
+            var html = '';
+            var startIndex = state.articles.length;
+            for (var i = 0; i < data.articles.length; i++) {
+              state.articles.push(data.articles[i]);
+              html += buildArticleCard(data.articles[i], startIndex + i);
+            }
+
+            if (append) {
+              articlesGrid.insertAdjacentHTML('beforeend', html);
+            } else {
+              articlesGrid.innerHTML = html;
+            }
+
+            // Show/hide Load More
+            if (state.currentPage < state.totalPages) {
+              loadMoreWrapper.style.display = '';
+            } else {
+              loadMoreWrapper.style.display = 'none';
+            }
+
+            loadMoreBtn.classList.remove('loading');
+            loadMoreBtn.disabled = false;
+          })
+          .catch(function(err) {
+            console.error('Error fetching articles:', err);
+            state.isLoading = false;
+            loadingSkeleton.style.display = 'none';
+            if (!append && state.articles.length === 0) {
+              emptyState.style.display = '';
+            }
+            loadMoreBtn.classList.remove('loading');
+            loadMoreBtn.disabled = false;
+          });
+      }
+
+      // ── Load More ──
+      loadMoreBtn.addEventListener('click', function() {
+        state.currentPage++;
+        fetchArticles(true);
+      });
+
+      // ── Search (debounced 300ms) ──
+      var searchTimeout = null;
+      searchInput.addEventListener('input', function() {
+        var val = this.value.trim();
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+          state.currentSearch = val;
+          state.currentPage = 1;
+          state.articles = [];
+          articlesGrid.innerHTML = '';
+
+          // If searching, hide featured section; show it back when search is cleared
+          if (val) {
+            featuredSection.style.display = 'none';
+          } else {
+            fetchFeatured();
+          }
+
+          fetchArticles(false);
+        }, 300);
+      });
+
+      // ── Navbar scroll effect ──
       var navbar = document.querySelector('.navbar');
       function handleNavScroll() {
         if ((window.scrollY || window.pageYOffset) > 50) {
@@ -902,6 +1466,7 @@
       }
       window.addEventListener('scroll', handleNavScroll, { passive: true });
 
+      // ── Mobile menu ──
       var hamburger = document.querySelector('.hamburger');
       var mobileMenu = document.querySelector('.mobile-menu');
       if (hamburger && mobileMenu) {
@@ -921,6 +1486,7 @@
         });
       }
 
+      // ── Fade-in observer ──
       var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!prefersReducedMotion && 'IntersectionObserver' in window) {
         var fadeObserver = new IntersectionObserver(function(entries) {
@@ -940,6 +1506,7 @@
         });
       }
 
+      // ── Resize handler for mobile menu ──
       window.addEventListener('resize', function() {
         if (window.innerWidth > 768 && mobileMenu && mobileMenu.classList.contains('open')) {
           mobileMenu.classList.remove('open');
@@ -949,6 +1516,7 @@
         }
       });
 
+      // ── Escape key for mobile menu ──
       if (mobileMenu) {
         mobileMenu.addEventListener('keydown', function(e) {
           if (e.key === 'Escape') {
@@ -960,30 +1528,17 @@
           }
         });
       }
+
+      // ── Initial Load ──
+      fetchFeatured();
+      fetchCategories();
+      fetchArticles(false);
+      bindCategoryClicks();
+
     })();
-
-    /* Blog signup handler */
-    function handleBlogSignup(e) {
-      e.preventDefault();
-      var input = e.target.querySelector('input[type="email"]');
-      var btn = e.target.querySelector('.blog-signup-btn');
-      var email = input.value;
-
-      btn.textContent = 'Subscribed!';
-      btn.style.background = '#059669';
-      input.value = '';
-      input.disabled = true;
-      btn.disabled = true;
-
-      setTimeout(function() {
-        btn.textContent = 'Notify Me';
-        btn.style.background = '#C8963E';
-        input.disabled = false;
-        btn.disabled = false;
-      }, 3000);
-    }
   </script>
 
+<link rel="stylesheet" href="/shared/css/marco-polo.css">
 <script src="/shared/js/marco-polo.js"></script>
 </body>
 </html>

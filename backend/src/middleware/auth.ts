@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
+import { isTokenBlacklisted } from "../utils/tokenBlacklist";
 
 export interface AuthRequest extends Request<any, any, any, any> {
   user?: {
@@ -11,6 +12,7 @@ export interface AuthRequest extends Request<any, any, any, any> {
     firstName?: string;
     lastName?: string;
   };
+  token?: string; // Store raw token for blacklist on logout
 }
 
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
@@ -22,11 +24,21 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     res.status(401).json({ error: "No token provided" });
     return;
   }
+
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+    // Explicit algorithm to prevent algorithm confusion attacks
+    const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId: string };
+
+    // Check if token has been revoked (logout blacklist)
+    const blacklisted = await isTokenBlacklisted(token);
+    if (blacklisted) {
+      res.status(401).json({ error: "Token has been revoked" });
+      return;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, role: true, firstName: true, lastName: true },
+      select: { id: true, email: true, role: true, firstName: true, lastName: true, isActive: true },
     });
 
     if (!user) {
@@ -34,7 +46,14 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       return;
     }
 
+    // Check if user account is still active
+    if (!user.isActive) {
+      res.status(403).json({ error: "Account has been deactivated" });
+      return;
+    }
+
     req.user = user;
+    req.token = token; // Store for logout blacklisting
     next();
   } catch {
     res.status(401).json({ error: "Invalid token" });

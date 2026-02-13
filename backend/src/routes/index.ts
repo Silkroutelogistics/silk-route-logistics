@@ -50,6 +50,7 @@ import mileageRoutes from "./mileage";
 import websiteRoutes from "./website";
 import analyticsRoutes from "./analytics";
 import aiRoutes from "./ai";
+import blogRoutes from "./blog";
 
 const router = Router();
 
@@ -137,6 +138,7 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
 
 // --- Public Routes (no auth) ---
 router.use("/tracking", trackingRoutes);
+router.use("/blog", blogRoutes);
 router.use("/", websiteRoutes);
 
 // --- API Routes ---
