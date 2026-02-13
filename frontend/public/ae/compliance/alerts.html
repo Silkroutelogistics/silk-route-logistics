@@ -522,12 +522,6 @@
 
     /* ======== INIT ======== */
     (function init() {
-      var token = localStorage.getItem("token");
-      if (!token) {
-        window.location.href = "/auth/login";
-        return;
-      }
-
       loadUser();
       bindSeverityFilters();
       readUrlParams();

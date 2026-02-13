@@ -13,26 +13,6 @@
   <style>
     /* ========== Compliance Dashboard Styles ========== */
 
-    /* --- Page Header --- */
-    .page-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .page-header h1 {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .page-header-sub {
-      font-size: 13px;
-      color: var(--gray-400);
-      margin-top: 2px;
-    }
-
     /* --- Buttons --- */
     .btn-primary {
       display: inline-flex; align-items: center; gap: 6px;
@@ -105,7 +85,7 @@
     .comp-kpi-card {
       background: var(--white);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-md);
       padding: 20px;
       text-align: center;
       position: relative;
@@ -165,7 +145,7 @@
     .chart-card {
       background: var(--white);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-md);
       padding: 20px;
     }
     .chart-card h3 {
@@ -205,7 +185,7 @@
     .verified-card {
       background: var(--white);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-md);
       padding: 20px;
       max-height: 340px;
       display: flex;
@@ -262,7 +242,7 @@
     .table-wrap {
       background: var(--white);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-md);
       overflow: hidden;
     }
     .comp-table {
@@ -410,6 +390,17 @@
 
     <!-- Main Content -->
     <main class="main">
+      <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1>Compliance Dashboard</h1>
+          <p>Carrier compliance monitoring and enforcement</p>
+        </div>
+        <button class="btn-primary" id="scan-btn" onclick="runFullScan()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Run Full Scan
+        </button>
+      </div>
+
       <!-- Loading State -->
       <div id="loading-state" class="loading-state">
         <div class="loading-spinner"></div>
@@ -417,19 +408,7 @@
       </div>
 
       <!-- Dashboard Content -->
-      <div id="dashboard-content" style="display:none;padding:24px 32px;">
-
-        <!-- Page Header -->
-        <div class="page-header">
-          <div>
-            <h1>Compliance Dashboard</h1>
-            <div class="page-header-sub">Carrier compliance monitoring and enforcement</div>
-          </div>
-          <button class="btn-primary" id="scan-btn" onclick="runFullScan()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Run Full Scan
-          </button>
-        </div>
+      <div id="dashboard-content" style="display:none;padding:0 32px 24px;">
 
         <!-- Critical Alerts Banner -->
         <div class="critical-banner" id="critical-banner">
@@ -541,9 +520,6 @@
   <script src="/ae/js/api.js"></script>
   <script>
     (function() {
-      var token = localStorage.getItem('token');
-      if (!token) { window.location.href = '/auth/login'; return; }
-
       var healthChartInst = null;
 
       // ========== AUTH CHECK ==========
