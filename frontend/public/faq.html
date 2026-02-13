@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — Silk Route Logistics | Frequently Asked Questions</title>
+  <meta name="description" content="Find answers to frequently asked questions about Silk Route Logistics freight brokerage services for shippers, carriers, technology, and billing.">
+  <meta name="keywords" content="freight brokerage FAQ, logistics questions, shipper FAQ, carrier FAQ, Silk Route Logistics">
+  <meta name="author" content="Silk Route Logistics LLC">
+  <meta property="og:title" content="FAQ — Silk Route Logistics">
+  <meta property="og:description" content="Answers to common questions about our freight brokerage services.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0D1B2A;
+      color: #E0E7EE;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'DM Serif Display', serif;
+      line-height: 1.2;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; height: auto; }
+    ul { list-style: none; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #C8963E;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 5vw, 48px);
+      color: #FFFFFF;
+      margin-bottom: 20px;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fade-in-delay-1 { transition-delay: 0.1s; }
+    .fade-in-delay-2 { transition-delay: 0.2s; }
+    .fade-in-delay-3 { transition-delay: 0.3s; }
+
+    /* NAVIGATION */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(13, 27, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .navbar.scrolled {
+      background: rgba(13, 27, 42, 0.95);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .navbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .navbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .navbar-logo-bar {
+      width: 3px; height: 36px;
+      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+    }
+
+    .navbar-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: #FFFFFF;
+      letter-spacing: 1.5px;
+      line-height: 1.2;
+    }
+
+    .navbar-logo-text span {
+      display: block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
+      color: #C8963E;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    .navbar-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: #8899AA;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+
+    .navbar-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 2px;
+      background: #C8963E;
+      transition: width 0.3s ease;
+    }
+
+    .navbar-links a:hover,
+    .navbar-links a.active { color: #FFFFFF; }
+
+    .navbar-links a:hover::after,
+    .navbar-links a.active::after { width: 100%; }
+
+    .navbar-links a:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    .navbar-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      background: #C8963E;
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: background 0.3s ease, transform 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .navbar-cta:hover {
+      background: #B8862E;
+      transform: translateY(-1px);
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      z-index: 1001;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 24px; height: 2px;
+      background: #E0E7EE;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 72px; left: 0; right: 0; bottom: 0;
+      background: rgba(13, 27, 42, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 999;
+      padding: 40px 24px;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .mobile-menu.open { display: flex; }
+
+    .mobile-menu a {
+      font-size: 20px;
+      font-weight: 500;
+      color: #8899AA;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: color 0.3s ease;
+    }
+
+    .mobile-menu a:hover,
+    .mobile-menu a.active { color: #FFFFFF; }
+
+    .mobile-menu .navbar-cta {
+      margin-top: 24px;
+      text-align: center;
+      justify-content: center;
+      padding: 16px 24px;
+      font-size: 16px;
+    }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      padding: 180px 0 80px;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      bottom: -100px; left: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.05) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .hero-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #C8963E;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 64px);
+      color: #FFFFFF;
+      margin-bottom: 24px;
+      line-height: 1.1;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: #C8963E;
+    }
+
+    .hero-text {
+      font-size: 18px;
+      color: #8899AA;
+      line-height: 1.8;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .hero-divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+      margin: 40px auto 0;
+    }
+
+    /* FAQ SECTION */
+    .faq-section {
+      padding: 60px 0 100px;
+    }
+
+    .faq-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-category {
+      margin-bottom: 48px;
+    }
+
+    .faq-category-title {
+      font-size: 28px;
+      color: #FFFFFF;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(200, 150, 62, 0.2);
+    }
+
+    .faq-item {
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .faq-item:hover {
+      border-color: rgba(200, 150, 62, 0.2);
+    }
+
+    .faq-item.active {
+      border-color: rgba(200, 150, 62, 0.3);
+      box-shadow: 0 4px 20px rgba(200, 150, 62, 0.06);
+    }
+
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      background: none;
+      border: none;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: color 0.3s ease;
+      gap: 16px;
+    }
+
+    .faq-question:hover {
+      color: #C8963E;
+    }
+
+    .faq-question:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: -2px;
+      border-radius: 12px;
+    }
+
+    .faq-icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(200, 150, 62, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease, background 0.3s ease;
+    }
+
+    .faq-item.active .faq-icon {
+      transform: rotate(45deg);
+      background: rgba(200, 150, 62, 0.2);
+    }
+
+    .faq-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+
+    .faq-item.active .faq-answer {
+      max-height: 500px;
+    }
+
+    .faq-answer-inner {
+      padding: 0 24px 24px;
+      font-size: 15px;
+      color: #A0AEBB;
+      line-height: 1.8;
+    }
+
+    .faq-answer-inner a {
+      color: #C8963E;
+      text-decoration: underline;
+      text-decoration-color: rgba(200, 150, 62, 0.4);
+      transition: text-decoration-color 0.3s ease;
+    }
+
+    .faq-answer-inner a:hover {
+      text-decoration-color: #C8963E;
+    }
+
+    /* CTA */
+    .cta-section {
+      padding: 0 0 100px;
+      text-align: center;
+    }
+
+    .cta-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 24px;
+      padding: 60px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -100px; left: 50%;
+      transform: translateX(-50%);
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.06) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .cta-box h2 {
+      font-size: clamp(28px, 4vw, 36px);
+      color: #FFFFFF;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-box p {
+      font-size: 17px;
+      color: #8899AA;
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: #C8963E;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-primary:hover {
+      background: #B8862E;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(200, 150, 62, 0.3);
+    }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 80px 0 40px;
+      position: relative;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 60px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: #667788;
+      line-height: 1.7;
+      margin-top: 16px;
+      max-width: 280px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-logo-bar {
+      width: 3px; height: 30px;
+      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+    }
+
+    .footer-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px;
+      color: #FFFFFF;
+      letter-spacing: 1px;
+    }
+
+    .footer-col h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #C8963E;
+      margin-bottom: 20px;
+    }
+
+    .footer-col ul li { margin-bottom: 12px; }
+
+    .footer-col ul li a {
+      font-size: 14px;
+      color: #667788;
+      transition: color 0.3s ease;
+    }
+
+    .footer-col ul li a:hover { color: #FFFFFF; }
+
+    .footer-col ul li a:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-bottom p { font-size: 13px; color: #4A5568; }
+
+    .footer-bottom-links { display: flex; gap: 24px; }
+
+    .footer-bottom-links a {
+      font-size: 13px;
+      color: #4A5568;
+      transition: color 0.3s ease;
+    }
+
+    .footer-bottom-links a:hover { color: #C8963E; }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
+    }
+
+    @media (max-width: 768px) {
+      .navbar-links, .navbar-cta-desktop { display: none; }
+      .hamburger { display: flex; }
+      .hero { padding: 140px 0 60px; }
+      .hero-text { font-size: 16px; }
+      .faq-section { padding: 40px 0 70px; }
+      .faq-category-title { font-size: 24px; }
+      .faq-question { font-size: 15px; padding: 18px 20px; }
+      .faq-answer-inner { padding: 0 20px 20px; }
+      .cta-box { padding: 40px 24px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      .footer-bottom { flex-direction: column; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 34px; }
+      .navbar-inner { padding: 0 16px; }
+      .container { padding: 0 16px; }
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -100%; left: 16px;
+      background: #C8963E;
+      color: #FFFFFF;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      z-index: 10000;
+      transition: top 0.3s ease;
+    }
+
+    .skip-link:focus { top: 16px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .fade-in { opacity: 1; transform: none; transition: none; }
+      .faq-answer { transition: none; }
+      .faq-icon { transition: none; }
+      .faq-item { transition: none; }
+      .navbar-links a::after { transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-logo" aria-label="Silk Route Logistics - Home">
+        <div class="navbar-logo-bar" aria-hidden="true"></div>
+        <div class="navbar-logo-text">
+          SILK ROUTE
+          <span>LOGISTICS</span>
+        </div>
+      </a>
+
+      <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/shippers">Shippers</a>
+        <a href="/carriers">Carriers</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+        <a href="/tracking">Tracking</a>
+      </div>
+
+      <a href="/shippers" class="navbar-cta navbar-cta-desktop">Get a Quote</a>
+
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="mobile-menu" role="menu">
+      <a href="/" role="menuitem">Home</a>
+      <a href="/shippers" role="menuitem">Shippers</a>
+      <a href="/carriers" role="menuitem">Carriers</a>
+      <a href="/about" role="menuitem">About</a>
+      <a href="/contact" role="menuitem">Contact</a>
+      <a href="/tracking" role="menuitem">Tracking</a>
+      <a href="/shippers" class="navbar-cta" role="menuitem">Get a Quote</a>
+    </div>
+  </nav>
+
+  <main id="main-content">
+
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-content">
+        <p class="hero-label fade-in">Help Center</p>
+        <h1 id="hero-heading" class="fade-in fade-in-delay-1">Frequently Asked <em>Questions</em></h1>
+        <p class="hero-text fade-in fade-in-delay-2">
+          Find answers to common questions about our freight brokerage services, technology platform, and partnership programs.
+        </p>
+        <div class="hero-divider fade-in fade-in-delay-3" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="faq-section" aria-label="Frequently asked questions">
+      <div class="container">
+        <div class="faq-content">
+
+          <!-- GENERAL -->
+          <div class="faq-category fade-in">
+            <h2 class="faq-category-title">General</h2>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What is Silk Route Logistics?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Silk Route Logistics (SRL) is a technology-driven freight brokerage that connects shippers with vetted, reliable carriers across North America. We use advanced technology, including our AI-powered Marco Polo platform, to provide real-time visibility, competitive pricing, and exceptional service on every shipment.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>Where is SRL located?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Our headquarters is in Kalamazoo, Michigan, strategically positioned in the heart of the Midwest freight corridor. This central location allows us to efficiently serve shippers and carriers across all 48 contiguous states.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What areas do you serve?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  SRL provides freight brokerage services across all 48 contiguous United States. We have optimized lane coverage in major freight corridors including the Midwest, Northeast, Southeast, Southwest, and West Coast. Whether you're shipping coast-to-coast or regionally, we have the carrier network to get it done.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SHIPPERS -->
+          <div class="faq-category fade-in">
+            <h2 class="faq-category-title">Shippers</h2>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>How do I get a freight quote?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Getting a quote is simple. Visit our <a href="/shippers">Shippers page</a> and fill out the quote request form with your shipment details including origin, destination, commodity, and weight. Our team typically responds within 15 minutes during business hours. You can also call us directly at <a href="tel:+12695550175">(269) 555-0175</a>.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What types of freight do you handle?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  We handle a wide range of freight types including dry van (general merchandise, packaged goods), refrigerated (temperature-controlled perishables), flatbed (oversized, construction materials), LTL (less-than-truckload partial shipments), and specialized freight (hazmat, high-value, expedited). Our team has experience across virtually every commodity.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>How do I track my shipment?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  You can track your shipment in real-time through our <a href="/tracking">tracking page</a> using your load number or BOL reference. Our platform provides live GPS updates, estimated arrival times, and automatic milestone notifications. You will also receive proactive status updates from your dedicated account representative.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARRIERS -->
+          <div class="faq-category fade-in">
+            <h2 class="faq-category-title">Carriers</h2>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>How do I sign up as a carrier?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Visit our <a href="/carriers">Carriers page</a> and complete the carrier onboarding form. You will need your MC number, DOT number, insurance certificates, and W-9. Our compliance team will verify your credentials, and once approved, you can start hauling loads immediately. The process typically takes 24-48 hours.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What is the Caravan Loyalty Program?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  The Caravan Loyalty Program is our carrier rewards system designed to recognize and reward our most reliable partners. As you complete loads with SRL, you advance through tiers (Bronze, Silver, Gold, Platinum) that unlock benefits like priority load access, reduced Quick Pay fees, fuel discounts, and dedicated support. The more you haul with us, the more you earn.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>Do you offer Quick Pay for carriers?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Yes. We offer Quick Pay options that get you paid within 2-5 business days after delivery, subject to a small processing fee. Standard payment terms are Net 30. Carriers enrolled in higher tiers of our Caravan Loyalty Program enjoy reduced Quick Pay fees. Contact your carrier representative or visit the carrier portal to enroll.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TECHNOLOGY -->
+          <div class="faq-category fade-in">
+            <h2 class="faq-category-title">Technology</h2>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What is Marco Polo AI?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Marco Polo is our proprietary AI assistant built into the SRL platform. Named after the famous explorer, Marco Polo helps with intelligent load matching, market rate analysis, shipment tracking inquiries, and operational support. It is available 24/7 to both shippers and carriers, providing instant answers and proactive insights to streamline your logistics operations.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>Do you have a mobile app?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Our platform is fully responsive and optimized for mobile browsers, so you can access all features from your phone or tablet. A dedicated mobile app is currently in development and will be available soon. In the meantime, you can add our website to your home screen for an app-like experience.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>How does your real-time tracking work?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Our tracking system integrates with carrier ELD devices and GPS systems to provide real-time location updates. You will see live position updates, estimated time of arrival, and automatic notifications at key milestones (dispatched, picked up, in transit, delivered). EDI integration (204, 990, 214, 210) ensures seamless data exchange between systems.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BILLING -->
+          <div class="faq-category fade-in">
+            <h2 class="faq-category-title">Billing</h2>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What are your payment terms?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  Standard payment terms for shippers are Net 30 from the date of delivery. For carriers, standard payment is also Net 30 with Quick Pay options available for faster processing. All invoices include detailed documentation including rate confirmation, bill of lading, and proof of delivery. Custom payment terms may be available for high-volume accounts.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>How does carrier factoring work with SRL?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  We work with all major factoring companies. If you factor your invoices, simply provide us with your factoring company's information and a Notice of Assignment (NOA). We will direct payment to your factoring company per the terms of the NOA. There are no additional fees from SRL for working with factoring companies.
+                </div>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question" aria-expanded="false">
+                <span>What payment methods do you accept?</span>
+                <span class="faq-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              </button>
+              <div class="faq-answer" role="region">
+                <div class="faq-answer-inner">
+                  We accept payment via ACH transfer, wire transfer, and company check. For carrier payments, ACH is the preferred and fastest method. All payment details are managed securely through our platform. Contact our billing team at <a href="mailto:billing@silkroutelogistics.ai">billing@silkroutelogistics.ai</a> for specific payment inquiries.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section" aria-labelledby="cta-heading">
+      <div class="container">
+        <div class="cta-box fade-in">
+          <h2 id="cta-heading">Still Have Questions?</h2>
+          <p>Our team is here to help. Reach out and we will get back to you within 15 minutes.</p>
+          <a href="/contact" class="btn-primary">Contact Us</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="footer-logo-bar" aria-hidden="true"></div>
+            <div class="footer-logo-text">SILK ROUTE LOGISTICS</div>
+          </div>
+          <p>
+            A technology-driven freight brokerage connecting shippers and carriers
+            across North America with transparency, reliability, and innovation.
+          </p>
+          <p style="margin-top: 12px; color: #4A5568;">
+            Silk Route Logistics LLC<br>
+            Kalamazoo, MI<br>
+            (269) 555-0175
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/contact">Contact</a></li>
+            <li><a href="/tracking">Track Shipment</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Services</h4>
+          <ul>
+            <li><a href="/shippers">Shipper Solutions</a></li>
+            <li><a href="/carriers">Carrier Solutions</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics LLC. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      'use strict';
+
+      /* Navbar scroll */
+      var navbar = document.querySelector('.navbar');
+      function handleNavScroll() {
+        if ((window.scrollY || window.pageYOffset) > 50) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+      }
+      window.addEventListener('scroll', handleNavScroll, { passive: true });
+
+      /* Mobile menu */
+      var hamburger = document.querySelector('.hamburger');
+      var mobileMenu = document.querySelector('.mobile-menu');
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', function() {
+          var isOpen = mobileMenu.classList.toggle('open');
+          hamburger.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          document.body.style.overflow = isOpen ? 'hidden' : '';
+        });
+        mobileMenu.querySelectorAll('a').forEach(function(link) {
+          link.addEventListener('click', function() {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+          });
+        });
+      }
+
+      /* Fade in */
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+        var fadeObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              fadeObserver.unobserve(entry.target);
+            }
+          });
+        }, { root: null, rootMargin: '0px 0px -60px 0px', threshold: 0.1 });
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          fadeObserver.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+
+      /* FAQ Accordion */
+      var faqItems = document.querySelectorAll('.faq-item');
+      faqItems.forEach(function(item) {
+        var question = item.querySelector('.faq-question');
+        question.addEventListener('click', function() {
+          var isActive = item.classList.contains('active');
+
+          // Close all items in the same category
+          var category = item.closest('.faq-category');
+          category.querySelectorAll('.faq-item.active').forEach(function(activeItem) {
+            activeItem.classList.remove('active');
+            activeItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+          });
+
+          // Toggle clicked item
+          if (!isActive) {
+            item.classList.add('active');
+            question.setAttribute('aria-expanded', 'true');
+          }
+        });
+      });
+
+      /* Resize handler */
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 768 && mobileMenu && mobileMenu.classList.contains('open')) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+
+      if (mobileMenu) {
+        mobileMenu.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            hamburger.focus();
+          }
+        });
+      }
+    })();
+  </script>
+
+<script src="/shared/js/marco-polo.js"></script>
+</body>
+</html>

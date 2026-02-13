@@ -44,7 +44,7 @@ export function initCronJobs() {
                 message: `Load ${load.referenceNumber} has no check call in the last 2 hours.`,
                 link: `/dashboard/tracking?load=${load.id}`,
               },
-            }).catch(() => {}); // Non-blocking
+            }).catch(err => console.error('[Cron] Error:', err.message));
           }
         }
       }
@@ -213,5 +213,79 @@ export function initCronJobs() {
     }
   });
 
-  console.log("[Cron] All scheduled jobs initialized");
+  // ─── AI Learning Cycles ─────────────────────────────────────────
+
+  // Daily at 4:00 AM: Rate Intelligence learning
+  cron.schedule("0 4 * * *", async () => {
+    try {
+      console.log("[Cron AI] Running Rate Intelligence learning cycle...");
+      const { runRateLearningCycle } = require("../services/rateIntelligenceService");
+      const result = await runRateLearningCycle();
+      console.log("[Cron AI] Rate Intelligence complete:", result);
+    } catch (err) {
+      console.error("[Cron AI] Rate Intelligence error:", err);
+    }
+  });
+
+  // Daily at 4:15 AM: Carrier Intelligence learning
+  cron.schedule("15 4 * * *", async () => {
+    try {
+      console.log("[Cron AI] Running Carrier Intelligence learning cycle...");
+      const { runCarrierLearningCycle } = require("../services/carrierIntelligenceService");
+      const result = await runCarrierLearningCycle();
+      console.log("[Cron AI] Carrier Intelligence complete:", result);
+    } catch (err) {
+      console.error("[Cron AI] Carrier Intelligence error:", err);
+    }
+  });
+
+  // Weekly Monday at 4:30 AM: Lane Optimizer learning
+  cron.schedule("30 4 * * 1", async () => {
+    try {
+      console.log("[Cron AI] Running Lane Optimizer learning cycle...");
+      const { runLaneLearningCycle } = require("../services/laneOptimizerService");
+      const result = await runLaneLearningCycle();
+      console.log("[Cron AI] Lane Optimizer complete:", result);
+    } catch (err) {
+      console.error("[Cron AI] Lane Optimizer error:", err);
+    }
+  });
+
+  // Weekly Monday at 5:00 AM: Customer Intelligence learning
+  cron.schedule("0 5 * * 1", async () => {
+    try {
+      console.log("[Cron AI] Running Customer Intelligence learning cycle...");
+      const { runCustomerLearningCycle } = require("../services/customerIntelligenceService");
+      const result = await runCustomerLearningCycle();
+      console.log("[Cron AI] Customer Intelligence complete:", result);
+    } catch (err) {
+      console.error("[Cron AI] Customer Intelligence error:", err);
+    }
+  });
+
+  // Daily at 5:30 AM: Compliance Forecast
+  cron.schedule("30 5 * * *", async () => {
+    try {
+      console.log("[Cron AI] Running Compliance Forecast cycle...");
+      const { runComplianceForecastCycle } = require("../services/complianceForecastService");
+      const result = await runComplianceForecastCycle();
+      console.log("[Cron AI] Compliance Forecast complete:", result);
+    } catch (err) {
+      console.error("[Cron AI] Compliance Forecast error:", err);
+    }
+  });
+
+  // Weekly Monday at 6:00 AM: System Self-Optimizer
+  cron.schedule("0 6 * * 1", async () => {
+    try {
+      console.log("[Cron AI] Running System Self-Optimizer...");
+      const { runSystemOptimizationCycle } = require("../services/systemOptimizerService");
+      const result = await runSystemOptimizationCycle();
+      console.log("[Cron AI] System Optimizer complete: Health", result.overallScore, "%");
+    } catch (err) {
+      console.error("[Cron AI] System Optimizer error:", err);
+    }
+  });
+
+  console.log("[Cron] All scheduled jobs initialized (including AI learning cycles)");
 }

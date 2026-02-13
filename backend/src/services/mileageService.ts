@@ -54,7 +54,7 @@ async function getCached(originHash: string, destHash: string, provider: string)
     }
     // Expired — delete stale entry
     if (cached) {
-      await prisma.mileageCache.delete({ where: { id: cached.id } }).catch(() => {});
+      await prisma.mileageCache.delete({ where: { id: cached.id } }).catch(err => console.error('[Mileage] Cache error:', err.message));
     }
   } catch {
     // Cache miss or DB error — proceed to API

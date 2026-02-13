@@ -578,6 +578,10 @@ model CarrierProfile {
   complianceNotes     ComplianceNote[]
   complianceOverrides ComplianceOverride[]
 
+  // AI Learning
+  aiIntelligence      CarrierIntelligence[] @relation("CarrierIntelligence")
+  complianceForecast  ComplianceForecast?   @relation("ComplianceForecast")
+
   @@index([mcNumber])
   @@index([dotNumber])
   @@index([status])
@@ -1293,6 +1297,9 @@ model Customer {
   contacts        CustomerContact[]
   shipperCredit   ShipperCredit?
 
+  // AI Learning
+  aiIntelligence  CustomerIntelligence? @relation("CustomerIntelligence")
+
   @@index([status])
   @@map("customers")
 }
@@ -1993,6 +2000,173 @@ model MileageCache {
   @@index([originHash, destinationHash])
   @@index([expiresAt])
   @@map("mileage_cache")
+}
+
+// ─── AI Auto-Learning Models ───
+
+model RateIntelligence {
+  id              String   @id @default(cuid())
+  laneKey         String   @map("lane_key") // "origin_state:dest_state" or "origin_city:dest_city"
+  equipmentType   String   @map("equipment_type") // DRY_VAN, REEFER, FLATBED
+  avgRate         Float    @map("avg_rate")
+  minRate         Float    @map("min_rate")
+  maxRate         Float    @map("max_rate")
+  medianRate      Float    @map("median_rate")
+  stdDev          Float    @map("std_dev")
+  sampleSize      Int      @map("sample_size")
+  trend           String   @default("STABLE") // RISING, FALLING, STABLE, VOLATILE
+  trendPct        Float    @default(0) @map("trend_pct")
+  predictedRate   Float?   @map("predicted_rate")
+  confidence      Float    @default(0) // 0-1 confidence score
+  seasonalFactor  Float    @default(1.0) @map("seasonal_factor")
+  dayOfWeekFactor Json?    @map("day_of_week_factor") // {mon: 1.02, tue: 0.98, ...}
+  lastTrainedAt   DateTime @default(now()) @map("last_trained_at")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([laneKey, equipmentType])
+  @@index([laneKey])
+  @@index([equipmentType])
+  @@map("rate_intelligence")
+}
+
+model CarrierIntelligence {
+  id                  String   @id @default(cuid())
+  carrierId           String   @map("carrier_id")
+  carrier             CarrierProfile @relation("CarrierIntelligence", fields: [carrierId], references: [id])
+  laneKey             String?  @map("lane_key")
+  reliabilityScore    Float    @default(50) @map("reliability_score") // 0-100
+  onTimeScore         Float    @default(50) @map("on_time_score")
+  communicationScore  Float    @default(50) @map("communication_score")
+  fallOffRisk         Float    @default(0.1) @map("fall_off_risk") // 0-1 probability
+  rateNegotiability   Float    @default(0.5) @map("rate_negotiability") // 0-1 how flexible on rates
+  preferredLanes      Json?    @map("preferred_lanes") // [{lane, score, loads}]
+  performanceTrend    String   @default("STABLE") @map("performance_trend") // IMPROVING, DECLINING, STABLE
+  predictedNextTier   String?  @map("predicted_next_tier")
+  churnRisk           Float    @default(0.1) @map("churn_risk") // 0-1 probability carrier leaves
+  totalDataPoints     Int      @default(0) @map("total_data_points")
+  lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([carrierId, laneKey])
+  @@index([carrierId])
+  @@index([reliabilityScore])
+  @@map("carrier_intelligence")
+}
+
+model LaneIntelligence {
+  id                String   @id @default(cuid())
+  originState       String   @map("origin_state")
+  originCity        String?  @map("origin_city")
+  destState         String   @map("dest_state")
+  destCity          String?  @map("dest_city")
+  laneKey           String   @unique @map("lane_key")
+  totalLoads        Int      @default(0) @map("total_loads")
+  avgTransitDays    Float    @default(0) @map("avg_transit_days")
+  avgMiles          Float    @default(0) @map("avg_miles")
+  avgRate           Float    @default(0) @map("avg_rate")
+  avgRpm            Float    @default(0) @map("avg_rpm")
+  demand            String   @default("MODERATE") // HIGH, MODERATE, LOW
+  demandTrend       String   @default("STABLE") @map("demand_trend") // RISING, FALLING, STABLE
+  bestDaysToBook    Json?    @map("best_days_to_book") // [0,1,2] = Sun, Mon, Tue
+  avgLeadTimeDays   Float    @default(3) @map("avg_lead_time_days")
+  backhaulLaneKey   String?  @map("backhaul_lane_key") // Best return lane
+  backhaulScore     Float    @default(0) @map("backhaul_score") // 0-100
+  deadheadAvgMiles  Float    @default(0) @map("deadhead_avg_miles")
+  competitorDensity String   @default("MEDIUM") @map("competitor_density") // HIGH, MEDIUM, LOW
+  seasonality       Json?    // {jan: 1.1, feb: 0.9, ...}
+  lastTrainedAt     DateTime @default(now()) @map("last_trained_at")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([originState, destState])
+  @@index([demand])
+  @@map("lane_intelligence")
+}
+
+model CustomerIntelligence {
+  id                  String   @id @default(cuid())
+  customerId          String   @unique @map("customer_id")
+  customer            Customer @relation("CustomerIntelligence", fields: [customerId], references: [id])
+  lifetimeValue       Float    @default(0) @map("lifetime_value")
+  avgLoadFrequency    Float    @default(0) @map("avg_load_frequency") // loads per month
+  avgLoadValue        Float    @default(0) @map("avg_load_value")
+  churnRisk           Float    @default(0.1) @map("churn_risk") // 0-1
+  churnReason         String?  @map("churn_reason")
+  growthPotential     Float    @default(0.5) @map("growth_potential") // 0-1
+  paymentReliability  Float    @default(1.0) @map("payment_reliability") // 0-1
+  avgPaymentDays      Float    @default(30) @map("avg_payment_days")
+  preferredLanes      Json?    @map("preferred_lanes")
+  preferredEquipment  Json?    @map("preferred_equipment")
+  seasonalPattern     Json?    @map("seasonal_pattern") // monthly shipping volumes
+  lastShipmentAt      DateTime? @map("last_shipment_at")
+  daysSinceLastLoad   Int      @default(0) @map("days_since_last_load")
+  engagementScore     Float    @default(50) @map("engagement_score") // 0-100
+  recommendedAction   String?  @map("recommended_action") // UPSELL, RETAIN, RE-ENGAGE, NURTURE
+  lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([churnRisk])
+  @@index([engagementScore])
+  @@map("customer_intelligence")
+}
+
+model ComplianceForecast {
+  id                  String   @id @default(cuid())
+  carrierId           String   @map("carrier_id")
+  carrier             CarrierProfile @relation("ComplianceForecast", fields: [carrierId], references: [id])
+  insuranceExpiryRisk Float    @default(0) @map("insurance_expiry_risk") // 0-1
+  authorityRisk       Float    @default(0) @map("authority_risk")
+  safetyRisk          Float    @default(0) @map("safety_risk")
+  overallRisk         Float    @default(0) @map("overall_risk")
+  predictedIssues     Json?    @map("predicted_issues") // [{type, probability, eta}]
+  daysUntilExpiry     Int?     @map("days_until_expiry") // nearest expiring doc
+  recommendedAction   String?  @map("recommended_action")
+  autoAlertSent       Boolean  @default(false) @map("auto_alert_sent")
+  lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([carrierId])
+  @@index([overallRisk])
+  @@map("compliance_forecast")
+}
+
+model AILearningCycle {
+  id              String   @id @default(cuid())
+  serviceName     String   @map("service_name") // rate, carrier, lane, customer, compliance, system
+  cycleType       String   @map("cycle_type") // DAILY, WEEKLY, MONTHLY, ON_DEMAND
+  dataPointsProcessed Int  @default(0) @map("data_points_processed")
+  modelsUpdated   Int      @default(0) @map("models_updated")
+  accuracy        Float?   // Self-measured accuracy improvement
+  durationMs      Int      @default(0) @map("duration_ms")
+  improvements    Json?    // [{metric, before, after, delta}]
+  errors          Json?    // Any issues during learning
+  status          String   @default("COMPLETED") // RUNNING, COMPLETED, FAILED
+  startedAt       DateTime @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@index([serviceName])
+  @@index([startedAt])
+  @@map("ai_learning_cycles")
+}
+
+model SystemMetric {
+  id              String   @id @default(cuid())
+  metricName      String   @map("metric_name")
+  metricValue     Float    @map("metric_value")
+  previousValue   Float?   @map("previous_value")
+  changePercent   Float?   @map("change_percent")
+  category        String   // PERFORMANCE, REVENUE, OPERATIONS, CARRIER, CUSTOMER
+  period          String   // DAILY, WEEKLY, MONTHLY
+  metadata        Json?
+  recordedAt      DateTime @default(now()) @map("recorded_at")
+
+  @@index([metricName, recordedAt])
+  @@index([category])
+  @@map("system_metrics")
 }
 
 // ─── Error Log ───

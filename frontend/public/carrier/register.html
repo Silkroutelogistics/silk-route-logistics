@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrier Registration | Silk Route Logistics</title>
+  <link rel="stylesheet" href="/carrier/css/carrier-console.css">
+  <style>
+    /* ─── Registration-specific styles ─────────────────── */
+    .register-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .register-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--navy-mid);
+    }
+    .register-nav .nav-logo {
+      color: var(--gold);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+    }
+    .register-nav .nav-link {
+      color: var(--slate);
+      font-size: 13px;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .register-nav .nav-link:hover {
+      color: var(--gold);
+    }
+
+    .register-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .register-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: var(--shadow);
+    }
+    .register-card h1 {
+      color: var(--gold);
+      font-size: 22px;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .register-card .register-subtitle {
+      color: var(--slate);
+      font-size: 13px;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    /* ─── Step Indicator ──────────────────────────────── */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 32px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--slate);
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .step-item.active .step-circle {
+      border-color: var(--gold);
+      color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(200, 150, 62, 0.15);
+    }
+    .step-item.done .step-circle {
+      border-color: var(--gold);
+      background: var(--gold);
+      color: var(--navy);
+    }
+    .step-label {
+      font-size: 11px;
+      color: var(--slate);
+      margin-left: 8px;
+      white-space: nowrap;
+      transition: color 0.3s;
+    }
+    .step-item.active .step-label {
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .step-item.done .step-label {
+      color: var(--gold);
+    }
+    .step-connector {
+      width: 40px;
+      height: 2px;
+      background: var(--border);
+      margin: 0 12px;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .step-connector.done {
+      background: var(--gold);
+    }
+
+    /* ─── Form Step Panels ────────────────────────────── */
+    .form-step {
+      display: none;
+    }
+    .form-step.active {
+      display: block;
+    }
+    .form-step h2 {
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .form-step .step-desc {
+      font-size: 12px;
+      color: var(--slate);
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ─── Checkbox / Multi-select groups ──────────────── */
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #CBD5E1;
+      cursor: pointer;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      transition: all 0.15s;
+    }
+    .checkbox-group label:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border);
+    }
+    .checkbox-group input[type="checkbox"] {
+      accent-color: var(--gold);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .checkbox-group input[type="checkbox"]:checked + span {
+      color: var(--gold);
+    }
+
+    /* ─── Navigation Buttons ──────────────────────────── */
+    .form-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      gap: 12px;
+    }
+    .form-nav .btn {
+      min-width: 120px;
+      justify-content: center;
+    }
+
+    /* ─── Error display ───────────────────────────────── */
+    .register-error {
+      background: var(--red-dim);
+      color: var(--red);
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* ─── Success State ───────────────────────────────── */
+    .success-state {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+    }
+    .success-state .success-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--green-dim);
+      border: 2px solid var(--green);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    .success-state h2 {
+      font-size: 20px;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .success-state p {
+      font-size: 14px;
+      color: var(--slate);
+      line-height: 1.6;
+      max-width: 380px;
+      margin: 0 auto 24px;
+    }
+
+    /* ─── Required asterisk ───────────────────────────── */
+    .required::after {
+      content: " *";
+      color: var(--red);
+    }
+
+    /* ─── Responsive ──────────────────────────────────── */
+    @media (max-width: 640px) {
+      .register-card {
+        padding: 24px;
+      }
+      .register-nav {
+        padding: 12px 16px;
+      }
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .checkbox-group {
+        grid-template-columns: 1fr;
+      }
+      .step-label {
+        display: none;
+      }
+      .step-connector {
+        width: 24px;
+        margin: 0 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="register-page">
+    <!-- Navigation -->
+    <nav class="register-nav">
+      <a href="/" class="nav-logo">SILK ROUTE LOGISTICS</a>
+      <a href="/carrier/login.html" class="nav-link">Carrier Sign In</a>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="register-body">
+      <div class="register-card">
+        <h1>SILK ROUTE LOGISTICS</h1>
+        <p class="register-subtitle">Carrier Registration</p>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+          <div class="step-item active" data-step="1">
+            <div class="step-circle">1</div>
+            <span class="step-label">Company Info</span>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step-item" data-step="2">
+            <div class="step-circle">2</div>
+            <span class="step-label">Contact Person</span>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step-item" data-step="3">
+            <div class="step-circle">3</div>
+            <span class="step-label">Fleet Details</span>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="registerError" class="register-error"></div>
+
+        <!-- Step 1: Company Info -->
+        <div class="form-step active" id="step1">
+          <h2>Company Information</h2>
+          <p class="step-desc">Tell us about your carrier company.</p>
+
+          <div class="form-group">
+            <label for="company" class="required">Company Name</label>
+            <input type="text" id="company" class="form-control" placeholder="e.g. Swift Transport LLC" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="mcNumber" class="required">MC Number</label>
+              <input type="text" id="mcNumber" class="form-control" placeholder="e.g. MC-123456" required>
+            </div>
+            <div class="form-group">
+              <label for="dotNumber" class="required">DOT Number</label>
+              <input type="text" id="dotNumber" class="form-control" placeholder="e.g. 1234567" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="companyPhone">Company Phone</label>
+            <input type="tel" id="companyPhone" class="form-control" placeholder="e.g. (555) 123-4567">
+          </div>
+
+          <div class="form-group">
+            <label for="companyEmail" class="required">Company Email</label>
+            <input type="email" id="companyEmail" class="form-control" placeholder="e.g. dispatch@yourcompany.com" required>
+          </div>
+
+          <div class="form-nav">
+            <div></div>
+            <button type="button" class="btn btn-primary" onclick="nextStep(1)">
+              Continue
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Contact Person -->
+        <div class="form-step" id="step2">
+          <h2>Contact Person</h2>
+          <p class="step-desc">Primary contact for your carrier account.</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="firstName" class="required">First Name</label>
+              <input type="text" id="firstName" class="form-control" placeholder="John" required>
+            </div>
+            <div class="form-group">
+              <label for="lastName" class="required">Last Name</label>
+              <input type="text" id="lastName" class="form-control" placeholder="Doe" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="contactEmail" class="required">Email</label>
+            <input type="email" id="contactEmail" class="form-control" placeholder="john@yourcompany.com" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="contactPhone">Phone</label>
+              <input type="tel" id="contactPhone" class="form-control" placeholder="(555) 987-6543">
+            </div>
+            <div class="form-group">
+              <label for="contactTitle">Title / Role</label>
+              <input type="text" id="contactTitle" class="form-control" placeholder="e.g. Owner, Dispatcher">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="required">Password (min 8 characters)</label>
+            <input type="password" id="password" class="form-control" placeholder="Create a secure password" minlength="8" required>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword" class="required">Confirm Password</label>
+            <input type="password" id="confirmPassword" class="form-control" placeholder="Confirm your password" minlength="8" required>
+          </div>
+
+          <div class="form-nav">
+            <button type="button" class="btn btn-secondary" onclick="prevStep(2)">
+              Back
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(2)">
+              Continue
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Fleet Details -->
+        <div class="form-step" id="step3">
+          <h2>Fleet Details</h2>
+          <p class="step-desc">Help us understand your fleet capacity and coverage.</p>
+
+          <div class="form-group">
+            <label for="numTrucks">Number of Trucks</label>
+            <select id="numTrucks" class="form-control">
+              <option value="">Select fleet size</option>
+              <option value="1-5">1 - 5</option>
+              <option value="6-20">6 - 20</option>
+              <option value="21-50">21 - 50</option>
+              <option value="51-100">51 - 100</option>
+              <option value="100+">100+</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="required">Equipment Types</label>
+            <div class="checkbox-group" id="equipmentTypes">
+              <label>
+                <input type="checkbox" name="equipment" value="Dry Van">
+                <span>Dry Van</span>
+              </label>
+              <label>
+                <input type="checkbox" name="equipment" value="Reefer">
+                <span>Reefer</span>
+              </label>
+              <label>
+                <input type="checkbox" name="equipment" value="Flatbed">
+                <span>Flatbed</span>
+              </label>
+              <label>
+                <input type="checkbox" name="equipment" value="Step Deck">
+                <span>Step Deck</span>
+              </label>
+              <label>
+                <input type="checkbox" name="equipment" value="Other">
+                <span>Other</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="required">Operating Regions</label>
+            <div class="checkbox-group" id="operatingRegions">
+              <label>
+                <input type="checkbox" name="region" value="Northeast">
+                <span>Northeast</span>
+              </label>
+              <label>
+                <input type="checkbox" name="region" value="Southeast">
+                <span>Southeast</span>
+              </label>
+              <label>
+                <input type="checkbox" name="region" value="Midwest">
+                <span>Midwest</span>
+              </label>
+              <label>
+                <input type="checkbox" name="region" value="Southwest">
+                <span>Southwest</span>
+              </label>
+              <label>
+                <input type="checkbox" name="region" value="West">
+                <span>West</span>
+              </label>
+              <label>
+                <input type="checkbox" name="region" value="Canada">
+                <span>Canada</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-nav">
+            <button type="button" class="btn btn-secondary" onclick="prevStep(3)">
+              Back
+            </button>
+            <button type="button" class="btn btn-primary" id="submitBtn" onclick="submitRegistration()">
+              Submit Application
+            </button>
+          </div>
+        </div>
+
+        <!-- Success State -->
+        <div class="success-state" id="successState">
+          <div class="success-icon">&#10003;</div>
+          <h2>Application Submitted!</h2>
+          <p>Our team will review your application and get back to you within 24 hours.</p>
+          <a href="/carrier/login.html" class="btn btn-primary" style="justify-content:center">
+            Go to Sign In
+          </a>
+        </div>
+
+        <!-- Already registered link -->
+        <p id="loginLink" style="margin-top:24px;font-size:12px;color:var(--slate);text-align:center">
+          Already registered? <a href="/carrier/login.html">Sign In</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/carrier/js/carrier-api.js"></script>
+  <script>
+    var currentStep = 1;
+    var totalSteps = 3;
+
+    // If already logged in, redirect to dashboard
+    if (CARRIER.isLoggedIn()) {
+      window.location.href = "/carrier/dashboard.html";
+    }
+
+    function showError(msg) {
+      var el = document.getElementById("registerError");
+      el.textContent = msg;
+      el.style.display = "block";
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function hideError() {
+      document.getElementById("registerError").style.display = "none";
+    }
+
+    function validateStep(step) {
+      hideError();
+
+      if (step === 1) {
+        var company = document.getElementById("company").value.trim();
+        var mc = document.getElementById("mcNumber").value.trim();
+        var dot = document.getElementById("dotNumber").value.trim();
+        var email = document.getElementById("companyEmail").value.trim();
+
+        if (!company) { showError("Company Name is required."); return false; }
+        if (!mc) { showError("MC Number is required."); return false; }
+        if (!dot) { showError("DOT Number is required."); return false; }
+        if (!email) { showError("Company Email is required."); return false; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError("Please enter a valid company email address."); return false; }
+        return true;
+      }
+
+      if (step === 2) {
+        var first = document.getElementById("firstName").value.trim();
+        var last = document.getElementById("lastName").value.trim();
+        var contactEmail = document.getElementById("contactEmail").value.trim();
+        var pass = document.getElementById("password").value;
+        var confirm = document.getElementById("confirmPassword").value;
+
+        if (!first) { showError("First Name is required."); return false; }
+        if (!last) { showError("Last Name is required."); return false; }
+        if (!contactEmail) { showError("Contact Email is required."); return false; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) { showError("Please enter a valid contact email address."); return false; }
+        if (!pass) { showError("Password is required."); return false; }
+        if (pass.length < 8) { showError("Password must be at least 8 characters."); return false; }
+        if (pass !== confirm) { showError("Passwords do not match."); return false; }
+        return true;
+      }
+
+      if (step === 3) {
+        var equipment = getCheckedValues("equipment");
+        var regions = getCheckedValues("region");
+
+        if (equipment.length === 0) { showError("Please select at least one equipment type."); return false; }
+        if (regions.length === 0) { showError("Please select at least one operating region."); return false; }
+        return true;
+      }
+
+      return true;
+    }
+
+    function getCheckedValues(name) {
+      var boxes = document.querySelectorAll('input[name="' + name + '"]:checked');
+      var values = [];
+      for (var i = 0; i < boxes.length; i++) {
+        values.push(boxes[i].value);
+      }
+      return values;
+    }
+
+    function updateStepIndicator() {
+      var items = document.querySelectorAll(".step-item");
+      var connectors = document.querySelectorAll(".step-connector");
+
+      for (var i = 0; i < items.length; i++) {
+        var stepNum = i + 1;
+        items[i].classList.remove("active", "done");
+
+        if (stepNum < currentStep) {
+          items[i].classList.add("done");
+          items[i].querySelector(".step-circle").innerHTML = "&#10003;";
+        } else if (stepNum === currentStep) {
+          items[i].classList.add("active");
+          items[i].querySelector(".step-circle").textContent = stepNum;
+        } else {
+          items[i].querySelector(".step-circle").textContent = stepNum;
+        }
+      }
+
+      for (var j = 0; j < connectors.length; j++) {
+        if (j < currentStep - 1) {
+          connectors[j].classList.add("done");
+        } else {
+          connectors[j].classList.remove("done");
+        }
+      }
+    }
+
+    function showStep(step) {
+      for (var i = 1; i <= totalSteps; i++) {
+        document.getElementById("step" + i).classList.remove("active");
+      }
+      document.getElementById("step" + step).classList.add("active");
+      currentStep = step;
+      updateStepIndicator();
+    }
+
+    function nextStep(fromStep) {
+      if (!validateStep(fromStep)) return;
+      if (fromStep < totalSteps) {
+        showStep(fromStep + 1);
+      }
+    }
+
+    function prevStep(fromStep) {
+      hideError();
+      if (fromStep > 1) {
+        showStep(fromStep - 1);
+      }
+    }
+
+    function submitRegistration() {
+      if (!validateStep(3)) return;
+
+      var submitBtn = document.getElementById("submitBtn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+      hideError();
+
+      var payload = {
+        company: document.getElementById("company").value.trim(),
+        mcNumber: document.getElementById("mcNumber").value.trim(),
+        dotNumber: document.getElementById("dotNumber").value.trim(),
+        phone: document.getElementById("companyPhone").value.trim() || document.getElementById("contactPhone").value.trim() || undefined,
+        email: document.getElementById("contactEmail").value.trim(),
+        firstName: document.getElementById("firstName").value.trim(),
+        lastName: document.getElementById("lastName").value.trim(),
+        password: document.getElementById("password").value,
+        equipmentTypes: getCheckedValues("equipment"),
+        operatingRegions: getCheckedValues("region"),
+      };
+
+      CARRIER.request("/api/carrier/register", {
+        method: "POST",
+        body: payload,
+      })
+        .then(function (data) {
+          // Hide form, show success
+          for (var i = 1; i <= totalSteps; i++) {
+            document.getElementById("step" + i).classList.remove("active");
+          }
+          document.getElementById("stepIndicator").style.display = "none";
+          document.getElementById("loginLink").style.display = "none";
+          document.getElementById("registerError").style.display = "none";
+          document.getElementById("successState").style.display = "block";
+
+          // Update subtitle
+          document.querySelector(".register-subtitle").textContent = "Welcome aboard!";
+        })
+        .catch(function (err) {
+          showError(err.message || "Registration failed. Please try again.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Application";
+        });
+    }
+  </script>
+</body>
+</html>

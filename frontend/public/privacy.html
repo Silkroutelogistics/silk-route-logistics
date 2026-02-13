@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Silk Route Logistics</title>
+  <meta name="description" content="Read the Silk Route Logistics privacy policy. Learn how we collect, use, and protect your personal information.">
+  <meta name="keywords" content="privacy policy, data protection, freight brokerage privacy, Silk Route Logistics">
+  <meta name="author" content="Silk Route Logistics LLC">
+  <meta property="og:title" content="Privacy Policy — Silk Route Logistics">
+  <meta property="og:description" content="How Silk Route Logistics collects, uses, and protects your information.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       RESET & BASE
+       ======================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0D1B2A;
+      color: #E0E7EE;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'DM Serif Display', serif;
+      line-height: 1.2;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    /* ========================================
+       UTILITY
+       ======================================== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #C8963E;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 5vw, 48px);
+      color: #FFFFFF;
+      margin-bottom: 20px;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fade-in-delay-1 { transition-delay: 0.1s; }
+    .fade-in-delay-2 { transition-delay: 0.2s; }
+    .fade-in-delay-3 { transition-delay: 0.3s; }
+
+    /* ========================================
+       NAVIGATION
+       ======================================== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(13, 27, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .navbar.scrolled {
+      background: rgba(13, 27, 42, 0.95);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .navbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .navbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .navbar-logo-bar {
+      width: 3px;
+      height: 36px;
+      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+    }
+
+    .navbar-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: #FFFFFF;
+      letter-spacing: 1.5px;
+      line-height: 1.2;
+    }
+
+    .navbar-logo-text span {
+      display: block;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
+      color: #C8963E;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    .navbar-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: #8899AA;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+
+    .navbar-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C8963E;
+      transition: width 0.3s ease;
+    }
+
+    .navbar-links a:hover,
+    .navbar-links a.active {
+      color: #FFFFFF;
+    }
+
+    .navbar-links a:hover::after,
+    .navbar-links a.active::after {
+      width: 100%;
+    }
+
+    .navbar-links a:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    .navbar-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      background: #C8963E;
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: background 0.3s ease, transform 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .navbar-cta:hover {
+      background: #B8862E;
+      transform: translateY(-1px);
+    }
+
+    .navbar-cta:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 4px;
+    }
+
+    /* Hamburger */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      z-index: 1001;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: #E0E7EE;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .hamburger.open span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .hamburger.open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.open span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* Mobile menu */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 72px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(13, 27, 42, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 999;
+      padding: 40px 24px;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .mobile-menu.open {
+      display: flex;
+    }
+
+    .mobile-menu a {
+      font-size: 20px;
+      font-weight: 500;
+      color: #8899AA;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: color 0.3s ease;
+    }
+
+    .mobile-menu a:hover,
+    .mobile-menu a.active {
+      color: #FFFFFF;
+    }
+
+    .mobile-menu .navbar-cta {
+      margin-top: 24px;
+      text-align: center;
+      justify-content: center;
+      padding: 16px 24px;
+      font-size: 16px;
+    }
+
+    /* ========================================
+       HERO SECTION
+       ======================================== */
+    .hero {
+      position: relative;
+      padding: 180px 0 80px;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(200, 150, 62, 0.05) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .hero-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #C8963E;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 64px);
+      color: #FFFFFF;
+      margin-bottom: 24px;
+      line-height: 1.1;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: #C8963E;
+    }
+
+    .hero-text {
+      font-size: 18px;
+      color: #8899AA;
+      line-height: 1.8;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .hero-divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+      margin: 40px auto 0;
+    }
+
+    /* ========================================
+       LEGAL CONTENT
+       ======================================== */
+    .legal-section {
+      padding: 60px 0 100px;
+    }
+
+    .legal-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .legal-updated {
+      font-size: 14px;
+      color: #667788;
+      margin-bottom: 48px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .legal-block {
+      margin-bottom: 48px;
+    }
+
+    .legal-block h2 {
+      font-size: 28px;
+      color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+
+    .legal-block h3 {
+      font-size: 20px;
+      color: #C8963E;
+      margin-bottom: 12px;
+      margin-top: 24px;
+    }
+
+    .legal-block p {
+      font-size: 15px;
+      color: #A0AEBB;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    .legal-block ul {
+      list-style: disc;
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+
+    .legal-block ul li {
+      font-size: 15px;
+      color: #A0AEBB;
+      line-height: 1.8;
+      margin-bottom: 8px;
+    }
+
+    .legal-block a {
+      color: #C8963E;
+      text-decoration: underline;
+      text-decoration-color: rgba(200, 150, 62, 0.4);
+      transition: text-decoration-color 0.3s ease;
+    }
+
+    .legal-block a:hover {
+      text-decoration-color: #C8963E;
+    }
+
+    /* ========================================
+       FOOTER
+       ======================================== */
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 80px 0 40px;
+      position: relative;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 60px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: #667788;
+      line-height: 1.7;
+      margin-top: 16px;
+      max-width: 280px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-logo-bar {
+      width: 3px;
+      height: 30px;
+      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      border-radius: 2px;
+    }
+
+    .footer-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px;
+      color: #FFFFFF;
+      letter-spacing: 1px;
+    }
+
+    .footer-col h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #C8963E;
+      margin-bottom: 20px;
+    }
+
+    .footer-col ul li {
+      margin-bottom: 12px;
+    }
+
+    .footer-col ul li a {
+      font-size: 14px;
+      color: #667788;
+      transition: color 0.3s ease;
+    }
+
+    .footer-col ul li a:hover {
+      color: #FFFFFF;
+    }
+
+    .footer-col ul li a:focus-visible {
+      outline: 2px solid #C8963E;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-bottom p {
+      font-size: 13px;
+      color: #4A5568;
+    }
+
+    .footer-bottom-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-bottom-links a {
+      font-size: 13px;
+      color: #4A5568;
+      transition: color 0.3s ease;
+    }
+
+    .footer-bottom-links a:hover {
+      color: #C8963E;
+    }
+
+    /* ========================================
+       RESPONSIVE
+       ======================================== */
+    @media (max-width: 1024px) {
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .navbar-links,
+      .navbar-cta-desktop {
+        display: none;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+
+      .hero {
+        padding: 140px 0 60px;
+      }
+
+      .hero-text {
+        font-size: 16px;
+      }
+
+      .legal-section {
+        padding: 40px 0 70px;
+      }
+
+      .legal-block h2 {
+        font-size: 24px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 {
+        font-size: 34px;
+      }
+
+      .navbar-inner {
+        padding: 0 16px;
+      }
+
+      .container {
+        padding: 0 16px;
+      }
+    }
+
+    /* ========================================
+       SKIP LINK
+       ======================================== */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      background: #C8963E;
+      color: #FFFFFF;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      z-index: 10000;
+      transition: top 0.3s ease;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    /* ========================================
+       REDUCED MOTION
+       ======================================== */
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .fade-in {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+
+      .navbar-links a::after {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- ==========================================
+       NAVIGATION
+       ========================================== -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-logo" aria-label="Silk Route Logistics - Home">
+        <div class="navbar-logo-bar" aria-hidden="true"></div>
+        <div class="navbar-logo-text">
+          SILK ROUTE
+          <span>LOGISTICS</span>
+        </div>
+      </a>
+
+      <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/shippers">Shippers</a>
+        <a href="/carriers">Carriers</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+        <a href="/tracking">Tracking</a>
+      </div>
+
+      <a href="/shippers" class="navbar-cta navbar-cta-desktop">Get a Quote</a>
+
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="mobile-menu" role="menu">
+      <a href="/" role="menuitem">Home</a>
+      <a href="/shippers" role="menuitem">Shippers</a>
+      <a href="/carriers" role="menuitem">Carriers</a>
+      <a href="/about" role="menuitem">About</a>
+      <a href="/contact" role="menuitem">Contact</a>
+      <a href="/tracking" role="menuitem">Tracking</a>
+      <a href="/shippers" class="navbar-cta" role="menuitem">Get a Quote</a>
+    </div>
+  </nav>
+
+  <!-- ==========================================
+       MAIN CONTENT
+       ========================================== -->
+  <main id="main-content">
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-content">
+        <p class="hero-label fade-in">Legal</p>
+        <h1 id="hero-heading" class="fade-in fade-in-delay-1">Privacy <em>Policy</em></h1>
+        <p class="hero-text fade-in fade-in-delay-2">
+          Your privacy matters to us. This policy explains how Silk Route Logistics collects, uses, and protects your information.
+        </p>
+        <div class="hero-divider fade-in fade-in-delay-3" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- LEGAL CONTENT -->
+    <section class="legal-section">
+      <div class="container">
+        <div class="legal-content">
+          <p class="legal-updated fade-in">Last Updated: February 1, 2026</p>
+
+          <div class="legal-block fade-in">
+            <h2>1. Information We Collect</h2>
+            <p>Silk Route Logistics LLC ("SRL," "we," "our," or "us") collects information to provide and improve our freight brokerage services. We may collect the following types of information:</p>
+            <h3>Personal Information</h3>
+            <ul>
+              <li>Name, email address, phone number, and business address</li>
+              <li>Company name, MC number, DOT number, and other carrier credentials</li>
+              <li>Payment and billing information (bank details, credit card numbers)</li>
+              <li>Driver's license and insurance documentation</li>
+            </ul>
+            <h3>Operational Information</h3>
+            <ul>
+              <li>Shipment details including origin, destination, commodity type, and weight</li>
+              <li>GPS and location data related to shipment tracking</li>
+              <li>Communication records including emails, phone calls, and chat messages</li>
+              <li>Load history and transaction records</li>
+            </ul>
+            <h3>Technical Information</h3>
+            <ul>
+              <li>IP address, browser type, and device information</li>
+              <li>Website usage data and analytics</li>
+              <li>Cookies and similar tracking technologies</li>
+            </ul>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>2. How We Use Information</h2>
+            <p>We use collected information for the following purposes:</p>
+            <ul>
+              <li><strong>Service Delivery:</strong> To match shippers with carriers, arrange transportation, and manage logistics operations</li>
+              <li><strong>Account Management:</strong> To create and maintain your account, verify credentials, and process payments</li>
+              <li><strong>Communication:</strong> To provide shipment updates, operational notifications, and respond to inquiries</li>
+              <li><strong>Compliance:</strong> To comply with FMCSA regulations, verify carrier authority, and maintain required records</li>
+              <li><strong>Improvement:</strong> To analyze usage patterns and improve our platform, services, and user experience</li>
+              <li><strong>Safety:</strong> To verify carrier safety ratings, insurance coverage, and regulatory compliance</li>
+              <li><strong>Marketing:</strong> To send relevant industry updates and service information, with your consent where required</li>
+            </ul>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>3. Data Security</h2>
+            <p>We implement industry-standard security measures to protect your information, including:</p>
+            <ul>
+              <li>SSL/TLS encryption for all data transmitted through our platform</li>
+              <li>Encrypted storage of sensitive financial and personal data</li>
+              <li>Role-based access controls limiting data access to authorized personnel</li>
+              <li>Regular security audits and vulnerability assessments</li>
+              <li>Secure data centers with physical and logical access controls</li>
+            </ul>
+            <p>While we take reasonable precautions, no method of electronic transmission or storage is 100% secure. We cannot guarantee absolute security of your data.</p>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>4. Cookies</h2>
+            <p>Our website uses cookies and similar technologies to enhance your experience. These include:</p>
+            <ul>
+              <li><strong>Essential Cookies:</strong> Required for platform functionality, authentication, and security</li>
+              <li><strong>Analytics Cookies:</strong> Help us understand how visitors interact with our website to improve performance</li>
+              <li><strong>Preference Cookies:</strong> Remember your settings and preferences for future visits</li>
+            </ul>
+            <p>You can manage cookie preferences through your browser settings. Disabling certain cookies may affect platform functionality.</p>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>5. Third-Party Services</h2>
+            <p>We may share information with trusted third parties to facilitate our services:</p>
+            <ul>
+              <li><strong>Payment Processors:</strong> To process payments and facilitate quick pay programs</li>
+              <li><strong>Compliance Services:</strong> FMCSA, SAFER, and other regulatory verification services</li>
+              <li><strong>Analytics Providers:</strong> To analyze platform usage and performance</li>
+              <li><strong>Cloud Infrastructure:</strong> Secure hosting and data storage providers</li>
+              <li><strong>Communication Tools:</strong> Email, SMS, and notification services</li>
+            </ul>
+            <p>We require all third-party providers to maintain appropriate security standards and limit their use of your data to the services they provide on our behalf.</p>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>6. Data Retention</h2>
+            <p>We retain personal information for as long as necessary to fulfill the purposes outlined in this policy, unless a longer retention period is required by law. Specifically:</p>
+            <ul>
+              <li>Active account data is retained for the duration of your business relationship with SRL</li>
+              <li>Transaction records are retained for a minimum of seven (7) years for tax and regulatory compliance</li>
+              <li>Communication records are retained for three (3) years after the last interaction</li>
+              <li>Analytics data is aggregated and anonymized after twelve (12) months</li>
+            </ul>
+            <p>Upon account closure, we will delete or anonymize your data within 90 days, except where retention is required by law.</p>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>7. Your Rights</h2>
+            <p>Depending on your location, you may have the following rights regarding your personal information:</p>
+            <ul>
+              <li><strong>Access:</strong> Request a copy of the personal information we hold about you</li>
+              <li><strong>Correction:</strong> Request correction of inaccurate or incomplete data</li>
+              <li><strong>Deletion:</strong> Request deletion of your personal information, subject to legal retention requirements</li>
+              <li><strong>Opt-Out:</strong> Unsubscribe from marketing communications at any time</li>
+              <li><strong>Portability:</strong> Request your data in a structured, machine-readable format</li>
+              <li><strong>Restriction:</strong> Request that we limit processing of your data in certain circumstances</li>
+            </ul>
+            <p>To exercise any of these rights, please contact us using the information below.</p>
+          </div>
+
+          <div class="legal-block fade-in">
+            <h2>8. Contact Us</h2>
+            <p>If you have questions about this Privacy Policy or wish to exercise your data rights, please contact us:</p>
+            <p>
+              <strong>Silk Route Logistics LLC</strong><br>
+              Kalamazoo, MI<br>
+              Phone: <a href="tel:+12695550175">(269) 555-0175</a><br>
+              Email: <a href="mailto:privacy@silkroutelogistics.ai">privacy@silkroutelogistics.ai</a>
+            </p>
+            <p>We will respond to all privacy-related inquiries within 30 days.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="footer-logo-bar" aria-hidden="true"></div>
+            <div class="footer-logo-text">SILK ROUTE LOGISTICS</div>
+          </div>
+          <p>
+            A technology-driven freight brokerage connecting shippers and carriers
+            across North America with transparency, reliability, and innovation.
+          </p>
+          <p style="margin-top: 12px; color: #4A5568;">
+            Silk Route Logistics LLC<br>
+            Kalamazoo, MI<br>
+            (269) 555-0175
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/contact">Contact</a></li>
+            <li><a href="/tracking">Track Shipment</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Services</h4>
+          <ul>
+            <li><a href="/shippers">Shipper Solutions</a></li>
+            <li><a href="/carriers">Carrier Solutions</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics LLC. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       JAVASCRIPT
+       ========================================== -->
+  <script>
+    (function() {
+      'use strict';
+
+      var navbar = document.querySelector('.navbar');
+      function handleNavScroll() {
+        if ((window.scrollY || window.pageYOffset) > 50) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+      }
+      window.addEventListener('scroll', handleNavScroll, { passive: true });
+
+      var hamburger = document.querySelector('.hamburger');
+      var mobileMenu = document.querySelector('.mobile-menu');
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', function() {
+          var isOpen = mobileMenu.classList.toggle('open');
+          hamburger.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          document.body.style.overflow = isOpen ? 'hidden' : '';
+        });
+        mobileMenu.querySelectorAll('a').forEach(function(link) {
+          link.addEventListener('click', function() {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+          });
+        });
+      }
+
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+        var fadeObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              fadeObserver.unobserve(entry.target);
+            }
+          });
+        }, { root: null, rootMargin: '0px 0px -60px 0px', threshold: 0.1 });
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          fadeObserver.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 768 && mobileMenu && mobileMenu.classList.contains('open')) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+
+      if (mobileMenu) {
+        mobileMenu.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            hamburger.focus();
+          }
+        });
+      }
+    })();
+  </script>
+
+<script src="/shared/js/marco-polo.js"></script>
+</body>
+</html>

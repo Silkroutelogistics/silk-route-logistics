@@ -22,7 +22,7 @@ function logErrorToDb(err: Error, req: Request, statusCode: number, errorType: s
       userAgent: req.headers["user-agent"]?.slice(0, 500),
       statusCode,
     },
-  }).catch(() => {}); // Fire-and-forget
+  }).catch(err => console.error('[ErrorHandler] Alert failed:', err.message));
 
   // Track error rate for alerting
   recentErrorCount++;
@@ -44,9 +44,9 @@ function logErrorToDb(err: Error, req: Request, statusCode: number, errorType: s
               message: `10+ errors in the last hour. Latest: ${err.message?.slice(0, 100)}`,
               actionUrl: "/admin/monitoring",
             },
-          }).catch(() => {});
+          }).catch(err => console.error('[ErrorHandler] Alert failed:', err.message));
         }
-      }).catch(() => {});
+      }).catch(err => console.error('[ErrorHandler] Alert failed:', err.message));
     console.error("[ErrorHandler] ALERT: 10+ errors in the last hour");
   }
 }

@@ -284,6 +284,32 @@
       color: var(--gray-600);
     }
 
+    /* --- PDF Download Button --- */
+    .pdf-download-btn:hover {
+      background: rgba(200,150,62,0.25) !important;
+      transform: translateY(-1px);
+    }
+
+    /* --- Print All Button --- */
+    .print-all-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--navy);
+      color: var(--gold);
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .print-all-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
     /* --- Print Styles --- */
     @media print {
       .sidebar, .hamburger, .overlay, .cat-sidebar, .search-bar { display: none !important; }
@@ -359,6 +385,10 @@
         <div class="training-content" id="training-content">
           <div class="search-bar">
             <input type="text" id="sop-search" placeholder="Search procedures..." oninput="renderSOPs()">
+            <button class="print-all-btn" onclick="window.print()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Print All
+            </button>
           </div>
           <div id="sop-container"></div>
         </div>
@@ -389,6 +419,7 @@
         category: "load",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-001",
         context: "Use this procedure when a shipper requests freight transportation. This creates a load entry visible on the load board for carrier matching.",
         steps: [
           {
@@ -434,6 +465,7 @@
         category: "carrier",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-002",
         context: "After a load is posted, assign a qualified carrier. Carrier selection impacts service quality, profitability, and compliance.",
         steps: [
           {
@@ -474,6 +506,7 @@
         category: "rate",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-003",
         context: "The Rate Calculator is available on every load detail view (right panel). Use it to ensure profitability before confirming any load.",
         steps: [
           {
@@ -514,6 +547,7 @@
         category: "comm",
         who: "All Staff",
         whoClass: "who-all",
+        pdfUrl: "/api/sops/pdf/SOP-004",
         context: "Every interaction with a carrier or shipper should be logged. This creates an audit trail and ensures team visibility into all communications.",
         steps: [
           {
@@ -549,6 +583,7 @@
         category: "comm",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-005",
         context: "Use the Communications Hub to send branded emails to carriers and shippers. Templates are available for common scenarios.",
         steps: [
           {
@@ -584,6 +619,7 @@
         category: "crm",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-006",
         context: "When you receive a list of potential shippers (from trade shows, purchased lists, referrals), import them as leads in the CRM pipeline.",
         steps: [
           {
@@ -624,6 +660,7 @@
         category: "docs",
         who: "All Staff",
         whoClass: "who-all",
+        pdfUrl: "/api/sops/pdf/SOP-007",
         context: "All load-related documents (BOL, POD, Rate Confirmation, insurance certificates) should be uploaded to the system for compliance and record-keeping.",
         steps: [
           {
@@ -659,6 +696,7 @@
         category: "carrier",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-008",
         context: "When a new carrier registers, they need to be verified and approved before they can accept loads.",
         steps: [
           { title: "Carrier Registers", detail: "The carrier self-registers at /carrier/login.html with company info, MC/DOT numbers, equipment types, and operating regions. They receive a temporary password.", tip: null },
@@ -674,6 +712,7 @@
         category: "carrier",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-009",
         context: "Understand the carrier-side flow when a carrier browses and accepts a load from the Carrier Portal.",
         steps: [
           { title: "Load Posting", detail: "Post loads with status POSTED. These appear in the carrier's Available Loads view, filtered by their equipment type.", tip: null },
@@ -688,6 +727,7 @@
         category: "carrier",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-010",
         context: "The Silk Route Carrier Performance Program (SRCPP) rewards carriers with tier-based perks including bonus payments and reduced QuickPay fees.",
         steps: [
           { title: "Understand Tiers", detail: "Bronze (0-89), Silver (90-94), Gold (95-97), Platinum (98+). Score is weighted: on-time pickup 20%, on-time delivery 20%, GPS compliance 15%, claims 15%, communication 10%, docs 10%, acceptance rate 10%.", tip: null },
@@ -702,6 +742,7 @@
         category: "rate",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-011",
         context: "After a load is delivered, carrier payment must be created and processed through the payment workflow.",
         steps: [
           { title: "Create Carrier Pay", detail: "Navigate to Carrier Pay section. Create payment with carrier ID, load ID, amount. System auto-calculates QuickPay discount if applicable.", tip: null },
@@ -716,6 +757,7 @@
         category: "compliance",
         who: "All Staff",
         whoClass: "who-all",
+        pdfUrl: "/api/sops/pdf/SOP-012",
         context: "Monitor carrier compliance including insurance expiration, FMCSA authority, and safety metrics to prevent service disruptions.",
         steps: [
           { title: "Run Compliance Scan", detail: "Navigate to Compliance → Run Scan. This checks all active drivers, trucks, trailers, and carriers for expiring documents and certifications.", tip: null },
@@ -730,6 +772,7 @@
         category: "compliance",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-013",
         context: "Monitor FMCSA CSA BASIC scores and SRL performance metrics for carriers to maintain safety standards.",
         steps: [
           { title: "Check BASIC Scores", detail: "Carrier's CSA BASIC scores are synced from FMCSA: Unsafe Driving, Hours of Service, Driver Fitness, Drug & Alcohol, Vehicle Maintenance, HazMat, Crash Indicator.", tip: null },
@@ -744,6 +787,7 @@
         category: "carrier",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-014",
         context: "Help carriers navigate their portal, reset passwords, and resolve common issues.",
         steps: [
           { title: "First Login Issues", detail: "Carriers must change their password on first login. If they're stuck, they can use the carrier-auth/force-change-password endpoint or contact their AE.", tip: null },
@@ -758,6 +802,7 @@
         category: "automation",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-015",
         context: "When assigning a carrier to a posted load, use Smart Match to find the best-fit carrier based on lane history, rate competitiveness, SRCPP tier, and availability.",
         steps: [
           { title: "Open Load Detail", detail: "From the Load Board, click a load in POSTED status to open the detail panel.", tip: null },
@@ -774,6 +819,7 @@
         category: "automation",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-016",
         context: "When a carrier is assigned, automated check-calls are scheduled at key milestones. The system sends SMS texts and processes carrier responses.",
         steps: [
           { title: "Automatic Scheduling", detail: "When a carrier is assigned via Smart Match (or manually triggered), the system creates 5 check-call slots: Pre-Pickup (-2h), At Pickup, Midpoint, Pre-Delivery (-2h), At Delivery.", tip: null },
@@ -790,6 +836,7 @@
         category: "automation",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-017",
         context: "The Risk Engine runs every 30 minutes, scoring all active loads on a GREEN/AMBER/RED scale. Use alerts to prioritize which loads need immediate attention.",
         steps: [
           { title: "Understand Risk Levels", detail: "GREEN (0-20 pts): Normal. AMBER (21-40 pts): Needs monitoring, in-app notification. RED (41+ pts): Urgent, in-app + email alert to AE.", tip: null },
@@ -806,6 +853,7 @@
         category: "automation",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-018",
         context: "When a carrier cancels or is removed from a load near pickup time, the Fall-Off Recovery system executes a parallel recovery to minimize downtime.",
         steps: [
           { title: "Trigger Recovery", detail: "From the load detail, click 'Fall-Off Recovery'. Enter a reason (e.g., 'Truck breakdown', 'Carrier no-show'). The system initiates parallel recovery actions.", tip: null },
@@ -822,6 +870,7 @@
         category: "automation",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-019",
         context: "Start automated email drip campaigns for prospects in the CRM pipeline. The sequence sends 4 branded emails over 14 days to warm up leads.",
         steps: [
           { title: "Navigate to CRM", detail: "Go to /ae/crm.html and select a prospect (Lead or Contacted stage). The prospect must have an email address on file.", tip: null },
@@ -838,6 +887,7 @@
         category: "automation",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-020",
         context: "Monitor all Phase C automation systems from a single summary view: active sequences, check-call status, risk alerts, fall-off events, and match activity.",
         steps: [
           { title: "Access Automation Summary", detail: "The AE Dashboard alert strip now reflects Phase C data. RED alerts include overdue check-calls and active fall-offs. AMBER includes stale loads and pending check-calls.", tip: null },
@@ -854,6 +904,7 @@
         category: "scale",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-021",
         lastUpdated: "2026-02-12",
         context: "After a load is delivered and POD received, generate a professional invoice and send it to the shipper for payment.",
         steps: [
@@ -871,6 +922,7 @@
         category: "scale",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-022",
         lastUpdated: "2026-02-12",
         context: "When freight is damaged, short, delivered late, or the carrier is a no-show, file a claim to initiate resolution and protect SRL and the shipper.",
         steps: [
@@ -889,6 +941,7 @@
         category: "scale",
         who: "Admin",
         whoClass: "who-admin",
+        pdfUrl: "/api/sops/pdf/SOP-023",
         lastUpdated: "2026-02-12",
         context: "The Financial Dashboard provides a comprehensive view of SRL's revenue, margins, and financial health. Available to ADMIN, CEO, and ACCOUNTING roles only.",
         steps: [
@@ -906,6 +959,7 @@
         category: "scale",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-024",
         lastUpdated: "2026-02-12",
         context: "Every load automatically gets a unique tracking link that shippers can use to monitor their shipment status in real time without needing a login.",
         steps: [
@@ -922,6 +976,7 @@
         category: "scale",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-025",
         lastUpdated: "2026-02-12",
         context: "Understand the Carrier Portal's Detention Pay Tracker so you can support carriers with detention claims and verify their submissions.",
         steps: [
@@ -938,6 +993,7 @@
         category: "scale",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-026",
         lastUpdated: "2026-02-12",
         context: "The Deadhead Minimizer helps carriers find backhaul loads near their delivery destination, reducing empty miles and increasing profitability.",
         steps: [
@@ -953,6 +1009,7 @@
         category: "scale",
         who: "AE",
         whoClass: "who-ae",
+        pdfUrl: "/api/sops/pdf/SOP-027",
         lastUpdated: "2026-02-12",
         context: "The Maintenance Reminders tool helps carriers track vehicle maintenance schedules, ensuring fleet compliance and reducing roadside breakdowns.",
         steps: [
@@ -1055,6 +1112,13 @@
                 '</li>';
               }).join("") +
             '</ol>' +
+            '<div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:12px;align-items:center;">' +
+              '<a href="' + sop.pdfUrl + '" target="_blank" class="pdf-download-btn" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(200,150,62,0.15);color:#C8963E;border-radius:8px;font-size:13px;font-weight:600;transition:all 0.2s;text-decoration:none;border:1px solid rgba(200,150,62,0.3);">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+                'Download PDF' +
+              '</a>' +
+              '<span style="font-size:12px;color:#64748b;">Training material for offline reference</span>' +
+            '</div>' +
           '</div>' +
         '</div>';
       }).join("");

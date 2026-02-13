@@ -58,7 +58,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
     where: { jobName },
     update: { lastStatus: "RUNNING", lastRun: new Date() },
     create: { jobName, schedule: "manual", lastStatus: "RUNNING", lastRun: new Date() },
-  }).catch(() => {});
+  }).catch(err => console.error('[CronRegistry] Error:', err.message));
 
   const start = Date.now();
   try {
@@ -74,7 +74,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
         runCount: { increment: 1 },
         nextRun: entry?.schedule ? getNextRunTime(entry.schedule) : null,
       },
-    }).catch(() => {});
+    }).catch(err => console.error('[CronRegistry] Error:', err.message));
 
     console.log(`[CronRegistry] ${jobName} completed in ${duration}ms`);
     return { success: true, duration };
@@ -90,7 +90,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
         failCount: { increment: 1 },
         runCount: { increment: 1 },
       },
-    }).catch(() => {});
+    }).catch(err => console.error('[CronRegistry] Error:', err.message));
 
     // Log to error_logs table
     await prisma.errorLog.create({
@@ -100,7 +100,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
         stackTrace: e.stack?.slice(0, 2000),
         endpoint: `cron:${jobName}`,
       },
-    }).catch(() => {});
+    }).catch(err => console.error('[CronRegistry] Error:', err.message));
 
     console.error(`[CronRegistry] ${jobName} FAILED in ${duration}ms:`, e.message);
     return { success: false, duration, error: e.message };
@@ -183,7 +183,7 @@ export async function seedCronRegistry() {
       where: { jobName: job.jobName },
       update: { schedule: job.schedule, description: job.description },
       create: { ...job, enabled: true, nextRun: getNextRunTime(job.schedule) },
-    }).catch(() => {});
+    }).catch(err => console.error('[CronRegistry] Error:', err.message));
   }
 
   console.log(`[CronRegistry] Seeded ${jobs.length} cron jobs into registry`);

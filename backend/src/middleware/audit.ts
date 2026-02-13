@@ -20,7 +20,7 @@ export function auditLog(action: string, entity: string) {
               userAgent: req.headers["user-agent"] || null,
             },
           })
-          .catch(() => {}); // Don't fail the request if audit fails
+          .catch(err => console.error('[Audit] Error:', err.message));
       }
       return originalJson(data);
     };
