@@ -743,6 +743,86 @@ a:hover {
 }
 
 /* ================================
+   Tables & Filter Bar (all screens)
+   ================================ */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gray-100);
+  white-space: nowrap;
+}
+
+tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-bar input[type="text"],
+.filter-bar input[type="date"],
+.filter-bar select {
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--white);
+  color: var(--gray-700);
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--gray-200);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+/* ================================
    Responsive: Tablet (<=1024px)
    ================================ */
 @media (max-width: 1024px) {
@@ -757,6 +837,8 @@ a:hover {
 
   .hamburger {
     display: flex;
+    width: 44px;
+    height: 44px;
   }
 
   .overlay.open {
@@ -791,17 +873,52 @@ a:hover {
 }
 
 /* ================================
-   Responsive: Mobile (<=640px)
+   Responsive: Tablet (<=768px)
    ================================ */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
     padding: 16px;
-    gap: 16px;
   }
 
   .dashboard-grid > section:nth-child(3) {
     grid-column: auto;
+  }
+
+  /* Hide less critical table columns on tablet */
+  table .col-hide-tablet {
+    display: none;
+  }
+
+  thead th, tbody td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar input[type="text"],
+  .filter-bar input[type="date"],
+  .filter-bar select {
+    width: 100%;
+  }
+}
+
+/* ================================
+   Responsive: Mobile (<=640px)
+   ================================ */
+@media (max-width: 640px) {
+  .main-header {
+    padding: 60px 16px 0;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 12px;
   }
 
   .kpi-grid {
@@ -825,6 +942,10 @@ a:hover {
     font-size: 20px;
   }
 
+  .alert-strip {
+    padding: 8px 12px;
+  }
+
   .alert-messages {
     flex-direction: column;
     gap: 4px;
@@ -834,5 +955,44 @@ a:hover {
     flex-direction: column;
     gap: 4px;
     text-align: center;
+  }
+
+  /* Table: allow wrapping on mobile, tighten padding */
+  thead th, tbody td {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+
+  tbody td {
+    white-space: normal;
+  }
+
+  /* Hide non-essential table columns on mobile */
+  table .col-hide-mobile {
+    display: none;
+  }
+
+  /* Tabs: scrollable on mobile */
+  .tabs {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  /* Modal: full width on mobile */
+  .modal {
+    width: 95%;
+    max-height: 90vh;
+    padding: 16px;
+  }
+
+  /* Buttons: minimum touch target */
+  .btn, .quick-action-btn {
+    min-height: 44px;
   }
 }

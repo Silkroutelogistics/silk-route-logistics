@@ -58,8 +58,8 @@
           <table>
             <thead>
               <tr>
-                <th>Load #</th><th>Origin</th><th>Destination</th><th>Pickup</th><th>Delivery</th>
-                <th>Equipment</th><th>Rate</th><th>Status</th><th>Actions</th>
+                <th>Load #</th><th>Origin</th><th>Destination</th><th>Pickup</th><th class="col-hide-mobile">Delivery</th>
+                <th class="col-hide-mobile">Equipment</th><th>Rate</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="myLoadsBody">
@@ -90,8 +90,8 @@
           <table>
             <thead>
               <tr>
-                <th>Origin</th><th>Destination</th><th>Pickup</th><th>Equipment</th>
-                <th>Weight</th><th>Distance</th><th>Rate</th><th>Actions</th>
+                <th>Origin</th><th>Destination</th><th>Pickup</th><th class="col-hide-mobile">Equipment</th>
+                <th class="col-hide-mobile">Weight</th><th class="col-hide-mobile">Distance</th><th>Rate</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="availBody">
@@ -299,8 +299,8 @@
           '<td>' + esc(l.originCity + ', ' + l.originState) + '</td>' +
           '<td>' + esc(l.destCity + ', ' + l.destState) + '</td>' +
           '<td>' + shortDate(l.pickupDate) + '</td>' +
-          '<td>' + shortDate(l.deliveryDate) + '</td>' +
-          '<td>' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
+          '<td class="col-hide-mobile">' + shortDate(l.deliveryDate) + '</td>' +
+          '<td class="col-hide-mobile">' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
           '<td style="font-weight:600">' + money(l.carrierRate || l.rate) + '</td>' +
           '<td>' + statusBadge(l.status) + '</td>' +
           '<td><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDetail(\'' + l.id + '\')">Details</button></td>' +
@@ -344,9 +344,9 @@
           '<td>' + esc(l.originCity + ', ' + l.originState) + '</td>' +
           '<td>' + esc(l.destCity + ', ' + l.destState) + '</td>' +
           '<td>' + shortDate(l.pickupDate) + '</td>' +
-          '<td>' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
-          '<td>' + (l.weight ? l.weight.toLocaleString() + ' lbs' : '--') + '</td>' +
-          '<td>' + (l.distance ? l.distance.toLocaleString() + ' mi' : '--') + '</td>' +
+          '<td class="col-hide-mobile">' + esc((l.equipmentType || "").replace(/_/g, " ")) + '</td>' +
+          '<td class="col-hide-mobile">' + (l.weight ? l.weight.toLocaleString() + ' lbs' : '--') + '</td>' +
+          '<td class="col-hide-mobile">' + (l.distance ? l.distance.toLocaleString() + ' mi' : '--') + '</td>' +
           rateCell +
           '<td>' +
             '<div class="btn-group">' +

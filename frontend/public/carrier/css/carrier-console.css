@@ -801,11 +801,11 @@ select.form-control { cursor: pointer; }
   display: none;
 }
 
-/* ─── Responsive ──────────────────────────────────── */
+/* ─── Responsive: Tablet (<=1024px) ──────────────── */
 @media (max-width: 1024px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
-  .hamburger { display: flex; }
+  .hamburger { display: flex; width: 44px; height: 44px; }
   .overlay.show { display: block; }
   .main { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
   .grid-3 { grid-template-columns: 1fr 1fr; }
@@ -813,12 +813,92 @@ select.form-control { cursor: pointer; }
   .detail-grid { grid-template-columns: 1fr; }
 }
 
+/* ─── Responsive: Tablet (<=768px) ───────────────── */
+@media (max-width: 768px) {
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+
+  /* Hide less critical table columns on tablet */
+  table .col-hide-tablet {
+    display: none;
+  }
+
+  thead th, tbody td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar .form-control,
+  .filter-bar .search-input {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  /* Tabs: scrollable on tablet */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-btn {
+    flex-shrink: 0;
+  }
+}
+
+/* ─── Responsive: Mobile (<=640px) ───────────────── */
 @media (max-width: 640px) {
+  .main { padding: 16px 12px; padding-top: 60px; }
+
   .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; }
   .info-grid { grid-template-columns: 1fr; }
   .compliance-grid { grid-template-columns: 1fr; }
-  .filter-bar { flex-direction: column; align-items: stretch; }
-  .filter-bar .form-control, .filter-bar .search-input { min-width: 100%; width: 100%; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .timeline { flex-wrap: wrap; gap: 4px; }
+  .page-header h1 { font-size: 18px; }
+
+  /* Table: allow wrapping on mobile, tighten padding */
+  thead th, tbody td {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+
+  tbody td {
+    white-space: normal;
+  }
+
+  /* Hide non-essential table columns on mobile */
+  table .col-hide-mobile {
+    display: none;
+  }
+
+  /* Timeline: compact on mobile */
+  .timeline { flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .timeline-step { flex: none; width: auto; min-width: 60px; }
+  .timeline-step::before { display: none; }
+  .timeline-label { font-size: 9px; }
+
+  /* Tabs: scrollable, no scrollbar */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 10px 14px; font-size: 12px; flex-shrink: 0; }
+
+  /* Modal: full width on mobile */
+  .modal { width: 95%; max-height: 90vh; padding: 16px; }
+
+  /* Buttons: minimum touch target */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 36px; }
+
+  /* Score bars: stack label */
+  .score-bar { flex-wrap: wrap; }
+  .score-bar .bar-label { width: 100%; }
 }

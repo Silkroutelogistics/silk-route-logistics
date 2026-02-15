@@ -851,14 +851,14 @@
                 <th>Load #</th>
                 <th>Origin</th>
                 <th>Destination</th>
-                <th>Shipper</th>
-                <th>Carrier</th>
+                <th class="col-hide-mobile">Shipper</th>
+                <th class="col-hide-mobile">Carrier</th>
                 <th>Status</th>
                 <th>Pickup</th>
-                <th>Delivery</th>
+                <th class="col-hide-mobile">Delivery</th>
                 <th style="text-align:right">Shipper Rate</th>
-                <th style="text-align:right">Carrier Rate</th>
-                <th style="text-align:right">Margin %</th>
+                <th class="col-hide-mobile" style="text-align:right">Carrier Rate</th>
+                <th class="col-hide-mobile" style="text-align:right">Margin %</th>
               </tr>
             </thead>
             <tbody id="load-tbody">
@@ -1218,14 +1218,14 @@
           '<td style="font-weight:600;color:var(--navy)">' + esc(load.referenceNumber) + '</td>' +
           '<td>' + esc(load.originCity) + ', ' + esc(load.originState) + '</td>' +
           '<td>' + esc(load.destCity) + ', ' + esc(load.destState) + '</td>' +
-          '<td>' + esc(shipperName || '--') + '</td>' +
-          '<td>' + esc(carrierName || '--') + '</td>' +
+          '<td class="col-hide-mobile">' + esc(shipperName || '--') + '</td>' +
+          '<td class="col-hide-mobile">' + esc(carrierName || '--') + '</td>' +
           '<td><span class="status-badge status-' + load.status.toLowerCase() + '">' + (STATUS_LABELS[load.status] || load.status) + '</span></td>' +
           '<td>' + shortDate(load.pickupDate) + '</td>' +
-          '<td>' + shortDate(load.deliveryDate) + '</td>' +
+          '<td class="col-hide-mobile">' + shortDate(load.deliveryDate) + '</td>' +
           '<td style="text-align:right">$' + num(shipperRate) + '</td>' +
-          '<td style="text-align:right">' + (carrierRate ? '$' + num(carrierRate) : '--') + '</td>' +
-          '<td style="text-align:right;' + marginClass + '">' + (margin !== null ? margin.toFixed(1) + '%' : '--') + '</td>' +
+          '<td class="col-hide-mobile" style="text-align:right">' + (carrierRate ? '$' + num(carrierRate) : '--') + '</td>' +
+          '<td class="col-hide-mobile" style="text-align:right;' + marginClass + '">' + (margin !== null ? margin.toFixed(1) + '%' : '--') + '</td>' +
         '</tr>';
       }).join("");
     }
