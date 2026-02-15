@@ -1510,6 +1510,29 @@
 
       html += '</div>';
 
+      // Quick Status Update
+      html += '<div class="assign-section">';
+      html += '<h4>Update Status</h4>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+      var statusBtns = [
+        {s:"AT_PICKUP",l:"At Pickup"},{s:"LOADED",l:"Loaded"},{s:"IN_TRANSIT",l:"In Transit"},
+        {s:"AT_DELIVERY",l:"At Delivery"},{s:"DELIVERED",l:"Delivered"},{s:"POD_RECEIVED",l:"POD Received"}
+      ];
+      statusBtns.forEach(function(b) {
+        var active = load.status === b.s ? ' style="background:var(--gold);color:#fff;border-color:var(--gold)"' : '';
+        html += '<button class="btn-secondary btn-sm"' + active + ' onclick="quickStatusUpdate(\'' + load.id + '\',\'' + b.s + '\')">' + b.l + '</button>';
+      });
+      html += '</div></div>';
+
+      // Check Call Log
+      html += '<div class="assign-section">';
+      html += '<h4>Log Check Call</h4>';
+      html += '<div style="margin-bottom:8px"><input type="text" id="cc-location" placeholder="Current location (city, state)" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px"></div>';
+      html += '<div style="margin-bottom:8px"><input type="text" id="cc-eta" placeholder="Updated ETA" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px"></div>';
+      html += '<div style="margin-bottom:8px"><textarea id="cc-notes" placeholder="Notes..." style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;height:60px;resize:vertical"></textarea></div>';
+      html += '<button class="btn-primary btn-sm" onclick="logCheckCall(\'' + load.id + '\')">Log Check Call</button>';
+      html += '</div>';
+
       // Communication Log
       html += '<div class="assign-section">';
       html += '<h4>Recent Activity</h4>';
@@ -2056,6 +2079,30 @@
     function toggleSidebar() {
       document.getElementById("sidebar").classList.toggle("open");
       document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function quickStatusUpdate(loadId, newStatus) {
+      SRL.request("/api/loads/" + loadId + "/status", { method: "PATCH", body: { status: newStatus } })
+        .then(function() {
+          showToast("Status updated to " + newStatus.replace(/_/g, " "), "success");
+          fetchLoads().then(function() { showLoadDetail(loadId); });
+        })
+        .catch(function(err) { showToast("Failed: " + err.message, "error"); });
+    }
+
+    function logCheckCall(loadId) {
+      var location = document.getElementById("cc-location").value.trim();
+      var eta = document.getElementById("cc-eta").value.trim();
+      var notes = document.getElementById("cc-notes").value.trim();
+      if (!location && !notes) { showToast("Enter location or notes", "error"); return; }
+      SRL.request("/api/check-calls", { method: "POST", body: {
+        loadId: loadId, location: location, etaUpdate: eta || undefined, notes: notes || undefined
+      }}).then(function() {
+        showToast("Check call logged", "success");
+        document.getElementById("cc-location").value = "";
+        document.getElementById("cc-eta").value = "";
+        document.getElementById("cc-notes").value = "";
+      }).catch(function(err) { showToast("Failed: " + err.message, "error"); });
     }
 
     function handleLogout() {
