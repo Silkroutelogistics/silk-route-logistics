@@ -54,6 +54,7 @@ async function main() {
       role: UserRole.CARRIER,
       isVerified: true,
       phone: "(269) 555-0200",
+      passwordChangedAt: now,
     },
   });
 
@@ -96,6 +97,7 @@ async function main() {
       role: UserRole.CARRIER,
       isVerified: true,
       phone: "(312) 555-0300",
+      passwordChangedAt: now,
     },
   });
 
@@ -109,6 +111,7 @@ async function main() {
       role: UserRole.CARRIER,
       isVerified: true,
       phone: "(404) 555-0400",
+      passwordChangedAt: now,
     },
   });
 
@@ -122,6 +125,7 @@ async function main() {
       role: UserRole.CARRIER,
       isVerified: true,
       phone: "(503) 555-0500",
+      passwordChangedAt: now,
     },
   });
 
@@ -135,6 +139,7 @@ async function main() {
       role: UserRole.CARRIER,
       isVerified: true,
       phone: "(602) 555-0600",
+      passwordChangedAt: now,
     },
   });
 
