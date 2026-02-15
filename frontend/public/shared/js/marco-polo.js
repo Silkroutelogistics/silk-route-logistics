@@ -719,8 +719,11 @@ var MarcoPolo = (function () {
       body: JSON.stringify(body)
     })
       .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
+        return res.json().then(function (data) {
+          // Even on 500, backend may include a fallback reply
+          if (!res.ok && !data.reply) throw new Error("HTTP " + res.status);
+          return data;
+        });
       })
       .then(function (data) {
         removeTyping();
