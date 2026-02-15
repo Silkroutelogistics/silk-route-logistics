@@ -4,41 +4,11 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clean existing data (FK-safe order)
-  await prisma.complianceAlert.deleteMany();
-  await prisma.auditLog.deleteMany();
-  await prisma.auditTrail.deleteMany();
-  await prisma.systemLog.deleteMany();
-  await prisma.otpCode.deleteMany();
-  await prisma.customerContact.deleteMany();
-  await prisma.eDITransaction.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.message.deleteMany();
-  await prisma.loadTender.deleteMany();
-  await prisma.carrierBonus.deleteMany();
-  await prisma.carrierScorecard.deleteMany();
-  await prisma.document.deleteMany();
-  await prisma.checkCall.deleteMany();
-  await prisma.paymentDispute.deleteMany();
-  await prisma.carrierPay.deleteMany();
-  await prisma.settlement.deleteMany();
-  await prisma.rateConfirmation.deleteMany();
-  await prisma.factoringFund.deleteMany();
-  await prisma.bankReconciliation.deleteMany();
-  await prisma.invoiceLineItem.deleteMany();
-  await prisma.invoice.deleteMany();
-  await prisma.load.deleteMany();
-  await prisma.carrierProfile.deleteMany();
-  await prisma.brokerIntegration.deleteMany();
-  await prisma.shipment.deleteMany();
-  await prisma.shipperCredit.deleteMany();
-  await prisma.customer.deleteMany();
-  await prisma.driver.deleteMany();
-  await prisma.equipment.deleteMany();
-  await prisma.truck.deleteMany();
-  await prisma.trailer.deleteMany();
-  await prisma.sOP.deleteMany();
-  await prisma.user.deleteMany();
+  // Clean all tables via TRUNCATE CASCADE
+  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
+    SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != '_prisma_migrations'
+  `;
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables.map(t => `"${t.tablename}"`).join(", ")} CASCADE`);
 
   const now = new Date();
   const day = 24 * 60 * 60 * 1000;
