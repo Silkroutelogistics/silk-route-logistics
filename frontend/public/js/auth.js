@@ -142,7 +142,7 @@ var SRLAuth = (function () {
     sessionStorage.removeItem("carrier_user");
     sessionStorage.removeItem("srl_last_activity");
     var isCarrier = window.location.pathname.startsWith("/carrier");
-    window.location.href = isCarrier ? "/carrier/login.html?expired=1" : "/auth/login?expired=1";
+    window.location.href = isCarrier ? "/auth/carrier-login?expired=1" : "/auth/login?expired=1";
   }
 
   // Check if already expired on page load

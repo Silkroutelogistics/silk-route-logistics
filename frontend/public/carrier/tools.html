@@ -586,7 +586,7 @@
     /* ═══════════════════════════════════════════════════════
        AUTH CHECK
        ═══════════════════════════════════════════════════════ */
-    if (!CARRIER.isLoggedIn()) window.location.href = '/carrier/login.html';
+    if (!CARRIER.isLoggedIn()) window.location.href = '/auth/carrier-login';
 
     /* ─── Helpers ─────────────────────────────────────── */
     function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }

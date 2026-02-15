@@ -45,7 +45,7 @@ var CARRIER = (function () {
         localStorage.removeItem("carrier_user");
         sessionStorage.removeItem("carrier_token");
         sessionStorage.removeItem("carrier_user");
-        window.location.href = "/carrier/login.html";
+        window.location.href = "/auth/carrier-login";
         return Promise.reject(new Error("Unauthorized"));
       }
       if (res.status === 403) {
@@ -84,7 +84,7 @@ var CARRIER = (function () {
       localStorage.removeItem("carrier_user");
       sessionStorage.removeItem("carrier_token");
       sessionStorage.removeItem("carrier_user");
-      window.location.href = "/carrier/login.html";
+      window.location.href = "/auth/carrier-login";
     });
   }
 
@@ -131,7 +131,7 @@ var CARRIER = (function () {
 
   function requireAuth() {
     if (!isLoggedIn()) {
-      window.location.href = "/carrier/login.html";
+      window.location.href = "/auth/carrier-login";
       return false;
     }
     return true;
