@@ -998,11 +998,71 @@
             <input id="f-commodity" type="text" placeholder="General merchandise">
           </div>
 
-          <!-- Rate -->
-          <div class="form-section-title">Rate</div>
           <div class="form-group">
-            <label>Shipper Rate ($) <span class="req">*</span></label>
-            <input id="f-rate" type="number" step="0.01" placeholder="2500.00">
+            <label>Pieces / Pallets</label>
+            <input id="f-pieces" type="number" placeholder="26">
+          </div>
+          <div class="form-group">
+            <label>Freight Class</label>
+            <select id="f-freightClass">
+              <option value="">Select...</option>
+              <option>50</option><option>55</option><option>60</option><option>65</option><option>70</option>
+              <option>77.5</option><option>85</option><option>92.5</option><option>100</option><option>110</option>
+              <option>125</option><option>150</option><option>175</option><option>200</option><option>250</option>
+              <option>300</option><option>400</option><option>500</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Temperature (if Reefer)</label>
+            <input id="f-temperature" type="number" placeholder="34">
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input id="f-hazmat" type="checkbox" style="width:auto;margin:0"> Hazmat
+            </label>
+          </div>
+
+          <!-- Cross-Border -->
+          <div class="form-section-title">Cross-Border</div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input id="f-crossBorder" type="checkbox" style="width:auto;margin:0" onchange="document.getElementById('border-fields').style.display=this.checked?'contents':'none'"> Cross-border shipment
+            </label>
+          </div>
+          <div id="border-fields" style="display:none;contents">
+            <div class="form-group">
+              <label>Border Crossing</label>
+              <select id="f-borderCrossing">
+                <option value="">Select crossing...</option>
+                <option>Detroit/Windsor</option><option>Buffalo/Fort Erie</option>
+                <option>Laredo/Nuevo Laredo</option><option>El Paso/Ciudad Juárez</option>
+                <option>Blaine/Surrey</option><option>Champlain/Lacolle</option>
+                <option>Sweetgrass/Coutts</option><option>Portal/North Portal</option>
+                <option>Nogales/Nogales</option><option>Otay Mesa/Tijuana</option>
+                <option>Pharr/Reynosa</option><option>Calexico/Mexicali</option>
+                <option>Lewiston/Queenston</option><option>Port Huron/Point Edward</option>
+                <option>Brownsville/Matamoros</option><option>Eagle Pass/Piedras Negras</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Customs Broker</label>
+              <input id="f-customsBroker" type="text" placeholder="Broker name">
+            </div>
+          </div>
+
+          <!-- Rate -->
+          <div class="form-section-title">Rate & Margin</div>
+          <div class="form-group">
+            <label>Customer Rate ($) <span class="req">*</span></label>
+            <input id="f-rate" type="number" step="0.01" placeholder="2500.00" oninput="calcMargin()">
+          </div>
+          <div class="form-group">
+            <label>Target Carrier Rate ($)</label>
+            <input id="f-carrierRate" type="number" step="0.01" placeholder="2100.00" oninput="calcMargin()">
+          </div>
+          <div class="form-group">
+            <label>Margin</label>
+            <input id="f-margin" type="text" readonly placeholder="--" style="font-weight:700">
           </div>
           <div class="form-group">
             <label>Distance (miles)</label>
@@ -1808,6 +1868,20 @@
       });
     }
 
+    function calcMargin() {
+      var cr = parseFloat(document.getElementById("f-rate").value) || 0;
+      var tr = parseFloat(document.getElementById("f-carrierRate").value) || 0;
+      var el = document.getElementById("f-margin");
+      if (cr > 0 && tr > 0) {
+        var pct = ((cr - tr) / cr * 100);
+        el.value = "$" + (cr - tr).toFixed(0) + " (" + pct.toFixed(1) + "%)";
+        el.style.color = pct >= 12 ? "#22c55e" : pct >= 8 ? "#f59e0b" : "#ef4444";
+      } else {
+        el.value = "--";
+        el.style.color = "";
+      }
+    }
+
     function openNewLoadModal() {
       document.getElementById("new-load-modal").classList.add("open");
       document.getElementById("form-error").className = "form-error";
@@ -1845,6 +1919,9 @@
         return;
       }
 
+      var carrierRate = parseFloat(document.getElementById("f-carrierRate").value) || undefined;
+      var marginPct = (carrierRate && rate) ? ((rate - carrierRate) / rate * 100) : undefined;
+
       var body = {
         originCity: originCity,
         originState: originState,
@@ -1857,8 +1934,13 @@
         pickupDate: new Date(pickupDate).toISOString(),
         deliveryDate: new Date(deliveryDate).toISOString(),
         equipmentType: equipmentType,
+        customerRate: rate,
         rate: rate,
+        carrierRate: carrierRate,
+        grossMargin: carrierRate ? (rate - carrierRate) : undefined,
         weight: parseFloat(document.getElementById("f-weight").value) || undefined,
+        pieces: parseInt(document.getElementById("f-pieces").value) || undefined,
+        freightClass: document.getElementById("f-freightClass").value || undefined,
         commodity: document.getElementById("f-commodity").value.trim() || undefined,
         distance: parseFloat(document.getElementById("f-distance").value) || undefined,
         specialInstructions: document.getElementById("f-instructions").value.trim() || undefined,
@@ -1888,7 +1970,8 @@
       ["f-originCity","f-originState","f-originZip","f-originCompany",
        "f-destCity","f-destState","f-destZip","f-destCompany",
        "f-pickupDate","f-deliveryDate","f-weight","f-commodity",
-       "f-rate","f-distance","f-instructions"].forEach(function(id) {
+       "f-rate","f-carrierRate","f-margin","f-distance","f-instructions",
+       "f-pieces","f-temperature","f-customsBroker"].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.value = "";
       });
