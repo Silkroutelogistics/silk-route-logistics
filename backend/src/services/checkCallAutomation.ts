@@ -7,6 +7,12 @@ import { autoGenerateInvoice } from "./invoiceService";
  * Creates check-call schedule when load is assigned, sends texts via OpenPhone, handles responses.
  */
 
+function setTime(date: Date, hours: number, minutes: number): Date {
+  const d = new Date(date);
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
 const RESPONSE_MAP: Record<string, { status: string; label: string }> = {
   "1": { status: "AT_PICKUP", label: "At Pickup" },
   "2": { status: "LOADED", label: "Loaded" },
@@ -24,6 +30,7 @@ export async function createCheckCallSchedule(loadId: string) {
     where: { id: loadId },
     include: {
       carrier: { select: { phone: true, carrierProfile: { select: { contactPhone: true } } } },
+      customer: { select: { id: true, rating: true } },
     },
   });
   if (!load || !load.carrier) return;
@@ -32,23 +39,48 @@ export async function createCheckCallSchedule(loadId: string) {
   const pickup = new Date(load.pickupDate);
   const delivery = new Date(load.deliveryDate);
   const transitMs = delivery.getTime() - pickup.getTime();
-  const midpoint = new Date(pickup.getTime() + transitMs / 2);
+  const transitDays = Math.ceil(transitMs / (24 * 60 * 60 * 1000));
+
+  // Determine customer tier — Preferred/Cornerstone/Platinum = expedited
+  const customerRating = load.customer?.rating || 0;
+  const isExpedited = customerRating >= 3; // rating 3+ = Preferred or higher
 
   // Delete any existing schedule for this load
   await prisma.checkCallSchedule.deleteMany({ where: { loadId } });
 
-  const schedules = [
-    { type: "PRE_PICKUP", scheduledTime: new Date(pickup.getTime() - 2 * 60 * 60 * 1000) },
-    { type: "AT_PICKUP", scheduledTime: pickup },
-    { type: "MIDPOINT", scheduledTime: midpoint },
-    { type: "PRE_DELIVERY", scheduledTime: new Date(delivery.getTime() - 2 * 60 * 60 * 1000) },
-    { type: "AT_DELIVERY", scheduledTime: delivery },
-  ].filter((s) => s.scheduledTime > new Date()); // Only future check calls
+  const schedules: { type: string; scheduledTime: Date }[] = [];
 
-  if (schedules.length === 0) return;
+  // Common: pre-pickup and pickup confirmation
+  schedules.push({ type: "PRE_PICKUP", scheduledTime: new Date(pickup.getTime() - 2 * 60 * 60 * 1000) });
+  schedules.push({ type: "PICKUP_30MIN", scheduledTime: new Date(pickup.getTime() - 30 * 60 * 1000) });
+  schedules.push({ type: "PICKUP_CONFIRM", scheduledTime: pickup });
+
+  // Transit check calls — depends on tier
+  for (let day = 1; day < transitDays; day++) {
+    const transitDay = new Date(pickup.getTime() + day * 24 * 60 * 60 * 1000);
+    if (isExpedited) {
+      // Expedited: carrier check 8:30 AM, shipper update 9 AM, carrier check 3:30 PM, shipper update 4 PM
+      schedules.push({ type: "CARRIER_CHECK_AM", scheduledTime: setTime(transitDay, 8, 30) });
+      schedules.push({ type: "TRANSIT_AM", scheduledTime: setTime(transitDay, 9, 0) });
+      schedules.push({ type: "CARRIER_CHECK_PM", scheduledTime: setTime(transitDay, 15, 30) });
+      schedules.push({ type: "TRANSIT_PM", scheduledTime: setTime(transitDay, 16, 0) });
+    } else {
+      // Standard: carrier check at 1:30 PM, shipper update at 2 PM
+      schedules.push({ type: "TRANSIT_DAILY", scheduledTime: setTime(transitDay, 13, 30) });
+    }
+  }
+
+  // Common: pre-delivery and POD requests
+  schedules.push({ type: "PRE_DELIVERY", scheduledTime: new Date(delivery.getTime() - 2 * 60 * 60 * 1000) });
+  schedules.push({ type: "POD_REQUEST_30MIN", scheduledTime: new Date(delivery.getTime() + 30 * 60 * 1000) });
+  schedules.push({ type: "POD_REQUEST_1HR", scheduledTime: new Date(delivery.getTime() + 60 * 60 * 1000) });
+
+  const futureSchedules = schedules.filter((s) => s.scheduledTime > new Date());
+
+  if (futureSchedules.length === 0) return;
 
   await prisma.checkCallSchedule.createMany({
-    data: schedules.map((s) => ({
+    data: futureSchedules.map((s) => ({
       loadId,
       scheduledTime: s.scheduledTime,
       type: s.type,
@@ -57,7 +89,7 @@ export async function createCheckCallSchedule(loadId: string) {
     })),
   });
 
-  console.log(`[CheckCall] Created ${schedules.length} scheduled check calls for load ${load.referenceNumber}`);
+  console.log(`[CheckCall] Created ${futureSchedules.length} ${isExpedited ? 'EXPEDITED' : 'STANDARD'} check calls for load ${load.referenceNumber}`);
 }
 
 /**
