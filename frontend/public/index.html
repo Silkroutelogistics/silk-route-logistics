@@ -1106,15 +1106,18 @@
     }
 
     .tech-card .tech-icon {
-      width: 52px;
-      height: 52px;
+      width: 100%;
+      height: 180px;
       border-radius: 12px;
-      background: rgba(200,150,62,0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
+      overflow: hidden;
       margin-bottom: 24px;
+    }
+
+    .tech-card .tech-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .tech-card h4 {
@@ -1276,15 +1279,18 @@
     }
 
     .value-pillar .pillar-icon {
-      width: 48px;
-      height: 48px;
+      width: 100%;
+      height: 160px;
       border-radius: 12px;
-      background: rgba(200,150,62,0.1);
+      overflow: hidden;
       margin: 0 auto 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
+    }
+
+    .value-pillar .pillar-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .value-pillar h4 {
@@ -1967,17 +1973,17 @@
       </div>
       <div class="tech-grid">
         <div class="tech-card reveal">
-          <div class="tech-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg></div>
+          <div class="tech-icon"><img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500&h=360&fit=crop" alt="Carrier fleet trucks on highway" loading="lazy"></div>
           <h4>Smart Carrier Matching</h4>
           <p>AI-powered load-carrier pairing that matches equipment type, lane history, on-time performance, and cost efficiency to find the optimal carrier for every shipment in seconds.</p>
         </div>
         <div class="tech-card reveal reveal-delay-1">
-          <div class="tech-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="tech-icon"><img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=500&h=360&fit=crop" alt="GPS tracking dashboard display" loading="lazy"></div>
           <h4>Real-Time Tracking</h4>
           <p>Live GPS visibility for every shipment with automated status updates pushed directly to shippers. Geofenced milestones trigger instant notifications from pickup through delivery.</p>
         </div>
         <div class="tech-card reveal reveal-delay-2">
-          <div class="tech-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></div>
+          <div class="tech-icon"><img src="https://images.unsplash.com/photo-1531746790095-e5995adbe783?w=500&h=360&fit=crop" alt="AI assistant helping with logistics" loading="lazy"></div>
           <h4>Marco Polo AI</h4>
           <p>Our 24/7 intelligent freight assistant handles instant quotes, shipment tracking, document retrieval, and support questions — available around the clock for shippers and carriers alike.</p>
         </div>
@@ -2046,17 +2052,17 @@
         </p>
         <div class="values-row">
           <div class="value-pillar reveal">
-            <div class="pillar-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+            <div class="pillar-icon"><img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?w=500&h=320&fit=crop" alt="Business handshake partnership" loading="lazy"></div>
             <h4>Carriers First</h4>
             <p>We treat carriers as partners, not commodities. Fair rates, fast pay, and respect on every interaction.</p>
           </div>
           <div class="value-pillar reveal reveal-delay-1">
-            <div class="pillar-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+            <div class="pillar-icon"><img src="https://images.unsplash.com/photo-1556740758-90de374c12ad?w=500&h=320&fit=crop" alt="Freight shipping container operations" loading="lazy"></div>
             <h4>Earning Shipper Trust</h4>
             <p>We don't just move freight — we earn your confidence with proactive communication and flawless execution.</p>
           </div>
           <div class="value-pillar reveal reveal-delay-2">
-            <div class="pillar-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/></svg></div>
+            <div class="pillar-icon"><img src="https://images.unsplash.com/photo-1553877522-43269d4ea984?w=500&h=320&fit=crop" alt="Team communication and collaboration" loading="lazy"></div>
             <h4>Non-Stop Communication</h4>
             <p>You'll never wonder where your freight is. Automated updates, live tracking, and a human always a call away.</p>
           </div>
