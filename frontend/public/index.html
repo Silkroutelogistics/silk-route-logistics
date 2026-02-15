@@ -1320,7 +1320,140 @@
     }
 
     /* ======================================
-       SECTION 10 — CTA BANNER
+       SECTION 10 — INDUSTRY INSIGHTS / BLOG
+       ====================================== */
+    .insights-section {
+      background: var(--navy);
+      padding: 96px 0;
+    }
+
+    .insights-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .insights-header p {
+      color: rgba(255,255,255,0.55);
+      font-size: 1.05rem;
+      margin-top: 12px;
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+    }
+
+    .insight-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: var(--transition);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .insight-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(200,150,62,0.3);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    }
+
+    .insight-card-img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .insight-card-body {
+      padding: 28px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .insight-card-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    .insight-card-body h4 {
+      font-family: var(--font-headline);
+      font-size: 1.15rem;
+      color: var(--white);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .insight-card-body p {
+      color: rgba(255,255,255,0.55);
+      font-size: 0.88rem;
+      line-height: 1.65;
+      flex: 1;
+    }
+
+    .insight-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .insight-card-date {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.35);
+    }
+
+    .insight-card-read {
+      font-size: 0.8rem;
+      color: var(--gold);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .insights-cta {
+      text-align: center;
+      margin-top: 48px;
+    }
+
+    .insights-cta a {
+      color: var(--gold);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .insights-cta a:hover {
+      color: #e0b050;
+    }
+
+    .insights-cta a span {
+      margin-left: 6px;
+      transition: margin-left 0.3s ease;
+    }
+
+    .insights-cta a:hover span {
+      margin-left: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .insights-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ======================================
+       SECTION 11 — CTA BANNER
        ====================================== */
     .cta-banner {
       background: linear-gradient(135deg, var(--navy) 0%, #162233 50%, var(--navy) 100%);
@@ -1834,17 +1967,17 @@
       </div>
       <div class="tech-grid">
         <div class="tech-card reveal">
-          <div class="tech-icon">&#129302;</div>
+          <div class="tech-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg></div>
           <h4>Smart Carrier Matching</h4>
           <p>AI-powered load-carrier pairing that matches equipment type, lane history, on-time performance, and cost efficiency to find the optimal carrier for every shipment in seconds.</p>
         </div>
         <div class="tech-card reveal reveal-delay-1">
-          <div class="tech-icon">&#128225;</div>
+          <div class="tech-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
           <h4>Real-Time Tracking</h4>
           <p>Live GPS visibility for every shipment with automated status updates pushed directly to shippers. Geofenced milestones trigger instant notifications from pickup through delivery.</p>
         </div>
         <div class="tech-card reveal reveal-delay-2">
-          <div class="tech-icon">&#127757;</div>
+          <div class="tech-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></div>
           <h4>Marco Polo AI</h4>
           <p>Our 24/7 intelligent freight assistant handles instant quotes, shipment tracking, document retrieval, and support questions — available around the clock for shippers and carriers alike.</p>
         </div>
@@ -1913,17 +2046,17 @@
         </p>
         <div class="values-row">
           <div class="value-pillar reveal">
-            <div class="pillar-icon">&#129309;</div>
+            <div class="pillar-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
             <h4>Carriers First</h4>
             <p>We treat carriers as partners, not commodities. Fair rates, fast pay, and respect on every interaction.</p>
           </div>
           <div class="value-pillar reveal reveal-delay-1">
-            <div class="pillar-icon">&#128170;</div>
+            <div class="pillar-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
             <h4>Earning Shipper Trust</h4>
             <p>We don't just move freight — we earn your confidence with proactive communication and flawless execution.</p>
           </div>
           <div class="value-pillar reveal reveal-delay-2">
-            <div class="pillar-icon">&#128172;</div>
+            <div class="pillar-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8963E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/></svg></div>
             <h4>Non-Stop Communication</h4>
             <p>You'll never wonder where your freight is. Automated updates, live tracking, and a human always a call away.</p>
           </div>
@@ -1938,7 +2071,61 @@
 
 
   <!-- ============================================
-       SECTION 10 — CTA BANNER
+       SECTION 10 — INDUSTRY INSIGHTS / BLOG
+       ============================================ -->
+  <section class="insights-section section-pad" id="insights">
+    <div class="container">
+      <div class="insights-header reveal">
+        <h2 class="headline headline-lg text-white">Industry Insights</h2>
+        <p>Trends, analysis, and expert perspectives from the freight frontlines.</p>
+      </div>
+      <div class="insights-grid">
+        <a href="/blog.html" class="insight-card reveal">
+          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&h=400&fit=crop" alt="Supply chain trends" class="insight-card-img" loading="lazy">
+          <div class="insight-card-body">
+            <span class="insight-card-tag">Market Analysis</span>
+            <h4>2026 Freight Market Outlook: What Shippers and Carriers Need to Know</h4>
+            <p>Capacity tightening, rate volatility, and the technology shifts reshaping how freight moves across North America this year.</p>
+            <div class="insight-card-footer">
+              <span class="insight-card-date">Feb 10, 2026</span>
+              <span class="insight-card-read">Read More</span>
+            </div>
+          </div>
+        </a>
+        <a href="/blog.html" class="insight-card reveal reveal-delay-1">
+          <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&h=400&fit=crop" alt="Trucking fleet" class="insight-card-img" loading="lazy">
+          <div class="insight-card-body">
+            <span class="insight-card-tag">Carrier Spotlight</span>
+            <h4>How Small Fleets Are Winning With Loyalty Programs Like The Caravan</h4>
+            <p>Owner-operators share how tiered carrier programs deliver consistent freight, faster pay, and real partnership over transactional load boards.</p>
+            <div class="insight-card-footer">
+              <span class="insight-card-date">Jan 28, 2026</span>
+              <span class="insight-card-read">Read More</span>
+            </div>
+          </div>
+        </a>
+        <a href="/blog.html" class="insight-card reveal reveal-delay-2">
+          <img src="https://images.unsplash.com/photo-1553413077-190dd305871c?w=600&h=400&fit=crop" alt="Warehouse logistics" class="insight-card-img" loading="lazy">
+          <div class="insight-card-body">
+            <span class="insight-card-tag">Technology</span>
+            <h4>AI in Freight Brokerage: Beyond the Hype to Real Operational Impact</h4>
+            <p>From automated carrier matching to predictive ETAs, how artificial intelligence is delivering measurable gains in load planning and execution.</p>
+            <div class="insight-card-footer">
+              <span class="insight-card-date">Jan 15, 2026</span>
+              <span class="insight-card-read">Read More</span>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="insights-cta reveal">
+        <a href="/blog.html">View All Insights <span>&rarr;</span></a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================
+       SECTION 11 — CTA BANNER
        ============================================ -->
   <section class="cta-banner" id="contact">
     <div class="container">
