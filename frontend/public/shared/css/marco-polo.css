@@ -37,9 +37,10 @@
 }
 
 .mp-bubble svg {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   fill: #fff;
+  stroke: none;
 }
 
 .mp-bubble.mp-hidden {
@@ -217,11 +218,8 @@
 .mp-header-icon svg {
   width: 20px;
   height: 20px;
-  fill: none;
-  stroke: #fff;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: #fff;
+  stroke: none;
 }
 
 .mp-header-title {
@@ -379,13 +377,10 @@
 }
 
 .mp-msg-avatar svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: #fff;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 16px;
+  height: 16px;
+  fill: #fff;
+  stroke: none;
 }
 
 .mp-msg-assistant .mp-bubble-text {
@@ -627,11 +622,8 @@
 .mp-welcome-icon svg {
   width: 32px;
   height: 32px;
-  fill: none;
-  stroke: #c8963e;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: #c8963e;
+  stroke: none;
 }
 
 .mp-welcome-title {
