@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next build)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: audit cleanup — env validation, dead deps, color mismatch, scheduler locks\n\n- Add GEMINI_API_KEY, RESEND_API_KEY, EMAIL_FROM, FMCSA_WEB_KEY to Zod\n  env schema; replace all raw process.env access with validated env object\n- Remove unused @anthropic-ai/sdk, nodemailer, @types/nodemailer\n- Update .env.example: document Resend/FMCSA vars, remove dead Claude refs\n- Fix gold color mismatch: align theme \\(#d4a574\\) with component hardcodes\n- Add daily OTP code cleanup cron job \\(3 AM, purges expired/used codes\\)\n- Add database-based distributed locks for all scheduler jobs to prevent\n  duplicate execution on multi-instance deployments\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(gh api:*)",
+      "Bash(where:*)",
+      "WebFetch(domain:silk-route-logistics.onrender.com)",
+      "WebFetch(domain:silk-route-logistics.pages.dev)",
+      "WebFetch(domain:silkroutelogistics.ai)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: update production API URL to custom domain and correct MarcoPolo provider label\n\n- frontend/.env.production: point to api.silkroutelogistics.ai instead of Render direct URL\n- MarcoPolo.tsx: default provider label changed from \"Claude AI\" to \"Gemini AI\" \\(Claude was removed\\)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npm test:*)",
+      "Bash(python3:*)",
+      "Bash(gh run list:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx ts-node:*)",
+      "Bash(npx ts-node-dev:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node -e:*)"
+    ]
+  }
+}
