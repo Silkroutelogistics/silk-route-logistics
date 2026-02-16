@@ -22,15 +22,18 @@ var MarcoPolo = (function () {
   var _els = {};
 
   /* ─── SVG Icons ───────────────────────────────────────────── */
-  /* Walking camel — Silk Road caravan theme */
-  var CAMEL_SVG =
+  /* Silk Road sailing ship — Marco Polo explorer theme */
+  var SHIP_SVG =
     '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke="none">' +
-      '<path d="M27 11c-.4-1.2-1.2-2-2-2.3V7.5c0-.8-.7-1.5-1.5-1.5S22 6.7 22 7.5v.8c-.6.1-1.2.4-1.7.9-.8.8-1.3 2-1.3 3.3v.5c-.8-.3-1.7-.5-2.5-.5-1.5 0-3 .6-4 1.5-.4.3-.7.7-1 1.1-.3-.4-.6-.6-1-.8-.8-.5-1.7-.6-2.5-.3-.6.2-1 .7-1.3 1.2L6 16.5l-.8 1.5c-.4.7-.5 1.5-.2 2.2.1.3.3.6.5.8H4v1.5c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V21h.5c.6 0 1.2-.3 1.5-.7l.5-.8v2h-.5v1.5c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V21h3v1.5h-.5v1.5c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V21h1c.3 0 .6-.1.8-.3l1.2-1.2V21h-.5v1.5c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V21h.5c1.1 0 2-.7 2.3-1.8l.7-2.2c.3-1 .2-2-.2-2.8L27 11zM23.5 8c.3 0 .5.2.5.5v.5h-1v-.5c0-.3.2-.5.5-.5zM9 17l.8-1.5.7-1.3c.1-.3.4-.5.7-.6.4-.1.9 0 1.3.3.3.2.6.5.7.9L12 17H9zm15.8-3.3l.5 1c.3.6.3 1.3.1 2l-.7 2.2c-.1.5-.6.9-1.2.9H17c-.3 0-.5-.1-.7-.3l-1.3-1.3c0-.1 0-.2.1-.3.7-.8 2-1.4 3.4-1.4 1 0 2 .3 2.8.7l.7.3V13c0-1 .4-1.9.9-2.4.4-.4.8-.6 1.3-.6.5.2 1 .8 1.3 1.7z"/>' +
-      '<circle cx="25" cy="12" r=".8"/>' +
+      '<path d="M16 3 L16 22" stroke="currentColor" stroke-width="1.5" fill="none"/>' +
+      '<path d="M16.5 4 L25 16 L16.5 18 Z" opacity="0.9"/>' +
+      '<path d="M15.5 6 L8 16 L15.5 18 Z" opacity="0.7"/>' +
+      '<path d="M5 23 C5 23 8 27 16 27 C24 27 27 23 27 23 L24 23 L22 20 L10 20 L8 23 Z"/>' +
+      '<path d="M3 28.5 Q8 26 13 28.5 Q18 31 23 28.5 Q26 27 29 28.5" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/>' +
     '</svg>';
   var ICONS = {
-    compass: CAMEL_SVG,
-    compassSmall: CAMEL_SVG,
+    compass: SHIP_SVG,
+    compassSmall: SHIP_SVG,
     send:
       '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
         '<line x1="22" y1="2" x2="11" y2="13"/>' +
@@ -276,9 +279,12 @@ var MarcoPolo = (function () {
     bubble.setAttribute("role", "button");
     bubble.setAttribute("tabindex", "0");
     bubble.innerHTML =
-      '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
-        '<path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" fill="currentColor"/>' +
-        '<path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" fill="currentColor"/>' +
+      '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke="none">' +
+        '<path d="M16 3 L16 22" stroke="currentColor" stroke-width="1.5" fill="none"/>' +
+        '<path d="M16.5 4 L25 16 L16.5 18 Z" opacity="0.9"/>' +
+        '<path d="M15.5 6 L8 16 L15.5 18 Z" opacity="0.7"/>' +
+        '<path d="M5 23 C5 23 8 27 16 27 C24 27 27 23 27 23 L24 23 L22 20 L10 20 L8 23 Z"/>' +
+        '<path d="M3 28.5 Q8 26 13 28.5 Q18 31 23 28.5 Q26 27 29 28.5" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/>' +
       '</svg>' +
       '<span id="mp-badge" class="mp-badge" style="display:none">0</span>';
     document.body.appendChild(bubble);
