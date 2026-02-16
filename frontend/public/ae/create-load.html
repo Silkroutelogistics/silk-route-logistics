@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Load - Silk Route Logistics</title>
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="stylesheet" href="/ae/css/console.css">
+  <link rel="stylesheet" href="/shared/css/themes.css">
+  <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
+  <style>
+    /* ========== Create Load Page Styles ========== */
+
+    /* --- Progress Bar --- */
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 20px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .progress-step:hover { background: var(--gray-50); }
+    .progress-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      border: 2px solid var(--gray-300);
+      color: var(--gray-400);
+      background: var(--white);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .progress-step.active .progress-step-num {
+      border-color: var(--gold);
+      background: var(--gold);
+      color: var(--white);
+    }
+    .progress-step.completed .progress-step-num {
+      border-color: var(--green);
+      background: var(--green);
+      color: var(--white);
+    }
+    .progress-step-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-400);
+      transition: color 0.15s;
+    }
+    .progress-step.active .progress-step-label { color: var(--gold); font-weight: 600; }
+    .progress-step.completed .progress-step-label { color: var(--green); }
+    .progress-connector {
+      width: 40px;
+      height: 2px;
+      background: var(--gray-200);
+      flex-shrink: 0;
+    }
+    .progress-connector.completed { background: var(--green); }
+
+    /* --- Form Container --- */
+    .form-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px 80px;
+    }
+
+    /* --- Collapsible Section --- */
+    .form-section {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+      transition: border-color 0.2s;
+    }
+    .form-section.active { border-color: var(--gold); }
+    .form-section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .form-section-header:hover { background: var(--gray-50); }
+    .form-section-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      background: var(--gray-100);
+      color: var(--gray-500);
+      flex-shrink: 0;
+    }
+    .form-section.active .form-section-num {
+      background: var(--gold);
+      color: var(--white);
+    }
+    .form-section.completed .form-section-num {
+      background: var(--green);
+      color: var(--white);
+    }
+    .form-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--navy);
+      flex: 1;
+    }
+    .form-section-chevron {
+      color: var(--gray-400);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .form-section.open .form-section-chevron { transform: rotate(180deg); }
+    .form-section-body {
+      display: none;
+      padding: 0 20px 20px;
+    }
+    .form-section.open .form-section-body { display: block; }
+
+    /* --- Form Grid --- */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+    }
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px 20px;
+    }
+    .form-grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 16px 20px;
+    }
+    .full-width { grid-column: 1 / -1; }
+
+    /* --- Form Fields --- */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .form-group label .required { color: var(--red); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 9px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--gray-700);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-dim);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group input:disabled,
+    .form-group select:disabled { background: var(--gray-50); color: var(--gray-400); }
+
+    /* --- Sub-Section --- */
+    .sub-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .sub-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sub-section-title svg { color: var(--gold); }
+
+    /* --- Radio Group --- */
+    .radio-group {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--gray-700);
+    }
+    .radio-option input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold);
+    }
+
+    /* --- Toggle Switch --- */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--gray-300);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle.on { background: var(--gold); }
+    .toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: var(--white);
+      border-radius: 50%;
+      transition: left 0.2s;
+      box-shadow: var(--shadow-sm);
+    }
+    .toggle.on .toggle-knob { left: 22px; }
+    .toggle-label { font-size: 14px; color: var(--gray-700); }
+
+    /* --- Checkbox --- */
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--gray-700);
+    }
+    .checkbox-wrap input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold);
+    }
+
+    /* --- Customer Search --- */
+    .search-wrap {
+      position: relative;
+    }
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 0 0 6px 6px;
+      box-shadow: var(--shadow-lg);
+      z-index: 50;
+      max-height: 240px;
+      overflow-y: auto;
+      display: none;
+    }
+    .search-results.open { display: block; }
+    .search-result-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--gray-700);
+      border-bottom: 1px solid var(--gray-100);
+      transition: background 0.1s;
+    }
+    .search-result-item:hover { background: var(--gold-dim); }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item small {
+      display: block;
+      font-size: 12px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+
+    /* --- Customer Info Card --- */
+    .customer-info {
+      display: none;
+      padding: 12px 16px;
+      background: var(--gray-50);
+      border-radius: 8px;
+      margin-top: 10px;
+      gap: 16px;
+      align-items: center;
+    }
+    .customer-info.visible { display: flex; }
+    .customer-info-name { font-size: 15px; font-weight: 600; color: var(--navy); }
+    .customer-info-detail { font-size: 12px; color: var(--gray-500); }
+    .tier-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tier-gold { background: var(--gold-dim); color: var(--gold); }
+    .tier-silver { background: var(--gray-100); color: var(--gray-600); }
+    .tier-bronze { background: rgba(205,127,50,0.12); color: #CD7F32; }
+    .tier-standard { background: var(--gray-100); color: var(--gray-500); }
+
+    /* --- Conditional Fields --- */
+    .conditional { display: none; }
+    .conditional.visible { display: block; }
+    .conditional-grid.visible {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+    }
+
+    /* --- Accessorial Row --- */
+    .accessorial-rows { margin-top: 10px; }
+    .accessorial-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--gray-100);
+      flex-wrap: wrap;
+    }
+    .accessorial-row .form-group { flex: 1; min-width: 120px; }
+    .accessorial-row .form-group.notes-col { flex: 2; }
+    .acc-delete {
+      background: none;
+      border: none;
+      color: var(--red);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+      align-self: flex-end;
+      margin-bottom: 4px;
+    }
+    .acc-delete:hover { background: var(--red-bg); }
+    .acc-total {
+      display: flex;
+      justify-content: flex-end;
+      padding: 10px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    /* --- Margin Display --- */
+    .margin-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .margin-green { background: var(--green-bg); color: var(--green); }
+    .margin-yellow { background: var(--amber-bg); color: #B45309; }
+    .margin-red { background: var(--red-bg); color: var(--red); }
+
+    /* --- Rate Calc --- */
+    .rate-calc {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-top: 4px;
+    }
+
+    /* --- Review Section --- */
+    .review-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .review-card {
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .review-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .review-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 13px;
+    }
+    .review-row-label { color: var(--gray-500); }
+    .review-row-value { color: var(--navy); font-weight: 500; text-align: right; }
+    .review-highlight {
+      background: var(--gold-dim);
+      border: 1px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .review-highlight-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 14px;
+    }
+    .review-highlight-row .label { color: var(--gray-600); }
+    .review-highlight-row .value { font-weight: 700; color: var(--navy); }
+
+    /* --- Action Bar (Fixed bottom) --- */
+    .action-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 32px;
+      background: var(--white);
+      border-top: 1px solid var(--gray-200);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      z-index: 40;
+    }
+    .action-bar-left { display: flex; gap: 8px; }
+    .action-bar-right { display: flex; gap: 8px; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      background: var(--gold);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      background: var(--white);
+      color: var(--navy);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+    .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      background: var(--white);
+      color: var(--red);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-danger:hover { border-color: var(--red); background: var(--red-bg); }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      box-shadow: var(--shadow-lg);
+    }
+    .toast.show { transform: translateX(0); }
+    .toast-success { background: var(--green); color: var(--white); }
+    .toast-error { background: var(--red); color: var(--white); }
+
+    /* --- Responsive --- */
+    @media (max-width: 1024px) {
+      .action-bar { left: 0; }
+      .form-container { padding: 20px 20px 80px; }
+      .progress-bar { padding: 16px 20px; }
+    }
+    @media (max-width: 768px) {
+      .form-grid, .form-grid-3, .form-grid-4,
+      .review-grid, .conditional-grid.visible { grid-template-columns: 1fr !important; }
+      .progress-step-label { display: none; }
+      .progress-connector { width: 20px; }
+      .accessorial-row { flex-direction: column; align-items: stretch; }
+    }
+    @media (max-width: 640px) {
+      .form-container { padding: 12px 12px 80px; }
+      .action-bar { padding: 10px 16px; }
+      .progress-bar { padding: 12px 12px; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/logo.png" alt="SRL">
+        <span>SRL Command</span>
+      </div>
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-user-name" id="user-name">--</div>
+        <div class="sidebar-user-role" id="user-role">--</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/ae/dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="/ae/loads.html" class="active">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Load Board
+        </a>
+        <a href="/ae/caravan.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          The Caravan
+        </a>
+        <a href="/ae/crm.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          CRM
+        </a>
+        <a href="/ae/communications.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Communications
+        </a>
+        <a href="/ae/claims.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="13" y2="11"/></svg>
+          Claims
+        </a>
+        <a href="/ae/financials.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Lead Hunter
+        </a>
+        <a href="/ae/training.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Training
+        </a>
+        <a href="/ae/analytics.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          Analytics
+        </a>
+        <a href="/ae/accounting/dashboard.html">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>
+          Accounting
+        </a>
+        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+          <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
+          <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
+          <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-logout" onclick="handleLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Hamburger -->
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="main-header" style="padding-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <a href="/ae/loads.html" style="color:var(--gray-400);font-size:13px;text-decoration:none;display:flex;align-items:center;gap:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back to Load Board
+          </a>
+        </div>
+        <h1>Create New Load</h1>
+        <p>Fill in the details below to create a new load for dispatch</p>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar" id="progress-bar">
+        <div class="progress-step active" data-step="1" onclick="scrollToSection(1)">
+          <div class="progress-step-num">1</div>
+          <span class="progress-step-label">Customer & Route</span>
+        </div>
+        <div class="progress-connector" id="conn-1-2"></div>
+        <div class="progress-step" data-step="2" onclick="scrollToSection(2)">
+          <div class="progress-step-num">2</div>
+          <span class="progress-step-label">Commodity & Equipment</span>
+        </div>
+        <div class="progress-connector" id="conn-2-3"></div>
+        <div class="progress-step" data-step="3" onclick="scrollToSection(3)">
+          <div class="progress-step-num">3</div>
+          <span class="progress-step-label">Rate & Contacts</span>
+        </div>
+        <div class="progress-connector" id="conn-3-4"></div>
+        <div class="progress-step" data-step="4" onclick="scrollToSection(4)">
+          <div class="progress-step-num">4</div>
+          <span class="progress-step-label">Review & Create</span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="form-container" id="form-container">
+
+        <!-- ==================== STEP 1: CUSTOMER & ROUTE ==================== -->
+        <div class="form-section active open" id="section-1">
+          <div class="form-section-header" onclick="toggleSection(1)">
+            <div class="form-section-num">1</div>
+            <div class="form-section-title">Customer & Route</div>
+            <svg class="form-section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="form-section-body">
+
+            <!-- Customer Search -->
+            <div class="form-grid" style="margin-bottom:16px;">
+              <div class="form-group">
+                <label>Customer <span class="required">*</span></label>
+                <div class="search-wrap">
+                  <input type="text" id="customer-search" placeholder="Search by company name..." autocomplete="off" oninput="searchCustomers(this.value)">
+                  <div class="search-results" id="customer-results"></div>
+                </div>
+                <input type="hidden" id="customer-id">
+                <div class="customer-info" id="customer-info">
+                  <div style="flex:1;">
+                    <div class="customer-info-name" id="cust-name"></div>
+                    <div class="customer-info-detail" id="cust-detail"></div>
+                  </div>
+                  <span class="tier-badge" id="cust-tier"></span>
+                  <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;" onclick="clearCustomer()" title="Clear">&times;</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Load Number</label>
+                <input type="text" id="load-number" value="Auto-assigned" disabled>
+              </div>
+            </div>
+
+            <!-- ORIGIN -->
+            <div class="sub-section">
+              <div class="sub-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/></svg>
+                Origin (Pickup)
+              </div>
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Company / Facility Name <span class="required">*</span></label>
+                  <input type="text" id="origin-company" data-field="originCompany">
+                </div>
+                <div class="form-group">
+                  <label>City <span class="required">*</span></label>
+                  <input type="text" id="origin-city" data-field="originCity">
+                </div>
+                <div class="form-group">
+                  <label>State <span class="required">*</span></label>
+                  <input type="text" id="origin-state" maxlength="2" placeholder="e.g. TX" data-field="originState" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                  <label>ZIP Code <span class="required">*</span></label>
+                  <input type="text" id="origin-zip" data-field="originZip">
+                </div>
+                <div class="form-group">
+                  <label>Country</label>
+                  <select id="origin-country" data-field="originCountry">
+                    <option value="US" selected>United States</option>
+                    <option value="CA">Canada</option>
+                    <option value="MX">Mexico</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid" style="margin-top:16px;">
+                <div class="form-group">
+                  <label>Pickup Date <span class="required">*</span></label>
+                  <input type="date" id="origin-date" data-field="pickupDate">
+                </div>
+                <div class="form-group">
+                  <label>Pickup Time Type</label>
+                  <div class="radio-group" style="margin-top:4px;">
+                    <label class="radio-option"><input type="radio" name="pickup-time-type" value="FCFS" checked onchange="togglePickupTime(this.value)"> FCFS</label>
+                    <label class="radio-option"><input type="radio" name="pickup-time-type" value="APPOINTMENT" onchange="togglePickupTime(this.value)"> Appointment</label>
+                    <label class="radio-option"><input type="radio" name="pickup-time-type" value="WINDOW" onchange="togglePickupTime(this.value)"> Window</label>
+                  </div>
+                </div>
+              </div>
+              <!-- Appointment fields -->
+              <div class="conditional form-grid" id="pickup-appointment-fields" style="margin-top:12px;">
+                <div class="form-group">
+                  <label>Appointment Time</label>
+                  <input type="time" id="pickup-appt-time" data-field="pickupApptTime">
+                </div>
+                <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;">
+                  <label class="checkbox-wrap" style="margin-top:auto;">
+                    <input type="checkbox" id="pickup-booked" data-field="pickupBooked"> Booked
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label>Booked By</label>
+                  <input type="text" id="pickup-booked-by" data-field="pickupBookedBy" placeholder="Name">
+                </div>
+                <div class="form-group">
+                  <label>Notes</label>
+                  <input type="text" id="pickup-appt-notes" data-field="pickupApptNotes">
+                </div>
+              </div>
+              <!-- Window fields -->
+              <div class="conditional form-grid" id="pickup-window-fields" style="margin-top:12px;">
+                <div class="form-group">
+                  <label>Window Open</label>
+                  <input type="time" id="pickup-window-open" data-field="pickupWindowOpen">
+                </div>
+                <div class="form-group">
+                  <label>Window Close</label>
+                  <input type="time" id="pickup-window-close" data-field="pickupWindowClose">
+                </div>
+              </div>
+              <!-- Pickup Contact -->
+              <div class="form-grid-3" style="margin-top:16px;">
+                <div class="form-group">
+                  <label>Pickup Contact Name</label>
+                  <input type="text" id="pickup-contact-name" data-field="pickupContactName">
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="tel" id="pickup-contact-phone" data-field="pickupContactPhone">
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="pickup-contact-email" data-field="pickupContactEmail">
+                </div>
+              </div>
+            </div>
+
+            <!-- DESTINATION -->
+            <div class="sub-section">
+              <div class="sub-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Destination (Delivery)
+              </div>
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Company / Facility Name <span class="required">*</span></label>
+                  <input type="text" id="dest-company" data-field="destCompany">
+                </div>
+                <div class="form-group">
+                  <label>City <span class="required">*</span></label>
+                  <input type="text" id="dest-city" data-field="destCity">
+                </div>
+                <div class="form-group">
+                  <label>State <span class="required">*</span></label>
+                  <input type="text" id="dest-state" maxlength="2" placeholder="e.g. CA" data-field="destState" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                  <label>ZIP Code <span class="required">*</span></label>
+                  <input type="text" id="dest-zip" data-field="destZip">
+                </div>
+                <div class="form-group">
+                  <label>Country</label>
+                  <select id="dest-country" data-field="destCountry">
+                    <option value="US" selected>United States</option>
+                    <option value="CA">Canada</option>
+                    <option value="MX">Mexico</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid" style="margin-top:16px;">
+                <div class="form-group">
+                  <label>Delivery Date <span class="required">*</span></label>
+                  <input type="date" id="dest-date" data-field="deliveryDate">
+                </div>
+                <div class="form-group">
+                  <label>Delivery Time Type</label>
+                  <div class="radio-group" style="margin-top:4px;">
+                    <label class="radio-option"><input type="radio" name="delivery-time-type" value="FCFS" checked onchange="toggleDeliveryTime(this.value)"> FCFS</label>
+                    <label class="radio-option"><input type="radio" name="delivery-time-type" value="APPOINTMENT" onchange="toggleDeliveryTime(this.value)"> Appointment</label>
+                    <label class="radio-option"><input type="radio" name="delivery-time-type" value="WINDOW" onchange="toggleDeliveryTime(this.value)"> Window</label>
+                  </div>
+                </div>
+              </div>
+              <!-- Appointment fields -->
+              <div class="conditional form-grid" id="delivery-appointment-fields" style="margin-top:12px;">
+                <div class="form-group">
+                  <label>Appointment Time</label>
+                  <input type="time" id="delivery-appt-time" data-field="deliveryApptTime">
+                </div>
+                <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;">
+                  <label class="checkbox-wrap" style="margin-top:auto;">
+                    <input type="checkbox" id="delivery-booked" data-field="deliveryBooked"> Booked
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label>Booked By</label>
+                  <input type="text" id="delivery-booked-by" data-field="deliveryBookedBy" placeholder="Name">
+                </div>
+                <div class="form-group">
+                  <label>Notes</label>
+                  <input type="text" id="delivery-appt-notes" data-field="deliveryApptNotes">
+                </div>
+              </div>
+              <!-- Window fields -->
+              <div class="conditional form-grid" id="delivery-window-fields" style="margin-top:12px;">
+                <div class="form-group">
+                  <label>Window Open</label>
+                  <input type="time" id="delivery-window-open" data-field="deliveryWindowOpen">
+                </div>
+                <div class="form-group">
+                  <label>Window Close</label>
+                  <input type="time" id="delivery-window-close" data-field="deliveryWindowClose">
+                </div>
+              </div>
+              <!-- Delivery Contact -->
+              <div class="form-grid-3" style="margin-top:16px;">
+                <div class="form-group">
+                  <label>Delivery Contact Name</label>
+                  <input type="text" id="delivery-contact-name" data-field="deliveryContactName">
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="tel" id="delivery-contact-phone" data-field="deliveryContactPhone">
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="delivery-contact-email" data-field="deliveryContactEmail">
+                </div>
+              </div>
+            </div>
+
+            <!-- CROSS-BORDER -->
+            <div class="sub-section">
+              <label class="checkbox-wrap" style="font-weight:600;">
+                <input type="checkbox" id="cross-border-check" onchange="toggleCrossBorder()"> Cross-Border Shipment
+              </label>
+              <div class="conditional form-grid" id="cross-border-fields" style="margin-top:14px;">
+                <div class="form-group">
+                  <label>Border Crossing <span class="required">*</span></label>
+                  <select id="border-crossing" data-field="borderCrossing">
+                    <option value="">-- Select Crossing --</option>
+                    <optgroup label="US-Mexico">
+                      <option value="Laredo, TX / Nuevo Laredo">Laredo, TX / Nuevo Laredo</option>
+                      <option value="El Paso, TX / Ciudad Juarez">El Paso, TX / Ciudad Juarez</option>
+                      <option value="McAllen, TX / Reynosa">McAllen, TX / Reynosa</option>
+                      <option value="Brownsville, TX / Matamoros">Brownsville, TX / Matamoros</option>
+                      <option value="Eagle Pass, TX / Piedras Negras">Eagle Pass, TX / Piedras Negras</option>
+                      <option value="Nogales, AZ / Nogales, Sonora">Nogales, AZ / Nogales, Sonora</option>
+                      <option value="San Diego, CA / Tijuana">San Diego, CA / Tijuana</option>
+                      <option value="Calexico, CA / Mexicali">Calexico, CA / Mexicali</option>
+                      <option value="Douglas, AZ / Agua Prieta">Douglas, AZ / Agua Prieta</option>
+                      <option value="Del Rio, TX / Ciudad Acuna">Del Rio, TX / Ciudad Acuna</option>
+                      <option value="Pharr, TX / Reynosa">Pharr, TX / Reynosa</option>
+                      <option value="Roma, TX / Ciudad Miguel Aleman">Roma, TX / Ciudad Miguel Aleman</option>
+                      <option value="Columbus, NM / Palomas">Columbus, NM / Palomas</option>
+                      <option value="Presidio, TX / Ojinaga">Presidio, TX / Ojinaga</option>
+                      <option value="Hidalgo, TX / Reynosa">Hidalgo, TX / Reynosa</option>
+                    </optgroup>
+                    <optgroup label="US-Canada">
+                      <option value="Detroit, MI / Windsor, ON">Detroit, MI / Windsor, ON</option>
+                      <option value="Buffalo, NY / Fort Erie, ON">Buffalo, NY / Fort Erie, ON</option>
+                      <option value="Port Huron, MI / Point Edward, ON">Port Huron, MI / Point Edward, ON</option>
+                      <option value="Champlain, NY / Lacolle, QC">Champlain, NY / Lacolle, QC</option>
+                      <option value="Blaine, WA / Surrey, BC">Blaine, WA / Surrey, BC</option>
+                      <option value="Pembina, ND / Emerson, MB">Pembina, ND / Emerson, MB</option>
+                      <option value="Portal, ND / North Portal, SK">Portal, ND / North Portal, SK</option>
+                      <option value="Sweetgrass, MT / Coutts, AB">Sweetgrass, MT / Coutts, AB</option>
+                      <option value="Houlton, ME / Woodstock, NB">Houlton, ME / Woodstock, NB</option>
+                      <option value="Lewiston, NY / Queenston, ON">Lewiston, NY / Queenston, ON</option>
+                      <option value="Alexandria Bay, NY / Lansdowne, ON">Alexandria Bay, NY / Lansdowne, ON</option>
+                      <option value="Calais, ME / St. Stephen, NB">Calais, ME / St. Stephen, NB</option>
+                      <option value="Derby Line, VT / Stanstead, QC">Derby Line, VT / Stanstead, QC</option>
+                      <option value="Sumas, WA / Huntingdon, BC">Sumas, WA / Huntingdon, BC</option>
+                      <option value="International Falls, MN / Fort Frances, ON">International Falls, MN / Fort Frances, ON</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Customs Broker</label>
+                  <input type="text" id="customs-broker" data-field="customsBroker">
+                </div>
+                <div class="form-group">
+                  <label>Bond Number</label>
+                  <input type="text" id="bond-number" data-field="bondNumber">
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== STEP 2: COMMODITY & EQUIPMENT ==================== -->
+        <div class="form-section" id="section-2">
+          <div class="form-section-header" onclick="toggleSection(2)">
+            <div class="form-section-num">2</div>
+            <div class="form-section-title">Commodity & Equipment</div>
+            <svg class="form-section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="form-section-body">
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label>Commodity Description <span class="required">*</span></label>
+                <input type="text" id="commodity" data-field="commodity" placeholder="e.g. Electronics, Dry Goods, Frozen Foods...">
+              </div>
+              <div class="form-group">
+                <label>Freight Class</label>
+                <select id="freight-class" data-field="freightClass">
+                  <option value="">-- Select --</option>
+                  <option value="50">50</option>
+                  <option value="55">55</option>
+                  <option value="60">60</option>
+                  <option value="65">65</option>
+                  <option value="70">70</option>
+                  <option value="77.5">77.5</option>
+                  <option value="85">85</option>
+                  <option value="92.5">92.5</option>
+                  <option value="100">100</option>
+                  <option value="110">110</option>
+                  <option value="125">125</option>
+                  <option value="150">150</option>
+                  <option value="175">175</option>
+                  <option value="200">200</option>
+                  <option value="250">250</option>
+                  <option value="300">300</option>
+                  <option value="400">400</option>
+                  <option value="500">500</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Weight (lbs) <span class="required">*</span></label>
+                <input type="number" id="weight" data-field="weight" placeholder="e.g. 42000" min="0">
+              </div>
+              <div class="form-group">
+                <label>Pieces / Pallets</label>
+                <input type="number" id="pieces" data-field="pieces" placeholder="e.g. 24" min="0">
+              </div>
+            </div>
+
+            <div class="form-grid" style="margin-top:16px;">
+              <div class="form-group">
+                <label>Equipment Type <span class="required">*</span></label>
+                <select id="equipment-type" data-field="equipmentType" onchange="toggleEquipmentOptions(this.value)">
+                  <option value="">-- Select --</option>
+                  <option value="DRY_VAN">Dry Van</option>
+                  <option value="REEFER">Reefer</option>
+                  <option value="FLATBED">Flatbed</option>
+                  <option value="STEP_DECK">Step Deck</option>
+                  <option value="POWER_ONLY">Power Only</option>
+                  <option value="BOX_TRUCK">Box Truck</option>
+                  <option value="HOTSHOT">Hotshot</option>
+                </select>
+              </div>
+              <div class="form-group conditional" id="temp-field">
+                <label>Temperature (&deg;F) <span class="required">*</span></label>
+                <input type="number" id="temperature" data-field="temperature" placeholder="e.g. 34">
+              </div>
+              <div class="form-group conditional" id="tarp-field" style="justify-content:flex-end;">
+                <label class="checkbox-wrap">
+                  <input type="checkbox" id="tarp-required" data-field="tarpRequired"> Tarp Required
+                </label>
+              </div>
+            </div>
+
+            <!-- Dimensions -->
+            <div class="sub-section">
+              <div class="sub-section-title">Dimensions (Optional)</div>
+              <div class="form-grid-3">
+                <div class="form-group">
+                  <label>Length (ft)</label>
+                  <input type="number" id="dim-length" data-field="dimLength" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                  <label>Width (ft)</label>
+                  <input type="number" id="dim-width" data-field="dimWidth" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                  <label>Height (ft)</label>
+                  <input type="number" id="dim-height" data-field="dimHeight" min="0" step="0.1">
+                </div>
+              </div>
+            </div>
+
+            <!-- Hazmat & Stackable -->
+            <div class="sub-section">
+              <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap;">
+                <label class="checkbox-wrap" style="font-weight:600;">
+                  <input type="checkbox" id="hazmat-check" onchange="toggleHazmat()"> Hazmat
+                </label>
+                <div class="toggle-wrap">
+                  <span class="toggle-label">Stackable:</span>
+                  <div class="toggle on" id="stackable-toggle" onclick="toggleStackable()">
+                    <div class="toggle-knob"></div>
+                  </div>
+                  <span class="toggle-label" id="stackable-label">Yes</span>
+                </div>
+              </div>
+              <div class="conditional form-grid-3" id="hazmat-fields" style="margin-top:14px;">
+                <div class="form-group">
+                  <label>UN Number <span class="required">*</span></label>
+                  <input type="text" id="hazmat-un" data-field="hazmatUN" placeholder="e.g. UN1203">
+                </div>
+                <div class="form-group">
+                  <label>Hazmat Class <span class="required">*</span></label>
+                  <input type="text" id="hazmat-class" data-field="hazmatClass" placeholder="e.g. 3">
+                </div>
+                <div class="form-group">
+                  <label>Proper Shipping Name <span class="required">*</span></label>
+                  <input type="text" id="hazmat-name" data-field="hazmatName" placeholder="e.g. Gasoline">
+                </div>
+              </div>
+            </div>
+
+            <!-- Special Instructions -->
+            <div class="sub-section">
+              <div class="form-group">
+                <label>Special Instructions</label>
+                <textarea id="special-instructions" data-field="specialInstructions" placeholder="Any special handling, delivery instructions, or notes for the carrier..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== STEP 3: RATE & CONTACTS ==================== -->
+        <div class="form-section" id="section-3">
+          <div class="form-section-header" onclick="toggleSection(3)">
+            <div class="form-section-num">3</div>
+            <div class="form-section-title">Rate & Contacts</div>
+            <svg class="form-section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="form-section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Distance / Miles</label>
+                <input type="number" id="miles" data-field="miles" placeholder="e.g. 1200" min="0">
+                <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">Auto-calculated from route when available</div>
+              </div>
+              <div class="form-group">
+                <label>Rate Type</label>
+                <div class="radio-group" style="margin-top:4px;">
+                  <label class="radio-option"><input type="radio" name="rate-type" value="FLAT" checked onchange="updateRateType(this.value)"> Flat Rate</label>
+                  <label class="radio-option"><input type="radio" name="rate-type" value="PER_MILE" onchange="updateRateType(this.value)"> Per Mile</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid" style="margin-top:16px;">
+              <div class="form-group">
+                <label>Customer Rate ($) <span class="required">*</span></label>
+                <input type="number" id="customer-rate" data-field="customerRate" placeholder="0.00" min="0" step="0.01" oninput="updateMargin()">
+                <div class="rate-calc" id="customer-rate-calc" style="display:none;"></div>
+              </div>
+              <div class="form-group">
+                <label>Target Carrier Rate ($) <span class="required">*</span></label>
+                <input type="number" id="carrier-rate" data-field="carrierRate" placeholder="0.00" min="0" step="0.01" oninput="updateMargin()">
+                <div class="rate-calc" id="carrier-rate-calc" style="display:none;"></div>
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.3px;">Margin</label>
+              <div class="margin-display margin-green" id="margin-display" style="margin-top:6px;">--</div>
+            </div>
+
+            <!-- Accessorials -->
+            <div class="sub-section">
+              <div class="sub-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Accessorials
+              </div>
+              <button class="btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="addAccessorial()">+ Add Accessorial</button>
+              <div class="accessorial-rows" id="accessorial-rows"></div>
+              <div class="acc-total" id="acc-total" style="display:none;">Total Accessorials: <span id="acc-total-amount">$0.00</span></div>
+            </div>
+
+            <!-- Contacts -->
+            <div class="sub-section">
+              <div class="sub-section-title">Shipper Contact</div>
+              <div class="form-grid-3">
+                <div class="form-group">
+                  <label>Name</label>
+                  <input type="text" id="shipper-contact-name" data-field="shipperContactName">
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="shipper-contact-email" data-field="shipperContactEmail">
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="tel" id="shipper-contact-phone" data-field="shipperContactPhone">
+                </div>
+              </div>
+            </div>
+            <div class="sub-section">
+              <div class="sub-section-title">Receiver Contact</div>
+              <div class="form-grid-3">
+                <div class="form-group">
+                  <label>Name</label>
+                  <input type="text" id="receiver-contact-name" data-field="receiverContactName">
+                </div>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="receiver-contact-email" data-field="receiverContactEmail">
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="tel" id="receiver-contact-phone" data-field="receiverContactPhone">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== STEP 4: REVIEW & CREATE ==================== -->
+        <div class="form-section" id="section-4">
+          <div class="form-section-header" onclick="toggleSection(4)">
+            <div class="form-section-num">4</div>
+            <div class="form-section-title">Review & Create</div>
+            <svg class="form-section-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="form-section-body">
+            <div id="review-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /form-container -->
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div class="action-bar-left">
+          <button class="btn-danger" onclick="clearForm()">Clear Form</button>
+        </div>
+        <div class="action-bar-right">
+          <button class="btn-secondary" onclick="saveDraft()">Save Draft</button>
+          <button class="btn-primary" id="create-btn" onclick="createLoad()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Create Load
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/ae/js/api.js"></script>
+
+  <script>
+    /* =========================================
+       INIT & AUTH
+       ========================================= */
+    SRL.requireAuth = function() {
+      var token = sessionStorage.getItem("token") || localStorage.getItem("token");
+      if (!token) { window.location.href = "/auth/login"; return false; }
+      return true;
+    };
+    if (typeof Auth !== "undefined" && Auth.requireAuth) {
+      Auth.requireAuth();
+    } else {
+      SRL.requireAuth();
+    }
+
+    var DRAFT_KEY = "srl_create_load_draft";
+    var customerSearchTimer = null;
+    var accessorialCounter = 0;
+    var stackableValue = true;
+
+    /* =========================================
+       ON LOAD
+       ========================================= */
+    document.addEventListener("DOMContentLoaded", function() {
+      loadUser();
+      restoreDraft();
+      setupAutoSave();
+    });
+
+    function loadUser() {
+      SRL.getMe().then(function(data) {
+        var user = data.user || data;
+        document.getElementById("user-name").textContent = (user.firstName || "") + " " + (user.lastName || "");
+        document.getElementById("user-role").textContent = formatRole(user.role);
+      }).catch(function() {});
+    }
+
+    function formatRole(role) {
+      var m = {ADMIN:"Administrator",BROKER:"Account Executive",DISPATCH:"Dispatch",OPERATIONS:"Operations",CEO:"CEO",CARRIER:"Carrier",ACCOUNTING:"Accounting"};
+      return m[role] || role || "--";
+    }
+
+    /* =========================================
+       SIDEBAR
+       ========================================= */
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("overlay").classList.toggle("open");
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
+      window.location.href = "/auth/login";
+    }
+
+    /* =========================================
+       TOAST
+       ========================================= */
+    function showToast(msg, type) {
+      var el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast toast-" + (type || "success") + " show";
+      setTimeout(function(){ el.classList.remove("show"); }, 4000);
+    }
+
+    /* =========================================
+       SECTION TOGGLE & PROGRESS
+       ========================================= */
+    function toggleSection(n) {
+      var sec = document.getElementById("section-" + n);
+      sec.classList.toggle("open");
+      if (sec.classList.contains("open")) {
+        updateActiveSection(n);
+      }
+    }
+
+    function scrollToSection(n) {
+      var sec = document.getElementById("section-" + n);
+      if (!sec.classList.contains("open")) {
+        sec.classList.add("open");
+      }
+      updateActiveSection(n);
+      sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function updateActiveSection(n) {
+      for (var i = 1; i <= 4; i++) {
+        var sec = document.getElementById("section-" + i);
+        var step = document.querySelector('.progress-step[data-step="' + i + '"]');
+        sec.classList.remove("active");
+        step.classList.remove("active");
+        if (i === n) {
+          sec.classList.add("active");
+          step.classList.add("active");
+        }
+      }
+      if (n === 4) { buildReview(); }
+    }
+
+    function markStepCompleted(n) {
+      var step = document.querySelector('.progress-step[data-step="' + n + '"]');
+      step.classList.add("completed");
+      step.querySelector(".progress-step-num").innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      if (n < 4) {
+        var conn = document.getElementById("conn-" + n + "-" + (n + 1));
+        if (conn) conn.classList.add("completed");
+      }
+    }
+
+    function unmarkStepCompleted(n) {
+      var step = document.querySelector('.progress-step[data-step="' + n + '"]');
+      step.classList.remove("completed");
+      step.querySelector(".progress-step-num").textContent = n;
+      if (n < 4) {
+        var conn = document.getElementById("conn-" + n + "-" + (n + 1));
+        if (conn) conn.classList.remove("completed");
+      }
+    }
+
+    /* =========================================
+       CUSTOMER SEARCH
+       ========================================= */
+    function searchCustomers(query) {
+      clearTimeout(customerSearchTimer);
+      var resultsEl = document.getElementById("customer-results");
+      if (!query || query.length < 2) {
+        resultsEl.classList.remove("open");
+        return;
+      }
+      customerSearchTimer = setTimeout(function() {
+        SRL.getCustomers({ search: query }).then(function(data) {
+          var customers = data.customers || data || [];
+          if (!Array.isArray(customers)) customers = [];
+          if (customers.length === 0) {
+            resultsEl.innerHTML = '<div class="search-result-item" style="color:var(--gray-400);">No customers found</div>';
+          } else {
+            resultsEl.innerHTML = customers.map(function(c) {
+              return '<div class="search-result-item" onclick="selectCustomer(' + JSON.stringify(JSON.stringify(c)) + ')">' +
+                (c.companyName || c.name || "Unknown") +
+                '<small>' + (c.paymentTerms || "Net 30") + ' | ' + (c.tier || "Standard") + '</small></div>';
+            }).join("");
+          }
+          resultsEl.classList.add("open");
+        }).catch(function() {
+          resultsEl.innerHTML = '<div class="search-result-item" style="color:var(--gray-400);">Search failed</div>';
+          resultsEl.classList.add("open");
+        });
+      }, 300);
+    }
+
+    function selectCustomer(jsonStr) {
+      var c = JSON.parse(jsonStr);
+      document.getElementById("customer-id").value = c.id || "";
+      document.getElementById("customer-search").value = c.companyName || c.name || "";
+      document.getElementById("customer-results").classList.remove("open");
+
+      var infoEl = document.getElementById("customer-info");
+      document.getElementById("cust-name").textContent = c.companyName || c.name || "";
+      document.getElementById("cust-detail").textContent = "Payment: " + (c.paymentTerms || "Net 30");
+      var tier = (c.tier || "STANDARD").toUpperCase();
+      var tierEl = document.getElementById("cust-tier");
+      tierEl.textContent = tier;
+      tierEl.className = "tier-badge tier-" + tier.toLowerCase();
+      infoEl.classList.add("visible");
+      saveDraft();
+    }
+
+    function clearCustomer() {
+      document.getElementById("customer-id").value = "";
+      document.getElementById("customer-search").value = "";
+      document.getElementById("customer-info").classList.remove("visible");
+      saveDraft();
+    }
+
+    // Close search dropdown on outside click
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".search-wrap")) {
+        document.getElementById("customer-results").classList.remove("open");
+      }
+    });
+
+    /* =========================================
+       PICKUP / DELIVERY TIME TYPE
+       ========================================= */
+    function togglePickupTime(val) {
+      document.getElementById("pickup-appointment-fields").classList.toggle("visible", val === "APPOINTMENT");
+      document.getElementById("pickup-window-fields").classList.toggle("visible", val === "WINDOW");
+      saveDraft();
+    }
+
+    function toggleDeliveryTime(val) {
+      document.getElementById("delivery-appointment-fields").classList.toggle("visible", val === "APPOINTMENT");
+      document.getElementById("delivery-window-fields").classList.toggle("visible", val === "WINDOW");
+      saveDraft();
+    }
+
+    /* =========================================
+       CROSS-BORDER
+       ========================================= */
+    function toggleCrossBorder() {
+      var checked = document.getElementById("cross-border-check").checked;
+      document.getElementById("cross-border-fields").classList.toggle("visible", checked);
+      saveDraft();
+    }
+
+    /* =========================================
+       EQUIPMENT OPTIONS
+       ========================================= */
+    function toggleEquipmentOptions(val) {
+      document.getElementById("temp-field").classList.toggle("visible", val === "REEFER");
+      document.getElementById("tarp-field").classList.toggle("visible", val === "FLATBED");
+      saveDraft();
+    }
+
+    /* =========================================
+       HAZMAT
+       ========================================= */
+    function toggleHazmat() {
+      var checked = document.getElementById("hazmat-check").checked;
+      document.getElementById("hazmat-fields").classList.toggle("visible", checked);
+      saveDraft();
+    }
+
+    /* =========================================
+       STACKABLE
+       ========================================= */
+    function toggleStackable() {
+      stackableValue = !stackableValue;
+      var toggle = document.getElementById("stackable-toggle");
+      toggle.classList.toggle("on", stackableValue);
+      document.getElementById("stackable-label").textContent = stackableValue ? "Yes" : "No";
+      saveDraft();
+    }
+
+    /* =========================================
+       RATE TYPE & MARGIN
+       ========================================= */
+    function updateRateType(val) {
+      var miles = parseFloat(document.getElementById("miles").value) || 0;
+      var custCalc = document.getElementById("customer-rate-calc");
+      var carrCalc = document.getElementById("carrier-rate-calc");
+      if (val === "PER_MILE" && miles > 0) {
+        custCalc.style.display = "block";
+        carrCalc.style.display = "block";
+      } else {
+        custCalc.style.display = "none";
+        carrCalc.style.display = "none";
+      }
+      updateMargin();
+      saveDraft();
+    }
+
+    function updateMargin() {
+      var rateType = document.querySelector('input[name="rate-type"]:checked').value;
+      var miles = parseFloat(document.getElementById("miles").value) || 0;
+      var custRate = parseFloat(document.getElementById("customer-rate").value) || 0;
+      var carrRate = parseFloat(document.getElementById("carrier-rate").value) || 0;
+
+      var custTotal = custRate;
+      var carrTotal = carrRate;
+
+      if (rateType === "PER_MILE" && miles > 0) {
+        custTotal = custRate * miles;
+        carrTotal = carrRate * miles;
+        document.getElementById("customer-rate-calc").textContent = "$" + custRate.toFixed(2) + " x " + miles + " mi = $" + custTotal.toFixed(2);
+        document.getElementById("customer-rate-calc").style.display = "block";
+        document.getElementById("carrier-rate-calc").textContent = "$" + carrRate.toFixed(2) + " x " + miles + " mi = $" + carrTotal.toFixed(2);
+        document.getElementById("carrier-rate-calc").style.display = "block";
+      } else {
+        document.getElementById("customer-rate-calc").style.display = "none";
+        document.getElementById("carrier-rate-calc").style.display = "none";
+      }
+
+      var marginEl = document.getElementById("margin-display");
+      if (custTotal > 0 && carrTotal > 0) {
+        var margin = ((custTotal - carrTotal) / custTotal) * 100;
+        var marginDollar = custTotal - carrTotal;
+        marginEl.textContent = margin.toFixed(1) + "% ($" + marginDollar.toFixed(2) + ")";
+        marginEl.className = "margin-display";
+        if (margin >= 12) marginEl.classList.add("margin-green");
+        else if (margin >= 8) marginEl.classList.add("margin-yellow");
+        else marginEl.classList.add("margin-red");
+      } else {
+        marginEl.textContent = "--";
+        marginEl.className = "margin-display margin-green";
+      }
+    }
+
+    /* =========================================
+       ACCESSORIALS
+       ========================================= */
+    function addAccessorial() {
+      accessorialCounter++;
+      var id = accessorialCounter;
+      var row = document.createElement("div");
+      row.className = "accessorial-row";
+      row.id = "acc-row-" + id;
+      row.innerHTML =
+        '<div class="form-group">' +
+          '<label>Type</label>' +
+          '<select id="acc-type-' + id + '" onchange="updateAccTotal()">' +
+            '<option value="">-- Select --</option>' +
+            '<option value="DETENTION">Detention</option>' +
+            '<option value="LUMPER">Lumper</option>' +
+            '<option value="TONU">TONU</option>' +
+            '<option value="FUEL_SURCHARGE">Fuel Surcharge</option>' +
+            '<option value="BORDER_CROSSING">Border Crossing</option>' +
+            '<option value="LAYOVER">Layover</option>' +
+            '<option value="DRIVER_ASSIST">Driver Assist</option>' +
+            '<option value="INSIDE_DELIVERY">Inside Delivery</option>' +
+            '<option value="OTHER">Other</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>Amount ($)</label>' +
+          '<input type="number" id="acc-amount-' + id + '" min="0" step="0.01" oninput="updateAccTotal()">' +
+        '</div>' +
+        '<div class="form-group notes-col">' +
+          '<label>Notes</label>' +
+          '<input type="text" id="acc-notes-' + id + '">' +
+        '</div>' +
+        '<button class="acc-delete" onclick="removeAccessorial(' + id + ')" title="Remove">&times;</button>';
+      document.getElementById("accessorial-rows").appendChild(row);
+      document.getElementById("acc-total").style.display = "flex";
+      updateAccTotal();
+    }
+
+    function removeAccessorial(id) {
+      var row = document.getElementById("acc-row-" + id);
+      if (row) row.remove();
+      updateAccTotal();
+      var rows = document.querySelectorAll(".accessorial-row");
+      if (rows.length === 0) document.getElementById("acc-total").style.display = "none";
+      saveDraft();
+    }
+
+    function updateAccTotal() {
+      var total = 0;
+      var rows = document.querySelectorAll(".accessorial-row");
+      rows.forEach(function(row) {
+        var amtInput = row.querySelector('input[type="number"]');
+        total += parseFloat(amtInput.value) || 0;
+      });
+      document.getElementById("acc-total-amount").textContent = "$" + total.toFixed(2);
+      saveDraft();
+    }
+
+    function getAccessorials() {
+      var accs = [];
+      var rows = document.querySelectorAll(".accessorial-row");
+      rows.forEach(function(row) {
+        var selects = row.querySelectorAll("select");
+        var inputs = row.querySelectorAll("input");
+        accs.push({
+          type: selects[0] ? selects[0].value : "",
+          amount: inputs[0] ? parseFloat(inputs[0].value) || 0 : 0,
+          notes: inputs[1] ? inputs[1].value : ""
+        });
+      });
+      return accs;
+    }
+
+    /* =========================================
+       REVIEW
+       ========================================= */
+    function buildReview() {
+      var d = gatherFormData();
+      var rateType = document.querySelector('input[name="rate-type"]:checked').value;
+      var miles = parseFloat(d.miles) || 0;
+      var custRate = parseFloat(d.customerRate) || 0;
+      var carrRate = parseFloat(d.carrierRate) || 0;
+      var custTotal = rateType === "PER_MILE" ? custRate * miles : custRate;
+      var carrTotal = rateType === "PER_MILE" ? carrRate * miles : carrRate;
+      var margin = custTotal > 0 ? ((custTotal - carrTotal) / custTotal * 100) : 0;
+      var marginClass = margin >= 12 ? "margin-green" : (margin >= 8 ? "margin-yellow" : "margin-red");
+
+      var equipMap = {DRY_VAN:"Dry Van",REEFER:"Reefer",FLATBED:"Flatbed",STEP_DECK:"Step Deck",POWER_ONLY:"Power Only",BOX_TRUCK:"Box Truck",HOTSHOT:"Hotshot"};
+
+      var html = '<div class="review-highlight">';
+      html += reviewHighlightRow("Load #", d.loadNumber || "Auto-assigned");
+      html += reviewHighlightRow("Customer", d.customerName || "--");
+      html += reviewHighlightRow("Route", (d.originCity || "--") + ", " + (d.originState || "--") + " &rarr; " + (d.destCity || "--") + ", " + (d.destState || "--"));
+      html += reviewHighlightRow("Customer Rate", "$" + custTotal.toFixed(2) + (rateType === "PER_MILE" ? " (" + custRate.toFixed(2) + "/mi)" : ""));
+      html += reviewHighlightRow("Carrier Rate", "$" + carrTotal.toFixed(2) + (rateType === "PER_MILE" ? " (" + carrRate.toFixed(2) + "/mi)" : ""));
+      html += reviewHighlightRow("Margin", '<span class="' + marginClass + '" style="padding:2px 8px;border-radius:4px;font-weight:700;">' + margin.toFixed(1) + "% ($" + (custTotal - carrTotal).toFixed(2) + ")</span>");
+      html += reviewHighlightRow("Equipment", equipMap[d.equipmentType] || "--");
+      html += reviewHighlightRow("Dates", (d.pickupDate || "--") + " &rarr; " + (d.deliveryDate || "--"));
+      html += '</div>';
+
+      html += '<div class="review-grid">';
+
+      // Origin card
+      html += '<div class="review-card">';
+      html += '<div class="review-card-title">Origin</div>';
+      html += reviewRow("Facility", d.originCompany);
+      html += reviewRow("Location", (d.originCity || "") + ", " + (d.originState || "") + " " + (d.originZip || ""));
+      html += reviewRow("Country", d.originCountry);
+      html += reviewRow("Pickup Date", d.pickupDate);
+      html += reviewRow("Contact", d.pickupContactName);
+      html += '</div>';
+
+      // Destination card
+      html += '<div class="review-card">';
+      html += '<div class="review-card-title">Destination</div>';
+      html += reviewRow("Facility", d.destCompany);
+      html += reviewRow("Location", (d.destCity || "") + ", " + (d.destState || "") + " " + (d.destZip || ""));
+      html += reviewRow("Country", d.destCountry);
+      html += reviewRow("Delivery Date", d.deliveryDate);
+      html += reviewRow("Contact", d.deliveryContactName);
+      html += '</div>';
+
+      // Commodity card
+      html += '<div class="review-card">';
+      html += '<div class="review-card-title">Commodity</div>';
+      html += reviewRow("Description", d.commodity);
+      html += reviewRow("Weight", d.weight ? d.weight + " lbs" : "--");
+      html += reviewRow("Pieces", d.pieces || "--");
+      html += reviewRow("Freight Class", d.freightClass || "--");
+      html += reviewRow("Hazmat", d.hazmat ? "Yes - " + (d.hazmatUN || "") : "No");
+      html += reviewRow("Stackable", d.stackable ? "Yes" : "No");
+      html += '</div>';
+
+      // Accessorials card
+      var accs = getAccessorials();
+      html += '<div class="review-card">';
+      html += '<div class="review-card-title">Accessorials & Contacts</div>';
+      if (accs.length > 0) {
+        accs.forEach(function(a) {
+          if (a.type) html += reviewRow(a.type.replace(/_/g, " "), "$" + a.amount.toFixed(2));
+        });
+      } else {
+        html += reviewRow("Accessorials", "None");
+      }
+      html += reviewRow("Shipper", d.shipperContactName || "--");
+      html += reviewRow("Receiver", d.receiverContactName || "--");
+      html += '</div>';
+
+      html += '</div>';
+
+      // Cross-border
+      if (d.crossBorder) {
+        html += '<div class="review-card" style="margin-top:16px;">';
+        html += '<div class="review-card-title">Cross-Border</div>';
+        html += '<div class="review-grid">';
+        html += '<div>' + reviewRow("Crossing", d.borderCrossing) + '</div>';
+        html += '<div>' + reviewRow("Customs Broker", d.customsBroker || "--") + reviewRow("Bond #", d.bondNumber || "--") + '</div>';
+        html += '</div></div>';
+      }
+
+      // Special instructions
+      if (d.specialInstructions) {
+        html += '<div class="review-card" style="margin-top:16px;">';
+        html += '<div class="review-card-title">Special Instructions</div>';
+        html += '<div style="font-size:13px;color:var(--gray-700);white-space:pre-wrap;">' + escHtml(d.specialInstructions) + '</div>';
+        html += '</div>';
+      }
+
+      document.getElementById("review-content").innerHTML = html;
+    }
+
+    function reviewHighlightRow(label, value) {
+      return '<div class="review-highlight-row"><span class="label">' + label + '</span><span class="value">' + value + '</span></div>';
+    }
+
+    function reviewRow(label, value) {
+      return '<div class="review-row"><span class="review-row-label">' + label + '</span><span class="review-row-value">' + (value || "--") + '</span></div>';
+    }
+
+    function escHtml(str) {
+      var div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    /* =========================================
+       GATHER FORM DATA
+       ========================================= */
+    function gatherFormData() {
+      var rateType = document.querySelector('input[name="rate-type"]:checked').value;
+      var pickupTimeType = document.querySelector('input[name="pickup-time-type"]:checked').value;
+      var deliveryTimeType = document.querySelector('input[name="delivery-time-type"]:checked').value;
+
+      return {
+        customerId: document.getElementById("customer-id").value,
+        customerName: document.getElementById("customer-search").value,
+        loadNumber: document.getElementById("load-number").value,
+
+        originCompany: document.getElementById("origin-company").value,
+        originCity: document.getElementById("origin-city").value,
+        originState: document.getElementById("origin-state").value.toUpperCase(),
+        originZip: document.getElementById("origin-zip").value,
+        originCountry: document.getElementById("origin-country").value,
+        pickupDate: document.getElementById("origin-date").value,
+        pickupTimeType: pickupTimeType,
+        pickupApptTime: document.getElementById("pickup-appt-time").value,
+        pickupBooked: document.getElementById("pickup-booked").checked,
+        pickupBookedBy: document.getElementById("pickup-booked-by").value,
+        pickupApptNotes: document.getElementById("pickup-appt-notes").value,
+        pickupWindowOpen: document.getElementById("pickup-window-open").value,
+        pickupWindowClose: document.getElementById("pickup-window-close").value,
+        pickupContactName: document.getElementById("pickup-contact-name").value,
+        pickupContactPhone: document.getElementById("pickup-contact-phone").value,
+        pickupContactEmail: document.getElementById("pickup-contact-email").value,
+
+        destCompany: document.getElementById("dest-company").value,
+        destCity: document.getElementById("dest-city").value,
+        destState: document.getElementById("dest-state").value.toUpperCase(),
+        destZip: document.getElementById("dest-zip").value,
+        destCountry: document.getElementById("dest-country").value,
+        deliveryDate: document.getElementById("dest-date").value,
+        deliveryTimeType: deliveryTimeType,
+        deliveryApptTime: document.getElementById("delivery-appt-time").value,
+        deliveryBooked: document.getElementById("delivery-booked").checked,
+        deliveryBookedBy: document.getElementById("delivery-booked-by").value,
+        deliveryApptNotes: document.getElementById("delivery-appt-notes").value,
+        deliveryWindowOpen: document.getElementById("delivery-window-open").value,
+        deliveryWindowClose: document.getElementById("delivery-window-close").value,
+        deliveryContactName: document.getElementById("delivery-contact-name").value,
+        deliveryContactPhone: document.getElementById("delivery-contact-phone").value,
+        deliveryContactEmail: document.getElementById("delivery-contact-email").value,
+
+        crossBorder: document.getElementById("cross-border-check").checked,
+        borderCrossing: document.getElementById("border-crossing").value,
+        customsBroker: document.getElementById("customs-broker").value,
+        bondNumber: document.getElementById("bond-number").value,
+
+        commodity: document.getElementById("commodity").value,
+        freightClass: document.getElementById("freight-class").value,
+        weight: document.getElementById("weight").value,
+        pieces: document.getElementById("pieces").value,
+        equipmentType: document.getElementById("equipment-type").value,
+        temperature: document.getElementById("temperature").value,
+        tarpRequired: document.getElementById("tarp-required").checked,
+        dimLength: document.getElementById("dim-length").value,
+        dimWidth: document.getElementById("dim-width").value,
+        dimHeight: document.getElementById("dim-height").value,
+        hazmat: document.getElementById("hazmat-check").checked,
+        hazmatUN: document.getElementById("hazmat-un").value,
+        hazmatClass: document.getElementById("hazmat-class").value,
+        hazmatName: document.getElementById("hazmat-name").value,
+        stackable: stackableValue,
+        specialInstructions: document.getElementById("special-instructions").value,
+
+        miles: document.getElementById("miles").value,
+        rateType: rateType,
+        customerRate: document.getElementById("customer-rate").value,
+        carrierRate: document.getElementById("carrier-rate").value,
+        accessorials: getAccessorials(),
+
+        shipperContactName: document.getElementById("shipper-contact-name").value,
+        shipperContactEmail: document.getElementById("shipper-contact-email").value,
+        shipperContactPhone: document.getElementById("shipper-contact-phone").value,
+        receiverContactName: document.getElementById("receiver-contact-name").value,
+        receiverContactEmail: document.getElementById("receiver-contact-email").value,
+        receiverContactPhone: document.getElementById("receiver-contact-phone").value,
+      };
+    }
+
+    /* =========================================
+       DRAFT SAVE / RESTORE
+       ========================================= */
+    function saveDraft() {
+      try {
+        var data = gatherFormData();
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      } catch(e) {}
+    }
+
+    function restoreDraft() {
+      try {
+        var json = localStorage.getItem(DRAFT_KEY);
+        if (!json) return;
+        var d = JSON.parse(json);
+        if (!d) return;
+
+        // Restore simple text/number fields
+        var fieldMap = {
+          "customer-search": "customerName",
+          "customer-id": "customerId",
+          "origin-company": "originCompany",
+          "origin-city": "originCity",
+          "origin-state": "originState",
+          "origin-zip": "originZip",
+          "origin-country": "originCountry",
+          "origin-date": "pickupDate",
+          "pickup-appt-time": "pickupApptTime",
+          "pickup-booked-by": "pickupBookedBy",
+          "pickup-appt-notes": "pickupApptNotes",
+          "pickup-window-open": "pickupWindowOpen",
+          "pickup-window-close": "pickupWindowClose",
+          "pickup-contact-name": "pickupContactName",
+          "pickup-contact-phone": "pickupContactPhone",
+          "pickup-contact-email": "pickupContactEmail",
+          "dest-company": "destCompany",
+          "dest-city": "destCity",
+          "dest-state": "destState",
+          "dest-zip": "destZip",
+          "dest-country": "destCountry",
+          "dest-date": "deliveryDate",
+          "delivery-appt-time": "deliveryApptTime",
+          "delivery-booked-by": "deliveryBookedBy",
+          "delivery-appt-notes": "deliveryApptNotes",
+          "delivery-window-open": "deliveryWindowOpen",
+          "delivery-window-close": "deliveryWindowClose",
+          "delivery-contact-name": "deliveryContactName",
+          "delivery-contact-phone": "deliveryContactPhone",
+          "delivery-contact-email": "deliveryContactEmail",
+          "border-crossing": "borderCrossing",
+          "customs-broker": "customsBroker",
+          "bond-number": "bondNumber",
+          "commodity": "commodity",
+          "freight-class": "freightClass",
+          "weight": "weight",
+          "pieces": "pieces",
+          "equipment-type": "equipmentType",
+          "temperature": "temperature",
+          "dim-length": "dimLength",
+          "dim-width": "dimWidth",
+          "dim-height": "dimHeight",
+          "hazmat-un": "hazmatUN",
+          "hazmat-class": "hazmatClass",
+          "hazmat-name": "hazmatName",
+          "special-instructions": "specialInstructions",
+          "miles": "miles",
+          "customer-rate": "customerRate",
+          "carrier-rate": "carrierRate",
+          "shipper-contact-name": "shipperContactName",
+          "shipper-contact-email": "shipperContactEmail",
+          "shipper-contact-phone": "shipperContactPhone",
+          "receiver-contact-name": "receiverContactName",
+          "receiver-contact-email": "receiverContactEmail",
+          "receiver-contact-phone": "receiverContactPhone",
+        };
+
+        Object.keys(fieldMap).forEach(function(elId) {
+          var val = d[fieldMap[elId]];
+          if (val !== undefined && val !== null && val !== "") {
+            var el = document.getElementById(elId);
+            if (el) el.value = val;
+          }
+        });
+
+        // Checkboxes
+        if (d.pickupBooked) document.getElementById("pickup-booked").checked = true;
+        if (d.deliveryBooked) document.getElementById("delivery-booked").checked = true;
+        if (d.tarpRequired) document.getElementById("tarp-required").checked = true;
+
+        // Cross-border
+        if (d.crossBorder) {
+          document.getElementById("cross-border-check").checked = true;
+          toggleCrossBorder();
+        }
+
+        // Hazmat
+        if (d.hazmat) {
+          document.getElementById("hazmat-check").checked = true;
+          toggleHazmat();
+        }
+
+        // Stackable
+        if (d.stackable === false) {
+          stackableValue = false;
+          document.getElementById("stackable-toggle").classList.remove("on");
+          document.getElementById("stackable-label").textContent = "No";
+        }
+
+        // Rate type
+        if (d.rateType === "PER_MILE") {
+          document.querySelector('input[name="rate-type"][value="PER_MILE"]').checked = true;
+        }
+
+        // Pickup time type
+        if (d.pickupTimeType) {
+          var ptRadio = document.querySelector('input[name="pickup-time-type"][value="' + d.pickupTimeType + '"]');
+          if (ptRadio) { ptRadio.checked = true; togglePickupTime(d.pickupTimeType); }
+        }
+
+        // Delivery time type
+        if (d.deliveryTimeType) {
+          var dtRadio = document.querySelector('input[name="delivery-time-type"][value="' + d.deliveryTimeType + '"]');
+          if (dtRadio) { dtRadio.checked = true; toggleDeliveryTime(d.deliveryTimeType); }
+        }
+
+        // Equipment options
+        if (d.equipmentType) toggleEquipmentOptions(d.equipmentType);
+
+        // Customer info card
+        if (d.customerId && d.customerName) {
+          document.getElementById("cust-name").textContent = d.customerName;
+          document.getElementById("customer-info").classList.add("visible");
+        }
+
+        // Accessorials
+        if (d.accessorials && d.accessorials.length > 0) {
+          d.accessorials.forEach(function(a) {
+            addAccessorial();
+            var row = document.getElementById("acc-row-" + accessorialCounter);
+            if (row) {
+              var sel = row.querySelector("select");
+              var inputs = row.querySelectorAll("input");
+              if (sel) sel.value = a.type || "";
+              if (inputs[0]) inputs[0].value = a.amount || "";
+              if (inputs[1]) inputs[1].value = a.notes || "";
+            }
+          });
+          updateAccTotal();
+        }
+
+        updateMargin();
+      } catch(e) {
+        console.warn("Draft restore failed:", e);
+      }
+    }
+
+    function setupAutoSave() {
+      document.getElementById("form-container").addEventListener("input", function() {
+        saveDraft();
+        checkStepCompletion();
+      });
+      document.getElementById("form-container").addEventListener("change", function() {
+        saveDraft();
+        checkStepCompletion();
+      });
+    }
+
+    function checkStepCompletion() {
+      var d = gatherFormData();
+      // Step 1 complete if customer + origin + destination basics filled
+      if (d.customerId && d.originCity && d.originState && d.destCity && d.destState && d.pickupDate && d.deliveryDate) {
+        markStepCompleted(1);
+      } else {
+        unmarkStepCompleted(1);
+      }
+      // Step 2 complete if commodity + equipment + weight
+      if (d.commodity && d.equipmentType && d.weight) {
+        markStepCompleted(2);
+      } else {
+        unmarkStepCompleted(2);
+      }
+      // Step 3 complete if rates filled
+      if (d.customerRate && d.carrierRate) {
+        markStepCompleted(3);
+      } else {
+        unmarkStepCompleted(3);
+      }
+    }
+
+    /* =========================================
+       CLEAR FORM
+       ========================================= */
+    function clearForm() {
+      if (!confirm("Are you sure you want to clear all form data? This cannot be undone.")) return;
+      localStorage.removeItem(DRAFT_KEY);
+      window.location.reload();
+    }
+
+    /* =========================================
+       CREATE LOAD
+       ========================================= */
+    function createLoad() {
+      var d = gatherFormData();
+
+      // Validation
+      var errors = [];
+      if (!d.customerId) errors.push("Customer is required");
+      if (!d.originCity || !d.originState) errors.push("Origin city/state is required");
+      if (!d.destCity || !d.destState) errors.push("Destination city/state is required");
+      if (!d.pickupDate) errors.push("Pickup date is required");
+      if (!d.deliveryDate) errors.push("Delivery date is required");
+      if (!d.commodity) errors.push("Commodity description is required");
+      if (!d.equipmentType) errors.push("Equipment type is required");
+      if (!d.weight) errors.push("Weight is required");
+      if (!d.customerRate) errors.push("Customer rate is required");
+      if (!d.carrierRate) errors.push("Carrier rate is required");
+
+      if (errors.length > 0) {
+        showToast(errors[0], "error");
+        return;
+      }
+
+      var rateType = d.rateType;
+      var miles = parseFloat(d.miles) || 0;
+      var custRate = parseFloat(d.customerRate) || 0;
+      var carrRate = parseFloat(d.carrierRate) || 0;
+      var custTotal = rateType === "PER_MILE" ? custRate * miles : custRate;
+      var carrTotal = rateType === "PER_MILE" ? carrRate * miles : carrRate;
+
+      // Build payload
+      var payload = {
+        customerId: d.customerId,
+        status: "POSTED",
+
+        originName: d.originCompany,
+        originCity: d.originCity,
+        originState: d.originState,
+        originZip: d.originZip,
+        originCountry: d.originCountry || "US",
+        pickupDate: d.pickupDate,
+        pickupTimeType: d.pickupTimeType,
+
+        destinationName: d.destCompany,
+        destinationCity: d.destCity,
+        destinationState: d.destState,
+        destinationZip: d.destZip,
+        destinationCountry: d.destCountry || "US",
+        deliveryDate: d.deliveryDate,
+        deliveryTimeType: d.deliveryTimeType,
+
+        commodity: d.commodity,
+        weight: parseFloat(d.weight) || null,
+        pieces: parseInt(d.pieces) || null,
+        equipmentType: d.equipmentType,
+        freightClass: d.freightClass || null,
+
+        customerRate: custTotal,
+        carrierRate: carrTotal,
+        rateType: rateType,
+        ratePerMile: rateType === "PER_MILE" ? custRate : null,
+        miles: miles || null,
+
+        specialInstructions: d.specialInstructions || null,
+        stackable: d.stackable,
+      };
+
+      // Optional fields
+      if (d.pickupTimeType === "APPOINTMENT") {
+        payload.pickupTime = d.pickupApptTime || null;
+        payload.pickupBooked = d.pickupBooked;
+        payload.pickupBookedBy = d.pickupBookedBy || null;
+        payload.pickupNotes = d.pickupApptNotes || null;
+      } else if (d.pickupTimeType === "WINDOW") {
+        payload.pickupWindowOpen = d.pickupWindowOpen || null;
+        payload.pickupWindowClose = d.pickupWindowClose || null;
+      }
+
+      if (d.deliveryTimeType === "APPOINTMENT") {
+        payload.deliveryTime = d.deliveryApptTime || null;
+        payload.deliveryBooked = d.deliveryBooked;
+        payload.deliveryBookedBy = d.deliveryBookedBy || null;
+        payload.deliveryNotes = d.deliveryApptNotes || null;
+      } else if (d.deliveryTimeType === "WINDOW") {
+        payload.deliveryWindowOpen = d.deliveryWindowOpen || null;
+        payload.deliveryWindowClose = d.deliveryWindowClose || null;
+      }
+
+      if (d.equipmentType === "REEFER" && d.temperature) {
+        payload.temperature = parseFloat(d.temperature);
+      }
+      if (d.equipmentType === "FLATBED") {
+        payload.tarpRequired = d.tarpRequired;
+      }
+
+      if (d.dimLength || d.dimWidth || d.dimHeight) {
+        payload.dimensions = {
+          length: parseFloat(d.dimLength) || null,
+          width: parseFloat(d.dimWidth) || null,
+          height: parseFloat(d.dimHeight) || null,
+        };
+      }
+
+      if (d.hazmat) {
+        payload.hazmat = true;
+        payload.hazmatUN = d.hazmatUN || null;
+        payload.hazmatClass = d.hazmatClass || null;
+        payload.hazmatName = d.hazmatName || null;
+      }
+
+      if (d.crossBorder) {
+        payload.crossBorder = true;
+        payload.borderCrossing = d.borderCrossing || null;
+        payload.customsBroker = d.customsBroker || null;
+        payload.bondNumber = d.bondNumber || null;
+      }
+
+      // Contacts
+      payload.pickupContact = {
+        name: d.pickupContactName || null,
+        phone: d.pickupContactPhone || null,
+        email: d.pickupContactEmail || null,
+      };
+      payload.deliveryContact = {
+        name: d.deliveryContactName || null,
+        phone: d.deliveryContactPhone || null,
+        email: d.deliveryContactEmail || null,
+      };
+      payload.shipperContact = {
+        name: d.shipperContactName || null,
+        email: d.shipperContactEmail || null,
+        phone: d.shipperContactPhone || null,
+      };
+      payload.receiverContact = {
+        name: d.receiverContactName || null,
+        email: d.receiverContactEmail || null,
+        phone: d.receiverContactPhone || null,
+      };
+
+      // Accessorials
+      var accs = d.accessorials.filter(function(a) { return a.type; });
+      if (accs.length > 0) {
+        payload.accessorials = accs;
+      }
+
+      // Submit
+      var btn = document.getElementById("create-btn");
+      btn.disabled = true;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Creating...';
+
+      SRL.request("/api/loads", { method: "POST", body: payload })
+        .then(function(result) {
+          localStorage.removeItem(DRAFT_KEY);
+          showToast("Load created successfully!", "success");
+          setTimeout(function() {
+            window.location.href = "/ae/loads.html";
+          }, 1500);
+        })
+        .catch(function(err) {
+          showToast("Failed to create load: " + (err.message || "Unknown error"), "error");
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Create Load';
+        });
+    }
+
+    /* =========================================
+       SAVE DRAFT BUTTON
+       ========================================= */
+    function saveDraftBtn() {
+      saveDraft();
+      showToast("Draft saved", "success");
+    }
+    // Wire up the "Save Draft" button
+    document.querySelector('.action-bar .btn-secondary').onclick = saveDraftBtn;
+
+  </script>
+
+  <script src="/ae/js/notification-bell.js"></script>
+  <script src="/shared/js/themeEngine.js"></script>
+  <script src="/shared/js/marco-polo.js"></script>
+</body>
+</html>

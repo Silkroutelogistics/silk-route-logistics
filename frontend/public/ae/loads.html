@@ -725,6 +725,109 @@
     .mileage-practical { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
     .mileage-detail { display:flex; gap:16px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:var(--slate); }
     .mileage-detail span { display:flex; align-items:center; gap:4px; }
+
+    /* --- Workflow Tabs --- */
+    .workflow-tabs {
+      display: flex;
+      background: var(--white);
+      border-bottom: 2px solid var(--gray-200);
+      padding: 0 32px;
+    }
+    .workflow-tab {
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-400);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .workflow-tab:hover { color: var(--navy); }
+    .workflow-tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .workflow-tab .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--gray-100);
+      color: var(--gray-500);
+    }
+    .workflow-tab.active .tab-count {
+      background: var(--gold-dim);
+      color: var(--gold);
+    }
+    .workflow-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
+    .workflow-panel.active { display: flex; }
+
+    /* Track & Trace Cards */
+    .track-card {
+      background: var(--white);
+      border: 1px solid var(--gray-100);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .track-card:hover { border-color: var(--gold); box-shadow: var(--shadow-sm); }
+    .track-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .track-card-ref { font-weight: 700; color: var(--navy); font-size: 15px; }
+    .track-card-route { font-size: 13px; color: var(--gray-600); }
+    .track-card-meta {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: var(--gray-500);
+      flex-wrap: wrap;
+    }
+    .track-card-meta strong { color: var(--navy); }
+    .track-card-action {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .action-pending { background: rgba(245,158,11,0.1); color: #B45309; }
+    .action-transit { background: var(--gold-dim); color: var(--gold); }
+    .action-delivered { background: rgba(34,197,94,0.1); color: #15803D; }
+
+    /* Invoice mini-table */
+    .invoice-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 13px;
+    }
+    .invoice-row:last-child { border-bottom: none; }
+    @media (max-width: 640px) {
+      .workflow-tabs { padding: 0 12px; overflow-x: auto; }
+      .workflow-tab { padding: 12px 16px; font-size: 13px; }
+    }
   </style>
 </head>
 <body>
@@ -802,18 +905,38 @@
     <!-- Main -->
     <main class="main">
 
+      <!-- ===== WORKFLOW TABS ===== -->
+      <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 32px;border-bottom:1px solid var(--gray-200);background:var(--white);">
+        <div>
+          <h1>Load Management</h1>
+          <p id="load-count-label">Loading loads...</p>
+        </div>
+        <a href="/ae/create-load.html" class="btn-primary" style="text-decoration:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Load
+        </a>
+      </div>
+
+      <div class="workflow-tabs">
+        <button class="workflow-tab active" onclick="switchWorkflowTab('board')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Load Board <span class="tab-count" id="board-count">--</span>
+        </button>
+        <button class="workflow-tab" onclick="switchWorkflowTab('track')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Track &amp; Trace <span class="tab-count" id="track-count">--</span>
+        </button>
+        <button class="workflow-tab" onclick="switchWorkflowTab('completed')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Completed <span class="tab-count" id="completed-count">--</span>
+        </button>
+      </div>
+
+      <!-- ===== LOAD BOARD PANEL ===== -->
+      <div class="workflow-panel active" id="panel-board">
+
       <!-- ===== LIST VIEW ===== -->
       <div class="list-view active" id="list-view">
-        <div class="main-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-          <div>
-            <h1>Load Management</h1>
-            <p id="load-count-label">Loading loads...</p>
-          </div>
-          <button class="btn-primary" onclick="openNewLoadModal()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Load
-          </button>
-        </div>
 
         <!-- Filters -->
         <div class="filter-bar">
@@ -901,6 +1024,33 @@
           <div class="detail-right" id="detail-right">
             <!-- Rate Calculator + Carrier Assignment + Comm Log -->
           </div>
+        </div>
+      </div>
+
+      </div><!-- /panel-board -->
+
+      <!-- ===== TRACK & TRACE PANEL ===== -->
+      <div class="workflow-panel" id="panel-track">
+        <div style="padding:16px 32px;display:flex;gap:12px;border-bottom:1px solid var(--gray-200);background:var(--white)">
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--gold-dim);color:var(--gold);border-color:var(--gold)" onclick="filterTrack('pickup')" id="track-filter-pickup">Pickup <span id="track-pickup-count"></span></button>
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterTrack('transit')" id="track-filter-transit">In Transit <span id="track-transit-count"></span></button>
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterTrack('delivery')" id="track-filter-delivery">At Delivery <span id="track-delivery-count"></span></button>
+        </div>
+        <div style="padding:24px 32px;overflow-y:auto;flex:1" id="track-cards">
+          <div style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</div>
+        </div>
+      </div>
+
+      <!-- ===== COMPLETED PANEL ===== -->
+      <div class="workflow-panel" id="panel-completed">
+        <div style="padding:16px 32px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--gray-200);background:var(--white)">
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--gold-dim);color:var(--gold);border-color:var(--gold)" onclick="filterCompleted('delivered')" id="comp-filter-delivered">Delivered</button>
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterCompleted('pod')" id="comp-filter-pod">POD Received</button>
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterCompleted('invoiced')" id="comp-filter-invoiced">Invoiced</button>
+          <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterCompleted('all')" id="comp-filter-all">All Completed</button>
+        </div>
+        <div style="padding:24px 32px;overflow-y:auto;flex:1" id="completed-cards">
+          <div style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</div>
         </div>
       </div>
 
@@ -1276,6 +1426,7 @@
       document.getElementById("list-view").classList.add("active");
       state.currentLoad = null;
       fetchLoads();
+      loadWorkflowCounts();
     }
 
     function renderDetail(load) {
@@ -2110,6 +2261,159 @@
       sessionStorage.removeItem("token");
       window.location.href = "/auth/login";
     }
+
+    /* =========================================
+       WORKFLOW TABS
+       ========================================= */
+    var currentWorkflowTab = "board";
+    var trackLoads = [];
+    var completedLoads = [];
+    var trackSubFilter = "pickup";
+    var completedSubFilter = "delivered";
+
+    function switchWorkflowTab(tab) {
+      currentWorkflowTab = tab;
+      document.querySelectorAll(".workflow-tab").forEach(function(t) { t.classList.remove("active"); });
+      document.querySelectorAll(".workflow-panel").forEach(function(p) { p.classList.remove("active"); });
+      var tabs = document.querySelectorAll(".workflow-tab");
+      if (tab === "board") { tabs[0].classList.add("active"); document.getElementById("panel-board").classList.add("active"); }
+      else if (tab === "track") { tabs[1].classList.add("active"); document.getElementById("panel-track").classList.add("active"); loadTrackLoads(); }
+      else if (tab === "completed") { tabs[2].classList.add("active"); document.getElementById("panel-completed").classList.add("active"); loadCompletedLoads(); }
+    }
+
+    function loadWorkflowCounts() {
+      // Board: DRAFT, POSTED, TENDERED, BOOKED, CONFIRMED
+      SRL.getLoads({ status: "DRAFT,POSTED,TENDERED,BOOKED,CONFIRMED", limit: 1 }).then(function(r) {
+        document.getElementById("board-count").textContent = r.total || 0;
+      }).catch(function(){});
+      // Track: DISPATCHED, AT_PICKUP, LOADED, IN_TRANSIT, AT_DELIVERY
+      SRL.getLoads({ status: "DISPATCHED,AT_PICKUP,LOADED,IN_TRANSIT,AT_DELIVERY", limit: 1 }).then(function(r) {
+        document.getElementById("track-count").textContent = r.total || 0;
+      }).catch(function(){});
+      // Completed: DELIVERED, POD_RECEIVED, INVOICED, COMPLETED
+      SRL.getLoads({ status: "DELIVERED,POD_RECEIVED,INVOICED,COMPLETED", limit: 1 }).then(function(r) {
+        document.getElementById("completed-count").textContent = r.total || 0;
+      }).catch(function(){});
+    }
+
+    function loadTrackLoads() {
+      var statuses = "DISPATCHED,AT_PICKUP,LOADED,IN_TRANSIT,AT_DELIVERY";
+      SRL.getLoads({ status: statuses, limit: 100 }).then(function(r) {
+        trackLoads = r.loads || [];
+        renderTrackCards();
+      }).catch(function() {
+        document.getElementById("track-cards").innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Error loading data</div>';
+      });
+    }
+
+    function filterTrack(sub) {
+      trackSubFilter = sub;
+      ["pickup","transit","delivery"].forEach(function(s) {
+        var btn = document.getElementById("track-filter-" + s);
+        if (s === sub) { btn.style.background = "var(--gold-dim)"; btn.style.color = "var(--gold)"; btn.style.borderColor = "var(--gold)"; }
+        else { btn.style.background = "var(--white)"; btn.style.color = "var(--gray-600)"; btn.style.borderColor = "var(--gray-200)"; }
+      });
+      renderTrackCards();
+    }
+
+    function renderTrackCards() {
+      var filtered = trackLoads;
+      if (trackSubFilter === "pickup") filtered = trackLoads.filter(function(l) { return ["DISPATCHED","AT_PICKUP","LOADED","BOOKED","CONFIRMED"].indexOf(l.status) !== -1; });
+      else if (trackSubFilter === "transit") filtered = trackLoads.filter(function(l) { return l.status === "IN_TRANSIT"; });
+      else if (trackSubFilter === "delivery") filtered = trackLoads.filter(function(l) { return l.status === "AT_DELIVERY"; });
+
+      document.getElementById("track-pickup-count").textContent = "(" + trackLoads.filter(function(l){ return ["DISPATCHED","AT_PICKUP","LOADED"].indexOf(l.status) !== -1; }).length + ")";
+      document.getElementById("track-transit-count").textContent = "(" + trackLoads.filter(function(l){ return l.status === "IN_TRANSIT"; }).length + ")";
+      document.getElementById("track-delivery-count").textContent = "(" + trackLoads.filter(function(l){ return l.status === "AT_DELIVERY"; }).length + ")";
+
+      var el = document.getElementById("track-cards");
+      if (filtered.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)">No loads in this stage</div>';
+        return;
+      }
+      el.innerHTML = filtered.map(function(load) {
+        var carrierName = load.carrier ? (load.carrier.company || load.carrier.firstName + " " + load.carrier.lastName) : "Unassigned";
+        var route = esc(load.originCity) + ", " + esc(load.originState) + " → " + esc(load.destCity) + ", " + esc(load.destState);
+        var actionClass = load.status === "IN_TRANSIT" ? "action-transit" : (load.status === "AT_DELIVERY" ? "action-delivered" : "action-pending");
+        var nextAction = "";
+        if (load.status === "DISPATCHED") nextAction = "Awaiting pickup confirmation";
+        else if (load.status === "AT_PICKUP") nextAction = "Driver at pickup — awaiting loaded confirmation";
+        else if (load.status === "LOADED") nextAction = "Loaded — awaiting departure";
+        else if (load.status === "IN_TRANSIT") nextAction = "In transit — next check call pending";
+        else if (load.status === "AT_DELIVERY") nextAction = "Driver at delivery — awaiting unload";
+        return '<div class="track-card" onclick="openDetail(\'' + load.id + '\')">' +
+          '<div class="track-card-header">' +
+            '<span class="track-card-ref">' + esc(load.referenceNumber) + '</span>' +
+            '<span class="status-badge status-' + load.status.toLowerCase() + '">' + (STATUS_LABELS[load.status] || load.status) + '</span>' +
+          '</div>' +
+          '<div class="track-card-route">' + route + '</div>' +
+          '<div class="track-card-meta">' +
+            '<span>Carrier: <strong>' + esc(carrierName) + '</strong></span>' +
+            '<span>Pickup: <strong>' + shortDate(load.pickupDate) + '</strong></span>' +
+            '<span>Delivery: <strong>' + shortDate(load.deliveryDate) + '</strong></span>' +
+            (load.driverName ? '<span>Driver: <strong>' + esc(load.driverName) + '</strong></span>' : '') +
+          '</div>' +
+          (nextAction ? '<div class="track-card-action ' + actionClass + '">' + nextAction + '</div>' : '') +
+        '</div>';
+      }).join("");
+    }
+
+    function loadCompletedLoads() {
+      var statuses = "DELIVERED,POD_RECEIVED,INVOICED,COMPLETED";
+      SRL.getLoads({ status: statuses, limit: 100 }).then(function(r) {
+        completedLoads = r.loads || [];
+        renderCompletedCards();
+      }).catch(function() {
+        document.getElementById("completed-cards").innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Error loading data</div>';
+      });
+    }
+
+    function filterCompleted(sub) {
+      completedSubFilter = sub;
+      ["delivered","pod","invoiced","all"].forEach(function(s) {
+        var btn = document.getElementById("comp-filter-" + s);
+        if (s === sub) { btn.style.background = "var(--gold-dim)"; btn.style.color = "var(--gold)"; btn.style.borderColor = "var(--gold)"; }
+        else { btn.style.background = "var(--white)"; btn.style.color = "var(--gray-600)"; btn.style.borderColor = "var(--gray-200)"; }
+      });
+      renderCompletedCards();
+    }
+
+    function renderCompletedCards() {
+      var filtered = completedLoads;
+      if (completedSubFilter === "delivered") filtered = completedLoads.filter(function(l) { return l.status === "DELIVERED"; });
+      else if (completedSubFilter === "pod") filtered = completedLoads.filter(function(l) { return l.status === "POD_RECEIVED"; });
+      else if (completedSubFilter === "invoiced") filtered = completedLoads.filter(function(l) { return ["INVOICED","COMPLETED"].indexOf(l.status) !== -1; });
+
+      var el = document.getElementById("completed-cards");
+      if (filtered.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)">No loads in this stage</div>';
+        return;
+      }
+      el.innerHTML = filtered.map(function(load) {
+        var route = esc(load.originCity) + ", " + esc(load.originState) + " → " + esc(load.destCity) + ", " + esc(load.destState);
+        var shipperRate = load.customerRate || load.rate || 0;
+        var podStatus = load.podReceivedAt ? '<span style="color:var(--green)">&#10003; POD Received</span>' : '<span style="color:var(--amber)">POD Pending</span>';
+        return '<div class="track-card" onclick="openDetail(\'' + load.id + '\')">' +
+          '<div class="track-card-header">' +
+            '<span class="track-card-ref">' + esc(load.referenceNumber) + '</span>' +
+            '<span class="status-badge status-' + load.status.toLowerCase() + '">' + (STATUS_LABELS[load.status] || load.status) + '</span>' +
+          '</div>' +
+          '<div class="track-card-route">' + route + '</div>' +
+          '<div class="track-card-meta">' +
+            '<span>Delivered: <strong>' + shortDate(load.deliveryDate) + '</strong></span>' +
+            '<span>Rate: <strong>$' + num2(shipperRate) + '</strong></span>' +
+            '<span>' + podStatus + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+
+    // Load counts on init
+    loadWorkflowCounts();
+
+    // Check URL hash for tab
+    if (window.location.hash === "#track") switchWorkflowTab("track");
+    else if (window.location.hash === "#completed") switchWorkflowTab("completed");
   </script>
 <script src="/ae/js/notification-bell.js"></script>
 <script src="/shared/js/themeEngine.js"></script>
