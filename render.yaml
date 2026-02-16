@@ -17,3 +17,7 @@ services:
         value: https://silkroutelogistics.ai,https://www.silkroutelogistics.ai,https://silk-route-logistics.pages.dev
       - key: PORT
         value: 4000
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@silkroutelogistics.ai
