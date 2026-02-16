@@ -42,7 +42,7 @@ router.post("/send", async (req: any, res: Response) => {
   const senderFullName = sender ? `${sender.firstName} ${sender.lastName}` : "SRL Team";
   const senderPhone = sender?.phone || "";
   const senderEmail = sender?.email || env.EMAIL_FROM;
-  const logoUrl = "https://silkroutelogistics.ai/logo-full.png";
+  const logoUrl = "https://silkroutelogistics.ai/logo-penguin.gif";
 
   // Email signature block
   const signatureHtml = `
