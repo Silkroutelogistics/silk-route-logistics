@@ -34,6 +34,8 @@ router.post("/send", async (req: any, res: Response) => {
   }
 
   let html: string;
+  // Keep clean text for communication log (strip <br> back to newlines)
+  const cleanText = customBody ? customBody.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "") : (templateParams ? templateParams[2] || "" : "");
 
   if (template && TEMPLATE_MAP[template]) {
     const params = templateParams || [];
@@ -86,7 +88,7 @@ router.post("/send", async (req: any, res: Response) => {
             from: env.EMAIL_FROM,
             to,
             subject,
-            body: html,
+            body: cleanText || subject,
             userId: req.user!.id,
           },
         });

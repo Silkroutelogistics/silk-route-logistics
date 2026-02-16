@@ -197,6 +197,8 @@
     }
     .icon-call { background: rgba(34,197,94,0.1); color: var(--green); }
     .icon-text { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .icon-email-in { background: rgba(168,85,247,0.1); color: #A855F7; }
+    .icon-email-out { background: rgba(200,150,62,0.15); color: var(--gold); }
     .icon-email { background: rgba(168,85,247,0.1); color: #A855F7; }
     .icon-note { background: rgba(245,158,11,0.1); color: #B45309; }
     .comm-bubble {
@@ -206,6 +208,13 @@
       box-shadow: var(--shadow-sm);
       min-width: 120px;
     }
+    .comm-entry.inbound-email .comm-bubble {
+      background: #F5F3FF;
+      border: 1px solid #E9E5FF;
+      color: #1E1B4B;
+    }
+    .comm-entry.inbound-email .comm-type-label { color: #7C3AED; }
+    .comm-entry.inbound-email .comm-timestamp { color: #9CA3AF; }
     .comm-entry.outbound .comm-bubble {
       background: var(--navy);
       color: var(--white);
@@ -782,6 +791,35 @@
     }
 
     /* ======== RENDER THREAD ======== */
+    function cleanEmailBody(body, type) {
+      if (!body) return "(no content)";
+      var text = body;
+      // Strip full HTML email templates (outbound emails store raw HTML)
+      if (text.indexOf("<!DOCTYPE") !== -1 || text.indexOf("<html") !== -1) {
+        // Try to extract just the user content from SRL template
+        var contentMatch = text.match(/<td[^>]*style="[^"]*padding:32px[^"]*"[^>]*>([\s\S]*?)<\/td>/i);
+        if (contentMatch) {
+          text = contentMatch[1];
+        }
+        // Strip remaining HTML tags
+        text = text.replace(/<br\s*\/?>/gi, "\n");
+        text = text.replace(/<\/?(p|div|tr|td|table|h[1-6])[^>]*>/gi, "\n");
+        text = text.replace(/<[^>]+>/g, "");
+        text = text.replace(/&nbsp;/g, " ");
+        text = text.replace(/&amp;/g, "&");
+        text = text.replace(/&lt;/g, "<");
+        text = text.replace(/&gt;/g, ">");
+        text = text.replace(/&quot;/g, '"');
+        text = text.replace(/&#x27;/g, "'");
+        text = text.replace(/&middot;/g, " ");
+      }
+      // Clean up whitespace
+      text = text.replace(/\n{3,}/g, "\n\n").trim();
+      // Remove common email footer/signature noise
+      text = text.replace(/Silk Route Logistics\s*[·•]\s*Moving Freight.*$/i, "").trim();
+      return text || "(no content)";
+    }
+
     function renderThread() {
       var thread = document.getElementById("convo-thread");
       if (state.communications.length === 0) {
@@ -790,10 +828,18 @@
       }
       thread.innerHTML = state.communications.map(function(c) {
         var isOutbound = c.direction === "OUTBOUND" || c.type.includes("OUTBOUND") || c.type === "NOTE";
-        var iconClass = getTypeIcon(c.type);
+        var isInboundEmail = c.type === "EMAIL_INBOUND";
+        var iconClass = isInboundEmail ? "icon-email-in" : isOutbound && c.type === "EMAIL_OUTBOUND" ? "icon-email-out" : getTypeIcon(c.type);
         var typeLabel = getTypeLabel(c.type);
+        var entryClass = "comm-entry";
+        if (isOutbound) entryClass += " outbound";
+        if (isInboundEmail) entryClass += " inbound-email";
 
-        return '<div class="comm-entry' + (isOutbound ? ' outbound' : '') + '">' +
+        var displayBody = cleanEmailBody(c.body, c.type);
+        var fromLabel = isInboundEmail && c.from ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">from ' + esc(c.from) + '</div>' : '';
+        var byLabel = isOutbound && c.user ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">by ' + esc(c.user.firstName + " " + c.user.lastName) + '</div>' : '';
+
+        return '<div class="' + entryClass + '">' +
           '<div class="comm-icon ' + iconClass + '">' + getTypeEmoji(c.type) + '</div>' +
           '<div class="comm-bubble">' +
             '<div class="comm-bubble-header">' +
@@ -801,9 +847,9 @@
               '<span class="comm-timestamp">' + timeAgo(c.createdAt) + '</span>' +
             '</div>' +
             (c.subject ? '<div class="comm-subject">' + esc(c.subject) + '</div>' : '') +
-            '<div class="comm-body">' + esc(c.body || "--") + '</div>' +
+            '<div class="comm-body">' + esc(displayBody).replace(/\n/g, "<br>") + '</div>' +
             (c.duration ? '<div class="comm-duration">' + formatDuration(c.duration) + '</div>' : '') +
-            (c.user ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">by ' + esc(c.user.firstName + " " + c.user.lastName) + '</div>' : '') +
+            fromLabel + byLabel +
           '</div>' +
         '</div>';
       }).join("");
