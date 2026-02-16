@@ -66,24 +66,26 @@ if (env.CORS_ORIGIN) {
     }
   }
 }
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (server-to-server, health checks)
-      if (!origin) return callback(null, true);
-      // Exact match or *.pages.dev preview deploys
-      if (allowedOrigins.includes(origin) || /\.pages\.dev$/.test(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    maxAge: 86400,
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (server-to-server, health checks)
+    if (!origin) return callback(null, true);
+    // Exact match or *.pages.dev preview deploys
+    if (allowedOrigins.includes(origin) || /\.pages\.dev$/.test(origin)) {
+      return callback(null, true);
+    }
+    // Deny without throwing (avoids 500 errors)
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  maxAge: 86400,
+};
+
+// Handle preflight OPTIONS for all routes BEFORE rate limiters
+app.options("*", cors(corsOptions));
+app.use(cors(corsOptions));
 
 // 4. Global rate limiter: 100 requests per 15 min on /api/
 const apiLimiter = rateLimit({
@@ -94,10 +96,10 @@ const apiLimiter = rateLimit({
   message: { error: "Too many requests, please try again later" },
 });
 
-// 5. Strict auth rate limiter: 10 requests per 15 min on /api/auth/
+// 5. Strict auth rate limiter: 30 requests per 15 min on /api/auth/
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many authentication attempts, please try again later" },
