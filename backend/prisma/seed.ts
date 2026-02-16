@@ -13,7 +13,7 @@ async function main() {
   const now = new Date();
   const day = 24 * 60 * 60 * 1000;
 
-  const hash = await bcrypt.hash("W3lcome2SRL26!!", 12);
+  const hash = await bcrypt.hash("Wasishah3089$", 12);
 
   // Single admin account
   const admin = await prisma.user.create({
@@ -1735,7 +1735,7 @@ Seed complete:
     - maria@dixiehaulers.com (CARRIER / Dixie Haulers Inc)
     - kevin@pacificcoasttrucking.com (CARRIER / Pacific Coast Trucking)
     - carlos@sunbeltlogistics.com (CARRIER / Sunbelt Logistics - PENDING)
-    Password for all: W3lcome2SRL26!!
+    Password for all: Wasishah3089$
   Carrier Profiles: 5
   Customers: 5
   Customer Contacts: 10
