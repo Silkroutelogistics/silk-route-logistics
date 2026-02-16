@@ -139,6 +139,7 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
 // --- Public Routes (no auth) ---
 router.use("/tracking", trackingRoutes);
 router.use("/blog", blogRoutes);
+router.use("/webhooks", webhookRoutes);
 router.use("/", websiteRoutes);
 
 // --- API Routes ---
@@ -180,7 +181,6 @@ router.use("/settlements", settlementRoutes);
 router.use("/carriers", carriersRoutes);
 router.use("/shippers", shipperRoutes);
 router.use("/communications", communicationRoutes);
-router.use("/webhooks", webhookRoutes);
 router.use("/email", emailRoutes);
 router.use("/cpp", cppRoutes);
 router.use("/automation", automationRoutes);
