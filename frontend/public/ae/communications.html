@@ -14,6 +14,12 @@
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
   <style>
     /* ========== Communications Hub Styles ========== */
+    .comm-main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: 100vh;
+    }
     .comm-layout {
       display: flex;
       flex: 1 1 0;
@@ -27,8 +33,8 @@
       align-items: center;
       gap: 8px;
       padding: 8px 20px;
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-200);
+      background: var(--theme-card-bg, var(--white));
+      border-bottom: 1px solid var(--theme-border, var(--gray-200));
       flex-shrink: 0;
     }
     .layout-btn {
@@ -36,27 +42,27 @@
       align-items: center;
       gap: 4px;
       padding: 4px 10px;
-      border: 1px solid var(--gray-200);
+      border: 1px solid var(--theme-border, var(--gray-200));
       border-radius: 5px;
-      background: var(--white);
-      color: var(--gray-500);
+      background: var(--theme-card-bg, var(--white));
+      color: var(--theme-text-muted, var(--gray-500));
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .layout-btn:hover { border-color: var(--gold); color: var(--gold); }
-    .layout-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .layout-btn:hover { border-color: var(--theme-primary, var(--gold)); color: var(--theme-primary, var(--gold)); }
+    .layout-btn.active { background: var(--theme-sidebar-bg, var(--navy)); color: var(--theme-sidebar-text, var(--white)); border-color: var(--theme-sidebar-bg, var(--navy)); }
     .layout-btn svg { width: 14px; height: 14px; }
 
     /* --- Left: Contact List (30%) --- */
     .contact-panel {
       width: 30%;
       min-width: 260px;
-      border-right: 1px solid var(--gray-200);
+      border-right: 1px solid var(--theme-border, var(--gray-200));
       display: flex;
       flex-direction: column;
-      background: var(--white);
+      background: var(--theme-card-bg, var(--white));
       transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
       overflow: hidden;
     }
@@ -78,7 +84,7 @@
       min-width: unset;
       max-height: none;
       border-right: none;
-      border-bottom: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--theme-border, var(--gray-200));
       flex-shrink: 0;
     }
     .comm-layout.top-layout .contact-panel .contact-tabs {
@@ -103,7 +109,7 @@
     .comm-layout.top-layout .contact-item {
       flex: 0 0 auto;
       padding: 6px 12px;
-      border: 1px solid var(--gray-200);
+      border: 1px solid var(--theme-border, var(--gray-200));
       border-radius: 20px;
       border-bottom: none;
       font-size: 12px;
@@ -111,14 +117,14 @@
       transition: all 0.15s;
     }
     .comm-layout.top-layout .contact-item:hover {
-      border-color: var(--gold);
+      border-color: var(--theme-primary, var(--gold));
     }
     .comm-layout.top-layout .contact-item.active {
-      background: var(--gold);
-      color: var(--white);
-      border-color: var(--gold);
+      background: var(--theme-primary, var(--gold));
+      color: #fff;
+      border-color: var(--theme-primary, var(--gold));
     }
-    .comm-layout.top-layout .contact-item.active .contact-name { color: var(--white); }
+    .comm-layout.top-layout .contact-item.active .contact-name { color: #fff; }
     .comm-layout.top-layout .contact-item.active .contact-last-msg { color: rgba(255,255,255,0.7); }
     .comm-layout.top-layout .contact-avatar {
       width: 24px;
@@ -132,20 +138,22 @@
     .comm-layout.top-layout #sort-row { display: none; }
     .contact-search {
       padding: 12px;
-      border-bottom: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--theme-border, var(--gray-200));
     }
     .contact-search input {
       width: 100%;
       padding: 8px 12px;
-      border: 1px solid var(--gray-200);
+      border: 1px solid var(--theme-input-border, var(--gray-200));
       border-radius: 6px;
       font-size: 13px;
       outline: none;
+      background: var(--theme-input-bg, #fff);
+      color: var(--theme-input-text, inherit);
     }
-    .contact-search input:focus { border-color: var(--gold); }
+    .contact-search input:focus { border-color: var(--theme-primary, var(--gold)); }
     .contact-tabs {
       display: flex;
-      border-bottom: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--theme-border, var(--gray-200));
     }
     .contact-tab {
       flex: 1;
@@ -154,7 +162,7 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      color: var(--gray-500);
+      color: var(--theme-text-muted, var(--gray-500));
       border-bottom: 2px solid transparent;
       transition: color 0.15s, border-color 0.15s;
       background: none;
@@ -163,8 +171,8 @@
       border-right: none;
     }
     .contact-tab.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
+      color: var(--theme-primary, var(--gold));
+      border-bottom-color: var(--theme-primary, var(--gold));
     }
     .contact-list {
       flex: 1;
@@ -177,11 +185,11 @@
       gap: 10px;
       padding: 12px;
       cursor: pointer;
-      border-bottom: 1px solid var(--gray-50);
+      border-bottom: 1px solid var(--theme-border-light, var(--gray-50));
       transition: background 0.1s;
     }
-    .contact-item:hover { background: var(--gray-50); }
-    .contact-item.active { background: var(--gold-dim); }
+    .contact-item:hover { background: var(--theme-bg-alt, var(--gray-50)); }
+    .contact-item.active { background: var(--theme-primary-dim, var(--gold-dim)); }
     .contact-avatar {
       width: 36px;
       height: 36px;
@@ -204,14 +212,14 @@
     .contact-name {
       font-size: 13px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--theme-text-heading, var(--navy));
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .contact-last-msg {
       font-size: 11px;
-      color: var(--gray-400);
+      color: var(--theme-text-muted, var(--gray-400));
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -223,7 +231,7 @@
     }
     .contact-time {
       font-size: 10px;
-      color: var(--gray-400);
+      color: var(--theme-text-muted, var(--gray-400));
     }
     .contact-unread {
       display: inline-block;
@@ -239,19 +247,19 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: var(--gray-50);
+      background: var(--theme-bg, var(--gray-50));
     }
     .convo-header {
       padding: 14px 20px;
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-200);
+      background: var(--theme-card-bg, var(--white));
+      border-bottom: 1px solid var(--theme-border, var(--gray-200));
       display: flex;
       align-items: center;
       gap: 12px;
     }
     .convo-header h3 {
       font-size: 16px;
-      color: var(--navy);
+      color: var(--theme-text-heading, var(--navy));
       font-weight: 700;
     }
     .convo-header-type {
@@ -276,7 +284,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--gray-400);
+      color: var(--theme-text-muted, var(--gray-400));
       font-size: 14px;
     }
     .comm-entry {
@@ -302,10 +310,10 @@
     .icon-email { background: rgba(168,85,247,0.1); color: #A855F7; }
     .icon-note { background: rgba(245,158,11,0.1); color: #B45309; }
     .comm-bubble {
-      background: var(--white);
+      background: var(--theme-card-bg, var(--white));
       border-radius: 12px;
       padding: 10px 14px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--theme-card-shadow, var(--shadow-sm));
       min-width: 120px;
     }
     .comm-entry.inbound-email .comm-bubble {
@@ -328,19 +336,19 @@
       align-items: center;
       gap: 6px;
       padding: 6px 16px;
-      background: var(--white);
-      border: 1px dashed var(--gray-300);
+      background: var(--theme-card-bg, var(--white));
+      border: 1px dashed var(--theme-border, var(--gray-300));
       border-radius: 20px;
-      color: var(--gray-500);
+      color: var(--theme-text-muted, var(--gray-500));
       font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
     }
     .comm-collapsed-btn:hover {
-      background: var(--gray-50);
-      border-color: var(--gold);
-      color: var(--gold);
+      background: var(--theme-bg-alt, var(--gray-50));
+      border-color: var(--theme-primary, var(--gold));
+      color: var(--theme-primary, var(--gold));
     }
     .comm-collapsed-btn svg {
       transition: transform 0.2s;
@@ -376,7 +384,7 @@
     }
     .comm-timestamp {
       font-size: 10px;
-      color: var(--gray-400);
+      color: var(--theme-text-muted, var(--gray-400));
     }
     .comm-entry.outbound .comm-timestamp { color: rgba(255,255,255,0.5); }
     .comm-subject {
@@ -404,8 +412,8 @@
 
     /* --- Compose Bar --- */
     .compose-bar {
-      background: var(--white);
-      border-top: 1px solid var(--gray-200);
+      background: var(--theme-card-bg, var(--white));
+      border-top: 1px solid var(--theme-border, var(--gray-200));
       padding: 12px 20px;
     }
     .compose-tabs {
@@ -418,20 +426,20 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      color: var(--gray-500);
-      border: 1px solid var(--gray-200);
-      background: var(--white);
+      color: var(--theme-text-muted, var(--gray-500));
+      border: 1px solid var(--theme-border, var(--gray-200));
+      background: var(--theme-card-bg, var(--white));
       transition: background 0.15s, color 0.15s;
     }
     .compose-tab:first-child { border-radius: 6px 0 0 6px; }
     .compose-tab:last-child { border-radius: 0 6px 6px 0; border-left: none; }
-    .compose-tab.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .compose-tab.active { background: var(--theme-sidebar-bg, var(--navy)); color: var(--theme-sidebar-text, var(--white)); border-color: var(--theme-sidebar-bg, var(--navy)); }
     .compose-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
     .compose-textarea {
       flex: 1;
       min-width: 200px;
       padding: 8px 12px;
-      border: 1px solid var(--gray-200);
+      border: 1px solid var(--theme-input-border, var(--gray-200));
       border-radius: 6px;
       font-size: 13px;
       font-family: inherit;
@@ -439,8 +447,10 @@
       min-height: 100px;
       max-height: 300px;
       outline: none;
+      background: var(--theme-input-bg, #fff);
+      color: var(--theme-input-text, inherit);
     }
-    .compose-textarea:focus { border-color: var(--gold); }
+    .compose-textarea:focus { border-color: var(--theme-primary, var(--gold)); }
     .compose-email-fields {
       display: none;
       width: 100%;
@@ -451,15 +461,17 @@
     .compose-email-fields input,
     .compose-email-fields select {
       padding: 6px 10px;
-      border: 1px solid var(--gray-200);
+      border: 1px solid var(--theme-input-border, var(--gray-200));
       border-radius: 6px;
       font-size: 12px;
       outline: none;
+      background: var(--theme-input-bg, #fff);
+      color: var(--theme-input-text, inherit);
     }
     .compose-email-fields input { flex: 1; min-width: 150px; }
     .compose-email-fields select { width: 180px; }
     .compose-email-fields input:focus,
-    .compose-email-fields select:focus { border-color: var(--gold); }
+    .compose-email-fields select:focus { border-color: var(--theme-primary, var(--gold)); }
     .btn-send {
       padding: 8px 18px;
       background: var(--gold);
@@ -489,8 +501,8 @@
     .info-panel {
       width: 20%;
       min-width: 200px;
-      border-left: 1px solid var(--gray-200);
-      background: var(--white);
+      border-left: 1px solid var(--theme-border, var(--gray-200));
+      background: var(--theme-card-bg, var(--white));
       overflow-y: auto;
       padding: 20px 16px;
     }
@@ -510,7 +522,7 @@
       text-align: center;
       font-size: 16px;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--theme-text-heading, var(--navy));
       margin-bottom: 4px;
     }
     .info-type-badge {
@@ -523,7 +535,7 @@
     .info-section-title {
       font-size: 11px;
       font-weight: 700;
-      color: var(--gray-400);
+      color: var(--theme-text-muted, var(--gray-400));
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 8px;
@@ -534,12 +546,12 @@
     .info-field label {
       display: block;
       font-size: 10px;
-      color: var(--gray-400);
+      color: var(--theme-text-muted, var(--gray-400));
       text-transform: uppercase;
     }
     .info-field span {
       font-size: 13px;
-      color: var(--navy);
+      color: var(--theme-text-heading, var(--navy));
       font-weight: 500;
     }
     .tier-badge {
@@ -583,7 +595,7 @@
     @media (max-width: 768px) {
       .layout-bar { flex-wrap: wrap; }
       .comm-layout { flex-direction: column; }
-      .contact-panel { width: 100% !important; min-width: unset !important; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--gray-200); }
+      .contact-panel { width: 100% !important; min-width: unset !important; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--theme-border, var(--gray-200)); }
       .contact-panel.collapsed { max-height: 0; }
       .convo-panel { min-height: 50vh; }
       .info-panel { display: none; }
@@ -624,7 +636,7 @@
     <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-    <main class="main" style="display:flex;flex-direction:column;overflow:hidden;height:100vh">
+    <main class="main comm-main">
       <div class="main-header" style="flex-shrink:0">
         <h1>Communications Hub</h1>
       </div>
@@ -677,9 +689,9 @@
             <button class="contact-tab" data-filter="shipper" onclick="setContactTab('shipper',this)">Shippers</button>
             <button class="contact-tab" data-filter="inbox" onclick="setContactTab('inbox',this)">Inbox</button>
           </div>
-          <div id="sort-row" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50)">
-            <label style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;white-space:nowrap">Sort:</label>
-            <select id="contact-sort" onchange="sortContacts()" style="flex:1;padding:3px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:11px;outline:none;background:var(--white);color:var(--navy)">
+          <div id="sort-row" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--theme-border, var(--gray-200));background:var(--theme-bg-alt, var(--gray-50))">
+            <label style="font-size:10px;font-weight:600;color:var(--theme-text-muted, var(--gray-400));text-transform:uppercase;white-space:nowrap">Sort:</label>
+            <select id="contact-sort" onchange="sortContacts()" style="flex:1;padding:3px 6px;border:1px solid var(--theme-input-border, var(--gray-200));border-radius:4px;font-size:11px;outline:none;background:var(--theme-input-bg, var(--white));color:var(--theme-input-text, var(--navy))">
               <option value="name_asc">Name A-Z</option>
               <option value="name_desc">Name Z-A</option>
               <option value="type">Type (Carrier/Shipper)</option>
