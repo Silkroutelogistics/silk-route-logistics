@@ -287,8 +287,9 @@
       border-radius: 6px;
       font-size: 13px;
       font-family: inherit;
-      resize: none;
-      height: 40px;
+      resize: vertical;
+      min-height: 100px;
+      max-height: 300px;
       outline: none;
     }
     .compose-textarea:focus { border-color: var(--gold); }
@@ -518,15 +519,7 @@
             <div class="compose-email-fields" id="email-fields">
               <input type="email" id="email-to" placeholder="To email address...">
               <input type="text" id="email-subject" placeholder="Subject...">
-              <select id="email-template" onchange="loadTemplate()">
-                <option value="">No template</option>
-                <option value="introduction">Introduction</option>
-                <option value="follow_up">Follow Up</option>
-                <option value="rate_quote">Rate Quote</option>
-                <option value="load_confirmation">Load Confirmation</option>
-                <option value="invoice">Invoice</option>
-                <option value="thank_you">Thank You</option>
-              </select>
+              <select id="email-template" onchange="loadTemplate()"></select>
             </div>
             <div class="compose-form">
               <textarea class="compose-textarea" id="compose-text" placeholder="Type a note..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComm()}"></textarea>
@@ -739,6 +732,7 @@
       badge.textContent = typeLabel;
       badge.className = "convo-header-type type-" + contact.entityType.toLowerCase();
       document.getElementById("compose-bar").style.display = "";
+      updateTemplateDropdown();
 
       if (contact.entityType === "INBOX") {
         renderInboxInfoPanel(contact);
@@ -917,30 +911,55 @@
       }
     }
 
+    var carrierTemplates = [
+      { id: "", label: "No template" },
+      { id: "carrier_intro", label: "Carrier Introduction", subject: "Partnership Opportunity - Silk Route Logistics", body: "Hi [NAME],\n\nI'm reaching out from Silk Route Logistics. We're a growing freight brokerage and we're always looking for reliable carriers to join our network.\n\nWe have consistent freight in your operating lanes and offer quick pay options. Would you be interested in a brief call to discuss how we can work together?" },
+      { id: "carrier_load_offer", label: "Load Available", subject: "Load Available - Silk Route Logistics", body: "Hi [NAME],\n\nWe have a load available that matches your equipment and lanes. Please let me know if you're interested and I can share the full details including rate, pickup/delivery times, and commodity info." },
+      { id: "carrier_rate_confirm", label: "Rate Confirmation", subject: "Rate Confirmation - Silk Route Logistics", body: "Hi [NAME],\n\nPlease find the rate confirmation for the load we discussed. Kindly review the details and sign at your earliest convenience. If you have any questions, don't hesitate to reach out." },
+      { id: "carrier_pod_request", label: "POD Request", subject: "POD Required - Silk Route Logistics", body: "Hi [NAME],\n\nThe load has been delivered. Could you please upload the signed Proof of Delivery (POD) at your earliest convenience? This will help us process your payment quickly." },
+      { id: "carrier_payment", label: "Payment Update", subject: "Payment Update - Silk Route Logistics", body: "Hi [NAME],\n\nThis is to confirm that your payment has been processed. Please allow 2-3 business days for the funds to reflect in your account. Thank you for your service." },
+      { id: "carrier_followup", label: "Follow Up", subject: "Following Up - Silk Route Logistics", body: "Hi [NAME],\n\nJust following up on our previous conversation. We'd love to continue working together and have more loads available in your lanes. Let me know your current availability." },
+      { id: "carrier_thank_you", label: "Thank You", subject: "Thank You - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for the great service on the recent load. We appreciate your professionalism and reliability. Looking forward to working with you again soon." }
+    ];
+
+    var shipperTemplates = [
+      { id: "", label: "No template" },
+      { id: "shipper_intro", label: "Introduction", subject: "Introduction - Silk Route Logistics", body: "Hi [NAME],\n\nI'd like to introduce myself and Silk Route Logistics. We are a full-service freight brokerage specializing in reliable, on-time delivery across all 48 states.\n\nWe offer competitive rates, real-time tracking, and dedicated account management. I'd love to learn more about your shipping needs and see how we can help." },
+      { id: "shipper_quote", label: "Rate Quote", subject: "Rate Quote - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for the opportunity to quote on your freight. Please find our competitive rate below for the requested lane.\n\nWe're confident we can provide reliable service at this rate. Let me know if you'd like to proceed or if you have any questions." },
+      { id: "shipper_load_confirm", label: "Load Confirmation", subject: "Load Booked - Silk Route Logistics", body: "Hi [NAME],\n\nGreat news! Your load has been booked and a carrier has been assigned. You can expect pickup at the scheduled time. I'll keep you updated with tracking information throughout transit." },
+      { id: "shipper_delivery_update", label: "Delivery Update", subject: "Delivery Update - Silk Route Logistics", body: "Hi [NAME],\n\nI wanted to provide an update on your shipment. The load is currently in transit and on schedule for delivery. I'll notify you once delivery is confirmed." },
+      { id: "shipper_invoice", label: "Invoice", subject: "Invoice - Silk Route Logistics", body: "Hi [NAME],\n\nPlease find the invoice for the recently completed shipment. Payment terms are as agreed. If you have any questions about the charges, please don't hesitate to reach out." },
+      { id: "shipper_followup", label: "Follow Up", subject: "Following Up - Silk Route Logistics", body: "Hi [NAME],\n\nFollowing up on our previous conversation. I'd love to discuss how we can support your upcoming shipping needs. Do you have any loads coming up that we can help with?" },
+      { id: "shipper_thank_you", label: "Thank You", subject: "Thank You - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for trusting Silk Route Logistics with your freight. We value our partnership and are committed to providing you with the best service possible." }
+    ];
+
+    function updateTemplateDropdown() {
+      var select = document.getElementById("email-template");
+      var templates = shipperTemplates; // default
+      if (state.currentContact) {
+        var type = state.currentContact.entityType;
+        if (type === "CARRIER") templates = carrierTemplates;
+        else if (type === "SHIPPER") templates = shipperTemplates;
+        // INBOX: use shipper templates as default for unknown contacts
+      }
+      select.innerHTML = templates.map(function(t) {
+        return '<option value="' + t.id + '">' + esc(t.label) + '</option>';
+      }).join("");
+    }
+
     function loadTemplate() {
-      var tpl = document.getElementById("email-template").value;
-      if (!tpl) return;
+      var tplId = document.getElementById("email-template").value;
+      if (!tplId) return;
       var textarea = document.getElementById("compose-text");
-      var senderName = state.currentUser ? (state.currentUser.firstName + " " + state.currentUser.lastName) : "AE";
       var recipientName = state.currentContact ? state.currentContact.name : "there";
 
-      var prefills = {
-        introduction: "I'd like to introduce myself and Silk Route Logistics. We can support your freight needs across all 48 states.",
-        follow_up: "Following up on our previous conversation. Would love to discuss how we can help with your upcoming shipments.",
-        rate_quote: "Please find our competitive rate quote for your requested lanes.",
-        load_confirmation: "Your load has been confirmed and a carrier has been assigned.",
-        invoice: "Please find your invoice details attached.",
-        thank_you: "Thank you for your business. We value our partnership and look forward to serving you."
-      };
-      textarea.value = prefills[tpl] || "";
-      document.getElementById("email-subject").value = {
-        introduction: "Introduction - Silk Route Logistics",
-        follow_up: "Following Up - Silk Route Logistics",
-        rate_quote: "Rate Quote - Silk Route Logistics",
-        load_confirmation: "Load Confirmation - Silk Route Logistics",
-        invoice: "Invoice - Silk Route Logistics",
-        thank_you: "Thank You - Silk Route Logistics"
-      }[tpl] || "Silk Route Logistics";
+      // Find template in both lists
+      var tpl = carrierTemplates.concat(shipperTemplates).find(function(t) { return t.id === tplId; });
+      if (!tpl) return;
+
+      var body = (tpl.body || "").replace(/\[NAME\]/g, recipientName);
+      textarea.value = body;
+      document.getElementById("email-subject").value = tpl.subject || "Silk Route Logistics";
     }
 
     function sendComm() {
