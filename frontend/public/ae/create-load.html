@@ -1271,6 +1271,13 @@
       window.location.href = "/auth/login";
     }
 
+    function esc(str) {
+      if (!str) return "";
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
     /* =========================================
        TOAST
        ========================================= */
@@ -1352,10 +1359,12 @@
           if (customers.length === 0) {
             resultsEl.innerHTML = '<div class="search-result-item" style="color:var(--gray-400);">No customers found</div>';
           } else {
-            resultsEl.innerHTML = customers.map(function(c) {
-              return '<div class="search-result-item" onclick="selectCustomer(' + JSON.stringify(JSON.stringify(c)) + ')">' +
-                (c.companyName || c.name || "Unknown") +
-                '<small>' + (c.paymentTerms || "Net 30") + ' | ' + (c.tier || "Standard") + '</small></div>';
+            // Store customers in temp array for click handling
+            window._customerResults = customers;
+            resultsEl.innerHTML = customers.map(function(c, idx) {
+              return '<div class="search-result-item" onclick="selectCustomerByIndex(' + idx + ')">' +
+                esc(c.companyName || c.name || "Unknown") +
+                '<small>' + esc((c.paymentTerms || "Net 30") + ' | ' + (c.tier || "Standard")) + '</small></div>';
             }).join("");
           }
           resultsEl.classList.add("open");
@@ -1366,8 +1375,14 @@
       }, 300);
     }
 
-    function selectCustomer(jsonStr) {
-      var c = JSON.parse(jsonStr);
+    function selectCustomerByIndex(idx) {
+      var c = (window._customerResults || [])[idx];
+      if (!c) return;
+      selectCustomer(c);
+    }
+
+    function selectCustomer(c) {
+      if (typeof c === "string") c = JSON.parse(c);
       document.getElementById("customer-id").value = c.id || "";
       document.getElementById("customer-search").value = c.companyName || c.name || "";
       document.getElementById("customer-results").classList.remove("open");
@@ -2150,7 +2165,8 @@
 
   </script>
 
-  <script src="/ae/js/notification-bell.js"></script>
+  <script src="/ae/js/sidebar.js"></script>
+<script src="/ae/js/notification-bell.js"></script>
   <script src="/shared/js/themeEngine.js"></script>
   <script src="/shared/js/marco-polo.js"></script>
 </body>

@@ -84,6 +84,98 @@ a:hover {
   flex-direction: column;
   z-index: 100;
   overflow-y: auto;
+  transition: width 0.25s ease;
+}
+
+/* --- Sidebar Collapse (Desktop) --- */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  position: absolute;
+  top: 28px;
+  right: -12px;
+  background: var(--theme-sidebar-bg, var(--navy));
+  border: 2px solid var(--theme-border, var(--gray-200));
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 101;
+  color: var(--theme-sidebar-text, var(--white));
+  font-size: 12px;
+  transition: transform 0.25s ease, right 0.25s ease;
+}
+.sidebar-toggle:hover {
+  background: var(--theme-primary, var(--gold));
+  border-color: var(--theme-primary, var(--gold));
+}
+.sidebar-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+}
+
+/* Collapsed sidebar state */
+.sidebar.collapsed {
+  width: 60px;
+}
+.sidebar.collapsed .sidebar-logo span,
+.sidebar.collapsed .sidebar-user,
+.sidebar.collapsed .sidebar-nav a span,
+.sidebar.collapsed .sidebar-nav > div > div:first-child,
+.sidebar.collapsed .sidebar-footer {
+  display: none;
+}
+.sidebar.collapsed .sidebar-logo {
+  justify-content: center;
+  padding: 20px 8px;
+}
+.sidebar.collapsed .sidebar-nav a {
+  justify-content: center;
+  padding: 12px 0;
+  gap: 0;
+}
+.sidebar.collapsed .sidebar-nav a.active {
+  border-right-width: 2px;
+}
+.sidebar.collapsed .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* Main content adjusts when sidebar collapsed */
+.page.sidebar-collapsed > .main {
+  margin-left: 60px;
+}
+.page.sidebar-collapsed > .sidebar {
+  width: 60px;
+}
+
+/* Tooltip on hover for collapsed nav items */
+.sidebar.collapsed .sidebar-nav a {
+  position: relative;
+}
+.sidebar.collapsed .sidebar-nav a::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--theme-sidebar-bg, var(--navy));
+  color: var(--theme-sidebar-text, var(--white));
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  margin-left: 8px;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.sidebar.collapsed .sidebar-nav a:hover::after {
+  opacity: 1;
 }
 
 .sidebar-logo {
@@ -217,6 +309,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  transition: margin-left 0.25s ease;
 }
 
 .main-header {
@@ -833,6 +926,10 @@ tbody tr:hover {
 
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .sidebar-toggle {
+    display: none;
   }
 
   .hamburger {
