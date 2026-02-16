@@ -16,7 +16,7 @@
     /* ========== Communications Hub Styles ========== */
     .comm-layout {
       display: flex;
-      flex: 1;
+      flex: 1 1 0;
       min-height: 0;
       overflow: hidden;
     }
@@ -503,14 +503,11 @@
         <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
         <a href="/ae/communications.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
         <a href="/ae/claims.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="13" y2="11"/></svg>Claims</a>
-        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financials</a>
+        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Lead Hunter</a>
         <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
-        <a href="/ae/analytics.html">
-          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-          Analytics
-        </a>
+        <a href="/ae/analytics.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</a>
         <a href="/ae/accounting/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>Accounting</a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
+        <div style="border-top:1px solid rgba(255,255,255,0.08);margin:12px 0;padding-top:12px;">
           <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
@@ -524,7 +521,7 @@
     <button class="hamburger" id="hamburger" onclick="toggleSidebar()">&#9776;</button>
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-    <main class="main" style="display:flex;flex-direction:column">
+    <main class="main" style="display:flex;flex-direction:column;overflow:hidden;height:100vh">
       <div class="main-header" style="flex-shrink:0">
         <h1>Communications Hub</h1>
       </div>
@@ -558,6 +555,16 @@
             <button class="contact-tab" data-filter="carrier" onclick="setContactTab('carrier',this)">Carriers</button>
             <button class="contact-tab" data-filter="shipper" onclick="setContactTab('shipper',this)">Shippers</button>
             <button class="contact-tab" data-filter="inbox" onclick="setContactTab('inbox',this)">Inbox</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50)">
+            <label style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;white-space:nowrap">Sort:</label>
+            <select id="contact-sort" onchange="sortContacts()" style="flex:1;padding:3px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:11px;outline:none;background:var(--white);color:var(--navy)">
+              <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+              <option value="type">Type (Carrier/Shipper)</option>
+              <option value="tier">Tier (High to Low)</option>
+              <option value="recent">Recent Activity</option>
+            </select>
           </div>
           <ul class="contact-list" id="contact-list"></ul>
         </div>
@@ -701,7 +708,40 @@
         }
         return true;
       });
+      applySorting();
       renderContactList();
+    }
+
+    function sortContacts() {
+      applySorting();
+      renderContactList();
+    }
+
+    function applySorting() {
+      var sortBy = (document.getElementById("contact-sort") || {}).value || "name_asc";
+      var tierOrder = { PLATINUM: 0, GOLD: 1, SILVER: 2, BRONZE: 3 };
+      state.filtered.sort(function(a, b) {
+        if (sortBy === "name_asc") return (a.name || "").localeCompare(b.name || "");
+        if (sortBy === "name_desc") return (b.name || "").localeCompare(a.name || "");
+        if (sortBy === "type") {
+          if (a.entityType !== b.entityType) return a.entityType === "CARRIER" ? -1 : 1;
+          return (a.name || "").localeCompare(b.name || "");
+        }
+        if (sortBy === "tier") {
+          var ta = tierOrder[a.tier] !== undefined ? tierOrder[a.tier] : 99;
+          var tb = tierOrder[b.tier] !== undefined ? tierOrder[b.tier] : 99;
+          if (ta !== tb) return ta - tb;
+          return (a.name || "").localeCompare(b.name || "");
+        }
+        if (sortBy === "recent") {
+          // Sort by last communication activity (carrier/shipper with email first)
+          var ae = a.email ? 0 : 1;
+          var be = b.email ? 0 : 1;
+          if (ae !== be) return ae - be;
+          return (a.name || "").localeCompare(b.name || "");
+        }
+        return 0;
+      });
     }
 
     function loadInboxContacts(search) {
