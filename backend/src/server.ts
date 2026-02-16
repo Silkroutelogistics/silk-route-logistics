@@ -17,7 +17,7 @@ import { initCronJobs } from "./cron";
 import { seedCronRegistry } from "./services/cronRegistryService";
 
 const app = express();
-const BUILD_VERSION = Date.now().toString();
+const BUILD_VERSION = Date.now().toString(); // changes on every deploy restart
 
 // Trust proxy (Render uses reverse proxy)
 app.set("trust proxy", 1);
