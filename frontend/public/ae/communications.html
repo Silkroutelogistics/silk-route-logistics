@@ -702,7 +702,8 @@
         var isActive = state.currentContact && state.currentContact.id === c.id;
         var subtitle = c.entityType === "INBOX" ? esc(c.lastMsg) : esc(c.subtitle);
         var countBadge = c.count ? ' <span style="font-size:10px;background:var(--gold);color:#fff;border-radius:10px;padding:1px 6px;margin-left:4px">' + c.count + '</span>' : '';
-        return '<li class="contact-item' + (isActive ? ' active' : '') + '" onclick="selectContact(\'' + c.id + '\')">' +
+        var safeId = c.id.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        return '<li class="contact-item' + (isActive ? ' active' : '') + '" onclick="selectContact(\'' + safeId + '\')">' +
           '<div class="contact-avatar ' + avatarClass + '">' + initials + '</div>' +
           '<div class="contact-info">' +
             '<div class="contact-name">' + esc(c.name) + countBadge + '</div>' +
@@ -732,13 +733,17 @@
 
       if (contact.entityType === "INBOX") {
         renderInboxInfoPanel(contact);
+        // Auto-switch to email reply mode for inbox contacts
+        var emailBtn = document.querySelector('.compose-tab:nth-child(2)');
+        if (emailBtn) setComposeMode("email", emailBtn);
+        document.getElementById("email-to").value = contact.email || "";
+        document.getElementById("email-subject").value = contact.lastMsg ? "Re: " + contact.lastMsg : "";
       } else {
         renderInfoPanel(contact);
-      }
-
-      // Pre-fill email to if available
-      if (contact.email) {
-        document.getElementById("email-to").value = contact.email;
+        // Pre-fill email to if available
+        if (contact.email) {
+          document.getElementById("email-to").value = contact.email;
+        }
       }
     }
 
@@ -897,14 +902,23 @@
       var text = document.getElementById("compose-text").value.trim();
       if (!text) return;
 
+      // For INBOX contacts, resolve the entity type/id for logging
+      var entityType = state.currentContact.entityType;
+      var entityId = state.currentContact.entityId;
+      if (entityType === "INBOX") {
+        // Use the matched type if sender was matched, otherwise UNKNOWN
+        entityType = state.currentContact.matchedType || "UNKNOWN";
+        entityId = state.currentContact.matchedId || state.currentContact.email;
+      }
+
       if (state.composeMode === "note") {
         SRL.request("/api/communications", {
           method: "POST",
           body: {
             type: "NOTE",
             direction: "OUTBOUND",
-            entityType: state.currentContact.entityType,
-            entityId: state.currentContact.entityId,
+            entityType: entityType,
+            entityId: entityId,
             body: text
           }
         }).then(function() {
@@ -927,8 +941,8 @@
         var body = {
           to: to,
           subject: subject,
-          entityType: state.currentContact.entityType,
-          entityId: state.currentContact.entityId
+          entityType: entityType,
+          entityId: entityId
         };
 
         if (template) {
