@@ -32,7 +32,7 @@ app.use(
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'"],
+        connectSrc: ["'self'", "https://api.silkroutelogistics.ai", "http://localhost:4000"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
@@ -84,14 +84,26 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 86400,
 };
 
-// Handle preflight OPTIONS for all routes BEFORE rate limiters
-app.options("*", cors(corsOptions));
+// Explicit preflight handler — MUST be before cors middleware
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && (allowedOrigins.includes(origin) || /\.pages\.dev$/.test(origin) || /\.silkroutelogistics\.ai$/.test(origin))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+  res.sendStatus(204);
+});
+
+// CORS middleware for all other requests
 app.use(cors(corsOptions));
 
-// 4. Global rate limiter: 100 requests per 15 min on /api/
+// 4. Global rate limiter: 300 requests per 15 min on /api/
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },
