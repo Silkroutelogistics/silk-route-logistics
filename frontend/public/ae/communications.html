@@ -209,21 +209,64 @@
       min-width: 120px;
     }
     .comm-entry.inbound-email .comm-bubble {
-      background: #F5F3FF;
-      border: 1px solid #E9E5FF;
+      background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+      border: 1px solid #DDD6FE;
       color: #1E1B4B;
+      border-left: 3px solid #7C3AED;
     }
     .comm-entry.inbound-email .comm-type-label { color: #7C3AED; }
     .comm-entry.inbound-email .comm-timestamp { color: #9CA3AF; }
+    /* Collapsible old messages */
+    .comm-collapsed-group {
+      padding: 8px 16px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .comm-collapsed-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      background: var(--white);
+      border: 1px dashed var(--gray-300);
+      border-radius: 20px;
+      color: var(--gray-500);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .comm-collapsed-btn:hover {
+      background: var(--gray-50);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .comm-collapsed-btn svg {
+      transition: transform 0.2s;
+    }
+    .comm-collapsed-btn.expanded svg {
+      transform: rotate(180deg);
+    }
+    .comm-hidden-messages {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .comm-hidden-messages.show {
+      display: flex;
+    }
     .comm-entry.outbound .comm-bubble {
-      background: var(--navy);
+      background: linear-gradient(135deg, #0D1B2A 0%, #1B2D45 100%);
       color: var(--white);
+      border-left: 3px solid var(--gold);
     }
     .comm-bubble-header {
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
     }
     .comm-type-label {
       font-size: 10px;
@@ -238,8 +281,13 @@
     .comm-entry.outbound .comm-timestamp { color: rgba(255,255,255,0.5); }
     .comm-subject {
       font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 4px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .comm-entry.outbound .comm-subject {
+      border-bottom-color: rgba(255,255,255,0.1);
     }
     .comm-body {
       font-size: 13px;
@@ -757,6 +805,9 @@
         document.getElementById("email-subject").value = contact.lastMsg ? "Re: " + contact.lastMsg : "";
       } else {
         renderInfoPanel(contact);
+        // Auto-switch to email mode for carrier/shipper contacts
+        var emailBtn = document.querySelector('.compose-tab:nth-child(2)');
+        if (emailBtn) setComposeMode("email", emailBtn);
         // Pre-fill email to if available
         if (contact.email) {
           document.getElementById("email-to").value = contact.email;
@@ -828,41 +879,81 @@
       return text || "(no content)";
     }
 
+    function renderCommEntry(c) {
+      var isOutbound = c.direction === "OUTBOUND" || c.type.includes("OUTBOUND") || c.type === "NOTE";
+      var isInboundEmail = c.type === "EMAIL_INBOUND";
+      var iconClass = isInboundEmail ? "icon-email-in" : isOutbound && c.type === "EMAIL_OUTBOUND" ? "icon-email-out" : getTypeIcon(c.type);
+      var typeLabel = getTypeLabel(c.type);
+      var entryClass = "comm-entry";
+      if (isOutbound) entryClass += " outbound";
+      if (isInboundEmail) entryClass += " inbound-email";
+
+      var displayBody = cleanEmailBody(c.body, c.type);
+      var fromLabel = isInboundEmail && c.from ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">from ' + esc(c.from) + '</div>' : '';
+      var byLabel = isOutbound && c.user ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">by ' + esc(c.user.firstName + " " + c.user.lastName) + '</div>' : '';
+      var dateStr = c.createdAt ? new Date(c.createdAt).toLocaleString("en-US", {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "";
+
+      return '<div class="' + entryClass + '">' +
+        '<div class="comm-icon ' + iconClass + '">' + getTypeEmoji(c.type) + '</div>' +
+        '<div class="comm-bubble">' +
+          '<div class="comm-bubble-header">' +
+            '<span class="comm-type-label">' + typeLabel + '</span>' +
+            '<span class="comm-timestamp">' + timeAgo(c.createdAt) + '</span>' +
+            '<span style="font-size:10px;color:var(--gray-400);margin-left:auto">' + dateStr + '</span>' +
+          '</div>' +
+          (c.subject ? '<div class="comm-subject">' + esc(c.subject) + '</div>' : '') +
+          '<div class="comm-body">' + esc(displayBody).replace(/\n/g, "<br>") + '</div>' +
+          (c.duration ? '<div class="comm-duration">' + formatDuration(c.duration) + '</div>' : '') +
+          fromLabel + byLabel +
+        '</div>' +
+      '</div>';
+    }
+
     function renderThread() {
       var thread = document.getElementById("convo-thread");
       if (state.communications.length === 0) {
         thread.innerHTML = '<div class="convo-empty">No communications yet. Log a note or send an email to get started.</div>';
         return;
       }
-      thread.innerHTML = state.communications.map(function(c) {
-        var isOutbound = c.direction === "OUTBOUND" || c.type.includes("OUTBOUND") || c.type === "NOTE";
-        var isInboundEmail = c.type === "EMAIL_INBOUND";
-        var iconClass = isInboundEmail ? "icon-email-in" : isOutbound && c.type === "EMAIL_OUTBOUND" ? "icon-email-out" : getTypeIcon(c.type);
-        var typeLabel = getTypeLabel(c.type);
-        var entryClass = "comm-entry";
-        if (isOutbound) entryClass += " outbound";
-        if (isInboundEmail) entryClass += " inbound-email";
+      // Show newest first — reverse the array (state.communications is oldest-first)
+      var sorted = state.communications.slice().reverse();
+      var VISIBLE_COUNT = 3;
 
-        var displayBody = cleanEmailBody(c.body, c.type);
-        var fromLabel = isInboundEmail && c.from ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">from ' + esc(c.from) + '</div>' : '';
-        var byLabel = isOutbound && c.user ? '<div style="font-size:10px;margin-top:4px;opacity:0.6">by ' + esc(c.user.firstName + " " + c.user.lastName) + '</div>' : '';
+      if (sorted.length <= VISIBLE_COUNT) {
+        // Few messages — show all
+        thread.innerHTML = sorted.map(renderCommEntry).join("");
+      } else {
+        // Show latest messages + collapsible older ones
+        var recent = sorted.slice(0, VISIBLE_COUNT);
+        var older = sorted.slice(VISIBLE_COUNT);
+        var html = recent.map(renderCommEntry).join("");
+        html += '<div class="comm-collapsed-group">' +
+          '<button class="comm-collapsed-btn" onclick="toggleOlderMessages(this)">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+            'Show ' + older.length + ' older message' + (older.length > 1 ? 's' : '') +
+          '</button></div>';
+        html += '<div class="comm-hidden-messages" id="older-messages">' +
+          older.map(renderCommEntry).join("") + '</div>';
+        thread.innerHTML = html;
+      }
+      // Scroll to top to see newest
+      thread.scrollTop = 0;
+    }
 
-        return '<div class="' + entryClass + '">' +
-          '<div class="comm-icon ' + iconClass + '">' + getTypeEmoji(c.type) + '</div>' +
-          '<div class="comm-bubble">' +
-            '<div class="comm-bubble-header">' +
-              '<span class="comm-type-label">' + typeLabel + '</span>' +
-              '<span class="comm-timestamp">' + timeAgo(c.createdAt) + '</span>' +
-            '</div>' +
-            (c.subject ? '<div class="comm-subject">' + esc(c.subject) + '</div>' : '') +
-            '<div class="comm-body">' + esc(displayBody).replace(/\n/g, "<br>") + '</div>' +
-            (c.duration ? '<div class="comm-duration">' + formatDuration(c.duration) + '</div>' : '') +
-            fromLabel + byLabel +
-          '</div>' +
-        '</div>';
-      }).join("");
-
-      thread.scrollTop = thread.scrollHeight;
+    function toggleOlderMessages(btn) {
+      var container = document.getElementById("older-messages");
+      if (container.classList.contains("show")) {
+        container.classList.remove("show");
+        btn.classList.remove("expanded");
+        var count = container.children.length;
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+          'Show ' + count + ' older message' + (count > 1 ? 's' : '');
+      } else {
+        container.classList.add("show");
+        btn.classList.add("expanded");
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+          'Hide older messages';
+      }
     }
 
     /* ======== INFO PANEL ======== */
@@ -952,7 +1043,10 @@
       { id: "carrier_pod_request", label: "POD Request", subject: "POD Required - Silk Route Logistics", body: "Hi [NAME],\n\nThe load has been delivered. Could you please upload the signed Proof of Delivery (POD) at your earliest convenience? This will help us process your payment quickly." },
       { id: "carrier_payment", label: "Payment Update", subject: "Payment Update - Silk Route Logistics", body: "Hi [NAME],\n\nThis is to confirm that your payment has been processed. Please allow 2-3 business days for the funds to reflect in your account. Thank you for your service." },
       { id: "carrier_followup", label: "Follow Up", subject: "Following Up - Silk Route Logistics", body: "Hi [NAME],\n\nJust following up on our previous conversation. We'd love to continue working together and have more loads available in your lanes. Let me know your current availability." },
-      { id: "carrier_thank_you", label: "Thank You", subject: "Thank You - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for the great service on the recent load. We appreciate your professionalism and reliability. Looking forward to working with you again soon." }
+      { id: "carrier_thank_you", label: "Thank You", subject: "Thank You - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for the great service on the recent load. We appreciate your professionalism and reliability. Looking forward to working with you again soon." },
+      { id: "carrier_onboarding", label: "Onboarding Welcome", subject: "Welcome to Silk Route Logistics Network", body: "Hi [NAME],\n\nWelcome aboard! We're excited to have you as part of the Silk Route Logistics carrier network.\n\nTo complete your onboarding, please ensure the following documents are uploaded to your carrier portal:\n- W-9 Form\n- Certificate of Insurance\n- Operating Authority\n\nOnce verified, you'll start receiving load opportunities in your preferred lanes. Our team is here to support you every step of the way." },
+      { id: "carrier_quickpay", label: "Quick Pay Offer", subject: "Quick Pay Available - Silk Route Logistics", body: "Hi [NAME],\n\nGood news! You're eligible for our Quick Pay program. Get paid within 2 business days of delivering the load and submitting your POD.\n\nQuick Pay Terms:\n- 2% fee deducted from carrier rate\n- Payment within 48 hours of approved POD\n- Available on all loads over $500\n\nWould you like to opt in? Just reply to confirm." },
+      { id: "carrier_capacity", label: "Capacity Check", subject: "Capacity Inquiry - Silk Route Logistics", body: "Hi [NAME],\n\nWe're seeing strong demand in your operating region and wanted to check on your current availability.\n\nCould you share:\n1. Number of trucks available this week\n2. Preferred lanes\n3. Any deadhead limitations\n\nWe'd love to keep you loaded and moving. Let me know your capacity and I'll match you with the best opportunities." }
     ];
 
     var shipperTemplates = [
@@ -963,7 +1057,10 @@
       { id: "shipper_delivery_update", label: "Delivery Update", subject: "Delivery Update - Silk Route Logistics", body: "Hi [NAME],\n\nI wanted to provide an update on your shipment. The load is currently in transit and on schedule for delivery. I'll notify you once delivery is confirmed." },
       { id: "shipper_invoice", label: "Invoice", subject: "Invoice - Silk Route Logistics", body: "Hi [NAME],\n\nPlease find the invoice for the recently completed shipment. Payment terms are as agreed. If you have any questions about the charges, please don't hesitate to reach out." },
       { id: "shipper_followup", label: "Follow Up", subject: "Following Up - Silk Route Logistics", body: "Hi [NAME],\n\nFollowing up on our previous conversation. I'd love to discuss how we can support your upcoming shipping needs. Do you have any loads coming up that we can help with?" },
-      { id: "shipper_thank_you", label: "Thank You", subject: "Thank You - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for trusting Silk Route Logistics with your freight. We value our partnership and are committed to providing you with the best service possible." }
+      { id: "shipper_thank_you", label: "Thank You", subject: "Thank You - Silk Route Logistics", body: "Hi [NAME],\n\nThank you for trusting Silk Route Logistics with your freight. We value our partnership and are committed to providing you with the best service possible." },
+      { id: "shipper_seasonal", label: "Seasonal Capacity", subject: "Secure Your Capacity - Silk Route Logistics", body: "Hi [NAME],\n\nWith peak season approaching, we wanted to reach out early to help you secure reliable capacity for your upcoming shipments.\n\nWe recommend booking in advance to lock in competitive rates and guarantee truck availability. Our carrier network is strong and we can handle:\n- Dry van, reefer, and flatbed\n- Full truckload and LTL\n- Expedited and team driver options\n\nLet's set up a call to discuss your volume forecast and ensure a smooth peak season." },
+      { id: "shipper_claims", label: "Claims Resolution", subject: "Claims Update - Silk Route Logistics", body: "Hi [NAME],\n\nI'm writing regarding the freight claim filed for your recent shipment. Our claims team has reviewed the documentation and is working to resolve this as quickly as possible.\n\nWe take cargo integrity seriously and will keep you updated on the resolution timeline. Please let me know if you have any additional documentation to share." },
+      { id: "shipper_contract", label: "Contract Renewal", subject: "Partnership Renewal - Silk Route Logistics", body: "Hi [NAME],\n\nAs we approach the renewal period for our freight partnership, I wanted to check in and discuss how we can continue to serve your logistics needs.\n\nOver the past year, we've handled your shipments with a 98%+ on-time delivery rate and we're committed to maintaining that standard. I'd love to schedule a review call to discuss volume commitments, lane pricing, and any new requirements you may have." }
     ];
 
     function updateTemplateDropdown() {
