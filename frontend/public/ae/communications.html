@@ -21,6 +21,34 @@
       overflow: hidden;
     }
 
+    /* --- Layout Toggle Bar --- */
+    .layout-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-shrink: 0;
+    }
+    .layout-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border: 1px solid var(--gray-200);
+      border-radius: 5px;
+      background: var(--white);
+      color: var(--gray-500);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .layout-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .layout-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+    .layout-btn svg { width: 14px; height: 14px; }
+
     /* --- Left: Contact List (30%) --- */
     .contact-panel {
       width: 30%;
@@ -29,7 +57,79 @@
       display: flex;
       flex-direction: column;
       background: var(--white);
+      transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
+      overflow: hidden;
     }
+    /* Collapsed state */
+    .contact-panel.collapsed {
+      width: 0;
+      min-width: 0;
+      border-right: none;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* --- Top Layout Mode --- */
+    .comm-layout.top-layout {
+      flex-direction: column;
+    }
+    .comm-layout.top-layout .contact-panel {
+      width: 100%;
+      min-width: unset;
+      max-height: none;
+      border-right: none;
+      border-bottom: 1px solid var(--gray-200);
+      flex-shrink: 0;
+    }
+    .comm-layout.top-layout .contact-panel .contact-tabs {
+      justify-content: center;
+      gap: 4px;
+      padding: 4px 12px;
+    }
+    .comm-layout.top-layout .contact-panel .contact-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+    }
+    .comm-layout.top-layout .contact-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px 12px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .comm-layout.top-layout .contact-item {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 20px;
+      border-bottom: none;
+      font-size: 12px;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .comm-layout.top-layout .contact-item:hover {
+      border-color: var(--gold);
+    }
+    .comm-layout.top-layout .contact-item.active {
+      background: var(--gold);
+      color: var(--white);
+      border-color: var(--gold);
+    }
+    .comm-layout.top-layout .contact-item.active .contact-name { color: var(--white); }
+    .comm-layout.top-layout .contact-item.active .contact-last-msg { color: rgba(255,255,255,0.7); }
+    .comm-layout.top-layout .contact-avatar {
+      width: 24px;
+      height: 24px;
+      font-size: 10px;
+    }
+    .comm-layout.top-layout .contact-meta { display: none; }
+    .comm-layout.top-layout .convo-panel { flex: 1; min-height: 0; }
+    .comm-layout.top-layout .info-panel { display: none; }
+    /* Hide sort row in top layout */
+    .comm-layout.top-layout #sort-row { display: none; }
     .contact-search {
       padding: 12px;
       border-bottom: 1px solid var(--gray-200);
@@ -480,10 +580,13 @@
       .info-panel { display: none; }
       .contact-panel { width: 35%; min-width: 220px; }
     }
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
+      .layout-bar { flex-wrap: wrap; }
       .comm-layout { flex-direction: column; }
-      .contact-panel { width: 100%; max-height: 40vh; }
+      .contact-panel { width: 100% !important; min-width: unset !important; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--gray-200); }
+      .contact-panel.collapsed { max-height: 0; }
       .convo-panel { min-height: 50vh; }
+      .info-panel { display: none; }
     }
   </style>
 </head>
@@ -544,9 +647,27 @@
         </div>
       </div>
 
-      <div class="comm-layout">
+      <!-- Layout Controls -->
+      <div class="layout-bar">
+        <span style="font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">View:</span>
+        <button class="layout-btn active" id="btn-layout-side" onclick="setLayout('side')" title="Contacts on left side">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="12" y="3" width="9" height="18" rx="1"/></svg>
+          Side Panel
+        </button>
+        <button class="layout-btn" id="btn-layout-top" onclick="setLayout('top')" title="Contacts as top tabs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="12" width="18" height="9" rx="1"/></svg>
+          Top Tabs
+        </button>
+        <div style="flex:1"></div>
+        <button class="layout-btn" id="btn-collapse" onclick="toggleContactPanel()" title="Collapse/Expand contacts panel">
+          <svg id="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+          <span id="collapse-label">Hide Contacts</span>
+        </button>
+      </div>
+
+      <div class="comm-layout" id="comm-layout">
         <!-- LEFT: Contact List -->
-        <div class="contact-panel">
+        <div class="contact-panel" id="contact-panel">
           <div class="contact-search">
             <input type="text" id="contact-search" placeholder="Search contacts..." oninput="filterContacts()">
           </div>
@@ -556,7 +677,7 @@
             <button class="contact-tab" data-filter="shipper" onclick="setContactTab('shipper',this)">Shippers</button>
             <button class="contact-tab" data-filter="inbox" onclick="setContactTab('inbox',this)">Inbox</button>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50)">
+          <div id="sort-row" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50)">
             <label style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;white-space:nowrap">Sort:</label>
             <select id="contact-sort" onchange="sortContacts()" style="flex:1;padding:3px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:11px;outline:none;background:var(--white);color:var(--navy)">
               <option value="name_asc">Name A-Z</option>
@@ -621,7 +742,9 @@
       composeMode: "note",
       tabFilter: "all",
       currentUser: null,
-      templates: []
+      templates: [],
+      layoutMode: "side",
+      panelCollapsed: false
     };
 
     /* ======== INIT ======== */
@@ -639,6 +762,67 @@
         document.getElementById("user-role").textContent = formatRole(u.role);
       }).catch(function(){});
     }
+
+    /* ======== LAYOUT CONTROLS ======== */
+    function setLayout(mode) {
+      var layout = document.getElementById("comm-layout");
+      var panel = document.getElementById("contact-panel");
+      var sideBtn = document.getElementById("btn-layout-side");
+      var topBtn = document.getElementById("btn-layout-top");
+      var collapseBtn = document.getElementById("btn-collapse");
+
+      if (mode === "top") {
+        layout.classList.add("top-layout");
+        panel.classList.remove("collapsed");
+        sideBtn.classList.remove("active");
+        topBtn.classList.add("active");
+        collapseBtn.style.display = "none";
+        state.layoutMode = "top";
+      } else {
+        layout.classList.remove("top-layout");
+        sideBtn.classList.add("active");
+        topBtn.classList.remove("active");
+        collapseBtn.style.display = "";
+        state.layoutMode = "side";
+        // Restore collapse state
+        if (state.panelCollapsed) {
+          panel.classList.add("collapsed");
+        } else {
+          panel.classList.remove("collapsed");
+        }
+      }
+      localStorage.setItem("srl_comm_layout", mode);
+    }
+
+    function toggleContactPanel() {
+      var panel = document.getElementById("contact-panel");
+      var icon = document.getElementById("collapse-icon");
+      var label = document.getElementById("collapse-label");
+      if (panel.classList.contains("collapsed")) {
+        panel.classList.remove("collapsed");
+        state.panelCollapsed = false;
+        icon.innerHTML = '<polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>';
+        label.textContent = "Hide Contacts";
+      } else {
+        panel.classList.add("collapsed");
+        state.panelCollapsed = true;
+        icon.innerHTML = '<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>';
+        label.textContent = "Show Contacts";
+      }
+      localStorage.setItem("srl_comm_collapsed", state.panelCollapsed ? "1" : "0");
+    }
+
+    // Restore saved layout on load
+    (function restoreLayout() {
+      var saved = localStorage.getItem("srl_comm_layout") || "side";
+      var collapsed = localStorage.getItem("srl_comm_collapsed") === "1";
+      state.panelCollapsed = collapsed;
+      if (saved === "top") {
+        setLayout("top");
+      } else if (collapsed) {
+        toggleContactPanel();
+      }
+    })();
 
     function loadTemplates() {
       SRL.request("/api/email/templates").then(function(res) {
