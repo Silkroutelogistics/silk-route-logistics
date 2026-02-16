@@ -123,6 +123,7 @@ var SRLAuth = (function () {
   if (!isConsole) return;
   if (window.location.pathname.indexOf("login") !== -1) return;
   if (window.location.pathname.indexOf("register") !== -1) return;
+  if (window.location.pathname.indexOf("forgot-password") !== -1) return;
 
   var IDLE_LIMIT = 15 * 60 * 1000; // 15 minutes
   var idleTimer;

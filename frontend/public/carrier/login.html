@@ -294,6 +294,7 @@
         .then(function(data) {
           if (remember) SRLAuth.setRememberedEmail(email, 'carrier');
           else SRLAuth.setRememberedEmail('', 'carrier');
+          localStorage.setItem('srl_last_activity', Date.now().toString());
           if (data.mustChangePassword) {
             document.getElementById('changePassModal').classList.add('show');
             window._tempToken = data.token;

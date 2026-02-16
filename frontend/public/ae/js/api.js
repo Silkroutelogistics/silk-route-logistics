@@ -36,7 +36,9 @@ var SRL = (function () {
       if (res.status === 401) {
         localStorage.removeItem("token");
         sessionStorage.removeItem("token");
-        window.location.href = "/auth/login";
+        localStorage.removeItem("user");
+        localStorage.removeItem("srl_last_activity");
+        window.location.href = "/auth/login.html";
         return Promise.reject(new Error("Unauthorized"));
       }
       if (res.status === 403) {

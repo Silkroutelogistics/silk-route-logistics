@@ -45,7 +45,8 @@ var CARRIER = (function () {
         localStorage.removeItem("carrier_user");
         sessionStorage.removeItem("carrier_token");
         sessionStorage.removeItem("carrier_user");
-        window.location.href = "/auth/carrier-login";
+        localStorage.removeItem("srl_last_activity");
+        window.location.href = "/carrier/login.html";
         return Promise.reject(new Error("Unauthorized"));
       }
       if (res.status === 403) {

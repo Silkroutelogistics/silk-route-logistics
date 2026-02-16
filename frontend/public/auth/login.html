@@ -303,6 +303,8 @@
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
+          localStorage.setItem('user', JSON.stringify(data.user || {}));
+          localStorage.setItem('srl_last_activity', Date.now().toString());
           if (remember) SRLAuth.setRememberedEmail(email, 'ae');
           else SRLAuth.setRememberedEmail('', 'ae');
           window.location.href = '/ae/dashboard/index.html';
@@ -334,6 +336,8 @@
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
+          localStorage.setItem('user', JSON.stringify(data.user || {}));
+          localStorage.setItem('srl_last_activity', Date.now().toString());
           if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');
           else SRLAuth.setRememberedEmail('', 'ae');
           var redirect = new URLSearchParams(window.location.search).get('redirect');
