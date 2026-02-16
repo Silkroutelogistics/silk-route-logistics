@@ -8,30 +8,113 @@ import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
 
-function generateRefNumber(): string {
-  const d = new Date();
-  const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  const rand = String(Math.floor(1000 + Math.random() * 9000));
-  return `SRL-${date}-${rand}`;
+async function generateLoadNumber(): Promise<string> {
+  // Ensure sequence exists (idempotent)
+  await prisma.$executeRawUnsafe(`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121472`);
+  const result = await prisma.$queryRawUnsafe<{ nextval: bigint }[]>(`SELECT nextval('load_number_seq') as nextval`);
+  const num = Number(result[0].nextval);
+  return `SRL-${num}`;
 }
 
 export async function createLoad(req: AuthRequest, res: Response) {
-  const data = req.body; // Already validated & transformed by validateBody middleware
+  const raw = req.body; // Already validated by validateBody middleware
 
   // Enforce shipper credit limit if customer is specified
-  if (data.customerId) {
-    const creditCheck = await enforceShipperCredit(data.customerId);
+  if (raw.customerId) {
+    const creditCheck = await enforceShipperCredit(raw.customerId);
     if (!creditCheck.allowed) {
       res.status(403).json({ error: `Shipper credit blocked: ${creditCheck.reason}` });
       return;
     }
   }
 
+  // Map frontend field names → Prisma schema field names
+  const pickupContact = raw.pickupContact || {};
+  const deliveryContact = raw.deliveryContact || {};
+  const dims = raw.dimensions || {};
+
+  const data: Record<string, unknown> = {
+    customerId: raw.customerId || undefined,
+    status: raw.status || "POSTED",
+
+    // Route
+    originCompany: raw.originName || raw.originCompany || undefined,
+    originCity: raw.originCity,
+    originState: raw.originState,
+    originZip: raw.originZip,
+    originContactName: pickupContact.name || raw.contactName || undefined,
+    originContactPhone: pickupContact.phone || raw.contactPhone || undefined,
+    destCompany: raw.destinationName || raw.destCompany || undefined,
+    destCity: raw.destinationCity || raw.destCity,
+    destState: raw.destinationState || raw.destState,
+    destZip: raw.destinationZip || raw.destZip,
+    destContactName: deliveryContact.name || undefined,
+    destContactPhone: deliveryContact.phone || undefined,
+
+    // Schedule
+    pickupDate: raw.pickupDate,
+    pickupTimeStart: raw.pickupTimeType === "APPOINTMENT" ? raw.pickupTime :
+                     raw.pickupTimeType === "WINDOW" ? raw.pickupWindowOpen : undefined,
+    pickupTimeEnd: raw.pickupTimeType === "WINDOW" ? raw.pickupWindowClose : undefined,
+    deliveryDate: raw.deliveryDate,
+    deliveryTimeStart: raw.deliveryTimeType === "APPOINTMENT" ? raw.deliveryTime :
+                       raw.deliveryTimeType === "WINDOW" ? raw.deliveryWindowOpen : undefined,
+    deliveryTimeEnd: raw.deliveryTimeType === "WINDOW" ? raw.deliveryWindowClose : undefined,
+
+    // Freight
+    weight: raw.weight || undefined,
+    pieces: raw.pieces || undefined,
+    equipmentType: raw.equipmentType,
+    commodity: raw.commodity || undefined,
+    freightClass: raw.freightClass || undefined,
+    stackable: raw.stackable ?? true,
+    distance: raw.miles || raw.distance || undefined,
+
+    // Financials
+    rate: raw.customerRate || raw.rate || 0,
+    customerRate: raw.customerRate || undefined,
+    carrierRate: raw.carrierRate || undefined,
+    rateType: raw.rateType || "FLAT",
+
+    // Hazmat
+    hazmat: raw.hazmat || false,
+    hazmatUnNumber: raw.hazmatUN || undefined,
+    hazmatClass: raw.hazmatClass || undefined,
+
+    // Temperature
+    temperatureControlled: raw.temperature != null || raw.temperatureControlled || false,
+    tempMin: raw.tempMin || (raw.temperature != null ? raw.temperature : undefined),
+    tempMax: raw.tempMax || undefined,
+
+    // Dimensions
+    dimensionsLength: dims.length || raw.length || undefined,
+    dimensionsWidth: dims.width || raw.width || undefined,
+    dimensionsHeight: dims.height || raw.height || undefined,
+
+    // Cross-border
+    customsRequired: raw.crossBorder || raw.customsRequired || false,
+    borderCrossingPoint: raw.borderCrossing || undefined,
+    customsBrokerName: raw.customsBroker || undefined,
+    bondType: raw.bondNumber || raw.bondType || undefined,
+
+    // Accessorials & Instructions
+    accessorials: raw.accessorials || undefined,
+    specialInstructions: raw.specialInstructions || undefined,
+    pickupInstructions: raw.pickupNotes || undefined,
+    deliveryInstructions: raw.deliveryNotes || undefined,
+  };
+
+  // Remove undefined values
+  for (const key of Object.keys(data)) {
+    if (data[key] === undefined) delete data[key];
+  }
+
+  const refNumber = await generateLoadNumber();
   const load = await prisma.load.create({
     data: {
       ...data,
-      referenceNumber: generateRefNumber(),
-      status: data.status || "POSTED",
+      referenceNumber: refNumber,
+      loadNumber: refNumber,
       posterId: req.user!.id,
     } as any,
   });
