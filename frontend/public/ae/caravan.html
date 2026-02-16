@@ -1153,6 +1153,7 @@
       }
       html += '<button class="btn-secondary btn-sm" onclick="window.location.href=\'/ae/loads.html\'">Find Loads</button>';
       html += '<button class="btn-secondary btn-sm" style="border-color:var(--green);color:var(--green)" onclick="window.location.href=\'/ae/compliance/carrier.html?id=' + c.id + '\'">View Compliance</button>';
+      html += '<button class="btn-secondary btn-sm" style="border-color:#e74c3c;color:#e74c3c;margin-left:auto" onclick="deleteCarrier(\'' + c.id + '\',\'' + esc(c.companyName || c.contactName || '') + '\')">Archive</button>';
       html += '</div>';
 
       document.getElementById("detail-body").innerHTML = html;
@@ -1164,6 +1165,17 @@
       document.getElementById("detail-panel").classList.remove("open");
       document.getElementById("detail-overlay").classList.remove("open");
       state.selectedCarrier = null;
+    }
+
+    function deleteCarrier(id, name) {
+      if (!confirm("Archive carrier " + (name || id) + "?\n\nTheir load history will be preserved. You can restore them later.")) return;
+      SRL.request("/api/carriers/" + id, { method: "DELETE" })
+        .then(function() {
+          showToast("Carrier archived", "success");
+          closeDetail();
+          fetchCarriers();
+        })
+        .catch(function(err) { showToast("Failed: " + err.message, "error"); });
     }
 
     /* =========================================

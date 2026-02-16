@@ -40,6 +40,7 @@ router.get("/available", async (req: AuthRequest, res: Response) => {
   const where: Record<string, unknown> = {
     status: "POSTED",
     carrierId: null,
+    deletedAt: null,
   };
 
   // Filter by equipment type if carrier has preferences
@@ -80,6 +81,7 @@ router.get("/my-loads", async (req: AuthRequest, res: Response) => {
 
   const where: Record<string, unknown> = {
     carrierId: req.user!.id,
+    deletedAt: null,
   };
   if (status && status !== "ALL") {
     where.status = status;

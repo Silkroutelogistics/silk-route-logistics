@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  createCustomer, getCustomers, getCustomerById, getCustomerStats, updateCustomer, deleteCustomer,
+  createCustomer, getCustomers, getCustomerById, getCustomerStats, updateCustomer, deleteCustomer, restoreCustomer,
   getCustomerContacts, addCustomerContact, updateCustomerContact, deleteCustomerContact, updateCustomerCredit,
 } from "../controllers/customerController";
 import { authenticate, authorize } from "../middleware/auth";
@@ -32,6 +32,7 @@ router.get("/stats", getCustomerStats);
 router.get("/:id", getCustomerById);
 router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);
 router.delete("/:id", authorize("ADMIN", "CEO"), deleteCustomer);
+router.put("/:id/restore", authorize("ADMIN", "CEO"), restoreCustomer);
 
 // Customer contacts
 router.get("/:id/contacts", getCustomerContacts);

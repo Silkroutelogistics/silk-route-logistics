@@ -585,6 +585,9 @@ model CarrierProfile {
 
   @@index([mcNumber])
   @@index([dotNumber])
+  deletedAt   DateTime?
+  deletedBy   String?
+
   @@index([status])
   @@index([cppTier])
   @@index([source])
@@ -822,6 +825,9 @@ model Load {
   @@index([loadNumber])
   @@index([originState])
   @@index([destState])
+  deletedAt   DateTime?
+  deletedBy   String?
+
   @@index([customerId])
   @@index([carrierId])
   @@index([pickupDate])
@@ -842,6 +848,7 @@ model LoadTender {
   respondedAt DateTime?
   expiresAt   DateTime
   createdAt   DateTime     @default(now())
+  deletedAt   DateTime?
 
   @@index([carrierId, status])
   @@map("load_tenders")
@@ -901,6 +908,7 @@ model CheckCall {
   calledById  String?
   calledBy    User?    @relation("CheckCallUser", fields: [calledById], references: [id])
   createdAt   DateTime @default(now())
+  deletedAt   DateTime?
 
   @@index([loadId, createdAt])
   @@map("check_calls")
@@ -951,6 +959,8 @@ model Invoice {
 
   documents       Document[]
   lineItems       InvoiceLineItem[]
+
+  deletedAt   DateTime?
 
   @@index([status])
   @@index([userId, status])
@@ -1179,6 +1189,8 @@ model Settlement {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
+  deletedAt   DateTime?
+
   @@index([carrierId, status])
   @@index([periodStart, periodEnd])
   @@map("settlements")
@@ -1300,6 +1312,9 @@ model Customer {
 
   // AI Learning
   aiIntelligence  CustomerIntelligence? @relation("CustomerIntelligence")
+
+  deletedAt   DateTime?
+  deletedBy   String?
 
   @@index([status])
   @@map("customers")

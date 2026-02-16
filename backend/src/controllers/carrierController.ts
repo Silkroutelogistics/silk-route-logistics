@@ -386,7 +386,11 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
 
 /** Get all carriers with performance data for admin/broker view */
 export async function getAllCarriers(req: AuthRequest, res: Response) {
+  const includeDeleted = req.query.include_deleted === "true";
+  const where = includeDeleted ? {} : { deletedAt: null };
+
   const carriers = await prisma.carrierProfile.findMany({
+    where,
     include: {
       user: { select: { id: true, firstName: true, lastName: true, email: true, company: true, phone: true } },
       scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
@@ -463,8 +467,8 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
 
 /** Get single carrier detail */
 export async function getCarrierDetail(req: AuthRequest, res: Response) {
-  const carrier = await prisma.carrierProfile.findUnique({
-    where: { id: req.params.id },
+  const carrier = await prisma.carrierProfile.findFirst({
+    where: { id: req.params.id, deletedAt: null },
     include: {
       user: { select: { id: true, firstName: true, lastName: true, email: true, company: true, phone: true } },
       scorecards: { orderBy: { calculatedAt: "desc" }, take: 6 },

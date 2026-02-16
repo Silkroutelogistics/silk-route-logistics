@@ -25,6 +25,11 @@ export async function getCustomers(req: AuthRequest, res: Response) {
   const query = customerQuerySchema.parse(req.query);
   const where: Record<string, unknown> = {};
 
+  // Exclude soft-deleted customers unless explicitly requested
+  if (req.query.include_deleted !== "true") {
+    where.deletedAt = null;
+  }
+
   if (query.status) where.status = query.status;
   if (query.search) {
     where.OR = [
@@ -66,8 +71,11 @@ export async function getCustomers(req: AuthRequest, res: Response) {
 }
 
 export async function getCustomerById(req: AuthRequest, res: Response) {
-  const customer = await prisma.customer.findUnique({
-    where: { id: req.params.id },
+  const customer = await prisma.customer.findFirst({
+    where: {
+      id: req.params.id,
+      ...(req.query.include_deleted !== "true" ? { deletedAt: null } : {}),
+    },
     include: {
       shipments: { orderBy: { createdAt: "desc" }, take: 10, include: { driver: true } },
       contacts: { orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }] },
@@ -91,8 +99,8 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
 
 export async function getCustomerStats(req: AuthRequest, res: Response) {
   const [total, active, revenue, shipments] = await Promise.all([
-    prisma.customer.count(),
-    prisma.customer.count({ where: { status: "Active" } }),
+    prisma.customer.count({ where: { deletedAt: null } }),
+    prisma.customer.count({ where: { status: "Active", deletedAt: null } }),
     prisma.shipment.aggregate({ _sum: { rate: true } }),
     prisma.shipment.count(),
   ]);
@@ -112,8 +120,29 @@ export async function updateCustomer(req: AuthRequest, res: Response) {
 }
 
 export async function deleteCustomer(req: AuthRequest, res: Response) {
-  await prisma.customer.delete({ where: { id: req.params.id } });
-  res.status(204).send();
+  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  if (!customer || customer.deletedAt) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+  await prisma.customer.update({
+    where: { id: customer.id },
+    data: { deletedAt: new Date(), deletedBy: req.user!.email || req.user!.id },
+  });
+  res.json({ success: true, message: "Customer archived" });
+}
+
+export async function restoreCustomer(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  if (!customer || !customer.deletedAt) {
+    res.status(404).json({ error: "Archived customer not found" });
+    return;
+  }
+  await prisma.customer.update({
+    where: { id: customer.id },
+    data: { deletedAt: null, deletedBy: null },
+  });
+  res.json({ success: true, message: "Customer restored" });
 }
 
 // ─── Customer Contacts ──────────────────────────────────
@@ -135,7 +164,7 @@ const updateCreditSchema = z.object({
 });
 
 export async function getCustomerContacts(req: AuthRequest, res: Response) {
-  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  const customer = await prisma.customer.findFirst({ where: { id: req.params.id, deletedAt: null } });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
 
   const contacts = await prisma.customerContact.findMany({
@@ -146,7 +175,7 @@ export async function getCustomerContacts(req: AuthRequest, res: Response) {
 }
 
 export async function addCustomerContact(req: AuthRequest, res: Response) {
-  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  const customer = await prisma.customer.findFirst({ where: { id: req.params.id, deletedAt: null } });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
 
   const data = createContactSchema.parse(req.body);
@@ -202,7 +231,7 @@ export async function deleteCustomerContact(req: AuthRequest, res: Response) {
 }
 
 export async function updateCustomerCredit(req: AuthRequest, res: Response) {
-  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  const customer = await prisma.customer.findFirst({ where: { id: req.params.id, deletedAt: null } });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
 
   const data = updateCreditSchema.parse(req.body);

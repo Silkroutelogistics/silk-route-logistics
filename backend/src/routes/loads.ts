@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, carrierUpdateStatus, getDistance } from "../controllers/loadController";
+import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, carrierUpdateStatus, getDistance } from "../controllers/loadController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -20,5 +20,6 @@ router.put("/:id", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), validateBody
 router.patch("/:id/status", validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), updateLoadStatus);
 router.patch("/:id/carrier-status", authorize("CARRIER"), validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), carrierUpdateStatus);
 router.delete("/:id", auditLog("DELETE", "Load"), deleteLoad);
+router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
 
 export default router;

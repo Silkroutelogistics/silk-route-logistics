@@ -477,6 +477,7 @@
     <div class="dp-footer">
       <button class="btn-secondary btn-sm" onclick="editProspect()">Edit</button>
       <button class="btn-primary btn-sm" onclick="advanceStage()">Advance Stage</button>
+      <button class="btn-secondary btn-sm" style="border-color:#e74c3c;color:#e74c3c;margin-left:auto" onclick="deleteCustomer()">Archive</button>
     </div>
   </div>
 
@@ -761,6 +762,19 @@
       document.getElementById("detail-panel").classList.remove("open");
       document.getElementById("detail-overlay").classList.remove("open");
       state.selectedCustomer = null;
+    }
+
+    function deleteCustomer() {
+      if (!state.selectedCustomer) return;
+      var name = state.selectedCustomer.name || state.selectedCustomer.id;
+      if (!confirm("Archive customer " + name + "?\n\nTheir load and invoice history will be preserved. You can restore them later.")) return;
+      SRL.request("/api/customers/" + state.selectedCustomer.id, { method: "DELETE" })
+        .then(function() {
+          showToast("Customer archived", "success");
+          closeDetail();
+          fetchCustomers();
+        })
+        .catch(function(err) { showToast("Failed: " + err.message, "error"); });
     }
 
     function renderDetailBody(c) {

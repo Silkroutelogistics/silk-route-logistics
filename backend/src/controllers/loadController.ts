@@ -42,6 +42,11 @@ export async function getLoads(req: AuthRequest, res: Response) {
   const query = loadQuerySchema.parse(req.query);
   const where: Record<string, unknown> = {};
 
+  // Soft-delete filter: exclude archived loads unless ?include_deleted=true
+  if (req.query.include_deleted !== "true") {
+    where.deletedAt = null;
+  }
+
   if (query.status) {
     where.status = query.status;
   } else if (query.activeOnly) {
@@ -83,7 +88,7 @@ export async function getLoads(req: AuthRequest, res: Response) {
 
 export async function getLoadById(req: AuthRequest, res: Response) {
   const load = await prisma.load.findUnique({
-    where: { id: req.params.id },
+    where: { id: req.params.id, deletedAt: null },
     include: {
       poster: { select: { id: true, company: true, firstName: true, lastName: true, phone: true } },
       carrier: { select: { id: true, company: true, firstName: true, lastName: true, phone: true } },
@@ -107,7 +112,7 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   const { status } = updateLoadStatusSchema.parse(req.body);
 
   // Authorization: check user can update this load
-  const existing = await prisma.load.findUnique({ where: { id: req.params.id } });
+  const existing = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
   if (!existing) { res.status(404).json({ error: "Load not found" }); return; }
 
   const isPoster = existing.posterId === req.user!.id;
@@ -176,7 +181,7 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
     return;
   }
 
-  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  const load = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
   if (load.carrierId !== req.user!.id) {
     res.status(403).json({ error: "Not authorized — this load is not assigned to you" });
@@ -237,7 +242,7 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
 }
 
 export async function updateLoad(req: AuthRequest, res: Response) {
-  const existing = await prisma.load.findUnique({ where: { id: req.params.id } });
+  const existing = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
   if (!existing) { res.status(404).json({ error: "Load not found" }); return; }
 
   const isPoster = existing.posterId === req.user!.id;
@@ -325,7 +330,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
 
 export async function deleteLoad(req: AuthRequest, res: Response) {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
-  if (!load) {
+  if (!load || load.deletedAt) {
     res.status(404).json({ error: "Load not found" });
     return;
   }
@@ -334,8 +339,34 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
     return;
   }
 
-  await prisma.load.delete({ where: { id: req.params.id } });
-  res.status(204).send();
+  const now = new Date();
+  const deletedBy = req.user!.email || req.user!.id;
+
+  await Promise.all([
+    prisma.load.update({ where: { id: load.id }, data: { deletedAt: now, deletedBy } }),
+    prisma.loadTender.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
+    prisma.checkCall.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
+    prisma.invoice.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
+  ]);
+
+  res.json({ success: true, message: "Load archived" });
+}
+
+export async function restoreLoad(req: AuthRequest, res: Response) {
+  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!load || !load.deletedAt) {
+    res.status(404).json({ error: "Archived load not found" });
+    return;
+  }
+
+  await Promise.all([
+    prisma.load.update({ where: { id: load.id }, data: { deletedAt: null, deletedBy: null } }),
+    prisma.loadTender.updateMany({ where: { loadId: load.id }, data: { deletedAt: null } }),
+    prisma.checkCall.updateMany({ where: { loadId: load.id }, data: { deletedAt: null } }),
+    prisma.invoice.updateMany({ where: { loadId: load.id }, data: { deletedAt: null } }),
+  ]);
+
+  res.json({ success: true, message: "Load restored" });
 }
 
 const distanceQuerySchema = z.object({
