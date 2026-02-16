@@ -17,6 +17,7 @@ import { initCronJobs } from "./cron";
 import { seedCronRegistry } from "./services/cronRegistryService";
 
 const app = express();
+const BUILD_VERSION = Date.now().toString();
 
 // Trust proxy (Render uses reverse proxy)
 app.set("trust proxy", 1);
@@ -133,6 +134,11 @@ app.use(sanitizeInput);
 
 // ─── Static Files ───────────────────────────────────────────
 app.use("/uploads", express.static(path.resolve(env.UPLOAD_DIR)));
+
+// ─── Build Version (force logout on deploy) ─────────────────
+app.get("/api/build-version", (_req, res) => {
+  res.json({ version: BUILD_VERSION });
+});
 
 // ─── Health Check (outside rate limiter) ────────────────────
 app.get("/health", async (_req, res) => {

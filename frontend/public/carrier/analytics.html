@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+(function(){var A=window.API_URL||'https://api.silkroutelogistics.ai';fetch(A+'/api/build-version').then(function(r){return r.json()}).then(function(d){var s=localStorage.getItem('srl_build_version');if(s&&s!==d.version){localStorage.removeItem('token');localStorage.removeItem('carrier_token');localStorage.removeItem('user');localStorage.removeItem('carrier_user');localStorage.setItem('srl_build_version',d.version);window.location.href='/auth/login.html';return}localStorage.setItem('srl_build_version',d.version)}).catch(function(){})})();
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analytics | SRL Carrier Portal</title>
