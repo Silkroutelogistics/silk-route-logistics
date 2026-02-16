@@ -70,8 +70,8 @@ const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (server-to-server, health checks)
     if (!origin) return callback(null, true);
-    // Exact match or *.pages.dev preview deploys
-    if (allowedOrigins.includes(origin) || /\.pages\.dev$/.test(origin)) {
+    // Exact match, *.pages.dev previews, or *.silkroutelogistics.ai subdomains
+    if (allowedOrigins.includes(origin) || /\.pages\.dev$/.test(origin) || /\.silkroutelogistics\.ai$/.test(origin)) {
       return callback(null, true);
     }
     // Deny without throwing (avoids 500 errors)
@@ -80,6 +80,7 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Content-Disposition"],
   maxAge: 86400,
 };
 
