@@ -114,46 +114,55 @@ var SRLAuth = (function () {
 })();
 
 /**
- * Auto-logout after 1 hour of inactivity
+ * Auto-logout after 15 minutes of inactivity
  * Runs on all /ae/ and /carrier/ console pages
+ * Uses localStorage so it persists across tabs and tab restores
  */
 (function initInactivityTimer() {
   var isConsole = window.location.pathname.startsWith("/ae") || window.location.pathname.startsWith("/carrier");
-  // Only run on console pages, not login/public pages
   if (!isConsole) return;
-  // Don't run on login pages
   if (window.location.pathname.indexOf("login") !== -1) return;
+  if (window.location.pathname.indexOf("register") !== -1) return;
 
-  var TIMEOUT = 60 * 60 * 1000; // 1 hour
-  var timer;
+  var IDLE_LIMIT = 15 * 60 * 1000; // 15 minutes
+  var idleTimer;
 
-  function resetTimer() {
-    clearTimeout(timer);
-    timer = setTimeout(logoutInactive, TIMEOUT);
-    sessionStorage.setItem("srl_last_activity", Date.now().toString());
+  function resetIdle() {
+    clearTimeout(idleTimer);
+    localStorage.setItem("srl_last_activity", Date.now().toString());
+    idleTimer = setTimeout(forceLogout, IDLE_LIMIT);
   }
 
-  function logoutInactive() {
+  function forceLogout() {
     localStorage.removeItem("token");
-    sessionStorage.removeItem("token");
     localStorage.removeItem("carrier_token");
+    localStorage.removeItem("user");
     localStorage.removeItem("carrier_user");
-    sessionStorage.removeItem("carrier_token");
-    sessionStorage.removeItem("carrier_user");
-    sessionStorage.removeItem("srl_last_activity");
+    localStorage.removeItem("srl_last_activity");
     var isCarrier = window.location.pathname.startsWith("/carrier");
-    window.location.href = isCarrier ? "/auth/carrier-login?expired=1" : "/auth/login?expired=1";
+    window.location.href = isCarrier ? "/carrier/login.html" : "/auth/login.html";
   }
 
   // Check if already expired on page load
-  var lastActivity = sessionStorage.getItem("srl_last_activity");
-  if (lastActivity && (Date.now() - parseInt(lastActivity, 10)) > TIMEOUT) {
-    logoutInactive();
+  var lastActivity = localStorage.getItem("srl_last_activity");
+  if (lastActivity && (Date.now() - parseInt(lastActivity, 10)) > IDLE_LIMIT) {
+    forceLogout();
     return;
   }
 
-  ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"].forEach(function (evt) {
-    document.addEventListener(evt, resetTimer, { passive: true });
+  // Track all user activity
+  ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"].forEach(function (evt) {
+    document.addEventListener(evt, resetIdle, { passive: true });
   });
-  resetTimer();
+
+  // Start the timer
+  resetIdle();
+
+  // Check every 30 seconds in case tab was backgrounded
+  setInterval(function () {
+    var last = localStorage.getItem("srl_last_activity");
+    if (last && (Date.now() - parseInt(last, 10)) > IDLE_LIMIT) {
+      forceLogout();
+    }
+  }, 30000);
 })();
