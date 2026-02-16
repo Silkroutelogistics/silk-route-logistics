@@ -324,6 +324,18 @@
       white-space: nowrap;
     }
     .btn-send:hover { background: var(--gold-hover); }
+    .btn-new-convo {
+      padding: 6px 14px;
+      background: var(--gold);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-new-convo:hover { background: var(--gold-hover); }
 
     /* --- Right: Contact Info (20%) --- */
     .info-panel {
@@ -507,6 +519,8 @@
           <div class="convo-header" id="convo-header" style="display:none">
             <h3 id="convo-name">--</h3>
             <span class="convo-header-type" id="convo-type-badge"></span>
+            <div style="flex:1"></div>
+            <button class="btn-new-convo" onclick="startNewConversation()" title="New conversation">+ New</button>
           </div>
           <div class="convo-thread" id="convo-thread">
             <div class="convo-empty">Select a contact to view communications</div>
@@ -522,7 +536,7 @@
               <select id="email-template" onchange="loadTemplate()"></select>
             </div>
             <div class="compose-form">
-              <textarea class="compose-textarea" id="compose-text" placeholder="Type a note..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComm()}"></textarea>
+              <textarea class="compose-textarea" id="compose-text" placeholder="Type a message... (Shift+Enter to send)" onkeydown="if(event.key==='Enter'&&event.shiftKey){event.preventDefault();sendComm()}"></textarea>
               <button class="btn-send" onclick="sendComm()">Send</button>
             </div>
           </div>
@@ -893,6 +907,25 @@
       }
 
       document.getElementById("info-panel").innerHTML = html;
+    }
+
+    /* ======== NEW CONVERSATION ======== */
+    function startNewConversation() {
+      if (!state.currentContact) return;
+      // Switch to email mode
+      var emailBtn = document.querySelector('.compose-tab:nth-child(2)');
+      if (emailBtn) setComposeMode("email", emailBtn);
+      // Clear fields for new subject
+      document.getElementById("email-subject").value = "";
+      document.getElementById("compose-text").value = "";
+      document.getElementById("email-template").selectedIndex = 0;
+      // Pre-fill to address
+      if (state.currentContact.email) {
+        document.getElementById("email-to").value = state.currentContact.email;
+      }
+      // Focus on subject
+      document.getElementById("email-subject").focus();
+      showToast("New conversation — enter a subject", "success");
     }
 
     /* ======== COMPOSE ======== */
