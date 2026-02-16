@@ -86,62 +86,11 @@ async function main() {
     },
   });
 
-  // Additional carrier users
-  const carrierUser2 = await prisma.user.create({
-    data: {
-      email: "jthompson@midwestfreight.com",
-      passwordHash: hash,
-      firstName: "Jake",
-      lastName: "Thompson",
-      company: "Midwest Freight Lines",
-      role: UserRole.CARRIER,
-      isVerified: true,
-      phone: "(312) 555-0300",
-      passwordChangedAt: now,
-    },
-  });
-
-  const carrierUser3 = await prisma.user.create({
-    data: {
-      email: "maria@dixiehaulers.com",
-      passwordHash: hash,
-      firstName: "Maria",
-      lastName: "Garcia",
-      company: "Dixie Haulers Inc",
-      role: UserRole.CARRIER,
-      isVerified: true,
-      phone: "(404) 555-0400",
-      passwordChangedAt: now,
-    },
-  });
-
-  const carrierUser4 = await prisma.user.create({
-    data: {
-      email: "kevin@pacificcoasttrucking.com",
-      passwordHash: hash,
-      firstName: "Kevin",
-      lastName: "Chen",
-      company: "Pacific Coast Trucking",
-      role: UserRole.CARRIER,
-      isVerified: true,
-      phone: "(503) 555-0500",
-      passwordChangedAt: now,
-    },
-  });
-
-  const carrierUser5 = await prisma.user.create({
-    data: {
-      email: "carlos@sunbeltlogistics.com",
-      passwordHash: hash,
-      firstName: "Carlos",
-      lastName: "Ramirez",
-      company: "Sunbelt Logistics",
-      role: UserRole.CARRIER,
-      isVerified: true,
-      phone: "(602) 555-0600",
-      passwordChangedAt: now,
-    },
-  });
+  // Aliases for backward compatibility in seed references
+  const carrierUser2 = carrierUser;
+  const carrierUser3 = carrierUser;
+  const carrierUser4 = carrierUser;
+  const carrierUser5 = carrierUser;
 
   const cp1 = await prisma.carrierProfile.create({
     data: {
@@ -175,131 +124,11 @@ async function main() {
     },
   });
 
-  const cp2 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrierUser2.id,
-      mcNumber: "MC-2345678",
-      dotNumber: "4567890",
-      companyName: "Midwest Freight Lines",
-      contactName: "Jake Thompson",
-      contactPhone: "(312) 555-0300",
-      contactEmail: "jthompson@midwestfreight.com",
-      tier: "GOLD",
-      cppTier: "GOLD",
-      cppTotalLoads: 185,
-      cppTotalMiles: 94200,
-      equipmentTypes: ["Dry Van", "Reefer"],
-      operatingRegions: ["Midwest", "Northeast"],
-      onboardingStatus: "APPROVED",
-      status: "APPROVED",
-      approvedAt: new Date(),
-      w9Uploaded: true,
-      insuranceCertUploaded: true,
-      authorityDocUploaded: true,
-      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      safetyScore:96,
-      address: "500 Commerce Dr",
-      city: "Chicago",
-      state: "IL",
-      zip: "60609",
-      numberOfTrucks: 15,
-      paymentPreference: "EXPRESS",
-    },
-  });
-
-  const cp3 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrierUser3.id,
-      mcNumber: "MC-3456789",
-      dotNumber: "5678901",
-      companyName: "Dixie Haulers Inc",
-      contactName: "Maria Garcia",
-      contactPhone: "(404) 555-0400",
-      contactEmail: "maria@dixiehaulers.com",
-      tier: "SILVER",
-      cppTier: "SILVER",
-      cppTotalLoads: 98,
-      cppTotalMiles: 52000,
-      equipmentTypes: ["Dry Van", "Flatbed"],
-      operatingRegions: ["Southeast", "South Central"],
-      onboardingStatus: "APPROVED",
-      status: "APPROVED",
-      approvedAt: new Date(),
-      w9Uploaded: true,
-      insuranceCertUploaded: true,
-      authorityDocUploaded: true,
-      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      safetyScore:92,
-      address: "800 Peachtree Blvd",
-      city: "Atlanta",
-      state: "GA",
-      zip: "30309",
-      numberOfTrucks: 10,
-      paymentPreference: "STANDARD",
-    },
-  });
-
-  const cp4 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrierUser4.id,
-      mcNumber: "MC-4567890",
-      dotNumber: "6789012",
-      companyName: "Pacific Coast Trucking",
-      contactName: "Kevin Chen",
-      contactPhone: "(503) 555-0500",
-      contactEmail: "kevin@pacificcoasttrucking.com",
-      tier: "BRONZE",
-      cppTier: "BRONZE",
-      cppTotalLoads: 42,
-      cppTotalMiles: 23100,
-      equipmentTypes: ["Dry Van", "Reefer", "Flatbed"],
-      operatingRegions: ["West Coast"],
-      onboardingStatus: "APPROVED",
-      status: "APPROVED",
-      approvedAt: new Date(),
-      w9Uploaded: true,
-      insuranceCertUploaded: true,
-      authorityDocUploaded: true,
-      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      safetyScore:85,
-      address: "1200 Marine Dr",
-      city: "Portland",
-      state: "OR",
-      zip: "97201",
-      numberOfTrucks: 5,
-      paymentPreference: "STANDARD",
-    },
-  });
-
-  const cp5 = await prisma.carrierProfile.create({
-    data: {
-      userId: carrierUser5.id,
-      mcNumber: "MC-5678901",
-      dotNumber: "7890123",
-      companyName: "Sunbelt Logistics",
-      contactName: "Carlos Ramirez",
-      contactPhone: "(602) 555-0600",
-      contactEmail: "carlos@sunbeltlogistics.com",
-      tier: "NONE",
-      cppTier: "NONE",
-      cppTotalLoads: 0,
-      cppTotalMiles: 0,
-      equipmentTypes: ["Dry Van"],
-      operatingRegions: ["Southwest"],
-      onboardingStatus: "PENDING",
-      status: "NEW",
-      w9Uploaded: true,
-      insuranceCertUploaded: true,
-      authorityDocUploaded: true,
-      insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      address: "2400 Desert Sky Blvd",
-      city: "Phoenix",
-      state: "AZ",
-      zip: "85001",
-      numberOfTrucks: 3,
-      paymentPreference: "STANDARD",
-    },
-  });
+  // All loads use single carrier profile
+  const cp2 = cp1;
+  const cp3 = cp1;
+  const cp4 = cp1;
+  const cp5 = cp1;
 
   // ═══════════════════════════════════════════════
   // CUSTOMERS

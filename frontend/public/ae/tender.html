@@ -1110,7 +1110,8 @@
       return fd;
     }
 
-    window._saveDraft = function() {
+    // Auto-save helper — returns a Promise that resolves with the RC id
+    function ensureDraftSaved() {
       var fd = collectFormData();
       var payload = { loadId: state.load.id, formData: fd };
 
@@ -1121,28 +1122,29 @@
         promise = SRL.createRateConfirmation(payload);
       }
 
-      promise.then(function(rc) {
+      return promise.then(function(rc) {
         state.rcId = rc.id;
         state.rc = rc;
         showRCStatus(rc.status);
-        showToast("Draft saved", "success");
-      }).catch(function(err) {
-        showToast("Save failed: " + err.message, "error");
+        return rc;
       });
+    }
+
+    window._saveDraft = function() {
+      ensureDraftSaved()
+        .then(function() { showToast("Draft saved", "success"); })
+        .catch(function(err) { showToast("Save failed: " + err.message, "error"); });
     };
 
     window._generatePdf = function() {
-      if (!state.rcId) {
-        showToast("Save draft first", "error");
-        return;
-      }
-      var url = SRL.getRateConfirmationPdfUrl(state.rcId);
-      var token = sessionStorage.getItem("token") || localStorage.getItem("token");
-      window.open(url + "?token=" + token, "_blank");
+      ensureDraftSaved().then(function() {
+        var url = SRL.getRateConfirmationPdfUrl(state.rcId);
+        var token = sessionStorage.getItem("token") || localStorage.getItem("token");
+        window.open(url + "?token=" + token, "_blank");
+      }).catch(function(err) { showToast("Save failed: " + err.message, "error"); });
     };
 
     window._sendToCarrier = function() {
-      if (!state.rcId) { showToast("Save draft first", "error"); return; }
       var fd = state.formData;
 
       // Carrier validation — warn if no MC/DOT number
@@ -1153,50 +1155,52 @@
       var email = fd.carrierEmail || prompt("Enter carrier email:");
       if (!email) return;
       var name = fd.carrierName || "Carrier";
-      SRL.sendRateConfirmationToCarrier(state.rcId, { recipientEmail: email, recipientName: name })
-        .then(function() {
+
+      ensureDraftSaved().then(function() {
+        return SRL.sendRateConfirmationToCarrier(state.rcId, { recipientEmail: email, recipientName: name });
+      }).then(function() {
           showRCStatus("SENT");
           startTenderTimer(state.rcId);
-          showToast("Rate confirmation sent to carrier", "success");
-        })
-        .catch(function(err) { showToast("Send failed: " + err.message, "error"); });
+          showToast("Rate confirmation sent to " + email, "success");
+      }).catch(function(err) { showToast("Send failed: " + err.message, "error"); });
     };
 
     window._copyTenderLink = function() {
-      if (!state.rcId) { showToast("Save draft first", "error"); return; }
-      var link = window.location.origin + "/carrier/rate-confirmation?rcId=" + state.rcId;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).then(function() {
-          showToast("Tender link copied to clipboard", "success");
-        }).catch(function() {
+      ensureDraftSaved().then(function() {
+        var link = window.location.origin + "/carrier/rate-confirmation?rcId=" + state.rcId;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).then(function() {
+            showToast("Tender link copied to clipboard", "success");
+          }).catch(function() {
+            prompt("Copy this link:", link);
+          });
+        } else {
           prompt("Copy this link:", link);
-        });
-      } else {
-        prompt("Copy this link:", link);
-      }
+        }
+      }).catch(function(err) { showToast("Save failed: " + err.message, "error"); });
     };
 
     window._sendToShipper = function() {
-      if (!state.rcId) { showToast("Save draft first", "error"); return; }
       var fd = state.formData;
       var l = state.load;
       var email = (l.customer && l.customer.email) || fd.shipperEmail || prompt("Enter shipper email:");
       if (!email) return;
       var name = fd.shipperName || (l.customer ? l.customer.name : "Shipper");
-      SRL.sendRateConfirmationToShipper(state.rcId, { recipientEmail: email, recipientName: name })
-        .then(function() { showToast("Load confirmation sent to shipper", "success"); })
+
+      ensureDraftSaved().then(function() {
+        return SRL.sendRateConfirmationToShipper(state.rcId, { recipientEmail: email, recipientName: name });
+      }).then(function() { showToast("Load confirmation sent to shipper", "success"); })
         .catch(function(err) { showToast("Send failed: " + err.message, "error"); });
     };
 
     window._finalize = function() {
-      if (!state.rcId) { showToast("Save draft first", "error"); return; }
       if (!confirm("Finalize this rate confirmation and dispatch the load?")) return;
-      SRL.finalizeRateConfirmation(state.rcId)
-        .then(function(result) {
+      ensureDraftSaved().then(function() {
+        return SRL.finalizeRateConfirmation(state.rcId);
+      }).then(function(result) {
           showRCStatus("FINALIZED");
           showToast("Rate confirmation finalized. Load status: " + result.load.status, "success");
-        })
-        .catch(function(err) { showToast("Finalize failed: " + err.message, "error"); });
+      }).catch(function(err) { showToast("Finalize failed: " + err.message, "error"); });
     };
 
     // ─── HTML Helpers ──────────────────────────────
