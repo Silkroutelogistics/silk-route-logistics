@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { env } from "../config/env";
+import { prisma } from "../config/database";
 import { openPhoneWebhook } from "../controllers/communicationController";
 import { handleCheckCallResponse } from "../services/checkCallAutomation";
 import { handleResendWebhook } from "../services/emailSequenceService";
@@ -70,6 +71,97 @@ router.post("/resend", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[Webhook] Resend error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Resend inbound email — receives emails sent to sales@silkroutelogistics.ai
+router.post("/inbound-email", async (req, res) => {
+  try {
+    const { from, to, subject, text, html } = req.body;
+
+    if (!from) {
+      res.status(400).json({ error: "Missing from field" });
+      return;
+    }
+
+    // Extract sender email (Resend sends "Name <email>" or just "email")
+    const senderEmail = (from.match(/<([^>]+)>/) || [null, from])[1].toLowerCase().trim();
+    const senderName = from.replace(/<[^>]+>/, "").trim() || senderEmail;
+    const recipientAddr = Array.isArray(to) ? to[0] : (to || "sales@silkroutelogistics.ai");
+    const body = text || (html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "");
+
+    console.log(`[Inbound Email] From: ${senderEmail}, Subject: ${subject || "(no subject)"}`);
+
+    // Try to match sender to a carrier or customer
+    let entityType = "UNKNOWN";
+    let entityId = "UNKNOWN";
+
+    // Check carriers (user email or carrier profile contact email)
+    const carrierUser = await prisma.user.findFirst({
+      where: {
+        role: "CARRIER",
+        email: { equals: senderEmail, mode: "insensitive" },
+      },
+      include: { carrierProfile: { select: { id: true, companyName: true } } },
+    });
+
+    if (carrierUser && carrierUser.carrierProfile) {
+      entityType = "CARRIER";
+      entityId = carrierUser.carrierProfile.id;
+    } else {
+      // Check carrier profile contact emails
+      const carrierProfile = await prisma.carrierProfile.findFirst({
+        where: { contactEmail: { equals: senderEmail, mode: "insensitive" } },
+      });
+      if (carrierProfile) {
+        entityType = "CARRIER";
+        entityId = carrierProfile.id;
+      }
+    }
+
+    // If not a carrier, check customers
+    if (entityType === "UNKNOWN") {
+      const customer = await prisma.customer.findFirst({
+        where: { email: { equals: senderEmail, mode: "insensitive" } },
+      });
+      if (customer) {
+        entityType = "SHIPPER";
+        entityId = customer.id;
+      }
+    }
+
+    // Get system user for logging (first admin)
+    const systemUser = await prisma.user.findFirst({
+      where: { role: "ADMIN", isActive: true },
+      select: { id: true },
+    });
+
+    // Create communication record
+    await prisma.communication.create({
+      data: {
+        type: "EMAIL_INBOUND",
+        direction: "INBOUND",
+        entityType,
+        entityId,
+        from: senderEmail,
+        to: recipientAddr,
+        subject: subject || "(no subject)",
+        body: body.slice(0, 10000),
+        metadata: {
+          senderName,
+          rawTo: to,
+          hasHtml: !!html,
+          receivedAt: new Date().toISOString(),
+        },
+        userId: systemUser?.id || "system",
+      },
+    });
+
+    console.log(`[Inbound Email] Stored as ${entityType}/${entityId}`);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[Inbound Email] Error:", err);
     res.status(500).json({ error: err.message });
   }
 });

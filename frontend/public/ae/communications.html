@@ -96,6 +96,7 @@
     }
     .avatar-carrier { background: #6366F1; }
     .avatar-shipper { background: #F59E0B; }
+    .avatar-inbox { background: #A855F7; }
     .contact-info {
       flex: 1;
       min-width: 0;
@@ -161,6 +162,7 @@
     }
     .type-carrier { background: rgba(99,102,241,0.1); color: #6366F1; }
     .type-shipper { background: rgba(245,158,11,0.1); color: #B45309; }
+    .type-inbox { background: rgba(168,85,247,0.1); color: #A855F7; }
     .convo-thread {
       flex: 1;
       overflow-y: auto;
@@ -462,8 +464,8 @@
         <div style="flex:1;min-width:200px;background:linear-gradient(135deg,#1a73e8 0%,#4285f4 100%);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           <div>
-            <div style="color:#fff;font-size:13px;font-weight:600">Google Workspace Email</div>
-            <div style="color:rgba(255,255,255,0.7);font-size:11px">@silkroutelogistics.ai inbox integration — Coming Soon</div>
+            <div style="color:#fff;font-size:13px;font-weight:600">Sales Inbox</div>
+            <div style="color:rgba(255,255,255,0.7);font-size:11px">sales@silkroutelogistics.ai — Inbound emails appear in Inbox tab</div>
           </div>
         </div>
         <div style="flex:1;min-width:200px;background:linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px">
@@ -485,6 +487,7 @@
             <button class="contact-tab active" data-filter="all" onclick="setContactTab('all',this)">All</button>
             <button class="contact-tab" data-filter="carrier" onclick="setContactTab('carrier',this)">Carriers</button>
             <button class="contact-tab" data-filter="shipper" onclick="setContactTab('shipper',this)">Shippers</button>
+            <button class="contact-tab" data-filter="inbox" onclick="setContactTab('inbox',this)">Inbox</button>
           </div>
           <ul class="contact-list" id="contact-list"></ul>
         </div>
@@ -621,6 +624,10 @@
 
     function filterContacts() {
       var search = (document.getElementById("contact-search").value || "").toLowerCase();
+      if (state.tabFilter === "inbox") {
+        loadInboxContacts(search);
+        return;
+      }
       state.filtered = state.contacts.filter(function(c) {
         if (state.tabFilter === "carrier" && c.entityType !== "CARRIER") return false;
         if (state.tabFilter === "shipper" && c.entityType !== "SHIPPER") return false;
@@ -633,6 +640,48 @@
       renderContactList();
     }
 
+    function loadInboxContacts(search) {
+      SRL.request("/api/communications?type=EMAIL_INBOUND&limit=100").then(function(res) {
+        var emails = res.communications || [];
+        // Group by sender email
+        var senderMap = {};
+        emails.forEach(function(e) {
+          var from = e.from || "unknown";
+          if (!senderMap[from]) {
+            var meta = e.metadata || {};
+            senderMap[from] = {
+              id: "inbox_" + from,
+              entityType: "INBOX",
+              entityId: from,
+              name: meta.senderName || from,
+              subtitle: from,
+              email: from,
+              lastMsg: e.subject || e.body || "",
+              lastTime: e.createdAt,
+              count: 0,
+              matchedType: e.entityType,
+              matchedId: e.entityId
+            };
+          }
+          senderMap[from].count++;
+        });
+        var inboxContacts = Object.values(senderMap);
+        // Sort by most recent
+        inboxContacts.sort(function(a, b) { return new Date(b.lastTime) - new Date(a.lastTime); });
+        if (search) {
+          inboxContacts = inboxContacts.filter(function(c) {
+            var hay = ((c.name||"")+" "+(c.email||"")).toLowerCase();
+            return hay.indexOf(search) !== -1;
+          });
+        }
+        state.filtered = inboxContacts;
+        renderContactList();
+      }).catch(function() {
+        state.filtered = [];
+        renderContactList();
+      });
+    }
+
     function setContactTab(filter, btn) {
       state.tabFilter = filter;
       document.querySelectorAll(".contact-tab").forEach(function(t) { t.classList.remove("active"); });
@@ -643,37 +692,49 @@
     function renderContactList() {
       var list = document.getElementById("contact-list");
       if (state.filtered.length === 0) {
-        list.innerHTML = '<li style="padding:30px;text-align:center;color:var(--gray-400);font-size:13px">No contacts found</li>';
+        var emptyMsg = state.tabFilter === "inbox" ? "No inbound emails yet" : "No contacts found";
+        list.innerHTML = '<li style="padding:30px;text-align:center;color:var(--gray-400);font-size:13px">' + emptyMsg + '</li>';
         return;
       }
       list.innerHTML = state.filtered.map(function(c) {
         var initials = getInitials(c.name);
-        var avatarClass = c.entityType === "CARRIER" ? "avatar-carrier" : "avatar-shipper";
+        var avatarClass = c.entityType === "CARRIER" ? "avatar-carrier" : c.entityType === "INBOX" ? "avatar-inbox" : "avatar-shipper";
         var isActive = state.currentContact && state.currentContact.id === c.id;
+        var subtitle = c.entityType === "INBOX" ? esc(c.lastMsg) : esc(c.subtitle);
+        var countBadge = c.count ? ' <span style="font-size:10px;background:var(--gold);color:#fff;border-radius:10px;padding:1px 6px;margin-left:4px">' + c.count + '</span>' : '';
         return '<li class="contact-item' + (isActive ? ' active' : '') + '" onclick="selectContact(\'' + c.id + '\')">' +
           '<div class="contact-avatar ' + avatarClass + '">' + initials + '</div>' +
           '<div class="contact-info">' +
-            '<div class="contact-name">' + esc(c.name) + '</div>' +
-            '<div class="contact-last-msg">' + esc(c.subtitle) + '</div>' +
+            '<div class="contact-name">' + esc(c.name) + countBadge + '</div>' +
+            '<div class="contact-last-msg">' + subtitle + '</div>' +
           '</div>' +
+          (c.lastTime ? '<div class="contact-meta"><div class="contact-time">' + timeAgo(c.lastTime) + '</div></div>' : '') +
         '</li>';
       }).join("");
     }
 
     /* ======== SELECT CONTACT ======== */
     function selectContact(id) {
+      // Check in both regular contacts and filtered (for inbox)
       var contact = state.contacts.find(function(c) { return c.id === id; });
+      if (!contact) contact = state.filtered.find(function(c) { return c.id === id; });
       if (!contact) return;
       state.currentContact = contact;
       renderContactList();
-      renderInfoPanel(contact);
       loadCommunications(contact);
       document.getElementById("convo-header").style.display = "";
       document.getElementById("convo-name").textContent = contact.name;
       var badge = document.getElementById("convo-type-badge");
-      badge.textContent = contact.entityType;
+      var typeLabel = contact.entityType === "INBOX" ? "INBOUND" : contact.entityType;
+      badge.textContent = typeLabel;
       badge.className = "convo-header-type type-" + contact.entityType.toLowerCase();
       document.getElementById("compose-bar").style.display = "";
+
+      if (contact.entityType === "INBOX") {
+        renderInboxInfoPanel(contact);
+      } else {
+        renderInfoPanel(contact);
+      }
 
       // Pre-fill email to if available
       if (contact.email) {
@@ -682,13 +743,37 @@
     }
 
     function loadCommunications(contact) {
-      SRL.request("/api/communications?entity_type=" + contact.entityType + "&entity_id=" + contact.entityId + "&limit=100").then(function(res) {
+      var url;
+      if (contact.entityType === "INBOX") {
+        // For inbox contacts, load by sender email
+        url = "/api/communications?from=" + encodeURIComponent(contact.email) + "&type=EMAIL_INBOUND&limit=100";
+      } else {
+        url = "/api/communications?entity_type=" + contact.entityType + "&entity_id=" + contact.entityId + "&limit=100";
+      }
+      SRL.request(url).then(function(res) {
         state.communications = (res.communications || []).reverse();
         renderThread();
       }).catch(function() {
         state.communications = [];
         renderThread();
       });
+    }
+
+    function renderInboxInfoPanel(contact) {
+      var html = '';
+      var initials = getInitials(contact.name);
+      html += '<div class="info-avatar avatar-inbox">' + initials + '</div>';
+      html += '<div class="info-name">' + esc(contact.name) + '</div>';
+      html += '<div class="info-type-badge"><span class="convo-header-type" style="background:rgba(168,85,247,0.1);color:#A855F7">INBOUND EMAIL</span></div>';
+      html += '<div class="info-section">';
+      html += '<div class="info-section-title">Sender</div>';
+      html += '<div class="info-field"><label>Email</label><span>' + esc(contact.email) + '</span></div>';
+      html += '<div class="info-field"><label>Total Emails</label><span>' + (contact.count || 0) + '</span></div>';
+      if (contact.matchedType && contact.matchedType !== "UNKNOWN") {
+        html += '<div class="info-field"><label>Matched</label><span>' + esc(contact.matchedType) + '</span></div>';
+      }
+      html += '</div>';
+      document.getElementById("info-panel").innerHTML = html;
     }
 
     /* ======== RENDER THREAD ======== */

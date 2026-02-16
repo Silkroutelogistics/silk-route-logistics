@@ -4,7 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 
 // ─── GET /api/communications ──────────────────────────
 export async function getCommunications(req: AuthRequest, res: Response) {
-  const { entity_type, entity_id, load_id, page = "1", limit = "50" } = req.query as Record<string, string>;
+  const { entity_type, entity_id, load_id, type, from: fromEmail, page = "1", limit = "50" } = req.query as Record<string, string>;
   const p = Math.max(1, parseInt(page));
   const l = Math.min(100, parseInt(limit) || 50);
 
@@ -12,6 +12,8 @@ export async function getCommunications(req: AuthRequest, res: Response) {
   if (entity_type) where.entityType = entity_type;
   if (entity_id) where.entityId = entity_id;
   if (load_id) where.loadId = load_id;
+  if (type) where.type = type;
+  if (fromEmail) where.from = { equals: fromEmail, mode: "insensitive" };
 
   const [communications, total] = await Promise.all([
     prisma.communication.findMany({
