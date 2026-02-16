@@ -162,6 +162,158 @@ export function thankYouEmail(recipientName: string, senderName: string, reason:
   `);
 }
 
+export function tenderOfferEmail(carrierName: string, loadRef: string, origin: string, dest: string, pickup: string, delivery: string, rate: string, expiresAt: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Rate Confirmation Tender</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${carrierName}, Silk Route Logistics is pleased to offer you the following load tender. Please review the details below and confirm your acceptance.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Pickup</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${pickup}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Delivery</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${delivery}</td></tr>
+      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#C8963E;font-weight:700;font-size:16px">${rate}</td></tr>
+    </table>
+    <p style="color:#dc2626;font-size:14px;line-height:1.6;margin:0 0 16px;font-weight:600">
+      This tender expires on ${expiresAt}. Please respond before the deadline to secure this load.
+    </p>
+    ${button("Review & Accept Tender", "https://silkroutelogistics.ai/carrier/tenders")}
+  `);
+}
+
+export function tenderAcceptedEmail(brokerName: string, carrierName: string, loadRef: string, origin: string, dest: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Tender Accepted</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${brokerName}, great news! <strong>${carrierName}</strong> has accepted the tender for the following load.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Carrier</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="color:#64748b"><strong>Destination</strong></td><td style="color:#0D1B2A">${dest}</td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
+      The rate confirmation is now active. You can view the full load details in your dashboard.
+    </p>
+    ${button("View Load Details", "https://silkroutelogistics.ai/ae/loads.html")}
+  `);
+}
+
+export function checkCallRequestEmail(carrierName: string, loadRef: string, origin: string, dest: string, dueTime: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Check Call Request</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${carrierName}, please provide a location update for load <strong style="color:#0D1B2A">${loadRef}</strong>.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
+      <tr><td style="color:#64748b"><strong>Due By</strong></td><td style="color:#0D1B2A;font-weight:600">${dueTime}</td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
+      Timely check calls help us ensure smooth delivery and keep all parties informed. Thank you for your cooperation.
+    </p>
+    ${button("Submit Check Call", "https://silkroutelogistics.ai/carrier/check-calls")}
+  `);
+}
+
+export function checkCallOverdueEmail(brokerName: string, loadRef: string, carrierName: string, lastCallTime: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Check Call Overdue</h2>
+    <p style="color:#dc2626;font-size:15px;line-height:1.6;margin:0 0 16px;font-weight:600">
+      Attention ${brokerName}: A check call for load <strong>${loadRef}</strong> is overdue and requires immediate attention.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Carrier</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
+      <tr><td style="color:#64748b"><strong>Last Check Call</strong></td><td style="color:#dc2626;font-weight:600">${lastCallTime}</td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
+      Please contact <strong>${carrierName}</strong> immediately to obtain a location update and confirm the load is on schedule.
+    </p>
+    ${button("View Load Details", "https://silkroutelogistics.ai/ae/loads.html")}
+  `);
+}
+
+export function podRequestEmail(carrierName: string, loadRef: string, origin: string, dest: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">POD Required</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${carrierName}, our records indicate that load <strong style="color:#0D1B2A">${loadRef}</strong> has been delivered. Please upload your Proof of Delivery documents at your earliest convenience.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="color:#64748b"><strong>Destination</strong></td><td style="color:#0D1B2A">${dest}</td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
+      Prompt submission of POD documents ensures timely invoice processing and payment. Thank you.
+    </p>
+    ${button("Upload POD Documents", "https://silkroutelogistics.ai/carrier/pod-upload")}
+  `);
+}
+
+export function deliveryConfirmationEmail(recipientName: string, loadRef: string, origin: string, dest: string, deliveredAt: string, signedBy: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Delivery Confirmation</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${recipientName}, we are pleased to confirm that your shipment has been successfully delivered.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Delivered At</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${deliveredAt}</td></tr>
+      <tr><td style="color:#64748b"><strong>Signed By</strong></td><td style="color:#C8963E;font-weight:700">${signedBy}</td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
+      Thank you for choosing Silk Route Logistics. If you have any questions about this delivery, please don't hesitate to reach out.
+    </p>
+    ${button("View Delivery Details", "https://silkroutelogistics.ai/shipments")}
+  `);
+}
+
+export function carrierLocationUpdateEmail(brokerName: string, loadRef: string, carrierName: string, city: string, state: string, etaHours: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Carrier Location Update</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${brokerName}, a location update has been received for load <strong style="color:#0D1B2A">${loadRef}</strong>.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Carrier</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Current Location</strong></td><td style="color:#C8963E;border-bottom:1px solid #e2e8f0;font-weight:700">${city}, ${state}</td></tr>
+      <tr><td style="color:#64748b"><strong>ETA</strong></td><td style="color:#0D1B2A;font-weight:600">${etaHours} hours</td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
+      You can track this load in real time from your dashboard.
+    </p>
+    ${button("Track Load", "https://silkroutelogistics.ai/ae/loads.html")}
+  `);
+}
+
+export function loadOpportunityEmail(carrierName: string, loadRef: string, origin: string, dest: string, pickup: string, rate: string, equipmentType: string): string {
+  return wrapper(`
+    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">New Load Opportunity</h2>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${carrierName}, a new load matching your lane preferences is available on the Silk Route Logistics Caravan board. Act fast to secure this opportunity.
+    </p>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Pickup</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${pickup}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Equipment</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${equipmentType}</td></tr>
+      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#C8963E;font-weight:700;font-size:16px">${rate}</td></tr>
+    </table>
+    ${button("View Load Details", "https://silkroutelogistics.ai/carrier/load-board")}
+  `);
+}
+
 export const TEMPLATE_MAP: Record<string, (...args: string[]) => string> = {
   introduction: introductionEmail,
   follow_up: followUpEmail,
@@ -169,4 +321,12 @@ export const TEMPLATE_MAP: Record<string, (...args: string[]) => string> = {
   load_confirmation: loadConfirmationEmail,
   invoice: invoiceEmail,
   thank_you: thankYouEmail,
+  tender_offer: tenderOfferEmail,
+  tender_accepted: tenderAcceptedEmail,
+  check_call_request: checkCallRequestEmail,
+  check_call_overdue: checkCallOverdueEmail,
+  pod_request: podRequestEmail,
+  delivery_confirmation: deliveryConfirmationEmail,
+  carrier_location_update: carrierLocationUpdateEmail,
+  load_opportunity: loadOpportunityEmail,
 };

@@ -172,6 +172,61 @@
             <div id="statusButtons" class="btn-group" style="flex-wrap:wrap"></div>
           </div>
 
+          <!-- POD / Document Upload -->
+          <div class="card" style="margin-bottom:20px" id="podUploadCard">
+            <div class="card-header"><h3>Upload POD / Documents</h3></div>
+            <form id="podUploadForm" enctype="multipart/form-data">
+              <div class="form-group">
+                <label>Document Type</label>
+                <select class="form-control" id="podDocType">
+                  <option value="BOL">BOL</option>
+                  <option value="POD" selected>POD</option>
+                  <option value="RATE_CONFIRMATION">Rate Confirmation</option>
+                  <option value="LUMPER_RECEIPT">Lumper Receipt</option>
+                  <option value="SCALE_TICKET">Scale Ticket</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Select File</label>
+                <input type="file" class="form-control" id="podFileInput" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff">
+              </div>
+              <div id="podUploadError" class="login-error" style="display:none"></div>
+              <div id="podUploadSuccess" style="display:none;color:#22c55e;font-size:13px;margin-bottom:8px"></div>
+              <button type="submit" class="btn btn-primary btn-sm" id="podUploadBtn">Upload Document</button>
+            </form>
+            <div style="margin-top:16px">
+              <div style="font-size:12px;font-weight:600;color:var(--slate);margin-bottom:8px;text-transform:uppercase">Uploaded Documents</div>
+              <div id="podDocsList"><p style="color:var(--slate);font-size:13px">No documents yet</p></div>
+            </div>
+          </div>
+
+          <!-- Check Call -->
+          <div class="card" style="margin-bottom:20px" id="checkCallCard">
+            <div class="card-header"><h3>Submit Check Call</h3></div>
+            <form id="checkCallForm">
+              <div class="form-group">
+                <label>Current City</label>
+                <input type="text" class="form-control" id="checkCallCity" placeholder="e.g. Dallas">
+              </div>
+              <div class="form-group">
+                <label>Current State</label>
+                <input type="text" class="form-control" id="checkCallState" placeholder="e.g. TX" maxlength="2" style="text-transform:uppercase">
+              </div>
+              <div class="form-group">
+                <label>ETA (hours)</label>
+                <input type="number" class="form-control" id="checkCallEta" placeholder="e.g. 6" min="0" step="0.5">
+              </div>
+              <div class="form-group">
+                <label>Notes</label>
+                <textarea class="form-control" id="checkCallNotes" rows="3" placeholder="Optional notes about current status..."></textarea>
+              </div>
+              <div id="checkCallError" class="login-error" style="display:none"></div>
+              <div id="checkCallSuccess" style="display:none;color:#22c55e;font-size:13px;margin-bottom:8px"></div>
+              <button type="submit" class="btn btn-primary btn-sm">Submit Check Call</button>
+            </form>
+          </div>
+
           <!-- Broker Contact -->
           <div class="card">
             <div class="card-header"><h3>Broker Contact</h3></div>
@@ -456,6 +511,9 @@
               '<span class="badge badge-slate">' + esc(d.docType || "DOC") + '</span>' +
             '</div>';
           }).join("");
+
+      // POD uploaded documents list
+      renderPodDocsList(docs);
     }
 
     function infoItem(label, value) {
@@ -550,6 +608,117 @@
         });
       });
     }
+
+    // ── POD / Document Upload ──
+    function renderPodDocsList(docs) {
+      var el = document.getElementById("podDocsList");
+      if (!docs || docs.length === 0) {
+        el.innerHTML = '<p style="color:var(--slate);font-size:13px">No documents yet</p>';
+        return;
+      }
+      el.innerHTML = docs.map(function (d) {
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">' +
+          '<span style="font-size:13px">' + esc(d.fileName || d.name || 'Document') + '</span>' +
+          '<span class="badge badge-slate">' + esc(d.docType || d.type || "DOC") + '</span>' +
+        '</div>';
+      }).join("");
+    }
+
+    document.getElementById("podUploadForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!currentLoadId) return;
+      var fileInput = document.getElementById("podFileInput");
+      var errEl = document.getElementById("podUploadError");
+      var successEl = document.getElementById("podUploadSuccess");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        errEl.textContent = "Please select a file to upload.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      var formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("type", document.getElementById("podDocType").value);
+
+      var btn = document.getElementById("podUploadBtn");
+      btn.disabled = true;
+      btn.textContent = "Uploading...";
+
+      CARRIER.request("/api/carrier-loads/" + currentLoadId + "/documents", {
+        method: "POST",
+        body: formData,
+        rawBody: true
+      }).then(function (res) {
+        btn.disabled = false;
+        btn.textContent = "Upload Document";
+        fileInput.value = "";
+        successEl.textContent = "Document uploaded successfully!";
+        successEl.style.display = "block";
+        setTimeout(function () { successEl.style.display = "none"; }, 3000);
+        // Refresh detail to update document lists
+        openDetail(currentLoadId);
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = "Upload Document";
+        errEl.textContent = err.message || "Upload failed";
+        errEl.style.display = "block";
+      });
+    });
+
+    // ── Check Call Submit ──
+    document.getElementById("checkCallForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!currentLoadId) return;
+      var errEl = document.getElementById("checkCallError");
+      var successEl = document.getElementById("checkCallSuccess");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      var city = document.getElementById("checkCallCity").value.trim();
+      var state = document.getElementById("checkCallState").value.trim().toUpperCase();
+      var etaHours = parseFloat(document.getElementById("checkCallEta").value);
+      var notes = document.getElementById("checkCallNotes").value.trim();
+
+      if (!city || !state) {
+        errEl.textContent = "City and State are required.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      var submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+
+      CARRIER.request("/api/carrier-loads/" + currentLoadId + "/check-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: city,
+          state: state,
+          etaHours: isNaN(etaHours) ? null : etaHours,
+          notes: notes
+        })
+      }).then(function (res) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Check Call";
+        successEl.textContent = "Check call submitted successfully!";
+        successEl.style.display = "block";
+        // Clear form
+        document.getElementById("checkCallCity").value = "";
+        document.getElementById("checkCallState").value = "";
+        document.getElementById("checkCallEta").value = "";
+        document.getElementById("checkCallNotes").value = "";
+        setTimeout(function () { successEl.style.display = "none"; }, 3000);
+      }).catch(function (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Check Call";
+        errEl.textContent = err.message || "Check call failed";
+        errEl.style.display = "block";
+      });
+    });
 
     // Sidebar toggle
     document.getElementById("hamburger").addEventListener("click", function () {

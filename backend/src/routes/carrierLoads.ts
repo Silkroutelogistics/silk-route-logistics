@@ -3,6 +3,17 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
+import multer from "multer";
+import path from "path";
+import { env } from "../config/env";
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, env.UPLOAD_DIR),
+    filename: (_req, file, cb) => cb(null, Date.now() + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+});
 
 const router = Router();
 
@@ -313,6 +324,120 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   }
 
   res.json(updated);
+});
+
+// POST /api/carrier-loads/:id/documents — Upload a document (BOL, POD, etc.)
+router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, res: Response) => {
+  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!load) {
+    res.status(404).json({ error: "Load not found" });
+    return;
+  }
+  if (load.carrierId !== req.user!.id) {
+    res.status(403).json({ error: "Not your load" });
+    return;
+  }
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+
+  const docType = (req.body.type || "OTHER").toUpperCase();
+  const fileUrl = "/uploads/" + req.file.filename;
+
+  const doc = await prisma.document.create({
+    data: {
+      loadId: load.id,
+      docType,
+      fileName: req.file.originalname,
+      fileUrl,
+      fileType: req.file.mimetype || "application/octet-stream",
+      fileSize: req.file.size,
+      entityType: "LOAD",
+      entityId: load.id,
+      userId: req.user!.id,
+    },
+  });
+
+  // If it's a POD, update the load
+  if (docType === "POD") {
+    await prisma.load.update({
+      where: { id: load.id },
+      data: {
+        podUrl: fileUrl,
+        podReceivedAt: new Date(),
+        status: load.status === "DELIVERED" ? "POD_RECEIVED" : load.status,
+      },
+    });
+
+    // Notify broker
+    if (load.posterId) {
+      await prisma.notification.create({
+        data: {
+          userId: load.posterId,
+          type: "LOAD",
+          title: "POD Received",
+          message: `POD uploaded for load ${load.referenceNumber}`,
+          actionUrl: "/ae/loads.html?id=" + load.id,
+        },
+      });
+    }
+  }
+
+  res.json(doc);
+});
+
+// POST /api/carrier-loads/:id/check-call — Submit a check call from carrier
+const checkCallSchema = z.object({
+  city: z.string().optional(),
+  state: z.string().optional(),
+  etaHours: z.number().optional(),
+  notes: z.string().optional(),
+});
+
+router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRequest, res: Response) => {
+  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!load) {
+    res.status(404).json({ error: "Load not found" });
+    return;
+  }
+  if (load.carrierId !== req.user!.id) {
+    res.status(403).json({ error: "Not your load" });
+    return;
+  }
+
+  const { city: ccCity, state: ccState, etaHours, notes } = req.body;
+  const location = ccCity && ccState ? `${ccCity}, ${ccState}` : (ccCity || ccState || "");
+  const etaDate = etaHours ? new Date(Date.now() + etaHours * 3600000) : undefined;
+
+  const cc = await prisma.checkCall.create({
+    data: {
+      loadId: load.id,
+      calledById: req.user!.id,
+      status: load.status,
+      location: location || undefined,
+      city: ccCity || undefined,
+      state: ccState || undefined,
+      etaUpdate: etaDate,
+      method: "CARRIER_PORTAL",
+      notes: notes || `Carrier check-in from ${location || "unknown location"}`,
+    },
+  });
+
+  // Notify broker
+  if (load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD",
+        title: "Check Call Received",
+        message: `Check call for ${load.referenceNumber}: ${location || "Location update"}${etaHours ? " — ETA " + etaHours + "h" : ""}`,
+        actionUrl: "/ae/loads.html?id=" + load.id,
+      },
+    });
+  }
+
+  res.json(cc);
 });
 
 export default router;
