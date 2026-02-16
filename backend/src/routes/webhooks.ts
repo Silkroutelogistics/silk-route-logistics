@@ -75,17 +75,64 @@ router.post("/resend", async (req, res) => {
   }
 });
 
-// Resend inbound email — receives emails sent to sales@silkroutelogistics.ai
+// Resend inbound email — receives emails via Resend webhook (email.received event)
+// Also accepts direct POST with {from, to, subject, text} for testing
 router.post("/inbound-email", async (req, res) => {
   try {
-    const { from, to, subject, text, html } = req.body;
+    const payload = req.body;
+
+    // Resend webhook wraps in { type: "email.received", data: { ... } }
+    // Also support direct format { from, to, subject, text } for testing
+    let from: string;
+    let to: string | string[];
+    let subject: string;
+    let text: string;
+    let html: string;
+    let emailId: string | undefined;
+
+    if (payload.type === "email.received" && payload.data) {
+      // Resend webhook format
+      const d = payload.data;
+      from = d.from || "";
+      to = d.to || [];
+      subject = d.subject || "";
+      text = d.text || d.body || "";
+      html = d.html || "";
+      emailId = d.email_id || d.id;
+      console.log(`[Inbound Email] Resend webhook event, emailId: ${emailId}`);
+
+      // If body is missing, try to fetch from Resend API
+      if (!text && !html && emailId && env.RESEND_API_KEY) {
+        try {
+          const resp = await fetch(`https://api.resend.com/emails/${emailId}`, {
+            headers: { Authorization: `Bearer ${env.RESEND_API_KEY}` },
+          });
+          if (resp.ok) {
+            const emailData = await resp.json() as any;
+            text = emailData.text || "";
+            html = emailData.html || "";
+            if (!from && emailData.from) from = emailData.from;
+            if (!subject && emailData.subject) subject = emailData.subject;
+          }
+        } catch (fetchErr) {
+          console.error("[Inbound Email] Failed to fetch email content:", fetchErr);
+        }
+      }
+    } else {
+      // Direct format
+      from = payload.from || "";
+      to = payload.to || "";
+      subject = payload.subject || "";
+      text = payload.text || "";
+      html = payload.html || "";
+    }
 
     if (!from) {
       res.status(400).json({ error: "Missing from field" });
       return;
     }
 
-    // Extract sender email (Resend sends "Name <email>" or just "email")
+    // Extract sender email (may be "Name <email>" or just "email")
     const senderEmail = (from.match(/<([^>]+)>/) || [null, from])[1].toLowerCase().trim();
     const senderName = from.replace(/<[^>]+>/, "").trim() || senderEmail;
     const recipientAddr = Array.isArray(to) ? to[0] : (to || "sales@silkroutelogistics.ai");
@@ -97,7 +144,6 @@ router.post("/inbound-email", async (req, res) => {
     let entityType = "UNKNOWN";
     let entityId = "UNKNOWN";
 
-    // Check carriers (user email or carrier profile contact email)
     const carrierUser = await prisma.user.findFirst({
       where: {
         role: "CARRIER",
@@ -110,7 +156,6 @@ router.post("/inbound-email", async (req, res) => {
       entityType = "CARRIER";
       entityId = carrierUser.carrierProfile.id;
     } else {
-      // Check carrier profile contact emails
       const carrierProfile = await prisma.carrierProfile.findFirst({
         where: { contactEmail: { equals: senderEmail, mode: "insensitive" } },
       });
@@ -120,7 +165,6 @@ router.post("/inbound-email", async (req, res) => {
       }
     }
 
-    // If not a carrier, check customers
     if (entityType === "UNKNOWN") {
       const customer = await prisma.customer.findFirst({
         where: { email: { equals: senderEmail, mode: "insensitive" } },
@@ -131,13 +175,11 @@ router.post("/inbound-email", async (req, res) => {
       }
     }
 
-    // Get system user for logging (first admin)
     const systemUser = await prisma.user.findFirst({
       where: { role: "ADMIN", isActive: true },
       select: { id: true },
     });
 
-    // Create communication record
     await prisma.communication.create({
       data: {
         type: "EMAIL_INBOUND",
@@ -152,6 +194,7 @@ router.post("/inbound-email", async (req, res) => {
           senderName,
           rawTo: to,
           hasHtml: !!html,
+          emailId: emailId || null,
           receivedAt: new Date().toISOString(),
         },
         userId: systemUser?.id || "system",
