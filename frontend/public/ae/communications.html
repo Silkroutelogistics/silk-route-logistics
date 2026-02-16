@@ -750,8 +750,8 @@
     function loadCommunications(contact) {
       var url;
       if (contact.entityType === "INBOX") {
-        // For inbox contacts, load by sender email
-        url = "/api/communications?from=" + encodeURIComponent(contact.email) + "&type=EMAIL_INBOUND&limit=100";
+        // For inbox contacts, load full thread (inbound + outbound with this email)
+        url = "/api/communications?thread_email=" + encodeURIComponent(contact.email) + "&limit=100";
       } else {
         url = "/api/communications?entity_type=" + contact.entityType + "&entity_id=" + contact.entityId + "&limit=100";
       }

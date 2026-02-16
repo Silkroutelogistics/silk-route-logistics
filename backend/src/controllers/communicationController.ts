@@ -4,7 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 
 // ─── GET /api/communications ──────────────────────────
 export async function getCommunications(req: AuthRequest, res: Response) {
-  const { entity_type, entity_id, load_id, type, from: fromEmail, page = "1", limit = "50" } = req.query as Record<string, string>;
+  const { entity_type, entity_id, load_id, type, from: fromEmail, thread_email, page = "1", limit = "50" } = req.query as Record<string, string>;
   const p = Math.max(1, parseInt(page));
   const l = Math.min(100, parseInt(limit) || 50);
 
@@ -14,6 +14,14 @@ export async function getCommunications(req: AuthRequest, res: Response) {
   if (load_id) where.loadId = load_id;
   if (type) where.type = type;
   if (fromEmail) where.from = { equals: fromEmail, mode: "insensitive" };
+  // thread_email: get full conversation (inbound from + outbound to this email)
+  if (thread_email) {
+    where.OR = [
+      { from: { equals: thread_email, mode: "insensitive" } },
+      { to: { equals: thread_email, mode: "insensitive" } },
+    ];
+    where.type = { in: ["EMAIL_INBOUND", "EMAIL_OUTBOUND"] };
+  }
 
   const [communications, total] = await Promise.all([
     prisma.communication.findMany({
