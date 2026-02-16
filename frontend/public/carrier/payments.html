@@ -74,8 +74,8 @@
         <table>
           <thead>
             <tr>
-              <th>Load</th><th>Route</th><th>Amount</th><th>QuickPay</th>
-              <th>Net Pay</th><th>Method</th><th>Status</th><th>Actions</th>
+              <th>Load</th><th>Route</th><th>Amount</th><th class="col-hide-mobile">QuickPay</th>
+              <th>Net Pay</th><th class="col-hide-mobile">Method</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="paymentsBody">
@@ -157,9 +157,9 @@
           '<td style="font-weight:600;color:var(--gold)">' + esc(load.referenceNumber || "--") + '</td>' +
           '<td style="font-size:12px">' + esc(route) + '</td>' +
           '<td>' + money(p.amount) + '</td>' +
-          '<td>' + (hasQuickPay ? '<span style="color:var(--red)">-' + money(p.quickPayDiscount) + '</span>' : '--') + '</td>' +
+          '<td class="col-hide-mobile">' + (hasQuickPay ? '<span style="color:var(--red)">-' + money(p.quickPayDiscount) + '</span>' : '--') + '</td>' +
           '<td style="font-weight:600">' + money(p.netAmount) + '</td>' +
-          '<td>' + esc(p.paymentMethod || "Standard") + '</td>' +
+          '<td class="col-hide-mobile">' + esc(p.paymentMethod || "Standard") + '</td>' +
           '<td><span class="badge badge-' + (payStatusColors[p.status] || "slate") + '">' + esc(p.status) + '</span></td>' +
           '<td>' + (canRequestQP
             ? '<button class="btn btn-primary btn-sm" onclick="requestQP(\'' + p.id + '\',' + p.amount + ')">QuickPay</button>'

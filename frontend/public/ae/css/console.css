@@ -967,9 +967,33 @@ tbody tr:hover {
     white-space: normal;
   }
 
+  /* Table scroll hint */
+  .table-wrap {
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* Hide non-essential table columns on mobile */
   table .col-hide-mobile {
     display: none;
+  }
+
+  /* Inline grids collapse */
+  .form-grid,
+  .detail-grid,
+  .info-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Page header stacks on mobile */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .page-header h1 {
+    font-size: 18px;
   }
 
   /* Tabs: scrollable on mobile */
