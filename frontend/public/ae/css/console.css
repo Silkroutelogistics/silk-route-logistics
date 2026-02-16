@@ -150,6 +150,10 @@ a:hover {
 .page.sidebar-collapsed > .sidebar {
   width: 60px;
 }
+/* Fixed elements inside main also need to adjust */
+.page.sidebar-collapsed .action-bar {
+  left: 60px;
+}
 
 /* Tooltip on hover for collapsed nav items */
 .sidebar.collapsed .sidebar-nav a {
