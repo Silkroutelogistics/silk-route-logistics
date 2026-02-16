@@ -19,6 +19,10 @@ export function securityHeaders(_req: Request, res: Response, next: NextFunction
  * to prevent XSS and injection attacks.
  */
 export function sanitizeInput(req: Request, _res: Response, next: NextFunction) {
+  // Skip sanitization for webhook routes (external services send raw data with <> etc.)
+  if (req.path.startsWith("/api/webhooks")) {
+    return next();
+  }
   req.body = sanitizeObject(req.body);
   req.query = sanitizeObject(req.query) as typeof req.query;
   req.params = sanitizeObject(req.params) as typeof req.params;
