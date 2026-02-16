@@ -1136,16 +1136,10 @@
         var body = {
           to: to,
           subject: subject,
+          customBody: text.replace(/\n/g, "<br>"),
           entityType: entityType,
           entityId: entityId
         };
-
-        if (template) {
-          body.template = template;
-          body.templateParams = [state.currentContact.name, senderName, text];
-        } else {
-          body.customBody = text.replace(/\n/g, "<br>");
-        }
 
         SRL.request("/api/email/send", { method: "POST", body: body }).then(function() {
           document.getElementById("compose-text").value = "";
