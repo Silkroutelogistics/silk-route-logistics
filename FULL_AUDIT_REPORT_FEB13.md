@@ -130,7 +130,7 @@ All referenced files verified to exist:
 - `/carrier/js/carrier-api.js` ✓
 
 ### Placeholder Text Found
-- `MC# XXXXXXX` and `DOT# XXXXXXX` in `index.html` footer — **intentional** (company registration pending)
+- `MC# 1794414` and `DOT# 4526880` in `index.html` footer — **updated** with real registration numbers
 - No "Lorem ipsum", "TODO", "FIXME", "PLACEHOLDER", or "CHANGE THIS" found
 - No "12 states" or "twelve states" references found
 
@@ -239,6 +239,6 @@ All referenced files verified to exist:
 | Branding | ✅ Consistent (asset-based brokerage) |
 
 ### Remaining Notes
-- `MC# XXXXXXX` / `DOT# XXXXXXX` placeholders in index.html footer — update when company registration completes
+- `MC# 1794414` / `DOT# 4526880` in index.html footer — updated with real registration numbers
 - `api.silkroutelogistics.ai` domain — consider setting up as CNAME to Render for production use
 - Blog content depends on backend news aggregation cron — will populate after first 4-hour cycle

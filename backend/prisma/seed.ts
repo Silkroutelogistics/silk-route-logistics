@@ -95,8 +95,8 @@ async function main() {
   const cp1 = await prisma.carrierProfile.create({
     data: {
       userId: carrierUser.id,
-      mcNumber: "MC-1234567",
-      dotNumber: "3456789",
+      mcNumber: "MC-1794414",
+      dotNumber: "4526880",
       companyName: "SRL Transport LLC",
       contactName: "SRL Carrier",
       contactPhone: "(269) 555-0200",

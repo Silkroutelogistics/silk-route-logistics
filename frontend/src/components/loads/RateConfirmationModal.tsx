@@ -270,8 +270,8 @@ const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
 
 const SRL_INFO = {
   company: "Silk Route Logistics Inc.",
-  mc: "MC-1234567",
-  dot: "DOT-9876543",
+  mc: "MC-1794414",
+  dot: "DOT-4526880",
   address: "8950 Westheimer Rd, Suite 200, Houston, TX 77063",
   phone: "(832) 555-0175",
   email: "dispatch@silkroutelogistics.ai",

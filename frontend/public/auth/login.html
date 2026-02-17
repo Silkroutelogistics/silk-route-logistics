@@ -17,58 +17,115 @@
     /* === LEFT PANEL === */
     .left-panel{
       width:55%;position:relative;overflow:hidden;
-      background:linear-gradient(165deg,#0D1B2A 0%,#12263e 50%,#0f2035 100%);
+      background:linear-gradient(165deg,#1b3a5e 0%,#224870 40%,#285280 70%,#1e4060 100%);
       display:flex;align-items:center;justify-content:center;
     }
     .left-panel::before{
       content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
-      background:radial-gradient(ellipse at 30% 50%,rgba(200,150,62,0.03) 0%,transparent 50%),
-                 radial-gradient(ellipse at 70% 80%,rgba(200,150,62,0.02) 0%,transparent 50%);
+      background:radial-gradient(ellipse at 25% 35%,rgba(200,150,62,0.14) 0%,transparent 45%),
+                 radial-gradient(ellipse at 70% 70%,rgba(200,150,62,0.10) 0%,transparent 45%),
+                 radial-gradient(ellipse at 50% 15%,rgba(120,180,240,0.07) 0%,transparent 40%);
       animation:gradientShift 20s ease-in-out infinite alternate;
     }
     @keyframes gradientShift{0%{transform:translate(0,0) rotate(0deg)}100%{transform:translate(30px,-20px) rotate(2deg)}}
 
-    .particle{position:absolute;border-radius:50%;background:rgba(200,150,62,0.12);animation:float 25s ease-in-out infinite}
+    .particle{position:absolute;border-radius:50%;background:rgba(200,150,62,0.18);animation:float 25s ease-in-out infinite}
     @keyframes float{
-      0%,100%{transform:translateY(0) translateX(0);opacity:.1}
-      25%{transform:translateY(-30px) translateX(10px);opacity:.2}
-      50%{transform:translateY(-15px) translateX(-10px);opacity:.15}
-      75%{transform:translateY(-40px) translateX(5px);opacity:.1}
+      0%,100%{transform:translateY(0) translateX(0);opacity:.15}
+      25%{transform:translateY(-30px) translateX(10px);opacity:.3}
+      50%{transform:translateY(-15px) translateX(-10px);opacity:.22}
+      75%{transform:translateY(-40px) translateX(5px);opacity:.15}
     }
 
     .left-content{
       position:relative;z-index:2;padding:60px;max-width:520px;width:100%;
       display:flex;flex-direction:column;justify-content:center;min-height:100vh;
     }
-    .brand-logo{height:36px;margin-bottom:32px;opacity:.9;border-radius:8px}
+    .brand-logo{height:52px;width:52px;object-fit:contain;margin-bottom:32px;opacity:.95;border-radius:12px;background:rgba(255,255,255,0.08);padding:6px}
+
+    /* === HERO SLIDESHOW === */
+    .hero-slideshow{
+      position:relative;width:100%;height:170px;border-radius:16px;overflow:hidden;margin-bottom:28px;
+      box-shadow:0 8px 40px rgba(0,0,0,0.35),0 0 60px rgba(200,150,62,0.06);
+      border:1px solid rgba(200,150,62,0.15);
+    }
+    .hero-slide{
+      position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease-in-out;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .hero-slide.active{opacity:1}
+    /* Frosted glass overlay on all slides */
+    .hero-slide::after{
+      content:'';position:absolute;inset:0;
+      background:rgba(255,255,255,0.02);
+      backdrop-filter:blur(1px);
+      pointer-events:none;
+    }
+    .hero-slide-1{
+      background:linear-gradient(135deg,#1e4468 0%,#275580 30%,#2f6090 60%,#224c72 100%);
+    }
+    .hero-slide-1::before{
+      content:'';position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at 20% 50%,rgba(200,150,62,0.18) 0%,transparent 50%),
+        radial-gradient(ellipse at 80% 40%,rgba(200,150,62,0.12) 0%,transparent 45%),
+        url("data:image/svg+xml,%3Csvg width='500' height='170' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,85 Q80,30 160,85 Q240,140 320,85 Q400,30 500,85' stroke='%23c8a95170' stroke-width='2.5' fill='none' stroke-dasharray='8,6'/%3E%3Cpath d='M0,105 Q100,50 200,105 Q300,155 400,105 Q450,80 500,95' stroke='%23c8a95140' stroke-width='1.5' fill='none'/%3E%3Ccircle cx='80' cy='68' r='5' fill='%23c8a95160'/%3E%3Ccircle cx='240' cy='100' r='4' fill='%23c8a95150'/%3E%3Ccircle cx='400' cy='72' r='5' fill='%23c8a95160'/%3E%3C/svg%3E") center/cover no-repeat;
+    }
+    .slide-text{position:relative;z-index:2;text-align:center;padding:0 30px}
+    .slide-text span{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#dbb960;font-weight:600}
+    .slide-text p{font-size:18px;color:#f0f4f8;font-weight:300;margin-top:8px;line-height:1.4}
+    .hero-slide-2{
+      background:linear-gradient(160deg,#1b3e60 0%,#234e78 40%,#2a5888 70%,#1f4468 100%);
+    }
+    .hero-slide-2::before{
+      content:'';position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at 50% 50%,rgba(200,150,62,0.16) 0%,transparent 50%),
+        url("data:image/svg+xml,%3Csvg width='500' height='170' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='100' cy='85' r='40' stroke='%23c8a95148' stroke-width='2' fill='none'/%3E%3Ccircle cx='250' cy='85' r='55' stroke='%23c8a95138' stroke-width='2' fill='none'/%3E%3Ccircle cx='400' cy='85' r='35' stroke='%23c8a95148' stroke-width='2' fill='none'/%3E%3Cline x1='140' y1='85' x2='195' y2='85' stroke='%23c8a95155' stroke-width='2' stroke-dasharray='4,4'/%3E%3Cline x1='305' y1='85' x2='365' y2='85' stroke='%23c8a95155' stroke-width='2' stroke-dasharray='4,4'/%3E%3Ccircle cx='100' cy='85' r='6' fill='%23c8a95160'/%3E%3Ccircle cx='250' cy='85' r='6' fill='%23c8a95160'/%3E%3Ccircle cx='400' cy='85' r='6' fill='%23c8a95160'/%3E%3C/svg%3E") center/cover no-repeat;
+    }
+    .hero-slide-3{
+      background:linear-gradient(145deg,#1c4060 0%,#254e78 35%,#2c5a8a 65%,#204668 100%);
+    }
+    .hero-slide-3::before{
+      content:'';position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at 35% 60%,rgba(200,150,62,0.16) 0%,transparent 45%),
+        radial-gradient(ellipse at 75% 30%,rgba(200,150,62,0.12) 0%,transparent 40%),
+        url("data:image/svg+xml,%3Csvg width='500' height='170' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,135 L50,55 L150,55' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Cpath d='M150,55 L150,115 L280,115' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Cpath d='M280,115 L280,45 L420,45' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Cpath d='M420,45 L420,125 L480,125' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='135' r='6' fill='%23c8a95165'/%3E%3Ccircle cx='150' cy='55' r='5' fill='%23c8a95158'/%3E%3Ccircle cx='280' cy='115' r='5' fill='%23c8a95158'/%3E%3Ccircle cx='420' cy='45' r='5' fill='%23c8a95158'/%3E%3Ccircle cx='480' cy='125' r='6' fill='%23c8a95165'/%3E%3C/svg%3E") center/cover no-repeat;
+    }
+    .slideshow-dots{display:flex;justify-content:center;gap:8px;margin-top:12px}
+    .slideshow-dot{width:6px;height:6px;border-radius:50%;background:rgba(200,150,62,0.25);transition:all .4s ease}
+    .slideshow-dot.active{background:#dbb960;width:20px;border-radius:3px}
     .brand-name{font-size:13px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:#c8a951;margin-bottom:4px}
     .portal-name{font-size:28px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-.5px}
-    .portal-subtitle{font-size:14px;color:#5a7a9a;font-weight:400;margin-bottom:40px}
+    .portal-subtitle{font-size:14px;color:#7a9bb8;font-weight:400;margin-bottom:40px}
 
     .features-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:36px}
     .feature-pill{
       display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;
-      background:rgba(200,150,62,0.04);border:1px solid rgba(200,150,62,0.08);transition:all .3s ease;
+      background:rgba(200,150,62,0.07);border:1px solid rgba(200,150,62,0.14);transition:all .3s ease;
+      backdrop-filter:blur(4px);
     }
-    .feature-pill:hover{background:rgba(200,150,62,0.08);border-color:rgba(200,150,62,0.15);transform:translateY(-1px)}
-    .feature-pill .icon{display:inline-flex;color:#c8a951;line-height:0}
-    .feature-pill .label{font-size:12.5px;color:#b0bec5;font-weight:500;letter-spacing:.3px}
+    .feature-pill:hover{background:rgba(200,150,62,0.13);border-color:rgba(200,150,62,0.25);transform:translateY(-1px)}
+    .feature-pill .icon{display:inline-flex;color:#dbb960;line-height:0}
+    .feature-pill .label{font-size:12.5px;color:#c8d4de;font-weight:500;letter-spacing:.3px}
 
-    .tagline{font-size:13.5px;color:#5a7a9a;line-height:1.75;margin-bottom:40px;max-width:440px}
+    .tagline{font-size:13.5px;color:#7a9ab5;line-height:1.75;margin-bottom:40px;max-width:440px}
 
     /* === DAILY INSIGHT CARD === */
     .insight-card{
       padding:24px 28px;border-radius:12px;position:relative;overflow:hidden;
-      background:linear-gradient(135deg,rgba(200,150,62,0.05) 0%,rgba(200,150,62,0.02) 100%);
-      border-left:3px solid #c8a951;
+      background:linear-gradient(135deg,rgba(200,150,62,0.08) 0%,rgba(200,150,62,0.03) 100%);
+      border-left:3px solid #dbb960;
+      backdrop-filter:blur(4px);
     }
     .insight-content{position:relative;z-index:1}
-    .insight-label{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#c8a951;margin-bottom:10px}
-    .insight-text{font-size:14.5px;color:#cdd6de;line-height:1.7;font-style:italic;max-width:380px}
-    .insight-source{font-size:11px;color:#4a6070;margin-top:12px;font-style:normal}
+    .insight-label{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#dbb960;margin-bottom:10px}
+    .insight-text{font-size:14.5px;color:#dce4ec;line-height:1.7;font-style:italic;max-width:380px}
+    .insight-source{font-size:11px;color:#5d7a8e;margin-top:12px;font-style:normal}
 
-    .silk-road-line{margin-top:auto;padding-top:40px;opacity:.12}
-    .left-footer{font-size:11px;color:#3a4f60;margin-top:16px}
+    .silk-road-line{margin-top:auto;padding-top:40px;opacity:.2}
+    .left-footer{font-size:11px;color:#4d6878;margin-top:16px}
 
     /* === RIGHT PANEL === */
     .right-panel{
@@ -153,7 +210,7 @@
       <div class="particle" style="width:4px;height:4px;top:80%;left:80%;animation-delay:5s;animation-duration:26s"></div>
 
       <div class="left-content">
-        <img src="/logo.png" alt="SRL" class="brand-logo">
+        <img src="/logo-full-alt.png" alt="SRL" class="brand-logo">
         <div class="brand-name">SILK ROUTE LOGISTICS</div>
         <div class="portal-name">Account Executive Portal</div>
         <div class="portal-subtitle">Command center for freight operations</div>
@@ -163,6 +220,32 @@
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><span class="label">Secure Payments</span></div>
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span><span class="label">Carrier Network</span></div>
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></span><span class="label">Live Analytics</span></div>
+        </div>
+
+        <div class="hero-slideshow" id="heroSlideshow">
+          <div class="hero-slide hero-slide-1 active">
+            <div class="slide-text">
+              <span>Connecting Routes</span>
+              <p>4,000+ miles of trade routes,<br>one seamless platform</p>
+            </div>
+          </div>
+          <div class="hero-slide hero-slide-2">
+            <div class="slide-text">
+              <span>Carrier Network</span>
+              <p>Real-time visibility across<br>every mile of your freight</p>
+            </div>
+          </div>
+          <div class="hero-slide hero-slide-3">
+            <div class="slide-text">
+              <span>Smart Logistics</span>
+              <p>AI-powered matching from<br>pickup to final delivery</p>
+            </div>
+          </div>
+        </div>
+        <div class="slideshow-dots" id="slideshowDots">
+          <div class="slideshow-dot active"></div>
+          <div class="slideshow-dot"></div>
+          <div class="slideshow-dot"></div>
         </div>
 
         <p class="tagline">Asset-based trucking and freight brokerage powered by technology. Real-time tracking, automated invoicing, and AI-driven operations from Kalamazoo, Michigan.</p>
@@ -356,6 +439,22 @@
       document.getElementById('otp').value = '';
       showAlert('', 'error');
     }
+  </script>
+
+  <!-- Hero Slideshow Auto-Play -->
+  <script>
+    (function() {
+      var slides = document.querySelectorAll('.hero-slide');
+      var dots = document.querySelectorAll('.slideshow-dot');
+      var current = 0;
+      setInterval(function() {
+        slides[current].classList.remove('active');
+        dots[current].classList.remove('active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('active');
+        dots[current].classList.add('active');
+      }, 3000);
+    })();
   </script>
 
   <!-- Daily Insight System -->

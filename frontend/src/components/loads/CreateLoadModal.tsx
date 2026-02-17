@@ -572,13 +572,58 @@ function StateSelect({ label, value, onChange, required, error }: {
 
 interface AddressResult { city: string; state: string; zip: string; display: string; }
 
+// Load Google Maps script once
+let googleMapsLoaded = false;
+let googleMapsLoading = false;
+const googleMapsCallbacks: (() => void)[] = [];
+
+function loadGoogleMaps(): Promise<void> {
+  if (googleMapsLoaded && window.google?.maps?.places) return Promise.resolve();
+  return new Promise((resolve) => {
+    if (googleMapsLoading) { googleMapsCallbacks.push(resolve); return; }
+    googleMapsLoading = true;
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) { console.error("Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"); resolve(); return; }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    script.async = true;
+    script.onload = () => {
+      googleMapsLoaded = true;
+      googleMapsLoading = false;
+      resolve();
+      googleMapsCallbacks.forEach((cb) => cb());
+      googleMapsCallbacks.length = 0;
+    };
+    script.onerror = () => { googleMapsLoading = false; resolve(); };
+    document.head.appendChild(script);
+  });
+}
+
+declare global {
+  interface Window { google: any; }
+}
+
 function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (addr: AddressResult) => void }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AddressResult[]>([]);
+  const [results, setResults] = useState<{ addr: AddressResult; placeId: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const autocompleteRef = useRef<any>(null);
+  const placesRef = useRef<any>(null);
+  const attrRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loadGoogleMaps().then(() => {
+      if (window.google?.maps?.places) {
+        autocompleteRef.current = new window.google.maps.places.AutocompleteService();
+        // PlacesService requires a DOM element or map
+        const div = document.createElement("div");
+        placesRef.current = new window.google.maps.places.PlacesService(div);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -589,39 +634,74 @@ function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (ad
   }, []);
 
   const search = useCallback(async (q: string) => {
-    if (q.length < 3) { setResults([]); return; }
+    if (q.length < 3 || !autocompleteRef.current) { setResults([]); return; }
     setLoading(true);
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=us,ca`,
-        { headers: { "Accept-Language": "en" } }
+      autocompleteRef.current.getPlacePredictions(
+        {
+          input: q,
+          componentRestrictions: { country: ["us", "ca"] },
+          types: ["(cities)"],
+        },
+        (predictions: any[] | null, status: string) => {
+          if (status === "OK" && predictions) {
+            const parsed = predictions.slice(0, 5).map((p: any) => {
+              const terms = p.terms || [];
+              const city = terms[0]?.value || "";
+              const state = terms[1]?.value || "";
+              return {
+                addr: { city, state: state.length === 2 ? state : state.slice(0, 2).toUpperCase(), zip: "", display: p.description },
+                placeId: p.place_id,
+              };
+            });
+            setResults(parsed);
+            setShowDropdown(parsed.length > 0);
+          } else {
+            setResults([]);
+          }
+          setLoading(false);
+        }
       );
-      const data = await res.json();
-      const parsed: AddressResult[] = data
-        .filter((r: any) => r.address && (r.address.city || r.address.town || r.address.village || r.address.county))
-        .map((r: any) => {
-          const a = r.address;
-          const city = a.city || a.town || a.village || a.county || "";
-          const state = a["ISO3166-2-lvl4"]?.split("-")[1] || a.state_code || a.state || "";
-          const zip = a.postcode || "";
-          return { city, state: state.toUpperCase().slice(0, 2), zip, display: r.display_name };
-        });
-      setResults(parsed);
-      setShowDropdown(parsed.length > 0);
-    } catch { setResults([]); }
-    setLoading(false);
+    } catch {
+      setResults([]);
+      setLoading(false);
+    }
   }, []);
 
   const handleChange = (val: string) => {
     setQuery(val);
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => search(val), 350);
+    timerRef.current = setTimeout(() => search(val), 300);
   };
 
-  const handleSelect = (addr: AddressResult) => {
-    onSelect(addr);
-    setQuery(addr.display.split(",").slice(0, 2).join(",").trim());
+  const handleSelect = (item: { addr: AddressResult; placeId: string }) => {
     setShowDropdown(false);
+    setQuery(item.addr.display.split(",").slice(0, 2).join(",").trim());
+
+    // Get place details for zip code
+    if (placesRef.current && item.placeId) {
+      placesRef.current.getDetails(
+        { placeId: item.placeId, fields: ["address_components"] },
+        (place: any, status: string) => {
+          if (status === "OK" && place?.address_components) {
+            let city = item.addr.city;
+            let state = item.addr.state;
+            let zip = "";
+            for (const comp of place.address_components) {
+              const types: string[] = comp.types;
+              if (types.includes("locality")) city = comp.long_name;
+              if (types.includes("administrative_area_level_1")) state = comp.short_name;
+              if (types.includes("postal_code")) zip = comp.short_name;
+            }
+            onSelect({ city, state, zip, display: item.addr.display });
+          } else {
+            onSelect(item.addr);
+          }
+        }
+      );
+    } else {
+      onSelect(item.addr);
+    }
   };
 
   return (
@@ -642,11 +722,11 @@ function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (ad
           {results.map((r, i) => (
             <button key={i} onClick={() => handleSelect(r)}
               className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition truncate">
-              <span className="text-gold font-medium">{r.city}, {r.state}</span>
-              {r.zip && <span className="text-slate-500"> {r.zip}</span>}
-              <span className="text-slate-600 block text-xs truncate">{r.display}</span>
+              <span className="text-gold font-medium">{r.addr.city}, {r.addr.state}</span>
+              <span className="text-slate-600 block text-xs truncate">{r.addr.display}</span>
             </button>
           ))}
+          <div ref={attrRef} className="px-3 py-1 text-[9px] text-slate-600 text-right">Powered by Google</div>
         </div>
       )}
     </div>
