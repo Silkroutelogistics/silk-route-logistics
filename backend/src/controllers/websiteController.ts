@@ -84,7 +84,7 @@ export async function createWebsiteLead(req: Request, res: Response) {
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${data.originCity}, ${data.originState} → ${data.destCity}, ${data.destState}</td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #e2e8f0">${data.equipment || "Any"}</td></tr>
         </table>
-        <p>In the meantime, feel free to call us at <strong>(312) 555-0175</strong> for immediate assistance.</p>
+        <p>In the meantime, feel free to call us at <strong>(269) 220-6760</strong> for immediate assistance.</p>
       `),
     ).catch((e) => console.error("[Website] Failed to send lead confirmation:", e.message));
 

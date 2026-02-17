@@ -9,7 +9,7 @@ const COMPANY = {
   name: "Silk Route Logistics Inc.",
   address: "4000 S Westnedge Ave",
   cityStateZip: "Kalamazoo, MI 49008",
-  phone: "+1 (269) 555-0100",
+  phone: "+1 (269) 220-6760",
   email: "info@silkroutelogistics.ai",
   website: "silkroutelogistics.ai",
 };

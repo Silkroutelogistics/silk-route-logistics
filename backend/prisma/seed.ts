@@ -25,7 +25,7 @@ async function main() {
       company: "Silk Route Logistics",
       role: UserRole.ADMIN,
       isVerified: true,
-      phone: "(269) 555-0100",
+      phone: "(269) 220-6760",
     },
   });
 
