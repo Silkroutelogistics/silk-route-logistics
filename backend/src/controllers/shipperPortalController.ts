@@ -685,8 +685,8 @@ export async function createQuoteRequest(req: AuthRequest, res: Response) {
         specialInstructions: specialInstructions || "",
         rate: 0,
         notes: `Load Type: ${loadType || "FTL"}\nSubmitted via Shipper Portal`,
-        poster: { connect: { id: userId } },
-        ...(customer ? { customer: { connect: { id: customer.id } } } : {}),
+        posterId: userId,
+        customerId: customer?.id ?? null,
       },
     });
 
