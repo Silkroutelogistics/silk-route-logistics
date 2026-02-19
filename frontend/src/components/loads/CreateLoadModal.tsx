@@ -34,8 +34,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
   const [attempted, setAttempted] = useState<Record<number, boolean>>({});
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
-    originCity: "", originState: "", originZip: "",
-    destCity: "", destState: "", destZip: "",
+    originAddress: "", originCity: "", originState: "", originZip: "",
+    destAddress: "", destCity: "", destState: "", destZip: "",
     pickupDate: "", deliveryDate: "", distance: "",
     shipmentType: "DOMESTIC" as "DOMESTIC" | "CROSS_BORDER",
     borderCrossingPoint: "", customsBrokerName: "", customsBrokerPhone: "",
@@ -107,8 +107,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
   const mutation = useMutation({
     mutationFn: (status: string) => {
       const payload: Record<string, unknown> = {
-        originCity: form.originCity, originState: form.originState, originZip: form.originZip,
-        destCity: form.destCity, destState: form.destState, destZip: form.destZip,
+        originAddress: form.originAddress || undefined, originCity: form.originCity, originState: form.originState, originZip: form.originZip,
+        destAddress: form.destAddress || undefined, destCity: form.destCity, destState: form.destState, destZip: form.destZip,
         pickupDate: form.pickupDate, deliveryDate: form.deliveryDate,
         equipmentType: form.equipmentType, commodity: form.commodity || undefined,
         rate: parseFloat(form.rate),
@@ -236,20 +236,24 @@ export function CreateLoadModal({ open, onClose }: Props) {
             <>
               <h3 className="text-sm font-medium text-slate-300">Origin</h3>
               <AddressAutocomplete
-                label="Search address..."
-                onSelect={(addr) => { update("originCity", addr.city); update("originState", addr.state); update("originZip", addr.zip); }}
+                label="Search full address..."
+                value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
+                onSelect={(addr) => { update("originAddress", addr.address); update("originCity", addr.city); update("originState", addr.state); update("originZip", addr.zip); }}
               />
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
+                <Input label="Address" value={form.originAddress} onChange={(v) => update("originAddress", v)} />
                 <Input label="City" value={form.originCity} onChange={(v) => update("originCity", v)} required error={attempted[1] ? errors.originCity : undefined} />
                 <StateSelect label="State/Province" value={form.originState} onChange={(v) => update("originState", v)} required error={attempted[1] ? errors.originState : undefined} />
                 <Input label="Zip/Postal" value={form.originZip} onChange={(v) => update("originZip", v)} required error={attempted[1] ? errors.originZip : undefined} />
               </div>
               <h3 className="text-sm font-medium text-slate-300 mt-4">Destination</h3>
               <AddressAutocomplete
-                label="Search address..."
-                onSelect={(addr) => { update("destCity", addr.city); update("destState", addr.state); update("destZip", addr.zip); }}
+                label="Search full address..."
+                value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
+                onSelect={(addr) => { update("destAddress", addr.address); update("destCity", addr.city); update("destState", addr.state); update("destZip", addr.zip); }}
               />
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
+                <Input label="Address" value={form.destAddress} onChange={(v) => update("destAddress", v)} />
                 <Input label="City" value={form.destCity} onChange={(v) => update("destCity", v)} required error={attempted[1] ? errors.destCity : undefined} />
                 <StateSelect label="State/Province" value={form.destState} onChange={(v) => update("destState", v)} required error={attempted[1] ? errors.destState : undefined} />
                 <Input label="Zip/Postal" value={form.destZip} onChange={(v) => update("destZip", v)} required error={attempted[1] ? errors.destZip : undefined} />
@@ -424,7 +428,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
                   <h4 className="text-xs font-medium text-slate-400 uppercase">Route Details</h4>
                   <button onClick={() => setStep(1)} className="text-xs text-gold hover:underline">Edit</button>
                 </div>
-                <Row label="Route" value={`${form.originCity}, ${form.originState} ${form.originZip} → ${form.destCity}, ${form.destState} ${form.destZip}`} />
+                <Row label="Origin" value={`${[form.originAddress, form.originCity, form.originState, form.originZip].filter(Boolean).join(", ")}`} />
+                <Row label="Destination" value={`${[form.destAddress, form.destCity, form.destState, form.destZip].filter(Boolean).join(", ")}`} />
                 <Row label="Pickup" value={form.pickupDate} />
                 <Row label="Delivery" value={form.deliveryDate} />
                 <Row label="Distance" value={form.distance ? `${form.distance} mi` : "—"} />
@@ -570,7 +575,7 @@ function StateSelect({ label, value, onChange, required, error }: {
   );
 }
 
-interface AddressResult { city: string; state: string; zip: string; display: string; }
+interface AddressResult { address: string; city: string; state: string; zip: string; }
 
 // Load Google Maps script once
 let googleMapsLoaded = false;
@@ -603,24 +608,25 @@ declare global {
   interface Window { google: any; }
 }
 
-function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (addr: AddressResult) => void }) {
+function AddressAutocomplete({ label, value, onSelect }: {
+  label: string;
+  value: AddressResult;
+  onSelect: (addr: AddressResult) => void;
+}) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ addr: AddressResult; placeId: string }[]>([]);
+  const [results, setResults] = useState<{ description: string; placeId: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const autocompleteRef = useRef<any>(null);
   const placesRef = useRef<any>(null);
-  const attrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadGoogleMaps().then(() => {
       if (window.google?.maps?.places) {
         autocompleteRef.current = new window.google.maps.places.AutocompleteService();
-        // PlacesService requires a DOM element or map
-        const div = document.createElement("div");
-        placesRef.current = new window.google.maps.places.PlacesService(div);
+        placesRef.current = new window.google.maps.places.PlacesService(document.createElement("div"));
       }
     });
   }, []);
@@ -633,39 +639,22 @@ function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (ad
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const search = useCallback(async (q: string) => {
+  // Sync display when value clears
+  useEffect(() => { if (!value.address && !value.city) setQuery(""); }, [value.address, value.city]);
+
+  const search = useCallback((q: string) => {
     if (q.length < 3 || !autocompleteRef.current) { setResults([]); return; }
     setLoading(true);
-    try {
-      autocompleteRef.current.getPlacePredictions(
-        {
-          input: q,
-          componentRestrictions: { country: ["us", "ca"] },
-          types: ["(cities)"],
-        },
-        (predictions: any[] | null, status: string) => {
-          if (status === "OK" && predictions) {
-            const parsed = predictions.slice(0, 5).map((p: any) => {
-              const terms = p.terms || [];
-              const city = terms[0]?.value || "";
-              const state = terms[1]?.value || "";
-              return {
-                addr: { city, state: state.length === 2 ? state : state.slice(0, 2).toUpperCase(), zip: "", display: p.description },
-                placeId: p.place_id,
-              };
-            });
-            setResults(parsed);
-            setShowDropdown(parsed.length > 0);
-          } else {
-            setResults([]);
-          }
-          setLoading(false);
-        }
-      );
-    } catch {
-      setResults([]);
-      setLoading(false);
-    }
+    autocompleteRef.current.getPlacePredictions(
+      { input: q, componentRestrictions: { country: ["us", "ca"] }, types: ["address"] },
+      (predictions: any[] | null, status: string) => {
+        if (status === "OK" && predictions) {
+          setResults(predictions.slice(0, 5).map((p: any) => ({ description: p.description, placeId: p.place_id })));
+          setShowDropdown(true);
+        } else { setResults([]); }
+        setLoading(false);
+      }
+    );
   }, []);
 
   const handleChange = (val: string) => {
@@ -674,34 +663,29 @@ function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (ad
     timerRef.current = setTimeout(() => search(val), 300);
   };
 
-  const handleSelect = (item: { addr: AddressResult; placeId: string }) => {
+  const handleSelect = (item: { description: string; placeId: string }) => {
     setShowDropdown(false);
-    setQuery(item.addr.display.split(",").slice(0, 2).join(",").trim());
-
-    // Get place details for zip code
-    if (placesRef.current && item.placeId) {
-      placesRef.current.getDetails(
-        { placeId: item.placeId, fields: ["address_components"] },
-        (place: any, status: string) => {
-          if (status === "OK" && place?.address_components) {
-            let city = item.addr.city;
-            let state = item.addr.state;
-            let zip = "";
-            for (const comp of place.address_components) {
-              const types: string[] = comp.types;
-              if (types.includes("locality")) city = comp.long_name;
-              if (types.includes("administrative_area_level_1")) state = comp.short_name;
-              if (types.includes("postal_code")) zip = comp.short_name;
-            }
-            onSelect({ city, state, zip, display: item.addr.display });
-          } else {
-            onSelect(item.addr);
-          }
+    setQuery(item.description);
+    if (!placesRef.current) return;
+    placesRef.current.getDetails(
+      { placeId: item.placeId, fields: ["address_components", "formatted_address"] },
+      (place: any, status: string) => {
+        if (status !== "OK" || !place?.address_components) return;
+        let streetNumber = "", route = "", city = "", state = "", zip = "";
+        for (const c of place.address_components) {
+          const t: string[] = c.types;
+          if (t.includes("street_number")) streetNumber = c.long_name;
+          if (t.includes("route")) route = c.long_name;
+          if (t.includes("locality")) city = c.long_name;
+          if (t.includes("sublocality_level_1") && !city) city = c.long_name;
+          if (t.includes("administrative_area_level_1")) state = c.short_name;
+          if (t.includes("postal_code")) zip = c.short_name;
         }
-      );
-    } else {
-      onSelect(item.addr);
-    }
+        const address = [streetNumber, route].filter(Boolean).join(" ");
+        onSelect({ address, city, state, zip });
+        setQuery(place.formatted_address || item.description);
+      }
+    );
   };
 
   return (
@@ -719,14 +703,13 @@ function AddressAutocomplete({ label, onSelect }: { label: string; onSelect: (ad
       </div>
       {showDropdown && results.length > 0 && (
         <div className="absolute z-50 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-          {results.map((r, i) => (
-            <button key={i} onClick={() => handleSelect(r)}
+          {results.map((r) => (
+            <button key={r.placeId} onClick={() => handleSelect(r)}
               className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition truncate">
-              <span className="text-gold font-medium">{r.addr.city}, {r.addr.state}</span>
-              <span className="text-slate-600 block text-xs truncate">{r.addr.display}</span>
+              <MapPin className="w-3 h-3 inline mr-1.5 text-gold" />{r.description}
             </button>
           ))}
-          <div ref={attrRef} className="px-3 py-1 text-[9px] text-slate-600 text-right">Powered by Google</div>
+          <div className="px-3 py-1 text-[9px] text-slate-600 text-right">Powered by Google</div>
         </div>
       )}
     </div>
