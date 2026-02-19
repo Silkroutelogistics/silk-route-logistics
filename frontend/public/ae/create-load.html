@@ -719,6 +719,10 @@
                   <label>Company / Facility Name <span class="required">*</span></label>
                   <input type="text" id="origin-company" data-field="originCompany">
                 </div>
+                <div class="form-group full-width">
+                  <label>Street Address <span class="required">*</span></label>
+                  <input type="text" id="origin-address" data-field="originAddress" placeholder="Start typing an address..." autocomplete="off">
+                </div>
                 <div class="form-group">
                   <label>City <span class="required">*</span></label>
                   <input type="text" id="origin-city" data-field="originCity">
@@ -812,6 +816,10 @@
                 <div class="form-group full-width">
                   <label>Company / Facility Name <span class="required">*</span></label>
                   <input type="text" id="dest-company" data-field="destCompany">
+                </div>
+                <div class="form-group full-width">
+                  <label>Street Address <span class="required">*</span></label>
+                  <input type="text" id="dest-address" data-field="destAddress" placeholder="Start typing an address..." autocomplete="off">
                 </div>
                 <div class="form-group">
                   <label>City <span class="required">*</span></label>
@@ -1626,6 +1634,7 @@
       html += '<div class="review-card">';
       html += '<div class="review-card-title">Origin</div>';
       html += reviewRow("Facility", d.originCompany);
+      if (d.originAddress) html += reviewRow("Address", d.originAddress);
       html += reviewRow("Location", (d.originCity || "") + ", " + (d.originState || "") + " " + (d.originZip || ""));
       html += reviewRow("Country", d.originCountry);
       html += reviewRow("Pickup Date", d.pickupDate);
@@ -1636,6 +1645,7 @@
       html += '<div class="review-card">';
       html += '<div class="review-card-title">Destination</div>';
       html += reviewRow("Facility", d.destCompany);
+      if (d.destAddress) html += reviewRow("Address", d.destAddress);
       html += reviewRow("Location", (d.destCity || "") + ", " + (d.destState || "") + " " + (d.destZip || ""));
       html += reviewRow("Country", d.destCountry);
       html += reviewRow("Delivery Date", d.deliveryDate);
@@ -1719,6 +1729,7 @@
         loadNumber: document.getElementById("load-number").value,
 
         originCompany: document.getElementById("origin-company").value,
+        originAddress: document.getElementById("origin-address").value,
         originCity: document.getElementById("origin-city").value,
         originState: document.getElementById("origin-state").value.toUpperCase(),
         originZip: document.getElementById("origin-zip").value,
@@ -1736,6 +1747,7 @@
         pickupContactEmail: document.getElementById("pickup-contact-email").value,
 
         destCompany: document.getElementById("dest-company").value,
+        destAddress: document.getElementById("dest-address").value,
         destCity: document.getElementById("dest-city").value,
         destState: document.getElementById("dest-state").value.toUpperCase(),
         destZip: document.getElementById("dest-zip").value,
@@ -1811,6 +1823,7 @@
           "customer-search": "customerName",
           "customer-id": "customerId",
           "origin-company": "originCompany",
+          "origin-address": "originAddress",
           "origin-city": "originCity",
           "origin-state": "originState",
           "origin-zip": "originZip",
@@ -1825,6 +1838,7 @@
           "pickup-contact-phone": "pickupContactPhone",
           "pickup-contact-email": "pickupContactEmail",
           "dest-company": "destCompany",
+          "dest-address": "destAddress",
           "dest-city": "destCity",
           "dest-state": "destState",
           "dest-zip": "destZip",
@@ -2024,6 +2038,7 @@
         status: "POSTED",
 
         originName: d.originCompany,
+        originAddress: d.originAddress || null,
         originCity: d.originCity,
         originState: d.originState,
         originZip: d.originZip,
@@ -2032,6 +2047,7 @@
         pickupTimeType: d.pickupTimeType,
 
         destinationName: d.destCompany,
+        destAddress: d.destAddress || null,
         destinationCity: d.destCity,
         destinationState: d.destState,
         destinationZip: d.destZip,
@@ -2163,6 +2179,62 @@
     // Wire up the "Save Draft" button
     document.querySelector('.action-bar .btn-secondary').onclick = saveDraftBtn;
 
+  </script>
+
+  <!-- Google Maps Places API -->
+  <script>
+  (function(){
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyD7l3H5sHuMVwICBGm4wXb7MtArFQs_V-A&libraries=places&callback=initPlacesAutocomplete';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  })();
+
+  function initPlacesAutocomplete() {
+    setupAddressAutocomplete('origin-address', 'origin-city', 'origin-state', 'origin-zip');
+    setupAddressAutocomplete('dest-address', 'dest-city', 'dest-state', 'dest-zip');
+  }
+
+  function setupAddressAutocomplete(inputId, cityId, stateId, zipId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      componentRestrictions: { country: ['us', 'ca', 'mx'] }
+    });
+    autocomplete.setFields(['address_components', 'formatted_address']);
+    autocomplete.addListener('place_changed', function() {
+      var place = autocomplete.getPlace();
+      if (!place || !place.address_components) return;
+      var comps = place.address_components;
+      var get = function(type) {
+        for (var i = 0; i < comps.length; i++) {
+          if (comps[i].types.indexOf(type) !== -1) return comps[i];
+        }
+        return null;
+      };
+      var streetNum = get('street_number');
+      var route = get('route');
+      var city = get('locality') || get('sublocality_level_1') || get('administrative_area_level_3');
+      var state = get('administrative_area_level_1');
+      var zip = get('postal_code');
+      // Build street address
+      var street = '';
+      if (streetNum) street = streetNum.long_name;
+      if (route) street += (street ? ' ' : '') + route.long_name;
+      if (street) input.value = street;
+      // Fill city/state/zip
+      var cityEl = document.getElementById(cityId);
+      var stateEl = document.getElementById(stateId);
+      var zipEl = document.getElementById(zipId);
+      if (cityEl && city) { cityEl.value = city.long_name; cityEl.dispatchEvent(new Event('input')); }
+      if (stateEl && state) { stateEl.value = state.short_name; stateEl.dispatchEvent(new Event('input')); }
+      if (zipEl && zip) { zipEl.value = zip.long_name; zipEl.dispatchEvent(new Event('input')); }
+      // Trigger auto-save
+      if (typeof saveDraft === 'function') saveDraft();
+    });
+  }
   </script>
 
   <script src="/ae/js/sidebar.js"></script>

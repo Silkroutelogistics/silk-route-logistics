@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2 } from "lucide-react";
@@ -178,7 +178,18 @@ export default function OnboardingPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                <input value={form.address} onChange={(e) => set("address", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="Street address" />
+                <AddressAutocomplete
+                  value={form.address}
+                  onChange={(v) => set("address", v)}
+                  onSelect={(addr) => {
+                    set("address", addr.street);
+                    set("city", addr.city);
+                    set("state", addr.state);
+                    set("zip", addr.zip);
+                  }}
+                  placeholder="Start typing an address..."
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none"
+                />
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
@@ -379,5 +390,65 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Google Places AddressAutocomplete ── */
+let mapsPromise: Promise<void> | null = null;
+function loadGoogleMaps(): Promise<void> {
+  if (mapsPromise) return mapsPromise;
+  if (typeof window !== "undefined" && (window as any).google?.maps?.places) return Promise.resolve();
+  mapsPromise = new Promise((resolve) => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+  return mapsPromise;
+}
+
+interface ParsedAddr { street: string; city: string; state: string; zip: string; }
+
+function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: {
+  value: string; onChange: (v: string) => void; onSelect: (a: ParsedAddr) => void;
+  placeholder?: string; className?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const acRef = useRef<any>(null); // eslint-disable-line
+
+  const handlePlace = useCallback(() => {
+    const place = acRef.current?.getPlace();
+    if (!place?.address_components) return;
+    const get = (type: string) => place.address_components?.find((c: any) => c.types.includes(type)); // eslint-disable-line
+    const num = get("street_number")?.long_name || "";
+    const route = get("route")?.long_name || "";
+    const street = [num, route].filter(Boolean).join(" ");
+    onSelect({
+      street: street || (inputRef.current?.value ?? ""),
+      city: (get("locality") || get("sublocality_level_1") || get("administrative_area_level_3"))?.long_name || "",
+      state: get("administrative_area_level_1")?.short_name || "",
+      zip: get("postal_code")?.long_name || "",
+    });
+  }, [onSelect]);
+
+  useEffect(() => {
+    loadGoogleMaps().then(() => {
+      if (!inputRef.current || !(window as any).google?.maps?.places || acRef.current) return;
+      acRef.current = new (window as any).google.maps.places.Autocomplete(inputRef.current, { // eslint-disable-line
+        types: ["address"],
+        componentRestrictions: { country: ["us", "ca", "mx"] },
+      });
+      acRef.current.setFields(["address_components", "formatted_address"]);
+      acRef.current.addListener("place_changed", handlePlace);
+    });
+  }, [handlePlace]);
+
+  return (
+    <input ref={inputRef} type="text" value={value} onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder} className={className} autoComplete="off" />
   );
 }

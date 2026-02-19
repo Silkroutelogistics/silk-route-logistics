@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ArrowRight, MapPin, User } from "lucide-react";
@@ -56,7 +56,23 @@ export default function ShipperRegisterPage() {
                 <Field label="MC/DOT # (if applicable)" value={form.mc} onChange={(v) => upd("mc", v)} placeholder="MC-XXXXXX" />
                 <Field label="Annual Freight Spend" value={form.spend} onChange={(v) => upd("spend", v)} options={["Under $100K", "$100K - $500K", "$500K - $1M", "$1M - $5M", "$5M+"]} />
               </div>
-              <Field label="Company Address" required value={form.address} onChange={(v) => upd("address", v)} placeholder="123 Industrial Pkwy, City, ST ZIP" icon={<MapPin size={16} />} />
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-wide">
+                  Company Address <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><MapPin size={16} /></div>
+                  <AddressAutocomplete
+                    value={form.address || ""}
+                    onChange={(v) => upd("address", v)}
+                    onSelect={(addr) => {
+                      upd("address", [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "));
+                    }}
+                    placeholder="Start typing an address..."
+                    className="w-full py-2.5 pl-10 pr-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Primary Contact Name" required value={form.contact} onChange={(v) => upd("contact", v)} placeholder="Jane Doe" icon={<User size={16} />} />
                 <Field label="Title / Role" value={form.title} onChange={(v) => upd("title", v)} placeholder="Logistics Manager" />
@@ -183,5 +199,65 @@ function Field({
       </div>
       {helpText && <div className="text-[11px] text-gray-400 mt-1">{helpText}</div>}
     </div>
+  );
+}
+
+/* ── Google Places AddressAutocomplete ── */
+let mapsPromise: Promise<void> | null = null;
+function loadGoogleMaps(): Promise<void> {
+  if (mapsPromise) return mapsPromise;
+  if (typeof window !== "undefined" && (window as any).google?.maps?.places) return Promise.resolve();
+  mapsPromise = new Promise((resolve) => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+  return mapsPromise;
+}
+
+interface ParsedAddr { street: string; city: string; state: string; zip: string; }
+
+function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: {
+  value: string; onChange: (v: string) => void; onSelect: (a: ParsedAddr) => void;
+  placeholder?: string; className?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const acRef = useRef<any>(null); // eslint-disable-line
+
+  const handlePlace = useCallback(() => {
+    const place = acRef.current?.getPlace();
+    if (!place?.address_components) return;
+    const get = (type: string) => place.address_components?.find((c: any) => c.types.includes(type)); // eslint-disable-line
+    const num = get("street_number")?.long_name || "";
+    const route = get("route")?.long_name || "";
+    const street = [num, route].filter(Boolean).join(" ");
+    onSelect({
+      street: street || (inputRef.current?.value ?? ""),
+      city: (get("locality") || get("sublocality_level_1") || get("administrative_area_level_3"))?.long_name || "",
+      state: get("administrative_area_level_1")?.short_name || "",
+      zip: get("postal_code")?.long_name || "",
+    });
+  }, [onSelect]);
+
+  useEffect(() => {
+    loadGoogleMaps().then(() => {
+      if (!inputRef.current || !(window as any).google?.maps?.places || acRef.current) return;
+      acRef.current = new (window as any).google.maps.places.Autocomplete(inputRef.current, { // eslint-disable-line
+        types: ["address"],
+        componentRestrictions: { country: ["us", "ca", "mx"] },
+      });
+      acRef.current.setFields(["address_components", "formatted_address"]);
+      acRef.current.addListener("place_changed", handlePlace);
+    });
+  }, [handlePlace]);
+
+  return (
+    <input ref={inputRef} type="text" value={value} onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder} className={className} autoComplete="off" />
   );
 }
