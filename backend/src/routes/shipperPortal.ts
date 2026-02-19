@@ -7,6 +7,7 @@ import {
   getShipperAnalytics,
   getShipperTracking,
   getShipperDocuments,
+  createQuoteRequest,
 } from "../controllers/shipperPortalController";
 
 const router = Router();
@@ -20,5 +21,6 @@ router.get("/invoices", getShipperInvoices as any);
 router.get("/analytics", getShipperAnalytics as any);
 router.get("/tracking", getShipperTracking as any);
 router.get("/documents", getShipperDocuments as any);
+router.post("/quotes", createQuoteRequest as any);
 
 export default router;

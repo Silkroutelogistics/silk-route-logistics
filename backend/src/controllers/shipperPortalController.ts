@@ -645,3 +645,58 @@ export async function getShipperDocuments(req: AuthRequest, res: Response) {
     res.status(500).json({ error: "Failed to load documents" });
   }
 }
+
+// ─── Create Quote Request ────────────────────────────────
+export async function createQuoteRequest(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const {
+      originAddress, originCity, originState, originZip,
+      destAddress, destCity, destState, destZip,
+      pickupDate, deliveryDate, equipmentType, loadType,
+      weight, commodity, specialInstructions,
+    } = req.body;
+
+    if (!originCity || !originState || !destCity || !destState || !pickupDate || !equipmentType || !weight || !commodity) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Resolve the shipper's customer record
+    const customer = await prisma.customer.findUnique({ where: { userId } });
+
+    // Create the load as a quote (POSTED status = pending quote)
+    const load = await prisma.load.create({
+      data: {
+        referenceNumber: `RFQ-${Date.now().toString(36).toUpperCase()}`,
+        status: LoadStatus.POSTED,
+        originAddress: originAddress || "",
+        originCity,
+        originState,
+        originZip: originZip || "",
+        destAddress: destAddress || "",
+        destCity,
+        destState,
+        destZip: destZip || "",
+        pickupDate: new Date(pickupDate),
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        equipmentType,
+        commodity,
+        weight: parseFloat(weight.toString().replace(/,/g, "")) || 0,
+        specialInstructions: specialInstructions || "",
+        rate: 0,
+        notes: `Load Type: ${loadType || "FTL"}\nSubmitted via Shipper Portal`,
+        poster: { connect: { id: userId } },
+        ...(customer ? { customer: { connect: { id: customer.id } } } : {}),
+      },
+    });
+
+    res.status(201).json({
+      id: load.id,
+      referenceNumber: load.referenceNumber,
+      message: "Quote request submitted successfully",
+    });
+  } catch (err) {
+    console.error("[ShipperPortal] Create quote error:", err);
+    res.status(500).json({ error: "Failed to submit quote request" });
+  }
+}
