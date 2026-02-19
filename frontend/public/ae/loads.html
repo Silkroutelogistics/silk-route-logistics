@@ -939,6 +939,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           Completed <span class="tab-count" id="completed-count">--</span>
         </button>
+        <button class="workflow-tab" onclick="switchWorkflowTab('archive')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          Archive <span class="tab-count" id="archive-count">--</span>
+        </button>
       </div>
 
       <!-- ===== LOAD BOARD PANEL ===== -->
@@ -1074,7 +1078,105 @@
         </div>
       </div>
 
+      <!-- ===== ARCHIVE PANEL ===== -->
+      <div class="workflow-panel" id="panel-archive">
+        <div style="padding:16px 32px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--gray-200);background:var(--white)">
+          <span style="font-size:13px;color:var(--gray-500)">Cancelled and archived loads are shown here. You can restore loads back to the Load Board.</span>
+        </div>
+        <div class="table-wrap">
+          <table class="load-table" id="archive-table">
+            <thead>
+              <tr>
+                <th>Load #</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th class="col-hide-mobile">Shipper</th>
+                <th>Status</th>
+                <th class="col-hide-mobile">Cancelled By</th>
+                <th>Reason</th>
+                <th class="col-hide-mobile">Cancelled On</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="archive-tbody">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </main>
+  </div>
+
+  <!-- ===== CANCEL LOAD MODAL ===== -->
+  <div class="modal-backdrop" id="cancel-modal" style="display:none">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h3 id="cancel-modal-title">Cancel Load</h3>
+        <button class="modal-close" onclick="closeCancelModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px">
+        <!-- Step 1: Confirm -->
+        <div id="cancel-step-1">
+          <div style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(231,76,60,0.06);border-radius:8px;border:1px solid rgba(231,76,60,0.15);margin-bottom:20px">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+              <div style="font-weight:600;color:var(--navy);font-size:14px">Are you sure you want to cancel this load?</div>
+              <div style="font-size:12px;color:var(--gray-500);margin-top:2px" id="cancel-load-info"></div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:16px">
+            This will archive the load and all related tenders, check calls, and invoices. Cancelled loads can be restored from the <strong>Archive</strong> tab.
+          </p>
+          <div style="display:flex;justify-content:flex-end;gap:10px">
+            <button class="btn-secondary btn-sm" onclick="closeCancelModal()">Go Back</button>
+            <button class="btn-danger btn-sm" onclick="goToCancelStep2()">Continue to Cancel</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Reason -->
+        <div id="cancel-step-2" style="display:none">
+          <div style="margin-bottom:16px">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Cancellation Reason <span style="color:var(--red)">*</span></label>
+            <select id="cancel-reason-select" style="width:100%;padding:9px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:14px;color:var(--gray-700);outline:none;margin-bottom:12px" onchange="toggleCancelOther()">
+              <option value="">Select a reason...</option>
+              <option value="Shipper cancelled shipment">Shipper cancelled shipment</option>
+              <option value="Carrier no-show / fall-off">Carrier no-show / fall-off</option>
+              <option value="Rate disagreement">Rate disagreement</option>
+              <option value="Load not ready at origin">Load not ready at origin</option>
+              <option value="Duplicate load entry">Duplicate load entry</option>
+              <option value="Capacity / equipment issue">Capacity / equipment issue</option>
+              <option value="Weather / road closure">Weather / road closure</option>
+              <option value="Compliance issue">Compliance issue</option>
+              <option value="Other">Other (specify below)</option>
+            </select>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Additional Notes <span id="cancel-notes-req" style="color:var(--red);display:none">*</span></label>
+            <textarea id="cancel-notes" rows="3" placeholder="Provide details about the cancellation..." style="width:100%;padding:9px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:14px;color:var(--gray-700);outline:none;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+          </div>
+          <div id="cancel-error" style="display:none;padding:8px 12px;background:rgba(231,76,60,0.06);border-radius:6px;color:#e74c3c;font-size:13px;margin-bottom:12px"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <button class="btn-secondary btn-sm" onclick="goToCancelStep1()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
+            </button>
+            <button class="btn-danger btn-sm" id="cancel-confirm-btn" onclick="confirmCancelLoad()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Cancel &amp; Archive Load
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Success -->
+        <div id="cancel-step-3" style="display:none;text-align:center;padding:20px 0">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="margin-bottom:12px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div style="font-size:16px;font-weight:600;color:var(--navy);margin-bottom:6px">Load Cancelled</div>
+          <div style="font-size:13px;color:var(--gray-500);margin-bottom:20px" id="cancel-success-msg"></div>
+          <button class="btn-primary btn-sm" onclick="closeCancelModal()">Done</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== NEW LOAD MODAL ===== -->
@@ -2302,17 +2404,91 @@
       return e.replace(/_/g, " ").replace(/\b\w/g, function(c){return c.toUpperCase();});
     }
 
+    /* =========================================
+       CANCEL LOAD MODAL (Step-by-step)
+       ========================================= */
+    var cancelLoadData = null;
+
     function deleteLoad() {
       if (!state.currentLoad) return;
-      var ref = state.currentLoad.referenceNumber || state.currentLoad.id;
-      if (!confirm("Are you sure you want to archive Load " + ref + "?\n\nThis will archive the load and all related tenders, check calls, and invoices. You can restore it later.")) return;
-      SRL.request("/api/loads/" + state.currentLoad.id, { method: "DELETE" })
+      cancelLoadData = state.currentLoad;
+      var ref = cancelLoadData.loadNumber || cancelLoadData.referenceNumber || cancelLoadData.id;
+      var route = (cancelLoadData.originCity || "") + ", " + (cancelLoadData.originState || "") + " → " + (cancelLoadData.destCity || "") + ", " + (cancelLoadData.destState || "");
+      document.getElementById("cancel-modal-title").textContent = "Cancel Load " + ref;
+      document.getElementById("cancel-load-info").textContent = ref + " | " + route;
+      document.getElementById("cancel-step-1").style.display = "block";
+      document.getElementById("cancel-step-2").style.display = "none";
+      document.getElementById("cancel-step-3").style.display = "none";
+      document.getElementById("cancel-reason-select").value = "";
+      document.getElementById("cancel-notes").value = "";
+      document.getElementById("cancel-error").style.display = "none";
+      document.getElementById("cancel-modal").style.display = "flex";
+    }
+
+    function closeCancelModal() {
+      document.getElementById("cancel-modal").style.display = "none";
+      cancelLoadData = null;
+    }
+
+    function goToCancelStep2() {
+      document.getElementById("cancel-step-1").style.display = "none";
+      document.getElementById("cancel-step-2").style.display = "block";
+    }
+
+    function goToCancelStep1() {
+      document.getElementById("cancel-step-2").style.display = "none";
+      document.getElementById("cancel-step-1").style.display = "block";
+    }
+
+    function toggleCancelOther() {
+      var sel = document.getElementById("cancel-reason-select").value;
+      var req = document.getElementById("cancel-notes-req");
+      req.style.display = sel === "Other" ? "inline" : "none";
+    }
+
+    function confirmCancelLoad() {
+      var reason = document.getElementById("cancel-reason-select").value;
+      var notes = document.getElementById("cancel-notes").value.trim();
+      var errEl = document.getElementById("cancel-error");
+
+      if (!reason) {
+        errEl.textContent = "Please select a cancellation reason.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (reason === "Other" && !notes) {
+        errEl.textContent = "Please provide details for the cancellation.";
+        errEl.style.display = "block";
+        return;
+      }
+      errEl.style.display = "none";
+
+      var fullReason = reason === "Other" ? notes : (notes ? reason + " — " + notes : reason);
+      var btn = document.getElementById("cancel-confirm-btn");
+      btn.disabled = true;
+      btn.textContent = "Cancelling...";
+
+      SRL.request("/api/loads/" + cancelLoadData.id, {
+        method: "DELETE",
+        body: { reason: fullReason }
+      })
         .then(function() {
-          showToast("Load " + ref + " archived", "success");
+          var ref = cancelLoadData.loadNumber || cancelLoadData.referenceNumber || cancelLoadData.id;
+          document.getElementById("cancel-step-2").style.display = "none";
+          document.getElementById("cancel-step-3").style.display = "block";
+          document.getElementById("cancel-success-msg").textContent = "Load " + ref + " has been cancelled and moved to the Archive tab.";
           showListView();
           fetchLoads();
+          loadWorkflowCounts();
         })
-        .catch(function(err) { showToast("Failed: " + err.message, "error"); });
+        .catch(function(err) {
+          errEl.textContent = "Failed: " + err.message;
+          errEl.style.display = "block";
+        })
+        .finally(function() {
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Cancel &amp; Archive Load';
+        });
     }
 
     function showToast(msg, type) {
@@ -2375,6 +2551,7 @@
       if (tab === "board") { tabs[0].classList.add("active"); document.getElementById("panel-board").classList.add("active"); }
       else if (tab === "track") { tabs[1].classList.add("active"); document.getElementById("panel-track").classList.add("active"); loadTrackLoads(); }
       else if (tab === "completed") { tabs[2].classList.add("active"); document.getElementById("panel-completed").classList.add("active"); loadCompletedLoads(); }
+      else if (tab === "archive") { tabs[3].classList.add("active"); document.getElementById("panel-archive").classList.add("active"); loadArchiveLoads(); }
     }
 
     function loadWorkflowCounts() {
@@ -2389,6 +2566,10 @@
       // Completed: DELIVERED, POD_RECEIVED, INVOICED, COMPLETED
       SRL.getLoads({ status: "DELIVERED,POD_RECEIVED,INVOICED,COMPLETED", limit: 1 }).then(function(r) {
         document.getElementById("completed-count").textContent = r.total || 0;
+      }).catch(function(){});
+      // Archive: soft-deleted loads
+      SRL.getLoads({ include_deleted: "true", status: "CANCELLED", limit: 1 }).then(function(r) {
+        document.getElementById("archive-count").textContent = r.total || 0;
       }).catch(function(){});
     }
 
@@ -2524,12 +2705,62 @@
       });
     }
 
+    /* =========================================
+       ARCHIVE TAB
+       ========================================= */
+    function loadArchiveLoads() {
+      SRL.getLoads({ include_deleted: "true", status: "CANCELLED", limit: 200 }).then(function(r) {
+        var loads = (r.loads || []).filter(function(l) { return l.deletedAt; });
+        var tbody = document.getElementById("archive-tbody");
+        if (loads.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gray-400)">No archived loads</td></tr>';
+          return;
+        }
+        tbody.innerHTML = loads.map(function(l) {
+          var ref = esc(l.loadNumber || l.referenceNumber || l.id);
+          var origin = esc(l.originCity || "") + ", " + esc(l.originState || "");
+          var dest = esc(l.destCity || "") + ", " + esc(l.destState || "");
+          var shipper = l.customer ? esc(l.customer.name || "") : (l.poster ? esc(l.poster.company || l.poster.firstName || "") : "—");
+          var reason = esc(l.cancellationReason || "—");
+          var cancelledBy = esc(l.deletedBy || "—");
+          var cancelledOn = l.deletedAt ? new Date(l.deletedAt).toLocaleDateString() : "—";
+          return '<tr>' +
+            '<td style="font-weight:600;color:var(--navy)">' + ref + '</td>' +
+            '<td>' + origin + '</td>' +
+            '<td>' + dest + '</td>' +
+            '<td class="col-hide-mobile">' + shipper + '</td>' +
+            '<td><span class="status-badge status-cancelled">Cancelled</span></td>' +
+            '<td class="col-hide-mobile" style="font-size:12px">' + cancelledBy + '</td>' +
+            '<td style="max-width:200px;font-size:12px;white-space:normal;line-height:1.4">' + reason + '</td>' +
+            '<td class="col-hide-mobile" style="font-size:12px">' + cancelledOn + '</td>' +
+            '<td style="text-align:right"><button class="btn-secondary btn-sm" onclick="restoreArchivedLoad(\'' + l.id + '\',\'' + ref + '\')" style="font-size:11px;padding:4px 10px">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Restore' +
+            '</button></td>' +
+          '</tr>';
+        }).join("");
+      }).catch(function() {
+        document.getElementById("archive-tbody").innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--red)">Error loading archived loads</td></tr>';
+      });
+    }
+
+    function restoreArchivedLoad(loadId, ref) {
+      if (!confirm("Restore load " + ref + " back to the Load Board?")) return;
+      SRL.request("/api/loads/" + loadId + "/restore", { method: "PUT" })
+        .then(function() {
+          showToast("Load " + ref + " restored", "success");
+          loadArchiveLoads();
+          loadWorkflowCounts();
+        })
+        .catch(function(err) { showToast("Failed: " + err.message, "error"); });
+    }
+
     // Load counts on init
     loadWorkflowCounts();
 
     // Check URL hash for tab
     if (window.location.hash === "#track") switchWorkflowTab("track");
     else if (window.location.hash === "#completed") switchWorkflowTab("completed");
+    else if (window.location.hash === "#archive") switchWorkflowTab("archive");
   </script>
 <script src="/ae/js/sidebar.js"></script>
 <script src="/ae/js/notification-bell.js"></script>

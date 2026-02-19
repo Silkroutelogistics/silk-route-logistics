@@ -426,9 +426,18 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
 
   const now = new Date();
   const deletedBy = req.user!.email || req.user!.id;
+  const reason = req.body?.reason || null;
 
   await Promise.all([
-    prisma.load.update({ where: { id: load.id }, data: { deletedAt: now, deletedBy } }),
+    prisma.load.update({
+      where: { id: load.id },
+      data: {
+        deletedAt: now,
+        deletedBy,
+        cancellationReason: reason,
+        status: "CANCELLED",
+      },
+    }),
     prisma.loadTender.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
     prisma.checkCall.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
     prisma.invoice.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),

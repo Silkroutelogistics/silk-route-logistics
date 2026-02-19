@@ -828,8 +828,9 @@ model Load {
   @@index([loadNumber])
   @@index([originState])
   @@index([destState])
-  deletedAt   DateTime?
-  deletedBy   String?
+  deletedAt          DateTime?
+  deletedBy          String?
+  cancellationReason String?
 
   @@index([customerId])
   @@index([carrierId])
