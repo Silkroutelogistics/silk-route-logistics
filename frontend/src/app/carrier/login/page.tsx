@@ -3,9 +3,23 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
-import { Logo } from "@/components/ui/Logo";
+import { Truck, DollarSign, FileCheck, MapPin, Shield } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
+
+const FEATURES = [
+  { icon: Truck, label: "Load Matching" },
+  { icon: DollarSign, label: "Fast Payments" },
+  { icon: FileCheck, label: "Compliance Docs" },
+  { icon: MapPin, label: "Status Updates" },
+];
+
+const INSIGHTS = [
+  { cat: "CARRIER TIP", text: "Carriers who update load status within 30 minutes of pickup see 40% more repeat bookings from brokers.", src: "DAT Freight & Analytics" },
+  { cat: "INDUSTRY FACT", text: "Owner-operators earn an average of $250,000+ in gross revenue annually. Fuel and maintenance are 55% of costs.", src: "ATRI Operational Costs, 2024" },
+  { cat: "DID YOU KNOW", text: "Carriers using digital BOL and POD submission get paid an average of 5 days faster than those using paper.", src: "TriumphPay, 2024" },
+  { cat: "SRL PROMISE", text: "No double-brokering. No hidden fees. Fast payment options including QuickPay. Your truck, our word.", src: "Silk Route Logistics" },
+  { cat: "PERSPECTIVE", text: "The top 10% of carriers by on-time delivery rate command 8–12% higher rates than industry average.", src: "FreightWaves Intelligence" },
+];
 
 export default function CarrierLoginPage() {
   const [email, setEmail] = useState("");
@@ -14,6 +28,9 @@ export default function CarrierLoginPage() {
   const { login, isLoading, error, token, mustChangePassword } = useCarrierAuth();
   const router = useRouter();
 
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  const insight = INSIGHTS[dayOfYear % INSIGHTS.length];
+
   useEffect(() => {
     if (token && !mustChangePassword) router.replace("/carrier/dashboard");
   }, [token, mustChangePassword, router]);
@@ -21,109 +38,134 @@ export default function CarrierLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = await login(email, password);
-    if (ok) {
-      router.push("/carrier/dashboard");
-    }
+    if (ok) router.push("/carrier/dashboard");
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-[#0D1B2A] to-[#0F1E30]">
-      {/* Left branding */}
-      <div className="hidden lg:flex flex-[0_0_45%] flex-col justify-center px-16">
-        <Logo size="lg" />
-        <h1 className="text-3xl font-serif text-white mt-6 mb-3">Carrier Portal</h1>
-        <p className="text-gray-400 text-sm leading-relaxed max-w-[400px]">
-          Access your loads, manage compliance documents, track payments, and update shipment status — all in one place.
-        </p>
-        <div className="mt-8 space-y-3">
-          {[
-            "View and accept available loads",
-            "Real-time load status updates",
-            "Compliance document management",
-            "Payment tracking & QuickPay",
-          ].map((t, i) => (
-            <div key={i} className="flex items-center gap-2.5 text-gray-400 text-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C]" />
-              {t}
-            </div>
+    <div className="flex min-h-screen" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+      {/* LEFT PANEL */}
+      <div className="hidden lg:flex w-[55%] relative overflow-hidden items-center justify-center"
+        style={{ background: "linear-gradient(165deg, #1b3a5e 0%, #224870 40%, #285280 70%, #1e4060 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          {[{ w: 4, t: "15%", l: "20%", d: 0, dur: 22 }, { w: 3, t: "45%", l: "75%", d: 3, dur: 28 }, { w: 5, t: "70%", l: "35%", d: 7, dur: 25 }, { w: 3, t: "25%", l: "60%", d: 12, dur: 30 }].map((p, i) => (
+            <div key={i} className="absolute rounded-full animate-pulse" style={{ width: p.w, height: p.w, top: p.t, left: p.l, background: "rgba(200,150,62,0.18)", animationDelay: `${p.d}s`, animationDuration: `${p.dur}s` }} />
           ))}
+        </div>
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 25% 35%, rgba(200,150,62,0.14) 0%, transparent 45%), radial-gradient(ellipse at 70% 70%, rgba(200,150,62,0.10) 0%, transparent 45%)" }} />
+
+        <div className="relative z-10 px-[60px] max-w-[520px] w-full">
+          <Link href="/" className="block mb-8">
+            <img src="/logo-full-alt.png" alt="SRL" className="h-[52px] w-[52px] object-contain rounded-xl bg-white/[0.08] p-1.5 opacity-95" />
+          </Link>
+          <div className="text-[13px] font-semibold tracking-[4px] uppercase text-[#c8a951] mb-1">SILK ROUTE LOGISTICS</div>
+          <div className="text-[28px] font-bold text-white mb-1.5 tracking-tight">Carrier Portal</div>
+          <div className="text-sm text-[#7a9bb8] mb-10">Access loads, manage compliance, and track payments</div>
+
+          <div className="grid grid-cols-2 gap-2.5 mb-8">
+            {FEATURES.map((f) => (
+              <div key={f.label} className="flex items-center gap-2.5 px-4 py-3 rounded-lg border transition-all hover:-translate-y-px"
+                style={{ background: "rgba(200,150,62,0.07)", borderColor: "rgba(200,150,62,0.14)" }}>
+                <f.icon size={16} className="text-[#dbb960]" />
+                <span className="text-[12.5px] text-[#c8d4de] font-medium tracking-wide">{f.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl p-6 relative overflow-hidden border-l-[3px] border-l-[#dbb960]"
+            style={{ background: "linear-gradient(135deg, rgba(200,150,62,0.08) 0%, rgba(200,150,62,0.03) 100%)" }}>
+            <div className="text-[9.5px] font-semibold tracking-[2.5px] uppercase text-[#dbb960] mb-2.5">{insight.cat}</div>
+            <div className="text-[14.5px] text-[#dce4ec] leading-relaxed italic max-w-[380px]">&ldquo;{insight.text}&rdquo;</div>
+            <div className="text-[11px] text-[#5d7a8e] mt-3">&mdash; {insight.src}</div>
+          </div>
+
+          <div className="mt-auto pt-10 text-[11px] text-[#4d6878]">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</div>
         </div>
       </div>
 
-      {/* Right form */}
-      <div className="flex-1 flex items-center justify-center bg-white lg:rounded-l-[20px]">
-        <div className="w-full max-w-[400px] px-8">
-          <div className="lg:hidden mb-8">
-            <Logo size="md" />
+      {/* RIGHT PANEL */}
+      <div className="flex-1 flex items-center justify-center overflow-y-auto"
+        style={{ background: "linear-gradient(180deg, #101d2e 0%, #0c1825 100%)", borderLeft: "1px solid rgba(200,150,62,0.06)" }}>
+        <div className="w-full max-w-[380px] px-10 lg:px-0">
+          <div className="flex flex-col items-center mb-8">
+            <img src="/logo.png" alt="Silk Route Logistics" className="h-12 mb-3.5 rounded-lg" />
+            <h2 className="text-xl font-semibold text-[#c8a951]">Carrier Sign In</h2>
+            <p className="text-[13px] text-[#6a8090] mt-1">Enter your credentials to access the portal</p>
           </div>
-          <h2 className="text-2xl font-serif text-[#0D1B2A] mb-1">Carrier Sign In</h2>
-          <p className="text-sm text-gray-500 mb-8">Enter your credentials to access the carrier portal</p>
 
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-md px-3 py-2.5 mb-5 text-sm text-red-600">
-              <AlertCircle size={16} />
+            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed"
+              style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#f87171" }}>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Email</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="carrier@company.com"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-md text-sm focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]/20"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Email Address</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="carrier@company.com" autoComplete="email"
+                className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
+                style={{ background: "#162236", border: "1px solid #243447" }}
+                onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                required
+              />
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Password</label>
+            <div className="mb-4">
+              <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Password</label>
               <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type={showPw ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-md text-sm focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]/20"
+                <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password" autoComplete="current-password"
+                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
+                  style={{ background: "#162236", border: "1px solid #243447" }}
+                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
                   required
                 />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5e70] hover:text-[#8899aa] bg-transparent border-none cursor-pointer transition-colors text-sm">
+                  {showPw ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-white text-sm font-semibold rounded-md shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-60"
-            >
+            <div className="flex items-center justify-between mb-6">
+              <label className="flex items-center gap-2 text-[13px] text-[#8899aa] cursor-pointer">
+                <input type="checkbox" className="accent-[#c8a951]" style={{ width: 15, height: 15 }} /> Remember me
+              </label>
+              <span className="text-[13px] text-[#c8a951] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
+            </div>
+            <button type="submit" disabled={isLoading}
+              className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+              style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A", boxShadow: "0 4px 20px rgba(200,150,62,0.25)" }}>
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500 mb-2">
-              New carrier?{" "}
-              <Link href="/onboarding" className="text-[#C9A84C] font-semibold hover:underline">
-                Register here
-              </Link>
-            </p>
-            <div className="space-y-0">
-              <Link href="/shipper/login" className="text-xs text-gray-400 hover:text-[#C9A84C]">
-                Shipper Login
-              </Link>
-              <span className="text-gray-300 mx-2">&middot;</span>
-              <Link href="/auth/login" className="text-xs text-gray-400 hover:text-[#C9A84C]">
-                Employee Login
-              </Link>
-            </div>
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-[#1f3044]" />
+            <span className="text-[12px] text-[#4a5e70]">or</span>
+            <div className="flex-1 h-px bg-[#1f3044]" />
+          </div>
+
+          <Link href="/onboarding"
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#c8a951] rounded-lg border transition-all hover:bg-[rgba(200,150,62,0.05)] no-underline"
+            style={{ borderColor: "rgba(200,150,62,0.25)" }}>
+            <Truck size={16} /> Register as New Carrier
+          </Link>
+
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <Link href="/shipper/login" className="text-xs text-[#6a8090] hover:text-[#c8a951] transition-colors no-underline">
+              Shipper Login
+            </Link>
+            <span className="text-[#243447]">&middot;</span>
+            <Link href="/auth/login" className="text-xs text-[#6a8090] hover:text-[#c8a951] transition-colors no-underline">
+              Employee Login
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 mt-7 text-[11px] text-[#3a5060]">
+            <Shield size={12} className="opacity-40" />
+            256-bit SSL encrypted &bull; SOC 2 compliant
           </div>
         </div>
       </div>
