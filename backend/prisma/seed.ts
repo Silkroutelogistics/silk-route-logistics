@@ -100,6 +100,20 @@ async function main() {
     },
   });
 
+  // Personal shipper account
+  const shipperUser2 = await prisma.user.create({
+    data: {
+      email: "wasihaider3089@gmail.com",
+      passwordHash: hash,
+      firstName: "Wasi",
+      lastName: "Haider",
+      company: "Haider Logistics",
+      role: UserRole.SHIPPER,
+      isVerified: true,
+      phone: "(269) 220-6760",
+    },
+  });
+
   // Aliases for backward compatibility in seed references
   const carrierUser2 = carrierUser;
   const carrierUser3 = carrierUser;
@@ -262,6 +276,31 @@ async function main() {
       onboardingStatus: "APPROVED",
       status: "Active",
       notes: "Hazmat shipper",
+    },
+  });
+
+  // Link personal shipper account to a customer
+  const custPersonal = await prisma.customer.create({
+    data: {
+      name: "Haider Logistics",
+      type: "SHIPPER",
+      address: "100 Main St",
+      city: "Kalamazoo",
+      state: "MI",
+      zip: "49007",
+      contactName: "Wasi Haider",
+      email: "wasihaider3089@gmail.com",
+      phone: "(269) 220-6760",
+      creditLimit: 250000,
+      creditStatus: "APPROVED",
+      paymentTerms: "Net 30",
+      avgLoadsPerMonth: 20,
+      preferredEquipment: ["Dry Van", "Reefer"],
+      rating: 5,
+      industry: "General Freight",
+      onboardingStatus: "APPROVED",
+      status: "Active",
+      userId: shipperUser2.id,
     },
   });
 

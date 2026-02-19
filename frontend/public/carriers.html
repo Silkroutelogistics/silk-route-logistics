@@ -192,6 +192,53 @@
       transform: translateY(-1px);
     }
 
+    .login-dropdown {
+      position: relative;
+      margin-left: 12px;
+    }
+    .login-dropdown-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      background: #C8963E;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    .login-dropdown-btn:hover { background: #B8862E; transform: translateY(-1px); }
+    .login-dropdown-btn svg { width: 14px; height: 14px; }
+    .login-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 180px;
+      background: #0F1E30;
+      border: 1px solid rgba(200,150,62,0.2);
+      border-radius: 10px;
+      padding: 6px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+      z-index: 200;
+    }
+    .login-dropdown-menu a {
+      display: block;
+      padding: 10px 14px;
+      color: #E0E7EE;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .login-dropdown-menu a:hover { background: rgba(200,150,62,0.12); color: #C8963E; }
+    .login-dropdown.open .login-dropdown-menu { display: block; }
+
     /* Hamburger */
     .hamburger {
       display: none;
@@ -1468,7 +1515,16 @@
         <a href="/about.html" role="menuitem">About</a>
         <a href="/contact.html" role="menuitem">Contact</a>
         <a href="/tracking.html" role="menuitem">Tracking</a>
-        <a href="/carrier/dashboard.html" class="nav-cta" role="menuitem">Carrier Login</a>
+        <div class="login-dropdown" id="loginDropdown">
+          <button class="login-dropdown-btn" aria-haspopup="true" aria-expanded="false">
+            Login
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="login-dropdown-menu">
+            <a href="/carrier/dashboard.html">Carrier Login</a>
+            <a href="/shipper/login">Shipper Login</a>
+          </div>
+        </div>
       </div>
 
       <button class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobileMenu">
@@ -1486,6 +1542,7 @@
       <a href="/contact.html" role="menuitem">Contact</a>
       <a href="/tracking.html" role="menuitem">Tracking</a>
       <a href="/carrier/dashboard.html" class="mobile-cta" role="menuitem">Carrier Login</a>
+      <a href="/shipper/login" class="mobile-cta" role="menuitem">Shipper Login</a>
     </div>
   </nav>
 
@@ -2027,6 +2084,7 @@
             <li><a href="mailto:carriers@silkroutelogistics.ai">carriers@silkroutelogistics.ai</a></li>
             <li>Kalamazoo, MI 49007</li>
             <li><a href="/carrier/dashboard.html">Carrier Portal</a></li>
+            <li><a href="/shipper/login">Shipper Portal</a></li>
           </ul>
         </div>
       </div>
@@ -2045,6 +2103,21 @@
   <script>
     (function () {
       'use strict';
+
+      // ── Login Dropdown Toggle ────────────────────────────────────────
+      var loginDropdown = document.getElementById('loginDropdown');
+      if (loginDropdown) {
+        var btn = loginDropdown.querySelector('.login-dropdown-btn');
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          loginDropdown.classList.toggle('open');
+          btn.setAttribute('aria-expanded', loginDropdown.classList.contains('open').toString());
+        });
+        document.addEventListener('click', function () {
+          loginDropdown.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+        });
+      }
 
       // ── Mobile Menu Toggle ─────────────────────────────────────────
       var hamburger = document.querySelector('.hamburger');
