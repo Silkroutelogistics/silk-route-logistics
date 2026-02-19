@@ -11,64 +11,118 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a1628;color:#e0e0e0;overflow:hidden;height:100vh}
 
-    /* === SPLIT LAYOUT === */
     .login-container{display:flex;height:100vh}
 
     /* === LEFT PANEL === */
     .left-panel{
       width:55%;position:relative;overflow:hidden;
-      background:linear-gradient(165deg,#0D1B2A 0%,#12263e 50%,#0f2035 100%);
+      background:linear-gradient(165deg,#1b3a5e 0%,#224870 40%,#285280 70%,#1e4060 100%);
       display:flex;align-items:center;justify-content:center;
     }
     .left-panel::before{
       content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
-      background:radial-gradient(ellipse at 30% 50%,rgba(200,150,62,0.03) 0%,transparent 50%),
-                 radial-gradient(ellipse at 70% 80%,rgba(200,150,62,0.02) 0%,transparent 50%);
+      background:radial-gradient(ellipse at 25% 35%,rgba(200,150,62,0.14) 0%,transparent 45%),
+                 radial-gradient(ellipse at 70% 70%,rgba(200,150,62,0.10) 0%,transparent 45%),
+                 radial-gradient(ellipse at 50% 15%,rgba(120,180,240,0.07) 0%,transparent 40%);
       animation:gradientShift 20s ease-in-out infinite alternate;
     }
     @keyframes gradientShift{0%{transform:translate(0,0) rotate(0deg)}100%{transform:translate(30px,-20px) rotate(2deg)}}
 
-    .particle{position:absolute;border-radius:50%;background:rgba(200,150,62,0.12);animation:float 25s ease-in-out infinite}
+    .particle{position:absolute;border-radius:50%;background:rgba(200,150,62,0.18);animation:float 25s ease-in-out infinite}
     @keyframes float{
-      0%,100%{transform:translateY(0) translateX(0);opacity:.1}
-      25%{transform:translateY(-30px) translateX(10px);opacity:.2}
-      50%{transform:translateY(-15px) translateX(-10px);opacity:.15}
-      75%{transform:translateY(-40px) translateX(5px);opacity:.1}
+      0%,100%{transform:translateY(0) translateX(0);opacity:.15}
+      25%{transform:translateY(-30px) translateX(10px);opacity:.3}
+      50%{transform:translateY(-15px) translateX(-10px);opacity:.22}
+      75%{transform:translateY(-40px) translateX(5px);opacity:.15}
     }
 
     .left-content{
       position:relative;z-index:2;padding:60px;max-width:520px;width:100%;
       display:flex;flex-direction:column;justify-content:center;min-height:100vh;
     }
-    .brand-logo{height:36px;margin-bottom:32px;opacity:.9;border-radius:8px}
+    .brand-logo{height:52px;width:52px;object-fit:contain;margin-bottom:32px;opacity:.95;border-radius:12px;background:rgba(255,255,255,0.08);padding:6px}
+
+    /* === HERO SLIDESHOW === */
+    .hero-slideshow{
+      position:relative;width:100%;height:170px;border-radius:16px;overflow:hidden;margin-bottom:28px;
+      box-shadow:0 8px 40px rgba(0,0,0,0.35),0 0 60px rgba(200,150,62,0.06);
+      border:1px solid rgba(200,150,62,0.15);
+    }
+    .hero-slide{
+      position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease-in-out;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .hero-slide.active{opacity:1}
+    .hero-slide::after{
+      content:'';position:absolute;inset:0;
+      background:rgba(255,255,255,0.02);
+      backdrop-filter:blur(1px);
+      pointer-events:none;
+    }
+    .hero-slide-1{
+      background:linear-gradient(135deg,#1e4468 0%,#275580 30%,#2f6090 60%,#224c72 100%);
+    }
+    .hero-slide-1::before{
+      content:'';position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at 20% 50%,rgba(200,150,62,0.18) 0%,transparent 50%),
+        radial-gradient(ellipse at 80% 40%,rgba(200,150,62,0.12) 0%,transparent 45%),
+        url("data:image/svg+xml,%3Csvg width='500' height='170' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,85 Q80,30 160,85 Q240,140 320,85 Q400,30 500,85' stroke='%23c8a95170' stroke-width='2.5' fill='none' stroke-dasharray='8,6'/%3E%3Cpath d='M0,105 Q100,50 200,105 Q300,155 400,105 Q450,80 500,95' stroke='%23c8a95140' stroke-width='1.5' fill='none'/%3E%3Ccircle cx='80' cy='68' r='5' fill='%23c8a95160'/%3E%3Ccircle cx='240' cy='100' r='4' fill='%23c8a95150'/%3E%3Ccircle cx='400' cy='72' r='5' fill='%23c8a95160'/%3E%3C/svg%3E") center/cover no-repeat;
+    }
+    .slide-text{position:relative;z-index:2;text-align:center;padding:0 30px}
+    .slide-text span{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#dbb960;font-weight:600}
+    .slide-text p{font-size:18px;color:#f0f4f8;font-weight:300;margin-top:8px;line-height:1.4}
+    .hero-slide-2{
+      background:linear-gradient(160deg,#1b3e60 0%,#234e78 40%,#2a5888 70%,#1f4468 100%);
+    }
+    .hero-slide-2::before{
+      content:'';position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at 50% 50%,rgba(200,150,62,0.16) 0%,transparent 50%),
+        url("data:image/svg+xml,%3Csvg width='500' height='170' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='100' cy='85' r='40' stroke='%23c8a95148' stroke-width='2' fill='none'/%3E%3Ccircle cx='250' cy='85' r='55' stroke='%23c8a95138' stroke-width='2' fill='none'/%3E%3Ccircle cx='400' cy='85' r='35' stroke='%23c8a95148' stroke-width='2' fill='none'/%3E%3Cline x1='140' y1='85' x2='195' y2='85' stroke='%23c8a95155' stroke-width='2' stroke-dasharray='4,4'/%3E%3Cline x1='305' y1='85' x2='365' y2='85' stroke='%23c8a95155' stroke-width='2' stroke-dasharray='4,4'/%3E%3Ccircle cx='100' cy='85' r='6' fill='%23c8a95160'/%3E%3Ccircle cx='250' cy='85' r='6' fill='%23c8a95160'/%3E%3Ccircle cx='400' cy='85' r='6' fill='%23c8a95160'/%3E%3C/svg%3E") center/cover no-repeat;
+    }
+    .hero-slide-3{
+      background:linear-gradient(145deg,#1c4060 0%,#254e78 35%,#2c5a8a 65%,#204668 100%);
+    }
+    .hero-slide-3::before{
+      content:'';position:absolute;inset:0;
+      background:
+        radial-gradient(ellipse at 35% 60%,rgba(200,150,62,0.16) 0%,transparent 45%),
+        radial-gradient(ellipse at 75% 30%,rgba(200,150,62,0.12) 0%,transparent 40%),
+        url("data:image/svg+xml,%3Csvg width='500' height='170' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,135 L50,55 L150,55' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Cpath d='M150,55 L150,115 L280,115' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Cpath d='M280,115 L280,45 L420,45' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Cpath d='M420,45 L420,125 L480,125' stroke='%23c8a95155' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='135' r='6' fill='%23c8a95165'/%3E%3Ccircle cx='150' cy='55' r='5' fill='%23c8a95158'/%3E%3Ccircle cx='280' cy='115' r='5' fill='%23c8a95158'/%3E%3Ccircle cx='420' cy='45' r='5' fill='%23c8a95158'/%3E%3Ccircle cx='480' cy='125' r='6' fill='%23c8a95165'/%3E%3C/svg%3E") center/cover no-repeat;
+    }
+    .slideshow-dots{display:flex;justify-content:center;gap:8px;margin-top:12px}
+    .slideshow-dot{width:6px;height:6px;border-radius:50%;background:rgba(200,150,62,0.25);transition:all .4s ease}
+    .slideshow-dot.active{background:#dbb960;width:20px;border-radius:3px}
     .brand-name{font-size:13px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:#c8a951;margin-bottom:4px}
     .portal-name{font-size:28px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-.5px}
-    .portal-subtitle{font-size:14px;color:#5a7a9a;font-weight:400;margin-bottom:40px}
+    .portal-subtitle{font-size:14px;color:#7a9bb8;font-weight:400;margin-bottom:40px}
 
     .features-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:36px}
     .feature-pill{
       display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;
-      background:rgba(200,150,62,0.04);border:1px solid rgba(200,150,62,0.08);transition:all .3s ease;
+      background:rgba(200,150,62,0.07);border:1px solid rgba(200,150,62,0.14);transition:all .3s ease;
+      backdrop-filter:blur(4px);
     }
-    .feature-pill:hover{background:rgba(200,150,62,0.08);border-color:rgba(200,150,62,0.15);transform:translateY(-1px)}
-    .feature-pill .icon{display:inline-flex;color:#c8a951;line-height:0}
-    .feature-pill .label{font-size:12.5px;color:#b0bec5;font-weight:500;letter-spacing:.3px}
+    .feature-pill:hover{background:rgba(200,150,62,0.13);border-color:rgba(200,150,62,0.25);transform:translateY(-1px)}
+    .feature-pill .icon{display:inline-flex;color:#dbb960;line-height:0}
+    .feature-pill .label{font-size:12.5px;color:#c8d4de;font-weight:500;letter-spacing:.3px}
 
-    .tagline{font-size:13.5px;color:#5a7a9a;line-height:1.75;margin-bottom:40px;max-width:440px}
+    .tagline{font-size:13.5px;color:#7a9ab5;line-height:1.75;margin-bottom:40px;max-width:440px}
 
-    /* === DAILY INSIGHT CARD === */
     .insight-card{
       padding:24px 28px;border-radius:12px;position:relative;overflow:hidden;
-      background:linear-gradient(135deg,rgba(200,150,62,0.05) 0%,rgba(200,150,62,0.02) 100%);
-      border-left:3px solid #c8a951;
+      background:linear-gradient(135deg,rgba(200,150,62,0.08) 0%,rgba(200,150,62,0.03) 100%);
+      border-left:3px solid #dbb960;
+      backdrop-filter:blur(4px);
     }
     .insight-content{position:relative;z-index:1}
-    .insight-label{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#c8a951;margin-bottom:10px}
-    .insight-text{font-size:14.5px;color:#cdd6de;line-height:1.7;font-style:italic;max-width:380px}
-    .insight-source{font-size:11px;color:#4a6070;margin-top:12px;font-style:normal}
+    .insight-label{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:#dbb960;margin-bottom:10px}
+    .insight-text{font-size:14.5px;color:#dce4ec;line-height:1.7;font-style:italic;max-width:380px}
+    .insight-source{font-size:11px;color:#5d7a8e;margin-top:12px;font-style:normal}
 
-    .silk-road-line{margin-top:auto;padding-top:40px;opacity:.12}
-    .left-footer{font-size:11px;color:#3a4f60;margin-top:16px}
+    .silk-road-line{margin-top:auto;padding-top:40px;opacity:.2}
+    .left-footer{font-size:11px;color:#4d6878;margin-top:16px}
 
     /* === RIGHT PANEL === */
     .right-panel{
@@ -86,6 +140,7 @@
     .alert-banner{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:20px;display:none;text-align:center;line-height:1.5}
     .alert-error{background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);color:#f87171}
     .alert-warning{background:rgba(202,138,4,0.08);border:1px solid rgba(202,138,4,0.2);color:#fbbf24}
+    .alert-success{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#4ade80}
 
     .field-group{margin-bottom:18px}
     .field-label{font-size:11.5px;font-weight:500;color:#8899aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:block}
@@ -124,12 +179,15 @@
     }
     .btn-secondary:hover{background:rgba(200,150,62,0.05);border-color:rgba(200,150,62,0.4)}
 
-    .bottom-links{text-align:center;margin-top:20px;font-size:13px;color:#5a7a9a}
-    .bottom-links a{color:#c8a951;text-decoration:none;font-weight:500}
-    .bottom-links a:hover{text-decoration:underline}
-
     .security-badge{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:28px;font-size:11px;color:#3a5060}
     .security-badge svg{opacity:.4}
+
+    .otp-section{display:none}
+    .otp-section.show{display:block}
+    .email-section.hide{display:none}
+    .back-link{text-align:center;margin-top:16px}
+    .back-link a{color:#6a8090;font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Inter',sans-serif}
+    .back-link a:hover{color:#c8a951}
 
     /* Change password modal */
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:1000}
@@ -155,16 +213,42 @@
       <div class="particle" style="width:4px;height:4px;top:80%;left:80%;animation-delay:5s;animation-duration:26s"></div>
 
       <div class="left-content">
-        <img src="/logo.png" alt="SRL" class="brand-logo">
+        <img src="/logo-full-alt.png" alt="SRL" class="brand-logo">
         <div class="brand-name">SILK ROUTE LOGISTICS</div>
         <div class="portal-name">Carrier Portal</div>
-        <div class="portal-subtitle">Your loads, payments, and rewards in one place</div>
+        <div class="portal-subtitle">Your loads, payments, and compliance in one place</div>
 
         <div class="features-grid">
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg></span><span class="label">Available Loads</span></div>
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span class="label">Real-Time Tracking</span></div>
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span><span class="label">Caravan Rewards</span></div>
           <div class="feature-pill"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span class="label">Instant Pay</span></div>
+        </div>
+
+        <div class="hero-slideshow" id="heroSlideshow">
+          <div class="hero-slide hero-slide-1 active">
+            <div class="slide-text">
+              <span>Haul with Confidence</span>
+              <p>Priority loads, fast payment,<br>zero double-brokering</p>
+            </div>
+          </div>
+          <div class="hero-slide hero-slide-2">
+            <div class="slide-text">
+              <span>Caravan Partner Program</span>
+              <p>Earn rewards, reduced fees,<br>and premium load access</p>
+            </div>
+          </div>
+          <div class="hero-slide hero-slide-3">
+            <div class="slide-text">
+              <span>Smart Dispatch</span>
+              <p>AI-powered load matching<br>tailored to your lanes</p>
+            </div>
+          </div>
+        </div>
+        <div class="slideshow-dots" id="slideshowDots">
+          <div class="slideshow-dot active"></div>
+          <div class="slideshow-dot"></div>
+          <div class="slideshow-dot"></div>
         </div>
 
         <p class="tagline">Join our carrier network for priority loads, fast payment, and AI-powered dispatch from Kalamazoo, Michigan.</p>
@@ -193,34 +277,43 @@
       <div class="login-card">
         <div class="form-logo">
           <img src="/logo.png" alt="Silk Route Logistics">
-          <h2>Carrier Portal</h2>
+          <h2>Carrier Sign In</h2>
           <p>Sign in to manage your loads &amp; payments</p>
         </div>
 
         <div id="alertBanner" class="alert-banner"></div>
 
-        <form id="loginForm">
+        <!-- Step 1: Email + Password -->
+        <div id="email-section" class="email-section">
           <div class="field-group">
             <label class="field-label">Email Address</label>
-            <input type="email" id="email" class="field-input" placeholder="carrier@example.com" required autocomplete="email">
+            <input type="email" id="email" class="field-input" placeholder="carrier@example.com" autocomplete="email">
           </div>
           <div class="field-group">
             <label class="field-label">Password</label>
-            <input type="password" id="password" class="field-input" placeholder="Enter your password" required autocomplete="current-password">
+            <input type="password" id="password" class="field-input" placeholder="Enter your password" autocomplete="current-password">
           </div>
           <div class="form-options">
             <label class="remember-label"><input type="checkbox" id="rememberMe"> Remember me</label>
             <a href="/carrier/forgot-password.html" class="forgot-link">Forgot password?</a>
           </div>
-          <button type="submit" id="loginBtn" class="btn-submit">Sign In</button>
-        </form>
+          <button id="loginBtn" class="btn-submit" onclick="handleLogin()">Sign In</button>
+        </div>
+
+        <!-- Step 2: OTP Verification -->
+        <div id="otp-section" class="otp-section">
+          <div class="field-group">
+            <label class="field-label">Verification Code</label>
+            <input type="text" id="otp" class="field-input" placeholder="Enter 8-digit code" maxlength="8" autocomplete="one-time-code" inputmode="numeric">
+          </div>
+          <button id="otpBtn" class="btn-submit" onclick="handleOtp()">Verify</button>
+          <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
+        </div>
 
         <div class="divider"><div class="divider-line"></div><span class="divider-text">or</span><div class="divider-line"></div></div>
-        <a href="/auth/login" class="btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg> Employee Login</a>
-
-        <div class="bottom-links">
-          New to SRL? <a href="/carrier/register.html">Register as a Carrier</a>
-        </div>
+        <a href="/onboarding" class="btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Register as New Carrier</a>
+        <a href="/auth/login" class="btn-secondary" style="margin-top:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg> Employee Login</a>
+        <a href="/shipper/login" class="btn-secondary" style="margin-top:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Shipper Portal</a>
 
         <div class="security-badge">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -253,6 +346,10 @@
   <script src="/js/auth.js"></script>
   <script src="/carrier/js/carrier-api.js"></script>
   <script>
+    var BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
+    var pendingEmail = '';
+
     // Session expired banner
     if (new URLSearchParams(window.location.search).get('expired') === '1') {
       var b = document.getElementById('alertBanner');
@@ -270,6 +367,11 @@
     // If already logged in, go to dashboard
     if (CARRIER.isLoggedIn()) { window.location.href = '/carrier/dashboard.html'; }
 
+    // Enter key support
+    document.getElementById('email').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('password').focus(); });
+    document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
+    document.getElementById('otp').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleOtp(); });
+
     function showAlert(msg, type) {
       var el = document.getElementById('alertBanner');
       el.className = 'alert-banner alert-' + type;
@@ -277,23 +379,39 @@
       el.textContent = msg;
     }
 
-    var loginForm = document.getElementById('loginForm');
-    var loginBtn = document.getElementById('loginBtn');
-
-    loginForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      showAlert('', 'error');
-      loginBtn.disabled = true;
-      loginBtn.innerHTML = '<span class="spinner"></span>';
-
-      var email = document.getElementById('email').value;
+    function handleLogin() {
+      var email = document.getElementById('email').value.trim();
       var password = document.getElementById('password').value;
+      if (!email || !password) { showAlert('Please enter your email and password.', 'error'); return; }
+
+      var btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      showAlert('', 'error');
+
       var remember = document.getElementById('rememberMe').checked;
 
-      CARRIER.login(email, password, remember)
-        .then(function(data) {
+      fetch(BASE + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.textContent = 'Sign In';
+        if (data.error) { showAlert(data.error, 'error'); return; }
+        if (data.pendingOtp) {
+          pendingEmail = email;
+          document.getElementById('email-section').classList.add('hide');
+          document.getElementById('otp-section').classList.add('show');
+          showAlert('A verification code has been sent to your email.', 'success');
+          setTimeout(function() { document.getElementById('otp').focus(); }, 100);
+          return;
+        }
+        if (data.token) {
           if (remember) SRLAuth.setRememberedEmail(email, 'carrier');
           else SRLAuth.setRememberedEmail('', 'carrier');
+          CARRIER.setToken(data.token);
+          localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
           if (data.mustChangePassword) {
             document.getElementById('changePassModal').classList.add('show');
@@ -301,13 +419,58 @@
           } else {
             window.location.href = '/carrier/dashboard.html';
           }
-        })
-        .catch(function(err) {
-          showAlert(err.message || 'Login failed', 'error');
-          loginBtn.disabled = false;
-          loginBtn.textContent = 'Sign In';
-        });
-    });
+        }
+      })
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Sign In';
+        showAlert('Unable to connect to server. Please try again.', 'error');
+      });
+    }
+
+    function handleOtp() {
+      var code = document.getElementById('otp').value.trim();
+      if (!code || code.length < 8) { showAlert('Please enter the 8-digit code.', 'error'); return; }
+
+      var btn = document.getElementById('otpBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      showAlert('', 'error');
+
+      fetch(BASE + '/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingEmail, code: code })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.textContent = 'Verify';
+        if (data.error) { showAlert(data.error, 'error'); return; }
+        if (data.token) {
+          var remember = document.getElementById('rememberMe').checked;
+          if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'carrier');
+          else SRLAuth.setRememberedEmail('', 'carrier');
+          CARRIER.setToken(data.token);
+          localStorage.setItem('user', JSON.stringify(data.user || {}));
+          localStorage.setItem('srl_last_activity', Date.now().toString());
+          if (data.mustChangePassword) {
+            document.getElementById('changePassModal').classList.add('show');
+            window._tempToken = data.token;
+          } else {
+            window.location.href = '/carrier/dashboard.html';
+          }
+        }
+      })
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Verify';
+        showAlert('Unable to connect to server. Please try again.', 'error');
+      });
+    }
+
+    function goBack() {
+      document.getElementById('email-section').classList.remove('hide');
+      document.getElementById('otp-section').classList.remove('show');
+      document.getElementById('otp').value = '';
+      showAlert('', 'error');
+    }
 
     // Change password form
     document.getElementById('changePassForm').addEventListener('submit', function(e) {
@@ -326,6 +489,22 @@
           errEl.style.display = 'block';
         });
     });
+  </script>
+
+  <!-- Hero Slideshow Auto-Play -->
+  <script>
+    (function() {
+      var slides = document.querySelectorAll('.hero-slide');
+      var dots = document.querySelectorAll('.slideshow-dot');
+      var current = 0;
+      setInterval(function() {
+        slides[current].classList.remove('active');
+        dots[current].classList.remove('active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('active');
+        dots[current].classList.add('active');
+      }, 3000);
+    })();
   </script>
 
   <!-- Daily Insight System -->

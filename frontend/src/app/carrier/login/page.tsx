@@ -3,22 +3,28 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Truck, DollarSign, FileCheck, MapPin, Shield } from "lucide-react";
+import { Truck, DollarSign, FileCheck, MapPin, Shield, Zap, Award } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
 const FEATURES = [
-  { icon: Truck, label: "Load Matching" },
-  { icon: DollarSign, label: "Fast Payments" },
-  { icon: FileCheck, label: "Compliance Docs" },
-  { icon: MapPin, label: "Status Updates" },
+  { icon: Truck, label: "Available Loads" },
+  { icon: MapPin, label: "Real-Time Tracking" },
+  { icon: Award, label: "Caravan Rewards" },
+  { icon: Zap, label: "Instant Pay" },
 ];
 
 const INSIGHTS = [
-  { cat: "CARRIER TIP", text: "Carriers who update load status within 30 minutes of pickup see 40% more repeat bookings from brokers.", src: "DAT Freight & Analytics" },
-  { cat: "INDUSTRY FACT", text: "Owner-operators earn an average of $250,000+ in gross revenue annually. Fuel and maintenance are 55% of costs.", src: "ATRI Operational Costs, 2024" },
-  { cat: "DID YOU KNOW", text: "Carriers using digital BOL and POD submission get paid an average of 5 days faster than those using paper.", src: "TriumphPay, 2024" },
-  { cat: "SRL PROMISE", text: "No double-brokering. No hidden fees. Fast payment options including QuickPay. Your truck, our word.", src: "Silk Route Logistics" },
-  { cat: "PERSPECTIVE", text: "The top 10% of carriers by on-time delivery rate command 8–12% higher rates than industry average.", src: "FreightWaves Intelligence" },
+  { cat: "CARRIER TIP", text: "Owner-operators who diversify across 3+ quality brokerages see 23% higher annual revenue.", src: "OOIDA Foundation Survey, 2024" },
+  { cat: "CARRIER INSIGHT", text: "Carriers with 95%+ on-time delivery rates earn 12% more per mile through premium load access.", src: "DAT Solutions" },
+  { cat: "CARAVAN REWARDS", text: "Carriers in the Caravan Partner Program earn priority loads and reduced Quick Pay fees.", src: "Silk Route Logistics" },
+  { cat: "SRL PROMISE", text: "At Silk Route, carriers aren\u2019t a number \u2014 you\u2019re a partner. Fair rates, fast pay, a voice that matters.", src: "Silk Route Logistics" },
+  { cat: "MOTIVATION", text: "Every mile you drive is a mile closer to your goals. Keep moving.", src: "Silk Route Logistics" },
+];
+
+const SLIDES = [
+  { label: "Haul with Confidence", text: "Priority loads, fast payment,\nzero double-brokering" },
+  { label: "Caravan Partner Program", text: "Earn rewards, reduced fees,\nand premium load access" },
+  { label: "Smart Dispatch", text: "AI-powered load matching\ntailored to your lanes" },
 ];
 
 export default function CarrierLoginPage() {
@@ -27,6 +33,7 @@ export default function CarrierLoginPage() {
   const [showPw, setShowPw] = useState(false);
   const { login, isLoading, error, token, mustChangePassword } = useCarrierAuth();
   const router = useRouter();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const insight = INSIGHTS[dayOfYear % INSIGHTS.length];
@@ -34,6 +41,13 @@ export default function CarrierLoginPage() {
   useEffect(() => {
     if (token && !mustChangePassword) router.replace("/carrier/dashboard");
   }, [token, mustChangePassword, router]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +61,11 @@ export default function CarrierLoginPage() {
       <div className="hidden lg:flex w-[55%] relative overflow-hidden items-center justify-center"
         style={{ background: "linear-gradient(165deg, #1b3a5e 0%, #224870 40%, #285280 70%, #1e4060 100%)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          {[{ w: 4, t: "15%", l: "20%", d: 0, dur: 22 }, { w: 3, t: "45%", l: "75%", d: 3, dur: 28 }, { w: 5, t: "70%", l: "35%", d: 7, dur: 25 }, { w: 3, t: "25%", l: "60%", d: 12, dur: 30 }].map((p, i) => (
+          {[{ w: 4, t: "15%", l: "20%", d: 0, dur: 22 }, { w: 3, t: "45%", l: "75%", d: 3, dur: 28 }, { w: 5, t: "70%", l: "35%", d: 7, dur: 25 }, { w: 3, t: "25%", l: "60%", d: 12, dur: 30 }, { w: 4, t: "80%", l: "80%", d: 5, dur: 26 }].map((p, i) => (
             <div key={i} className="absolute rounded-full animate-pulse" style={{ width: p.w, height: p.w, top: p.t, left: p.l, background: "rgba(200,150,62,0.18)", animationDelay: `${p.d}s`, animationDuration: `${p.dur}s` }} />
           ))}
         </div>
-        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 25% 35%, rgba(200,150,62,0.14) 0%, transparent 45%), radial-gradient(ellipse at 70% 70%, rgba(200,150,62,0.10) 0%, transparent 45%)" }} />
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 25% 35%, rgba(200,150,62,0.14) 0%, transparent 45%), radial-gradient(ellipse at 70% 70%, rgba(200,150,62,0.10) 0%, transparent 45%), radial-gradient(ellipse at 50% 15%, rgba(120,180,240,0.07) 0%, transparent 40%)" }} />
 
         <div className="relative z-10 px-[60px] max-w-[520px] w-full">
           <Link href="/" className="block mb-8">
@@ -59,7 +73,7 @@ export default function CarrierLoginPage() {
           </Link>
           <div className="text-[13px] font-semibold tracking-[4px] uppercase text-[#c8a951] mb-1">SILK ROUTE LOGISTICS</div>
           <div className="text-[28px] font-bold text-white mb-1.5 tracking-tight">Carrier Portal</div>
-          <div className="text-sm text-[#7a9bb8] mb-10">Access loads, manage compliance, and track payments</div>
+          <div className="text-sm text-[#7a9bb8] mb-10">Your loads, payments, and compliance in one place</div>
 
           <div className="grid grid-cols-2 gap-2.5 mb-8">
             {FEATURES.map((f) => (
@@ -71,14 +85,57 @@ export default function CarrierLoginPage() {
             ))}
           </div>
 
+          {/* Hero Slideshow */}
+          <div className="relative w-full h-[170px] rounded-2xl overflow-hidden mb-7"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.35), 0 0 60px rgba(200,150,62,0.06)", border: "1px solid rgba(200,150,62,0.15)" }}>
+            {SLIDES.map((slide, i) => (
+              <div key={i} className="absolute inset-0 flex items-center justify-center transition-opacity duration-[1200ms]"
+                style={{
+                  opacity: currentSlide === i ? 1 : 0,
+                  background: i === 0
+                    ? "linear-gradient(135deg, #1e4468 0%, #275580 30%, #2f6090 60%, #224c72 100%)"
+                    : i === 1
+                    ? "linear-gradient(160deg, #1b3e60 0%, #234e78 40%, #2a5888 70%, #1f4468 100%)"
+                    : "linear-gradient(145deg, #1c4060 0%, #254e78 35%, #2c5a8a 65%, #204668 100%)",
+                }}>
+                <div className="relative z-10 text-center px-8">
+                  <span className="text-[11px] tracking-[3px] uppercase text-[#dbb960] font-semibold">{slide.label}</span>
+                  <p className="text-[18px] text-[#f0f4f8] font-light mt-2 leading-relaxed whitespace-pre-line">{slide.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-center gap-2 mb-7">
+            {SLIDES.map((_, i) => (
+              <div key={i} className="h-1.5 rounded-full transition-all duration-400"
+                style={{
+                  width: currentSlide === i ? 20 : 6,
+                  background: currentSlide === i ? "#dbb960" : "rgba(200,150,62,0.25)",
+                }} />
+            ))}
+          </div>
+
+          <p className="text-[13.5px] text-[#7a9ab5] leading-[1.75] mb-10 max-w-[440px]">
+            Join our carrier network for priority loads, fast payment, and AI-powered dispatch from Kalamazoo, Michigan.
+          </p>
+
+          {/* Daily Insight */}
           <div className="rounded-xl p-6 relative overflow-hidden border-l-[3px] border-l-[#dbb960]"
-            style={{ background: "linear-gradient(135deg, rgba(200,150,62,0.08) 0%, rgba(200,150,62,0.03) 100%)" }}>
+            style={{ background: "linear-gradient(135deg, rgba(200,150,62,0.08) 0%, rgba(200,150,62,0.03) 100%)", backdropFilter: "blur(4px)" }}>
             <div className="text-[9.5px] font-semibold tracking-[2.5px] uppercase text-[#dbb960] mb-2.5">{insight.cat}</div>
             <div className="text-[14.5px] text-[#dce4ec] leading-relaxed italic max-w-[380px]">&ldquo;{insight.text}&rdquo;</div>
             <div className="text-[11px] text-[#5d7a8e] mt-3">&mdash; {insight.src}</div>
           </div>
 
-          <div className="mt-auto pt-10 text-[11px] text-[#4d6878]">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</div>
+          {/* Silk Road Line */}
+          <svg className="mt-auto pt-10 opacity-20" width="100%" height="24" viewBox="0 0 500 24">
+            <path d="M0,12 Q60,4 120,12 Q180,20 240,12 Q300,4 360,12 Q420,20 480,12 L500,12" stroke="#c8a951" strokeWidth="1.5" fill="none" strokeDasharray="8,6"/>
+            <circle cx="0" cy="12" r="2.5" fill="#c8a951" opacity="0.6"/>
+            <circle cx="250" cy="12" r="2" fill="#c8a951" opacity="0.4"/>
+            <circle cx="500" cy="12" r="2.5" fill="#c8a951" opacity="0.6"/>
+          </svg>
+
+          <div className="text-[11px] text-[#4d6878] mt-4">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</div>
         </div>
       </div>
 
