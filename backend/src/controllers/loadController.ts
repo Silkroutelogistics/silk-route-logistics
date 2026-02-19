@@ -39,12 +39,14 @@ export async function createLoad(req: AuthRequest, res: Response) {
 
     // Route
     originCompany: raw.originName || raw.originCompany || undefined,
+    originAddress: raw.originAddress || undefined,
     originCity: raw.originCity,
     originState: raw.originState,
     originZip: raw.originZip,
     originContactName: pickupContact.name || raw.contactName || undefined,
     originContactPhone: pickupContact.phone || raw.contactPhone || undefined,
     destCompany: raw.destinationName || raw.destCompany || undefined,
+    destAddress: raw.destAddress || raw.destinationAddress || undefined,
     destCity: raw.destinationCity || raw.destCity,
     destState: raw.destinationState || raw.destState,
     destZip: raw.destinationZip || raw.destZip,
