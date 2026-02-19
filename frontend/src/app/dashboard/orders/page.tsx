@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
   ClipboardEdit, Search, MapPin, Package, DollarSign, CheckCircle,
-  Download, ExternalLink, ChevronDown, AlertTriangle, Thermometer, Globe,
+  Download, ExternalLink, ChevronDown, AlertTriangle, Thermometer, Globe, Loader2,
 } from "lucide-react";
 
 interface Customer {
@@ -18,8 +18,8 @@ const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "10
 
 const initialForm = {
   customerId: "",
-  originCity: "", originState: "", originZip: "",
-  destCity: "", destState: "", destZip: "",
+  originAddress: "", originCity: "", originState: "", originZip: "",
+  destAddress: "", destCity: "", destState: "", destZip: "",
   pickupDate: "", deliveryDate: "",
   distance: "",
   equipmentType: "Dry Van",
@@ -52,9 +52,11 @@ export default function OrderBuilderPage() {
   const createLoad = useMutation({
     mutationFn: (status: "DRAFT" | "POSTED") => {
       const payload: Record<string, unknown> = {
+        originAddress: form.originAddress || undefined,
         originCity: form.originCity,
         originState: form.originState,
         originZip: form.originZip,
+        destAddress: form.destAddress || undefined,
         destCity: form.destCity,
         destState: form.destState,
         destZip: form.destZip,
@@ -192,6 +194,13 @@ export default function OrderBuilderPage() {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-3">
             <p className="text-xs text-slate-500 font-medium">ORIGIN</p>
+            <AddressAutocomplete
+              label="Search origin address..."
+              onSelect={(addr) => setForm((f) => ({ ...f, originAddress: addr.address, originCity: addr.city, originState: addr.state, originZip: addr.zip }))}
+              value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
+            />
+            <input value={form.originAddress} onChange={(e) => setForm((f) => ({ ...f, originAddress: e.target.value }))}
+              placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             <input value={form.originCity} onChange={(e) => setForm((f) => ({ ...f, originCity: e.target.value }))}
               placeholder="City" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             <div className="grid grid-cols-2 gap-2">
@@ -205,6 +214,13 @@ export default function OrderBuilderPage() {
           </div>
           <div className="space-y-3">
             <p className="text-xs text-slate-500 font-medium">DESTINATION</p>
+            <AddressAutocomplete
+              label="Search destination address..."
+              onSelect={(addr) => setForm((f) => ({ ...f, destAddress: addr.address, destCity: addr.city, destState: addr.state, destZip: addr.zip }))}
+              value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
+            />
+            <input value={form.destAddress} onChange={(e) => setForm((f) => ({ ...f, destAddress: e.target.value }))}
+              placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             <input value={form.destCity} onChange={(e) => setForm((f) => ({ ...f, destCity: e.target.value }))}
               placeholder="City" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             <div className="grid grid-cols-2 gap-2">
@@ -343,6 +359,134 @@ export default function OrderBuilderPage() {
 
       {createLoad.isError && (
         <p className="text-red-400 text-sm">Failed to create order. Please check all required fields.</p>
+      )}
+    </div>
+  );
+}
+
+/* ────── Google Maps loader (singleton) ────── */
+let gMapsLoaded = false;
+let gMapsLoading = false;
+const gMapsQueue: (() => void)[] = [];
+
+function loadGoogleMaps(): Promise<void> {
+  if (gMapsLoaded && window.google?.maps?.places) return Promise.resolve();
+  return new Promise((resolve) => {
+    if (gMapsLoading) { gMapsQueue.push(resolve); return; }
+    gMapsLoading = true;
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) { console.error("Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"); resolve(); return; }
+    const s = document.createElement("script");
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    s.async = true;
+    s.onload = () => { gMapsLoaded = true; gMapsLoading = false; resolve(); gMapsQueue.forEach((cb) => cb()); gMapsQueue.length = 0; };
+    s.onerror = () => { gMapsLoading = false; resolve(); };
+    document.head.appendChild(s);
+  });
+}
+
+declare global { interface Window { google: any; } }
+
+interface AddrParts { address: string; city: string; state: string; zip: string; }
+
+function AddressAutocomplete({ label, value, onSelect }: {
+  label: string; value: AddrParts; onSelect: (a: AddrParts) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ description: string; placeId: string }[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const autoRef = useRef<any>(null);
+  const placesRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    loadGoogleMaps().then(() => {
+      if (window.google?.maps?.places) {
+        autoRef.current = new window.google.maps.places.AutocompleteService();
+        placesRef.current = new window.google.maps.places.PlacesService(document.createElement("div"));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => { if (!value.address && !value.city) setQuery(""); }, [value.address, value.city]);
+
+  const search = useCallback((q: string) => {
+    if (q.length < 3 || !autoRef.current) { setResults([]); return; }
+    setLoading(true);
+    autoRef.current.getPlacePredictions(
+      { input: q, componentRestrictions: { country: ["us", "ca"] }, types: ["address"] },
+      (preds: any[] | null, status: string) => {
+        if (status === "OK" && preds) {
+          setResults(preds.slice(0, 5).map((p: any) => ({ description: p.description, placeId: p.place_id })));
+          setOpen(true);
+        } else { setResults([]); }
+        setLoading(false);
+      }
+    );
+  }, []);
+
+  const handleChange = (val: string) => {
+    setQuery(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(val), 300);
+  };
+
+  const handleSelect = (item: { description: string; placeId: string }) => {
+    setOpen(false);
+    setQuery(item.description);
+    if (!placesRef.current) return;
+    placesRef.current.getDetails(
+      { placeId: item.placeId, fields: ["address_components", "formatted_address"] },
+      (place: any, status: string) => {
+        if (status !== "OK" || !place?.address_components) return;
+        let streetNumber = "", route = "", city = "", state = "", zip = "";
+        for (const c of place.address_components) {
+          const t: string[] = c.types;
+          if (t.includes("street_number")) streetNumber = c.long_name;
+          if (t.includes("route")) route = c.long_name;
+          if (t.includes("locality")) city = c.long_name;
+          if (t.includes("sublocality_level_1") && !city) city = c.long_name;
+          if (t.includes("administrative_area_level_1")) state = c.short_name;
+          if (t.includes("postal_code")) zip = c.short_name;
+        }
+        const address = [streetNumber, route].filter(Boolean).join(" ");
+        onSelect({ address, city, state, zip });
+        setQuery(place.formatted_address || item.description);
+      }
+    );
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <div className="relative">
+        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gold" />
+        <input
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder={label}
+          className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50"
+        />
+        {loading && <Loader2 className="absolute right-3 top-2.5 w-4 h-4 text-gold animate-spin" />}
+      </div>
+      {open && results.length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+          {results.map((r) => (
+            <button key={r.placeId} onClick={() => handleSelect(r)}
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition truncate">
+              <MapPin className="w-3 h-3 inline mr-1.5 text-gold" />{r.description}
+            </button>
+          ))}
+          <div className="px-3 py-1 text-[9px] text-slate-600 text-right">Powered by Google</div>
+        </div>
       )}
     </div>
   );
