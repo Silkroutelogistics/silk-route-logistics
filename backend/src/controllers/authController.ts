@@ -27,8 +27,26 @@ export async function register(req: Request, res: Response) {
   const { password: _, ...userData } = data;
   const user = await prisma.user.create({
     data: { ...userData, passwordHash, passwordChangedAt: new Date() } as any,
-    select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    select: { id: true, email: true, firstName: true, lastName: true, role: true, company: true },
   });
+
+  // Auto-create Customer record for SHIPPER users so portal works immediately
+  if (user.role === "SHIPPER") {
+    await prisma.customer.create({
+      data: {
+        name: user.company || `${user.firstName} ${user.lastName}`,
+        type: "SHIPPER",
+        contactName: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        creditLimit: 50000,
+        creditStatus: "NOT_CHECKED",
+        paymentTerms: "Net 30",
+        onboardingStatus: "PENDING",
+        status: "Active",
+        userId: user.id,
+      },
+    }).catch((err) => console.error("[Register] Auto-create customer failed:", err.message));
+  }
 
   const token = signToken(user.id);
   setTokenCookie(res, token);

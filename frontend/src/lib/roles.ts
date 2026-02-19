@@ -16,6 +16,10 @@ export function isCarrier(role: string | undefined): boolean {
   return role === "CARRIER";
 }
 
+export function isShipper(role: string | undefined): boolean {
+  return role === "SHIPPER";
+}
+
 export function isEmployee(role: string | undefined): boolean {
   return EMPLOYEE_ROLES.includes(role as UserRole);
 }

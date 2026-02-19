@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/hooks/useAuthStore";
-import { isAdmin, isCarrier, isEmployee, CARRIER_ONLY_ROUTES, EMPLOYEE_ONLY_ROUTES } from "@/lib/roles";
+import { isAdmin, isCarrier, isEmployee, isShipper, CARRIER_ONLY_ROUTES, EMPLOYEE_ONLY_ROUTES } from "@/lib/roles";
 
 export function useRoleGuard() {
   const { user } = useAuthStore();
@@ -12,6 +12,12 @@ export function useRoleGuard() {
 
   useEffect(() => {
     if (!user) return;
+
+    // Shippers should never be on /dashboard/* — redirect to shipper portal
+    if (isShipper(user.role) && pathname.startsWith("/dashboard")) {
+      router.replace("/shipper/dashboard");
+      return;
+    }
 
     if (isAdmin(user.role)) return;
 

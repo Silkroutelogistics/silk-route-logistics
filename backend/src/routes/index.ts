@@ -51,6 +51,7 @@ import websiteRoutes from "./website";
 import analyticsRoutes from "./analytics";
 import aiRoutes from "./ai";
 import blogRoutes from "./blog";
+import shipperPortalRoutes from "./shipperPortal";
 
 const router = Router();
 
@@ -190,5 +191,6 @@ router.use("/admin", monitoringRoutes);
 router.use("/mileage", mileageRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/ai", aiRoutes);
+router.use("/shipper-portal", shipperPortalRoutes);
 
 export default router;

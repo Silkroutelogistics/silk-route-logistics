@@ -496,6 +496,9 @@ model User {
   complianceNotes     ComplianceNote[]     @relation("ComplianceNotes")
   complianceOverrides ComplianceOverride[] @relation("ComplianceOverrides")
 
+  // Shipper portal: link to Customer account
+  customerAccount     Customer?            @relation("CustomerUser")
+
   @@index([email])
   @@index([role])
   @@map("users")
@@ -1265,6 +1268,10 @@ model Customer {
   contactName     String?
   email           String?
   phone           String?
+
+  // Link to User account (shipper portal login)
+  userId          String?      @unique
+  user            User?        @relation("CustomerUser", fields: [userId], references: [id])
   address         String?
   city            String?
   state           String?

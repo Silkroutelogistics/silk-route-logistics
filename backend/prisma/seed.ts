@@ -86,6 +86,20 @@ async function main() {
     },
   });
 
+  // Shipper user — linked to Customer after customer creation
+  const shipperUser = await prisma.user.create({
+    data: {
+      email: "shipper@acmemfg.com",
+      passwordHash: hash,
+      firstName: "Robert",
+      lastName: "Mitchell",
+      company: "Acme Manufacturing",
+      role: UserRole.SHIPPER,
+      isVerified: true,
+      phone: "(313) 555-1000",
+    },
+  });
+
   // Aliases for backward compatibility in seed references
   const carrierUser2 = carrierUser;
   const carrierUser3 = carrierUser;
@@ -154,6 +168,7 @@ async function main() {
       industry: "Manufacturing",
       onboardingStatus: "APPROVED",
       status: "Active",
+      userId: shipperUser.id, // Link to shipper portal user
     },
   });
 

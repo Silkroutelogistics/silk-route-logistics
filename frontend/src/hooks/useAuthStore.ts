@@ -109,7 +109,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data } = await api.post("/auth/register", formData);
       localStorage.setItem("token", data.token);
       set({ user: data.user, token: data.token, isLoading: false });
-      window.location.href = "/dashboard/overview";
+      window.location.href = data.user?.role === "SHIPPER" ? "/shipper/dashboard" : "/dashboard/overview";
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Registration failed";
       set({ error: message, isLoading: false });
@@ -117,9 +117,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    const currentUser = get().user;
     localStorage.removeItem("token");
+    localStorage.removeItem("carrier_token");
     set({ user: null, token: null, tempToken: null });
-    window.location.href = "/auth/login";
+    const dest = currentUser?.role === "SHIPPER" ? "/shipper/login" : currentUser?.role === "CARRIER" ? "/carrier/login" : "/auth/login";
+    window.location.href = dest;
   },
 
   loadUser: async () => {

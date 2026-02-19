@@ -180,6 +180,7 @@ export function Sidebar() {
                   : user.role === "OPERATIONS" ? "Operations"
                   : user.role === "ACCOUNTING" ? "Accounting"
                   : user.role === "CARRIER" ? "Carrier"
+                  : user.role === "SHIPPER" ? "Shipper"
                   : user.role?.toLowerCase()}
               </p>
             </div>

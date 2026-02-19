@@ -126,8 +126,8 @@ export default function VerifyOtpPage() {
 
   const handleSplashComplete = useCallback(() => {
     sessionStorage.removeItem("otpEmail");
-    window.location.href = "/dashboard/overview";
-  }, []);
+    window.location.href = user?.role === "SHIPPER" ? "/shipper/dashboard" : "/dashboard/overview";
+  }, [user]);
 
   if (showSplash && user) {
     return (

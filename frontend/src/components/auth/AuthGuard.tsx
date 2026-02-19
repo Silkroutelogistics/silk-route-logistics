@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
+import { isShipper } from "@/lib/roles";
 import { Logo } from "@/components/ui/Logo";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!user) {
       loadUser().finally(() => setChecking(false));
     } else {
+      // Shipper users on the internal dashboard get redirected to shipper portal
+      if (isShipper(user.role)) {
+        router.replace("/shipper/dashboard");
+        return;
+      }
       setChecking(false);
     }
   }, [token, user, loadUser, router]);

@@ -9,8 +9,10 @@ import { BatchActionsBar } from "@/components/invoices/BatchActionsBar";
 import { cn } from "@/lib/utils";
 import {
   Download, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
-  ChevronDown, ChevronUp, Filter, TrendingUp, CreditCard, BarChart3, List,
+  ChevronDown, ChevronUp, Filter, TrendingUp, CreditCard, BarChart3, List, Printer,
 } from "lucide-react";
+import { InvoiceTemplate } from "@/components/templates";
+import type { InvoiceData } from "@/components/templates";
 
 interface LineItem {
   id: string;
@@ -94,6 +96,7 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
 
   const { data: invoiceData, isLoading } = useQuery({
     queryKey: ["invoices", isEmployee ? "all" : "mine", statusFilter],
@@ -403,6 +406,10 @@ export default function InvoicesPage() {
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
                         <Download className="w-3.5 h-3.5" /> Download PDF
                       </button>
+                      <button onClick={() => setPrintInvoice(inv)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
+                        <Printer className="w-3.5 h-3.5" /> Print Invoice
+                      </button>
                       {isEmployee && inv.status === "SUBMITTED" && (
                         <button onClick={() => updateStatus.mutate({ id: inv.id, status: "UNDER_REVIEW" })}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-xs hover:bg-purple-500/30 transition">
@@ -449,6 +456,43 @@ export default function InvoicesPage() {
       {isEmployee && <BatchActionsBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} invoices={invoices} />}
 
       {showCreate && <CreateInvoiceModal onClose={() => setShowCreate(false)} />}
+
+      {/* Print Invoice Template */}
+      {printInvoice && (
+        <InvoiceTemplate
+          onClose={() => setPrintInvoice(null)}
+          data={{
+            invoiceNumber: printInvoice.invoiceNumber,
+            status: printInvoice.status,
+            createdAt: printInvoice.createdAt,
+            amount: printInvoice.amount,
+            factoringFee: printInvoice.factoringFee ?? undefined,
+            advanceRate: printInvoice.advanceRate ?? undefined,
+            advanceAmount: printInvoice.advanceAmount ?? undefined,
+            paidAt: printInvoice.paidAt ?? undefined,
+            lineItems: printInvoice.lineItems?.map((li) => ({
+              id: li.id,
+              description: li.description,
+              type: li.type,
+              quantity: li.quantity,
+              rate: li.rate,
+              amount: li.amount,
+            })),
+            load: printInvoice.load ? {
+              referenceNumber: printInvoice.load.referenceNumber,
+              originCity: printInvoice.load.originCity,
+              originState: printInvoice.load.originState,
+              destCity: printInvoice.load.destCity,
+              destState: printInvoice.load.destState,
+            } : undefined,
+            user: printInvoice.user ? {
+              firstName: printInvoice.user.firstName,
+              lastName: printInvoice.user.lastName,
+              company: printInvoice.user.company,
+            } : undefined,
+          } as InvoiceData}
+        />
+      )}
     </div>
   );
 }
