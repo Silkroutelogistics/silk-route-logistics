@@ -31,7 +31,7 @@ export default function ShipperOverviewPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {kpis.map((kpi, i) => (
           <ShipperCard key={i} padding="p-5">
             <div className="flex justify-between items-start">

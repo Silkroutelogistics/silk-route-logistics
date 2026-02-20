@@ -504,6 +504,8 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([isActive, role])
+  @@index([company])
   @@map("users")
 }
 
@@ -837,9 +839,11 @@ model Load {
 
   @@index([customerId])
   @@index([carrierId])
+  @@index([posterId])
   @@index([pickupDate])
   @@index([deliveryDate])
   @@index([statusUpdatedAt])
+  @@index([status, createdAt])
   @@map("loads")
 }
 

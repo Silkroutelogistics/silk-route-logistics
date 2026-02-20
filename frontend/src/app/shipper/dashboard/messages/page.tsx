@@ -19,7 +19,7 @@ export default function ShipperMessagesPage() {
   return (
     <div>
       <h1 className="font-serif text-2xl text-[#0D1B2A] mb-6">Messages</h1>
-      <div className="grid grid-cols-[280px_1fr] gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
         {/* Contact list */}
         <ShipperCard padding="p-0">
           <div className="p-3.5 border-b border-gray-100">

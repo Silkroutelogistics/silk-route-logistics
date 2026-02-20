@@ -19,9 +19,9 @@ export function useSessionTimeout({
   const [countdown, setCountdown] = useState(0);
   const router = useRouter();
   const { clearAuth } = useAuthStore();
-  const idleTimer = useRef<ReturnType<typeof setTimeout>>();
-  const warningTimer = useRef<ReturnType<typeof setTimeout>>();
-  const countdownInterval = useRef<ReturnType<typeof setInterval>>();
+  const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const warningTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const countdownInterval = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const warningAt = timeoutMs - warningBeforeMs;
 
