@@ -350,7 +350,7 @@
         <a href="/ae/crm.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>CRM</a>
         <a href="/ae/communications.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Communications</a>
         <a href="/ae/claims.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="13" y2="11"/></svg>Claims</a>
-        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financials</a>
+        <a href="/ae/financials.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Lead Hunter</a>
         <a href="/ae/training.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
         <a href="/ae/analytics.html">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
@@ -373,8 +373,10 @@
 
     <main class="main" style="display:flex;flex-direction:column">
       <div class="main-header" style="flex-shrink:0">
-        <h1>Training &amp; Standard Operating Procedures</h1>
-        <p>Step-by-step guides for every AE workflow</p>
+        <div>
+          <h1>Training &amp; Standard Operating Procedures</h1>
+          <p>Step-by-step guides for every AE workflow</p>
+        </div>
       </div>
 
       <div class="training-layout">
@@ -914,7 +916,7 @@
         context: "After a load is delivered and POD received, generate a professional invoice and send it to the shipper for payment.",
         steps: [
           { title: "Verify Load is Delivered", detail: "Navigate to Load Board and find the load. Ensure the status is DELIVERED and a POD document has been uploaded.", tip: null },
-          { title: "Go to Financials", detail: "Navigate to /ae/financials.html or open the load detail view and look for the 'Generate Invoice' action.", tip: null },
+          { title: "Open Invoice Panel", detail: "Open the load detail view and look for the 'Generate Invoice' action, or navigate to the Accounting section at /ae/accounting/receivable.html.", tip: null },
           { title: "Generate Invoice", detail: "Click 'Generate Invoice' for the load. The system creates an invoice with all load details, shipper rate, accessorials, and payment terms. A PDF is auto-generated.", tip: "Tip: The invoice number follows the format INV-XXXX and auto-increments. The PDF uses SRL branding with navy/gold theme." },
           { title: "Review the Invoice", detail: "Check the generated invoice: verify the shipper name, load reference, route, rates, and total amount match the agreed terms.", tip: null },
           { title: "Send to Shipper", detail: "The system auto-sends a branded email to the shipper's email on file with the invoice PDF attached. Status changes to SENT.", tip: "Tip: If the shipper email is missing, add it in CRM first. Invoices without a recipient email are saved but not sent." },
@@ -1118,10 +1120,10 @@
               }).join("") +
             '</ol>' +
             '<div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:12px;align-items:center;">' +
-              '<a href="' + sop.pdfUrl + '" target="_blank" class="pdf-download-btn" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(200,150,62,0.15);color:#C8963E;border-radius:8px;font-size:13px;font-weight:600;transition:all 0.2s;text-decoration:none;border:1px solid rgba(200,150,62,0.3);">' +
+              '<button onclick="downloadSopPdf(\'' + sop.id + '\')" class="pdf-download-btn" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(200,150,62,0.15);color:#C8963E;border-radius:8px;font-size:13px;font-weight:600;transition:all 0.2s;cursor:pointer;border:1px solid rgba(200,150,62,0.3);">' +
                 '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
                 'Download PDF' +
-              '</a>' +
+              '</button>' +
               '<span style="font-size:12px;color:#64748b;">Training material for offline reference</span>' +
             '</div>' +
           '</div>' +
@@ -1138,6 +1140,61 @@
     function toggleSOP(id) {
       var card = document.getElementById("sop-" + id);
       if (card) card.classList.toggle("open");
+    }
+
+    /* ======== PDF DOWNLOAD ======== */
+    function downloadSopPdf(sopId) {
+      var sop = SOPS.find(function(s) { return s.id === sopId; });
+      if (!sop) return;
+
+      var stepsHtml = sop.steps.map(function(step, i) {
+        return '<div style="padding:12px 0 12px 48px;border-bottom:1px solid #e2e8f0;position:relative;font-size:14px;line-height:1.6;color:#334155;">' +
+          '<div style="position:absolute;left:0;top:12px;width:32px;height:32px;border-radius:50%;background:#0f172a;color:#c8963e;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">' + (i+1) + '</div>' +
+          '<div style="font-weight:600;color:#0f172a;margin-bottom:2px;">' + step.title + '</div>' +
+          '<div style="color:#64748b;font-size:13px;">' + step.detail + '</div>' +
+          (step.tip ? '<div style="margin-top:6px;padding:8px 12px;background:#fef9ee;border-radius:6px;font-size:12px;color:#92702e;border-left:3px solid #c8963e;"><strong>💡 </strong>' + step.tip + '</div>' : '') +
+        '</div>';
+      }).join('');
+
+      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+        '<title>' + sop.id + ' - ' + sop.title + '</title>' +
+        '<style>' +
+          'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:0;color:#334155;}' +
+          '.header{background:#0f172a;color:#fff;padding:32px 40px;display:flex;align-items:center;gap:20px;}' +
+          '.logo{width:48px;height:48px;border-radius:8px;}' +
+          '.header-text h1{font-size:14px;color:#c8963e;margin:0;letter-spacing:1px;text-transform:uppercase;}' +
+          '.header-text h2{font-size:22px;margin:4px 0 0;font-weight:700;}' +
+          '.content{padding:32px 40px;}' +
+          '.meta{display:flex;gap:16px;margin-bottom:24px;font-size:12px;color:#64748b;}' +
+          '.meta span{padding:4px 12px;background:#f1f5f9;border-radius:6px;}' +
+          '.context{background:#f8fafc;border-left:3px solid #0f172a;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#475569;border-radius:0 8px 8px 0;}' +
+          '.footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;}' +
+          '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}.header{background:#0f172a!important;color:#fff!important;}}' +
+        '</style></head><body>' +
+        '<div class="header">' +
+          '<img src="/logo.png" class="logo" alt="SRL">' +
+          '<div class="header-text">' +
+            '<h1>Silk Route Logistics — Standard Operating Procedure</h1>' +
+            '<h2>' + sop.id + ': ' + sop.title + '</h2>' +
+          '</div>' +
+        '</div>' +
+        '<div class="content">' +
+          '<div class="meta">' +
+            '<span>Role: ' + sop.who + '</span>' +
+            '<span>Category: ' + (CATEGORIES.find(function(c){return c.id===sop.category})||{label:sop.category}).label + '</span>' +
+            (sop.lastUpdated ? '<span>Updated: ' + sop.lastUpdated + '</span>' : '') +
+          '</div>' +
+          '<div class="context"><strong>When to use:</strong> ' + sop.context + '</div>' +
+          '<div>' + stepsHtml + '</div>' +
+          '<div class="footer">Confidential — Silk Route Logistics © 2026 — silkroutelogistics.ai</div>' +
+        '</div>' +
+        '</body></html>';
+
+      var w = window.open('', '_blank');
+      w.document.write(html);
+      w.document.close();
+      // Auto-trigger print dialog for Save as PDF
+      setTimeout(function() { w.print(); }, 500);
     }
 
     /* ======== HELPERS ======== */

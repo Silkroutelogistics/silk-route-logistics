@@ -88,8 +88,10 @@
     <!-- Main Content -->
     <main class="main">
       <div class="main-header">
-        <h1>AE Command Center</h1>
-        <p id="header-greeting">Loading your dashboard...</p>
+        <div>
+          <h1>AE Command Center</h1>
+          <p id="header-greeting">Loading your dashboard...</p>
+        </div>
       </div>
 
       <!-- Alert Strip -->
@@ -307,7 +309,7 @@
 
       var greeting = getGreeting();
       document.getElementById("header-greeting").textContent =
-        greeting + ", " + user.firstName + "! Here's your operational snapshot.";
+        greeting + ", " + user.firstName + "!";
     }
 
     // --- Alert Strip ---
