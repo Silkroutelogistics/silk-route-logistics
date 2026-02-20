@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { prisma } from "../config/database";
 
 const getKey = (): string => {
   const key = process.env.ENCRYPTION_KEY;
@@ -54,6 +53,7 @@ export function decrypt(encryptedStr: string): string {
  * Requires the pgcrypto extension to be enabled in the database.
  */
 export async function encryptField(plaintext: string): Promise<string> {
+  const { prisma } = await import("../config/database");
   const key = getKey();
   const result = await prisma.$queryRaw<[{ encrypted: string }]>`
     SELECT pgp_sym_encrypt(${plaintext}, ${key}) AS encrypted
@@ -66,6 +66,7 @@ export async function encryptField(plaintext: string): Promise<string> {
  * Requires the pgcrypto extension to be enabled in the database.
  */
 export async function decryptField(encrypted: string): Promise<string> {
+  const { prisma } = await import("../config/database");
   const key = getKey();
   const result = await prisma.$queryRaw<[{ decrypted: string }]>`
     SELECT pgp_sym_decrypt(${encrypted}::bytea, ${key}) AS decrypted
@@ -79,6 +80,7 @@ export async function decryptField(encrypted: string): Promise<string> {
  * Requires the pgcrypto extension to be enabled in the database.
  */
 export async function hashField(value: string): Promise<string> {
+  const { prisma } = await import("../config/database");
   const result = await prisma.$queryRaw<[{ hashed: string }]>`
     SELECT crypt(${value}, gen_salt('bf')) AS hashed
   `;
@@ -90,6 +92,7 @@ export async function hashField(value: string): Promise<string> {
  * Returns true if the value matches the hash.
  */
 export async function verifyHashedField(value: string, hash: string): Promise<boolean> {
+  const { prisma } = await import("../config/database");
   const result = await prisma.$queryRaw<[{ match: boolean }]>`
     SELECT crypt(${value}, ${hash}) = ${hash} AS match
   `;
