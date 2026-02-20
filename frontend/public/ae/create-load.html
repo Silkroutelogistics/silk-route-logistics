@@ -2234,8 +2234,102 @@
       if (zipEl && zip) { zipEl.value = zip.long_name; zipEl.dispatchEvent(new Event('input')); }
       // Trigger auto-save
       if (typeof saveDraft === 'function') saveDraft();
+      // Trigger auto mileage calculation
+      autoCalculateMiles();
     });
   }
+
+  /* ======== AUTO-CALCULATE MILES ======== */
+  var _milesCalcTimeout = null;
+
+  function autoCalculateMiles() {
+    // Debounce to avoid rapid-fire calls
+    clearTimeout(_milesCalcTimeout);
+    _milesCalcTimeout = setTimeout(_doCalculateMiles, 400);
+  }
+
+  function _doCalculateMiles() {
+    var oCity = (document.getElementById('origin-city').value || '').trim();
+    var oState = (document.getElementById('origin-state').value || '').trim();
+    var oZip = (document.getElementById('origin-zip').value || '').trim();
+    var dCity = (document.getElementById('dest-city').value || '').trim();
+    var dState = (document.getElementById('dest-state').value || '').trim();
+    var dZip = (document.getElementById('dest-zip').value || '').trim();
+
+    // Need at minimum city+state for both origin and destination
+    if ((!oCity || !oState) && !oZip) return;
+    if ((!dCity || !dState) && !dZip) return;
+
+    var origin = oZip ? (oCity + ', ' + oState + ' ' + oZip) : (oCity + ', ' + oState);
+    var dest = dZip ? (dCity + ', ' + dState + ' ' + dZip) : (dCity + ', ' + dState);
+
+    var milesEl = document.getElementById('miles');
+    var hintEl = milesEl.nextElementSibling;
+
+    // Show calculating state
+    if (hintEl) hintEl.textContent = 'Calculating distance...';
+    if (hintEl) hintEl.style.color = 'var(--gold)';
+
+    // Try backend mileage API first
+    var token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    var apiBase = window.API_URL || 'https://api.silkroutelogistics.ai';
+    var url = apiBase + '/api/mileage/calculate?origin=' + encodeURIComponent(origin) + '&destination=' + encodeURIComponent(dest);
+
+    fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var miles = data && (data.practical_miles || (data.mileage && data.mileage.miles));
+      if (miles && miles > 0) {
+        milesEl.value = Math.round(miles);
+        milesEl.dispatchEvent(new Event('input'));
+        if (hintEl) { hintEl.textContent = Math.round(miles) + ' miles (auto-calculated)'; hintEl.style.color = '#16a34a'; }
+        if (typeof updateMargin === 'function') updateMargin();
+        return;
+      }
+      // Fallback to Google Distance Matrix
+      _googleDistanceFallback(origin, dest, milesEl, hintEl);
+    })
+    .catch(function() {
+      // Fallback to Google Distance Matrix
+      _googleDistanceFallback(origin, dest, milesEl, hintEl);
+    });
+  }
+
+  function _googleDistanceFallback(origin, dest, milesEl, hintEl) {
+    if (!window.google || !google.maps || !google.maps.DistanceMatrixService) {
+      if (hintEl) { hintEl.textContent = 'Auto-calculated from route when available'; hintEl.style.color = 'var(--gray-400)'; }
+      return;
+    }
+    var service = new google.maps.DistanceMatrixService();
+    service.getDistanceMatrix({
+      origins: [origin],
+      destinations: [dest],
+      travelMode: 'DRIVING',
+      unitSystem: google.maps.UnitSystem.IMPERIAL
+    }, function(response, status) {
+      if (status === 'OK' && response.rows[0] && response.rows[0].elements[0] && response.rows[0].elements[0].status === 'OK') {
+        var distMeters = response.rows[0].elements[0].distance.value;
+        var miles = Math.round(distMeters / 1609.34);
+        milesEl.value = miles;
+        milesEl.dispatchEvent(new Event('input'));
+        if (hintEl) { hintEl.textContent = miles + ' miles (auto-calculated)'; hintEl.style.color = '#16a34a'; }
+        if (typeof updateMargin === 'function') updateMargin();
+      } else {
+        if (hintEl) { hintEl.textContent = 'Could not calculate — enter manually'; hintEl.style.color = 'var(--gray-400)'; }
+      }
+    });
+  }
+
+  // Also trigger on manual city/state changes
+  ['origin-city', 'origin-state', 'origin-zip', 'dest-city', 'dest-state', 'dest-zip'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', autoCalculateMiles);
+      el.addEventListener('blur', autoCalculateMiles);
+    }
+  });
   </script>
 
   <script src="/ae/js/sidebar.js"></script>
