@@ -63,6 +63,18 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 export function authorize(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {
+      // Log unauthorized access attempt
+      if (req.user) {
+        prisma.systemLog.create({
+          data: {
+            logType: "SECURITY",
+            severity: "WARNING",
+            source: "authorize",
+            message: `Access denied: ${req.user.email} (${req.user.role}) attempted ${req.method} ${req.originalUrl} — required: ${roles.join(", ")}`,
+            ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+          },
+        }).catch(() => {});
+      }
       res.status(403).json({ error: "Insufficient permissions" });
       return;
     }

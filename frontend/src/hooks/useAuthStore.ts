@@ -21,6 +21,7 @@ interface AuthState {
   forceChangePassword: (newPassword: string) => Promise<boolean>;
   registerUser: (data: Record<string, unknown>) => Promise<void>;
   logout: () => void;
+  clearAuth: () => void;
   loadUser: () => Promise<void>;
 }
 
@@ -123,6 +124,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: null, token: null, tempToken: null });
     const dest = currentUser?.role === "SHIPPER" ? "/shipper/login" : currentUser?.role === "CARRIER" ? "/carrier/login" : "/auth/login";
     window.location.href = dest;
+  },
+
+  clearAuth: () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("carrier_token");
+    localStorage.removeItem("user");
+    set({ user: null, token: null, tempToken: null });
   },
 
   loadUser: async () => {

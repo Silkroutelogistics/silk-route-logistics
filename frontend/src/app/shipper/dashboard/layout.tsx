@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { ShipperSidebar } from "@/components/shipper";
 import { Search, Bell, X } from "lucide-react";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
 
 interface Notification {
@@ -33,6 +34,11 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
   const { token, user, loadUser } = useAuthStore();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
+  const { showWarning, countdown, extendSession, forceLogout } = useSessionTimeout({
+    timeoutMs: 60 * 60 * 1000,
+    warningBeforeMs: 2 * 60 * 1000,
+    loginPath: "/shipper/login",
+  });
 
   const { data: notifData } = useQuery({
     queryKey: ["shipper-notifications"],
@@ -122,6 +128,29 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
         {/* Content */}
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
+
+      {/* Session timeout warning modal */}
+      {showWarning && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center">
+          <div className="bg-[#121e30] border border-[rgba(200,150,62,0.2)] rounded-2xl p-9 max-w-[420px] w-[90%] text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[rgba(202,138,4,0.12)] flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3 className="text-[#e8edf2] text-lg font-semibold mb-2">Session Expiring</h3>
+            <p className="text-[#7a9ab5] text-sm leading-relaxed mb-6">
+              Your session is about to expire due to inactivity. You will be logged out in <strong className="text-[#ca8a04]">{countdown}</strong>.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={extendSession} className="px-6 py-2.5 text-sm font-semibold bg-gradient-to-br from-[#c8a951] to-[#b8963e] text-[#0D1B2A] rounded-lg hover:shadow-[0_4px_20px_rgba(200,150,62,0.25)] transition-all">
+                Extend Session
+              </button>
+              <button onClick={forceLogout} className="px-6 py-2.5 text-sm font-medium bg-transparent text-[#6a8090] border border-[#243447] rounded-lg hover:bg-[rgba(200,150,62,0.05)] transition-all">
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

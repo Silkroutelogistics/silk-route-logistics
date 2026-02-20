@@ -187,10 +187,14 @@
 
     .otp-section{display:none}
     .otp-section.show{display:block}
+    .totp-section{display:none}
+    .totp-section.show{display:block}
     .email-section.hide{display:none}
     .back-link{text-align:center;margin-top:16px}
     .back-link a{color:#6a8090;font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Inter',sans-serif}
     .back-link a:hover{color:#c8a951}
+    .totp-icon{display:flex;justify-content:center;margin-bottom:16px}
+    .totp-hint{font-size:12.5px;color:#6a8090;text-align:center;margin-bottom:18px;line-height:1.5}
 
     @media(max-width:900px){.left-panel{display:none}.right-panel{width:100%;border-left:none}}
     @media(max-width:480px){.login-card{padding:24px 20px}}
@@ -307,6 +311,23 @@
           <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
         </div>
 
+        <!-- Step 3: TOTP 2FA Verification -->
+        <div id="totp-section" class="totp-section">
+          <div class="totp-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8a951" stroke-width="1.5" stroke-linecap="round">
+              <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/>
+              <path d="M9 9h1l1.5 3L13 9h1" opacity=".6"/>
+            </svg>
+          </div>
+          <div class="totp-hint">Open your authenticator app and enter the 6-digit code for Silk Route Logistics.</div>
+          <div class="field-group">
+            <label class="field-label">Authenticator Code</label>
+            <input type="text" id="totpCode" class="field-input" placeholder="000000" maxlength="8" autocomplete="one-time-code" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:20px">
+          </div>
+          <button id="totpBtn" class="btn-submit" onclick="handleTotp()">Verify 2FA</button>
+          <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
+        </div>
+
         <div class="divider"><div class="divider-line"></div><span class="divider-text">or</span><div class="divider-line"></div></div>
         <a href="/carrier/login.html" class="btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Carrier Login</a>
         <a href="/shipper/login" class="btn-secondary" style="margin-top:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Shipper Portal</a>
@@ -324,6 +345,7 @@
     var BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
     var pendingEmail = '';
+    var pendingTotpToken = '';
 
     // Session expired banner
     if (new URLSearchParams(window.location.search).get('expired') === '1') {
@@ -350,6 +372,7 @@
     document.getElementById('email').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('password').focus(); });
     document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
     document.getElementById('otp').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleOtp(); });
+    document.getElementById('totpCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleTotp(); });
 
     function showAlert(msg, type) {
       var el = document.getElementById('alertBanner');
@@ -417,15 +440,16 @@
       .then(function(data) {
         btn.disabled = false; btn.textContent = 'Verify';
         if (data.error) { showAlert(data.error, 'error'); return; }
+        if (data.pendingTotp) {
+          pendingTotpToken = data.totpToken;
+          document.getElementById('otp-section').classList.remove('show');
+          document.getElementById('totp-section').classList.add('show');
+          showAlert('Enter the code from your authenticator app.', 'success');
+          setTimeout(function() { document.getElementById('totpCode').focus(); }, 100);
+          return;
+        }
         if (data.token) {
-          var remember = document.getElementById('rememberMe').checked;
-          SRLAuth.setToken('token', data.token, remember);
-          localStorage.setItem('user', JSON.stringify(data.user || {}));
-          localStorage.setItem('srl_last_activity', Date.now().toString());
-          if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');
-          else SRLAuth.setRememberedEmail('', 'ae');
-          var redirect = new URLSearchParams(window.location.search).get('redirect');
-          window.location.href = redirect || '/ae/dashboard/index.html';
+          completeLogin(data);
         }
       })
       .catch(function() {
@@ -434,10 +458,51 @@
       });
     }
 
+    function handleTotp() {
+      var code = document.getElementById('totpCode').value.trim();
+      if (!code || code.length < 6) { showAlert('Please enter the 6-digit code.', 'error'); return; }
+
+      var btn = document.getElementById('totpBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      showAlert('', 'error');
+
+      fetch(BASE + '/api/auth/totp/login-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totpToken: pendingTotpToken, code: code })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.textContent = 'Verify 2FA';
+        if (data.error) { showAlert(data.error, 'error'); return; }
+        if (data.token) {
+          completeLogin(data);
+        }
+      })
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Verify 2FA';
+        showAlert('Unable to connect to server. Please try again.', 'error');
+      });
+    }
+
+    function completeLogin(data) {
+      var remember = document.getElementById('rememberMe').checked;
+      SRLAuth.setToken('token', data.token, remember);
+      localStorage.setItem('user', JSON.stringify(data.user || {}));
+      localStorage.setItem('srl_last_activity', Date.now().toString());
+      if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');
+      else SRLAuth.setRememberedEmail('', 'ae');
+      var redirect = new URLSearchParams(window.location.search).get('redirect');
+      window.location.href = redirect || '/ae/dashboard/index.html';
+    }
+
     function goBack() {
       document.getElementById('email-section').classList.remove('hide');
       document.getElementById('otp-section').classList.remove('show');
+      document.getElementById('totp-section').classList.remove('show');
       document.getElementById('otp').value = '';
+      document.getElementById('totpCode').value = '';
+      pendingTotpToken = '';
       showAlert('', 'error');
     }
   </script>

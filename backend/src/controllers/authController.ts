@@ -9,6 +9,8 @@ import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt, createPassw
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/emailService";
 import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 import { blacklistToken } from "../utils/tokenBlacklist";
+import { validatePassword } from "../utils/passwordPolicy";
+import { verifyTotpCode } from "../services/totpService";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 function signToken(userId: string): string {
@@ -17,6 +19,14 @@ function signToken(userId: string): string {
 
 export async function register(req: Request, res: Response) {
   const data = registerSchema.parse(req.body);
+
+  // Enforce password policy
+  const pwCheck = validatePassword(data.password);
+  if (!pwCheck.valid) {
+    res.status(400).json({ error: pwCheck.errors[0], passwordErrors: pwCheck.errors });
+    return;
+  }
+
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
     res.status(409).json({ error: "Email already registered" });
@@ -131,6 +141,17 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     return;
   }
 
+  // Check if TOTP 2FA is enabled — require additional verification
+  if (user.totpEnabled) {
+    const totpTempToken = jwt.sign(
+      { userId: user.id, purpose: "totp-verification" },
+      env.JWT_SECRET,
+      { algorithm: "HS256", expiresIn: "5m" } as jwt.SignOptions,
+    );
+    res.json({ pendingTotp: true, totpToken: totpTempToken });
+    return;
+  }
+
   // Check password expiry
   const baseDate = user.passwordChangedAt || user.createdAt;
   const daysSinceChange = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -197,8 +218,9 @@ export async function handleResendOtp(req: Request, res: Response) {
 
 export async function forceChangePassword(req: AuthRequest, res: Response) {
   const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 8) {
-    res.status(400).json({ error: "New password must be at least 8 characters" });
+  const pwCheck = validatePassword(newPassword || "");
+  if (!pwCheck.valid) {
+    res.status(400).json({ error: pwCheck.errors[0], passwordErrors: pwCheck.errors });
     return;
   }
 
@@ -328,8 +350,13 @@ export async function logout(req: AuthRequest, res: Response) {
 
 export async function changePassword(req: AuthRequest, res: Response) {
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword || newPassword.length < 8) {
-    res.status(400).json({ error: "New password must be at least 8 characters" });
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Current password and new password are required" });
+    return;
+  }
+  const pwCheck = validatePassword(newPassword);
+  if (!pwCheck.valid) {
+    res.status(400).json({ error: pwCheck.errors[0], passwordErrors: pwCheck.errors });
     return;
   }
 
@@ -375,8 +402,9 @@ export async function resetPassword(req: Request, res: Response) {
     return;
   }
 
-  if (newPassword.length < 8) {
-    res.status(400).json({ error: "New password must be at least 8 characters" });
+  const pwCheck = validatePassword(newPassword);
+  if (!pwCheck.valid) {
+    res.status(400).json({ error: pwCheck.errors[0], passwordErrors: pwCheck.errors });
     return;
   }
 
@@ -399,4 +427,88 @@ export async function resetPassword(req: Request, res: Response) {
   });
 
   res.json({ message: "Password has been reset successfully. You can now log in." });
+}
+
+export async function handleTotpLoginVerify(req: Request, res: Response) {
+  const { totpToken, code } = req.body;
+  if (!totpToken || !code) {
+    res.status(400).json({ error: "Token and code are required" });
+    return;
+  }
+
+  let payload: { userId: string; purpose?: string };
+  try {
+    payload = jwt.verify(totpToken, env.JWT_SECRET, { algorithms: ["HS256"] }) as any;
+  } catch {
+    res.status(401).json({ error: "Expired or invalid token. Please log in again." });
+    return;
+  }
+
+  if (payload.purpose !== "totp-verification") {
+    res.status(403).json({ error: "Invalid token for this operation" });
+    return;
+  }
+
+  const valid = await verifyTotpCode(payload.userId, code);
+  if (!valid) {
+    res.status(401).json({ error: "Invalid authenticator code" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { id: true, email: true, firstName: true, lastName: true, role: true, passwordChangedAt: true, createdAt: true },
+  });
+
+  if (!user) {
+    res.status(401).json({ error: "User not found" });
+    return;
+  }
+
+  // Check password expiry
+  const baseDate = user.passwordChangedAt || user.createdAt;
+  const daysSinceChange = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (daysSinceChange >= PASSWORD_EXPIRY_DAYS) {
+    const tempToken = jwt.sign(
+      { userId: user.id, purpose: "force-change-password" },
+      env.JWT_SECRET,
+      { algorithm: "HS256", expiresIn: "10m" } as jwt.SignOptions,
+    );
+    res.json({ passwordExpired: true, tempToken });
+    return;
+  }
+
+  // Issue full JWT + audit log
+  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
+  const userAgent = req.headers["user-agent"] || "";
+
+  const token = signToken(user.id);
+
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: "LOGIN",
+      entity: "Session",
+      changes: "2FA verified",
+      ipAddress: typeof ipAddress === "string" ? ipAddress : String(ipAddress),
+      userAgent,
+    },
+  });
+
+  setTokenCookie(res, token);
+  res.json({
+    user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
+    token,
+  });
+}
+
+export async function checkPasswordStrength(req: Request, res: Response) {
+  const { password } = req.body;
+  if (!password) {
+    res.status(400).json({ error: "Password is required" });
+    return;
+  }
+  const result = validatePassword(password);
+  res.json({ strength: result.strength, valid: result.valid, errors: result.errors });
 }

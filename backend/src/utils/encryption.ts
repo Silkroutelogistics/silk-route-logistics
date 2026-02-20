@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { prisma } from "../config/database";
 
 const getKey = (): string => {
@@ -7,6 +8,46 @@ const getKey = (): string => {
   }
   return key;
 };
+
+/**
+ * Derive a 32-byte AES-256 key from the ENCRYPTION_KEY env var
+ */
+function deriveAesKey(): Buffer {
+  const raw = getKey();
+  return crypto.createHash("sha256").update(raw).digest();
+}
+
+/**
+ * Synchronous AES-256-GCM encrypt (for application-level encryption)
+ * Returns base64 string: iv:authTag:ciphertext
+ */
+export function encrypt(plaintext: string): string {
+  const key = deriveAesKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  let encrypted = cipher.update(plaintext, "utf8", "base64");
+  encrypted += cipher.final("base64");
+  const authTag = cipher.getAuthTag().toString("base64");
+  return `${iv.toString("base64")}:${authTag}:${encrypted}`;
+}
+
+/**
+ * Synchronous AES-256-GCM decrypt
+ * Expects base64 string: iv:authTag:ciphertext
+ */
+export function decrypt(encryptedStr: string): string {
+  const parts = encryptedStr.split(":");
+  if (parts.length !== 3) throw new Error("Invalid encrypted format");
+  const [ivB64, authTagB64, ciphertext] = parts;
+  const key = deriveAesKey();
+  const iv = Buffer.from(ivB64, "base64");
+  const authTag = Buffer.from(authTagB64, "base64");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(ciphertext, "base64", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+}
 
 /**
  * Encrypt a plaintext value using PostgreSQL pgp_sym_encrypt.

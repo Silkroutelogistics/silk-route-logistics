@@ -466,6 +466,9 @@ model User {
   preferredTheme       String    @default("silk-route-classic")
   darkMode             Boolean   @default(false)
   passwordChangedAt    DateTime?
+  totpSecret           String?
+  totpEnabled          Boolean   @default(false)
+  totpBackupCodes      String?
   otpCodes             OtpCode[]
   rateConfirmations    RateConfirmation[] @relation("RateConfCreator")
   checkCalls           CheckCall[]        @relation("CheckCallUser")
