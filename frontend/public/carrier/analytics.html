@@ -269,7 +269,7 @@
 
     /* ── Auth Check ── */
     var token = localStorage.getItem("carrier_token");
-    if (!token) { window.location.href = "/auth/carrier-login"; return; }
+    if (!token) { window.location.href = "/carrier/login.html"; return; }
 
     /* ── State ── */
     var earningsGranularity = "day";
@@ -294,7 +294,7 @@
 
       loadAllData();
     }).catch(function () {
-      window.location.href = "/auth/carrier-login";
+      window.location.href = "/carrier/login.html";
     });
 
     /* ── Earnings granularity toggle ── */

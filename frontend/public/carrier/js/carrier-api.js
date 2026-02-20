@@ -85,7 +85,7 @@ var CARRIER = (function () {
       localStorage.removeItem("carrier_user");
       sessionStorage.removeItem("carrier_token");
       sessionStorage.removeItem("carrier_user");
-      window.location.href = "/auth/carrier-login";
+      window.location.href = "/carrier/login.html";
     });
   }
 
@@ -132,7 +132,7 @@ var CARRIER = (function () {
 
   function requireAuth() {
     if (!isLoggedIn()) {
-      window.location.href = "/auth/carrier-login";
+      window.location.href = "/carrier/login.html";
       return false;
     }
     return true;
