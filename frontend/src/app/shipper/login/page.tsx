@@ -300,7 +300,7 @@ export default function ShipperLoginPage() {
 
           <div className="flex items-center justify-center gap-1.5 mt-7 text-[11px] text-[#3a5060]">
             <Shield size={12} className="opacity-40" />
-            256-bit SSL encrypted &bull; SOC 2 compliant
+            256-bit SSL encrypted &bull; Secure data handling
           </div>
         </div>
       </div>
