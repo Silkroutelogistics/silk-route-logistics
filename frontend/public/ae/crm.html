@@ -515,13 +515,23 @@
             <input id="pf-industry" type="text" placeholder="Manufacturing">
           </div>
           <div class="form-section-title">Location</div>
+          <div class="form-group full-width">
+            <label>Street Address</label>
+            <input id="pf-address" type="text" placeholder="Start typing an address..." autocomplete="off">
+          </div>
           <div class="form-group">
             <label>City</label>
             <input id="pf-city" type="text" placeholder="Chicago">
           </div>
-          <div class="form-group">
-            <label>State</label>
-            <input id="pf-state" type="text" placeholder="IL" maxlength="2" style="text-transform:uppercase">
+          <div class="form-group" style="display:flex;gap:12px;">
+            <div style="flex:1">
+              <label>State</label>
+              <input id="pf-state" type="text" placeholder="IL" maxlength="2" style="text-transform:uppercase">
+            </div>
+            <div style="flex:1">
+              <label>ZIP</label>
+              <input id="pf-zip" type="text" placeholder="60601" maxlength="10">
+            </div>
           </div>
           <div class="form-section-title">Business Details</div>
           <div class="form-group">
@@ -892,8 +902,10 @@
       document.getElementById("pf-email").value = c.email || "";
       document.getElementById("pf-phone").value = c.phone || "";
       document.getElementById("pf-industry").value = c.industry || "";
+      document.getElementById("pf-address").value = c.address || "";
       document.getElementById("pf-city").value = c.city || "";
       document.getElementById("pf-state").value = c.state || "";
+      document.getElementById("pf-zip").value = c.zip || "";
       document.getElementById("pf-avgLoads").value = c.avgLoadsPerMonth || "";
       document.getElementById("pf-notes").value = c.notes || "";
       closeDetail();
@@ -931,8 +943,10 @@
         email: document.getElementById("pf-email").value.trim() || undefined,
         phone: document.getElementById("pf-phone").value.trim() || undefined,
         industry: document.getElementById("pf-industry").value.trim() || undefined,
+        address: document.getElementById("pf-address").value.trim() || undefined,
         city: document.getElementById("pf-city").value.trim() || undefined,
         state: document.getElementById("pf-state").value.trim().toUpperCase() || undefined,
+        zip: document.getElementById("pf-zip").value.trim() || undefined,
         avgLoadsPerMonth: parseInt(document.getElementById("pf-avgLoads").value) || undefined,
         notes: document.getElementById("pf-notes").value.trim() || undefined
       };
@@ -960,7 +974,7 @@
     }
 
     function clearProspectForm() {
-      ["pf-name","pf-contactName","pf-email","pf-phone","pf-industry","pf-city","pf-state","pf-avgLoads","pf-notes"].forEach(function(id) {
+      ["pf-name","pf-contactName","pf-email","pf-phone","pf-industry","pf-address","pf-city","pf-state","pf-zip","pf-avgLoads","pf-notes"].forEach(function(id) {
         document.getElementById(id).value = "";
       });
       document.getElementById("pf-equipment").selectedIndex = 0;
@@ -1182,6 +1196,51 @@
       window.location.href = "/auth/login";
     }
   </script>
+<!-- Google Maps Places API for address autocomplete -->
+<script>
+(function(){
+  var s = document.createElement('script');
+  s.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyD7l3H5sHuMVwICBGm4wXb7MtArFQs_V-A&libraries=places&callback=initCrmPlaces';
+  s.async = true;
+  s.defer = true;
+  document.head.appendChild(s);
+})();
+
+function initCrmPlaces() {
+  var input = document.getElementById('pf-address');
+  if (!input || !window.google) return;
+  var autocomplete = new google.maps.places.Autocomplete(input, {
+    types: ['address'],
+    componentRestrictions: { country: ['us', 'ca', 'mx'] }
+  });
+  autocomplete.setFields(['address_components', 'formatted_address']);
+  autocomplete.addListener('place_changed', function() {
+    var place = autocomplete.getPlace();
+    if (!place || !place.address_components) return;
+    var comps = place.address_components;
+    var get = function(type) {
+      for (var i = 0; i < comps.length; i++) {
+        if (comps[i].types.indexOf(type) !== -1) return comps[i];
+      }
+      return null;
+    };
+    var streetNum = get('street_number');
+    var route = get('route');
+    var city = get('locality') || get('sublocality_level_1') || get('administrative_area_level_3');
+    var state = get('administrative_area_level_1');
+    var zip = get('postal_code');
+    // Build street address
+    var street = '';
+    if (streetNum) street = streetNum.long_name;
+    if (route) street += (street ? ' ' : '') + route.long_name;
+    if (street) input.value = street;
+    // Auto-fill city, state, zip
+    if (city) document.getElementById('pf-city').value = city.long_name;
+    if (state) document.getElementById('pf-state').value = state.short_name;
+    if (zip) document.getElementById('pf-zip').value = zip.long_name;
+  });
+}
+</script>
 <script src="/ae/js/sidebar.js"></script>
 <script src="/ae/js/notification-bell.js"></script>
 <script src="/shared/js/themeEngine.js"></script>
