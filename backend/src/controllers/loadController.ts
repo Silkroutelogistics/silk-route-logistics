@@ -183,6 +183,7 @@ export async function getLoadById(req: AuthRequest, res: Response) {
       },
       documents: true,
       messages: { include: { sender: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "asc" } },
+      delays: { include: { reportedBy: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { reportedAt: "desc" } },
     },
   });
 

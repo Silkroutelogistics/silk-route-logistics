@@ -45,6 +45,11 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
     return;
   }
 
+  if (!user.isActive) {
+    res.status(403).json({ error: "Account has been deactivated. Contact support." });
+    return;
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     res.status(401).json({ error: "Invalid credentials" });
@@ -80,6 +85,9 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
     },
     carrier: {
       id: profile.id,
+      companyName: profile.companyName,
+      mcNumber: profile.mcNumber,
+      dotNumber: profile.dotNumber,
       tier: profile.tier,
       cppTier: profile.cppTier,
       onboardingStatus: profile.onboardingStatus,

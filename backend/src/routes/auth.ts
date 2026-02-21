@@ -89,4 +89,42 @@ router.post("/totp/disable", authenticate, validateBody(z.object({ code: z.strin
   }
 });
 
+// Admin: List all employees
+router.get("/users", authenticate, authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res) => {
+  try {
+    const users = await (await import("../config/database")).prisma.user.findMany({
+      where: { role: { notIn: ["CARRIER", "SHIPPER"] } },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, company: true, isActive: true, lastLogin: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// Admin: Toggle employee active status
+router.patch("/users/:id/status", authenticate, authorize("ADMIN") as any, async (req: AuthRequest, res) => {
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== "boolean") {
+      res.status(400).json({ error: "isActive must be a boolean" });
+      return;
+    }
+    // Prevent self-deactivation
+    if (req.params.id === req.user!.id) {
+      res.status(400).json({ error: "Cannot change your own status" });
+      return;
+    }
+    const user = await (await import("../config/database")).prisma.user.update({
+      where: { id: req.params.id },
+      data: { isActive },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 export default router;

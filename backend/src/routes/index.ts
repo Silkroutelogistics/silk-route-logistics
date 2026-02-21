@@ -52,6 +52,7 @@ import analyticsRoutes from "./analytics";
 import aiRoutes from "./ai";
 import blogRoutes from "./blog";
 import shipperPortalRoutes from "./shipperPortal";
+import delayRoutes from "./delays";
 
 const router = Router();
 
@@ -192,5 +193,6 @@ router.use("/mileage", mileageRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/ai", aiRoutes);
 router.use("/shipper-portal", shipperPortalRoutes);
+router.use("/delays", delayRoutes);
 
 export default router;

@@ -437,6 +437,20 @@ enum CheckCallDriverStatus {
   OTHER
 }
 
+enum DelayReasonCode {
+  WEATHER
+  TRAFFIC
+  MECHANICAL
+  SHIPPER_DELAY
+  RECEIVER_DELAY
+  DRIVER_HOS
+  CUSTOMS
+  DETENTION
+  ACCIDENT
+  ROAD_CLOSURE
+  OTHER
+}
+
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
@@ -501,6 +515,8 @@ model User {
 
   // Shipper portal: link to Customer account
   customerAccount     Customer?            @relation("CustomerUser")
+
+  reportedDelays      LoadDelay[]          @relation("DelayReporter")
 
   @@index([email])
   @@index([role])
@@ -828,6 +844,7 @@ model Load {
   riskLogs        RiskLog[]
   fallOffEvents   FallOffEvent[]
   claims          Claim[]
+  delays          LoadDelay[]
 
   @@index([status])
   @@index([loadNumber])
@@ -2627,4 +2644,24 @@ model ShipmentRiskLog {
   @@index([riskLevel])
   @@index([scannedAt])
   @@map("shipment_risk_logs")
+}
+
+model LoadDelay {
+  id             String          @id @default(cuid())
+  loadId         String
+  load           Load            @relation(fields: [loadId], references: [id])
+  reasonCode     DelayReasonCode
+  description    String?
+  delayMinutes   Int
+  reportedAt     DateTime        @default(now())
+  reportedById   String
+  reportedBy     User            @relation("DelayReporter", fields: [reportedById], references: [id])
+  resolvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([loadId])
+  @@index([reasonCode])
+  @@index([reportedAt])
+  @@map("load_delays")
 }

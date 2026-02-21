@@ -1110,6 +1110,47 @@
     </main>
   </div>
 
+  <!-- ===== REPORT DELAY MODAL ===== -->
+  <div class="modal-backdrop" id="delay-modal" style="display:none">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h3>Report Delay</h3>
+        <button class="modal-close" onclick="closeDelayModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px">
+        <input type="hidden" id="delay-load-id">
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">Reason Code</label>
+          <select id="delay-reason" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px">
+            <option value="WEATHER">Weather</option>
+            <option value="TRAFFIC">Traffic</option>
+            <option value="MECHANICAL">Mechanical</option>
+            <option value="SHIPPER_DELAY">Shipper Delay</option>
+            <option value="RECEIVER_DELAY">Receiver Delay</option>
+            <option value="DRIVER_HOS">Driver HOS</option>
+            <option value="CUSTOMS">Customs</option>
+            <option value="DETENTION">Detention</option>
+            <option value="ACCIDENT">Accident</option>
+            <option value="ROAD_CLOSURE">Road Closure</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">Delay Duration (minutes)</label>
+          <input type="number" id="delay-minutes" min="1" placeholder="e.g. 120" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">Description (optional)</label>
+          <textarea id="delay-description" rows="3" placeholder="Details about the delay..." style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:12px 24px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--gray-200)">
+        <button class="btn-secondary btn-sm" onclick="closeDelayModal()">Cancel</button>
+        <button class="btn-primary btn-sm" onclick="submitDelay()" style="background:var(--red)">Report Delay</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== CANCEL LOAD MODAL ===== -->
   <div class="modal-backdrop" id="cancel-modal" style="display:none">
     <div class="modal" style="max-width:520px">
@@ -1728,6 +1769,32 @@
       }
       html += '</div>';
 
+      // Delays
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title" style="display:flex;justify-content:space-between;align-items:center">Delays';
+      html += '<button class="btn-primary btn-sm" style="font-size:11px;padding:4px 10px" onclick="openDelayModal(\'' + load.id + '\')">+ Report Delay</button>';
+      html += '</div>';
+      if (load.delays && load.delays.length > 0) {
+        load.delays.forEach(function(d) {
+          var reasonLabel = d.reasonCode.replace(/_/g, ' ');
+          var hrs = Math.floor(d.delayMinutes / 60);
+          var mins = d.delayMinutes % 60;
+          var duration = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+          var resolved = d.resolvedAt ? '<span style="color:var(--green);font-size:11px;margin-left:6px">&#10003; Resolved</span>' : '<button class="btn-sm" style="font-size:10px;padding:2px 8px;margin-left:6px;background:var(--green);color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="resolveDelay(\'' + d.id + '\')">Resolve</button>';
+          html += '<div style="padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+          html += '<span style="font-weight:600;color:var(--red)">' + esc(reasonLabel) + '</span>';
+          html += '<span style="color:var(--gray-500)">' + duration + resolved + '</span>';
+          html += '</div>';
+          if (d.description) html += '<div style="color:var(--gray-600);margin-top:2px">' + esc(d.description) + '</div>';
+          html += '<div style="color:var(--gray-400);font-size:11px;margin-top:2px">Reported by ' + esc(d.reportedBy.firstName + ' ' + d.reportedBy.lastName) + ' &middot; ' + new Date(d.reportedAt).toLocaleString() + '</div>';
+          html += '</div>';
+        });
+      } else {
+        html += '<div class="empty-state" style="padding:12px;font-size:13px;color:var(--gray-400)">No delays reported</div>';
+      }
+      html += '</div>';
+
       // Special Instructions
       if (load.specialInstructions || load.notes || load.pickupInstructions || load.deliveryInstructions) {
         html += '<div class="detail-section">';
@@ -2123,7 +2190,7 @@
       var el = document.getElementById("rc-results");
       el.innerHTML =
         '<div class="rate-result-row"><span class="rl">Margin $</span><span class="rv' + (margin < 0 ? '" style="color:var(--red)"' : '"') + '>$' + num2(margin) + '</span></div>' +
-        '<div class="rate-result-row"><span class="rl">Margin %</span><span class="rv' + (pct < 10 ? '" style="color:var(--amber)"' : '"') + '>' + pct.toFixed(1) + '%</span></div>' +
+        '<div class="rate-result-row"><span class="rl">Margin %</span><span class="rv' + (pct < 20 ? '" style="color:var(--amber)"' : '"') + '>' + pct.toFixed(1) + '%</span></div>' +
         '<div class="rate-result-row"><span class="rl">Fuel Surcharge</span><span class="rv">$' + num2(f) + '</span></div>' +
         '<div class="rate-result-row highlight' + (isNeg ? ' negative' : '') + '"><span class="rl">Net Profit</span><span class="rv">$' + num2(net) + '</span></div>';
     }
@@ -2310,6 +2377,50 @@
         showToast("POD request sent to carrier", "success");
       }).catch(function(err) {
         showToast("POD request failed: " + err.message, "error");
+      });
+    }
+
+    function openDelayModal(loadId) {
+      document.getElementById("delay-load-id").value = loadId;
+      document.getElementById("delay-reason").value = "WEATHER";
+      document.getElementById("delay-minutes").value = "";
+      document.getElementById("delay-description").value = "";
+      document.getElementById("delay-modal").style.display = "flex";
+    }
+    function closeDelayModal() {
+      document.getElementById("delay-modal").style.display = "none";
+    }
+    function submitDelay() {
+      var loadId = document.getElementById("delay-load-id").value;
+      var minutes = parseInt(document.getElementById("delay-minutes").value);
+      if (!minutes || minutes < 1) { showToast("Enter a valid delay duration", "error"); return; }
+      SRL.request("/api/delays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          loadId: loadId,
+          reasonCode: document.getElementById("delay-reason").value,
+          delayMinutes: minutes,
+          description: document.getElementById("delay-description").value || undefined
+        })
+      }).then(function() {
+        showToast("Delay reported", "success");
+        closeDelayModal();
+        openDetail(loadId);
+      }).catch(function(err) {
+        showToast("Failed to report delay: " + err.message, "error");
+      });
+    }
+    function resolveDelay(delayId) {
+      SRL.request("/api/delays/" + delayId, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolved: true })
+      }).then(function() {
+        showToast("Delay marked as resolved", "success");
+        if (state.currentLoad) openDetail(state.currentLoad.id);
+      }).catch(function(err) {
+        showToast("Failed: " + err.message, "error");
       });
     }
 
