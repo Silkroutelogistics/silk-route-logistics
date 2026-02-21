@@ -1,3 +1,11 @@
+import * as Sentry from "@sentry/node";
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || "",
+  environment: process.env.NODE_ENV || "development",
+  enabled: !!process.env.SENTRY_DSN,
+  tracesSampleRate: 0.2,
+});
+
 import "express-async-errors";
 import express from "express";
 import path from "path";
@@ -175,6 +183,9 @@ app.use(auditMiddleware as any);
 
 // ─── API Routes ─────────────────────────────────────────────
 app.use("/api", routes);
+
+// ─── Sentry Error Handler (must be before custom errorHandler) ──
+Sentry.setupExpressErrorHandler(app);
 
 // ─── Global Error Handler ───────────────────────────────────
 app.use(errorHandler);

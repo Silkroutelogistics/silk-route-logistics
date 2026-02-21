@@ -1,8 +1,23 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Sentry } from "@/lib/sentry";
+import { useAuthStore } from "@/hooks/useAuthStore";
 import { ToastProvider } from "@/components/ui/Toast";
+
+function SentryUserSync() {
+  const user = useAuthStore((s) => s.user);
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({ id: user.id, email: user.email });
+      Sentry.setTag("user.role", user.role);
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [user]);
+  return null;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -16,7 +31,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <Sentry.ErrorBoundary fallback={<p>Something went wrong.</p>}>
+          <SentryUserSync />
+          {children}
+        </Sentry.ErrorBoundary>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import * as Sentry from "@sentry/node";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
 import { isTokenBlacklisted } from "../utils/tokenBlacklist";
@@ -54,6 +55,8 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
     req.user = user;
     req.token = token; // Store for logout blacklisting
+    Sentry.setUser({ id: user.id, email: user.email });
+    Sentry.setTag("user.role", user.role);
     next();
   } catch {
     res.status(401).json({ error: "Invalid token" });
