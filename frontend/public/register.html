@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — Silk Route Logistics</title>
+  <meta name="description" content="Register with Silk Route Logistics — sign up as a carrier to haul loads or as a shipper to move freight across North America.">
+  <meta name="keywords" content="register, sign up, carrier registration, shipper registration, freight brokerage, Silk Route Logistics">
+  <meta name="author" content="Silk Route Logistics LLC">
+  <meta property="og:title" content="Register — Silk Route Logistics">
+  <meta property="og:description" content="Join Silk Route Logistics as a carrier or shipper. Fast onboarding, transparent pricing, reliable service.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/css/srl-logo.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0D1B2A;
+      color: #E0E7EE;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    h1, h2, h3, h4 { font-family: 'DM Serif Display', serif; line-height: 1.2; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; height: auto; }
+    ul { list-style: none; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* ========== NAVIGATION ========== */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(13, 27, 42, 0.95);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .navbar-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; height: 72px;
+    }
+    .navbar-links { display: flex; align-items: center; gap: 36px; }
+    .navbar-links a {
+      font-size: 14px; font-weight: 500; color: #8899AA;
+      transition: color 0.3s ease; position: relative;
+    }
+    .navbar-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0;
+      width: 0; height: 2px; background: #C8963E; transition: width 0.3s ease;
+    }
+    .navbar-links a:hover { color: #FFFFFF; }
+    .navbar-links a:hover::after { width: 100%; }
+    .navbar-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px; background: #C8963E; color: #FFFFFF;
+      font-size: 14px; font-weight: 600; border-radius: 8px;
+      transition: background 0.3s ease, transform 0.2s ease;
+      border: none; cursor: pointer;
+    }
+    .navbar-cta:hover { background: #B8862E; transform: translateY(-1px); }
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      background: none; border: none; cursor: pointer; padding: 8px; z-index: 1001;
+    }
+    .hamburger span {
+      display: block; width: 24px; height: 2px;
+      background: #E0E7EE; border-radius: 2px; transition: all 0.3s ease;
+    }
+    .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+    .mobile-menu {
+      display: none; position: fixed; top: 72px; left: 0; right: 0; bottom: 0;
+      background: rgba(13, 27, 42, 0.98);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      z-index: 999; padding: 32px 24px; flex-direction: column; gap: 8px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      display: block; padding: 14px 0; color: rgba(255,255,255,0.8);
+      font-size: 18px; font-weight: 500;
+      border-bottom: 1px solid rgba(255,255,255,0.06); transition: color 0.2s ease;
+    }
+    .mobile-menu a:hover { color: #C8963E; }
+    @media (max-width: 900px) {
+      .navbar-links, .navbar-cta-desktop { display: none; }
+      .hamburger { display: flex; }
+    }
+
+    /* ========== HERO ========== */
+    .hero {
+      position: relative; padding: 160px 0 80px; text-align: center;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(200,150,62,0.08) 0%, transparent 60%);
+    }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 2.5px; color: #C8963E; margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px); color: #FFFFFF;
+      margin-bottom: 16px;
+    }
+    .hero h1 em { font-style: italic; color: #C8963E; }
+    .hero-text {
+      font-size: 18px; color: #8899AA; max-width: 560px;
+      margin: 0 auto; line-height: 1.7;
+    }
+
+    /* ========== PORTAL CARDS ========== */
+    .portals { padding: 40px 0 100px; }
+    .portal-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 32px; max-width: 720px; margin: 0 auto;
+    }
+    .portal-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 48px 32px; text-align: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; overflow: hidden;
+    }
+    .portal-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: linear-gradient(90deg, transparent, #C8963E, transparent);
+      opacity: 0; transition: opacity 0.3s ease;
+    }
+    .portal-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(200,150,62,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+    }
+    .portal-card:hover::before { opacity: 1; }
+    .portal-icon {
+      width: 64px; height: 64px; margin: 0 auto 24px;
+      background: rgba(200,150,62,0.1); border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .portal-card h3 {
+      font-size: 22px; color: #FFFFFF; margin-bottom: 12px;
+    }
+    .portal-card p {
+      font-size: 15px; color: #8899AA; line-height: 1.6; margin-bottom: 16px;
+    }
+    .portal-features {
+      text-align: left; margin-bottom: 28px; padding: 0 8px;
+    }
+    .portal-features li {
+      font-size: 14px; color: #8899AA; padding: 4px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .portal-features li::before {
+      content: ''; display: inline-block; width: 6px; height: 6px;
+      background: #C8963E; border-radius: 50%; flex-shrink: 0;
+    }
+    .portal-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; background: #C8963E; color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px; font-weight: 600; border-radius: 8px;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .portal-btn:hover {
+      background: #B8862E; transform: translateY(-1px);
+    }
+    .portal-btn svg {
+      width: 16px; height: 16px; transition: transform 0.2s ease;
+    }
+    .portal-btn:hover svg { transform: translateX(3px); }
+
+    /* ========== HELP SECTION ========== */
+    .help-section {
+      text-align: center; padding: 0 0 80px;
+    }
+    .help-section p {
+      font-size: 15px; color: #8899AA;
+    }
+    .help-section a {
+      color: #C8963E; font-weight: 600;
+      transition: color 0.2s ease;
+    }
+    .help-section a:hover { color: #E8B85E; }
+
+    /* ========== FOOTER ========== */
+    .footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 48px 0 32px; color: #4A5568; font-size: 14px;
+    }
+    .footer-inner {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: #6B7280; transition: color 0.2s ease; }
+    .footer-links a:hover { color: #C8963E; }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 600px) {
+      .portal-grid { grid-template-columns: 1fr; max-width: 400px; }
+      .hero { padding: 140px 0 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== NAVIGATION ========== -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+      <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Home">
+        <img src="/logo.png" alt="SRL" class="srl-logo-img">
+        <div class="srl-penguin-zone">
+          <div class="srl-penguin">
+            <svg viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="12" cy="17" rx="7" ry="9" fill="#1a1a2e"/>
+              <ellipse cx="12" cy="18" rx="4.5" ry="6" fill="#e8e8e8"/>
+              <circle cx="12" cy="8" r="5.5" fill="#1a1a2e"/>
+              <circle cx="10" cy="7" r="1.1" fill="white"/><circle cx="14" cy="7" r="1.1" fill="white"/>
+              <circle cx="10.4" cy="7.2" r="0.5" fill="#111"/><circle cx="14.4" cy="7.2" r="0.5" fill="#111"/>
+              <polygon points="12,9.5 10.5,11.5 13.5,11.5" fill="#C8963E"/>
+              <ellipse cx="9" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+              <ellipse cx="15" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+            </svg>
+          </div>
+        </div>
+      </a>
+
+      <div class="navbar-links">
+        <a href="/">Home</a>
+        <a href="/shippers">Shippers</a>
+        <a href="/carriers">Carriers</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+        <a href="/tracking">Tracking</a>
+      </div>
+
+      <a href="/shippers" class="navbar-cta navbar-cta-desktop">Get a Quote</a>
+
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="mobile-menu" role="menu">
+      <a href="/" role="menuitem">Home</a>
+      <a href="/shippers" role="menuitem">Shippers</a>
+      <a href="/carriers" role="menuitem">Carriers</a>
+      <a href="/about" role="menuitem">About</a>
+      <a href="/contact" role="menuitem">Contact</a>
+      <a href="/tracking" role="menuitem">Tracking</a>
+      <a href="/shippers" class="navbar-cta" role="menuitem">Get a Quote</a>
+    </div>
+  </nav>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="hero-content">
+      <p class="hero-label">Get Started</p>
+      <h1 id="hero-heading">Create Your <em>Account</em></h1>
+      <p class="hero-text">
+        Join Silk Route Logistics as a carrier or shipper. Fast onboarding, transparent pricing, reliable service.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== PORTAL CARDS ========== -->
+  <section class="portals" aria-label="Registration options">
+    <div class="container">
+      <div class="portal-grid">
+
+        <!-- Carrier Registration -->
+        <a href="/carrier/register.html" class="portal-card">
+          <div class="portal-icon">&#9951;</div>
+          <h3>Carrier Registration</h3>
+          <p>Partner with SRL to access consistent freight and quick pay.</p>
+          <ul class="portal-features">
+            <li>Access to loads nationwide</li>
+            <li>Quick Pay within 24 hours</li>
+            <li>Dedicated carrier support</li>
+            <li>Digital document management</li>
+          </ul>
+          <span class="portal-btn">
+            Register as Carrier
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </span>
+        </a>
+
+        <!-- Shipper Registration -->
+        <a href="/shipper/register" class="portal-card">
+          <div class="portal-icon">&#9878;</div>
+          <h3>Shipper Registration</h3>
+          <p>Move your freight with confidence across North America.</p>
+          <ul class="portal-features">
+            <li>Instant freight quotes</li>
+            <li>Real-time shipment tracking</li>
+            <li>Dedicated account executive</li>
+            <li>Transparent invoicing</li>
+          </ul>
+          <span class="portal-btn">
+            Register as Shipper
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </span>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== HELP ========== -->
+  <section class="help-section">
+    <div class="container">
+      <p>Already have an account? <a href="/login">Log in here</a> &mdash; or <a href="/contact">contact us</a> for help.</p>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <p>&copy; 2026 Silk Route Logistics LLC. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      'use strict';
+      var hamburger = document.querySelector('.hamburger');
+      var mobileMenu = document.querySelector('.mobile-menu');
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', function() {
+          var isOpen = mobileMenu.classList.toggle('open');
+          hamburger.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          document.body.style.overflow = isOpen ? 'hidden' : '';
+        });
+        mobileMenu.querySelectorAll('a').forEach(function(link) {
+          link.addEventListener('click', function() {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+          });
+        });
+      }
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 900 && mobileMenu && mobileMenu.classList.contains('open')) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+    })();
+  </script>
+
+<link rel="stylesheet" href="/shared/css/marco-polo.css">
+<script src="/shared/js/marco-polo.js"></script>
+<script src="/js/cookie-consent.js"></script>
+</body>
+</html>

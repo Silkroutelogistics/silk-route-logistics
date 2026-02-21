@@ -1,2 +1,4 @@
+/services /#services 301
+/get-quote /shippers 301
 /ae/* /ae/:splat 200
 /carrier/* /carrier/:splat 200
