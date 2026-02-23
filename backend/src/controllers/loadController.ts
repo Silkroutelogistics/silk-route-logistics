@@ -132,6 +132,18 @@ export async function getLoads(req: AuthRequest, res: Response) {
     where.deletedAt = null;
   }
 
+  // Role-based scoping: CARRIER only sees loads assigned to them or available for tendering
+  if (req.user!.role === "CARRIER") {
+    where.OR = [
+      { carrierId: req.user!.id },
+      { status: { in: ["POSTED", "TENDERED"] } },
+    ];
+  }
+  // SHIPPER only sees their own loads
+  if (req.user!.role === "SHIPPER") {
+    where.posterId = req.user!.id;
+  }
+
   if (query.status) {
     where.status = query.status;
   } else if (query.activeOnly) {

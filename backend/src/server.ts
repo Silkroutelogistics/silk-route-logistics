@@ -38,15 +38,17 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "https://browser.sentry-cdn.com", "https://cdn.jsdelivr.net"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline required for inline styles in static HTML; CSS XSS risk is minimal
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https://api.silkroutelogistics.ai", "http://localhost:4000"],
-        fontSrc: ["'self'"],
+        connectSrc: ["'self'", "https://api.silkroutelogistics.ai", "http://localhost:4000", "https://*.sentry.io"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
+        frameAncestors: ["'none'"], // Clickjacking protection
         baseUri: ["'self'"],
         formAction: ["'self'"],
+        workerSrc: ["'self'", "blob:"],
         upgradeInsecureRequests: [],
       },
     },
@@ -174,8 +176,45 @@ app.get("/health", async (_req, res) => {
   });
 });
 
+// 6b. Write-operation rate limiter: 60 POST/PUT/PATCH/DELETE per 15 min
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many write requests, please slow down" },
+  // Only count write operations
+  skip: (req) => req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS",
+});
+
+// 6c. Upload rate limiter: 20 uploads per 15 min
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many uploads, please try again later" },
+});
+
+// 6d. Message spam limiter: 30 messages per 15 min
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many messages, please slow down" },
+});
+
 // ─── Apply Rate Limiters ────────────────────────────────────
 app.use("/api/auth", authLimiter);
+app.use("/api/carrier-auth", authLimiter);
+app.use("/api/documents/upload", uploadLimiter);
+app.use("/api/documents", uploadLimiter);
+app.use("/api/messages", messageLimiter);
+app.use("/api/loads", writeLimiter);
+app.use("/api/invoices", writeLimiter);
+app.use("/api/tenders", writeLimiter);
+app.use("/api/shipments", writeLimiter);
 app.use("/api", apiLimiter);
 
 // ─── Audit Trail Middleware ─────────────────────────────────

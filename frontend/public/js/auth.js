@@ -1,62 +1,41 @@
 /**
  * SRL Auth Utility — Shared across AE + Carrier consoles
- * Handles dual-storage (localStorage for Remember Me, sessionStorage for session-only)
+ * Auth tokens are managed via httpOnly cookies (set by backend).
+ * This utility handles auth state checking and redirects only.
  */
 var SRLAuth = (function () {
   "use strict";
 
   /**
-   * Get token from either storage (sessionStorage takes priority)
-   * @param {string} key - Storage key (default: "token")
+   * Check if user is logged in by calling the profile endpoint.
+   * Since tokens are in httpOnly cookies, we can't check localStorage.
+   * For quick checks, we use a cached flag in sessionStorage.
    */
-  function getToken(key) {
-    key = key || "token";
-    return sessionStorage.getItem(key) || localStorage.getItem(key);
+  function isLoggedIn() {
+    return sessionStorage.getItem("srl_authenticated") === "true";
   }
 
   /**
-   * Store token based on Remember Me preference
-   * @param {string} key - Storage key
-   * @param {string} value - Token value
-   * @param {boolean} remember - Use localStorage if true, sessionStorage if false
+   * Mark as authenticated (called after successful login API response)
    */
-  function setToken(key, value, remember) {
-    if (remember) {
-      localStorage.setItem(key, value);
-      sessionStorage.removeItem(key);
-    } else {
-      sessionStorage.setItem(key, value);
-      localStorage.removeItem(key);
-    }
+  function setAuthenticated() {
+    sessionStorage.setItem("srl_authenticated", "true");
   }
 
   /**
-   * Remove token from both storages
-   * @param {string} key - Storage key (default: "token")
+   * Clear auth state
    */
-  function removeToken(key) {
-    key = key || "token";
-    localStorage.removeItem(key);
-    sessionStorage.removeItem(key);
-  }
-
-  /**
-   * Check if user is logged in
-   * @param {string} key - Token key (default: "token")
-   */
-  function isLoggedIn(key) {
-    return !!getToken(key);
+  function clearAuth() {
+    sessionStorage.removeItem("srl_authenticated");
   }
 
   /**
    * Redirect to login if not authenticated
-   * @param {string} key - Token key
    * @param {string} loginUrl - Login page URL
    */
-  function requireAuth(key, loginUrl) {
-    key = key || "token";
+  function requireAuth(loginUrl) {
     loginUrl = loginUrl || "/auth/login";
-    if (!getToken(key)) {
+    if (!isLoggedIn()) {
       window.location.href = loginUrl;
       return false;
     }
@@ -65,13 +44,13 @@ var SRLAuth = (function () {
 
   /**
    * Clear auth and redirect to login
-   * @param {string} key - Token key
    * @param {string} loginUrl - Login page URL
    */
-  function logout(key, loginUrl) {
-    key = key || "token";
+  function logout(loginUrl) {
     loginUrl = loginUrl || "/auth/login";
-    removeToken(key);
+    clearAuth();
+    // Call backend to clear httpOnly cookie
+    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(function(){});
     window.location.href = loginUrl;
   }
 
@@ -92,19 +71,23 @@ var SRLAuth = (function () {
     return localStorage.getItem(prefix + "_remembered_email") || "";
   }
 
-  /**
-   * Check if Remember Me was previously selected
-   */
   function wasRemembered(prefix) {
     prefix = prefix || "srl";
     return !!localStorage.getItem(prefix + "_remembered_email");
   }
+
+  // Legacy compatibility stubs (no-ops — tokens are in httpOnly cookies now)
+  function getToken() { return null; }
+  function setToken() {}
+  function removeToken() { clearAuth(); }
 
   return {
     getToken: getToken,
     setToken: setToken,
     removeToken: removeToken,
     isLoggedIn: isLoggedIn,
+    setAuthenticated: setAuthenticated,
+    clearAuth: clearAuth,
     requireAuth: requireAuth,
     logout: logout,
     setRememberedEmail: setRememberedEmail,

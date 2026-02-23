@@ -40,7 +40,7 @@ router.post(
         res.status(400).json({ error: "Validation error", details: err.errors });
         return;
       }
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
     }
   }
 );
@@ -51,7 +51,7 @@ router.get("/load/:loadId", async (req: AuthRequest, res: Response) => {
     const delays = await getDelaysByLoadId(req.params.loadId);
     res.json(delays);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
 });
 
@@ -76,7 +76,7 @@ router.put(
         res.status(400).json({ error: "Validation error", details: err.errors });
         return;
       }
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
     }
   }
 );
@@ -90,7 +90,7 @@ router.delete(
       await deleteDelay(req.params.id);
       res.json({ success: true });
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
     }
   }
 );

@@ -106,8 +106,25 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
     if (!content) return;
     const win = window.open("", "_blank");
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>BOL - ${data.referenceNumber}</title><style>${printStyles}</style></head><body>${content.innerHTML}</body></html>`);
-    win.document.close();
+
+    // Safe DOM construction to prevent XSS — avoid document.write with string interpolation
+    const doc = win.document;
+    doc.open();
+    doc.write("<!DOCTYPE html><html><head></head><body></body></html>");
+    doc.close();
+
+    const titleEl = doc.createElement("title");
+    titleEl.textContent = `BOL - ${data.referenceNumber}`;
+    doc.head.appendChild(titleEl);
+
+    const styleEl = doc.createElement("style");
+    styleEl.textContent = printStyles;
+    doc.head.appendChild(styleEl);
+
+    // Clone the content DOM node instead of using innerHTML string
+    const cloned = content.cloneNode(true) as HTMLElement;
+    doc.body.appendChild(cloned);
+
     win.focus();
     win.print();
   };

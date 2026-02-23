@@ -45,6 +45,7 @@ export default function ShipperLoginPage() {
 
   const BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:4000" : "https://api.silkroutelogistics.ai";
+  const fetchOpts: RequestInit = { credentials: "include" }; // Send/receive httpOnly cookies
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -63,6 +64,7 @@ export default function ShipperLoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        ...fetchOpts,
       });
       const data = await res.json();
       if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
@@ -73,9 +75,8 @@ export default function ShipperLoginPage() {
         setLocalLoading(false);
         return;
       }
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user || {}));
+      // Cookie set by backend — redirect
+      if (data.user) {
         window.location.href = "/shipper/dashboard";
       }
     } catch {
@@ -94,12 +95,12 @@ export default function ShipperLoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: pendingEmail, code: otp }),
+        ...fetchOpts,
       });
       const data = await res.json();
       if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user || {}));
+      // Cookie set by backend — redirect
+      if (data.user) {
         window.location.href = "/shipper/dashboard";
       }
     } catch {

@@ -17,9 +17,9 @@ router.post("/", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), validateBody(cr
 router.get("/", validateQuery(loadQuerySchema), getLoads);
 router.get("/:id", getLoadById);
 router.put("/:id", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), validateBody(updateLoadSchema), auditLog("UPDATE", "Load"), updateLoad);
-router.patch("/:id/status", validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), updateLoadStatus);
+router.patch("/:id/status", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), updateLoadStatus);
 router.patch("/:id/carrier-status", authorize("CARRIER"), validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), carrierUpdateStatus);
-router.delete("/:id", auditLog("DELETE", "Load"), deleteLoad);
+router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
 
 export default router;

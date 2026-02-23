@@ -11,6 +11,7 @@ import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 import { blacklistToken } from "../utils/tokenBlacklist";
 import { validatePassword } from "../utils/passwordPolicy";
 import { verifyTotpCode } from "../services/totpService";
+import { registerSession, removeSession } from "../middleware/auth";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 function signToken(userId: string): string {
@@ -59,9 +60,13 @@ export async function register(req: Request, res: Response) {
   }
 
   const token = signToken(user.id);
+  registerSession(user.id, token, user.role);
   setTokenCookie(res, token);
   res.status(201).json({ user, token });
 }
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function login(req: Request, res: Response) {
   const { email, password } = loginSchema.parse(req.body);
@@ -76,21 +81,54 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
+  // Check account lockout
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+    res.status(423).json({
+      error: `Account is temporarily locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).`,
+      lockedUntil: user.lockedUntil,
+    });
+    return;
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    const newAttempts = (user.failedLoginAttempts || 0) + 1;
+    const updateData: Record<string, unknown> = { failedLoginAttempts: newAttempts };
+
+    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+      updateData.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+    }
+
+    await prisma.user.update({ where: { id: user.id }, data: updateData }).catch(() => {});
+
     // Log failed login for security monitoring
     await prisma.systemLog.create({
       data: {
         logType: "SECURITY",
-        severity: "WARNING",
+        severity: newAttempts >= MAX_FAILED_ATTEMPTS ? "ERROR" : "WARNING",
         source: "authController",
-        message: `Failed login attempt for ${email}`,
+        message: newAttempts >= MAX_FAILED_ATTEMPTS
+          ? `Account locked for ${email} after ${newAttempts} failed attempts`
+          : `Failed login attempt for ${email} (attempt ${newAttempts}/${MAX_FAILED_ATTEMPTS})`,
         ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
       },
     }).catch(() => {});
 
-    res.status(401).json({ error: "Invalid credentials" });
+    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+      res.status(423).json({ error: "Account has been temporarily locked due to too many failed attempts. Try again in 30 minutes." });
+    } else {
+      res.status(401).json({ error: "Invalid credentials" });
+    }
     return;
+  }
+
+  // Reset failed attempts on successful login
+  if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    }).catch(() => {});
   }
 
   // Send OTP instead of issuing JWT
@@ -152,6 +190,17 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     return;
   }
 
+  // ADMIN and CEO accounts MUST have 2FA enabled — force setup if not
+  if ((user.role === "ADMIN" || user.role === "CEO") && !user.totpEnabled) {
+    const setupToken = jwt.sign(
+      { userId: user.id, purpose: "force-2fa-setup" },
+      env.JWT_SECRET,
+      { algorithm: "HS256", expiresIn: "10m" } as jwt.SignOptions,
+    );
+    res.json({ require2FASetup: true, setupToken });
+    return;
+  }
+
   // Check password expiry
   const baseDate = user.passwordChangedAt || user.createdAt;
   const daysSinceChange = (Date.now() - baseDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -182,6 +231,7 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     },
   });
 
+  registerSession(user.id, token, user.role);
   setTokenCookie(res, token);
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
@@ -319,17 +369,20 @@ export async function updatePreferences(req: AuthRequest, res: Response) {
 export async function refreshToken(req: AuthRequest, res: Response) {
   // Blacklist the old token before issuing new one (rotation)
   if (req.token) {
+    removeSession(req.user!.id, req.token);
     await blacklistToken(req.token, req.user!.id, "refresh-rotation").catch(() => {});
   }
 
   const token = signToken(req.user!.id);
+  registerSession(req.user!.id, token, req.user!.role);
   setTokenCookie(res, token);
   res.json({ token });
 }
 
 export async function logout(req: AuthRequest, res: Response) {
-  // Blacklist the current token so it can't be reused
+  // Remove from active sessions and blacklist token
   if (req.token) {
+    removeSession(req.user!.id, req.token);
     await blacklistToken(req.token, req.user!.id, "logout").catch(() => {});
   }
 
@@ -371,7 +424,16 @@ export async function changePassword(req: AuthRequest, res: Response) {
     where: { id: req.user!.id },
     data: { passwordHash, passwordChangedAt: new Date() },
   });
-  res.json({ message: "Password updated successfully" });
+
+  // Blacklist current token to force re-authentication
+  if (req.token) {
+    await blacklistToken(req.token, req.user!.id, "password-change").catch(() => {});
+  }
+
+  // Issue a fresh token so the user stays logged in on this session
+  const newToken = signToken(req.user!.id);
+  setTokenCookie(res, newToken);
+  res.json({ message: "Password updated successfully", token: newToken });
 }
 
 export async function forgotPassword(req: Request, res: Response) {
@@ -396,7 +458,7 @@ export async function forgotPassword(req: Request, res: Response) {
 }
 
 export async function resetPassword(req: Request, res: Response) {
-  const { token, email, newPassword } = req.body;
+  const { token, email, newPassword, totpCode } = req.body;
   if (!token || !email || !newPassword) {
     res.status(400).json({ error: "Token, email, and new password are required" });
     return;
@@ -418,6 +480,19 @@ export async function resetPassword(req: Request, res: Response) {
   if (!user || user.email !== email) {
     res.status(400).json({ error: "Invalid or expired reset link" });
     return;
+  }
+
+  // If user has TOTP 2FA enabled, require TOTP code for password reset
+  if (user.totpEnabled) {
+    if (!totpCode) {
+      res.status(400).json({ error: "Two-factor authentication code is required", requires2FA: true });
+      return;
+    }
+    const totpValid = await verifyTotpCode(user.id, totpCode);
+    if (!totpValid) {
+      res.status(401).json({ error: "Invalid authenticator code" });
+      return;
+    }
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
@@ -496,6 +571,7 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
     },
   });
 
+  registerSession(user.id, token, user.role);
   setTokenCookie(res, token);
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },

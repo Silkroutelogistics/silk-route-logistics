@@ -86,7 +86,7 @@ router.get("/health/detailed", authenticate, authorize("ADMIN") as any, async (r
       counts: { users: userCount, loads: loadCount, invoices: invoiceCount },
     });
   } catch (err) {
-    res.status(500).json({ status: "error", error: String(err) });
+    res.status(500).json({ status: "error", error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
 });
 
@@ -113,7 +113,7 @@ router.get("/system-logs", authenticate, authorize("ADMIN") as any, async (req: 
     ]);
     res.json({ logs, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
 });
 
@@ -134,7 +134,7 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
     ]);
     res.json({ entries, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
 });
 

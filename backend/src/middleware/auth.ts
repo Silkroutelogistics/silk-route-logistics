@@ -16,6 +16,60 @@ export interface AuthRequest extends Request<any, any, any, any> {
   token?: string; // Store raw token for blacklist on logout
 }
 
+// Server-side inactivity timeouts (ms)
+const SESSION_TIMEOUT_EMPLOYEE = 30 * 60 * 1000; // 30 minutes
+const SESSION_TIMEOUT_SHIPPER = 60 * 60 * 1000;  // 60 minutes
+const SESSION_TIMEOUT_CARRIER = 60 * 60 * 1000;  // 60 minutes
+
+// In-memory last-activity tracker (per userId)
+const lastActivity = new Map<string, number>();
+
+// Concurrent session tracking: userId → Set of active token hashes
+const activeSessions = new Map<string, Set<string>>();
+const MAX_SESSIONS_ADMIN = 1;  // ADMIN/CEO: 1 concurrent session
+const MAX_SESSIONS_DEFAULT = 3; // Others: 3 concurrent sessions
+
+function getTokenHash(token: string): string {
+  // Use last 16 chars as a lightweight fingerprint to avoid storing full tokens
+  return token.slice(-16);
+}
+
+function getMaxSessions(role: string): number {
+  if (role === "ADMIN" || role === "CEO") return MAX_SESSIONS_ADMIN;
+  return MAX_SESSIONS_DEFAULT;
+}
+
+export function registerSession(userId: string, token: string, role: string): void {
+  let sessions = activeSessions.get(userId);
+  if (!sessions) {
+    sessions = new Set();
+    activeSessions.set(userId, sessions);
+  }
+  const hash = getTokenHash(token);
+  const maxSessions = getMaxSessions(role);
+
+  // If at limit, evict oldest session (FIFO — first added gets removed)
+  if (sessions.size >= maxSessions && !sessions.has(hash)) {
+    const oldest = sessions.values().next().value;
+    if (oldest) sessions.delete(oldest);
+  }
+  sessions.add(hash);
+}
+
+export function removeSession(userId: string, token: string): void {
+  const sessions = activeSessions.get(userId);
+  if (sessions) {
+    sessions.delete(getTokenHash(token));
+    if (sessions.size === 0) activeSessions.delete(userId);
+  }
+}
+
+export function getSessionTimeout(role: string): number {
+  if (role === "SHIPPER") return SESSION_TIMEOUT_SHIPPER;
+  if (role === "CARRIER") return SESSION_TIMEOUT_CARRIER;
+  return SESSION_TIMEOUT_EMPLOYEE;
+}
+
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   // Check Authorization header first, then fall back to httpOnly cookie
   const header = req.headers.authorization;
@@ -53,6 +107,26 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       return;
     }
 
+    // Concurrent session check — reject if this token was evicted
+    const sessions = activeSessions.get(user.id);
+    const tokenHash = getTokenHash(token);
+    if (sessions && sessions.size > 0 && !sessions.has(tokenHash)) {
+      res.status(401).json({ error: "Session ended — you logged in from another device", code: "SESSION_REPLACED" });
+      return;
+    }
+
+    // Server-side inactivity timeout check
+    const last = lastActivity.get(user.id);
+    const timeout = getSessionTimeout(user.role);
+    if (last && Date.now() - last > timeout) {
+      lastActivity.delete(user.id);
+      removeSession(user.id, token);
+      res.status(401).json({ error: "Session expired due to inactivity", code: "SESSION_TIMEOUT" });
+      return;
+    }
+    // Update last activity timestamp
+    lastActivity.set(user.id, Date.now());
+
     req.user = user;
     req.token = token; // Store for logout blacklisting
     Sentry.setUser({ id: user.id, email: user.email });
@@ -62,6 +136,15 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     res.status(401).json({ error: "Invalid token" });
   }
 }
+
+// Cleanup stale entries periodically (every 10 min)
+setInterval(() => {
+  const now = Date.now();
+  const maxTimeout = 60 * 60 * 1000; // 1 hour max
+  for (const [userId, ts] of lastActivity) {
+    if (now - ts > maxTimeout) lastActivity.delete(userId);
+  }
+}, 10 * 60 * 1000);
 
 export function authorize(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -74,7 +74,7 @@ export default function OnboardingPage() {
       }
 
       const data = await res.json();
-      localStorage.setItem("token", data.token);
+      // Token is set as httpOnly cookie by backend — no localStorage needed
 
       if (files.length > 0) {
         const fd = new FormData();

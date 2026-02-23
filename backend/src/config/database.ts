@@ -1,30 +1,51 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 
-// Inline AES-256-GCM encrypt/decrypt to avoid circular dependency with encryption.ts
-function deriveAesKey(): Buffer {
+// ─── Key Rotation Support ─────────────────────────────────
+// ENCRYPTION_KEY = current key (required)
+// ENCRYPTION_KEY_PREVIOUS = old key for decryption during rotation (optional)
+// Encrypted values are prefixed with key version: "v1:" or "v2:" etc.
+const CURRENT_KEY_VERSION = process.env.ENCRYPTION_KEY_VERSION || "v1";
+
+function deriveAesKey(rawKey: string): Buffer {
+  return crypto.createHash("sha256").update(rawKey).digest();
+}
+
+function getCurrentKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
-  if (!key) return Buffer.alloc(32); // no-op if key not set
-  return crypto.createHash("sha256").update(key).digest();
+  if (!key) throw new Error("ENCRYPTION_KEY is required — cannot encrypt/decrypt without it");
+  return deriveAesKey(key);
+}
+
+function getPreviousKey(): Buffer | null {
+  const key = process.env.ENCRYPTION_KEY_PREVIOUS;
+  if (!key) return null;
+  return deriveAesKey(key);
 }
 
 function aesEncrypt(plaintext: string): string {
-  if (!process.env.ENCRYPTION_KEY) return plaintext;
-  const key = deriveAesKey();
+  const key = getCurrentKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   let encrypted = cipher.update(plaintext, "utf8", "base64");
   encrypted += cipher.final("base64");
   const authTag = cipher.getAuthTag().toString("base64");
-  return `${iv.toString("base64")}:${authTag}:${encrypted}`;
+  // Include key version so we know which key to use for decryption
+  return `${CURRENT_KEY_VERSION}:${iv.toString("base64")}:${authTag}:${encrypted}`;
 }
 
-function aesDecrypt(encryptedStr: string): string {
-  if (!process.env.ENCRYPTION_KEY) return encryptedStr;
+function aesDecryptWithKey(encryptedStr: string, key: Buffer): string {
   const parts = encryptedStr.split(":");
-  if (parts.length !== 3) return encryptedStr;
-  const [ivB64, authTagB64, ciphertext] = parts;
-  const key = deriveAesKey();
+  // New format: version:iv:authTag:ciphertext (4 parts)
+  // Legacy format: iv:authTag:ciphertext (3 parts)
+  let ivB64: string, authTagB64: string, ciphertext: string;
+  if (parts.length === 4) {
+    [, ivB64, authTagB64, ciphertext] = parts;
+  } else if (parts.length === 3) {
+    [ivB64, authTagB64, ciphertext] = parts;
+  } else {
+    return encryptedStr;
+  }
   const iv = Buffer.from(ivB64, "base64");
   const authTag = Buffer.from(authTagB64, "base64");
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
@@ -34,6 +55,24 @@ function aesDecrypt(encryptedStr: string): string {
   return decrypted;
 }
 
+function aesDecrypt(encryptedStr: string): string {
+  // Try current key first
+  try {
+    return aesDecryptWithKey(encryptedStr, getCurrentKey());
+  } catch {
+    // Fall back to previous key (rotation support)
+    const prevKey = getPreviousKey();
+    if (prevKey) {
+      try {
+        return aesDecryptWithKey(encryptedStr, prevKey);
+      } catch {
+        // Both keys failed
+      }
+    }
+    return encryptedStr;
+  }
+}
+
 /**
  * Map of model → fields that should be AES-256-GCM encrypted at rest.
  * Only non-indexed, non-unique fields that store PII / financial data.
@@ -41,6 +80,9 @@ function aesDecrypt(encryptedStr: string): string {
 const ENCRYPTED_FIELDS: Record<string, string[]> = {
   Customer: ["taxId"],
   CarrierProfile: ["insurancePolicyNumber"],
+  // Note: User.totpSecret and totpBackupCodes are encrypted at the application layer
+  // by totpService.ts using encrypt/decrypt from utils/encryption.ts (to avoid double encryption)
+  Driver: ["licenseNumber"],
 };
 
 const ENC_PREFIX = "enc:";

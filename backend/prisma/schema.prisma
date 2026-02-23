@@ -483,6 +483,8 @@ model User {
   totpSecret           String?
   totpEnabled          Boolean   @default(false)
   totpBackupCodes      String?
+  failedLoginAttempts  Int       @default(0)
+  lockedUntil          DateTime?
   otpCodes             OtpCode[]
   rateConfirmations    RateConfirmation[] @relation("RateConfCreator")
   checkCalls           CheckCall[]        @relation("CheckCallUser")

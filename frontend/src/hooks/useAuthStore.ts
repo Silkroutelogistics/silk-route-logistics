@@ -11,7 +11,7 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
+  isAuthenticated: boolean;
   tempToken: string | null;
   isLoading: boolean;
   error: string | null;
@@ -23,11 +23,14 @@ interface AuthState {
   logout: () => void;
   clearAuth: () => void;
   loadUser: () => Promise<void>;
+  // Legacy getter for code that reads .token — returns null (cookie-based now)
+  token: string | null;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
+  isAuthenticated: false,
+  token: null, // JWT is now in httpOnly cookie — not accessible to JS
   tempToken: null,
   isLoading: false,
   error: null,
@@ -40,9 +43,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: false });
         return { pendingOtp: true as const, email: data.email };
       }
-      // Fallback (shouldn't happen with OTP flow)
-      localStorage.setItem("token", data.token);
-      set({ user: data.user, token: data.token, isLoading: false });
+      // Fallback (cookie set by backend automatically)
+      set({ user: data.user, isAuthenticated: true, isLoading: false });
       return false;
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
@@ -64,8 +66,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: true as const, passwordExpired: true };
       }
 
-      localStorage.setItem("token", data.token);
-      set({ user: data.user, token: data.token, isLoading: false });
+      // Cookie set by backend — just update local state
+      set({ user: data.user, isAuthenticated: true, isLoading: false });
       return { success: true as const };
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Verification failed";
@@ -94,8 +96,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: { Authorization: `Bearer ${tempToken}` },
       });
 
-      localStorage.setItem("token", data.token);
-      set({ user: data.user, token: data.token, tempToken: null, isLoading: false });
+      // New cookie set by backend
+      set({ user: data.user, isAuthenticated: true, tempToken: null, isLoading: false });
       return true;
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Password change failed";
@@ -108,8 +110,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await api.post("/auth/register", formData);
-      localStorage.setItem("token", data.token);
-      set({ user: data.user, token: data.token, isLoading: false });
+      // Cookie set by backend
+      set({ user: data.user, isAuthenticated: true, isLoading: false });
       window.location.href = data.user?.role === "SHIPPER" ? "/shipper/dashboard" : "/dashboard/overview";
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Registration failed";
@@ -119,27 +121,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: () => {
     const currentUser = get().user;
-    localStorage.removeItem("token");
-    localStorage.removeItem("carrier_token");
-    set({ user: null, token: null, tempToken: null });
+    // Call backend to blacklist token and clear cookie
+    api.post("/auth/logout").catch(() => {});
+    set({ user: null, isAuthenticated: false, tempToken: null });
     const dest = currentUser?.role === "SHIPPER" ? "/shipper/login" : currentUser?.role === "CARRIER" ? "/carrier/login" : "/auth/login";
     window.location.href = dest;
   },
 
   clearAuth: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("carrier_token");
-    localStorage.removeItem("user");
-    set({ user: null, token: null, tempToken: null });
+    set({ user: null, isAuthenticated: false, tempToken: null });
   },
 
   loadUser: async () => {
     try {
       const { data } = await api.get("/auth/profile");
-      set({ user: data });
+      set({ user: data, isAuthenticated: true });
     } catch {
-      localStorage.removeItem("token");
-      set({ user: null, token: null });
+      set({ user: null, isAuthenticated: false });
     }
   },
 }));

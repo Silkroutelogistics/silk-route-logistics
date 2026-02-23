@@ -4,6 +4,7 @@ import fs from "fs";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
+import { validateFileSignature } from "../config/upload";
 import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded } from "../services/integrationService";
 
@@ -13,6 +14,16 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
   if (!files || files.length === 0) {
     res.status(400).json({ error: "No files uploaded" });
     return;
+  }
+
+  // Validate file content matches claimed MIME type (magic bytes check)
+  for (const file of files) {
+    if (!validateFileSignature(file.path, file.mimetype)) {
+      // Delete the suspicious file
+      fs.unlinkSync(file.path);
+      res.status(400).json({ error: `File "${file.originalname}" content does not match its file type. Upload rejected.` });
+      return;
+    }
   }
 
   const { loadId, invoiceId, entityType, entityId, docType } = req.body;
@@ -84,10 +95,25 @@ export async function getDocuments(req: AuthRequest, res: Response) {
 
 // ─── GET /api/documents/:id/download ──────────────────
 export async function downloadDocument(req: AuthRequest, res: Response) {
-  const doc = await prisma.document.findUnique({ where: { id: req.params.id } });
+  const doc = await prisma.document.findUnique({
+    where: { id: req.params.id },
+    include: { load: { select: { posterId: true, carrierId: true } } },
+  });
   if (!doc) {
     res.status(404).json({ error: "Document not found" });
     return;
+  }
+
+  // IDOR check: non-admin users can only download their own docs or docs for their loads
+  const role = req.user!.role;
+  const userId = req.user!.id;
+  if (role !== "ADMIN" && role !== "CEO") {
+    const isOwner = doc.userId === userId;
+    const isLoadParticipant = doc.load && (doc.load.posterId === userId || doc.load.carrierId === userId);
+    if (!isOwner && !isLoadParticipant) {
+      res.status(403).json({ error: "Not authorized to download this document" });
+      return;
+    }
   }
 
   const filePath = path.resolve(env.UPLOAD_DIR, path.basename(doc.fileUrl));
@@ -96,7 +122,9 @@ export async function downloadDocument(req: AuthRequest, res: Response) {
     return;
   }
 
-  res.setHeader("Content-Disposition", `attachment; filename="${doc.fileName}"`);
+  // Sanitize filename for Content-Disposition header to prevent header injection
+  const safeFileName = doc.fileName.replace(/["\r\n]/g, "_");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeFileName}"`);
   res.setHeader("Content-Type", doc.fileType);
   fs.createReadStream(filePath).pipe(res);
 }

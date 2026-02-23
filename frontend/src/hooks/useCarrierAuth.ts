@@ -36,9 +36,9 @@ interface CarrierAuthState {
   logout: () => void;
 }
 
-export const useCarrierAuth = create<CarrierAuthState>((set, get) => ({
+export const useCarrierAuth = create<CarrierAuthState>((set) => ({
   user: null,
-  token: typeof window !== "undefined" ? localStorage.getItem("carrier_token") : null,
+  token: null, // JWT is now in httpOnly cookie — not accessible to JS
   isLoading: false,
   error: null,
   mustChangePassword: false,
@@ -48,16 +48,19 @@ export const useCarrierAuth = create<CarrierAuthState>((set, get) => ({
     try {
       const { data } = await api.post("/carrier-auth/login", { email, password });
 
-      localStorage.setItem("carrier_token", data.token);
-      // Set token for subsequent API calls
-      api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-
-      if (data.mustChangePassword) {
-        set({ token: data.token, mustChangePassword: true, isLoading: false });
+      // Backend now returns pendingOtp (OTP required)
+      if (data.pendingOtp) {
+        set({ isLoading: false });
         return true;
       }
 
-      set({ user: data.user ? { ...data.user, carrierProfile: data.carrier || null } : null, token: data.token, isLoading: false });
+      // Cookie set by backend
+      if (data.mustChangePassword) {
+        set({ mustChangePassword: true, isLoading: false });
+        return true;
+      }
+
+      set({ user: data.user ? { ...data.user, carrierProfile: data.carrier || null } : null, isLoading: false });
       return true;
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
@@ -72,11 +75,8 @@ export const useCarrierAuth = create<CarrierAuthState>((set, get) => ({
   changePassword: async (currentPassword, newPassword) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post("/carrier-auth/change-password", { currentPassword, newPassword });
-      if (data.token) {
-        localStorage.setItem("carrier_token", data.token);
-        api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-      }
+      await api.post("/carrier-auth/change-password", { currentPassword, newPassword });
+      // New cookie set by backend
       set({ isLoading: false });
       return true;
     } catch (err: unknown) {
@@ -89,11 +89,8 @@ export const useCarrierAuth = create<CarrierAuthState>((set, get) => ({
   forceChangePassword: async (newPassword) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post("/carrier-auth/force-change-password", { newPassword });
-      if (data.token) {
-        localStorage.setItem("carrier_token", data.token);
-        api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-      }
+      await api.post("/carrier-auth/force-change-password", { newPassword });
+      // New cookie set by backend
       set({ mustChangePassword: false, isLoading: false });
       return true;
     } catch (err: unknown) {
@@ -105,22 +102,16 @@ export const useCarrierAuth = create<CarrierAuthState>((set, get) => ({
 
   loadUser: async () => {
     try {
-      const token = get().token;
-      if (token) {
-        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      }
+      // Cookie sent automatically with withCredentials
       const { data } = await api.get("/carrier-auth/me");
       set({ user: data });
     } catch {
-      localStorage.removeItem("carrier_token");
       set({ user: null, token: null });
     }
   },
 
   logout: () => {
     api.post("/carrier-auth/logout").catch(() => {});
-    localStorage.removeItem("carrier_token");
-    delete api.defaults.headers.common["Authorization"];
     set({ user: null, token: null, mustChangePassword: false });
     window.location.href = "/carrier/login";
   },

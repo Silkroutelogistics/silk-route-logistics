@@ -27,7 +27,7 @@ router.get("/dashboard", authorize("ADMIN", "CEO") as any, async (req: AuthReque
     const dashboard = await getAIDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Failed to load AI dashboard", details: String(err) });
+    res.status(500).json({ error: "Failed to load AI dashboard", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -37,7 +37,7 @@ router.get("/health", authorize("ADMIN", "CEO") as any, async (req: AuthRequest,
     const health = await runSystemOptimizationCycle();
     res.json(health);
   } catch (err) {
-    res.status(500).json({ error: "Failed to run system health check", details: String(err) });
+    res.status(500).json({ error: "Failed to run system health check", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -56,7 +56,7 @@ router.get("/rates/predict", authorize("ADMIN", "BROKER", "AE", "DISPATCH", "OPE
     );
     res.json(prediction || { message: "No data available for this lane" });
   } catch (err) {
-    res.status(500).json({ error: "Rate prediction failed", details: String(err) });
+    res.status(500).json({ error: "Rate prediction failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -65,7 +65,7 @@ router.get("/rates/market", authorize("ADMIN", "BROKER", "AE", "CEO") as any, as
     const dashboard = await getMarketDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Failed to load market data", details: String(err) });
+    res.status(500).json({ error: "Failed to load market data", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -75,7 +75,7 @@ router.get("/carriers/:carrierId/predict", authorize("ADMIN", "BROKER", "AE", "D
     const prediction = await getCarrierPrediction(req.params.carrierId);
     res.json(prediction || { message: "No intelligence data for this carrier" });
   } catch (err) {
-    res.status(500).json({ error: "Carrier prediction failed", details: String(err) });
+    res.status(500).json({ error: "Carrier prediction failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -84,7 +84,7 @@ router.get("/carriers/dashboard", authorize("ADMIN", "BROKER", "AE", "OPERATIONS
     const dashboard = await getCarrierIntelligenceDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Failed to load carrier intelligence", details: String(err) });
+    res.status(500).json({ error: "Failed to load carrier intelligence", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -98,7 +98,7 @@ router.get("/lanes/analyze", authorize("ADMIN", "BROKER", "AE", "DISPATCH") as a
     const analysis = await getLaneAnalysis(String(originState), String(destState));
     res.json(analysis);
   } catch (err) {
-    res.status(500).json({ error: "Lane analysis failed", details: String(err) });
+    res.status(500).json({ error: "Lane analysis failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -109,7 +109,7 @@ router.get("/lanes/backhaul", authorize("ADMIN", "BROKER", "AE", "DISPATCH") as 
     const suggestions = await getBackhaulSuggestions(String(destState));
     res.json(suggestions);
   } catch (err) {
-    res.status(500).json({ error: "Backhaul suggestion failed", details: String(err) });
+    res.status(500).json({ error: "Backhaul suggestion failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -118,7 +118,7 @@ router.get("/lanes/dashboard", authorize("ADMIN", "BROKER", "AE", "OPERATIONS") 
     const dashboard = await getLaneDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Failed to load lane dashboard", details: String(err) });
+    res.status(500).json({ error: "Failed to load lane dashboard", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -128,7 +128,7 @@ router.get("/customers/:customerId/insights", authorize("ADMIN", "BROKER", "AE",
     const insights = await getCustomerInsights(req.params.customerId);
     res.json(insights || { message: "No intelligence data for this customer" });
   } catch (err) {
-    res.status(500).json({ error: "Customer insights failed", details: String(err) });
+    res.status(500).json({ error: "Customer insights failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -137,7 +137,7 @@ router.get("/customers/dashboard", authorize("ADMIN", "BROKER", "AE", "CEO") as 
     const dashboard = await getCustomerDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Failed to load customer dashboard", details: String(err) });
+    res.status(500).json({ error: "Failed to load customer dashboard", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -147,7 +147,7 @@ router.get("/compliance/:carrierId/forecast", authorize("ADMIN", "OPERATIONS", "
     const forecast = await getCarrierForecast(req.params.carrierId);
     res.json(forecast || { message: "No forecast data for this carrier" });
   } catch (err) {
-    res.status(500).json({ error: "Compliance forecast failed", details: String(err) });
+    res.status(500).json({ error: "Compliance forecast failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -192,7 +192,7 @@ router.post("/learn/:service", authorize("ADMIN", "CEO") as any, async (req: Aut
 
     res.json({ success: true, service, result });
   } catch (err) {
-    res.status(500).json({ error: "Learning cycle failed", details: String(err) });
+    res.status(500).json({ error: "Learning cycle failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -203,7 +203,7 @@ router.get("/anomalies/recent", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"
     const anomalies = await getRecentAnomalies(limit);
     res.json(anomalies);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch anomalies", details: String(err) });
+    res.status(500).json({ error: "Failed to fetch anomalies", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -212,7 +212,7 @@ router.post("/anomalies/:id/acknowledge", authorize("ADMIN", "CEO") as any, asyn
     const result = await acknowledgeAnomaly(req.params.id, req.user!.id);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Failed to acknowledge anomaly", details: String(err) });
+    res.status(500).json({ error: "Failed to acknowledge anomaly", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -221,7 +221,7 @@ router.post("/anomalies/scan", authorize("ADMIN", "CEO") as any, async (req: Aut
     const result = await runAnomalyScan();
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Anomaly scan failed", details: String(err) });
+    res.status(500).json({ error: "Anomaly scan failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -231,7 +231,7 @@ router.get("/learning/status", authorize("ADMIN", "CEO") as any, async (req: Aut
     const status = await getLatestTrainingStatus();
     res.json(status);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch training status", details: String(err) });
+    res.status(500).json({ error: "Failed to fetch training status", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -240,7 +240,7 @@ router.post("/learning/full-cycle", authorize("ADMIN", "CEO") as any, async (req
     const result = await runFullTrainingCycle();
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Full training cycle failed", details: String(err) });
+    res.status(500).json({ error: "Full training cycle failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -249,7 +249,7 @@ router.get("/learning/performance", authorize("ADMIN", "CEO") as any, async (req
     const report = await getPerformanceReport();
     res.json(report);
   } catch (err) {
-    res.status(500).json({ error: "Performance report failed", details: String(err) });
+    res.status(500).json({ error: "Performance report failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -260,7 +260,7 @@ router.get("/recommendations/load/:loadId", authorize("ADMIN", "BROKER", "DISPAT
     const recs = await getRecommendationsForLoad(req.params.loadId, limit);
     res.json(recs);
   } catch (err) {
-    res.status(500).json({ error: "Recommendations failed", details: String(err) });
+    res.status(500).json({ error: "Recommendations failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -270,7 +270,7 @@ router.post("/recommendations/outcome", authorize("ADMIN", "BROKER", "DISPATCH",
     await recordRecommendationOutcome(loadId, carrierId, outcome);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Failed to record outcome", details: String(err) });
+    res.status(500).json({ error: "Failed to record outcome", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -280,7 +280,7 @@ router.get("/recommendations/performance", authorize("ADMIN", "CEO", "BROKER") a
     const perf = await getRecommendationPerformance(days);
     res.json(perf);
   } catch (err) {
-    res.status(500).json({ error: "Performance data failed", details: String(err) });
+    res.status(500).json({ error: "Performance data failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -290,7 +290,7 @@ router.post("/facilities/rate", authenticate, async (req: AuthRequest, res: Resp
     const result = await submitFacilityRating(req.body);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Failed to submit rating", details: String(err) });
+    res.status(500).json({ error: "Failed to submit rating", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -299,7 +299,7 @@ router.get("/facilities/dashboard", authorize("ADMIN", "BROKER", "DISPATCH", "OP
     const dashboard = await getFacilityDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Facility dashboard failed", details: String(err) });
+    res.status(500).json({ error: "Facility dashboard failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -314,7 +314,7 @@ router.get("/facilities/search", authenticate, async (req: AuthRequest, res: Res
     });
     res.json(facilities);
   } catch (err) {
-    res.status(500).json({ error: "Facility search failed", details: String(err) });
+    res.status(500).json({ error: "Facility search failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -324,7 +324,7 @@ router.get("/preferences/:carrierId", authenticate, async (req: AuthRequest, res
     const prefs = await getCarrierPreferences(req.params.carrierId);
     res.json(prefs);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch preferences", details: String(err) });
+    res.status(500).json({ error: "Failed to fetch preferences", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -333,7 +333,7 @@ router.put("/preferences/:carrierId", authenticate, async (req: AuthRequest, res
     const result = await updateCarrierPreferences({ carrierId: req.params.carrierId, ...req.body });
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update preferences", details: String(err) });
+    res.status(500).json({ error: "Failed to update preferences", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -342,7 +342,7 @@ router.post("/preferences/:carrierId/auto-learn", authorize("ADMIN", "OPERATIONS
     const result = await autoLearnPreferences(req.params.carrierId);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Auto-learn failed", details: String(err) });
+    res.status(500).json({ error: "Auto-learn failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -352,7 +352,7 @@ router.get("/monitor/scan", authorize("ADMIN", "DISPATCH", "OPERATIONS") as any,
     const result = await scanActiveShipments();
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Shipment scan failed", details: String(err) });
+    res.status(500).json({ error: "Shipment scan failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -361,7 +361,7 @@ router.get("/monitor/load/:loadId", authorize("ADMIN", "BROKER", "DISPATCH", "OP
     const risk = await assessLoadRisk(req.params.loadId);
     res.json(risk);
   } catch (err) {
-    res.status(500).json({ error: "Risk assessment failed", details: String(err) });
+    res.status(500).json({ error: "Risk assessment failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -370,7 +370,7 @@ router.get("/monitor/dashboard", authorize("ADMIN", "DISPATCH", "OPERATIONS") as
     const dashboard = await getRiskDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: "Risk dashboard failed", details: String(err) });
+    res.status(500).json({ error: "Risk dashboard failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -387,7 +387,7 @@ router.get("/deadhead/backhaul", authenticate, async (req: AuthRequest, res: Res
     });
     res.json(loads);
   } catch (err) {
-    res.status(500).json({ error: "Backhaul search failed", details: String(err) });
+    res.status(500).json({ error: "Backhaul search failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -396,7 +396,7 @@ router.get("/deadhead/analytics", authorize("ADMIN", "BROKER", "OPERATIONS") as 
     const analytics = await getDeadheadAnalytics();
     res.json(analytics);
   } catch (err) {
-    res.status(500).json({ error: "Deadhead analytics failed", details: String(err) });
+    res.status(500).json({ error: "Deadhead analytics failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -406,7 +406,7 @@ router.get("/instant-book/eligible/:carrierId", authenticate, async (req: AuthRe
     const result = await canInstantBook(req.params.carrierId);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Eligibility check failed", details: String(err) });
+    res.status(500).json({ error: "Eligibility check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -415,7 +415,7 @@ router.get("/instant-book/load/:loadId", authenticate, async (req: AuthRequest, 
     const result = await isLoadInstantBookable(req.params.loadId);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Load check failed", details: String(err) });
+    res.status(500).json({ error: "Load check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -425,7 +425,7 @@ router.post("/instant-book", authenticate, async (req: AuthRequest, res: Respons
     const result = await instantBook(loadId, carrierId);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Instant book failed", details: String(err) });
+    res.status(500).json({ error: "Instant book failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -435,7 +435,7 @@ router.get("/instant-book/analytics", authorize("ADMIN", "CEO", "BROKER") as any
     const analytics = await getInstantBookAnalytics(days);
     res.json(analytics);
   } catch (err) {
-    res.status(500).json({ error: "Analytics failed", details: String(err) });
+    res.status(500).json({ error: "Analytics failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -446,7 +446,7 @@ router.post("/email-quote/process", authorize("ADMIN", "BROKER", "OPERATIONS") a
     const result = await processQuoteEmail(subject, body, sender);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Email processing failed", details: String(err) });
+    res.status(500).json({ error: "Email processing failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -456,7 +456,7 @@ router.get("/email-quote/analytics", authorize("ADMIN", "CEO", "BROKER") as any,
     const analytics = await getEmailQuoteAnalytics(days);
     res.json(analytics);
   } catch (err) {
-    res.status(500).json({ error: "Analytics failed", details: String(err) });
+    res.status(500).json({ error: "Analytics failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -467,7 +467,7 @@ router.get("/costs/summary", authorize("ADMIN", "CEO") as any, async (req: AuthR
     const summary = await getCostSummary(days);
     res.json(summary);
   } catch (err) {
-    res.status(500).json({ error: "Cost summary failed", details: String(err) });
+    res.status(500).json({ error: "Cost summary failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -476,7 +476,7 @@ router.get("/costs/today", authorize("ADMIN", "CEO") as any, async (req: AuthReq
     const today = await getTodaySpend();
     res.json(today);
   } catch (err) {
-    res.status(500).json({ error: "Today spend failed", details: String(err) });
+    res.status(500).json({ error: "Today spend failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
@@ -485,7 +485,7 @@ router.get("/costs/budget", authorize("ADMIN", "CEO") as any, async (req: AuthRe
     const budget = await checkBudget();
     res.json(budget);
   } catch (err) {
-    res.status(500).json({ error: "Budget check failed", details: String(err) });
+    res.status(500).json({ error: "Budget check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 

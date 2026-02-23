@@ -65,6 +65,13 @@ export async function getShipmentById(req: AuthRequest, res: Response) {
 }
 
 export async function updateShipment(req: AuthRequest, res: Response) {
+  // Verify shipment exists before updating
+  const existing = await prisma.shipment.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!existing) {
+    res.status(404).json({ error: "Shipment not found" });
+    return;
+  }
+
   const data = createShipmentSchema.partial().parse(req.body);
   const shipment = await prisma.shipment.update({
     where: { id: req.params.id },

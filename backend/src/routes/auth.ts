@@ -1,11 +1,15 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import jwt from "jsonwebtoken";
 import { register, login, getProfile, updateProfile, updatePreferences, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword, checkPasswordStrength, handleTotpLoginVerify } from "../controllers/authController";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, registerSession } from "../middleware/auth";
 import { generateTotpSetup, verifyTotpCode, enableTotp, disableTotp } from "../services/totpService";
 import { AuthRequest } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { registerSchema, loginSchema } from "../validators/auth";
+import { env } from "../config/env";
+import { prisma } from "../config/database";
+import { setTokenCookie } from "../utils/cookies";
 import { z } from "zod";
 
 const router = Router();
@@ -77,6 +81,11 @@ router.post("/totp/verify", authenticate, validateBody(z.object({ code: z.string
 
 router.post("/totp/disable", authenticate, validateBody(z.object({ code: z.string().min(6).max(8) })), async (req: AuthRequest, res) => {
   try {
+    // ADMIN/CEO cannot disable 2FA — it is mandatory for these roles
+    if (req.user!.role === "ADMIN" || req.user!.role === "CEO") {
+      res.status(403).json({ error: "Two-factor authentication is mandatory for administrator accounts" });
+      return;
+    }
     const valid = await verifyTotpCode(req.user!.id, req.body.code);
     if (!valid) {
       res.status(400).json({ error: "Invalid verification code" });
@@ -86,6 +95,72 @@ router.post("/totp/disable", authenticate, validateBody(z.object({ code: z.strin
     res.json({ message: "Two-factor authentication disabled" });
   } catch (err: unknown) {
     res.status(500).json({ error: "Failed to disable 2FA" });
+  }
+});
+
+// Forced 2FA setup for ADMIN/CEO — uses setupToken from login flow
+router.post("/totp/force-setup", async (req, res) => {
+  try {
+    const { setupToken } = req.body;
+    if (!setupToken) {
+      res.status(400).json({ error: "Setup token is required" });
+      return;
+    }
+    const payload = jwt.verify(setupToken, env.JWT_SECRET) as { userId: string; purpose: string };
+    if (payload.purpose !== "force-2fa-setup") {
+      res.status(401).json({ error: "Invalid setup token" });
+      return;
+    }
+    const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, email: true } });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const result = await generateTotpSetup(user.id, user.email);
+    res.json({ qrCode: result.qrCodeDataUrl, secret: result.secret, backupCodes: result.backupCodes });
+  } catch (err: unknown) {
+    if (err instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ error: "Invalid or expired setup token" });
+      return;
+    }
+    res.status(500).json({ error: "Failed to generate 2FA setup" });
+  }
+});
+
+router.post("/totp/force-enable", validateBody(z.object({ setupToken: z.string(), code: z.string().min(6).max(8) })), async (req, res) => {
+  try {
+    const { setupToken, code } = req.body;
+    const payload = jwt.verify(setupToken, env.JWT_SECRET) as { userId: string; purpose: string };
+    if (payload.purpose !== "force-2fa-setup") {
+      res.status(401).json({ error: "Invalid setup token" });
+      return;
+    }
+    const valid = await verifyTotpCode(payload.userId, code);
+    if (!valid) {
+      res.status(400).json({ error: "Invalid verification code" });
+      return;
+    }
+    await enableTotp(payload.userId);
+
+    // 2FA is now enabled — issue full JWT
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+    const token = jwt.sign({ userId: payload.userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "24h" } as jwt.SignOptions);
+    if (user) registerSession(user.id, token, user.role);
+    setTokenCookie(res, token);
+    res.json({
+      message: "Two-factor authentication enabled successfully",
+      user,
+      token,
+    });
+  } catch (err: unknown) {
+    if (err instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ error: "Invalid or expired setup token" });
+      return;
+    }
+    res.status(500).json({ error: "Failed to enable 2FA" });
   }
 });
 
@@ -99,7 +174,7 @@ router.get("/users", authenticate, authorize("ADMIN", "CEO") as any, async (req:
     });
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
 });
 
@@ -123,7 +198,7 @@ router.patch("/users/:id/status", authenticate, authorize("ADMIN") as any, async
     });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
 });
 

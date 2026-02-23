@@ -13,16 +13,16 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post("/", auditLog("CREATE", "Invoice"), createInvoice);
-router.get("/", getInvoices);
-router.get("/stats", getInvoiceStats);
+router.post("/", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("CREATE", "Invoice"), createInvoice);
+router.get("/", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"), getInvoices);
+router.get("/stats", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"), getInvoiceStats);
 router.get("/aging", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), getInvoiceAging);
 router.get("/all", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"), getAllInvoices);
 router.post("/generate/:loadId", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("GENERATE", "Invoice"), generateInvoiceFromLoad);
 router.post("/batch/status", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("BATCH_UPDATE", "Invoice"), batchUpdateInvoiceStatus);
-router.get("/:id", getInvoiceById);
+router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"), getInvoiceById);
 router.put("/:id/line-items", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("UPDATE", "InvoiceLineItems"), updateInvoiceLineItems);
-router.post("/:id/factor", auditLog("FACTOR", "Invoice"), submitForFactoring);
+router.post("/:id/factor", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("FACTOR", "Invoice"), submitForFactoring);
 router.patch("/:id/status", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("UPDATE_STATUS", "Invoice"), updateInvoiceStatus);
 router.patch("/:id/mark-paid", authorize("ADMIN", "CEO", "ACCOUNTING"), auditLog("MARK_PAID", "Invoice"), markInvoicePaid);
 
