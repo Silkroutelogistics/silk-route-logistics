@@ -120,6 +120,18 @@ export function initCronJobs() {
     }
   });
 
+  // ─── Daily at 7 AM: System health digest email to admins ────
+  cron.schedule("0 7 * * *", async () => {
+    try {
+      console.log("[Cron Daily] Generating system health digest...");
+      const { sendHealthDigest } = require("../services/healthDigestService");
+      await sendHealthDigest();
+      console.log("[Cron Daily] Health digest sent");
+    } catch (err) {
+      console.error("[Cron Daily] Health digest error:", err);
+    }
+  });
+
   // ─── Weekly (Monday 7 AM): Generate weekly report snapshot ───
   cron.schedule("0 7 * * 1", async () => {
     try {

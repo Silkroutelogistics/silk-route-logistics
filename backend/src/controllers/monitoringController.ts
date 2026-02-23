@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { getAllCronJobs, runRegisteredJob, toggleCronJob } from "../services/cronRegistryService";
 import { getRequestCount } from "../middleware/requestLogger";
+import { getSentryStatus } from "../services/sentryAlertService";
 
 // ──────────────────────────────────────────────────
 // Enhanced Health Check
@@ -78,6 +79,7 @@ export async function enhancedHealth(_req: AuthRequest, res: Response) {
     totalRequests: getRequestCount(),
     components,
     counts: { users: userCount, loads: loadCount, invoices: invoiceCount, carriers: carrierCount },
+    sentry: getSentryStatus(),
   });
 }
 

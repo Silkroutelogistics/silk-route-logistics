@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import * as Sentry from "@sentry/node";
 import { prisma } from "../config/database";
+import { trackError } from "../services/sentryAlertService";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -98,7 +100,25 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
 
   // Default: generic message in production, detailed in development
   const status = (err as any).status || (err as any).statusCode || 500;
-  logErrorToDb(err, _req, status, status >= 500 ? "UNHANDLED" : "AUTH");
+  const errorType = status >= 500 ? "UNHANDLED" : "AUTH";
+  logErrorToDb(err, _req, status, errorType);
+
+  // Track for spike detection (emails admins on rapid error bursts)
+  trackError(errorType, `${_req.method} ${_req.path}`, err.message || "Unknown error");
+
+  // Capture 5xx errors to Sentry with request context
+  if (status >= 500) {
+    Sentry.withScope((scope) => {
+      scope.setTag("error.type", errorType);
+      scope.setTag("http.method", _req.method);
+      scope.setTag("http.route", _req.path);
+      scope.setExtra("endpoint", `${_req.method} ${_req.path}`);
+      scope.setExtra("statusCode", status);
+      scope.setExtra("recentErrorCount", recentErrorCount);
+      Sentry.captureException(err);
+    });
+  }
+
   res.status(status).json({
     error: isProduction ? "Internal server error" : err.message,
     ...(isProduction ? {} : { stack: err.stack }),
