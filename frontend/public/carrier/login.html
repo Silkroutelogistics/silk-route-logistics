@@ -199,6 +199,7 @@
       fetch(BASE + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: email, password: password })
       })
       .then(function(r) { return r.json(); })
@@ -216,7 +217,8 @@
         if (data.token) {
           if (remember) SRLAuth.setRememberedEmail(email, 'carrier');
           else SRLAuth.setRememberedEmail('', 'carrier');
-          CARRIER.setToken(data.token);
+          sessionStorage.setItem('carrier_token', data.token);
+          if (remember) localStorage.setItem('carrier_token', data.token);
           SRLAuth.setAuthenticated();
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
@@ -245,6 +247,7 @@
       fetch(BASE + '/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: pendingEmail, code: code })
       })
       .then(function(r) { return r.json(); })
@@ -255,7 +258,8 @@
           var remember = document.getElementById('rememberMe').checked;
           if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'carrier');
           else SRLAuth.setRememberedEmail('', 'carrier');
-          CARRIER.setToken(data.token);
+          sessionStorage.setItem('carrier_token', data.token);
+          if (remember) localStorage.setItem('carrier_token', data.token);
           SRLAuth.setAuthenticated();
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());

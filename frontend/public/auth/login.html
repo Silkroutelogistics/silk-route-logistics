@@ -198,6 +198,7 @@
       fetch(BASE + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: email, password: password })
       })
       .then(function(r) { return r.json(); })
@@ -216,6 +217,8 @@
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
           SRLAuth.setAuthenticated();
+          sessionStorage.setItem('token', data.token);
+          if (remember) localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
           if (remember) SRLAuth.setRememberedEmail(email, 'ae');
@@ -240,6 +243,7 @@
       fetch(BASE + '/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: pendingEmail, code: code })
       })
       .then(function(r) { return r.json(); })
@@ -275,6 +279,7 @@
       fetch(BASE + '/api/auth/totp/login-verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ totpToken: pendingTotpToken, code: code })
       })
       .then(function(r) { return r.json(); })
@@ -295,6 +300,8 @@
       var remember = document.getElementById('rememberMe').checked;
       SRLAuth.setToken('token', data.token, remember);
       SRLAuth.setAuthenticated();
+      sessionStorage.setItem('token', data.token);
+      if (remember) localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user || {}));
       localStorage.setItem('srl_last_activity', Date.now().toString());
       if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');
