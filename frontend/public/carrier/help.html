@@ -11,55 +11,8 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    .sop-sidebar { width: 220px; flex-shrink: 0; }
-    .sop-sidebar a {
-      display: block; padding: 8px 12px; font-size: 13px;
-      color: var(--slate); border-radius: var(--radius-sm); margin-bottom: 4px;
-    }
-    .sop-sidebar a:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    .sop-sidebar a.active { background: var(--gold-dim); color: var(--gold); }
-    .sop-content { flex: 1; min-width: 0; }
-    .sop-layout { display: flex; gap: 24px; }
-    .sop-card {
-      background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
-    }
-    .sop-card h2 { font-size: 18px; color: var(--gold); margin-bottom: 4px; }
-    .sop-card .sop-meta { font-size: 12px; color: var(--slate); margin-bottom: 16px; }
-    .sop-card .sop-meta span {
-      display: inline-block; padding: 2px 8px; border-radius: 10px;
-      background: var(--gold-dim); color: var(--gold); font-size: 11px; font-weight: 600; margin-right: 8px;
-    }
-    .step-list { counter-reset: step; list-style: none; padding: 0; }
-    .step-list li {
-      counter-increment: step; position: relative; padding: 10px 0 10px 44px;
-      border-bottom: 1px solid var(--card-border); font-size: 13px; color: #CBD5E1;
-    }
-    .step-list li::before {
-      content: counter(step);
-      position: absolute; left: 0; top: 10px;
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--gold); color: var(--navy); font-weight: 700;
-      display: flex; align-items: center; justify-content: center; font-size: 12px;
-    }
-    .step-list li:last-child { border-bottom: none; }
-    .tip-box {
-      background: var(--gold-dim); border: 1px solid rgba(200,150,62,0.2);
-      border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 16px;
-      font-size: 12px; color: var(--gold-light);
-    }
-    .tip-box strong { color: var(--gold); }
-    .when-box {
-      background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.2);
-      border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px;
-      font-size: 12px; color: var(--blue);
-    }
-    @media (max-width: 768px) {
-      .sop-layout { flex-direction: column; }
-      .sop-sidebar { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; }
-    }
-  </style>
+  <link rel="stylesheet" href="/carrier/css/pages/help.css">
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <button class="hamburger" id="hamburger">&#9776;</button>

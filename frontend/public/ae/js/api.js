@@ -501,7 +501,7 @@ var SRL = (function () {
   function getMileageProvider() { return request("/api/mileage/provider"); }
   function batchMileage(pairs) { return request("/api/mileage/batch", { method: "POST", body: { pairs: pairs } }); }
   function renderMileageBadge(result) {
-    if (!result || !result.practical_miles) return '<span style="color:var(--slate)">--</span>';
+    if (!result || !result.practical_miles) return '<span class="text-slate">--</span>';
     if (result.source === "google_estimated" || result.route_type === "estimated") {
       return '<span class="mileage-badge mileage-estimated" title="Estimated via Google Maps routing (car distance, not truck-rated)">~' +
         result.practical_miles.toLocaleString() + ' mi <small>(estimated)</small></span>';

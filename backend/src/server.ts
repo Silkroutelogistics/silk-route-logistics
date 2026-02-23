@@ -39,7 +39,9 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "https://browser.sentry-cdn.com", "https://cdn.jsdelivr.net"],
-        styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline required for inline styles in static HTML; CSS XSS risk is minimal
+        styleSrc: ["'self'", "https://fonts.googleapis.com"], // unsafe-inline removed — all <style> blocks extracted to external CSS
+        "style-src-elem": ["'self'", "https://fonts.googleapis.com"],
+        "style-src-attr": ["'unsafe-inline'"], // inline style= attributes on elements; low risk (CSS, not JS)
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: ["'self'", "https://api.silkroutelogistics.ai", "http://localhost:4000", "https://*.sentry.io"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],

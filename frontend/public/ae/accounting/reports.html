@@ -12,240 +12,10 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    /* ========== Financial Reports Styles ========== */
-
-    .page-layout { display: flex; min-height: 100vh; }
-    .main-content { margin-left: var(--sidebar-width); flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
-    .page-header { padding: 24px 32px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-    .page-header h1 { font-size: 24px; font-weight: 700; color: var(--navy); }
-    .page-header-actions { display: flex; align-items: center; gap: 10px; }
-    .page-body { padding: 20px 32px 32px; flex: 1; }
-
-    /* --- Quick Reports Row --- */
-    .quick-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
-    .quick-card {
-      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
-      padding: 24px 20px; text-align: center; cursor: pointer; border: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    .quick-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-    .quick-card.active { border-color: var(--gold); background: var(--gold-dim); }
-    .quick-card-icon { font-size: 28px; margin-bottom: 10px; }
-    .quick-card-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
-    .quick-card-desc { font-size: 12px; color: var(--gray-400); }
-
-    /* --- Buttons --- */
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--gold); color: var(--white);
-      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
-      cursor: pointer; white-space: nowrap; text-decoration: none;
-    }
-    .btn-primary:hover { background: var(--gold-hover); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--white); color: var(--navy);
-      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
-      font-weight: 500; cursor: pointer;
-    }
-    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-    .btn-danger { background: var(--red); color: var(--white); border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .btn-danger:hover { background: #DC2626; }
-
-    /* --- Report Display Section --- */
-    .report-display {
-      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
-      margin-bottom: 28px; overflow: hidden;
-    }
-    .report-display-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px; border-bottom: 1px solid var(--gray-200);
-    }
-    .report-display-header h2 { font-size: 18px; font-weight: 700; color: var(--navy); }
-    .report-display-body { padding: 24px; }
-    .report-period-info { font-size: 13px; color: var(--gray-500); margin-bottom: 20px; padding: 10px 16px; background: var(--gray-50); border-radius: 6px; }
-
-    /* --- Comparison Table --- */
-    .comparison-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    .comparison-table th {
-      text-align: left; padding: 12px 16px; font-size: 12px; color: var(--gray-400);
-      text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
-      background: var(--gray-50);
-    }
-    .comparison-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); font-size: 14px; color: var(--gray-700); }
-    .comparison-table tbody tr:hover { background: var(--gray-50); }
-    .change-positive { color: #059669; font-weight: 600; }
-    .change-negative { color: var(--red); font-weight: 600; }
-
-    /* --- Stats Grid --- */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
-    .stat-card {
-      background: var(--gray-50); border-radius: var(--radius); padding: 16px; text-align: center;
-    }
-    .stat-card-label { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .stat-card-value { font-size: 22px; font-weight: 700; color: var(--navy); }
-    .stat-card-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
-
-    /* --- Monthly Report Controls --- */
-    .month-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .month-controls select {
-      padding: 8px 12px; border: 1px solid var(--gray-200);
-      border-radius: 6px; font-size: 13px; outline: none; background: var(--white);
-    }
-    .month-controls select:focus { border-color: var(--gold); }
-
-    /* --- Profitability Section --- */
-    .profit-section { margin-bottom: 28px; }
-    .profit-section h2 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
-    .profit-tabs {
-      display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); margin-bottom: 0;
-    }
-    .profit-tab {
-      padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--gray-500);
-      cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent;
-      margin-bottom: -2px; transition: all 0.15s;
-    }
-    .profit-tab:hover { color: var(--navy); }
-    .profit-tab.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
-    .profit-table-wrap {
-      background: var(--white); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-      box-shadow: var(--shadow-sm); overflow-x: auto;
-    }
-
-    /* --- Data Table --- */
-    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .data-table th {
-      text-align: left; padding: 12px 16px; font-size: 11px; color: var(--gray-400);
-      text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
-      white-space: nowrap; background: var(--gray-50); cursor: pointer;
-    }
-    .data-table th:hover { color: var(--gold); }
-    .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); }
-    .data-table tbody tr:hover { background: var(--gray-50); }
-    .amount-positive { color: #059669; font-weight: 600; }
-    .amount-negative { color: var(--red); font-weight: 600; }
-
-    /* --- Stored Reports Table --- */
-    .stored-section { margin-bottom: 28px; }
-    .stored-section h2 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
-    .stored-table-wrap {
-      background: var(--white); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm); overflow-x: auto;
-    }
-    .report-type-badge {
-      display: inline-block; padding: 3px 8px; border-radius: 4px;
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
-    }
-    .report-type-badge.WEEKLY { background: rgba(59,130,246,0.1); color: #2563EB; }
-    .report-type-badge.MONTHLY { background: rgba(168,85,247,0.1); color: #7C3AED; }
-    .report-type-badge.QUARTERLY { background: var(--gold-dim); color: var(--gold); }
-    .report-type-badge.ANNUAL { background: var(--green-bg); color: #059669; }
-    .report-type-badge.CUSTOM { background: var(--amber-bg); color: #B45309; }
-    .status-badge {
-      display: inline-block; padding: 3px 8px; border-radius: 4px;
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-    }
-    .status-badge.COMPLETED { background: var(--green-bg); color: #059669; }
-    .status-badge.PENDING { background: var(--amber-bg); color: #B45309; }
-    .status-badge.FAILED { background: var(--red-bg); color: var(--red); }
-    .status-badge.GENERATING { background: rgba(59,130,246,0.1); color: #2563EB; }
-
-    /* --- Modal --- */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      z-index: 500; align-items: center; justify-content: center;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-      width: 520px; max-width: 90vw; max-height: 85vh; overflow-y: auto;
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px; border-bottom: 1px solid var(--gray-200);
-    }
-    .modal-header h2 { font-size: 18px; font-weight: 700; color: var(--navy); }
-    .modal-close {
-      background: none; border: none; font-size: 24px; color: var(--gray-400);
-      cursor: pointer; line-height: 1;
-    }
-    .modal-close:hover { color: var(--red); }
-    .modal-body { padding: 24px; }
-    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px; }
-
-    /* --- Form --- */
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
-    .form-group input, .form-group textarea, .form-group select {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200);
-      border-radius: 6px; font-size: 14px; outline: none; font-family: inherit;
-      background: var(--white);
-    }
-    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--gold); }
-    .form-group textarea { resize: vertical; min-height: 60px; }
-    .form-hint { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    /* --- Filter Bar --- */
-    .filter-bar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 16px 20px; background: var(--white);
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      border-bottom: 1px solid var(--gray-200);
-      box-shadow: var(--shadow-sm); flex-wrap: wrap;
-    }
-    .filter-bar select, .filter-bar input {
-      padding: 8px 12px; border: 1px solid var(--gray-200);
-      border-radius: 6px; font-size: 13px; outline: none; background: var(--white);
-    }
-    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--gold); }
-    .filter-spacer { flex: 1; }
-
-    /* --- Empty & Loading --- */
-    .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); font-size: 14px; }
-    .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
-    .loading-spinner {
-      display: flex; align-items: center; justify-content: center; padding: 48px;
-      color: var(--gray-400); font-size: 14px; gap: 8px;
-    }
-    .spinner {
-      width: 20px; height: 20px; border: 2px solid var(--gray-200);
-      border-top-color: var(--gold); border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    /* --- Unauthorized --- */
-    .unauthorized {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 60vh; flex-direction: column; gap: 12px; color: var(--gray-400);
-    }
-    .unauthorized h2 { color: var(--red); font-size: 20px; }
-
-    /* --- Sort Indicator --- */
-    .sort-asc::after { content: ' \u25B2'; font-size: 9px; }
-    .sort-desc::after { content: ' \u25BC'; font-size: 9px; }
-
-    /* --- Responsive --- */
-    @media (max-width: 1200px) {
-      .quick-row { grid-template-columns: repeat(2, 1fr); }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 1024px) {
-      .main-content { margin-left: 0; }
-      .page-header { padding: 64px 20px 0; }
-      .page-body { padding: 20px; }
-    }
-    @media (max-width: 640px) {
-      .quick-row { grid-template-columns: 1fr; }
-      .stats-grid { grid-template-columns: 1fr 1fr; }
-      .form-row { grid-template-columns: 1fr; }
-      .profit-tabs { overflow-x: auto; }
-    }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/accounting-reports.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page-layout">
@@ -266,8 +36,8 @@
         <a href="/ae/financials.html">Lead Hunter</a>
         <a href="/ae/training.html">Training</a>
         <a href="/ae/analytics.html">Analytics</a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+        <div class="divider-top">
+          <div class="section-label">Accounting</div>
           <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
           <a href="/ae/accounting/payable.html">Accounts Payable</a>
           <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
@@ -277,8 +47,8 @@
           <a href="/ae/accounting/analytics.html">Analytics</a>
         </div>
 
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -307,13 +77,13 @@
         </div>
 
         <!-- Unauthorized State -->
-        <div class="unauthorized" id="unauthorized-state" style="display:none;">
+        <div class="unauthorized" id="unauthorized-state" class="d-none">
           <h2>Access Denied</h2>
           <p>You do not have permission to view this page. Required role: ADMIN, CEO, or ACCOUNTING.</p>
         </div>
 
         <!-- Main Content Container -->
-        <div id="main-container" style="display:none;">
+        <div id="main-container" class="d-none">
 
           <!-- Quick Reports Row -->
           <div class="quick-row">
@@ -340,7 +110,7 @@
           </div>
 
           <!-- Report Display Area (hidden by default) -->
-          <div class="report-display" id="report-display" style="display:none;">
+          <div class="report-display" id="report-display" class="d-none">
             <div class="report-display-header">
               <h2 id="report-display-title">Report</h2>
               <button class="btn-secondary btn-sm" onclick="closeReportDisplay()">Close</button>
@@ -657,7 +427,7 @@
 
       rows.forEach(function(row) {
         html += '<tr>';
-        html += '<td style="font-weight:600;">' + row.label + '</td>';
+        html += '<td class="fw-600">' + row.label + '</td>';
         html += '<td>' + row.curVal + '</td>';
         html += '<td>' + row.prevVal + '</td>';
         html += '<td>' + (row.changePct !== null && row.changePct !== undefined ? changePctHtml(row.changePct) : '--') + '</td>';
@@ -762,7 +532,7 @@
 
       rows.forEach(function(row) {
         html += '<tr>';
-        html += '<td style="font-weight:600;">' + row.label + '</td>';
+        html += '<td class="fw-600">' + row.label + '</td>';
         html += '<td>' + row.curVal + '</td>';
         html += '<td>' + row.prevVal + '</td>';
         html += '<td>' + (row.changePct !== null && row.changePct !== undefined ? changePctHtml(row.changePct) : '--') + '</td>';
@@ -788,13 +558,13 @@
 
       // Equipment breakdown (if available)
       if (data.equipmentBreakdown && data.equipmentBreakdown.length > 0) {
-        html += '<h3 style="font-size:15px;font-weight:600;color:var(--navy);margin:24px 0 12px;">Equipment Breakdown</h3>';
+        html += '<h3 class="fw-600 text-navy" style="font-size:15px;margin:24px 0 12px">Equipment Breakdown</h3>';
         html += '<table class="comparison-table">';
         html += '<thead><tr><th>Equipment Type</th><th>Loads</th><th>Revenue</th><th>Cost</th><th>Margin</th></tr></thead>';
         html += '<tbody>';
         data.equipmentBreakdown.forEach(function(eq) {
           html += '<tr>';
-          html += '<td style="font-weight:600;">' + escHtml(eq.type || eq.equipmentType) + '</td>';
+          html += '<td class="fw-600">' + escHtml(eq.type || eq.equipmentType) + '</td>';
           html += '<td>' + (eq.loadCount || eq.count || 0) + '</td>';
           html += '<td>' + fmt(eq.revenue) + '</td>';
           html += '<td>' + fmt(eq.cost) + '</td>';
@@ -807,7 +577,7 @@
       // Dispute stats (if available)
       if (data.disputeStats) {
         var ds = data.disputeStats;
-        html += '<h3 style="font-size:15px;font-weight:600;color:var(--navy);margin:24px 0 12px;">Dispute Statistics</h3>';
+        html += '<h3 class="fw-600 text-navy" style="font-size:15px;margin:24px 0 12px">Dispute Statistics</h3>';
         html += '<div class="stats-grid">';
         html += '<div class="stat-card"><div class="stat-card-label">Total Disputes</div><div class="stat-card-value">' + (ds.total || 0) + '</div></div>';
         html += '<div class="stat-card"><div class="stat-card-label">Resolved</div><div class="stat-card-value">' + (ds.resolved || 0) + '</div></div>';
@@ -1034,7 +804,7 @@
         }
 
         html += '<tr>';
-        html += '<td style="font-weight:600;">' + escHtml(r.title || 'Untitled Report') + '</td>';
+        html += '<td class="fw-600">' + escHtml(r.title || 'Untitled Report') + '</td>';
         html += '<td><span class="report-type-badge ' + escHtml(type) + '">' + escHtml(type) + '</span></td>';
         html += '<td>' + escHtml(periodStr) + '</td>';
         html += '<td><span class="status-badge ' + escHtml(status) + '">' + escHtml(status) + '</span></td>';

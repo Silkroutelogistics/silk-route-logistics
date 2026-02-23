@@ -12,518 +12,10 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    /* ========== Approval Queue Styles ========== */
-
-    /* --- Summary Cards --- */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .summary-card {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      padding: 20px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .summary-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-    }
-    .summary-card.pending::before { background: #EAB308; }
-    .summary-card.approved::before { background: var(--green); }
-    .summary-card.rejected::before { background: var(--red); }
-    .summary-card.escalated::before { background: #F97316; }
-    .summary-card.total::before { background: var(--gold); }
-    .summary-label {
-      font-size: 11px;
-      color: var(--gray-400);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .summary-count {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .summary-card.pending .summary-count { color: #A16207; }
-    .summary-card.approved .summary-count { color: #16A34A; }
-    .summary-card.rejected .summary-count { color: var(--red); }
-    .summary-card.escalated .summary-count { color: #EA580C; }
-
-    /* --- Threshold Banner --- */
-    .threshold-banner {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      background: rgba(200, 150, 62, 0.08);
-      border: 1px solid rgba(200, 150, 62, 0.25);
-      border-radius: var(--radius);
-      padding: 14px 20px;
-      margin-bottom: 24px;
-      font-size: 13px;
-      color: var(--gray-600);
-      line-height: 1.5;
-    }
-    .threshold-banner .info-icon {
-      flex-shrink: 0;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--gold);
-      color: var(--white);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      margin-top: 1px;
-    }
-    .threshold-banner strong { color: var(--navy); }
-
-    /* --- Filter Bar --- */
-    .filter-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 0;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .filter-bar select {
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      background: var(--white);
-      color: var(--gray-600);
-      outline: none;
-      cursor: pointer;
-    }
-    .filter-bar select:focus { border-color: var(--gold); }
-    .filter-bar label {
-      font-size: 12px;
-      color: var(--gray-400);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .filter-spacer { flex: 1; }
-    .filter-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-reset {
-      padding: 8px 14px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      background: var(--white);
-      color: var(--gray-500);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .btn-reset:hover { border-color: var(--gold); color: var(--gold); }
-
-    /* --- Table --- */
-    .approvals-card {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      overflow: hidden;
-    }
-    .approvals-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .approvals-table thead th {
-      text-align: left;
-      padding: 12px 14px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--gray-400);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 2px solid var(--gray-200);
-      white-space: nowrap;
-    }
-    .approvals-table tbody tr {
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-    .approvals-table tbody tr:hover {
-      background: var(--gray-50);
-    }
-    .approvals-table tbody tr.selected {
-      background: rgba(200, 150, 62, 0.06);
-    }
-    .approvals-table tbody td {
-      padding: 12px 14px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--gray-100);
-      color: var(--gray-600);
-    }
-
-    /* Priority icons */
-    .priority-dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-    .priority-dot.urgent { background: var(--red); animation: pulse-dot 1.5s infinite; }
-    .priority-dot.high { background: #F97316; }
-    .priority-dot.normal { background: #3B82F6; }
-    .priority-dot.low { background: var(--gray-300); }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-      50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
-    }
-
-    /* Status badges */
-    .status-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .status-badge.pending { background: rgba(234, 179, 8, 0.12); color: #A16207; }
-    .status-badge.approved { background: rgba(34, 197, 94, 0.12); color: #16A34A; }
-    .status-badge.rejected { background: rgba(239, 68, 68, 0.1); color: var(--red); }
-    .status-badge.escalated { background: rgba(249, 115, 22, 0.12); color: #EA580C; }
-
-    /* Age highlight */
-    .age-overdue { color: var(--red); font-weight: 600; }
-
-    /* Amount */
-    .amount-cell { font-weight: 600; color: var(--navy); white-space: nowrap; }
-
-    /* Type label */
-    .type-label {
-      font-size: 12px;
-      font-weight: 500;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: var(--gray-50);
-      border: 1px solid var(--gray-200);
-      white-space: nowrap;
-    }
-
-    /* Action buttons */
-    .btn-approve {
-      padding: 5px 12px;
-      border: none;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      background: rgba(34, 197, 94, 0.12);
-      color: #16A34A;
-      transition: all 0.15s;
-    }
-    .btn-approve:hover { background: #22C55E; color: var(--white); }
-    .btn-reject {
-      padding: 5px 12px;
-      border: none;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--red);
-      transition: all 0.15s;
-    }
-    .btn-reject:hover { background: var(--red); color: var(--white); }
-    .action-btns {
-      display: flex;
-      gap: 6px;
-    }
-
-    /* --- Detail Panel (Slide-in) --- */
-    .detail-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(13, 27, 42, 0.35);
-      z-index: 500;
-    }
-    .detail-overlay.open { display: block; }
-    .detail-panel {
-      position: fixed;
-      top: 0;
-      right: -520px;
-      width: 520px;
-      height: 100vh;
-      background: var(--white);
-      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-      z-index: 501;
-      transition: right 0.25s ease;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .detail-panel.open { right: 0; }
-    .detail-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--gray-200);
-      flex-shrink: 0;
-    }
-    .detail-header h2 {
-      font-size: 16px;
-      color: var(--navy);
-      font-weight: 700;
-    }
-    .detail-close {
-      width: 32px; height: 32px;
-      border: none; background: var(--gray-50);
-      border-radius: 6px; cursor: pointer;
-      font-size: 18px; color: var(--gray-400);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .detail-close:hover { background: var(--gray-100); color: var(--navy); }
-    .detail-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-    }
-    .detail-section {
-      margin-bottom: 24px;
-    }
-    .detail-section h3 {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--gray-400);
-      font-weight: 600;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--gray-100);
-    }
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      font-size: 13px;
-    }
-    .detail-row .label { color: var(--gray-400); }
-    .detail-row .value { color: var(--navy); font-weight: 500; text-align: right; max-width: 60%; }
-
-    /* Reference data card */
-    .ref-card {
-      background: var(--gray-50);
-      border: 1px solid var(--gray-200);
-      border-radius: var(--radius);
-      padding: 16px;
-    }
-    .ref-card .ref-title {
-      font-size: 11px;
-      color: var(--gray-400);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
-    }
-    .ref-card .ref-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 5px 0;
-      font-size: 13px;
-    }
-    .ref-card .ref-row .r-label { color: var(--gray-400); }
-    .ref-card .ref-row .r-value { color: var(--navy); font-weight: 500; }
-
-    /* Review form */
-    .review-form {
-      border-top: 2px solid var(--gray-100);
-      padding-top: 20px;
-    }
-    .review-form label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--gray-500);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .review-form textarea {
-      width: 100%;
-      min-height: 90px;
-      padding: 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-family: inherit;
-      resize: vertical;
-      outline: none;
-      color: var(--gray-600);
-    }
-    .review-form textarea:focus { border-color: var(--gold); }
-    .review-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .review-btn {
-      flex: 1;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .review-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .review-btn.approve-btn { background: #22C55E; color: var(--white); }
-    .review-btn.approve-btn:hover:not(:disabled) { background: #16A34A; }
-    .review-btn.reject-btn { background: var(--red); color: var(--white); }
-    .review-btn.reject-btn:hover:not(:disabled) { background: #DC2626; }
-
-    /* --- Pagination --- */
-    .pagination-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      border-top: 1px solid var(--gray-100);
-      font-size: 13px;
-      color: var(--gray-400);
-    }
-    .pagination-btns {
-      display: flex;
-      gap: 4px;
-    }
-    .page-btn {
-      min-width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      background: var(--white);
-      color: var(--gray-500);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .page-btn:hover { border-color: var(--gold); color: var(--gold); }
-    .page-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
-    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    /* --- Empty / Loading --- */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--gray-400);
-    }
-    .empty-state .empty-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-      opacity: 0.4;
-    }
-    .empty-state h3 { color: var(--gray-500); margin-bottom: 6px; }
-    .loading-row td {
-      text-align: center;
-      padding: 40px;
-      color: var(--gray-400);
-      font-size: 13px;
-    }
-
-    /* --- Auth Gate --- */
-    .access-denied {
-      text-align: center;
-      padding: 100px 20px;
-      color: var(--gray-400);
-    }
-    .access-denied h2 { color: var(--red); margin-bottom: 12px; font-size: 20px; }
-    .access-denied p { max-width: 400px; margin: 0 auto; }
-
-    /* --- Confirm Dialog --- */
-    .confirm-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(13, 27, 42, 0.5);
-      z-index: 600;
-      align-items: center;
-      justify-content: center;
-    }
-    .confirm-overlay.open { display: flex; }
-    .confirm-dialog {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      padding: 28px;
-      width: 420px;
-      max-width: 90vw;
-    }
-    .confirm-dialog h3 {
-      font-size: 16px;
-      color: var(--navy);
-      margin-bottom: 10px;
-    }
-    .confirm-dialog p {
-      font-size: 13px;
-      color: var(--gray-500);
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-    .confirm-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-    }
-    .confirm-cancel {
-      padding: 8px 18px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      background: var(--white);
-      color: var(--gray-500);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .confirm-cancel:hover { border-color: var(--navy); color: var(--navy); }
-    .confirm-proceed {
-      padding: 8px 18px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      color: var(--white);
-    }
-    .confirm-proceed.approve { background: #22C55E; }
-    .confirm-proceed.approve:hover { background: #16A34A; }
-    .confirm-proceed.reject { background: var(--red); }
-    .confirm-proceed.reject:hover { background: #DC2626; }
-
-    /* --- Responsive --- */
-    @media (max-width: 1200px) {
-      .summary-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 768px) {
-      .summary-grid { grid-template-columns: repeat(2, 1fr); }
-      .detail-panel { width: 100vw; right: -100vw; }
-      .filter-bar { flex-direction: column; align-items: stretch; }
-    }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/accounting-approvals.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page-layout">
@@ -545,8 +37,8 @@
         <a href="/ae/financials.html">Lead Hunter</a>
         <a href="/ae/training.html">Training</a>
         <a href="/ae/analytics.html">Analytics</a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+        <div class="divider-top">
+          <div class="section-label">Accounting</div>
           <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
           <a href="/ae/accounting/payable.html">Accounts Payable</a>
           <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
@@ -555,8 +47,8 @@
           <a href="/ae/accounting/approvals.html" class="active">Approvals</a>
         </div>
 
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -568,13 +60,13 @@
     <!-- ===== Main Content ===== -->
     <main class="main-content" id="main-content">
       <!-- Access Denied (hidden by default) -->
-      <div class="access-denied" id="access-denied" style="display:none;">
+      <div class="access-denied" id="access-denied" class="d-none">
         <h2>Access Denied</h2>
         <p>The Approval Queue is restricted to Admin and CEO roles. Please contact your administrator if you require access.</p>
       </div>
 
       <!-- Page Content (hidden until auth) -->
-      <div id="page-body" style="display:none;">
+      <div id="page-body" class="d-none">
 
         <!-- Page Header -->
         <div class="page-header">
@@ -673,7 +165,7 @@
           </table>
 
           <!-- Pagination -->
-          <div class="pagination-bar" id="pagination-bar" style="display:none;">
+          <div class="pagination-bar" id="pagination-bar" class="d-none">
             <div id="pagination-info">Showing 0 of 0</div>
             <div class="pagination-btns" id="pagination-btns"></div>
           </div>
@@ -892,7 +384,7 @@
           renderPagination();
         }).catch(function (err) {
           console.error('Failed to load approvals:', err);
-          $tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="color:var(--red);">Failed to load approvals. Please try again.</td></tr>';
+          $tbody.innerHTML = '<tr class="loading-row"><td colspan="8" class="text-red">Failed to load approvals. Please try again.</td></tr>';
         });
       }
 
@@ -963,7 +455,7 @@
             html += '<button class="btn-reject" data-action="reject" data-id="' + a.id + '" title="Reject">Reject</button>';
             html += '</div>';
           } else {
-            html += '<span style="color:var(--gray-300);font-size:12px;">--</span>';
+            html += '<span class="fs-12" style="color:var(--gray-300)">--</span>';
           }
           html += '</td>';
 
@@ -1026,7 +518,7 @@
           r.classList.toggle('selected', r.getAttribute('data-id') === id);
         });
 
-        $detailBody.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">Loading details...</div>';
+        $detailBody.innerHTML = '<div class="empty-state-lg">Loading details...</div>';
         $detailOverlay.classList.add('open');
         $detailPanel.classList.add('open');
 
@@ -1034,7 +526,7 @@
           renderDetail(data);
         }).catch(function (err) {
           console.error('Failed to load approval detail:', err);
-          $detailBody.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">Failed to load details.</div>';
+          $detailBody.innerHTML = '<div class="empty-state-lg text-red">Failed to load details.</div>';
         });
       }
 
@@ -1055,9 +547,9 @@
         // Approval Info Section
         html += '<div class="detail-section">';
         html += '<h3>Approval Information</h3>';
-        html += '<div class="detail-row"><span class="label">ID</span><span class="value" style="font-family:monospace;font-size:12px;">' + escapeHtml(a.id) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">ID</span><span class="value fs-12" style="font-family:monospace">' + escapeHtml(a.id) + '</span></div>';
         html += '<div class="detail-row"><span class="label">Type</span><span class="value">' + escapeHtml(typeLabel(a.type)) + '</span></div>';
-        html += '<div class="detail-row"><span class="label">Amount</span><span class="value" style="font-size:16px;font-weight:700;color:var(--navy);">' + formatCurrency(a.amount) + '</span></div>';
+        html += '<div class="detail-row"><span class="label">Amount</span><span class="value fw-700 text-navy" style="font-size:16px">' + formatCurrency(a.amount) + '</span></div>';
         html += '<div class="detail-row"><span class="label">Priority</span><span class="value"><span class="priority-dot ' + pClass + '" style="margin-right:6px;vertical-align:middle;"></span>' + escapeHtml(a.priority) + '</span></div>';
         html += '<div class="detail-row"><span class="label">Status</span><span class="value"><span class="status-badge ' + statusLower + '">' + escapeHtml(a.status) + '</span></span></div>';
         html += '<div class="detail-row"><span class="label">Requested By</span><span class="value">' + escapeHtml(a.requestedBy || '--') + '</span></div>';
@@ -1069,7 +561,7 @@
         if (a.description) {
           html += '<div class="detail-section">';
           html += '<h3>Description</h3>';
-          html += '<p style="font-size:13px;color:var(--gray-600);line-height:1.6;">' + escapeHtml(a.description) + '</p>';
+          html += '<p class="fs-13" style="color:var(--gray-600);line-height:1.6">' + escapeHtml(a.description) + '</p>';
           html += '</div>';
         }
 
@@ -1107,9 +599,9 @@
         if (a.reviewNotes) {
           html += '<div class="detail-section">';
           html += '<h3>Review Notes</h3>';
-          html += '<p style="font-size:13px;color:var(--gray-600);line-height:1.6;background:var(--gray-50);padding:12px;border-radius:var(--radius);border:1px solid var(--gray-100);">' + escapeHtml(a.reviewNotes) + '</p>';
+          html += '<p class="fs-13 p-12" style="color:var(--gray-600);line-height:1.6;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-100)">' + escapeHtml(a.reviewNotes) + '</p>';
           if (a.reviewedBy) {
-            html += '<div style="font-size:11px;color:var(--gray-400);margin-top:6px;">Reviewed by ' + escapeHtml(a.reviewedBy) + (a.reviewedAt ? ' on ' + formatDate(a.reviewedAt) : '') + '</div>';
+            html += '<div class="fs-11 text-muted mt-8">Reviewed by ' + escapeHtml(a.reviewedBy) + (a.reviewedAt ? ' on ' + formatDate(a.reviewedAt) : '') + '</div>';
           }
           html += '</div>';
         }
@@ -1229,7 +721,7 @@
         if (startPage > 1) {
           btnsHtml += '<button class="page-btn" data-page="1">1</button>';
           if (startPage > 2) {
-            btnsHtml += '<span style="padding:0 6px;color:var(--gray-300);">...</span>';
+            btnsHtml += '<span class="text-muted" style="padding:0 6px">...</span>';
           }
         }
 
@@ -1239,7 +731,7 @@
 
         if (endPage < state.totalPages) {
           if (endPage < state.totalPages - 1) {
-            btnsHtml += '<span style="padding:0 6px;color:var(--gray-300);">...</span>';
+            btnsHtml += '<span class="text-muted" style="padding:0 6px">...</span>';
           }
           btnsHtml += '<button class="page-btn" data-page="' + state.totalPages + '">' + state.totalPages + '</button>';
         }

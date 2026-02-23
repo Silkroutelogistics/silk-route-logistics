@@ -1,0 +1,77 @@
+.filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-bar select {
+      padding: 7px 12px;
+      border: 1px solid var(--theme-border, #e2e8f0);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--theme-card-bg, #fff);
+      color: var(--theme-text-primary, #334155);
+      outline: none;
+    }
+    .filter-bar select:focus { border-color: var(--theme-primary, #c8963e); }
+    .filter-bar label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--theme-text-muted, #94a3b8);
+    }
+    .export-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .sort-arrow { font-size: 10px; margin-left: 3px; opacity: 0.6; }
+    .sort-arrow.active { opacity: 1; color: var(--theme-primary, #c8963e); }
+    .export-card {
+      background: var(--theme-card-bg, #fff);
+      border: 1px solid var(--theme-card-border, #e2e8f0);
+      border-radius: 10px;
+      padding: 32px;
+      box-shadow: var(--theme-card-shadow, 0 1px 3px rgba(0,0,0,0.06));
+    }
+    .export-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--theme-text-heading, #0d1b2a);
+      margin-bottom: 20px;
+    }
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .export-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--theme-bg-alt, #f8fafc);
+      border-radius: 8px;
+      border: 1px solid var(--theme-border-light, #f1f5f9);
+    }
+    .export-item-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--theme-text-primary, #334155);
+    }
+    .export-item-actions { display: flex; gap: 6px; }
+    .export-item-actions button {
+      padding: 5px 12px;
+      border: 1px solid var(--theme-border, #e2e8f0);
+      background: var(--theme-card-bg, #fff);
+      color: var(--theme-text-primary, #334155);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .export-item-actions button:hover {
+      border-color: var(--theme-primary, #c8963e);
+      color: var(--theme-primary, #c8963e);
+    }

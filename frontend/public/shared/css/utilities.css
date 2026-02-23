@@ -1,0 +1,113 @@
+/* Silk Route Logistics — Shared Utility Classes
+   Extracted from common inline style patterns across all pages */
+
+/* Display */
+.d-none { display: none }
+.d-block { display: block }
+.d-flex { display: flex }
+.d-inline-flex { display: inline-flex }
+.d-grid { display: grid }
+
+/* Flexbox */
+.flex-1 { flex: 1 }
+.flex-wrap { flex-wrap: wrap }
+.flex-col { flex-direction: column }
+.align-center { align-items: center }
+.align-start { align-items: flex-start }
+.justify-center { justify-content: center }
+.justify-between { justify-content: space-between }
+.justify-end { justify-content: flex-end }
+
+/* Gap */
+.gap-4 { gap: 4px }
+.gap-6 { gap: 6px }
+.gap-8 { gap: 8px }
+.gap-10 { gap: 10px }
+.gap-12 { gap: 12px }
+.gap-16 { gap: 16px }
+.gap-20 { gap: 20px }
+.gap-24 { gap: 24px }
+
+/* Text Alignment */
+.text-center { text-align: center }
+.text-right { text-align: right }
+.text-left { text-align: left }
+.text-uppercase { text-transform: uppercase }
+
+/* Font Weight */
+.fw-500 { font-weight: 500 }
+.fw-600 { font-weight: 600 }
+.fw-700 { font-weight: 700 }
+
+/* Font Size */
+.fs-11 { font-size: 11px }
+.fs-12 { font-size: 12px }
+.fs-13 { font-size: 13px }
+.fs-14 { font-size: 14px }
+
+/* Margin Bottom */
+.mb-4 { margin-bottom: 4px }
+.mb-8 { margin-bottom: 8px }
+.mb-12 { margin-bottom: 12px }
+.mb-16 { margin-bottom: 16px }
+.mb-20 { margin-bottom: 20px }
+.mb-24 { margin-bottom: 24px }
+
+/* Margin Top */
+.mt-4 { margin-top: 4px }
+.mt-8 { margin-top: 8px }
+.mt-12 { margin-top: 12px }
+.mt-16 { margin-top: 16px }
+.mt-20 { margin-top: 20px }
+.mt-24 { margin-top: 24px }
+
+/* Padding */
+.p-8 { padding: 8px }
+.p-12 { padding: 12px }
+.p-16 { padding: 16px }
+.p-24 { padding: 24px }
+.px-16 { padding-left: 16px; padding-right: 16px }
+.py-24 { padding-top: 24px; padding-bottom: 24px }
+
+/* Width */
+.w-100 { width: 100% }
+
+/* Colors (using CSS vars from themes.css) */
+.text-red { color: var(--red) }
+.text-green { color: var(--green) }
+.text-gold { color: var(--gold) }
+.text-muted { color: var(--gray-400) }
+.text-navy { color: var(--navy) }
+.text-slate { color: var(--slate) }
+
+/* Composite Utilities — Extracted from high-frequency inline patterns */
+
+/* Section label: "font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px" */
+.section-label {
+  font-size: 10px;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0 16px 8px;
+}
+
+/* Divider: "border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px" */
+.divider-top {
+  border-top: 1px solid var(--gray-200);
+  margin: 12px 0;
+  padding-top: 12px;
+}
+
+/* Empty state: "text-align:center;color:var(--theme-text-muted);padding:24px" */
+.empty-state {
+  text-align: center;
+  color: var(--theme-text-muted);
+  padding: 24px;
+}
+
+/* Empty state large: "text-align:center;padding:40px;color:var(--gray-400)" */
+.empty-state-lg {
+  text-align: center;
+  padding: 40px;
+  color: var(--gray-400);
+}

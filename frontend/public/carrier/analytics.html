@@ -13,84 +13,8 @@
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
-  <style>
-    .export-card {
-      background: var(--theme-card-bg, #fff);
-      border: 1px solid var(--theme-card-border, #e2e8f0);
-      border-radius: 10px;
-      padding: 32px;
-      box-shadow: var(--theme-card-shadow, 0 1px 3px rgba(0,0,0,0.06));
-    }
-    .export-card h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--theme-text-heading, #0d1b2a);
-      margin-bottom: 20px;
-    }
-    .export-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
-    }
-    .export-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      background: var(--theme-bg-alt, #f8fafc);
-      border-radius: 8px;
-      border: 1px solid var(--theme-border-light, #f1f5f9);
-    }
-    .export-item-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--theme-text-primary, #334155);
-    }
-    .export-item-actions { display: flex; gap: 6px; }
-    .export-item-actions button {
-      padding: 5px 12px;
-      border: 1px solid var(--theme-border, #e2e8f0);
-      background: var(--theme-card-bg, #fff);
-      color: var(--theme-text-primary, #334155);
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .export-item-actions button:hover {
-      border-color: var(--theme-primary, #c8963e);
-      color: var(--theme-primary, #c8963e);
-    }
-    .export-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 16px;
-    }
-    .gauge-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 24px;
-    }
-    @media (max-width: 640px) {
-      .gauge-row { grid-template-columns: 1fr; }
-    }
-    .status-badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-    .badge-green { background: rgba(34,197,94,0.15); color: #22c55e; }
-    .badge-gold { background: rgba(200,150,62,0.15); color: #c8963e; }
-    .badge-amber { background: rgba(245,158,11,0.15); color: #f59e0b; }
-    .badge-blue { background: rgba(59,130,246,0.15); color: #3b82f6; }
-    .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
-    .badge-slate { background: rgba(148,163,184,0.15); color: #94a3b8; }
-  </style>
+  <link rel="stylesheet" href="/carrier/css/pages/analytics.css">
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <button class="hamburger" id="hamburger">&#9776;</button>
@@ -166,7 +90,7 @@
       <div class="gauge-row">
         <div class="chart-container">
           <div class="gauge-container">
-            <div class="chart-title" style="margin-bottom:12px">On-Time Pickup</div>
+            <div class="chart-title mb-12">On-Time Pickup</div>
             <div class="gauge-canvas-wrap"><canvas id="pickup-gauge"></canvas></div>
             <div class="gauge-value" id="pickup-gauge-value">--</div>
             <div class="gauge-label">Pickup Rate</div>
@@ -174,7 +98,7 @@
         </div>
         <div class="chart-container">
           <div class="gauge-container">
-            <div class="chart-title" style="margin-bottom:12px">On-Time Delivery</div>
+            <div class="chart-title mb-12">On-Time Delivery</div>
             <div class="gauge-canvas-wrap"><canvas id="delivery-gauge"></canvas></div>
             <div class="gauge-value" id="delivery-gauge-value">--</div>
             <div class="gauge-label">Delivery Rate</div>
@@ -542,7 +466,7 @@
       var loads = data.recentLoads || data.loads || [];
       var tbody = document.getElementById("loads-tbody");
       if (loads.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--theme-text-muted);padding:24px">No recent loads</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No recent loads</td></tr>';
       } else {
         tbody.innerHTML = loads.slice(0, 20).map(function (l) {
           var statusColors = {
@@ -560,7 +484,7 @@
           var fmtDateStr = date ? new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "--";
 
           return '<tr>' +
-            '<td style="font-weight:600">' + SRLAnalytics.esc(l.referenceNumber || l.refNumber || l.ref || "--") + '</td>' +
+            '<td class="fw-600">' + SRLAnalytics.esc(l.referenceNumber || l.refNumber || l.ref || "--") + '</td>' +
             '<td>' + route + '</td>' +
             '<td><span class="status-badge badge-' + badgeColor + '">' + SRLAnalytics.esc(statusText) + '</span></td>' +
             '<td>' + SRLAnalytics.fmtMoney(l.carrierRate || l.rate || 0) + '</td>' +

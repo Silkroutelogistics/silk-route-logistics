@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/carrier/css/carrier-console.css">
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <link rel="stylesheet" href="/shared/css/utilities.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
 </head>
 <body>
@@ -54,7 +55,7 @@
 
     <!-- ═══ OVERVIEW TAB ═══ -->
     <div id="tab-overview">
-      <div class="grid-2" style="margin-bottom:24px">
+      <div class="grid-2 mb-24">
         <!-- Insurance Card -->
         <div class="card">
           <div class="card-header"><h3>Insurance Status</h3></div>
@@ -75,7 +76,7 @@
       </div>
 
       <!-- Document Checklist -->
-      <div class="card" style="margin-bottom:24px">
+      <div class="card mb-24">
         <div class="card-header"><h3>Document Checklist</h3></div>
         <div class="compliance-grid" id="docChecklist">
           <div class="skeleton skeleton-line w100"></div>
@@ -93,8 +94,8 @@
     </div>
 
     <!-- ═══ CSA / SAFETY TAB ═══ -->
-    <div id="tab-csa" style="display:none">
-      <div class="grid-2" style="margin-bottom:24px">
+    <div id="tab-csa" class="d-none">
+      <div class="grid-2 mb-24">
         <!-- BASIC Scores -->
         <div class="card">
           <div class="card-header"><h3>FMCSA BASIC Scores</h3></div>
@@ -135,7 +136,7 @@
     </div>
 
     <!-- ═══ DOCUMENTS TAB ═══ -->
-    <div id="tab-documents" style="display:none">
+    <div id="tab-documents" class="d-none">
       <div class="card">
         <div class="card-header">
           <h3>Uploaded Documents</h3>
@@ -154,7 +155,7 @@
     </div>
 
     <!-- ═══ EXPIRATIONS TAB ═══ -->
-    <div id="tab-expirations" style="display:none">
+    <div id="tab-expirations" class="d-none">
       <div class="card">
         <div class="card-header"><h3>Expiration Calendar</h3></div>
         <div id="expirationsList">
@@ -261,15 +262,15 @@
       var alerts = data.alerts || [];
       var alertsEl = document.getElementById("alertsList");
       if (alerts.length === 0) {
-        alertsEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--green)">&#10003; No active alerts</div>';
+        alertsEl.innerHTML = '<div class="p-16 text-center text-green">&#10003; No active alerts</div>';
       } else {
         alertsEl.innerHTML = alerts.map(function (a) {
           var color = a.severity === "CRITICAL" ? "red" : a.severity === "WARNING" ? "amber" : "blue";
-          return '<div style="padding:10px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:10px">' +
+          return '<div class="d-flex align-center gap-10" style="padding:10px 0;border-bottom:1px solid var(--card-border)">' +
             '<span class="badge badge-' + color + '">' + esc(a.severity) + '</span>' +
             '<div>' +
-              '<div style="font-size:13px;color:#fff">' + esc(a.type.replace(/_/g, " ")) + '</div>' +
-              '<div style="font-size:11px;color:var(--slate)">' + esc(a.entityName) + ' &middot; Expires ' + shortDate(a.expiryDate) + '</div>' +
+              '<div class="fs-13" style="color:#fff">' + esc(a.type.replace(/_/g, " ")) + '</div>' +
+              '<div class="fs-11 text-slate">' + esc(a.entityName) + ' &middot; Expires ' + shortDate(a.expiryDate) + '</div>' +
             '</div>' +
           '</div>';
         }).join("");
@@ -280,8 +281,8 @@
       return '<div class="compliance-item">' +
         '<span class="item-label">' + esc(label) + '</span>' +
         (uploaded
-          ? '<span class="item-status" style="color:var(--green)">&#10003; Uploaded</span>'
-          : '<span class="item-status" style="color:var(--red)">&#10007; Missing</span>') +
+          ? '<span class="item-status text-green">&#10003; Uploaded</span>'
+          : '<span class="item-status text-red">&#10007; Missing</span>') +
       '</div>';
     }
 
@@ -345,7 +346,7 @@
             '<td>' + s.communicationScore.toFixed(1) + '</td>' +
             '<td>' + s.claimRatio.toFixed(1) + '%</td>' +
             '<td>' + (s.documentSubmissionTimeliness || 0).toFixed(1) + '%</td>' +
-            '<td style="font-weight:600;color:var(--gold)">' + s.overallScore.toFixed(1) + '</td>' +
+            '<td class="fw-600 text-gold">' + s.overallScore.toFixed(1) + '</td>' +
           '</tr>';
         }).join("");
       }
@@ -379,10 +380,10 @@
 
       el.innerHTML = exps.map(function (e) {
         var statusColor = e.status === "VALID" ? "green" : e.status === "EXPIRING_SOON" ? "amber" : e.status === "EXPIRED" ? "red" : "slate";
-        return '<div style="padding:10px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between">' +
+        return '<div class="d-flex align-center justify-between" style="padding:10px 0;border-bottom:1px solid var(--card-border)">' +
           '<div>' +
-            '<div style="font-size:14px;font-weight:500;color:#fff">' + esc(e.type) + '</div>' +
-            '<div style="font-size:12px;color:var(--slate)">Expires: ' + shortDate(e.date) + '</div>' +
+            '<div class="fs-14 fw-500" style="color:#fff">' + esc(e.type) + '</div>' +
+            '<div class="fs-12 text-slate">Expires: ' + shortDate(e.date) + '</div>' +
           '</div>' +
           '<span class="badge badge-' + statusColor + '">' + esc(e.status.replace(/_/g, " ")) + '</span>' +
         '</div>';

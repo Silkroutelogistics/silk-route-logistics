@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/carrier/css/carrier-console.css">
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <link rel="stylesheet" href="/shared/css/utilities.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
 </head>
 <body>
@@ -55,13 +56,13 @@
     </div>
 
     <!-- CPP Tier Card -->
-    <div class="tier-card" id="tierCard" style="margin-bottom:24px">
+    <div class="tier-card" id="tierCard" class="mb-24">
       <div class="skeleton skeleton-line w50"></div>
       <div class="skeleton skeleton-box"></div>
     </div>
 
     <!-- KPIs -->
-    <div class="grid-4" id="kpiGrid" style="margin-bottom:24px">
+    <div class="grid-4" id="kpiGrid" class="mb-24">
       <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
       <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
       <div class="kpi-tile"><div class="skeleton skeleton-box"></div></div>
@@ -86,10 +87,10 @@
       <!-- Col 2: The Caravan Load Board -->
       <div class="card">
         <div class="card-header">
-          <h3 style="display:flex;align-items:center;gap:8px"><span style="color:var(--gold)">&#9670;</span> The Caravan Load Board</h3>
+          <h3 class="d-flex align-center gap-8"><span class="text-gold">&#9670;</span> The Caravan Load Board</h3>
           <a href="/carrier/loads.html?tab=available" class="card-action">Browse All</a>
         </div>
-        <div id="caravanTierBanner" style="display:none"></div>
+        <div id="caravanTierBanner" class="d-none"></div>
         <div id="availableLoadsList">
           <div class="skeleton skeleton-line w100"></div>
           <div class="skeleton skeleton-line w75"></div>
@@ -100,7 +101,7 @@
       <!-- Col 3: Notifications & Quick Actions -->
       <div>
         <!-- Compliance Alerts -->
-        <div class="card" style="margin-bottom:20px">
+        <div class="card mb-20">
           <div class="card-header">
             <h3>Compliance Alerts</h3>
             <a href="/carrier/compliance.html" class="card-action">View All</a>
@@ -192,7 +193,7 @@
     function renderTierCard(cpp, dashboard) {
       var card = document.getElementById("tierCard");
       if (!cpp) {
-        card.innerHTML = '<div style="text-align:center;color:var(--slate);padding:20px">CPP data loading...</div>';
+        card.innerHTML = '<div class="text-center text-slate" style="padding:20px">CPP data loading...</div>';
         return;
       }
 
@@ -234,7 +235,7 @@
         '<div style="margin-top:12px;display:flex;gap:24px;font-size:12px;color:var(--slate)">' +
           '<span>Loads: <strong style="color:#fff">' + (totalLoads) + '</strong></span>' +
           '<span>Miles: <strong style="color:#fff">' + Math.round(cpp.totalMiles || 0).toLocaleString() + '</strong></span>' +
-          '<span>Bonus Rate: <strong style="color:var(--gold)">' + (cpp.bonusPercentage || 0) + '%</strong></span>' +
+          '<span>Bonus Rate: <strong class="text-gold">' + (cpp.bonusPercentage || 0) + '%</strong></span>' +
         '</div>';
 
       renderCaravanBanner(tier, totalLoads);
@@ -256,7 +257,7 @@
           '<span style="font-size:16px;color:' + p.color + '">&#9670;</span>' +
           '<div>' +
             '<div style="font-size:12px;font-weight:600;color:' + p.color + '">' + esc(p.msg) + '</div>' +
-            '<div style="font-size:11px;color:var(--slate)">' + esc(p.perksText) + '</div>' +
+            '<div class="fs-11 text-slate">' + esc(p.perksText) + '</div>' +
           '</div>' +
         '</div>';
     }
@@ -283,10 +284,10 @@
       }
 
       el.innerHTML = loads.slice(0, 5).map(function (l) {
-        return '<div style="padding:8px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between">' +
+        return '<div class="d-flex align-center justify-between" style="padding:8px 0;border-bottom:1px solid var(--card-border)">' +
           '<div>' +
-            '<div style="font-size:13px;font-weight:600;color:#fff">' + esc(l.referenceNumber) + '</div>' +
-            '<div style="font-size:11px;color:var(--slate)">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
+            '<div class="fs-13 fw-600" style="color:#fff">' + esc(l.referenceNumber) + '</div>' +
+            '<div class="fs-11 text-slate">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
           '</div>' +
           '<div>' + statusBadge(l.status) + '</div>' +
         '</div>';
@@ -304,14 +305,14 @@
       var isGuest = _carrierTier === "GUEST";
       el.innerHTML = loads.slice(0, 5).map(function (l) {
         var rateDisplay = isGuest
-          ? '<span style="color:#808080;font-size:11px;font-style:italic">Accept to see rate</span>'
-          : '<span style="color:var(--gold);font-weight:600;font-size:13px">' + money(l.carrierRate || l.rate) + '</span>';
+          ? '<span class="fs-11" style="color:#808080;font-style:italic">Accept to see rate</span>'
+          : '<span class="text-gold fw-600 fs-13">' + money(l.carrierRate || l.rate) + '</span>';
         return '<div style="padding:8px 0;border-bottom:1px solid var(--card-border)">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center">' +
-            '<div style="font-size:13px;font-weight:600;color:#fff">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
+          '<div class="d-flex justify-between align-center">' +
+            '<div class="fs-13 fw-600" style="color:#fff">' + esc(l.originCity + ', ' + l.originState) + ' → ' + esc(l.destCity + ', ' + l.destState) + '</div>' +
             rateDisplay +
           '</div>' +
-          '<div style="font-size:11px;color:var(--slate);margin-top:2px">' +
+          '<div class="fs-11 text-slate mt-4">' +
             esc((l.equipmentType || "").replace(/_/g, " ")) + ' &middot; ' + shortDate(l.pickupDate) +
             (l.distance ? ' &middot; ' + l.distance + ' mi' : '') +
           '</div>' +
@@ -322,15 +323,15 @@
     function renderComplianceAlerts(data) {
       var el = document.getElementById("complianceAlerts");
       if (!data || !data.alerts || data.alerts.length === 0) {
-        el.innerHTML = '<div style="padding:8px 0;color:var(--green);font-size:13px">&#10003; All clear - no compliance alerts</div>';
+        el.innerHTML = '<div class="text-green fs-13" style="padding:8px 0">&#10003; All clear - no compliance alerts</div>';
         return;
       }
 
       el.innerHTML = data.alerts.slice(0, 3).map(function (a) {
         var color = a.severity === "CRITICAL" ? "red" : "amber";
-        return '<div style="padding:6px 0;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:8px">' +
+        return '<div class="d-flex align-center gap-8" style="padding:6px 0;border-bottom:1px solid var(--card-border)">' +
           '<span class="badge badge-' + color + '">' + esc(a.severity) + '</span>' +
-          '<span style="font-size:12px;color:#CBD5E1">' + esc(a.type.replace(/_/g, " ")) + ' - ' + esc(a.entityName) + '</span>' +
+          '<span class="fs-12" style="color:#CBD5E1">' + esc(a.type.replace(/_/g, " ")) + ' - ' + esc(a.entityName) + '</span>' +
         '</div>';
       }).join("");
     }
@@ -345,8 +346,8 @@
 
       el.innerHTML = list.slice(0, 5).map(function (n) {
         return '<div style="padding:6px 0;border-bottom:1px solid var(--card-border)">' +
-          '<div style="font-size:12px;font-weight:500;color:#fff">' + esc(n.title) + '</div>' +
-          '<div style="font-size:11px;color:var(--slate)">' + esc(n.message) + '</div>' +
+          '<div class="fs-12 fw-500" style="color:#fff">' + esc(n.title) + '</div>' +
+          '<div class="fs-11 text-slate">' + esc(n.message) + '</div>' +
         '</div>';
       }).join("");
     }

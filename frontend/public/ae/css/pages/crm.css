@@ -1,0 +1,355 @@
+/* ========== CRM Styles ========== */
+
+    /* --- View Toggle --- */
+    .view-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 6px 14px;
+      border: none;
+      background: var(--white);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--gray-500);
+      transition: background 0.15s, color 0.15s;
+    }
+    .view-toggle button.active {
+      background: var(--navy);
+      color: var(--white);
+    }
+    .view-spacer { flex: 1; }
+    .view-bar input[type="text"] {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+    }
+    .view-bar input:focus { border-color: var(--gold); }
+    .view-bar select {
+      padding: 8px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--gold); color: var(--white);
+      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; text-decoration: none;
+    }
+    .btn-primary:hover { background: var(--gold-hover); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; background: var(--white); color: var(--navy);
+      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
+      font-weight: 500; cursor: pointer;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* --- Kanban Board --- */
+    .kanban-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 20px 32px;
+      display: none;
+    }
+    .kanban-wrap.active { display: block; }
+    .kanban {
+      display: flex;
+      gap: 16px;
+      min-width: max-content;
+      align-items: flex-start;
+    }
+    .kanban-col {
+      width: 260px;
+      flex-shrink: 0;
+      background: var(--gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 200px);
+    }
+    .kanban-col-header {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .kanban-col-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .kanban-col-count {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--gray-200);
+      color: var(--gray-600);
+    }
+    .kanban-col-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      min-height: 80px;
+    }
+    .kanban-col-body.drag-over {
+      background: var(--gold-dim);
+    }
+    .kanban-card {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
+      cursor: grab;
+      transition: box-shadow 0.15s, transform 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .kanban-card:hover { box-shadow: var(--shadow-md); }
+    .kanban-card.dragging { opacity: 0.5; transform: rotate(2deg); }
+    .kanban-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    .kanban-card-name:hover { color: var(--gold); }
+    .kanban-card-detail {
+      font-size: 11px;
+      color: var(--gray-500);
+    }
+    .kanban-card-tags {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .kanban-tag {
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .stage-lead .kanban-card { border-left-color: #6366F1; }
+    .stage-contacted .kanban-card { border-left-color: #3B82F6; }
+    .stage-quoted .kanban-card { border-left-color: var(--amber); }
+    .stage-negotiating .kanban-card { border-left-color: #F97316; }
+    .stage-won .kanban-card { border-left-color: var(--green); }
+    .stage-active .kanban-card { border-left-color: var(--gold); }
+
+    /* --- List View --- */
+    .list-wrap {
+      flex: 1;
+      overflow-x: auto;
+      padding: 0 32px 24px;
+      display: none;
+    }
+    .list-wrap.active { display: block; }
+    .crm-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .crm-table th {
+      text-align: left; padding: 10px 12px; font-weight: 600;
+      color: var(--gray-500); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
+      white-space: nowrap; cursor: pointer; user-select: none;
+    }
+    .crm-table th:hover { color: var(--navy); }
+    .crm-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-700); white-space: nowrap;
+    }
+    .crm-table tr.clickable:hover td { background: var(--gray-50); cursor: pointer; }
+    .stage-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .stage-Lead { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .stage-Contacted { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
+    .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
+    .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }
+    .stage-Active { background: var(--gold-dim); color: var(--gold); }
+
+    /* --- Detail Slide Panel --- */
+    .detail-panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 520px; max-width: 100vw;
+      background: var(--white);
+      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+      z-index: 300;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-panel.open { transform: translateX(0); }
+    .detail-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+      z-index: 290; display: none;
+    }
+    .detail-overlay.open { display: block; }
+    .dp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+    }
+    .dp-header h3 { font-size: 17px; color: var(--navy); }
+    .dp-close {
+      background: none; border: none; font-size: 22px;
+      cursor: pointer; color: var(--gray-400); padding: 4px; line-height: 1;
+    }
+    .dp-close:hover { color: var(--red); }
+    .dp-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+    }
+    .dp-section { margin-bottom: 20px; }
+    .dp-section-title {
+      font-size: 12px; font-weight: 700; color: var(--gray-500);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px; padding-bottom: 4px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .dp-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
+    }
+    .dp-field label {
+      display: block; font-size: 11px; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .dp-field span {
+      font-size: 14px; color: var(--navy); font-weight: 500;
+    }
+    .dp-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .dp-footer {
+      padding: 16px 20px; border-top: 1px solid var(--gray-100);
+      display: flex; gap: 8px;
+    }
+    .contact-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: var(--gray-50); border-radius: 8px;
+      margin-bottom: 6px; font-size: 13px;
+    }
+    .contact-chip-name { font-weight: 600; color: var(--navy); }
+    .contact-chip-title { font-size: 11px; color: var(--gray-500); }
+    .contact-chip-info { font-size: 11px; color: var(--gray-400); }
+
+    /* --- Modals --- */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 500; align-items: flex-start; justify-content: center;
+      padding: 40px 20px; overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg); width: 100%; max-width: 640px;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
+    }
+    .modal-header h3 { font-size: 18px; color: var(--navy); font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-400); }
+    .modal-close:hover { color: var(--red); }
+    .modal-body { padding: 24px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 16px 24px; border-top: 1px solid var(--gray-100);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
+    .form-group label .req { color: var(--red); }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 6px;
+      font-size: 13px; color: var(--gray-700); outline: none; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--gold); }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .form-section-title {
+      grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--navy);
+      margin-top: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--gray-100);
+    }
+    .form-error { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
+    .form-error.visible { display: block; }
+
+    /* --- CSV Import --- */
+    .csv-drop-zone {
+      border: 2px dashed var(--gray-300); border-radius: 12px;
+      padding: 40px; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .csv-drop-zone:hover, .csv-drop-zone.dragover {
+      border-color: var(--gold); background: var(--gold-dim);
+    }
+    .csv-drop-zone p { color: var(--gray-500); font-size: 14px; }
+    .csv-preview-table {
+      width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px;
+    }
+    .csv-preview-table th {
+      padding: 6px 8px; background: var(--gray-50); border: 1px solid var(--gray-200);
+      font-weight: 600; color: var(--gray-600);
+    }
+    .csv-preview-table td {
+      padding: 6px 8px; border: 1px solid var(--gray-100); color: var(--gray-700);
+    }
+    .csv-preview-table select {
+      padding: 4px; border: 1px solid var(--gray-200); border-radius: 4px; font-size: 11px; width: 100%;
+    }
+
+    /* --- Toast --- */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--white);
+      z-index: 9999; transform: translateY(80px); opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #15803D; }
+    .toast-error { background: var(--red); }
+
+    @media (max-width: 1024px) {
+      .view-bar { padding: 12px 20px; }
+      .kanban-wrap { padding: 16px 20px; }
+      .list-wrap { padding: 0 20px 20px; }
+      .detail-panel { width: 100%; }
+      .kanban-col { width: 230px; }
+    }
+    @media (max-width: 640px) {
+      .view-bar { flex-direction: column; align-items: stretch; }
+      .view-bar input { width: 100%; }
+      .view-spacer { display: none; }
+      .form-grid { grid-template-columns: 1fr; }
+      .dp-grid { grid-template-columns: 1fr; }
+    }

@@ -11,353 +11,8 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    /* ─── Tools Page Styles ──────────────────────────── */
-    .tools-tabs {
-      display: flex;
-      gap: 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .tools-tabs .tab-btn {
-      padding: 10px 20px;
-      background: none;
-      border: none;
-      color: var(--slate);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-    .tools-tabs .tab-btn:hover { color: #fff; }
-    .tools-tabs .tab-btn.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-    }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* ─── Fuel Map ────────────────────────────────────── */
-    .fuel-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 20px;
-    }
-    .fuel-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius);
-      padding: 20px;
-      text-align: center;
-      transition: transform 0.15s, border-color 0.15s;
-    }
-    .fuel-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255,255,255,0.2);
-    }
-    .fuel-card .region-name {
-      font-size: 13px;
-      color: var(--slate);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .fuel-card .fuel-price {
-      font-size: 32px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-    .fuel-card .fuel-label {
-      font-size: 11px;
-      color: var(--slate-dark);
-      margin-top: 4px;
-    }
-    .fuel-price.green { color: var(--green); }
-    .fuel-price.amber { color: var(--amber); }
-    .fuel-price.red { color: var(--red); }
-
-    .fuel-widget-placeholder {
-      background: rgba(255,255,255,0.03);
-      border: 1px dashed rgba(255,255,255,0.15);
-      border-radius: var(--radius);
-      padding: 40px 20px;
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .fuel-widget-placeholder .widget-icon {
-      font-size: 36px;
-      margin-bottom: 12px;
-      opacity: 0.5;
-    }
-    .fuel-widget-placeholder .widget-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 6px;
-    }
-    .fuel-widget-placeholder .widget-sub {
-      font-size: 13px;
-      color: var(--slate);
-    }
-    .fuel-legend {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-    .fuel-legend span {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--slate);
-    }
-    .fuel-legend .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-    .fuel-legend .dot.green { background: var(--green); }
-    .fuel-legend .dot.amber { background: var(--amber); }
-    .fuel-legend .dot.red { background: var(--red); }
-
-    /* ─── Weather ─────────────────────────────────────── */
-    .weather-inputs {
-      display: flex;
-      gap: 12px;
-      align-items: flex-end;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    .weather-inputs .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
-    .weather-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
-    .weather-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-    .weather-card .city-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 4px;
-    }
-    .weather-card .weather-type {
-      font-size: 12px;
-      color: var(--slate);
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      margin-bottom: 16px;
-    }
-    .weather-card .temp-display {
-      font-size: 42px;
-      font-weight: 700;
-      color: var(--gold);
-      line-height: 1;
-      margin-bottom: 16px;
-    }
-    .weather-detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      font-size: 13px;
-    }
-    .weather-detail-row .detail-label { color: var(--slate); }
-    .weather-detail-row .detail-value { color: #CBD5E1; font-weight: 500; }
-    .weather-alert-box {
-      margin-top: 12px;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      background: var(--red-dim);
-      border: 1px solid rgba(239,68,68,0.3);
-      color: var(--red);
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .weather-alert-box .alert-icon { margin-right: 6px; }
-
-    /* ─── Detention ───────────────────────────────────── */
-    .detention-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-    .detention-summary {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-    .detention-summary .summary-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--slate);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
-    }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      font-size: 14px;
-    }
-    .summary-row .row-label { color: var(--slate); }
-    .summary-row .row-value { color: #fff; font-weight: 600; }
-    .summary-row.total { border-top: 2px solid var(--gold-dim); border-bottom: none; padding-top: 12px; margin-top: 4px; }
-    .summary-row.total .row-value { color: var(--gold); font-size: 20px; }
-
-    /* ─── Maintenance ─────────────────────────────────── */
-    .reminders-list { margin-top: 20px; }
-    .reminder-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: var(--radius-sm);
-      margin-bottom: 10px;
-      transition: border-color 0.15s;
-    }
-    .reminder-item:hover { border-color: rgba(255,255,255,0.15); }
-    .reminder-info .reminder-truck {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-    }
-    .reminder-info .reminder-type {
-      font-size: 12px;
-      color: var(--slate);
-      margin-top: 2px;
-    }
-    .reminder-info .reminder-due {
-      font-size: 11px;
-      color: var(--slate-dark);
-      margin-top: 2px;
-    }
-    .reminder-countdown {
-      font-size: 20px;
-      font-weight: 700;
-      text-align: center;
-      min-width: 80px;
-    }
-    .reminder-countdown .countdown-label {
-      font-size: 10px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .countdown-green { color: var(--green); }
-    .countdown-amber { color: var(--amber); }
-    .countdown-red { color: var(--red); }
-    .reminder-actions {
-      display: flex;
-      gap: 6px;
-    }
-    .reminder-actions button {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--slate);
-      width: 30px;
-      height: 30px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-    }
-    .reminder-actions button:hover { border-color: var(--red); color: var(--red); }
-
-    /* ─── Deadhead ────────────────────────────────────── */
-    .deadhead-inputs {
-      display: flex;
-      gap: 12px;
-      align-items: flex-end;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    .deadhead-inputs .form-group { margin-bottom: 0; flex: 1; min-width: 240px; }
-    .backhaul-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
-    }
-    .backhaul-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius);
-      padding: 20px;
-      transition: border-color 0.15s, transform 0.15s;
-    }
-    .backhaul-card:hover {
-      border-color: var(--gold-dim);
-      transform: translateY(-2px);
-    }
-    .backhaul-route {
-      font-size: 15px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 6px;
-    }
-    .backhaul-route .route-arrow { color: var(--gold); margin: 0 6px; }
-    .backhaul-meta {
-      display: flex;
-      gap: 16px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-    .backhaul-meta .meta-item {
-      font-size: 12px;
-      color: var(--slate);
-    }
-    .backhaul-meta .meta-item strong {
-      color: #CBD5E1;
-      font-weight: 600;
-    }
-    .backhaul-meta .meta-item.rate strong { color: var(--gold); }
-    .backhaul-distance-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--gold-dim);
-      color: var(--gold);
-      margin-bottom: 10px;
-    }
-
-    /* ─── Form inline grid ────────────────────────────── */
-    .form-grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    /* ─── Responsive overrides ────────────────────────── */
-    @media (max-width: 768px) {
-      .detention-layout { grid-template-columns: 1fr; }
-      .form-grid-2 { grid-template-columns: 1fr; }
-      .weather-inputs, .deadhead-inputs { flex-direction: column; }
-      .tools-tabs .tab-btn { padding: 10px 14px; font-size: 12px; }
-    }
-  </style>
+  <link rel="stylesheet" href="/carrier/css/pages/tools.css">
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <button class="hamburger" id="hamburger">&#9776;</button>
@@ -427,7 +82,7 @@
     <!-- TAB 2: WEATHER ALERTS                              -->
     <!-- ═══════════════════════════════════════════════════ -->
     <div class="tab-panel" id="panel-weather">
-      <div class="card" style="margin-bottom:24px">
+      <div class="card mb-24">
         <div class="card-header"><h3>Route Weather Check</h3></div>
         <div class="weather-inputs">
           <div class="form-group">
@@ -480,11 +135,11 @@
 
         <!-- Summary -->
         <div>
-          <div class="detention-summary" id="detentionSummary" style="margin-bottom:20px">
+          <div class="detention-summary" id="detentionSummary" class="mb-20">
             <div class="summary-title">Detention Calculation</div>
             <div class="empty-state" style="padding:20px 0">
               <div class="empty-icon">&#9201;</div>
-              <p style="font-size:13px">Fill in the form to calculate detention pay</p>
+              <p class="fs-13">Fill in the form to calculate detention pay</p>
             </div>
           </div>
         </div>
@@ -516,7 +171,7 @@
     <!-- TAB 4: MAINTENANCE REMINDERS                       -->
     <!-- ═══════════════════════════════════════════════════ -->
     <div class="tab-panel" id="panel-maintenance">
-      <div class="card" style="margin-bottom:24px">
+      <div class="card mb-24">
         <div class="card-header"><h3>Add Reminder</h3></div>
         <div class="form-grid-2">
           <div class="form-group">
@@ -544,7 +199,7 @@
       <div class="card">
         <div class="card-header">
           <h3>Active Reminders</h3>
-          <span style="font-size:12px;color:var(--slate)" id="reminderCount">0 reminders</span>
+          <span class="fs-12 text-slate" id="reminderCount">0 reminders</span>
         </div>
         <div class="reminders-list" id="remindersList">
           <div class="empty-state">
@@ -559,7 +214,7 @@
     <!-- TAB 5: DEADHEAD MINIMIZER                          -->
     <!-- ═══════════════════════════════════════════════════ -->
     <div class="tab-panel" id="panel-deadhead">
-      <div class="card" style="margin-bottom:24px">
+      <div class="card mb-24">
         <div class="card-header"><h3>Find Backhaul Loads</h3></div>
         <div class="deadhead-inputs">
           <div class="form-group">
@@ -723,7 +378,7 @@
       var container = document.getElementById("weatherCards");
 
       if (!pickup && !delivery) {
-        container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p style="color:var(--red)">Please enter at least one city</p></div>';
+        container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p class="text-red">Please enter at least one city</p></div>';
         return;
       }
 
@@ -778,8 +433,8 @@
       summary.innerHTML =
         '<div class="summary-title">Detention Calculation</div>' +
         '<div style="padding:6px 0;font-size:13px;color:var(--slate);margin-bottom:8px">' + esc(loadRef) + ' &mdash; ' + esc(facility) + '</div>' +
-        '<div class="summary-row"><span class="row-label">Arrival</span><span class="row-value" style="font-size:13px">' + arrivalDate.toLocaleString() + '</span></div>' +
-        '<div class="summary-row"><span class="row-label">Departure</span><span class="row-value" style="font-size:13px">' + departureDate.toLocaleString() + '</span></div>' +
+        '<div class="summary-row"><span class="row-label">Arrival</span><span class="row-value fs-13">' + arrivalDate.toLocaleString() + '</span></div>' +
+        '<div class="summary-row"><span class="row-label">Departure</span><span class="row-value fs-13">' + departureDate.toLocaleString() + '</span></div>' +
         '<div class="summary-row"><span class="row-label">Total Time at Facility</span><span class="row-value">' + formatDuration(totalMinutes) + '</span></div>' +
         '<div class="summary-row"><span class="row-label">Free Time (standard)</span><span class="row-value">' + FREE_TIME_HOURS + 'h 0m</span></div>' +
         '<div class="summary-row"><span class="row-label">Billable Hours</span><span class="row-value">' + billableHours + ' hr' + (billableHours !== 1 ? 's' : '') + '</span></div>' +
@@ -933,11 +588,11 @@
       var container = document.getElementById("backhaulResults");
 
       if (!city) {
-        container.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Please enter your current delivery city</p></div>';
+        container.innerHTML = '<div class="empty-state"><p class="text-red">Please enter your current delivery city</p></div>';
         return;
       }
 
-      container.innerHTML = '<div class="empty-state"><div class="skeleton skeleton-line w75" style="margin:0 auto"></div><div class="skeleton skeleton-line w50" style="margin:8px auto 0"></div><p style="margin-top:12px;font-size:13px">Searching for loads near ' + esc(city) + '...</p></div>';
+      container.innerHTML = '<div class="empty-state"><div class="skeleton skeleton-line w75" style="margin:0 auto"></div><div class="skeleton skeleton-line w50" style="margin:8px auto 0"></div><p class="mt-12 fs-13">Searching for loads near ' + esc(city) + '...</p></div>';
 
       CARRIER.getAvailableLoads({ limit: 20 }).then(function (data) {
         var loads = data && data.loads ? data.loads : [];
@@ -970,15 +625,15 @@
           renderBackhaulResults(enriched, city, container);
         });
       }).catch(function (err) {
-        container.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Error loading available loads. Please try again.</p></div>';
+        container.innerHTML = '<div class="empty-state"><p class="text-red">Error loading available loads. Please try again.</p></div>';
       });
     }
 
     function renderBackhaulResults(enriched, city, container) {
       enriched.sort(function (a, b) { return a.deadheadMiles - b.deadheadMiles; });
 
-      var html = '<div style="margin-bottom:16px;font-size:13px;color:var(--slate)">' +
-        'Found <strong style="color:#fff">' + enriched.length + '</strong> loads near <strong style="color:var(--gold)">' + esc(city) + '</strong>, sorted by deadhead distance' +
+      var html = '<div class="mb-16 fs-13 text-slate">' +
+        'Found <strong style="color:#fff">' + enriched.length + '</strong> loads near <strong class="text-gold">' + esc(city) + '</strong>, sorted by deadhead distance' +
       '</div><div class="backhaul-grid">';
 
       html += enriched.map(function (l) {

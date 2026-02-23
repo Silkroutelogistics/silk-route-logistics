@@ -12,365 +12,10 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    /* ========== CRM Styles ========== */
-
-    /* --- View Toggle --- */
-    .view-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 32px;
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-200);
-      flex-wrap: wrap;
-    }
-    .view-toggle {
-      display: flex;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .view-toggle button {
-      padding: 6px 14px;
-      border: none;
-      background: var(--white);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      color: var(--gray-500);
-      transition: background 0.15s, color 0.15s;
-    }
-    .view-toggle button.active {
-      background: var(--navy);
-      color: var(--white);
-    }
-    .view-spacer { flex: 1; }
-    .view-bar input[type="text"] {
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      width: 220px;
-      outline: none;
-    }
-    .view-bar input:focus { border-color: var(--gold); }
-    .view-bar select {
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      outline: none;
-    }
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--gold); color: var(--white);
-      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
-      cursor: pointer; white-space: nowrap; text-decoration: none;
-    }
-    .btn-primary:hover { background: var(--gold-hover); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--white); color: var(--navy);
-      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
-      font-weight: 500; cursor: pointer;
-    }
-    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-sm { padding: 5px 12px; font-size: 12px; }
-
-    /* --- Kanban Board --- */
-    .kanban-wrap {
-      flex: 1;
-      overflow-x: auto;
-      padding: 20px 32px;
-      display: none;
-    }
-    .kanban-wrap.active { display: block; }
-    .kanban {
-      display: flex;
-      gap: 16px;
-      min-width: max-content;
-      align-items: flex-start;
-    }
-    .kanban-col {
-      width: 260px;
-      flex-shrink: 0;
-      background: var(--gray-50);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--gray-200);
-      display: flex;
-      flex-direction: column;
-      max-height: calc(100vh - 200px);
-    }
-    .kanban-col-header {
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--gray-200);
-    }
-    .kanban-col-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .kanban-col-count {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: var(--gray-200);
-      color: var(--gray-600);
-    }
-    .kanban-col-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px;
-      min-height: 80px;
-    }
-    .kanban-col-body.drag-over {
-      background: var(--gold-dim);
-    }
-    .kanban-card {
-      background: var(--white);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 8px;
-      box-shadow: var(--shadow-sm);
-      cursor: grab;
-      transition: box-shadow 0.15s, transform 0.1s;
-      border-left: 3px solid transparent;
-    }
-    .kanban-card:hover { box-shadow: var(--shadow-md); }
-    .kanban-card.dragging { opacity: 0.5; transform: rotate(2deg); }
-    .kanban-card-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--navy);
-      margin-bottom: 4px;
-      cursor: pointer;
-    }
-    .kanban-card-name:hover { color: var(--gold); }
-    .kanban-card-detail {
-      font-size: 11px;
-      color: var(--gray-500);
-    }
-    .kanban-card-tags {
-      display: flex;
-      gap: 4px;
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-    .kanban-tag {
-      padding: 1px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 600;
-    }
-
-    .stage-lead .kanban-card { border-left-color: #6366F1; }
-    .stage-contacted .kanban-card { border-left-color: #3B82F6; }
-    .stage-quoted .kanban-card { border-left-color: var(--amber); }
-    .stage-negotiating .kanban-card { border-left-color: #F97316; }
-    .stage-won .kanban-card { border-left-color: var(--green); }
-    .stage-active .kanban-card { border-left-color: var(--gold); }
-
-    /* --- List View --- */
-    .list-wrap {
-      flex: 1;
-      overflow-x: auto;
-      padding: 0 32px 24px;
-      display: none;
-    }
-    .list-wrap.active { display: block; }
-    .crm-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .crm-table th {
-      text-align: left; padding: 10px 12px; font-weight: 600;
-      color: var(--gray-500); font-size: 11px; text-transform: uppercase;
-      letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
-      white-space: nowrap; cursor: pointer; user-select: none;
-    }
-    .crm-table th:hover { color: var(--navy); }
-    .crm-table td {
-      padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
-      color: var(--gray-700); white-space: nowrap;
-    }
-    .crm-table tr.clickable:hover td { background: var(--gray-50); cursor: pointer; }
-    .stage-badge {
-      display: inline-block; padding: 3px 10px; border-radius: 12px;
-      font-size: 11px; font-weight: 600;
-    }
-    .stage-Lead { background: rgba(99,102,241,0.1); color: #6366F1; }
-    .stage-Contacted { background: rgba(59,130,246,0.1); color: #3B82F6; }
-    .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
-    .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
-    .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }
-    .stage-Active { background: var(--gold-dim); color: var(--gold); }
-
-    /* --- Detail Slide Panel --- */
-    .detail-panel {
-      position: fixed;
-      top: 0; right: 0; bottom: 0;
-      width: 520px; max-width: 100vw;
-      background: var(--white);
-      box-shadow: -4px 0 20px rgba(0,0,0,0.15);
-      z-index: 300;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      display: flex;
-      flex-direction: column;
-    }
-    .detail-panel.open { transform: translateX(0); }
-    .detail-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.3);
-      z-index: 290; display: none;
-    }
-    .detail-overlay.open { display: block; }
-    .dp-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
-    }
-    .dp-header h3 { font-size: 17px; color: var(--navy); }
-    .dp-close {
-      background: none; border: none; font-size: 22px;
-      cursor: pointer; color: var(--gray-400); padding: 4px; line-height: 1;
-    }
-    .dp-close:hover { color: var(--red); }
-    .dp-body {
-      flex: 1; overflow-y: auto; padding: 20px;
-    }
-    .dp-section { margin-bottom: 20px; }
-    .dp-section-title {
-      font-size: 12px; font-weight: 700; color: var(--gray-500);
-      text-transform: uppercase; letter-spacing: 0.5px;
-      margin-bottom: 10px; padding-bottom: 4px;
-      border-bottom: 1px solid var(--gray-100);
-    }
-    .dp-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
-    }
-    .dp-field label {
-      display: block; font-size: 11px; color: var(--gray-400);
-      text-transform: uppercase; letter-spacing: 0.3px;
-    }
-    .dp-field span {
-      font-size: 14px; color: var(--navy); font-weight: 500;
-    }
-    .dp-actions {
-      display: flex; gap: 8px; flex-wrap: wrap;
-    }
-    .dp-footer {
-      padding: 16px 20px; border-top: 1px solid var(--gray-100);
-      display: flex; gap: 8px;
-    }
-    .contact-chip {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; background: var(--gray-50); border-radius: 8px;
-      margin-bottom: 6px; font-size: 13px;
-    }
-    .contact-chip-name { font-weight: 600; color: var(--navy); }
-    .contact-chip-title { font-size: 11px; color: var(--gray-500); }
-    .contact-chip-info { font-size: 11px; color: var(--gray-400); }
-
-    /* --- Modals --- */
-    .modal-backdrop {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      z-index: 500; align-items: flex-start; justify-content: center;
-      padding: 40px 20px; overflow-y: auto;
-    }
-    .modal-backdrop.open { display: flex; }
-    .modal {
-      background: var(--white); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg); width: 100%; max-width: 640px;
-      animation: slideUp 0.2s ease;
-    }
-    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
-    }
-    .modal-header h3 { font-size: 18px; color: var(--navy); font-weight: 700; }
-    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-400); }
-    .modal-close:hover { color: var(--red); }
-    .modal-body { padding: 24px; }
-    .modal-footer {
-      display: flex; justify-content: flex-end; gap: 10px;
-      padding: 16px 24px; border-top: 1px solid var(--gray-100);
-    }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
-    .form-group { display: flex; flex-direction: column; }
-    .form-group.full-width { grid-column: 1 / -1; }
-    .form-group label { font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
-    .form-group label .req { color: var(--red); }
-    .form-group input, .form-group select, .form-group textarea {
-      padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 6px;
-      font-size: 13px; color: var(--gray-700); outline: none; font-family: inherit;
-    }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--gold); }
-    .form-group textarea { resize: vertical; min-height: 60px; }
-    .form-section-title {
-      grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--navy);
-      margin-top: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--gray-100);
-    }
-    .form-error { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
-    .form-error.visible { display: block; }
-
-    /* --- CSV Import --- */
-    .csv-drop-zone {
-      border: 2px dashed var(--gray-300); border-radius: 12px;
-      padding: 40px; text-align: center; cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .csv-drop-zone:hover, .csv-drop-zone.dragover {
-      border-color: var(--gold); background: var(--gold-dim);
-    }
-    .csv-drop-zone p { color: var(--gray-500); font-size: 14px; }
-    .csv-preview-table {
-      width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px;
-    }
-    .csv-preview-table th {
-      padding: 6px 8px; background: var(--gray-50); border: 1px solid var(--gray-200);
-      font-weight: 600; color: var(--gray-600);
-    }
-    .csv-preview-table td {
-      padding: 6px 8px; border: 1px solid var(--gray-100); color: var(--gray-700);
-    }
-    .csv-preview-table select {
-      padding: 4px; border: 1px solid var(--gray-200); border-radius: 4px; font-size: 11px; width: 100%;
-    }
-
-    /* --- Toast --- */
-    .toast {
-      position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
-      border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--white);
-      z-index: 9999; transform: translateY(80px); opacity: 0;
-      transition: transform 0.3s, opacity 0.3s;
-    }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast-success { background: #15803D; }
-    .toast-error { background: var(--red); }
-
-    @media (max-width: 1024px) {
-      .view-bar { padding: 12px 20px; }
-      .kanban-wrap { padding: 16px 20px; }
-      .list-wrap { padding: 0 20px 20px; }
-      .detail-panel { width: 100%; }
-      .kanban-col { width: 230px; }
-    }
-    @media (max-width: 640px) {
-      .view-bar { flex-direction: column; align-items: stretch; }
-      .view-bar input { width: 100%; }
-      .view-spacer { display: none; }
-      .form-grid { grid-template-columns: 1fr; }
-      .dp-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/crm.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page">
@@ -395,8 +40,8 @@
           Analytics
         </a>
         <a href="/ae/accounting/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>Accounting</a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -416,7 +61,7 @@
           <h1>CRM / Prospect Manager</h1>
           <p id="crm-subtitle">Manage your shipper pipeline</p>
         </div>
-        <div style="display:flex;gap:8px">
+        <div class="d-flex gap-8">
           <button class="btn-secondary" onclick="openCSVModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Import CSV
@@ -442,7 +87,7 @@
         </select>
         <input type="text" id="filter-search" placeholder="Search company, contact, city..." oninput="debounceSearch()">
         <div class="view-spacer"></div>
-        <span id="count-label" style="font-size:12px;color:var(--gray-400)"></span>
+        <span id="count-label" class="fs-12 text-muted"></span>
       </div>
 
       <!-- Kanban -->
@@ -526,11 +171,11 @@
             <input id="pf-city" type="text" placeholder="Chicago">
           </div>
           <div class="form-group" style="display:flex;gap:12px;">
-            <div style="flex:1">
+            <div class="flex-1">
               <label>State</label>
-              <input id="pf-state" type="text" placeholder="IL" maxlength="2" style="text-transform:uppercase">
+              <input id="pf-state" type="text" placeholder="IL" maxlength="2" class="text-uppercase">
             </div>
-            <div style="flex:1">
+            <div class="flex-1">
               <label>ZIP</label>
               <input id="pf-zip" type="text" placeholder="60601" maxlength="10">
             </div>
@@ -578,10 +223,10 @@
             <p>Drag & drop a CSV file here, or click to browse</p>
             <p style="font-size:12px;color:var(--gray-400);margin-top:4px">Supported: .csv files</p>
           </div>
-          <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleCSVFile(this)">
+          <input type="file" id="csv-file" accept=".csv" class="d-none" onchange="handleCSVFile(this)">
         </div>
         <!-- Step 2: Map & Preview -->
-        <div id="csv-step-preview" style="display:none">
+        <div id="csv-step-preview" class="d-none">
           <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">Map CSV columns to fields, then confirm import. First 5 rows shown as preview.</p>
           <div style="overflow-x:auto" id="csv-preview-container"></div>
           <p style="font-size:12px;color:var(--gray-400);margin-top:8px" id="csv-row-count"></p>
@@ -589,7 +234,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" onclick="closeCSVModal()">Cancel</button>
-        <button class="btn-primary" id="csv-import-btn" style="display:none" onclick="executeCSVImport()">Import as Leads</button>
+        <button class="btn-primary" id="csv-import-btn" class="d-none" onclick="executeCSVImport()">Import as Leads</button>
       </div>
     </div>
   </div>
@@ -744,12 +389,12 @@
     function renderList() {
       var tbody = document.getElementById("crm-tbody");
       if (state.filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gray-400)">No prospects found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state-lg">No prospects found</td></tr>';
         return;
       }
       tbody.innerHTML = state.filtered.map(function(c) {
         return '<tr class="clickable" onclick="openDetail(\'' + c.id + '\')">' +
-          '<td style="font-weight:600;color:var(--navy)">' + esc(c.name) + '</td>' +
+          '<td class="fw-600 text-navy">' + esc(c.name) + '</td>' +
           '<td>' + esc(c.contactName || '--') + '</td>' +
           '<td>' + esc(c.phone || '--') + '</td>' +
           '<td>' + (c.city ? esc(c.city) + ', ' + esc(c.state || '') : '--') + '</td>' +
@@ -798,9 +443,9 @@
 
       // Stage + Quick Actions
       html += '<div class="dp-section">';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+      html += '<div class="d-flex align-center gap-8 mb-12">';
       html += '<span class="stage-badge stage-' + (c.status || 'Lead') + '">' + esc(c.status || 'Lead') + '</span>';
-      if (c.type) html += '<span style="font-size:11px;color:var(--gray-400)">' + esc(c.type) + '</span>';
+      if (c.type) html += '<span class="fs-11 text-muted">' + esc(c.type) + '</span>';
       html += '</div>';
       html += '<div class="dp-actions">';
       html += '<button class="btn-secondary btn-sm" onclick="stageChange(\'Contacted\')">Log Contact</button>';
@@ -835,7 +480,7 @@
       if (c.contacts && c.contacts.length > 0) {
         c.contacts.forEach(function(ct) {
           html += '<div class="contact-chip">';
-          html += '<div><div class="contact-chip-name">' + esc(ct.name) + (ct.isPrimary ? ' <span style="font-size:10px;color:var(--gold)">(Primary)</span>' : '') + '</div>';
+          html += '<div><div class="contact-chip-name">' + esc(ct.name) + (ct.isPrimary ? ' <span class="text-gold" style="font-size:10px">(Primary)</span>' : '') + '</div>';
           html += '<div class="contact-chip-title">' + esc(ct.title || '') + '</div>';
           html += '<div class="contact-chip-info">' + esc(ct.email || '') + (ct.phone ? ' &middot; ' + esc(ct.phone) : '') + '</div></div>';
           html += '</div>';
@@ -847,7 +492,7 @@
       if (c.notes) {
         html += '<div class="dp-section">';
         html += '<div class="dp-section-title">Notes</div>';
-        html += '<div style="font-size:13px;color:var(--gray-600);white-space:pre-wrap">' + esc(c.notes) + '</div>';
+        html += '<div class="fs-13" style="color:var(--gray-600);white-space:pre-wrap">' + esc(c.notes) + '</div>';
         html += '</div>';
       }
 

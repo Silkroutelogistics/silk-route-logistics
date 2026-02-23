@@ -1,0 +1,319 @@
+/* ========== Training Module Styles ========== */
+    .training-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* --- Category Sidebar --- */
+    .cat-sidebar {
+      width: 240px;
+      border-right: 1px solid var(--gray-200);
+      background: var(--white);
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .cat-title {
+      padding: 16px 16px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cat-list { list-style: none; }
+    .cat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--gray-600);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .cat-item:hover { background: var(--gray-50); color: var(--navy); }
+    .cat-item.active {
+      background: var(--gold-dim);
+      color: var(--gold);
+      border-left-color: var(--gold);
+      font-weight: 600;
+    }
+    .cat-icon { font-size: 16px; width: 20px; text-align: center; }
+    .cat-count {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--gray-100);
+      padding: 1px 6px;
+      border-radius: 8px;
+      color: var(--gray-500);
+    }
+
+    /* --- Main Content --- */
+    .training-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+      background: var(--gray-50);
+    }
+
+    /* --- Search --- */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .search-bar input {
+      flex: 1;
+      max-width: 400px;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      background: var(--white);
+    }
+    .search-bar input:focus { border-color: var(--gold); }
+
+    /* --- SOP Card --- */
+    .sop-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border-left: 4px solid var(--gold);
+    }
+    .sop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .sop-header:hover { background: var(--gray-50); }
+    .sop-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sop-number {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+      background: var(--gold-dim);
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .sop-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .sop-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sop-who {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .who-ae { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .who-all { background: rgba(34,197,94,0.1); color: #15803D; }
+    .who-admin { background: rgba(239,68,68,0.1); color: var(--red); }
+    .sop-chevron {
+      font-size: 18px;
+      color: var(--gray-400);
+      transition: transform 0.2s;
+    }
+    .sop-card.open .sop-chevron { transform: rotate(90deg); }
+    .sop-body {
+      display: none;
+      padding: 0 20px 20px;
+    }
+    .sop-card.open .sop-body { display: block; }
+
+    /* --- Context / When to Use --- */
+    .sop-context {
+      background: var(--gray-50);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--gray-600);
+      border-left: 3px solid var(--navy);
+    }
+    .sop-context strong { color: var(--navy); }
+
+    /* --- Steps --- */
+    .sop-steps { list-style: none; counter-reset: step; }
+    .sop-step {
+      position: relative;
+      padding: 12px 0 12px 48px;
+      border-bottom: 1px solid var(--gray-100);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--gray-700);
+    }
+    .sop-step:last-child { border-bottom: none; }
+    .sop-step::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .step-title {
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 2px;
+    }
+    .step-detail { color: var(--gray-500); font-size: 13px; }
+    .step-tip {
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: var(--gold-dim);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--gold);
+    }
+    .step-tip strong { color: #8B6914; }
+
+    /* --- No Results --- */
+    .no-results {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray-400);
+    }
+    .no-results p { font-size: 16px; }
+
+    @media (max-width: 1024px) {
+      .cat-sidebar { width: 200px; }
+      .training-content { padding: 20px; }
+    }
+    @media (max-width: 640px) {
+      .training-layout { flex-direction: column; }
+      .cat-sidebar { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid var(--gray-200); }
+      .cat-list { display: flex; overflow-x: auto; }
+      .cat-item { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
+      .cat-item.active { border-left: none; border-bottom-color: var(--gold); }
+      .sop-header-left { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .sop-meta { margin-top: 4px; }
+    }
+
+    /* --- Last Updated Badge --- */
+    .sop-updated {
+      font-size: 10px;
+      color: var(--gray-400);
+      margin-left: 8px;
+      font-weight: 400;
+    }
+
+    /* --- Keyboard Shortcuts --- */
+    .shortcuts-section {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+      padding: 20px 24px;
+      border-left: 4px solid var(--navy);
+    }
+    .shortcuts-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+    .shortcuts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    .shortcut-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--gray-50);
+      border-radius: 6px;
+    }
+    .shortcut-key {
+      display: inline-block;
+      padding: 3px 8px;
+      background: var(--navy);
+      color: var(--gold);
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: monospace;
+      min-width: 28px;
+      text-align: center;
+    }
+    .shortcut-desc {
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+
+    /* --- PDF Download Button --- */
+    .pdf-download-btn:hover {
+      background: rgba(200,150,62,0.25) !important;
+      transform: translateY(-1px);
+    }
+
+    /* --- Print All Button --- */
+    .print-all-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--navy);
+      color: var(--gold);
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .print-all-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* --- Print Styles --- */
+    @media print {
+      .sidebar, .hamburger, .overlay, .cat-sidebar, .search-bar { display: none !important; }
+      .page { display: block; }
+      .main { margin: 0; padding: 0; }
+      .main-header { padding: 10px 0; }
+      .training-layout { display: block; }
+      .training-content { padding: 0; background: #fff; overflow: visible; }
+      .sop-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 12px; border: 1px solid #ddd; box-shadow: none; }
+      .sop-card .sop-body { display: block !important; }
+      .sop-header { cursor: default; }
+      .sop-chevron { display: none; }
+      .shortcuts-section { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+      body { font-size: 12px; color: #000; background: #fff; }
+      .sop-number { background: #eee; color: #333; }
+      .sop-title { color: #000; }
+      .step-tip { background: #f5f5f5; color: #666; }
+      .sop-step::before { background: #333; color: #fff; }
+    }

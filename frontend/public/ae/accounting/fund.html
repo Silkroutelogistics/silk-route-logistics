@@ -13,241 +13,10 @@
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
-  <style>
-    /* ========== Factoring Fund Styles ========== */
-
-    .page-layout { display: flex; min-height: 100vh; }
-    .main-content { margin-left: var(--sidebar-width); flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
-    .page-header { padding: 24px 32px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-    .page-header h1 { font-size: 24px; font-weight: 700; color: var(--navy); }
-    .page-header-actions { display: flex; align-items: center; gap: 10px; }
-    .page-body { padding: 20px 32px 32px; flex: 1; }
-
-    /* --- Fund Health Banner --- */
-    .fund-banner {
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      text-align: center;
-      margin-bottom: 24px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: var(--shadow-md);
-    }
-    .fund-banner.health-GREEN { background: linear-gradient(135deg, #065F46 0%, #047857 50%, #059669 100%); color: var(--white); }
-    .fund-banner.health-YELLOW { background: linear-gradient(135deg, #92400E 0%, #B45309 50%, #D97706 100%); color: var(--white); }
-    .fund-banner.health-RED { background: linear-gradient(135deg, #7F1D1D 0%, #991B1B 50%, #B91C1C 100%); color: var(--white); }
-    .fund-banner-label { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; margin-bottom: 8px; }
-    .fund-banner-balance { font-size: 48px; font-weight: 800; line-height: 1.1; margin-bottom: 8px; }
-    .fund-banner-status {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 16px; border-radius: 20px;
-      background: rgba(255,255,255,0.2); font-size: 14px; font-weight: 600;
-    }
-    .fund-banner-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--white); animation: pulse-dot 2s ease-in-out infinite; }
-    .fund-banner-alerts { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
-    .fund-banner-alert {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 14px; border-radius: 6px;
-      background: rgba(255,255,255,0.15); font-size: 13px; font-weight: 500;
-    }
-
-    /* --- KPI Row --- */
-    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-    .kpi-card {
-      background: var(--white); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm); padding: 20px; text-align: center;
-      border-top: 3px solid var(--gold);
-    }
-    .kpi-card-label { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .kpi-card-value { font-size: 28px; font-weight: 700; color: var(--navy); }
-    .kpi-card-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
-    .kpi-card.positive .kpi-card-value { color: #059669; }
-    .kpi-card.negative .kpi-card-value { color: var(--red); }
-
-    /* --- Chart Cards --- */
-    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-    .chart-card {
-      background: var(--white); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm); padding: 20px;
-    }
-    .chart-card h3 { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 16px; }
-    .chart-card canvas { max-height: 300px; }
-    .chart-card-full { grid-column: 1 / -1; }
-
-    /* --- Performance Section --- */
-    .perf-section { margin-bottom: 24px; }
-    .perf-section h2 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
-    .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-    .perf-card {
-      background: var(--white); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm); padding: 20px;
-    }
-    .perf-card h3 { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 16px; border-bottom: 2px solid var(--gold); padding-bottom: 8px; }
-    .perf-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
-    .perf-row:last-child { border-bottom: none; }
-    .perf-row-label { color: var(--gray-500); }
-    .perf-row-value { font-weight: 600; color: var(--navy); }
-    .perf-row-value.positive { color: #059669; }
-    .perf-row-value.negative { color: var(--red); }
-
-    /* --- Transactions Section --- */
-    .txn-section { margin-bottom: 24px; }
-    .txn-section h2 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
-
-    /* --- Filter Bar --- */
-    .filter-bar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 16px 20px; background: var(--white);
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      border-bottom: 1px solid var(--gray-200);
-      box-shadow: var(--shadow-sm);
-      flex-wrap: wrap;
-    }
-    .filter-bar select, .filter-bar input {
-      padding: 8px 12px; border: 1px solid var(--gray-200);
-      border-radius: 6px; font-size: 13px; outline: none;
-      background: var(--white);
-    }
-    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--gold); }
-    .filter-spacer { flex: 1; }
-
-    /* --- Buttons --- */
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--gold); color: var(--white);
-      border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
-      cursor: pointer; white-space: nowrap;
-    }
-    .btn-primary:hover { background: var(--gold-hover); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--white); color: var(--navy);
-      border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px;
-      font-weight: 500; cursor: pointer;
-    }
-    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-    .btn-danger { background: var(--red); color: var(--white); border: none; border-radius: 6px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .btn-danger:hover { background: #DC2626; }
-
-    /* --- Data Table --- */
-    .data-table-wrap {
-      background: var(--white); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-      box-shadow: var(--shadow-sm); overflow-x: auto;
-    }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .data-table th {
-      text-align: left; padding: 12px 16px; font-size: 11px; color: var(--gray-400);
-      text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200);
-      white-space: nowrap; background: var(--gray-50);
-    }
-    .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); }
-    .data-table tbody tr:hover { background: var(--gray-50); }
-    .amount-positive { color: #059669; font-weight: 600; }
-    .amount-negative { color: var(--red); font-weight: 600; }
-
-    /* --- Transaction Type Badge --- */
-    .txn-type-badge {
-      display: inline-block; padding: 3px 8px; border-radius: 4px;
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
-    }
-    .txn-type-badge.INITIAL_DEPOSIT { background: rgba(59,130,246,0.1); color: #2563EB; }
-    .txn-type-badge.CARRIER_PAYMENT_OUT { background: var(--red-bg); color: var(--red); }
-    .txn-type-badge.SHIPPER_PAYMENT_IN { background: var(--green-bg); color: #059669; }
-    .txn-type-badge.QP_FEE_EARNED { background: var(--gold-dim); color: var(--gold); }
-    .txn-type-badge.ADJUSTMENT { background: rgba(168,85,247,0.1); color: #7C3AED; }
-    .txn-type-badge.WITHDRAWAL { background: var(--amber-bg); color: #B45309; }
-
-    /* --- Pagination --- */
-    .pagination {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 16px; background: var(--white);
-      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-      border-top: 1px solid var(--gray-100);
-    }
-    .pagination button {
-      padding: 6px 14px; border: 1px solid var(--gray-200); border-radius: 6px;
-      background: var(--white); color: var(--gray-600); font-size: 13px; cursor: pointer;
-    }
-    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
-    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .pagination button.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
-    .pagination-info { font-size: 13px; color: var(--gray-400); }
-
-    /* --- Modal --- */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      z-index: 500; align-items: center; justify-content: center;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-      width: 480px; max-width: 90vw; max-height: 85vh; overflow-y: auto;
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px; border-bottom: 1px solid var(--gray-200);
-    }
-    .modal-header h2 { font-size: 18px; font-weight: 700; color: var(--navy); }
-    .modal-close {
-      background: none; border: none; font-size: 24px; color: var(--gray-400);
-      cursor: pointer; line-height: 1;
-    }
-    .modal-close:hover { color: var(--red); }
-    .modal-body { padding: 24px; }
-    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px; }
-
-    /* --- Form --- */
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
-    .form-group input, .form-group textarea, .form-group select {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200);
-      border-radius: 6px; font-size: 14px; outline: none;
-      font-family: inherit;
-    }
-    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--gold); }
-    .form-group textarea { resize: vertical; min-height: 80px; }
-    .form-hint { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
-
-    /* --- Empty & Loading --- */
-    .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); font-size: 14px; }
-    .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
-    .loading-spinner {
-      display: flex; align-items: center; justify-content: center; padding: 48px;
-      color: var(--gray-400); font-size: 14px; gap: 8px;
-    }
-    .spinner {
-      width: 20px; height: 20px; border: 2px solid var(--gray-200);
-      border-top-color: var(--gold); border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    /* --- Unauthorized --- */
-    .unauthorized {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 60vh; flex-direction: column; gap: 12px; color: var(--gray-400);
-    }
-    .unauthorized h2 { color: var(--red); font-size: 20px; }
-
-    /* --- Responsive --- */
-    @media (max-width: 1200px) {
-      .kpi-row { grid-template-columns: repeat(2, 1fr); }
-      .chart-row { grid-template-columns: 1fr; }
-      .perf-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 1024px) {
-      .main-content { margin-left: 0; }
-      .page-header { padding: 64px 20px 0; }
-      .page-body { padding: 20px; }
-    }
-    @media (max-width: 640px) {
-      .kpi-row { grid-template-columns: 1fr; }
-      .filter-bar { flex-direction: column; align-items: stretch; }
-      .fund-banner-balance { font-size: 32px; }
-    }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/accounting-fund.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page-layout">
@@ -268,8 +37,8 @@
         <a href="/ae/financials.html">Lead Hunter</a>
         <a href="/ae/training.html">Training</a>
         <a href="/ae/analytics.html">Analytics</a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Accounting</div>
+        <div class="divider-top">
+          <div class="section-label">Accounting</div>
           <a href="/ae/accounting/dashboard.html">Acct Dashboard</a>
           <a href="/ae/accounting/payable.html">Accounts Payable</a>
           <a href="/ae/accounting/receivable.html">Accounts Receivable</a>
@@ -279,8 +48,8 @@
           <a href="/ae/accounting/analytics.html">Analytics</a>
         </div>
 
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -298,7 +67,7 @@
         </div>
         <div class="page-header-actions">
           <button class="btn-secondary btn-sm" onclick="refreshAll()">Refresh</button>
-          <button class="btn-primary" id="btn-adjustment" style="display:none;" onclick="openAdjustmentModal()">Fund Adjustment</button>
+          <button class="btn-primary" id="btn-adjustment" class="d-none" onclick="openAdjustmentModal()">Fund Adjustment</button>
         </div>
       </div>
 
@@ -310,13 +79,13 @@
         </div>
 
         <!-- Unauthorized State -->
-        <div class="unauthorized" id="unauthorized-state" style="display:none;">
+        <div class="unauthorized" id="unauthorized-state" class="d-none">
           <h2>Access Denied</h2>
           <p>You do not have permission to view this page. Required role: ADMIN, CEO, or ACCOUNTING.</p>
         </div>
 
         <!-- Main Content Container -->
-        <div id="main-container" style="display:none;">
+        <div id="main-container" class="d-none">
 
           <!-- Fund Health Banner -->
           <div class="fund-banner" id="fund-banner">
@@ -913,7 +682,7 @@
 
       if (startPage > 1) {
         html += '<button onclick="goToPage(1)">1</button>';
-        if (startPage > 2) html += '<span style="padding:0 4px;color:var(--gray-400);">...</span>';
+        if (startPage > 2) html += '<span class="text-muted" style="padding:0 4px">...</span>';
       }
 
       for (var i = startPage; i <= endPage; i++) {
@@ -921,7 +690,7 @@
       }
 
       if (endPage < txnTotalPages) {
-        if (endPage < txnTotalPages - 1) html += '<span style="padding:0 4px;color:var(--gray-400);">...</span>';
+        if (endPage < txnTotalPages - 1) html += '<span class="text-muted" style="padding:0 4px">...</span>';
         html += '<button onclick="goToPage(' + txnTotalPages + ')">' + txnTotalPages + '</button>';
       }
 

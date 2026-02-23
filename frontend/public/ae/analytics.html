@@ -14,87 +14,10 @@
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
-  <style>
-    .filter-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .filter-bar select {
-      padding: 7px 12px;
-      border: 1px solid var(--theme-border, #e2e8f0);
-      border-radius: 6px;
-      font-size: 13px;
-      background: var(--theme-card-bg, #fff);
-      color: var(--theme-text-primary, #334155);
-      outline: none;
-    }
-    .filter-bar select:focus { border-color: var(--theme-primary, #c8963e); }
-    .filter-bar label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--theme-text-muted, #94a3b8);
-    }
-    .export-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 16px;
-    }
-    .sort-arrow { font-size: 10px; margin-left: 3px; opacity: 0.6; }
-    .sort-arrow.active { opacity: 1; color: var(--theme-primary, #c8963e); }
-    .export-card {
-      background: var(--theme-card-bg, #fff);
-      border: 1px solid var(--theme-card-border, #e2e8f0);
-      border-radius: 10px;
-      padding: 32px;
-      box-shadow: var(--theme-card-shadow, 0 1px 3px rgba(0,0,0,0.06));
-    }
-    .export-card h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--theme-text-heading, #0d1b2a);
-      margin-bottom: 20px;
-    }
-    .export-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
-    }
-    .export-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      background: var(--theme-bg-alt, #f8fafc);
-      border-radius: 8px;
-      border: 1px solid var(--theme-border-light, #f1f5f9);
-    }
-    .export-item-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--theme-text-primary, #334155);
-    }
-    .export-item-actions { display: flex; gap: 6px; }
-    .export-item-actions button {
-      padding: 5px 12px;
-      border: 1px solid var(--theme-border, #e2e8f0);
-      background: var(--theme-card-bg, #fff);
-      color: var(--theme-text-primary, #334155);
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .export-item-actions button:hover {
-      border-color: var(--theme-primary, #c8963e);
-      color: var(--theme-primary, #c8963e);
-    }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/analytics.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page">
@@ -116,8 +39,8 @@
         <a href="/ae/training.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Training</a>
         <a href="/ae/analytics.html" class="active"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</a>
         <a href="/ae/accounting/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>Accounting</a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -192,7 +115,7 @@
         <div class="analytics-grid-2">
           <div class="chart-container">
             <div class="gauge-container">
-              <div class="chart-title" style="margin-bottom:12px">Overall On-Time %</div>
+              <div class="chart-title mb-12">Overall On-Time %</div>
               <div class="gauge-canvas-wrap"><canvas id="ontime-gauge"></canvas></div>
               <div class="gauge-value" id="ontime-gauge-value">--</div>
               <div class="gauge-label">On-Time Delivery Rate</div>
@@ -671,7 +594,7 @@
       var bottomCarriers = data.bottomCarriers || [];
       var carrierTbody = document.querySelector("#ontime-carriers-table tbody");
       if (bottomCarriers.length === 0) {
-        carrierTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--theme-text-muted);padding:24px">No data available</td></tr>';
+        carrierTbody.innerHTML = '<tr><td colspan="4" class="empty-state">No data available</td></tr>';
       } else {
         carrierTbody.innerHTML = bottomCarriers.map(function (row) {
           var otClass = (row.onTimePct || 0) >= 95 ? "heatmap-dark-green" : (row.onTimePct || 0) >= 90 ? "heatmap-light-green" : (row.onTimePct || 0) >= 80 ? "heatmap-yellow" : "heatmap-red";
@@ -688,7 +611,7 @@
       var bottomLanes = data.bottomLanes || [];
       var lanesTbody = document.querySelector("#ontime-lanes-table tbody");
       if (bottomLanes.length === 0) {
-        lanesTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--theme-text-muted);padding:24px">No data available</td></tr>';
+        lanesTbody.innerHTML = '<tr><td colspan="4" class="empty-state">No data available</td></tr>';
       } else {
         lanesTbody.innerHTML = bottomLanes.map(function (row) {
           var otClass = (row.onTimePct || 0) >= 95 ? "heatmap-dark-green" : (row.onTimePct || 0) >= 90 ? "heatmap-light-green" : (row.onTimePct || 0) >= 80 ? "heatmap-yellow" : "heatmap-red";
@@ -708,7 +631,7 @@
     function renderLanes(data) {
       if (!data || !data.lanes) {
         var tbody = document.getElementById("lanes-tbody");
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No lane data available</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No lane data available</td></tr>';
         return;
       }
 
@@ -743,7 +666,7 @@
       /* Table body */
       var tbody = document.getElementById("lanes-tbody");
       if (lanes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No lanes match filter</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No lanes match filter</td></tr>';
       } else {
         tbody.innerHTML = lanes.map(function (l) {
           var mPct = l.marginPct || 0;
@@ -808,7 +731,7 @@
     function renderCarriers(data) {
       if (!data || !data.carriers) {
         var tbody = document.getElementById("carriers-tbody");
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No carrier data available</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No carrier data available</td></tr>';
         return;
       }
 
@@ -850,7 +773,7 @@
 
       var tbody = document.getElementById("carriers-tbody");
       if (carriers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No carriers match filters</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No carriers match filters</td></tr>';
       } else {
         tbody.innerHTML = carriers.map(function (row) {
           var tierClass = "tier-" + (row.tier || "NONE");
@@ -875,7 +798,7 @@
     function renderShippers(data) {
       if (!data || !data.shippers) {
         var tbody = document.getElementById("shippers-tbody");
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No shipper data available</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No shipper data available</td></tr>';
         return;
       }
 
@@ -904,7 +827,7 @@
 
       var tbody = document.getElementById("shippers-tbody");
       if (shippers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--theme-text-muted);padding:24px">No shipper data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No shipper data available</td></tr>';
       } else {
         tbody.innerHTML = shippers.map(function (row) {
           var mPct = row.marginPct || 0;

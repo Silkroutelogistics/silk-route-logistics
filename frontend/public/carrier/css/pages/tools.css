@@ -1,0 +1,345 @@
+/* ─── Tools Page Styles ──────────────────────────── */
+    .tools-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tools-tabs .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      color: var(--slate);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tools-tabs .tab-btn:hover { color: #fff; }
+    .tools-tabs .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ─── Fuel Map ────────────────────────────────────── */
+    .fuel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .fuel-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .fuel-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .fuel-card .region-name {
+      font-size: 13px;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .fuel-card .fuel-price {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .fuel-card .fuel-label {
+      font-size: 11px;
+      color: var(--slate-dark);
+      margin-top: 4px;
+    }
+    .fuel-price.green { color: var(--green); }
+    .fuel-price.amber { color: var(--amber); }
+    .fuel-price.red { color: var(--red); }
+
+    .fuel-widget-placeholder {
+      background: rgba(255,255,255,0.03);
+      border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .fuel-widget-placeholder .widget-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    .fuel-widget-placeholder .widget-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .fuel-widget-placeholder .widget-sub {
+      font-size: 13px;
+      color: var(--slate);
+    }
+    .fuel-legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .fuel-legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--slate);
+    }
+    .fuel-legend .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .fuel-legend .dot.green { background: var(--green); }
+    .fuel-legend .dot.amber { background: var(--amber); }
+    .fuel-legend .dot.red { background: var(--red); }
+
+    /* ─── Weather ─────────────────────────────────────── */
+    .weather-inputs {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .weather-inputs .form-group { margin-bottom: 0; flex: 1; min-width: 180px; }
+    .weather-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .weather-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .weather-card .city-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .weather-card .weather-type {
+      font-size: 12px;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 16px;
+    }
+    .weather-card .temp-display {
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .weather-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+    }
+    .weather-detail-row .detail-label { color: var(--slate); }
+    .weather-detail-row .detail-value { color: #CBD5E1; font-weight: 500; }
+    .weather-alert-box {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .weather-alert-box .alert-icon { margin-right: 6px; }
+
+    /* ─── Detention ───────────────────────────────────── */
+    .detention-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .detention-summary {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .detention-summary .summary-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 14px;
+    }
+    .summary-row .row-label { color: var(--slate); }
+    .summary-row .row-value { color: #fff; font-weight: 600; }
+    .summary-row.total { border-top: 2px solid var(--gold-dim); border-bottom: none; padding-top: 12px; margin-top: 4px; }
+    .summary-row.total .row-value { color: var(--gold); font-size: 20px; }
+
+    /* ─── Maintenance ─────────────────────────────────── */
+    .reminders-list { margin-top: 20px; }
+    .reminder-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .reminder-item:hover { border-color: rgba(255,255,255,0.15); }
+    .reminder-info .reminder-truck {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .reminder-info .reminder-type {
+      font-size: 12px;
+      color: var(--slate);
+      margin-top: 2px;
+    }
+    .reminder-info .reminder-due {
+      font-size: 11px;
+      color: var(--slate-dark);
+      margin-top: 2px;
+    }
+    .reminder-countdown {
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      min-width: 80px;
+    }
+    .reminder-countdown .countdown-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .countdown-green { color: var(--green); }
+    .countdown-amber { color: var(--amber); }
+    .countdown-red { color: var(--red); }
+    .reminder-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .reminder-actions button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--slate);
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .reminder-actions button:hover { border-color: var(--red); color: var(--red); }
+
+    /* ─── Deadhead ────────────────────────────────────── */
+    .deadhead-inputs {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .deadhead-inputs .form-group { margin-bottom: 0; flex: 1; min-width: 240px; }
+    .backhaul-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .backhaul-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .backhaul-card:hover {
+      border-color: var(--gold-dim);
+      transform: translateY(-2px);
+    }
+    .backhaul-route {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .backhaul-route .route-arrow { color: var(--gold); margin: 0 6px; }
+    .backhaul-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .backhaul-meta .meta-item {
+      font-size: 12px;
+      color: var(--slate);
+    }
+    .backhaul-meta .meta-item strong {
+      color: #CBD5E1;
+      font-weight: 600;
+    }
+    .backhaul-meta .meta-item.rate strong { color: var(--gold); }
+    .backhaul-distance-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--gold-dim);
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    /* ─── Form inline grid ────────────────────────────── */
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ─── Responsive overrides ────────────────────────── */
+    @media (max-width: 768px) {
+      .detention-layout { grid-template-columns: 1fr; }
+      .form-grid-2 { grid-template-columns: 1fr; }
+      .weather-inputs, .deadhead-inputs { flex-direction: column; }
+      .tools-tabs .tab-btn { padding: 10px 14px; font-size: 12px; }
+    }

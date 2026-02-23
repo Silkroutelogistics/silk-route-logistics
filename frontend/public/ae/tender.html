@@ -12,275 +12,10 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    /* ========== Tender Page Styles ========== */
-    .tender-layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-      height: calc(100vh - 0px);
-    }
-
-    /* Section Tabs (left vertical nav) */
-    .section-tabs {
-      width: 220px;
-      background: var(--white);
-      border-right: 1px solid var(--gray-200);
-      overflow-y: auto;
-      flex-shrink: 0;
-      padding: 16px 0;
-    }
-    .section-tab {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 20px;
-      font-size: 13px;
-      color: var(--gray-600);
-      cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: all 0.15s;
-      text-decoration: none;
-    }
-    .section-tab:hover { background: var(--gray-50); color: var(--navy); text-decoration: none; }
-    .section-tab.active {
-      background: var(--gold-dim);
-      color: var(--gold);
-      border-left-color: var(--gold);
-      font-weight: 600;
-    }
-    .section-tab .tab-num {
-      width: 22px; height: 22px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 50%;
-      font-size: 11px; font-weight: 700;
-      background: var(--gray-100);
-      color: var(--gray-500);
-      flex-shrink: 0;
-    }
-    .section-tab.active .tab-num { background: var(--gold); color: #fff; }
-    .section-tab.completed .tab-num { background: var(--green); color: #fff; }
-
-    /* Center: form area */
-    .form-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px 32px;
-      background: var(--gray-50);
-    }
-    .form-section { display: none; }
-    .form-section.active { display: block; }
-    .form-section h3 {
-      font-size: 18px;
-      color: var(--navy);
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid var(--gold);
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .form-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group.full-width { grid-column: 1 / -1; }
-    .form-group label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--gray-500);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      color: var(--gray-700);
-      background: var(--white);
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus { border-color: var(--gold); }
-    .form-group textarea { min-height: 80px; resize: vertical; }
-    .form-group input[readonly],
-    .form-group textarea[readonly] { background: var(--gray-50); color: var(--gray-500); }
-
-    /* Right: profit summary */
-    .profit-summary {
-      width: 280px;
-      background: var(--white);
-      border-left: 1px solid var(--gray-200);
-      padding: 20px;
-      overflow-y: auto;
-      flex-shrink: 0;
-    }
-    .profit-summary h4 {
-      font-size: 14px;
-      color: var(--navy);
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid var(--gold);
-    }
-    .profit-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-      font-size: 13px;
-      color: var(--gray-600);
-    }
-    .profit-row.total {
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--navy);
-      border-top: 1px solid var(--gray-200);
-      margin-top: 8px;
-      padding-top: 10px;
-    }
-    .profit-row .val { font-weight: 600; }
-    .margin-green { color: var(--green) !important; }
-    .margin-amber { color: var(--amber) !important; }
-    .margin-red { color: var(--red) !important; }
-
-    .profit-summary .action-btns {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .profit-summary .action-btns button,
-    .profit-summary .action-btns a {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      text-align: center;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-    }
-    .btn-gold { background: var(--gold); color: #fff; }
-    .btn-gold:hover { background: var(--gold-hover); }
-    .btn-outline { background: var(--white); color: var(--navy); border: 1px solid var(--gray-200) !important; }
-    .btn-outline:hover { border-color: var(--gold) !important; color: var(--gold); }
-    .btn-green { background: var(--green); color: #fff; }
-    .btn-green:hover { opacity: 0.9; }
-
-    /* Read-only info cards */
-    .info-card {
-      background: var(--gray-50);
-      border: 1px solid var(--gray-200);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .info-card .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      font-size: 13px;
-    }
-    .info-card .info-row .label { color: var(--gray-500); }
-    .info-card .info-row .value { color: var(--navy); font-weight: 500; }
-
-    /* Stops */
-    .stop-card {
-      border: 1px solid var(--gray-200);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 12px;
-      background: var(--white);
-      position: relative;
-    }
-    .stop-card .stop-remove {
-      position: absolute;
-      top: 8px; right: 8px;
-      background: none; border: none;
-      color: var(--red); cursor: pointer;
-      font-size: 18px; line-height: 1;
-    }
-    .stop-card h5 { font-size: 13px; color: var(--gold); margin-bottom: 10px; }
-
-    /* Accessorial row */
-    .acc-row {
-      display: flex;
-      gap: 12px;
-      align-items: end;
-      margin-bottom: 8px;
-    }
-    .acc-row select, .acc-row input { flex: 1; }
-    .acc-row .acc-remove {
-      background: none; border: none;
-      color: var(--red); cursor: pointer;
-      font-size: 16px; padding: 8px;
-    }
-
-    /* Review summary */
-    .review-section {
-      background: var(--white);
-      border: 1px solid var(--gray-200);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .review-section h4 {
-      font-size: 14px;
-      color: var(--gold);
-      margin-bottom: 10px;
-      border-bottom: 1px solid var(--gray-100);
-      padding-bottom: 6px;
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      top: 20px; right: 20px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      z-index: 9999;
-      animation: slideIn 0.3s ease;
-      color: #fff;
-    }
-    .toast.success { background: var(--green); }
-    .toast.error { background: var(--red); }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-    .nav-btns { display: flex; gap: 8px; margin-top: 24px; }
-
-    @media (max-width: 1100px) {
-      .section-tabs { width: 180px; }
-      .profit-summary { width: 240px; }
-    }
-    @media (max-width: 900px) {
-      .tender-layout { flex-direction: column; }
-      .section-tabs { width: 100%; flex-direction: row; overflow-x: auto; display: flex; padding: 8px; border-right: none; border-bottom: 1px solid var(--gray-200); }
-      .section-tab { border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; padding: 8px 12px; }
-      .section-tab.active { border-bottom-color: var(--gold); border-left: none; }
-      .profit-summary { width: 100%; border-left: none; border-top: 1px solid var(--gray-200); }
-    }
-    @media (max-width: 640px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .form-grid.three-col { grid-template-columns: 1fr; }
-      .nav-btns { flex-direction: column; }
-      .nav-btns .btn { width: 100%; min-height: 44px; }
-    }
-    .mileage-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:12px; font-size:13px; font-weight:600; }
-    .mileage-badge small { font-weight:400; opacity:.8; font-size:11px; }
-    .mileage-estimated { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
-    .mileage-practical { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/tender.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page">
@@ -339,8 +74,8 @@
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>
           Accounting
         </a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -483,7 +218,7 @@
     var params = new URLSearchParams(window.location.search);
     var loadId = params.get("loadId");
     if (!loadId) {
-      document.querySelector(".form-area").innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray-400)">No load ID specified. <a href="/ae/loads.html">Go back</a></div>';
+      document.querySelector(".form-area").innerHTML = '<div class="empty-state-lg">No load ID specified. <a href="/ae/loads.html">Go back</a></div>';
       return;
     }
 
@@ -527,11 +262,11 @@
           state.mileage = m;
           var el = document.getElementById("tender-mileage-badge");
           if (el) {
-            el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
-              '<span style="font-size:11px;color:var(--gray-400);text-transform:uppercase">Mileage:</span>' +
+            el.innerHTML = '<div class="d-flex align-center gap-8" style="padding:4px 0">' +
+              '<span class="fs-11 text-muted text-uppercase">Mileage:</span>' +
               SRL.renderMileageBadge(m) +
-              (m.drive_time_hours ? '<span style="font-size:12px;color:var(--gray-400)">&#9201; ' + m.drive_time_hours + 'h</span>' : '') +
-              (m.toll_cost !== null ? '<span style="font-size:12px;color:var(--gray-400)">Tolls: $' + m.toll_cost.toFixed(2) + '</span>' : '') +
+              (m.drive_time_hours ? '<span class="fs-12 text-muted">&#9201; ' + m.drive_time_hours + 'h</span>' : '') +
+              (m.toll_cost !== null ? '<span class="fs-12 text-muted">Tolls: $' + m.toll_cost.toFixed(2) + '</span>' : '') +
             '</div>';
           }
           // Update profit summary with mileage data
@@ -539,7 +274,7 @@
         }).catch(function() {});
       }
     }).catch(function(err) {
-      document.querySelector(".form-area").innerHTML = '<div style="padding:40px;text-align:center;color:var(--red)">Error loading data: ' + esc(err.message) + '</div>';
+      document.querySelector(".form-area").innerHTML = '<div class="empty-state-lg text-red">Error loading data: ' + esc(err.message) + '</div>';
     });
 
     function showRCStatus(status) {
@@ -775,7 +510,7 @@
       var stops = fd.stops || [];
       var html = '<div class="form-section" data-section="4">' +
         '<h3>5. Stops</h3>' +
-        '<div class="form-grid" style="margin-bottom:16px">' +
+        '<div class="form-grid mb-16">' +
           '<div class="form-group"><label>Route Type</label>' +
           '<select data-field="isMultiStop" onchange="window._toggleMultiStop(this.value)">' +
             '<option value="false"' + (!fd.isMultiStop ? ' selected' : '') + '>Direct (Origin to Destination)</option>' +
@@ -793,7 +528,7 @@
       html += '</div>';
 
       if (fd.isMultiStop) {
-        html += '<button class="btn-outline" style="margin-top:8px;padding:8px 16px;font-size:13px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._addStop()">+ Add Stop</button>';
+        html += '<button class="btn-outline mt-8 fs-13" style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._addStop()">+ Add Stop</button>';
       }
 
       html += navBtns(4) + '</div>';
@@ -848,7 +583,7 @@
       var l = state.load;
       return '<div class="form-section" data-section="5">' +
         '<h3>6. Carrier / Driver Assignment</h3>' +
-        '<div class="form-grid" style="margin-bottom:20px">' +
+        '<div class="form-grid mb-20">' +
           formSelect("Assignment Type", "assignmentType", fd.assignmentType, ["COMPANY_DRIVER", "PARTNER_CARRIER"]) +
         '</div>' +
         '<div class="form-grid">' +
@@ -956,7 +691,7 @@
       return '<div class="form-section" data-section="8">' +
         '<h3>9. Terms & Conditions</h3>' +
         formArea("Standard Terms (editable)", "customTerms", fd.customTerms, "full-width") +
-        '<div class="form-grid" style="margin-top:16px">' +
+        '<div class="form-grid mt-16">' +
           formArea("Special Instructions", "specialInstructions", fd.specialInstructions, "full-width") +
         '</div>' +
         navBtns(8) +
@@ -1039,7 +774,7 @@
       html += '<div class="profit-row total ' + marginClass + '"><span>Gross Margin</span><span class="val">$' + num(margin) + '</span></div>';
       html += '<div class="profit-row ' + marginClass + '"><span>Margin %</span><span class="val">' + marginPct.toFixed(1) + '%</span></div>';
       if (dist > 0) {
-        html += '<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--gray-200)">';
+        html += '<div class="mt-12" style="padding-top:8px;border-top:1px solid var(--gray-200)">';
         html += profitRow("Revenue / Mile", "$" + revPerMile.toFixed(2));
         html += profitRow("Cost / Mile", "$" + costPerMile.toFixed(2));
         html += '<div class="profit-row ' + marginClass + '"><span>Margin / Mile</span><span class="val">$' + marginPerMile.toFixed(2) + '</span></div>';
@@ -1255,10 +990,10 @@
     function navBtns(sectionIdx) {
       var html = '<div class="nav-btns">';
       if (sectionIdx > 0) {
-        html += '<button class="btn-outline" style="padding:8px 20px;font-size:13px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._switchSection(' + (sectionIdx - 1) + ')">Previous</button>';
+        html += '<button class="btn-outline fs-13" style="padding:8px 20px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._switchSection(' + (sectionIdx - 1) + ')">Previous</button>';
       }
       if (sectionIdx < SECTIONS.length - 1) {
-        html += '<button class="btn-gold" style="padding:8px 20px;font-size:13px;border-radius:6px;cursor:pointer;border:none" onclick="window._switchSection(' + (sectionIdx + 1) + ')">Next</button>';
+        html += '<button class="btn-gold fs-13" style="padding:8px 20px;border-radius:6px;cursor:pointer;border:none" onclick="window._switchSection(' + (sectionIdx + 1) + ')">Next</button>';
       }
       html += '</div>';
       return html;

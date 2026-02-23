@@ -12,830 +12,10 @@
   <link rel="stylesheet" href="/shared/css/themes.css">
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script>(function(){try{var t=localStorage.getItem('srl_theme')||'silk-route-classic';var m=localStorage.getItem('srl_mode')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','silk-route-classic');document.documentElement.setAttribute('data-mode','light')}})()</script>
-  <style>
-    /* ========== Page-specific styles ========== */
-
-    /* --- Filter Bar --- */
-    .filter-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 32px;
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-200);
-      flex-wrap: wrap;
-    }
-    .filter-bar select,
-    .filter-bar input {
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      color: var(--gray-700);
-      background: var(--white);
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    .filter-bar select:focus,
-    .filter-bar input:focus {
-      border-color: var(--gold);
-    }
-    .filter-bar input[type="text"] { width: 220px; }
-    .filter-bar input[type="date"] { width: 150px; }
-    .filter-spacer { flex: 1; }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 18px;
-      background: var(--gold);
-      color: var(--white);
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-    .btn-primary:hover { background: var(--gold-hover); text-decoration: none; }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 18px;
-      background: var(--white);
-      color: var(--navy);
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
-
-    .btn-sm {
-      padding: 5px 12px;
-      font-size: 12px;
-    }
-
-    .btn-danger {
-      background: var(--red);
-      color: #fff;
-      border: none;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-danger:hover { opacity: 0.9; }
-
-    /* --- Load Table --- */
-    .table-wrap {
-      flex: 1;
-      overflow-x: auto;
-      padding: 0 32px 24px;
-    }
-    .load-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .load-table th {
-      text-align: left;
-      padding: 10px 12px;
-      font-weight: 600;
-      color: var(--gray-500);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 2px solid var(--gray-200);
-      white-space: nowrap;
-      cursor: pointer;
-      user-select: none;
-    }
-    .load-table th:hover { color: var(--navy); }
-    .load-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--gray-100);
-      color: var(--gray-700);
-      white-space: nowrap;
-    }
-    .load-table tr.clickable-row { cursor: pointer; }
-    .load-table tr.clickable-row:hover td { background: var(--gray-50); }
-
-    /* --- Status Badge --- */
-    .status-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .status-posted      { background: rgba(59,130,246,0.1);  color: #2563EB; }
-    .status-tendered     { background: rgba(59,130,246,0.15); color: #1D4ED8; }
-    .status-booked,
-    .status-confirmed,
-    .status-dispatched   { background: rgba(245,158,11,0.12); color: #B45309; }
-    .status-at_pickup,
-    .status-loaded,
-    .status-picked_up,
-    .status-in_transit,
-    .status-at_delivery  { background: var(--gold-dim); color: var(--gold); }
-    .status-delivered,
-    .status-pod_received { background: rgba(34,197,94,0.1);   color: #15803D; }
-    .status-invoiced     { background: rgba(13,27,42,0.08);   color: var(--navy); }
-    .status-completed,
-    .status-paid         { background: var(--gray-100);        color: var(--gray-500); }
-    .status-cancelled,
-    .status-tonu         { background: var(--red-bg);          color: var(--red); }
-    .status-draft,
-    .status-planned      { background: var(--gray-100);        color: var(--gray-400); }
-
-    /* --- Pagination --- */
-    .pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 16px 32px;
-    }
-    .pagination button {
-      padding: 6px 12px;
-      border: 1px solid var(--gray-200);
-      background: var(--white);
-      border-radius: 6px;
-      font-size: 13px;
-      cursor: pointer;
-      color: var(--gray-600);
-    }
-    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
-    .pagination button:disabled { opacity: 0.4; cursor: default; }
-    .pagination .page-info { font-size: 13px; color: var(--gray-500); }
-
-    /* --- Detail View --- */
-    .detail-view {
-      display: none;
-      flex-direction: column;
-      flex: 1;
-      min-height: 0;
-    }
-    .detail-view.active { display: flex; }
-    .list-view.active { display: flex; flex-direction: column; flex: 1; }
-    .list-view { display: none; }
-
-    .detail-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px 32px;
-      border-bottom: 1px solid var(--gray-200);
-      background: var(--white);
-    }
-    .detail-header .back-btn {
-      background: none;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--gray-600);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .detail-header .back-btn:hover { border-color: var(--gold); color: var(--gold); }
-    .detail-header h2 {
-      font-size: 18px;
-      color: var(--navy);
-      font-weight: 700;
-    }
-    .detail-header .detail-status { margin-left: 8px; }
-    .detail-header-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-    .delete-btn { background: transparent; border: none; color: var(--gray-400); cursor: pointer; padding: 6px; border-radius: 4px; display: flex; align-items: center; }
-    .delete-btn:hover { color: #e74c3c; background: rgba(231,76,60,0.1); }
-
-    .detail-panels {
-      display: flex;
-      flex: 1;
-      overflow-y: auto;
-      gap: 0;
-    }
-    .detail-left {
-      flex: 0 0 60%;
-      padding: 24px 24px 24px 32px;
-      overflow-y: auto;
-      border-right: 1px solid var(--gray-200);
-    }
-    .detail-right {
-      flex: 0 0 40%;
-      padding: 24px 24px 24px 24px;
-      overflow-y: auto;
-      background: var(--gray-50);
-    }
-
-    /* --- Detail Section --- */
-    .detail-section {
-      margin-bottom: 24px;
-    }
-    .detail-section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--gray-500);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--gray-100);
-    }
-    .detail-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 20px;
-    }
-    .detail-field label {
-      display: block;
-      font-size: 11px;
-      color: var(--gray-400);
-      margin-bottom: 2px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .detail-field span {
-      font-size: 14px;
-      color: var(--navy);
-      font-weight: 500;
-    }
-
-    /* --- Timeline --- */
-    .timeline {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      margin: 8px 0;
-    }
-    .timeline-step {
-      flex: 1;
-      text-align: center;
-      position: relative;
-    }
-    .timeline-dot {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--gray-200);
-      margin: 0 auto 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      color: white;
-      position: relative;
-      z-index: 2;
-    }
-    .timeline-dot.completed { background: var(--green); }
-    .timeline-dot.current { background: var(--gold); box-shadow: 0 0 0 4px var(--gold-dim); }
-    .timeline-label {
-      font-size: 10px;
-      color: var(--gray-400);
-      white-space: nowrap;
-    }
-    .timeline-step.done .timeline-label { color: var(--green); font-weight: 600; }
-    .timeline-step.active .timeline-label { color: var(--gold); font-weight: 600; }
-    .timeline-line {
-      flex: 0 0 auto;
-      width: 30px;
-      height: 3px;
-      background: var(--gray-200);
-    }
-    .timeline-line.filled { background: var(--green); }
-
-    /* --- Rate Calculator --- */
-    .rate-calc {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 20px;
-    }
-    .rate-calc h4 {
-      font-size: 14px;
-      color: var(--navy);
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-    .rate-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .rate-row label {
-      flex: 0 0 110px;
-      font-size: 12px;
-      color: var(--gray-500);
-      text-align: right;
-    }
-    .rate-row input {
-      flex: 1;
-      padding: 7px 10px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 14px;
-      color: var(--navy);
-      outline: none;
-    }
-    .rate-row input:focus { border-color: var(--gold); }
-    .rate-row .rate-val {
-      flex: 1;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--navy);
-    }
-    .rate-results {
-      border-top: 1px solid var(--gray-100);
-      padding-top: 12px;
-      margin-top: 12px;
-    }
-    .rate-result-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      font-size: 13px;
-    }
-    .rate-result-row .rl { color: var(--gray-500); }
-    .rate-result-row .rv { font-weight: 600; color: var(--navy); }
-    .rate-result-row.highlight .rv { color: var(--green); font-size: 16px; }
-    .rate-result-row.negative .rv { color: var(--red); }
-
-    /* --- Carrier Assignment --- */
-    .assign-section {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 20px;
-    }
-    .assign-section h4 {
-      font-size: 14px;
-      color: var(--navy);
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-    .assign-section select {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      margin-bottom: 12px;
-      outline: none;
-    }
-    .assign-section select:focus { border-color: var(--gold); }
-
-    /* --- Comm Log --- */
-    .comm-log-item {
-      padding: 8px 0;
-      border-bottom: 1px solid var(--gray-100);
-      font-size: 12px;
-    }
-    .comm-log-item:last-child { border-bottom: none; }
-    .comm-log-item .comm-from { font-weight: 600; color: var(--navy); }
-    .comm-log-item .comm-time { color: var(--gray-400); }
-    .comm-log-item .comm-msg { color: var(--gray-600); margin-top: 2px; }
-
-    /* --- Documents --- */
-    .doc-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--gray-100);
-      font-size: 13px;
-    }
-    .doc-row:last-child { border-bottom: none; }
-    .doc-label { color: var(--gray-600); font-weight: 500; }
-    .doc-link { color: var(--gold); cursor: pointer; }
-    .doc-missing { color: var(--gray-400); font-style: italic; font-size: 12px; }
-
-    /* --- Tier Badge --- */
-    .tier-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .tier-PLATINUM { background: #E5E7EB; color: #374151; }
-    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
-    .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
-    .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
-    .tier-GUEST { background: rgba(107,114,128,0.1); color: #6B7280; }
-    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
-
-    /* --- Caravan / DAT Split Tabs --- */
-    .carrier-tabs {
-      display: flex;
-      border-bottom: 2px solid var(--gray-100);
-      margin-bottom: 16px;
-    }
-    .carrier-tab {
-      flex: 1;
-      padding: 10px 16px;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--gray-400);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-      transition: color 0.15s, border-color 0.15s;
-      background: none;
-      border-top: none;
-      border-left: none;
-      border-right: none;
-    }
-    .carrier-tab:hover { color: var(--navy); }
-    .carrier-tab.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-    }
-    .carrier-tab-panel { display: none; }
-    .carrier-tab-panel.active { display: block; }
-
-    /* --- Match Card --- */
-    .match-card {
-      background: var(--white);
-      border: 1px solid var(--gray-100);
-      border-radius: var(--radius);
-      padding: 14px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .match-card:hover { border-color: var(--gold); box-shadow: var(--shadow-sm); }
-    .match-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-    }
-    .match-card-company {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .match-score {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .match-score-high { background: rgba(34,197,94,0.1); color: #15803D; }
-    .match-score-mid { background: var(--gold-dim); color: var(--gold); }
-    .match-score-low { background: rgba(239,68,68,0.1); color: var(--red); }
-    .match-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 11px;
-      color: var(--gray-500);
-      flex-wrap: wrap;
-    }
-    .match-meta span { white-space: nowrap; }
-    .match-actions {
-      display: flex;
-      gap: 6px;
-      margin-top: 10px;
-    }
-
-    /* --- DAT Section --- */
-    .dat-status-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      margin-bottom: 14px;
-      font-size: 13px;
-    }
-    .dat-posted { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #15803D; }
-    .dat-not-posted { background: var(--gray-50); border: 1px solid var(--gray-200); color: var(--gray-500); }
-    .dat-response-card {
-      background: var(--white);
-      border: 1px solid var(--gray-100);
-      border-radius: var(--radius);
-      padding: 14px;
-      margin-bottom: 10px;
-    }
-    .dat-response-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .dat-response-company {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .dat-response-rate {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--green);
-    }
-    .source-caravan {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 700;
-      background: rgba(34,197,94,0.1);
-      color: #15803D;
-    }
-    .source-dat {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 700;
-      background: rgba(59,130,246,0.1);
-      color: #2563EB;
-    }
-
-    /* --- Modal --- */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 500;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 40px 20px;
-      overflow-y: auto;
-    }
-    .modal-backdrop.open { display: flex; }
-    .modal {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      width: 100%;
-      max-width: 680px;
-      animation: slideUp 0.2s ease;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--gray-100);
-    }
-    .modal-header h3 {
-      font-size: 18px;
-      color: var(--navy);
-      font-weight: 700;
-    }
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 22px;
-      cursor: pointer;
-      color: var(--gray-400);
-      padding: 4px;
-      line-height: 1;
-    }
-    .modal-close:hover { color: var(--red); }
-    .modal-body { padding: 24px; }
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      padding: 16px 24px;
-      border-top: 1px solid var(--gray-100);
-    }
-
-    /* --- Form --- */
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px 20px;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-    .form-group.full-width {
-      grid-column: 1 / -1;
-    }
-    .form-group label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--gray-600);
-      margin-bottom: 4px;
-    }
-    .form-group label .req { color: var(--red); }
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      padding: 8px 12px;
-      border: 1px solid var(--gray-200);
-      border-radius: 6px;
-      font-size: 13px;
-      color: var(--gray-700);
-      outline: none;
-      font-family: inherit;
-    }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      border-color: var(--gold);
-    }
-    .form-group textarea { resize: vertical; min-height: 60px; }
-    .form-section-title {
-      grid-column: 1 / -1;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--navy);
-      margin-top: 8px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid var(--gray-100);
-    }
-    .form-error {
-      color: var(--red);
-      font-size: 12px;
-      margin-top: 8px;
-      display: none;
-    }
-    .form-error.visible { display: block; }
-
-    /* --- Toast --- */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--white);
-      z-index: 9999;
-      transform: translateY(80px);
-      opacity: 0;
-      transition: transform 0.3s, opacity 0.3s;
-    }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast-success { background: #15803D; }
-    .toast-error { background: var(--red); }
-
-    /* --- Responsive Detail --- */
-    @media (max-width: 1024px) {
-      .filter-bar { padding: 12px 20px; }
-      .table-wrap { padding: 0 20px 20px; }
-      .detail-panels { flex-direction: column; }
-      .detail-left { flex: none; border-right: none; border-bottom: 1px solid var(--gray-200); padding: 20px; }
-      .detail-right { flex: none; padding: 20px; }
-      .detail-header { padding: 16px 20px; }
-      .pagination { padding: 12px 20px; }
-    }
-    @media (max-width: 640px) {
-      .filter-bar { flex-direction: column; align-items: stretch; }
-      .filter-bar input[type="text"] { width: 100%; }
-      .filter-bar input[type="date"] { width: 100%; }
-      .filter-spacer { display: none; }
-      .detail-grid { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
-      .modal { margin: 20px 0; }
-      .detail-header { flex-wrap: wrap; }
-      .detail-header-actions { margin-left: 0; width: 100%; margin-top: 8px; }
-    }
-
-    /* Mileage Badges */
-    .mileage-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:12px; font-size:13px; font-weight:600; }
-    .mileage-badge small { font-weight:400; opacity:.8; font-size:11px; }
-    .mileage-estimated { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
-    .mileage-practical { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
-    .mileage-detail { display:flex; gap:16px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:var(--slate); }
-    .mileage-detail span { display:flex; align-items:center; gap:4px; }
-
-    /* --- Workflow Tabs --- */
-    .workflow-tabs {
-      display: flex;
-      background: var(--white);
-      border-bottom: 2px solid var(--gray-200);
-      padding: 0 32px;
-    }
-    .workflow-tab {
-      padding: 14px 24px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--gray-400);
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: color 0.15s, border-color 0.15s;
-      background: none;
-      border-top: none;
-      border-left: none;
-      border-right: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-    .workflow-tab:hover { color: var(--navy); }
-    .workflow-tab.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-    }
-    .workflow-tab .tab-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 22px;
-      height: 20px;
-      padding: 0 6px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 700;
-      background: var(--gray-100);
-      color: var(--gray-500);
-    }
-    .workflow-tab.active .tab-count {
-      background: var(--gold-dim);
-      color: var(--gold);
-    }
-    .workflow-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
-    .workflow-panel.active { display: flex; }
-
-    /* Track & Trace Cards */
-    .track-card {
-      background: var(--white);
-      border: 1px solid var(--gray-100);
-      border-radius: var(--radius-lg);
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .track-card:hover { border-color: var(--gold); box-shadow: var(--shadow-sm); }
-    .track-card-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    .track-card-ref { font-weight: 700; color: var(--navy); font-size: 15px; }
-    .track-card-route { font-size: 13px; color: var(--gray-600); }
-    .track-card-meta {
-      display: flex;
-      gap: 20px;
-      font-size: 12px;
-      color: var(--gray-500);
-      flex-wrap: wrap;
-    }
-    .track-card-meta strong { color: var(--navy); }
-    .track-card-action {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .action-pending { background: rgba(245,158,11,0.1); color: #B45309; }
-    .action-transit { background: var(--gold-dim); color: var(--gold); }
-    .action-delivered { background: rgba(34,197,94,0.1); color: #15803D; }
-
-    /* Invoice mini-table */
-    .invoice-row {
-      display: flex;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--gray-100);
-      font-size: 13px;
-    }
-    .invoice-row:last-child { border-bottom: none; }
-    @media (max-width: 640px) {
-      .workflow-tabs { padding: 0 12px; overflow-x: auto; }
-      .workflow-tab { padding: 12px 16px; font-size: 13px; }
-    }
-  </style>
+  <link rel="stylesheet" href="/ae/css/pages/loads.css">
   <script src="https://browser.sentry-cdn.com/8.48.0/bundle.tracing.replay.min.js" integrity="sha384-gdAAufpzRZFoI7KqFiKJljH/2YMTO32L2rZL8rpO7ef1BTD8aJMPwdMiSJkjw/8I" crossorigin="anonymous"></script>
   <script src="/js/sentry-init.js"></script>
+<link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
   <div class="page">
@@ -894,8 +74,8 @@
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 21V9"/></svg>
           Accounting
         </a>
-        <div style="border-top:1px solid var(--gray-200);margin:12px 0;padding-top:12px;">
-          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;">Compliance</div>
+        <div class="divider-top">
+          <div class="section-label">Compliance</div>
           <a href="/ae/compliance/dashboard.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</a>
           <a href="/ae/compliance/overview.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Overview</a>
           <a href="/ae/compliance/alerts.html"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerts</a>
@@ -978,7 +158,7 @@
           <input type="date" id="filter-date-to" onchange="applyFilters()" title="Pickup to">
           <input type="text" id="filter-search" placeholder="Search ref#, city, commodity..." oninput="debounceSearch()">
           <div class="filter-spacer"></div>
-          <span id="showing-label" style="font-size:12px;color:var(--gray-400);"></span>
+          <span id="showing-label" class="fs-12 text-muted"></span>
         </div>
 
         <!-- Table -->
@@ -994,13 +174,13 @@
                 <th>Status</th>
                 <th>Pickup</th>
                 <th class="col-hide-mobile">Delivery</th>
-                <th style="text-align:right">Shipper Rate</th>
-                <th class="col-hide-mobile" style="text-align:right">Carrier Rate</th>
-                <th class="col-hide-mobile" style="text-align:right">Margin %</th>
+                <th class="text-right">Shipper Rate</th>
+                <th class="col-hide-mobile text-right">Carrier Rate</th>
+                <th class="col-hide-mobile text-right">Margin %</th>
               </tr>
             </thead>
             <tbody id="load-tbody">
-              <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</td></tr>
+              <tr><td colspan="11" class="empty-state-lg">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1019,11 +199,11 @@
           <h2 id="detail-ref">--</h2>
           <span id="detail-status-badge" class="status-badge"></span>
           <div class="detail-header-actions">
-            <a id="tender-dispatch-btn" class="btn-primary btn-sm" style="display:none" href="#" target="_blank">
+            <a id="tender-dispatch-btn" class="btn-primary btn-sm d-none" href="#" target="_blank">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               Tender / Dispatch
             </a>
-            <button id="generate-bol-btn" class="btn-secondary btn-sm" style="display:none" onclick="generateBOL()">
+            <button id="generate-bol-btn" class="btn-secondary btn-sm d-none" onclick="generateBOL()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               BOL
             </button>
@@ -1063,7 +243,7 @@
           <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterTrack('delivery')" id="track-filter-delivery">At Delivery <span id="track-delivery-count"></span></button>
         </div>
         <div style="padding:24px 32px;overflow-y:auto;flex:1" id="track-cards">
-          <div style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</div>
+          <div class="empty-state-lg">Loading...</div>
         </div>
       </div>
 
@@ -1076,7 +256,7 @@
           <button class="btn-sm" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:var(--white);color:var(--gray-600)" onclick="filterCompleted('all')" id="comp-filter-all">All Completed</button>
         </div>
         <div style="padding:24px 32px;overflow-y:auto;flex:1" id="completed-cards">
-          <div style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</div>
+          <div class="empty-state-lg">Loading...</div>
         </div>
       </div>
 
@@ -1097,11 +277,11 @@
                 <th class="col-hide-mobile">Cancelled By</th>
                 <th>Reason</th>
                 <th class="col-hide-mobile">Cancelled On</th>
-                <th style="text-align:right">Actions</th>
+                <th class="text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="archive-tbody">
-              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gray-400)">Loading...</td></tr>
+              <tr><td colspan="9" class="empty-state-lg">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1111,7 +291,7 @@
   </div>
 
   <!-- ===== REPORT DELAY MODAL ===== -->
-  <div class="modal-backdrop" id="delay-modal" style="display:none">
+  <div class="modal-backdrop d-none" id="delay-modal">
     <div class="modal" style="max-width:480px">
       <div class="modal-header">
         <h3>Report Delay</h3>
@@ -1119,7 +299,7 @@
       </div>
       <div class="modal-body" style="padding:20px 24px">
         <input type="hidden" id="delay-load-id">
-        <div style="margin-bottom:16px">
+        <div class="mb-16">
           <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">Reason Code</label>
           <select id="delay-reason" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px">
             <option value="WEATHER">Weather</option>
@@ -1135,11 +315,11 @@
             <option value="OTHER">Other</option>
           </select>
         </div>
-        <div style="margin-bottom:16px">
+        <div class="mb-16">
           <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">Delay Duration (minutes)</label>
           <input type="number" id="delay-minutes" min="1" placeholder="e.g. 120" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px">
         </div>
-        <div style="margin-bottom:16px">
+        <div class="mb-16">
           <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">Description (optional)</label>
           <textarea id="delay-description" rows="3" placeholder="Details about the delay..." style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;resize:vertical"></textarea>
         </div>
@@ -1152,7 +332,7 @@
   </div>
 
   <!-- ===== CANCEL LOAD MODAL ===== -->
-  <div class="modal-backdrop" id="cancel-modal" style="display:none">
+  <div class="modal-backdrop d-none" id="cancel-modal">
     <div class="modal" style="max-width:520px">
       <div class="modal-header">
         <h3 id="cancel-modal-title">Cancel Load</h3>
@@ -1171,16 +351,16 @@
           <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:16px">
             This will archive the load and all related tenders, check calls, and invoices. Cancelled loads can be restored from the <strong>Archive</strong> tab.
           </p>
-          <div style="display:flex;justify-content:flex-end;gap:10px">
+          <div class="d-flex justify-end gap-10">
             <button class="btn-secondary btn-sm" onclick="closeCancelModal()">Go Back</button>
             <button class="btn-danger btn-sm" onclick="goToCancelStep2()">Continue to Cancel</button>
           </div>
         </div>
 
         <!-- Step 2: Reason -->
-        <div id="cancel-step-2" style="display:none">
-          <div style="margin-bottom:16px">
-            <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Cancellation Reason <span style="color:var(--red)">*</span></label>
+        <div id="cancel-step-2" class="d-none">
+          <div class="mb-16">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Cancellation Reason <span class="text-red">*</span></label>
             <select id="cancel-reason-select" style="width:100%;padding:9px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:14px;color:var(--gray-700);outline:none;margin-bottom:12px" onchange="toggleCancelOther()">
               <option value="">Select a reason...</option>
               <option value="Shipper cancelled shipment">Shipper cancelled shipment</option>
@@ -1194,12 +374,12 @@
               <option value="Other">Other (specify below)</option>
             </select>
           </div>
-          <div style="margin-bottom:16px">
+          <div class="mb-16">
             <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Additional Notes <span id="cancel-notes-req" style="color:var(--red);display:none">*</span></label>
             <textarea id="cancel-notes" rows="3" placeholder="Provide details about the cancellation..." style="width:100%;padding:9px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:14px;color:var(--gray-700);outline:none;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
           </div>
           <div id="cancel-error" style="display:none;padding:8px 12px;background:rgba(231,76,60,0.06);border-radius:6px;color:#e74c3c;font-size:13px;margin-bottom:12px"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="d-flex justify-between align-center">
             <button class="btn-secondary btn-sm" onclick="goToCancelStep1()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
               Back
@@ -1213,7 +393,7 @@
 
         <!-- Step 3: Success -->
         <div id="cancel-step-3" style="display:none;text-align:center;padding:20px 0">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="margin-bottom:12px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" class="mb-12"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           <div style="font-size:16px;font-weight:600;color:var(--navy);margin-bottom:6px">Load Cancelled</div>
           <div style="font-size:13px;color:var(--gray-500);margin-bottom:20px" id="cancel-success-msg"></div>
           <button class="btn-primary btn-sm" onclick="closeCancelModal()">Done</button>
@@ -1249,7 +429,7 @@
           </div>
           <div class="form-group">
             <label>State <span class="req">*</span></label>
-            <input id="f-originState" type="text" placeholder="IL" maxlength="2" style="text-transform:uppercase">
+            <input id="f-originState" type="text" placeholder="IL" maxlength="2" class="text-uppercase">
           </div>
           <div class="form-group">
             <label>ZIP <span class="req">*</span></label>
@@ -1268,7 +448,7 @@
           </div>
           <div class="form-group">
             <label>State <span class="req">*</span></label>
-            <input id="f-destState" type="text" placeholder="TX" maxlength="2" style="text-transform:uppercase">
+            <input id="f-destState" type="text" placeholder="TX" maxlength="2" class="text-uppercase">
           </div>
           <div class="form-group">
             <label>ZIP <span class="req">*</span></label>
@@ -1377,7 +557,7 @@
           </div>
           <div class="form-group">
             <label>Margin</label>
-            <input id="f-margin" type="text" readonly placeholder="--" style="font-weight:700">
+            <input id="f-margin" type="text" readonly placeholder="--" class="fw-700">
           </div>
           <div class="form-group">
             <label>Distance (miles)</label>
@@ -1490,14 +670,14 @@
           "Showing " + state.loads.length + " of " + state.total;
       }).catch(function(err) {
         document.getElementById("load-tbody").innerHTML =
-          '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--red)">Error loading data</td></tr>';
+          '<tr><td colspan="11" class="empty-state-lg text-red">Error loading data</td></tr>';
       });
     }
 
     function renderTable() {
       var tbody = document.getElementById("load-tbody");
       if (state.loads.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="empty-state" style="padding:40px">No loads found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state-lg">No loads found</td></tr>';
         return;
       }
 
@@ -1531,7 +711,7 @@
         if (load.carrier) carrierName = load.carrier.company || (load.carrier.firstName + " " + load.carrier.lastName);
 
         return '<tr class="clickable-row" onclick="openDetail(\'' + load.id + '\')">' +
-          '<td style="font-weight:600;color:var(--navy)">' + esc(load.referenceNumber) + '</td>' +
+          '<td class="fw-600 text-navy">' + esc(load.referenceNumber) + '</td>' +
           '<td>' + esc(load.originCity) + ', ' + esc(load.originState) + '</td>' +
           '<td>' + esc(load.destCity) + ', ' + esc(load.destState) + '</td>' +
           '<td class="col-hide-mobile">' + esc(shipperName || '--') + '</td>' +
@@ -1539,8 +719,8 @@
           '<td><span class="status-badge status-' + load.status.toLowerCase() + '">' + (STATUS_LABELS[load.status] || load.status) + '</span></td>' +
           '<td>' + shortDate(load.pickupDate) + '</td>' +
           '<td class="col-hide-mobile">' + shortDate(load.deliveryDate) + '</td>' +
-          '<td style="text-align:right">$' + num(shipperRate) + '</td>' +
-          '<td class="col-hide-mobile" style="text-align:right">' + (carrierRate ? '$' + num(carrierRate) : '--') + '</td>' +
+          '<td class="text-right">$' + num(shipperRate) + '</td>' +
+          '<td class="col-hide-mobile text-right">' + (carrierRate ? '$' + num(carrierRate) : '--') + '</td>' +
           '<td class="col-hide-mobile" style="text-align:right;' + marginClass + '">' + (margin !== null ? margin.toFixed(1) + '%' : '--') + '</td>' +
         '</tr>';
       }).join("");
@@ -1637,9 +817,9 @@
         var dest = load.destCity + ", " + load.destState + " " + (load.destZip || "");
         var badgeEl = document.getElementById("mileage-badge-" + load.id);
         if (badgeEl) {
-          badgeEl.innerHTML = '<span style="font-size:12px;color:var(--slate)">Calculating mileage...</span>';
+          badgeEl.innerHTML = '<span class="fs-12 text-slate">Calculating mileage...</span>';
           SRL.getMileage(origin, dest, { equipment: load.equipmentType }).then(function(m) {
-            var html = '<label style="font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;display:block">Mileage Service</label>';
+            var html = '<label class="fs-11 text-slate d-block" style="text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Mileage Service</label>';
             html += SRL.renderMileageBadge(m);
             html += '<div class="mileage-detail">';
             html += '<span>&#9201; Drive: ' + m.drive_time_hours + 'h</span>';
@@ -1744,7 +924,7 @@
         html += field("Phone", load.carrier.phone ? '<a href="tel:' + esc(load.carrier.phone) + '">' + esc(load.carrier.phone) + '</a>' : '--');
         html += '</div>';
       } else {
-        html += '<div class="empty-state" style="padding:12px">No carrier assigned</div>';
+        html += '<div class="empty-state p-12">No carrier assigned</div>';
       }
       html += '</div>';
 
@@ -1765,14 +945,14 @@
       }
       // Request POD button if delivered but no POD
       if (!load.podUrl && !load.podReceivedAt && ["DELIVERED"].indexOf(load.status) !== -1) {
-        html += '<div style="margin-top:8px"><button class="btn-primary btn-sm" style="background:var(--amber)" onclick="requestPOD(\'' + load.id + '\')">Request POD from Carrier</button></div>';
+        html += '<div class="mt-8"><button class="btn-primary btn-sm" style="background:var(--amber)" onclick="requestPOD(\'' + load.id + '\')">Request POD from Carrier</button></div>';
       }
       html += '</div>';
 
       // Delays
       html += '<div class="detail-section">';
-      html += '<div class="detail-section-title" style="display:flex;justify-content:space-between;align-items:center">Delays';
-      html += '<button class="btn-primary btn-sm" style="font-size:11px;padding:4px 10px" onclick="openDelayModal(\'' + load.id + '\')">+ Report Delay</button>';
+      html += '<div class="detail-section-title d-flex justify-between align-center">Delays';
+      html += '<button class="btn-primary btn-sm fs-11" style="padding:4px 10px" onclick="openDelayModal(\'' + load.id + '\')">+ Report Delay</button>';
       html += '</div>';
       if (load.delays && load.delays.length > 0) {
         load.delays.forEach(function(d) {
@@ -1780,18 +960,18 @@
           var hrs = Math.floor(d.delayMinutes / 60);
           var mins = d.delayMinutes % 60;
           var duration = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
-          var resolved = d.resolvedAt ? '<span style="color:var(--green);font-size:11px;margin-left:6px">&#10003; Resolved</span>' : '<button class="btn-sm" style="font-size:10px;padding:2px 8px;margin-left:6px;background:var(--green);color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="resolveDelay(\'' + d.id + '\')">Resolve</button>';
-          html += '<div style="padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px">';
-          html += '<div style="display:flex;justify-content:space-between;align-items:center">';
-          html += '<span style="font-weight:600;color:var(--red)">' + esc(reasonLabel) + '</span>';
+          var resolved = d.resolvedAt ? '<span class="text-green fs-11" style="margin-left:6px">&#10003; Resolved</span>' : '<button class="btn-sm" style="font-size:10px;padding:2px 8px;margin-left:6px;background:var(--green);color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="resolveDelay(\'' + d.id + '\')">Resolve</button>';
+          html += '<div class="fs-13" style="padding:8px 0;border-bottom:1px solid var(--gray-100)">';
+          html += '<div class="d-flex justify-between align-center">';
+          html += '<span class="fw-600 text-red">' + esc(reasonLabel) + '</span>';
           html += '<span style="color:var(--gray-500)">' + duration + resolved + '</span>';
           html += '</div>';
-          if (d.description) html += '<div style="color:var(--gray-600);margin-top:2px">' + esc(d.description) + '</div>';
-          html += '<div style="color:var(--gray-400);font-size:11px;margin-top:2px">Reported by ' + esc(d.reportedBy.firstName + ' ' + d.reportedBy.lastName) + ' &middot; ' + new Date(d.reportedAt).toLocaleString() + '</div>';
+          if (d.description) html += '<div class="mt-4" style="color:var(--gray-600)">' + esc(d.description) + '</div>';
+          html += '<div class="fs-11 text-muted mt-4">Reported by ' + esc(d.reportedBy.firstName + ' ' + d.reportedBy.lastName) + ' &middot; ' + new Date(d.reportedAt).toLocaleString() + '</div>';
           html += '</div>';
         });
       } else {
-        html += '<div class="empty-state" style="padding:12px;font-size:13px;color:var(--gray-400)">No delays reported</div>';
+        html += '<div class="empty-state fs-13 text-muted" style="padding:12px">No delays reported</div>';
       }
       html += '</div>';
 
@@ -1799,10 +979,10 @@
       if (load.specialInstructions || load.notes || load.pickupInstructions || load.deliveryInstructions) {
         html += '<div class="detail-section">';
         html += '<div class="detail-section-title">Notes &amp; Instructions</div>';
-        if (load.pickupInstructions) html += '<div style="font-size:13px;margin-bottom:6px"><strong>Pickup:</strong> ' + esc(load.pickupInstructions) + '</div>';
-        if (load.deliveryInstructions) html += '<div style="font-size:13px;margin-bottom:6px"><strong>Delivery:</strong> ' + esc(load.deliveryInstructions) + '</div>';
-        if (load.specialInstructions) html += '<div style="font-size:13px;margin-bottom:6px"><strong>Special:</strong> ' + esc(load.specialInstructions) + '</div>';
-        if (load.notes) html += '<div style="font-size:13px"><strong>Notes:</strong> ' + esc(load.notes) + '</div>';
+        if (load.pickupInstructions) html += '<div class="fs-13 mb-8"><strong>Pickup:</strong> ' + esc(load.pickupInstructions) + '</div>';
+        if (load.deliveryInstructions) html += '<div class="fs-13 mb-8"><strong>Delivery:</strong> ' + esc(load.deliveryInstructions) + '</div>';
+        if (load.specialInstructions) html += '<div class="fs-13 mb-8"><strong>Special:</strong> ' + esc(load.specialInstructions) + '</div>';
+        if (load.notes) html += '<div class="fs-13"><strong>Notes:</strong> ' + esc(load.notes) + '</div>';
         html += '</div>';
       }
 
@@ -1821,16 +1001,16 @@
       html += '<div class="rate-row"><label>Carrier Rate $</label><input type="number" step="0.01" id="rc-carrier" value="' + carrierRate + '" oninput="calcRate()"></div>';
       html += '<div class="rate-row"><label>Fuel Surcharge $</label><input type="number" step="0.01" id="rc-fuel" value="' + (load.fuelSurcharge || 0) + '" oninput="calcRate()"></div>';
       html += '<div class="rate-results" id="rc-results"></div>';
-      html += '<div style="margin-top:12px;text-align:right"><button class="btn-primary btn-sm" onclick="saveRates()">Save Rates</button></div>';
+      html += '<div class="mt-12 text-right"><button class="btn-primary btn-sm" onclick="saveRates()">Save Rates</button></div>';
       html += '</div>';
 
       // Carrier Assignment (Current)
       html += '<div class="assign-section">';
       html += '<h4>Carrier Assignment</h4>';
       if (load.carrier) {
-        html += '<div style="font-size:13px;color:var(--gray-600);margin-bottom:8px">Currently assigned to:</div>';
-        html += '<div style="font-weight:600;color:var(--navy);font-size:14px">' + esc(load.carrier.company || load.carrier.firstName + ' ' + load.carrier.lastName) + '</div>';
-        html += '<div style="margin-top:12px"><button class="btn-secondary btn-sm" onclick="reassignCarrier()">Reassign</button></div>';
+        html += '<div class="fs-13 mb-8" style="color:var(--gray-600)">Currently assigned to:</div>';
+        html += '<div class="fw-600 text-navy fs-14">' + esc(load.carrier.company || load.carrier.firstName + ' ' + load.carrier.lastName) + '</div>';
+        html += '<div class="mt-12"><button class="btn-secondary btn-sm" onclick="reassignCarrier()">Reassign</button></div>';
       } else {
         html += renderCarrierSelect(load);
         html += '<button class="btn-primary btn-sm" onclick="assignCarrier()">Assign Carrier</button>';
@@ -1847,7 +1027,7 @@
 
       // Caravan Tab
       html += '<div class="carrier-tab-panel active" id="tab-caravan">';
-      html += '<div id="caravan-matches" style="color:var(--gray-400);font-size:13px;padding:12px 0">Click "Find Matches" to run smart matching</div>';
+      html += '<div id="caravan-matches" class="text-muted fs-13" style="padding:12px 0">Click "Find Matches" to run smart matching</div>';
       html += '<button class="btn-primary btn-sm" onclick="runSmartMatch(\'' + load.id + '\')">Find Matches</button>';
       html += '</div>';
 
@@ -1857,9 +1037,9 @@
         html += '<div class="dat-status-bar dat-posted">';
         html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
         html += '<span>Posted to DAT</span>';
-        html += '<span style="margin-left:auto;font-size:11px;color:var(--gray-500)">' + esc(load.datPostId) + '</span>';
+        html += '<span class="fs-11" style="margin-left:auto;color:var(--gray-500)">' + esc(load.datPostId) + '</span>';
         html += '</div>';
-        html += '<div style="display:flex;gap:8px;margin-bottom:14px">';
+        html += '<div class="d-flex gap-8">';
         html += '<button class="btn-secondary btn-sm" onclick="loadDATResponses(\'' + load.id + '\')">Refresh Responses</button>';
         html += '<button class="btn-danger btn-sm" onclick="removeDATPost(\'' + load.datPostId + '\', \'' + load.id + '\')">Remove Post</button>';
         html += '</div>';
@@ -1869,9 +1049,9 @@
         html += '<span>Not posted to DAT</span>';
         html += '</div>';
         html += '<button class="btn-primary btn-sm" onclick="postToDAT(\'' + load.id + '\')">Post to DAT</button>';
-        html += '<div style="margin-top:6px;font-size:11px;color:var(--gray-400)">Posts this load to the DAT load board to find external carriers</div>';
+        html += '<div class="mt-8 fs-11 text-muted">Posts this load to the DAT load board to find external carriers</div>';
       }
-      html += '<div id="dat-responses" style="margin-top:14px"></div>';
+      html += '<div id="dat-responses" class="mt-16"></div>';
       html += '</div>';
 
       html += '</div>';
@@ -1879,7 +1059,7 @@
       // Quick Status Update
       html += '<div class="assign-section">';
       html += '<h4>Update Status</h4>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+      html += '<div class="d-flex flex-wrap gap-6 mb-12">';
       var statusBtns = [
         {s:"AT_PICKUP",l:"At Pickup"},{s:"LOADED",l:"Loaded"},{s:"IN_TRANSIT",l:"In Transit"},
         {s:"AT_DELIVERY",l:"At Delivery"},{s:"DELIVERED",l:"Delivered"},{s:"POD_RECEIVED",l:"POD Received"}
@@ -1893,9 +1073,9 @@
       // Check Call Log
       html += '<div class="assign-section">';
       html += '<h4>Log Check Call</h4>';
-      html += '<div style="margin-bottom:8px"><input type="text" id="cc-location" placeholder="Current location (city, state)" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px"></div>';
-      html += '<div style="margin-bottom:8px"><input type="text" id="cc-eta" placeholder="Updated ETA" style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px"></div>';
-      html += '<div style="margin-bottom:8px"><textarea id="cc-notes" placeholder="Notes..." style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;height:60px;resize:vertical"></textarea></div>';
+      html += '<div class="mb-8"><input type="text" id="cc-location" placeholder="Current location (city, state)" class="w-100 fs-13" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px"></div>';
+      html += '<div class="mb-8"><input type="text" id="cc-eta" placeholder="Updated ETA" class="w-100 fs-13" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px"></div>';
+      html += '<div class="mb-8"><textarea id="cc-notes" placeholder="Notes..." class="w-100 fs-13" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:6px;height:60px;resize:vertical"></textarea></div>';
       html += '<button class="btn-primary btn-sm" onclick="logCheckCall(\'' + load.id + '\')">Log Check Call</button>';
       html += '</div>';
 
@@ -1910,7 +1090,7 @@
           html += '</div>';
         });
       } else {
-        html += '<div class="empty-state" style="padding:12px">No activity yet</div>';
+        html += '<div class="empty-state p-12">No activity yet</div>';
       }
       html += '</div>';
 
@@ -1944,17 +1124,17 @@
 
     function runSmartMatch(loadId) {
       var el = document.getElementById("caravan-matches");
-      el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Matching...</div>';
+      el.innerHTML = '<div class="text-muted fs-13" style="padding:8px 0">Matching...</div>';
 
       SRL.matchCarriersForLoad(loadId).then(function(res) {
         var matches = res.matches || [];
         if (matches.length === 0) {
-          el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">No matching Caravan carriers found for this load.' +
+          el.innerHTML = '<div class="text-muted fs-13" style="padding:8px 0">No matching Caravan carriers found for this load.' +
             (res.suggestDAT ? ' <strong>Consider posting to DAT.</strong>' : '') + '</div>';
           return;
         }
 
-        var html = '<div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">' + matches.length + ' matches from ' + (res.totalCandidates || 0) + ' candidates</div>';
+        var html = '<div class="fs-11 text-muted mb-8">' + matches.length + ' matches from ' + (res.totalCandidates || 0) + ' candidates</div>';
         matches.forEach(function(m) {
           var scoreClass = m.matchScore >= 70 ? "match-score-high" : m.matchScore >= 50 ? "match-score-mid" : "match-score-low";
           html += '<div class="match-card">';
@@ -1971,7 +1151,7 @@
 
           // Score breakdown tooltip
           if (m.breakdown) {
-            html += '<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">';
+            html += '<div class="d-flex gap-4 mt-8 flex-wrap">';
             var bd = m.breakdown;
             if (bd.equipment > 0) html += '<span class="equip-tag" style="background:rgba(34,197,94,0.1);color:#15803D">Equip +' + bd.equipment + '</span>';
             if (bd.region > 0) html += '<span class="equip-tag">Region +' + bd.region + '</span>';
@@ -1990,14 +1170,14 @@
         });
 
         if (res.suggestDAT) {
-          html += '<div style="padding:12px;background:rgba(59,130,246,0.05);border-radius:6px;font-size:12px;color:#2563EB;margin-top:8px">';
-          html += 'Few Caravan matches found. <a href="#" onclick="event.preventDefault();switchCarrierTab(\'dat\')" style="font-weight:600">Post to DAT</a> for more coverage.';
+          html += '<div class="p-12 fs-12 mt-8" style="background:rgba(59,130,246,0.05);border-radius:6px;color:#2563EB">';
+          html += 'Few Caravan matches found. <a href="#" onclick="event.preventDefault();switchCarrierTab(\'dat\')" class="fw-600">Post to DAT</a> for more coverage.';
           html += '</div>';
         }
 
         el.innerHTML = html;
       }).catch(function(err) {
-        el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px 0">Error: ' + esc(err.message) + '</div>';
+        el.innerHTML = '<div class="text-red fs-13" style="padding:8px 0">Error: ' + esc(err.message) + '</div>';
       });
     }
 
@@ -2039,16 +1219,16 @@
     function loadDATResponses(loadId) {
       var el = document.getElementById("dat-responses");
       if (!el) return;
-      el.innerHTML = '<div style="color:var(--gray-400);font-size:12px">Loading responses...</div>';
+      el.innerHTML = '<div class="text-muted fs-12">Loading responses...</div>';
 
       SRL.getDATResponses(loadId).then(function(res) {
         var responses = res.responses || [];
         if (responses.length === 0) {
-          el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">No carrier responses yet</div>';
+          el.innerHTML = '<div class="text-muted fs-13" style="padding:8px 0">No carrier responses yet</div>';
           return;
         }
 
-        var html = '<div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">' + responses.length + ' carrier response(s)</div>';
+        var html = '<div class="fs-11 text-muted mb-8">' + responses.length + ' carrier response(s)</div>';
         responses.forEach(function(r) {
           html += '<div class="dat-response-card">';
           html += '<div class="dat-response-header">';
@@ -2058,7 +1238,7 @@
           html += '<div class="match-meta">';
           html += '<span>MC# ' + esc(r.mcNumber) + '</span>';
           html += '<span>DOT# ' + esc(r.dotNumber) + '</span>';
-          html += '<span>' + (r.driverAvailable ? '<span style="color:var(--green)">Driver Ready</span>' : '<span style="color:var(--amber)">Pending</span>') + '</span>';
+          html += '<span>' + (r.driverAvailable ? '<span class="text-green">Driver Ready</span>' : '<span style="color:var(--amber)">Pending</span>') + '</span>';
           html += '<span>' + timeAgo(r.respondedAt) + '</span>';
           html += '</div>';
           html += '<div class="match-actions">';
@@ -2069,12 +1249,12 @@
         });
 
         if (res.mock) {
-          html += '<div style="font-size:10px;color:var(--gray-400);text-align:center;margin-top:8px">Mock data — DAT API not configured</div>';
+          html += '<div class="fs-11 text-muted text-center mt-8">Mock data — DAT API not configured</div>';
         }
 
         el.innerHTML = html;
       }).catch(function(err) {
-        el.innerHTML = '<div style="color:var(--red);font-size:12px">Error loading responses</div>';
+        el.innerHTML = '<div class="text-red fs-12">Error loading responses</div>';
       });
     }
 
@@ -2145,9 +1325,9 @@
       html += '</div>';
 
       if (currentStatus === "CANCELLED") {
-        html += '<div style="text-align:center;margin-top:8px;color:var(--red);font-weight:600;font-size:12px">CANCELLED</div>';
+        html += '<div class="text-center mt-8 text-red fw-600 fs-12">CANCELLED</div>';
       } else if (currentStatus === "TONU") {
-        html += '<div style="text-align:center;margin-top:8px;color:var(--red);font-weight:600;font-size:12px">TRUCK ORDER NOT USED</div>';
+        html += '<div class="text-center mt-8 text-red fw-600 fs-12">TRUCK ORDER NOT USED</div>';
       }
 
       return html;
@@ -2189,7 +1369,7 @@
 
       var el = document.getElementById("rc-results");
       el.innerHTML =
-        '<div class="rate-result-row"><span class="rl">Margin $</span><span class="rv' + (margin < 0 ? '" style="color:var(--red)"' : '"') + '>$' + num2(margin) + '</span></div>' +
+        '<div class="rate-result-row"><span class="rl">Margin $</span><span class="rv' + (margin < 0 ? ' text-red"' : '"') + '>$' + num2(margin) + '</span></div>' +
         '<div class="rate-result-row"><span class="rl">Margin %</span><span class="rv' + (pct < 20 ? '" style="color:var(--amber)"' : '"') + '>' + pct.toFixed(1) + '%</span></div>' +
         '<div class="rate-result-row"><span class="rl">Fuel Surcharge</span><span class="rv">$' + num2(f) + '</span></div>' +
         '<div class="rate-result-row highlight' + (isNeg ? ' negative' : '') + '"><span class="rl">Net Profit</span><span class="rv">$' + num2(net) + '</span></div>';
@@ -2239,7 +1419,7 @@
       if (sections[0]) {
         sections[0].innerHTML = '<h4>Reassign Carrier</h4>' +
           renderCarrierSelect(load) +
-          '<div style="margin-top:12px;display:flex;gap:8px">' +
+          '<div class="mt-12 d-flex gap-8">' +
           '<button class="btn-primary btn-sm" onclick="assignCarrier()">Assign</button>' +
           '<button class="btn-secondary btn-sm" onclick="openDetail(\'' + load.id + '\')">Cancel</button>' +
           '</div>';
@@ -2693,7 +1873,7 @@
         trackLoads = r.loads || [];
         renderTrackCards();
       }).catch(function() {
-        document.getElementById("track-cards").innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Error loading data</div>';
+        document.getElementById("track-cards").innerHTML = '<div class="empty-state-lg text-red">Error loading data</div>';
       });
     }
 
@@ -2719,7 +1899,7 @@
 
       var el = document.getElementById("track-cards");
       if (filtered.length === 0) {
-        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)">No loads in this stage</div>';
+        el.innerHTML = '<div class="empty-state-lg">No loads in this stage</div>';
         return;
       }
       el.innerHTML = filtered.map(function(load) {
@@ -2755,7 +1935,7 @@
         completedLoads = r.loads || [];
         renderCompletedCards();
       }).catch(function() {
-        document.getElementById("completed-cards").innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Error loading data</div>';
+        document.getElementById("completed-cards").innerHTML = '<div class="empty-state-lg text-red">Error loading data</div>';
       });
     }
 
@@ -2777,20 +1957,20 @@
 
       var el = document.getElementById("completed-cards");
       if (filtered.length === 0) {
-        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400)">No loads in this stage</div>';
+        el.innerHTML = '<div class="empty-state-lg">No loads in this stage</div>';
         return;
       }
       el.innerHTML = filtered.map(function(load) {
         var route = esc(load.originCity) + ", " + esc(load.originState) + " → " + esc(load.destCity) + ", " + esc(load.destState);
         var shipperRate = load.customerRate || load.rate || 0;
-        var podStatus = load.podReceivedAt ? '<span style="color:var(--green)">&#10003; POD Received</span>' : '<span style="color:var(--amber)">POD Pending</span>';
+        var podStatus = load.podReceivedAt ? '<span class="text-green">&#10003; POD Received</span>' : '<span style="color:var(--amber)">POD Pending</span>';
         var invoiceAction = '';
         if (load.status === "DELIVERED" || load.status === "POD_RECEIVED") {
           invoiceAction = '<button class="btn-primary btn-sm" style="margin-top:8px;background:var(--green)" onclick="event.stopPropagation();generateInvoiceForLoad(\'' + load.id + '\',\'' + esc(load.referenceNumber) + '\')">Generate Invoice</button>';
         } else if (load.status === "INVOICED") {
-          invoiceAction = '<span class="track-card-action action-delivered" style="margin-top:8px">&#10003; Invoice Created</span>';
+          invoiceAction = '<span class="track-card-action action-delivered mt-8">&#10003; Invoice Created</span>';
         } else if (load.status === "COMPLETED") {
-          invoiceAction = '<span class="track-card-action action-delivered" style="margin-top:8px">&#10003; Completed</span>';
+          invoiceAction = '<span class="track-card-action action-delivered mt-8">&#10003; Completed</span>';
         }
         return '<div class="track-card" onclick="openDetail(\'' + load.id + '\')">' +
           '<div class="track-card-header">' +
@@ -2827,7 +2007,7 @@
         var loads = (r.loads || []).filter(function(l) { return l.deletedAt; });
         var tbody = document.getElementById("archive-tbody");
         if (loads.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gray-400)">No archived loads</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state-lg">No archived loads</td></tr>';
           return;
         }
         tbody.innerHTML = loads.map(function(l) {
@@ -2839,21 +2019,21 @@
           var cancelledBy = esc(l.deletedBy || "—");
           var cancelledOn = l.deletedAt ? new Date(l.deletedAt).toLocaleDateString() : "—";
           return '<tr>' +
-            '<td style="font-weight:600;color:var(--navy)">' + ref + '</td>' +
+            '<td class="fw-600 text-navy">' + ref + '</td>' +
             '<td>' + origin + '</td>' +
             '<td>' + dest + '</td>' +
             '<td class="col-hide-mobile">' + shipper + '</td>' +
             '<td><span class="status-badge status-cancelled">Cancelled</span></td>' +
-            '<td class="col-hide-mobile" style="font-size:12px">' + cancelledBy + '</td>' +
-            '<td style="max-width:200px;font-size:12px;white-space:normal;line-height:1.4">' + reason + '</td>' +
-            '<td class="col-hide-mobile" style="font-size:12px">' + cancelledOn + '</td>' +
-            '<td style="text-align:right"><button class="btn-secondary btn-sm" onclick="restoreArchivedLoad(\'' + l.id + '\',\'' + ref + '\')" style="font-size:11px;padding:4px 10px">' +
+            '<td class="col-hide-mobile fs-12">' + cancelledBy + '</td>' +
+            '<td class="fs-12" style="max-width:200px;white-space:normal;line-height:1.4">' + reason + '</td>' +
+            '<td class="col-hide-mobile fs-12">' + cancelledOn + '</td>' +
+            '<td class="text-right"><button class="btn-secondary btn-sm fs-11" style="padding:4px 10px" onclick="restoreArchivedLoad(\'' + l.id + '\',\'' + ref + '\')">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Restore' +
             '</button></td>' +
           '</tr>';
         }).join("");
       }).catch(function() {
-        document.getElementById("archive-tbody").innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--red)">Error loading archived loads</td></tr>';
+        document.getElementById("archive-tbody").innerHTML = '<tr><td colspan="9" class="empty-state-lg text-red">Error loading archived loads</td></tr>';
       });
     }
 
