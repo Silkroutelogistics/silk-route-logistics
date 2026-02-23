@@ -215,6 +215,7 @@
         if (data.token) {
           var remember = document.getElementById('rememberMe').checked;
           SRLAuth.setToken('token', data.token, remember);
+          SRLAuth.setAuthenticated();
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
           if (remember) SRLAuth.setRememberedEmail(email, 'ae');
@@ -293,6 +294,7 @@
     function completeLogin(data) {
       var remember = document.getElementById('rememberMe').checked;
       SRLAuth.setToken('token', data.token, remember);
+      SRLAuth.setAuthenticated();
       localStorage.setItem('user', JSON.stringify(data.user || {}));
       localStorage.setItem('srl_last_activity', Date.now().toString());
       if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');

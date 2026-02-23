@@ -217,6 +217,7 @@
           if (remember) SRLAuth.setRememberedEmail(email, 'carrier');
           else SRLAuth.setRememberedEmail('', 'carrier');
           CARRIER.setToken(data.token);
+          SRLAuth.setAuthenticated();
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
           if (data.mustChangePassword) {
@@ -255,6 +256,7 @@
           if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'carrier');
           else SRLAuth.setRememberedEmail('', 'carrier');
           CARRIER.setToken(data.token);
+          SRLAuth.setAuthenticated();
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
           if (data.mustChangePassword) {
