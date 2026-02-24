@@ -131,10 +131,14 @@
     return;
   }
 
-  // Track user activity
+  // Track user activity — reset timer on ANY interaction, even during warning
   ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"].forEach(function (evt) {
     document.addEventListener(evt, function () {
-      if (!warningVisible) resetIdle();
+      // If warning is showing and user interacts, dismiss it and reset
+      if (warningVisible) {
+        hideWarning();
+      }
+      resetIdle();
     }, { passive: true });
   });
 

@@ -218,7 +218,7 @@
           SRLAuth.setToken('token', data.token, remember);
           SRLAuth.setAuthenticated();
           sessionStorage.setItem('token', data.token);
-          if (remember) localStorage.setItem('token', data.token);
+          localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user || {}));
           localStorage.setItem('srl_last_activity', Date.now().toString());
           if (remember) SRLAuth.setRememberedEmail(email, 'ae');
@@ -301,7 +301,7 @@
       SRLAuth.setToken('token', data.token, remember);
       SRLAuth.setAuthenticated();
       sessionStorage.setItem('token', data.token);
-      if (remember) localStorage.setItem('token', data.token);
+      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user || {}));
       localStorage.setItem('srl_last_activity', Date.now().toString());
       if (remember) SRLAuth.setRememberedEmail(pendingEmail, 'ae');

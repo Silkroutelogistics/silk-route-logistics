@@ -34,11 +34,31 @@ var SRL = (function () {
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     }).then(function (res) {
       if (res.status === 401) {
+        // Avoid logout loop — only redirect if not already redirecting
+        if (window._srl_logging_out) return Promise.reject(new Error("Unauthorized"));
+        // Grace: try refreshing token once via /api/auth/me before hard logout
+        var alreadyRetried = opts._authRetry;
+        if (!alreadyRetried && path !== "/api/auth/me") {
+          return request("/api/auth/me", { _authRetry: true }).then(function() {
+            // Token still valid — retry original request
+            return request(path, Object.assign({}, opts, { _authRetry: true }));
+          }).catch(function() {
+            // Truly unauthorized — logout
+            window._srl_logging_out = true;
+            localStorage.removeItem("token");
+            sessionStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("srl_last_activity");
+            window.location.href = "/auth/login.html?expired=1";
+            return Promise.reject(new Error("Unauthorized"));
+          });
+        }
+        window._srl_logging_out = true;
         localStorage.removeItem("token");
         sessionStorage.removeItem("token");
         localStorage.removeItem("user");
         localStorage.removeItem("srl_last_activity");
-        window.location.href = "/auth/login.html";
+        window.location.href = "/auth/login.html?expired=1";
         return Promise.reject(new Error("Unauthorized"));
       }
       if (res.status === 403) {
