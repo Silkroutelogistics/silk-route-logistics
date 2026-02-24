@@ -186,17 +186,13 @@
     }
 
     var SECTIONS = [
-      { num: 1, label: "Broker Info" },
-      { num: 2, label: "Load Details" },
-      { num: 3, label: "Shipper / Pickup" },
-      { num: 4, label: "Consignee / Delivery" },
-      { num: 5, label: "Stops" },
-      { num: 6, label: "Carrier / Driver" },
-      { num: 7, label: "Financials" },
-      { num: 8, label: "Payment Terms" },
-      { num: 9, label: "Terms & Conditions" },
-      { num: 10, label: "Review & Send" },
+      { num: 1, label: "Overview" },
+      { num: 2, label: "Pickup & Delivery" },
+      { num: 3, label: "Carrier & Driver" },
+      { num: 4, label: "Rates & Terms" },
+      { num: 5, label: "Review & Send" },
     ];
+    var sectionValidState = [true, false, false, false, true]; // section 0 (Overview) and 4 (Review) always valid
 
     var ACCESSORIAL_TYPES = [
       "Detention", "Lumper", "TONU", "Layover", "Fuel Surcharge Adj",
@@ -374,12 +370,56 @@
       state.formData = fd;
     }
 
+    // ─── Step Validation ────────────────────────────
+    function validateTenderSection(idx) {
+      var fd = state.formData;
+      if (idx === 0) return { valid: true, errors: [] }; // Overview — no input needed
+      if (idx === 1) {
+        var errors = [];
+        var loadingType = fd.loadingType;
+        var unloadingType = fd.unloadingType;
+        if (!loadingType) errors.push("Loading type is required");
+        if (!unloadingType) errors.push("Unloading type is required");
+        return { valid: errors.length === 0, errors: errors };
+      }
+      if (idx === 2) {
+        var errors = [];
+        if (!fd.driverName || !fd.driverName.trim()) errors.push("Driver name is required");
+        if (!fd.driverPhone || !fd.driverPhone.trim()) errors.push("Driver phone is required");
+        if (!fd.truckNumber || !fd.truckNumber.trim()) errors.push("Truck # is required");
+        if (!fd.trailerNumber || !fd.trailerNumber.trim()) errors.push("Trailer # is required");
+        return { valid: errors.length === 0, errors: errors };
+      }
+      if (idx === 3) {
+        var errors = [];
+        var custRate = Number(fd.customerRate) || 0;
+        var carrRate = Number(fd.lineHaulRate) || 0;
+        if (custRate <= 0) errors.push("Customer rate must be > 0");
+        if (carrRate <= 0) errors.push("Carrier rate must be > 0");
+        if (!fd.carrierPaymentTier) errors.push("Payment tier is required");
+        return { valid: errors.length === 0, errors: errors };
+      }
+      return { valid: true, errors: [] }; // Review — no validation
+    }
+
+    function updateSectionValidStates() {
+      for (var i = 0; i < SECTIONS.length; i++) {
+        sectionValidState[i] = validateTenderSection(i).valid;
+      }
+    }
+
     // ─── Section Tabs ──────────────────────────────
     function renderSectionTabs() {
+      updateSectionValidStates();
       var html = "";
       SECTIONS.forEach(function(s, i) {
-        html += '<a class="section-tab' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" onclick="window._switchSection(' + i + ')">';
-        html += '<span class="tab-num">' + s.num + '</span>';
+        var locked = false;
+        for (var j = 0; j < i; j++) {
+          if (!sectionValidState[j]) { locked = true; break; }
+        }
+        var completed = sectionValidState[i] && i < SECTIONS.length - 1 && i <= state.activeSection;
+        html += '<a class="section-tab' + (i === state.activeSection ? ' active' : '') + (locked ? ' step-locked' : '') + '" data-idx="' + i + '" onclick="window._switchSection(' + i + ')">';
+        html += '<span class="tab-num">' + (completed ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : s.num) + '</span>';
         html += '<span>' + s.label + '</span>';
         html += '</a>';
       });
@@ -387,10 +427,19 @@
     }
 
     function switchSection(idx) {
+      // Block if prior sections not valid
+      if (idx > state.activeSection) {
+        for (var j = 0; j < idx; j++) {
+          var result = validateTenderSection(j);
+          if (!result.valid) {
+            showToast("Complete Section " + (j + 1) + " first: " + result.errors[0], "error");
+            return;
+          }
+        }
+      }
       state.activeSection = idx;
       // Update tabs
-      var tabs = document.querySelectorAll(".section-tab");
-      tabs.forEach(function(t, i) { t.classList.toggle("active", i === idx); });
+      renderSectionTabs();
       // Update form sections
       var sections = document.querySelectorAll(".form-section");
       sections.forEach(function(s, i) { s.classList.toggle("active", i === idx); });
@@ -401,27 +450,24 @@
     function renderAllSections() {
       var area = document.getElementById("form-area");
       area.innerHTML = "";
-      area.innerHTML += renderSection1();
-      area.innerHTML += renderSection2();
-      area.innerHTML += renderSection3();
-      area.innerHTML += renderSection4();
-      area.innerHTML += renderSection5();
-      area.innerHTML += renderSection6();
-      area.innerHTML += renderSection7();
-      area.innerHTML += renderSection8();
-      area.innerHTML += renderSection9();
-      area.innerHTML += renderSection10();
+      area.innerHTML += renderSection1_Overview();
+      area.innerHTML += renderSection2_PickupDelivery();
+      area.innerHTML += renderSection3_CarrierDriver();
+      area.innerHTML += renderSection4_RatesTerms();
+      area.innerHTML += renderSection5_ReviewSend();
 
       // Bind all form inputs to state.formData
       bindFormInputs();
     }
 
-    // Section 1 — Broker Info (read-only)
-    function renderSection1() {
+    // ─── Section 1: Overview (read-only — Broker + Load Details merged) ───
+    function renderSection1_Overview() {
       var fd = state.formData;
+      var l = state.load;
       return '<div class="form-section" data-section="0">' +
-        '<h3>1. Broker Information</h3>' +
-        '<div class="info-card">' +
+        '<h3>1. Overview</h3>' +
+        '<div class="info-card" style="margin-bottom:16px">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Broker</div>' +
           infoRow("Company", "Silk Route Logistics Inc.") +
           infoRow("Broker / AE", fd.brokerContact || "--") +
           infoRow("Email", fd.brokerEmail || "--") +
@@ -429,18 +475,10 @@
           infoRow("Reference #", fd.referenceNumber || "--") +
           infoRow("Date", new Date().toLocaleDateString()) +
         '</div>' +
-        navBtns(0) +
-      '</div>';
-    }
-
-    // Section 2 — Load Details (read-only from load)
-    function renderSection2() {
-      var l = state.load;
-      return '<div class="form-section" data-section="1">' +
-        '<h3>2. Load Details</h3>' +
         '<div class="info-card">' +
-          infoRow("Origin", esc(l.originCity) + ", " + esc(l.originState) + " " + esc(l.originZip) + (l.originCompany ? " (" + esc(l.originCompany) + ")" : "")) +
-          infoRow("Destination", esc(l.destCity) + ", " + esc(l.destState) + " " + esc(l.destZip) + (l.destCompany ? " (" + esc(l.destCompany) + ")" : "")) +
+          '<div style="font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Load Details</div>' +
+          infoRow("Origin", esc(l.originCity) + ", " + esc(l.originState) + " " + esc(l.originZip || "") + (l.originCompany ? " (" + esc(l.originCompany) + ")" : "")) +
+          infoRow("Destination", esc(l.destCity) + ", " + esc(l.destState) + " " + esc(l.destZip || "") + (l.destCompany ? " (" + esc(l.destCompany) + ")" : "")) +
           infoRow("Distance", l.distance ? num(l.distance) + " mi" : "--") +
           '<div id="tender-mileage-badge" style="padding:4px 0"></div>' +
           infoRow("Equipment", formatEquip(l.equipmentType)) +
@@ -452,86 +490,77 @@
           (l.hazmat ? infoRow("Hazmat", "Yes — Class " + (l.hazmatClass || "N/A")) : "") +
           (l.temperatureControlled ? infoRow("Temp Control", (l.tempMin || "") + " - " + (l.tempMax || "") + " F") : "") +
         '</div>' +
-        navBtns(1) +
+        navBtns(0) +
       '</div>';
     }
 
-    // Section 3 — Shipper / Pickup
-    function renderSection3() {
+    // ─── Section 2: Pickup & Delivery (addresses read-only from load, extra fields editable) ───
+    function renderSection2_PickupDelivery() {
       var fd = state.formData;
-      return '<div class="form-section" data-section="2">' +
-        '<h3>3. Shipper / Pickup</h3>' +
-        '<div class="form-grid">' +
-          formField("Company", "shipperName", fd.shipperName) +
-          formField("Contact", "shipperContact", fd.shipperContact) +
-          formField("Address", "shipperAddress", fd.shipperAddress, "full-width") +
-          formField("City", "shipperCity", fd.shipperCity) +
-          formField("State", "shipperState", fd.shipperState) +
-          formField("Zip", "shipperZip", fd.shipperZip) +
-          formField("Phone", "shipperPhone", fd.shipperPhone) +
-          formField("PO Number", "poNumber", fd.poNumber) +
-          formField("Pickup Number", "pickupNumber", fd.pickupNumber) +
-          formField("Pickup Hours", "pickupHours", fd.pickupHours) +
-          formSelect("Loading Type", "loadingType", fd.loadingType, ["", "Live Load", "Drop & Hook", "Preloaded"]) +
-          formField("Est. Loading Time", "estLoadingTime", fd.estLoadingTime) +
-          formArea("Pickup Instructions", "pickupInstructions", fd.pickupInstructions, "full-width") +
-        '</div>' +
-        navBtns(2) +
-      '</div>';
-    }
-
-    // Section 4 — Consignee / Delivery
-    function renderSection4() {
-      var fd = state.formData;
-      return '<div class="form-section" data-section="3">' +
-        '<h3>4. Consignee / Delivery</h3>' +
-        '<div class="form-grid">' +
-          formField("Company", "consigneeName", fd.consigneeName) +
-          formField("Contact", "consigneeContact", fd.consigneeContact) +
-          formField("Address", "consigneeAddress", fd.consigneeAddress, "full-width") +
-          formField("City", "consigneeCity", fd.consigneeCity) +
-          formField("State", "consigneeState", fd.consigneeState) +
-          formField("Zip", "consigneeZip", fd.consigneeZip) +
-          formField("Phone", "consigneePhone", fd.consigneePhone) +
-          formField("Delivery Ref", "deliveryRef", fd.deliveryRef) +
-          formField("Appointment #", "appointmentNumber", fd.appointmentNumber) +
-          formField("Delivery Hours", "deliveryHours", fd.deliveryHours) +
-          formSelect("Unloading Type", "unloadingType", fd.unloadingType, ["", "Live Unload", "Drop & Hook", "Driver Assist"]) +
-          formField("Est. Unloading Time", "estUnloadingTime", fd.estUnloadingTime) +
-          formArea("Delivery Instructions", "deliveryInstructions", fd.deliveryInstructions, "full-width") +
-        '</div>' +
-        navBtns(3) +
-      '</div>';
-    }
-
-    // Section 5 — Stops
-    function renderSection5() {
-      var fd = state.formData;
+      var l = state.load;
       var stops = fd.stops || [];
-      var html = '<div class="form-section" data-section="4">' +
-        '<h3>5. Stops</h3>' +
-        '<div class="form-grid mb-16">' +
-          '<div class="form-group"><label>Route Type</label>' +
-          '<select data-field="isMultiStop" onchange="window._toggleMultiStop(this.value)">' +
-            '<option value="false"' + (!fd.isMultiStop ? ' selected' : '') + '>Direct (Origin to Destination)</option>' +
-            '<option value="true"' + (fd.isMultiStop ? ' selected' : '') + '>Multi-Stop</option>' +
-          '</select></div>' +
-          formField("Extra Stop Pay $", "extraStopPay", fd.extraStopPay || 0, "", "number") +
-        '</div>';
 
-      html += '<div id="stops-container">';
-      if (fd.isMultiStop && stops.length > 0) {
-        stops.forEach(function(stop, i) {
-          html += renderStopCard(stop, i);
-        });
-      }
-      html += '</div>';
+      var html = '<div class="form-section" data-section="1">' +
+        '<h3>2. Pickup & Delivery</h3>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">' +
 
+        // Left: Pickup
+        '<div class="info-card" style="padding:16px">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Pickup</div>' +
+          infoRow("Company", esc(fd.shipperName || l.originName || l.originCompany || "--")) +
+          infoRow("Address", esc(fd.shipperAddress || l.originAddress || "--")) +
+          infoRow("City / State / ZIP", esc(fd.shipperCity || l.originCity || "") + ", " + esc(fd.shipperState || l.originState || "") + " " + esc(fd.shipperZip || l.originZip || "")) +
+          infoRow("Contact", esc(fd.shipperContact || "--")) +
+          infoRow("Phone", esc(fd.shipperPhone || "--")) +
+          '<div class="form-grid" style="margin-top:12px">' +
+            formField("PO Number", "poNumber", fd.poNumber) +
+            formField("Pickup #", "pickupNumber", fd.pickupNumber) +
+            formField("Pickup Hours", "pickupHours", fd.pickupHours) +
+            formSelect("Loading Type", "loadingType", fd.loadingType, ["", "Live Load", "Drop & Hook", "Preloaded"]) +
+            formField("Est. Loading Time", "estLoadingTime", fd.estLoadingTime) +
+            formArea("Pickup Instructions", "pickupInstructions", fd.pickupInstructions, "full-width") +
+          '</div>' +
+        '</div>' +
+
+        // Right: Delivery
+        '<div class="info-card" style="padding:16px">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Delivery</div>' +
+          infoRow("Company", esc(fd.consigneeName || l.destCompany || "--")) +
+          infoRow("Address", esc(fd.consigneeAddress || l.destAddress || "--")) +
+          infoRow("City / State / ZIP", esc(fd.consigneeCity || l.destCity || "") + ", " + esc(fd.consigneeState || l.destState || "") + " " + esc(fd.consigneeZip || l.destZip || "")) +
+          infoRow("Contact", esc(fd.consigneeContact || "--")) +
+          infoRow("Phone", esc(fd.consigneePhone || "--")) +
+          '<div class="form-grid" style="margin-top:12px">' +
+            formField("Delivery Ref", "deliveryRef", fd.deliveryRef) +
+            formField("Appointment #", "appointmentNumber", fd.appointmentNumber) +
+            formField("Delivery Hours", "deliveryHours", fd.deliveryHours) +
+            formSelect("Unloading Type", "unloadingType", fd.unloadingType, ["", "Live Unload", "Drop & Hook", "Driver Assist"]) +
+            formField("Est. Unloading Time", "estUnloadingTime", fd.estUnloadingTime) +
+            formArea("Delivery Instructions", "deliveryInstructions", fd.deliveryInstructions, "full-width") +
+          '</div>' +
+        '</div>' +
+
+        '</div>'; // end 2-col grid
+
+      // Stops (shown only if multi-stop)
       if (fd.isMultiStop) {
-        html += '<button class="btn-outline mt-8 fs-13" style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._addStop()">+ Add Stop</button>';
+        html += '<div style="margin-top:20px;border-top:1px solid var(--gray-200);padding-top:16px">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Additional Stops</div>' +
+          '<div class="form-grid mb-16">' +
+            formField("Extra Stop Pay $", "extraStopPay", fd.extraStopPay || 0, "", "number") +
+          '</div>' +
+          '<div id="stops-container">';
+        if (stops.length > 0) {
+          stops.forEach(function(stop, i) {
+            html += renderStopCard(stop, i);
+          });
+        }
+        html += '</div>' +
+          '<button class="btn-outline mt-8 fs-13" style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._addStop()">+ Add Stop</button>' +
+        '</div>';
       }
 
-      html += navBtns(4) + '</div>';
+      html += navBtns(1) + '</div>';
       return html;
     }
 
@@ -558,7 +587,7 @@
         state.formData.stops = [{ type: "PICKUP", company: "", address: "", city: "", state: "" }];
       }
       renderAllSections();
-      switchSection(4);
+      switchSection(1);
       renderProfitSummary();
     };
 
@@ -567,22 +596,22 @@
       if (state.formData.stops.length >= 5) { showToast("Maximum 5 stops", "error"); return; }
       state.formData.stops.push({ type: "DELIVERY", company: "", address: "", city: "", state: "" });
       renderAllSections();
-      switchSection(4);
+      switchSection(1);
     };
 
     window._removeStop = function(idx) {
       state.formData.stops.splice(idx, 1);
       renderAllSections();
-      switchSection(4);
+      switchSection(1);
       renderProfitSummary();
     };
 
-    // Section 6 — Carrier / Driver
-    function renderSection6() {
+    // ─── Section 3: Carrier & Driver ───
+    function renderSection3_CarrierDriver() {
       var fd = state.formData;
       var l = state.load;
-      return '<div class="form-section" data-section="5">' +
-        '<h3>6. Carrier / Driver Assignment</h3>' +
+      return '<div class="form-section" data-section="2">' +
+        '<h3>3. Carrier & Driver</h3>' +
         '<div class="form-grid mb-20">' +
           formSelect("Assignment Type", "assignmentType", fd.assignmentType, ["COMPANY_DRIVER", "PARTNER_CARRIER"]) +
         '</div>' +
@@ -594,18 +623,20 @@
           formField("Carrier Email", "carrierEmail", fd.carrierEmail) +
           formField("Dispatcher Name", "dispatcherName", fd.dispatcherName) +
           formField("Dispatcher Phone", "dispatcherPhone", fd.dispatcherPhone) +
-          formField("Driver Name", "driverName", fd.driverName) +
-          formField("Driver Phone", "driverPhone", fd.driverPhone) +
-          formField("Truck #", "truckNumber", fd.truckNumber) +
-          formField("Trailer #", "trailerNumber", fd.trailerNumber) +
+          formField("Driver Name *", "driverName", fd.driverName) +
+          formField("Driver Phone *", "driverPhone", fd.driverPhone) +
+          formField("Truck # *", "truckNumber", fd.truckNumber) +
+          formField("Trailer # *", "trailerNumber", fd.trailerNumber) +
         '</div>' +
-        navBtns(5) +
+        navBtns(2) +
       '</div>';
     }
 
-    // Section 7 — Financials
-    function renderSection7() {
+    // ─── Section 4: Rates & Terms (Financials + Payment + T&C merged with collapsible panels) ───
+    function renderSection4_RatesTerms() {
       var fd = state.formData;
+
+      // Accessorials HTML
       var accHtml = '<div id="accessorials-container">';
       (fd.accessorials || []).forEach(function(acc, i) {
         accHtml += '<div class="acc-row" data-acc="' + i + '">' +
@@ -618,35 +649,95 @@
       });
       accHtml += '</div>';
 
-      return '<div class="form-section" data-section="6">' +
-        '<h3>7. Financials</h3>' +
-        '<div class="form-grid">' +
-          formField("Customer Rate $", "customerRate", fd.customerRate, "", "number") +
-          formField("Carrier Line Haul $", "lineHaulRate", fd.lineHaulRate, "", "number") +
-          formSelect("Rate Type", "rateType", fd.rateType, ["FLAT", "PER_MILE"]) +
-          formField("Fuel Surcharge $", "fuelSurcharge", fd.fuelSurcharge, "", "number") +
-          formSelect("Fuel Surcharge Type", "fuelSurchargeType", fd.fuelSurchargeType, ["FLAT", "PERCENTAGE"]) +
-          formField("Detention Rate $/hr", "detentionRate", fd.detentionRate || 0, "", "number") +
+      return '<div class="form-section" data-section="3">' +
+        '<h3>4. Rates & Terms</h3>' +
+
+        // Sub-panel 1: Rates (open by default)
+        '<div class="collapsible-panel open" id="rates-panel">' +
+          '<div class="collapsible-panel-header" onclick="window._togglePanel(\'rates-panel\')">' +
+            '<span>Rates & Financials</span>' +
+            '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</div>' +
+          '<div class="collapsible-panel-body">' +
+            '<div class="form-grid">' +
+              formField("Customer Rate $ *", "customerRate", fd.customerRate, "", "number") +
+              formField("Carrier Line Haul $ *", "lineHaulRate", fd.lineHaulRate, "", "number") +
+              formSelect("Rate Type", "rateType", fd.rateType, ["FLAT", "PER_MILE"]) +
+              formField("Fuel Surcharge $", "fuelSurcharge", fd.fuelSurcharge, "", "number") +
+              formSelect("Fuel Surcharge Type", "fuelSurchargeType", fd.fuelSurchargeType, ["FLAT", "PERCENTAGE"]) +
+              formField("Detention Rate $/hr", "detentionRate", fd.detentionRate || 0, "", "number") +
+            '</div>' +
+            '<div style="margin-top:16px">' +
+              '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Accessorials</label>' +
+              accHtml +
+              '<button class="btn-outline" style="padding:6px 14px;font-size:12px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;margin-top:4px" onclick="window._addAcc()">+ Add Accessorial</button>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        '<div style="margin-top:20px">' +
-          '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Accessorials</label>' +
-          accHtml +
-          '<button class="btn-outline" style="padding:6px 14px;font-size:12px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;margin-top:4px" onclick="window._addAcc()">+ Add Accessorial</button>' +
+
+        // Sub-panel 2: Payment Terms (open by default)
+        '<div class="collapsible-panel open" id="payment-panel">' +
+          '<div class="collapsible-panel-header" onclick="window._togglePanel(\'payment-panel\')">' +
+            '<span>Payment Terms</span>' +
+            '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</div>' +
+          '<div class="collapsible-panel-body">' +
+            '<div class="form-grid">' +
+              formSelect("Payment Tier *", "carrierPaymentTier", fd.carrierPaymentTier, ["FLASH", "EXPRESS", "PRIORITY", "PARTNER", "ELITE", "STANDARD"]) +
+              formField("QuickPay Fee %", "quickPayFeePercent", fd.quickPayFeePercent, "", "number") +
+              formField("Factoring Company", "factoringCompany", fd.factoringCompany || "") +
+              formField("Factoring Contact", "factoringContact", fd.factoringContact || "") +
+              formField("Factoring Email", "factoringEmail", fd.factoringEmail || "") +
+              formSelect("Payment Terms", "paymentTerms", fd.paymentTerms || "Net 30", ["Net 15", "Net 30", "Net 60", "QuickPay", "COD"]) +
+            '</div>' +
+            '<div style="margin-top:16px">' +
+              '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Document Checklist</label>' +
+              '<div class="form-grid">' +
+                checkbox("Signed Rate Con", "docChecklist_signedRateCon", fd.docChecklist ? fd.docChecklist.signedRateCon : true) +
+                checkbox("Signed BOL", "docChecklist_signedBol", fd.docChecklist ? fd.docChecklist.signedBol : true) +
+                checkbox("Proof of Delivery", "docChecklist_pod", fd.docChecklist ? fd.docChecklist.pod : true) +
+                checkbox("Carrier Invoice", "docChecklist_carrierInvoice", fd.docChecklist ? fd.docChecklist.carrierInvoice : true) +
+                checkbox("Lumper Receipt", "docChecklist_lumperReceipt", fd.docChecklist ? fd.docChecklist.lumperReceipt : false) +
+                checkbox("Scale Ticket", "docChecklist_scaleTicket", fd.docChecklist ? fd.docChecklist.scaleTicket : false) +
+                checkbox("Temperature Log", "docChecklist_tempLog", fd.docChecklist ? fd.docChecklist.tempLog : false) +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        navBtns(6) +
+
+        // Sub-panel 3: Terms & Conditions (collapsed by default)
+        '<div class="collapsible-panel" id="terms-panel">' +
+          '<div class="collapsible-panel-header" onclick="window._togglePanel(\'terms-panel\')">' +
+            '<span>Terms & Conditions</span>' +
+            '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</div>' +
+          '<div class="collapsible-panel-body">' +
+            formArea("Standard Terms (editable)", "customTerms", fd.customTerms, "full-width") +
+            '<div class="form-grid mt-16">' +
+              formArea("Special Instructions", "specialInstructions", fd.specialInstructions, "full-width") +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        navBtns(3) +
       '</div>';
     }
+
+    window._togglePanel = function(panelId) {
+      var panel = document.getElementById(panelId);
+      if (panel) panel.classList.toggle("open");
+    };
 
     window._addAcc = function() {
       if (!state.formData.accessorials) state.formData.accessorials = [];
       state.formData.accessorials.push({ type: "Detention", description: "Detention", amount: 0 });
       renderAllSections();
-      switchSection(6);
+      switchSection(3);
     };
     window._removeAcc = function(idx) {
       state.formData.accessorials.splice(idx, 1);
       renderAllSections();
-      switchSection(6);
+      switchSection(3);
       renderProfitSummary();
     };
     window._updateAcc = function(idx, field, val) {
@@ -656,50 +747,8 @@
       renderProfitSummary();
     };
 
-    // Section 8 — Payment Terms
-    function renderSection8() {
-      var fd = state.formData;
-      return '<div class="form-section" data-section="7">' +
-        '<h3>8. Payment Terms</h3>' +
-        '<div class="form-grid">' +
-          formSelect("Payment Tier", "carrierPaymentTier", fd.carrierPaymentTier, ["FLASH", "EXPRESS", "PRIORITY", "PARTNER", "ELITE", "STANDARD"]) +
-          formField("QuickPay Fee %", "quickPayFeePercent", fd.quickPayFeePercent, "", "number") +
-          formField("Factoring Company", "factoringCompany", fd.factoringCompany || "") +
-          formField("Factoring Contact", "factoringContact", fd.factoringContact || "") +
-          formField("Factoring Email", "factoringEmail", fd.factoringEmail || "") +
-          formSelect("Payment Terms", "paymentTerms", fd.paymentTerms || "Net 30", ["Net 15", "Net 30", "Net 60", "QuickPay", "COD"]) +
-        '</div>' +
-        '<div style="margin-top:20px">' +
-          '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Document Checklist</label>' +
-          '<div class="form-grid">' +
-            checkbox("Signed Rate Con", "docChecklist_signedRateCon", fd.docChecklist ? fd.docChecklist.signedRateCon : true) +
-            checkbox("Signed BOL", "docChecklist_signedBol", fd.docChecklist ? fd.docChecklist.signedBol : true) +
-            checkbox("Proof of Delivery", "docChecklist_pod", fd.docChecklist ? fd.docChecklist.pod : true) +
-            checkbox("Carrier Invoice", "docChecklist_carrierInvoice", fd.docChecklist ? fd.docChecklist.carrierInvoice : true) +
-            checkbox("Lumper Receipt", "docChecklist_lumperReceipt", fd.docChecklist ? fd.docChecklist.lumperReceipt : false) +
-            checkbox("Scale Ticket", "docChecklist_scaleTicket", fd.docChecklist ? fd.docChecklist.scaleTicket : false) +
-            checkbox("Temperature Log", "docChecklist_tempLog", fd.docChecklist ? fd.docChecklist.tempLog : false) +
-          '</div>' +
-        '</div>' +
-        navBtns(7) +
-      '</div>';
-    }
-
-    // Section 9 — Terms & Conditions
-    function renderSection9() {
-      var fd = state.formData;
-      return '<div class="form-section" data-section="8">' +
-        '<h3>9. Terms & Conditions</h3>' +
-        formArea("Standard Terms (editable)", "customTerms", fd.customTerms, "full-width") +
-        '<div class="form-grid mt-16">' +
-          formArea("Special Instructions", "specialInstructions", fd.specialInstructions, "full-width") +
-        '</div>' +
-        navBtns(8) +
-      '</div>';
-    }
-
-    // Section 10 — Review & Send
-    function renderSection10() {
+    // ─── Section 5: Review & Send ───
+    function renderSection5_ReviewSend() {
       var fd = state.formData;
       var l = state.load;
       var custRate = Number(fd.customerRate) || 0;
@@ -708,8 +757,8 @@
       var marginPct = custRate > 0 ? ((margin / custRate) * 100).toFixed(1) : "0.0";
       var dist = l.distance || 0;
 
-      return '<div class="form-section" data-section="9">' +
-        '<h3>10. Review & Send</h3>' +
+      return '<div class="form-section" data-section="4">' +
+        '<h3>5. Review & Send</h3>' +
 
         '<div class="review-section">' +
           '<h4>Route</h4>' +
@@ -809,12 +858,14 @@
           if (el.type === "checkbox") val = el.checked;
           state.formData[field] = val;
           renderProfitSummary();
+          renderSectionTabs();
         });
         el.addEventListener("change", function() {
           var val = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
           if (el.type === "checkbox") val = el.checked;
           state.formData[field] = val;
           renderProfitSummary();
+          renderSectionTabs();
         });
       });
 
@@ -993,11 +1044,20 @@
         html += '<button class="btn-outline fs-13" style="padding:8px 20px;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer" onclick="window._switchSection(' + (sectionIdx - 1) + ')">Previous</button>';
       }
       if (sectionIdx < SECTIONS.length - 1) {
-        html += '<button class="btn-gold fs-13" style="padding:8px 20px;border-radius:6px;cursor:pointer;border:none" onclick="window._switchSection(' + (sectionIdx + 1) + ')">Next</button>';
+        html += '<button class="btn-gold btn-next fs-13" style="padding:8px 20px;border-radius:6px;cursor:pointer;border:none" onclick="window._goNextSection(' + sectionIdx + ')">Next: ' + SECTIONS[sectionIdx + 1].label + '</button>';
       }
       html += '</div>';
       return html;
     }
+
+    window._goNextSection = function(currentIdx) {
+      var result = validateTenderSection(currentIdx);
+      if (!result.valid) {
+        showToast(result.errors[0], "error");
+        return;
+      }
+      switchSection(currentIdx + 1);
+    };
 
     function showToast(msg, type) {
       var el = document.createElement("div");

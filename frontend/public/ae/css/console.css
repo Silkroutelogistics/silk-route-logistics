@@ -570,7 +570,37 @@ a:hover {
   flex-shrink: 0;
 }
 
+.action-item.clickable {
+  transition: background 0.15s ease;
+}
+
+.action-item.clickable:hover {
+  background: var(--gold-dim);
+}
+
 .action-item:hover .action-item-title {
+  color: var(--gold);
+}
+
+.action-item:hover .action-item-arrow {
+  color: var(--gold);
+}
+
+.notif-item.clickable {
+  transition: background 0.15s ease;
+}
+
+.notif-item.clickable:hover {
+  background: var(--gold-dim);
+}
+
+.notif-item .action-item-arrow {
+  color: var(--gray-300);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.notif-item.clickable:hover .action-item-arrow {
   color: var(--gold);
 }
 
@@ -1120,4 +1150,103 @@ tbody tr:hover {
   .btn, .quick-action-btn {
     min-height: 44px;
   }
+}
+
+/* ================================
+   Step Validation UI
+   ================================ */
+.field-error {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 2px var(--red-bg);
+}
+
+.error-msg {
+  color: var(--red);
+  font-size: 11px;
+  margin-top: 2px;
+  display: block;
+}
+
+.btn-next:disabled,
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.step-locked {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+}
+
+.step-locked::after {
+  content: "\1F512";
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+.margin-warning {
+  color: var(--amber);
+  font-size: 11px;
+  margin-top: 2px;
+  display: block;
+}
+
+/* Collapsible sub-panel for tender */
+.collapsible-panel {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.collapsible-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--gray-50);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.collapsible-panel-header:hover {
+  background: var(--gray-100);
+}
+
+.collapsible-panel-header .chevron {
+  transition: transform 0.2s;
+  width: 16px;
+  height: 16px;
+  color: var(--gray-400);
+}
+
+.collapsible-panel.open .collapsible-panel-header .chevron {
+  transform: rotate(180deg);
+}
+
+.collapsible-panel-body {
+  display: none;
+  padding: 16px;
+}
+
+.collapsible-panel.open .collapsible-panel-body {
+  display: block;
+}
+
+/* Timeline clickable next step */
+.timeline-dot.clickable {
+  border: 2px dashed var(--gold) !important;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.timeline-dot.clickable:hover {
+  background: var(--gold-dim) !important;
+  transform: scale(1.2);
 }

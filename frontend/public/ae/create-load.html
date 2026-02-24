@@ -419,6 +419,13 @@
               </div>
             </div>
 
+            <!-- Step 1 Next Button -->
+            <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+              <button class="btn-primary btn-next" id="next-btn-1" disabled onclick="goToStep(2)">
+                Next: Commodity & Equipment
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -550,6 +557,18 @@
                 <textarea id="special-instructions" data-field="specialInstructions" placeholder="Any special handling, delivery instructions, or notes for the carrier..."></textarea>
               </div>
             </div>
+
+            <!-- Step 2 Nav Buttons -->
+            <div style="display:flex;justify-content:space-between;margin-top:20px;">
+              <button class="btn-secondary" onclick="goToStep(1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                Back
+              </button>
+              <button class="btn-primary btn-next" id="next-btn-2" disabled onclick="goToStep(3)">
+                Next: Rate & Contacts
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -639,6 +658,18 @@
                 </div>
               </div>
             </div>
+
+            <!-- Step 3 Nav Buttons -->
+            <div style="display:flex;justify-content:space-between;margin-top:20px;">
+              <button class="btn-secondary" onclick="goToStep(2)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                Back
+              </button>
+              <button class="btn-primary btn-next" id="next-btn-3" disabled onclick="goToStep(4)">
+                Next: Review & Create
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -652,6 +683,13 @@
           <div class="form-section-body">
             <div id="review-content">
               <!-- Populated by JS -->
+            </div>
+            <!-- Step 4 Back Button -->
+            <div style="display:flex;justify-content:flex-start;margin-top:20px;">
+              <button class="btn-secondary" onclick="goToStep(3)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                Back
+              </button>
             </div>
           </div>
         </div>
@@ -709,6 +747,12 @@
       loadUser();
       restoreDraft();
       setupAutoSave();
+      // Initialize validation state and locks
+      checkStepCompletion();
+      updateProgressBarLocks();
+      // Update next button for step 1
+      var btn = document.getElementById("next-btn-1");
+      if (btn) btn.disabled = !silentValidateStep(1);
     });
 
     function loadUser() {
@@ -756,10 +800,225 @@
     }
 
     /* =========================================
+       STEP VALIDATION SYSTEM
+       ========================================= */
+    var currentStep = 1;
+    var stepValidState = [false, false, false, false, true]; // index 0 unused, steps 1-4 (step 4 always valid)
+
+    function markFieldError(fieldId, message) {
+      var el = document.getElementById(fieldId);
+      if (!el) return;
+      el.classList.add("field-error");
+      // Remove existing error message if any
+      var existing = el.parentElement.querySelector(".error-msg");
+      if (existing) existing.remove();
+      if (message) {
+        var msg = document.createElement("span");
+        msg.className = "error-msg";
+        msg.textContent = message;
+        el.parentElement.appendChild(msg);
+      }
+    }
+
+    function clearFieldError(fieldId) {
+      var el = document.getElementById(fieldId);
+      if (!el) return;
+      el.classList.remove("field-error");
+      var existing = el.parentElement.querySelector(".error-msg");
+      if (existing) existing.remove();
+    }
+
+    function clearAllFieldErrors(stepNum) {
+      var sec = document.getElementById("section-" + stepNum);
+      if (!sec) return;
+      var errorFields = sec.querySelectorAll(".field-error");
+      errorFields.forEach(function(el) { el.classList.remove("field-error"); });
+      var errorMsgs = sec.querySelectorAll(".error-msg");
+      errorMsgs.forEach(function(el) { el.remove(); });
+      // Also clear margin warnings
+      var warnings = sec.querySelectorAll(".margin-warning");
+      warnings.forEach(function(el) { el.remove(); });
+    }
+
+    function validateStep(stepNum) {
+      clearAllFieldErrors(stepNum);
+      var errors = [];
+
+      if (stepNum === 1) {
+        var customerId = document.getElementById("customer-id").value;
+        if (!customerId) { markFieldError("customer-search", "Customer is required"); errors.push("Customer is required"); }
+
+        var originCompany = document.getElementById("origin-company").value.trim();
+        if (!originCompany) { markFieldError("origin-company", "Company name is required"); errors.push("Origin company required"); }
+
+        var originAddress = document.getElementById("origin-address").value.trim();
+        if (!originAddress) { markFieldError("origin-address", "Street address is required"); errors.push("Origin address required"); }
+
+        var originCity = document.getElementById("origin-city").value.trim();
+        if (!originCity) { markFieldError("origin-city", "City is required"); errors.push("Origin city required"); }
+
+        var originState = document.getElementById("origin-state").value.trim().toUpperCase();
+        if (!originState || originState.length !== 2) { markFieldError("origin-state", "2-letter state code required"); errors.push("Origin state required"); }
+
+        var originZip = document.getElementById("origin-zip").value.trim();
+        if (!originZip || !/^\d{5}$/.test(originZip)) { markFieldError("origin-zip", "5-digit ZIP required"); errors.push("Origin ZIP required"); }
+
+        var pickupDate = document.getElementById("origin-date").value;
+        if (!pickupDate) { markFieldError("origin-date", "Pickup date is required"); errors.push("Pickup date required"); }
+        else {
+          var today = new Date(); today.setHours(0,0,0,0);
+          var pd = new Date(pickupDate + "T00:00:00");
+          if (pd < today) { markFieldError("origin-date", "Must be today or future"); errors.push("Pickup date must be today or future"); }
+        }
+
+        var destCompany = document.getElementById("dest-company").value.trim();
+        if (!destCompany) { markFieldError("dest-company", "Company name is required"); errors.push("Dest company required"); }
+
+        var destAddress = document.getElementById("dest-address").value.trim();
+        if (!destAddress) { markFieldError("dest-address", "Street address is required"); errors.push("Dest address required"); }
+
+        var destCity = document.getElementById("dest-city").value.trim();
+        if (!destCity) { markFieldError("dest-city", "City is required"); errors.push("Dest city required"); }
+
+        var destState = document.getElementById("dest-state").value.trim().toUpperCase();
+        if (!destState || destState.length !== 2) { markFieldError("dest-state", "2-letter state code required"); errors.push("Dest state required"); }
+
+        var destZip = document.getElementById("dest-zip").value.trim();
+        if (!destZip || !/^\d{5}$/.test(destZip)) { markFieldError("dest-zip", "5-digit ZIP required"); errors.push("Dest ZIP required"); }
+
+        var deliveryDate = document.getElementById("dest-date").value;
+        if (!deliveryDate) { markFieldError("dest-date", "Delivery date is required"); errors.push("Delivery date required"); }
+        else if (pickupDate && deliveryDate < pickupDate) { markFieldError("dest-date", "Must be on or after pickup date"); errors.push("Delivery must be >= pickup"); }
+
+        // Cross-border conditional
+        var crossBorder = document.getElementById("cross-border-check").checked;
+        if (crossBorder) {
+          var crossing = document.getElementById("border-crossing").value;
+          if (!crossing) { markFieldError("border-crossing", "Border crossing is required"); errors.push("Border crossing required"); }
+        }
+      }
+
+      else if (stepNum === 2) {
+        var commodity = document.getElementById("commodity").value.trim();
+        if (!commodity) { markFieldError("commodity", "Commodity description is required"); errors.push("Commodity required"); }
+
+        var weight = parseFloat(document.getElementById("weight").value);
+        if (!weight || weight <= 0) { markFieldError("weight", "Weight must be greater than 0"); errors.push("Weight required"); }
+
+        var equipType = document.getElementById("equipment-type").value;
+        if (!equipType) { markFieldError("equipment-type", "Equipment type is required"); errors.push("Equipment type required"); }
+
+        // Reefer requires temperature
+        if (equipType === "REEFER") {
+          var temp = document.getElementById("temperature").value;
+          if (!temp && temp !== "0") { markFieldError("temperature", "Temperature required for reefer"); errors.push("Temperature required"); }
+        }
+
+        // Hazmat conditional
+        var hazmat = document.getElementById("hazmat-check").checked;
+        if (hazmat) {
+          if (!document.getElementById("hazmat-un").value.trim()) { markFieldError("hazmat-un", "UN# required"); errors.push("Hazmat UN# required"); }
+          if (!document.getElementById("hazmat-class").value.trim()) { markFieldError("hazmat-class", "Class required"); errors.push("Hazmat class required"); }
+          if (!document.getElementById("hazmat-name").value.trim()) { markFieldError("hazmat-name", "Shipping name required"); errors.push("Hazmat name required"); }
+        }
+      }
+
+      else if (stepNum === 3) {
+        var custRate = parseFloat(document.getElementById("customer-rate").value);
+        if (!custRate || custRate <= 0) { markFieldError("customer-rate", "Customer rate must be > 0"); errors.push("Customer rate required"); }
+
+        var carrRate = parseFloat(document.getElementById("carrier-rate").value);
+        if (!carrRate || carrRate <= 0) { markFieldError("carrier-rate", "Carrier rate must be > 0"); errors.push("Carrier rate required"); }
+
+        if (custRate > 0 && carrRate > 0) {
+          if (carrRate >= custRate) { markFieldError("carrier-rate", "Must be less than customer rate"); errors.push("Carrier rate must be < customer rate"); }
+          else {
+            var margin = ((custRate - carrRate) / custRate) * 100;
+            if (margin < 8) {
+              var carrEl = document.getElementById("carrier-rate");
+              var existingWarn = carrEl.parentElement.querySelector(".margin-warning");
+              if (!existingWarn) {
+                var warn = document.createElement("span");
+                warn.className = "margin-warning";
+                warn.textContent = "Warning: margin is " + margin.toFixed(1) + "% (below 8% target)";
+                carrEl.parentElement.appendChild(warn);
+              }
+            }
+          }
+        }
+      }
+
+      // Step 4 has no validation
+      var valid = errors.length === 0;
+      stepValidState[stepNum] = valid;
+      return { valid: valid, errors: errors };
+    }
+
+    function updateNextButton(stepNum) {
+      var btn = document.getElementById("next-btn-" + stepNum);
+      if (!btn) return;
+      var result = validateStep(stepNum);
+      btn.disabled = !result.valid;
+    }
+
+    function updateProgressBarLocks() {
+      for (var i = 2; i <= 4; i++) {
+        var step = document.querySelector('.progress-step[data-step="' + i + '"]');
+        // A step is accessible if all prior steps are valid
+        var accessible = true;
+        for (var j = 1; j < i; j++) {
+          if (!stepValidState[j]) { accessible = false; break; }
+        }
+        if (accessible) {
+          step.classList.remove("step-locked");
+        } else {
+          step.classList.add("step-locked");
+        }
+      }
+    }
+
+    function goToStep(n) {
+      // Validate current step before advancing
+      if (n > currentStep) {
+        var result = validateStep(currentStep);
+        if (!result.valid) {
+          showToast(result.errors[0], "error");
+          return;
+        }
+      }
+      // Close current section, open target
+      for (var i = 1; i <= 4; i++) {
+        var sec = document.getElementById("section-" + i);
+        var step = document.querySelector('.progress-step[data-step="' + i + '"]');
+        sec.classList.remove("active", "open");
+        step.classList.remove("active");
+      }
+      var targetSec = document.getElementById("section-" + n);
+      var targetStep = document.querySelector('.progress-step[data-step="' + n + '"]');
+      targetSec.classList.add("active", "open");
+      targetStep.classList.add("active");
+      currentStep = n;
+      targetSec.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (n === 4) { buildReview(); }
+      // Re-validate to update next button for new step
+      updateNextButton(n);
+      updateProgressBarLocks();
+    }
+
+    /* =========================================
        SECTION TOGGLE & PROGRESS
        ========================================= */
     function toggleSection(n) {
       var sec = document.getElementById("section-" + n);
+      // Block opening future steps if prior not validated
+      if (n > currentStep) {
+        for (var j = 1; j < n; j++) {
+          if (!stepValidState[j]) {
+            showToast("Complete Step " + j + " first", "error");
+            return;
+          }
+        }
+      }
       sec.classList.toggle("open");
       if (sec.classList.contains("open")) {
         updateActiveSection(n);
@@ -767,6 +1026,15 @@
     }
 
     function scrollToSection(n) {
+      // Block if prior steps not valid
+      if (n > 1) {
+        for (var j = 1; j < n; j++) {
+          if (!stepValidState[j]) {
+            showToast("Complete Step " + j + " first", "error");
+            return;
+          }
+        }
+      }
       var sec = document.getElementById("section-" + n);
       if (!sec.classList.contains("open")) {
         sec.classList.add("open");
@@ -786,6 +1054,7 @@
           step.classList.add("active");
         }
       }
+      currentStep = n;
       if (n === 4) { buildReview(); }
     }
 
@@ -1422,33 +1691,94 @@
       document.getElementById("form-container").addEventListener("input", function() {
         saveDraft();
         checkStepCompletion();
+        // Live-update the next button for current step (silent — don't show red borders until blur)
+        var btn = document.getElementById("next-btn-" + currentStep);
+        if (btn) {
+          // Quick silent check without marking errors
+          var result = silentValidateStep(currentStep);
+          btn.disabled = !result;
+        }
       });
       document.getElementById("form-container").addEventListener("change", function() {
         saveDraft();
         checkStepCompletion();
+        var btn = document.getElementById("next-btn-" + currentStep);
+        if (btn) {
+          var result = silentValidateStep(currentStep);
+          btn.disabled = !result;
+        }
+      });
+      // On blur, show field-level errors for current step
+      document.getElementById("form-container").addEventListener("focusout", function(e) {
+        if (e.target.matches("input, select, textarea")) {
+          // Only validate the specific field's step
+          validateStep(currentStep);
+          var btn = document.getElementById("next-btn-" + currentStep);
+          if (btn) btn.disabled = !stepValidState[currentStep];
+          updateProgressBarLocks();
+        }
       });
     }
 
+    // Silent validation: returns true/false without marking field errors
+    function silentValidateStep(stepNum) {
+      if (stepNum === 1) {
+        var d = gatherFormData();
+        if (!d.customerId) return false;
+        if (!d.originCompany) return false;
+        if (!d.originAddress) return false;
+        if (!d.originCity) return false;
+        if (!d.originState || d.originState.length !== 2) return false;
+        if (!d.originZip || !/^\d{5}$/.test(d.originZip)) return false;
+        if (!d.pickupDate) return false;
+        var today = new Date(); today.setHours(0,0,0,0);
+        if (new Date(d.pickupDate + "T00:00:00") < today) return false;
+        if (!d.destCompany) return false;
+        if (!d.destAddress) return false;
+        if (!d.destCity) return false;
+        if (!d.destState || d.destState.length !== 2) return false;
+        if (!d.destZip || !/^\d{5}$/.test(d.destZip)) return false;
+        if (!d.deliveryDate) return false;
+        if (d.deliveryDate < d.pickupDate) return false;
+        if (d.crossBorder && !d.borderCrossing) return false;
+        return true;
+      }
+      if (stepNum === 2) {
+        var commodity = document.getElementById("commodity").value.trim();
+        var weight = parseFloat(document.getElementById("weight").value);
+        var equipType = document.getElementById("equipment-type").value;
+        if (!commodity || !weight || weight <= 0 || !equipType) return false;
+        if (equipType === "REEFER" && !document.getElementById("temperature").value) return false;
+        var hazmat = document.getElementById("hazmat-check").checked;
+        if (hazmat) {
+          if (!document.getElementById("hazmat-un").value.trim()) return false;
+          if (!document.getElementById("hazmat-class").value.trim()) return false;
+          if (!document.getElementById("hazmat-name").value.trim()) return false;
+        }
+        return true;
+      }
+      if (stepNum === 3) {
+        var custRate = parseFloat(document.getElementById("customer-rate").value);
+        var carrRate = parseFloat(document.getElementById("carrier-rate").value);
+        if (!custRate || custRate <= 0 || !carrRate || carrRate <= 0) return false;
+        if (carrRate >= custRate) return false;
+        return true;
+      }
+      return true; // Step 4 always valid
+    }
+
     function checkStepCompletion() {
-      var d = gatherFormData();
-      // Step 1 complete if customer + origin + destination basics filled
-      if (d.customerId && d.originCity && d.originState && d.destCity && d.destState && d.pickupDate && d.deliveryDate) {
-        markStepCompleted(1);
-      } else {
-        unmarkStepCompleted(1);
+      // Use silent validation for checkmarks
+      for (var s = 1; s <= 3; s++) {
+        if (silentValidateStep(s)) {
+          markStepCompleted(s);
+          stepValidState[s] = true;
+        } else {
+          unmarkStepCompleted(s);
+          stepValidState[s] = false;
+        }
       }
-      // Step 2 complete if commodity + equipment + weight
-      if (d.commodity && d.equipmentType && d.weight) {
-        markStepCompleted(2);
-      } else {
-        unmarkStepCompleted(2);
-      }
-      // Step 3 complete if rates filled
-      if (d.customerRate && d.carrierRate) {
-        markStepCompleted(3);
-      } else {
-        unmarkStepCompleted(3);
-      }
+      updateProgressBarLocks();
     }
 
     /* =========================================
@@ -1464,25 +1794,17 @@
        CREATE LOAD
        ========================================= */
     function createLoad() {
-      var d = gatherFormData();
-
-      // Validation
-      var errors = [];
-      if (!d.customerId) errors.push("Customer is required");
-      if (!d.originCity || !d.originState) errors.push("Origin city/state is required");
-      if (!d.destCity || !d.destState) errors.push("Destination city/state is required");
-      if (!d.pickupDate) errors.push("Pickup date is required");
-      if (!d.deliveryDate) errors.push("Delivery date is required");
-      if (!d.commodity) errors.push("Commodity description is required");
-      if (!d.equipmentType) errors.push("Equipment type is required");
-      if (!d.weight) errors.push("Weight is required");
-      if (!d.customerRate) errors.push("Customer rate is required");
-      if (!d.carrierRate) errors.push("Carrier rate is required");
-
-      if (errors.length > 0) {
-        showToast(errors[0], "error");
-        return;
+      // Validate all steps before creating
+      for (var s = 1; s <= 3; s++) {
+        var result = validateStep(s);
+        if (!result.valid) {
+          goToStep(s);
+          showToast(result.errors[0], "error");
+          return;
+        }
       }
+
+      var d = gatherFormData();
 
       var rateType = d.rateType;
       var miles = parseFloat(d.miles) || 0;
