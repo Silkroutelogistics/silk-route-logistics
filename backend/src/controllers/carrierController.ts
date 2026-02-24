@@ -457,6 +457,9 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
               docTimeliness: latestScorecard.documentSubmissionTimeliness,
             }
           : null,
+        lastVettingScore: c.lastVettingScore,
+        lastVettingRisk: c.lastVettingRisk,
+        lastVettedAt: c.lastVettedAt,
         createdAt: c.createdAt,
       };
     })

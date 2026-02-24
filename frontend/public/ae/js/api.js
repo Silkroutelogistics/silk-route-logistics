@@ -285,6 +285,15 @@ var SRL = (function () {
     return request("/api/carrier-match/import-from-dat", { method: "POST", body: data });
   }
 
+  // --- Carrier Vetting ---
+  function vetCarrier(data) {
+    return request("/api/carriers/vet", { method: "POST", body: data });
+  }
+
+  function getVettingReport(carrierId) {
+    return request("/api/carriers/" + carrierId + "/vetting-report");
+  }
+
   function emergencyApproveCarrier(carrierId, reason) {
     return request("/api/carrier-match/" + carrierId + "/emergency-approve", { method: "POST", body: { reason: reason } });
   }
@@ -550,6 +559,8 @@ var SRL = (function () {
     getCaravanCarriers: getCaravanCarriers,
     matchCarriersForLoad: matchCarriersForLoad,
     importFromDAT: importFromDAT,
+    vetCarrier: vetCarrier,
+    getVettingReport: getVettingReport,
     emergencyApproveCarrier: emergencyApproveCarrier,
     promoteToBronze: promoteToBronze,
     postToDAT: postToDAT,

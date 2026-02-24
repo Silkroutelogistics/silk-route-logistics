@@ -586,6 +586,11 @@ model CarrierProfile {
 
   notes                 String?
 
+  // Vetting
+  lastVettingScore      Int?
+  lastVettingRisk       String?                 // LOW|MEDIUM|HIGH|CRITICAL
+  lastVettedAt          DateTime?
+
   // Caravan / DAT source tracking
   source                String?                 @default("caravan")   // 'caravan' | 'dat'
   emergencyApproved     Boolean                 @default(false)

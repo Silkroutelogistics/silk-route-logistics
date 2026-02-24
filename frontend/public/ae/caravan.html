@@ -205,6 +205,7 @@
               <th>Regions</th>
               <th>Loads</th>
               <th>Compliance</th>
+              <th>Vet Score</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -271,6 +272,22 @@
       <div class="modal-footer">
         <button class="btn-secondary" onclick="closeImportModal()">Cancel</button>
         <button class="btn-primary" id="import-btn" onclick="submitImport()">Import &amp; Verify</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vetting Scorecard Modal -->
+  <div class="modal-backdrop" id="vetting-modal">
+    <div class="modal" style="max-width:580px">
+      <div class="modal-header">
+        <h3 id="vetting-modal-title">Carrier Vetting Scorecard</h3>
+        <button class="modal-close" onclick="closeVettingModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="vetting-modal-body">
+        <div style="text-align:center;padding:40px;color:var(--gray-400)">Running vetting checks...</div>
+      </div>
+      <div class="modal-footer" id="vetting-modal-footer" style="display:none">
+        <button class="btn-secondary" onclick="closeVettingModal()">Close</button>
       </div>
     </div>
   </div>
@@ -487,6 +504,7 @@
           '<div class="carrier-card-badges">' +
             '<span class="source-' + source + '">' + (source === "dat" ? "DAT" : "Caravan") + '</span>' +
             (c.emergencyApproved ? '<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,0.1);color:#EF4444">Emergency</span>' : '') +
+            renderVettingBadge(c) +
           '</div>' +
           (equipTags ? '<div class="carrier-card-equipment">' + equipTags + '</div>' : '') +
         '</div>';
@@ -496,7 +514,7 @@
     function renderTable() {
       var tbody = document.getElementById("table-tbody");
       if (state.filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="empty-state-lg">No carriers match your filters</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-state-lg">No carriers match your filters</td></tr>';
         return;
       }
 
@@ -525,6 +543,7 @@
           '<td>' + esc(regions || "--") + '</td>' +
           '<td>' + loads + '</td>' +
           '<td><span class="compliance-dot ' + complianceClass + '"></span>' + (complianceOk ? 'OK' : 'Issue') + '</td>' +
+          '<td>' + renderVettingBadge(c) + '</td>' +
           '<td>' + esc(statusLabel) + '</td>' +
         '</tr>';
       }).join("");
@@ -597,8 +616,29 @@
       html += dField("Safety Rating", esc(c.safetyRating || "Not rated"));
       html += '</div></div>';
 
+      // Vetting section
+      if (c.lastVettingScore !== null && c.lastVettingScore !== undefined) {
+        var vRisk = c.lastVettingRisk || "UNKNOWN";
+        var vColor = vRisk === "LOW" ? "var(--green)" : vRisk === "MEDIUM" ? "var(--gold)" : vRisk === "HIGH" ? "var(--amber)" : "var(--red)";
+        html += '<div class="detail-section">';
+        html += '<div class="detail-section-title">Vetting Scorecard</div>';
+        html += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">';
+        html += '<div style="width:56px;height:56px;border-radius:50%;border:3px solid ' + vColor + ';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:' + vColor + '">' + c.lastVettingScore + '</div>';
+        html += '<div><div style="font-weight:600;font-size:14px">' + vRisk + ' Risk</div>';
+        html += '<div style="font-size:12px;color:var(--gray-400)">Vetted: ' + (c.lastVettedAt ? new Date(c.lastVettedAt).toLocaleDateString() : 'Unknown') + '</div></div>';
+        html += '</div>';
+        html += '<button class="btn-secondary btn-sm" onclick="viewVettingReport(\'' + c.id + '\')" style="margin-right:8px">View Full Report</button>';
+        if (c.dotNumber) html += '<button class="btn-secondary btn-sm" onclick="runQuickVet(\'' + esc(c.dotNumber) + '\',\'' + esc(c.mcNumber || '') + '\',\'' + c.id + '\')">Re-Vet</button>';
+        html += '</div>';
+      }
+
       // Actions
       html += '<div class="detail-actions">';
+      if (c.dotNumber) {
+        html += '<button class="btn-primary btn-sm" style="background:var(--gold);border-color:var(--gold)" onclick="runQuickVet(\'' + esc(c.dotNumber) + '\',\'' + esc(c.mcNumber || '') + '\',\'' + c.id + '\')">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' +
+          'Quick Vet</button>';
+      }
       if (tier === "GUEST") {
         html += '<button class="btn-primary btn-sm" onclick="doPromote(\'' + c.id + '\')">Promote to Bronze</button>';
       }
@@ -691,15 +731,67 @@
 
       var btn = document.getElementById("import-btn");
       btn.disabled = true;
-      btn.textContent = "Importing...";
 
+      // If DOT# provided, run vetting gate before import
+      if (data.dotNumber) {
+        btn.textContent = "Vetting carrier...";
+        SRL.vetCarrier({ dotNumber: data.dotNumber, mcNumber: data.mcNumber }).then(function(report) {
+          if (report.riskLevel === "CRITICAL") {
+            // Block import for CRITICAL carriers
+            errEl.innerHTML = '<strong>Import blocked</strong> — Carrier scored ' + report.score + '/100 (CRITICAL risk).<br>' +
+              report.flags.map(function(f){ return '&bull; ' + esc(f); }).join('<br>') +
+              '<br><em>Recommendation: REJECT</em>';
+            errEl.className = "form-error visible";
+            btn.disabled = false;
+            btn.textContent = "Import & Verify";
+            return;
+          }
+
+          if (report.riskLevel === "MEDIUM" || report.riskLevel === "HIGH") {
+            var riskWord = report.riskLevel === "HIGH" ? "HIGH" : "MEDIUM";
+            var proceed = confirm(
+              "Vetting Warning: Score " + report.score + "/100 (" + riskWord + " risk)\n\n" +
+              report.flags.join("\n") +
+              "\n\nProceed with import anyway?"
+            );
+            if (!proceed) {
+              btn.disabled = false;
+              btn.textContent = "Import & Verify";
+              return;
+            }
+          }
+
+          // Score acceptable — proceed with import
+          proceedWithImport(data, btn, errEl, report);
+        }).catch(function(err) {
+          // Vetting failed, still allow import with warning
+          var proceed = confirm("Vetting check failed: " + (err.message || "Unknown error") + "\n\nProceed with import without vetting?");
+          if (proceed) {
+            proceedWithImport(data, btn, errEl, null);
+          } else {
+            btn.disabled = false;
+            btn.textContent = "Import & Verify";
+          }
+        });
+      } else {
+        // No DOT# — import directly
+        proceedWithImport(data, btn, errEl, null);
+      }
+    }
+
+    function proceedWithImport(data, btn, errEl, vettingReport) {
+      btn.textContent = "Importing...";
       SRL.importFromDAT(data).then(function(res) {
         var msg = "Carrier imported";
-        if (res.fmcsa && res.fmcsa.verified) msg += " & FMCSA verified";
-        else if (res.fmcsa && !res.fmcsa.verified) msg += " (FMCSA check failed)";
+        if (vettingReport) {
+          msg += " (Vet score: " + vettingReport.score + "/100 " + vettingReport.riskLevel + ")";
+        } else if (res.fmcsa && res.fmcsa.verified) {
+          msg += " & FMCSA verified";
+        } else if (res.fmcsa && !res.fmcsa.verified) {
+          msg += " (FMCSA check failed)";
+        }
         showToast(msg, "success");
         closeImportModal();
-        // Clear form
         ["imp-company","imp-mc","imp-dot","imp-contact","imp-phone","imp-email"].forEach(function(id) {
           document.getElementById(id).value = "";
         });
@@ -711,6 +803,126 @@
         btn.disabled = false;
         btn.textContent = "Import & Verify";
       });
+    }
+
+    /* =========================================
+       CARRIER VETTING
+       ========================================= */
+    function renderVettingBadge(c) {
+      if (c.lastVettingScore === null || c.lastVettingScore === undefined) return '';
+      var risk = c.lastVettingRisk || 'UNKNOWN';
+      var colors = { LOW: '#22c55e', MEDIUM: '#eab308', HIGH: '#f97316', CRITICAL: '#ef4444' };
+      var bg = { LOW: 'rgba(34,197,94,0.12)', MEDIUM: 'rgba(234,179,8,0.12)', HIGH: 'rgba(249,115,22,0.12)', CRITICAL: 'rgba(239,68,68,0.12)' };
+      return '<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:' + (bg[risk] || bg.CRITICAL) + ';color:' + (colors[risk] || colors.CRITICAL) + '">' + c.lastVettingScore + ' ' + risk + '</span>';
+    }
+
+    function runQuickVet(dotNumber, mcNumber, carrierId) {
+      openVettingModal();
+      document.getElementById("vetting-modal-title").textContent = "Vetting Carrier DOT#" + dotNumber;
+      document.getElementById("vetting-modal-body").innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 12px"></div><div style="color:var(--gray-400)">Running 8-point vetting check against FMCSA...</div></div>';
+      document.getElementById("vetting-modal-footer").style.display = "none";
+
+      SRL.vetCarrier({ dotNumber: dotNumber, mcNumber: mcNumber || undefined, carrierId: carrierId || undefined }).then(function(report) {
+        renderVettingReport(report);
+        // Update local carrier state
+        var c = state.allCarriers.find(function(x) { return x.id === carrierId; });
+        if (c) {
+          c.lastVettingScore = report.score;
+          c.lastVettingRisk = report.riskLevel;
+          c.lastVettedAt = report.vettedAt;
+        }
+        renderView();
+        // Re-render detail panel if open
+        if (state.selectedCarrier && state.selectedCarrier.id === carrierId) {
+          openCarrierDetail(carrierId);
+        }
+      }).catch(function(err) {
+        document.getElementById("vetting-modal-body").innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Vetting failed: ' + esc(err.message) + '</div>';
+        document.getElementById("vetting-modal-footer").style.display = "";
+      });
+    }
+
+    function viewVettingReport(carrierId) {
+      openVettingModal();
+      document.getElementById("vetting-modal-title").textContent = "Loading Vetting Report...";
+      document.getElementById("vetting-modal-body").innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 12px"></div></div>';
+      document.getElementById("vetting-modal-footer").style.display = "none";
+
+      SRL.getVettingReport(carrierId).then(function(report) {
+        renderVettingReport(report);
+      }).catch(function(err) {
+        document.getElementById("vetting-modal-body").innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Failed to load report: ' + esc(err.message) + '</div>';
+        document.getElementById("vetting-modal-footer").style.display = "";
+      });
+    }
+
+    function renderVettingReport(report) {
+      var colors = { LOW: '#22c55e', MEDIUM: '#eab308', HIGH: '#f97316', CRITICAL: '#ef4444' };
+      var recColors = { APPROVE: '#22c55e', REVIEW: '#eab308', REJECT: '#ef4444' };
+      var color = colors[report.riskLevel] || '#ef4444';
+      var recColor = recColors[report.recommendation] || '#eab308';
+
+      document.getElementById("vetting-modal-title").textContent = (report.legalName || 'DOT#' + report.dotNumber) + ' — Vetting Scorecard';
+
+      var html = '';
+      // Score gauge + recommendation
+      html += '<div style="display:flex;align-items:center;gap:24px;padding:16px 0;border-bottom:1px solid var(--gray-100)">';
+      html += '<div style="width:80px;height:80px;border-radius:50%;border:4px solid ' + color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+      html += '<span style="font-size:28px;font-weight:800;color:' + color + '">' + report.score + '</span>';
+      html += '</div>';
+      html += '<div>';
+      html += '<div style="font-size:20px;font-weight:700;color:' + color + '">' + report.riskLevel + ' RISK</div>';
+      html += '<div style="margin-top:4px;padding:3px 12px;border-radius:4px;display:inline-block;font-weight:700;font-size:12px;background:' + recColor + '22;color:' + recColor + '">' + report.recommendation + '</div>';
+      html += '<div style="font-size:11px;color:var(--gray-400);margin-top:4px">Vetted: ' + new Date(report.vettedAt).toLocaleString() + '</div>';
+      html += '</div></div>';
+
+      // FMCSA summary
+      html += '<div style="padding:12px 0;border-bottom:1px solid var(--gray-100)">';
+      html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px">FMCSA Data</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px">';
+      html += '<div><span style="color:var(--gray-400)">DOT#:</span> ' + esc(report.dotNumber) + '</div>';
+      html += '<div><span style="color:var(--gray-400)">MC#:</span> ' + esc(report.mcNumber || 'N/A') + '</div>';
+      html += '<div><span style="color:var(--gray-400)">Status:</span> ' + esc(report.fmcsaData.operatingStatus || 'Unknown') + '</div>';
+      html += '<div><span style="color:var(--gray-400)">Entity:</span> ' + esc(report.fmcsaData.entityType || 'Unknown') + '</div>';
+      html += '<div><span style="color:var(--gray-400)">Safety Rating:</span> ' + esc(report.fmcsaData.safetyRating || 'None') + '</div>';
+      html += '<div><span style="color:var(--gray-400)">Insurance:</span> ' + (report.fmcsaData.insuranceOnFile ? 'On file' : '<span style="color:var(--red)">NOT on file</span>') + '</div>';
+      html += '<div><span style="color:var(--gray-400)">Power Units:</span> ' + (report.fmcsaData.totalPowerUnits || 'N/A') + '</div>';
+      html += '<div><span style="color:var(--gray-400)">Drivers:</span> ' + (report.fmcsaData.totalDrivers || 'N/A') + '</div>';
+      html += '</div></div>';
+
+      // Checks
+      html += '<div style="padding:12px 0">';
+      html += '<div style="font-weight:600;font-size:13px;margin-bottom:8px">Vetting Checks</div>';
+      report.checks.forEach(function(check) {
+        var icon = check.result === 'PASS' ? '<span style="color:#22c55e">&#10003;</span>' : check.result === 'WARNING' ? '<span style="color:#eab308">&#9888;</span>' : '<span style="color:#ef4444">&#10007;</span>';
+        var deductText = check.deduction > 0 ? ' <span style="color:#ef4444;font-size:10px">-' + check.deduction + '</span>' : '';
+        html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-50);font-size:12px">';
+        html += '<span style="flex-shrink:0;width:18px;text-align:center">' + icon + '</span>';
+        html += '<div style="flex:1"><span style="font-weight:600">' + esc(check.name) + '</span>' + deductText + '<br><span style="color:var(--gray-400)">' + esc(check.detail) + '</span></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // Flags
+      if (report.flags && report.flags.length > 0) {
+        html += '<div style="padding:10px;border-radius:6px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);margin-top:8px">';
+        html += '<div style="font-weight:600;font-size:12px;color:#ef4444;margin-bottom:4px">Flags (' + report.flags.length + ')</div>';
+        report.flags.forEach(function(f) {
+          html += '<div style="font-size:11px;color:var(--gray-600);padding:2px 0">&bull; ' + esc(f) + '</div>';
+        });
+        html += '</div>';
+      }
+
+      document.getElementById("vetting-modal-body").innerHTML = html;
+      document.getElementById("vetting-modal-footer").style.display = "";
+    }
+
+    function openVettingModal() {
+      document.getElementById("vetting-modal").classList.add("open");
+    }
+
+    function closeVettingModal() {
+      document.getElementById("vetting-modal").classList.remove("open");
     }
 
     /* =========================================

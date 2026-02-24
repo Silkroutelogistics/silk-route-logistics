@@ -3,6 +3,7 @@ import {
   getAllCarriers, getCarrierDetail, registerCarrier, updateCarrier, verifyCarrier,
   getCarrierScore,
 } from "../controllers/carrierController";
+import { vetCarrierEndpoint, getVettingReport } from "../controllers/carrierVettingController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
@@ -40,10 +41,14 @@ router.post("/", validateBody(carrierRegisterSchema), registerCarrier);
 // All routes below require auth
 router.use(authenticate);
 
+// Carrier vetting
+router.post("/vet", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), vetCarrierEndpoint);
+
 // Employee-facing list & detail
 router.get("/", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), validateQuery(carrierQuerySchema), getAllCarriers);
 router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
 router.get("/:id/score", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierScore);
+router.get("/:id/vetting-report", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getVettingReport);
 router.put("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
 
 // Admin verification
