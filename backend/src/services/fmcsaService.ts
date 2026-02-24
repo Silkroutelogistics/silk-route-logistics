@@ -63,40 +63,56 @@ const FMCSA_HEADERS = {
 
 export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACarrierResult> {
   const webKey = env.FMCSA_WEB_KEY;
+  const debugErrors: string[] = [];
 
   // Try keyed endpoint first (more reliable)
   if (webKey) {
     try {
       const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}?webKey=${webKey}`;
-      const response = await fetch(url, { headers: FMCSA_HEADERS });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(url, { headers: FMCSA_HEADERS, signal: controller.signal });
+      clearTimeout(timeout);
 
       if (response.ok) {
         const data = await response.json() as Record<string, any>;
         const result = parseCarrierResponse(data, dotNumber);
         if (result.legalName) return result;
+        debugErrors.push(`Keyed: 200 but no legalName in response`);
+      } else {
+        debugErrors.push(`Keyed: HTTP ${response.status}`);
       }
-      // Non-ok or no legalName — fall through to public endpoint
-      console.log(`[FMCSA] Keyed request status ${response.status} for DOT ${dotNumber}`);
     } catch (err) {
-      console.error(`[FMCSA] Keyed request error for DOT ${dotNumber}:`, err instanceof Error ? err.message : err);
-      // Fall through to public endpoint
+      const msg = err instanceof Error ? err.message : String(err);
+      debugErrors.push(`Keyed: ${msg}`);
+      console.error(`[FMCSA] Keyed request error for DOT ${dotNumber}:`, msg);
     }
+  } else {
+    debugErrors.push("No FMCSA_WEB_KEY configured");
   }
 
   // Try public endpoint (works without key for some DOTs)
   try {
     const publicUrl = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}`;
-    const publicRes = await fetch(publicUrl, { headers: FMCSA_HEADERS });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const publicRes = await fetch(publicUrl, { headers: FMCSA_HEADERS, signal: controller.signal });
+    clearTimeout(timeout);
     if (publicRes.ok) {
       const data = await publicRes.json() as Record<string, any>;
       const result = parseCarrierResponse(data, dotNumber);
       if (result.legalName) return result;
+      debugErrors.push(`Public: 200 but no legalName`);
+    } else {
+      debugErrors.push(`Public: HTTP ${publicRes.status}`);
     }
-  } catch {
-    // Fall through to demo mode
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    debugErrors.push(`Public: ${msg}`);
   }
 
   // Fall back to demo/mock verification
+  console.warn(`[FMCSA] Falling back to demo mode for DOT ${dotNumber}. Errors: ${debugErrors.join(" | ")}`);
   return {
     verified: true,
     legalName: "Carrier Verified (Demo Mode)",
@@ -110,6 +126,6 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     outOfServiceDate: null,
     totalDrivers: null,
     totalPowerUnits: null,
-    errors: ["FMCSA API unavailable - using demo mode"],
+    errors: ["FMCSA API unavailable - using demo mode", ...debugErrors],
   };
 }
