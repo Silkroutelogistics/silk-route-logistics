@@ -48,7 +48,7 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
     operatingStatus: carrier.allowedToOperate === "Y" ? "AUTHORIZED" : "NOT AUTHORIZED",
     entityType: carrier.carrierOperation?.carrierOperationDesc || null,
     safetyRating: carrier.safetyRating || null,
-    insuranceOnFile: carrier.bipdInsuranceOnFile === "Y",
+    insuranceOnFile: carrier.bipdInsuranceOnFile === "Y" || carrier.bipdInsuranceOnFile === "1" || carrier.bipdInsuranceOnFile === 1,
     outOfServiceDate: carrier.oosDate || null,
     totalDrivers: carrier.totalDrivers || null,
     totalPowerUnits: carrier.totalPowerUnits || null,
@@ -56,47 +56,44 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
   };
 }
 
+const FMCSA_HEADERS = {
+  Accept: "application/json",
+  "User-Agent": "SilkRouteLogistics/1.0",
+};
+
 export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACarrierResult> {
-  // Try real FMCSA API without key first (public endpoint)
+  const webKey = env.FMCSA_WEB_KEY;
+
+  // Try keyed endpoint first (more reliable)
+  if (webKey) {
+    try {
+      const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}?webKey=${webKey}`;
+      const response = await fetch(url, { headers: FMCSA_HEADERS });
+
+      if (response.ok) {
+        const data = await response.json() as Record<string, any>;
+        const result = parseCarrierResponse(data, dotNumber);
+        if (result.legalName) return result;
+      }
+      // Non-ok or no legalName — fall through to public endpoint
+      console.log(`[FMCSA] Keyed request status ${response.status} for DOT ${dotNumber}`);
+    } catch (err) {
+      console.error(`[FMCSA] Keyed request error for DOT ${dotNumber}:`, err instanceof Error ? err.message : err);
+      // Fall through to public endpoint
+    }
+  }
+
+  // Try public endpoint (works without key for some DOTs)
   try {
     const publicUrl = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}`;
-    const publicRes = await fetch(publicUrl);
+    const publicRes = await fetch(publicUrl, { headers: FMCSA_HEADERS });
     if (publicRes.ok) {
       const data = await publicRes.json() as Record<string, any>;
       const result = parseCarrierResponse(data, dotNumber);
       if (result.legalName) return result;
     }
   } catch {
-    // Fall through to keyed attempt or mock
-  }
-
-  // Try with web key if configured
-  const webKey = env.FMCSA_WEB_KEY;
-  if (webKey) {
-    try {
-      const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}?webKey=${webKey}`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        return {
-          verified: false, legalName: null, dbaName: null, mcNumber: null,
-          dotNumber, operatingStatus: null, entityType: null, safetyRating: null,
-          insuranceOnFile: false, outOfServiceDate: null, totalDrivers: null,
-          totalPowerUnits: null, errors: [`FMCSA API returned ${response.status}`],
-        };
-      }
-
-      const data = await response.json() as Record<string, any>;
-      return parseCarrierResponse(data, dotNumber);
-    } catch (err) {
-      return {
-        verified: false, legalName: null, dbaName: null, mcNumber: null,
-        dotNumber, operatingStatus: null, entityType: null, safetyRating: null,
-        insuranceOnFile: false, outOfServiceDate: null, totalDrivers: null,
-        totalPowerUnits: null,
-        errors: [`FMCSA API error: ${err instanceof Error ? err.message : "Unknown error"}`],
-      };
-    }
+    // Fall through to demo mode
   }
 
   // Fall back to demo/mock verification
