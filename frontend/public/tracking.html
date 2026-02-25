@@ -116,7 +116,28 @@
           <h3>Estimated Delivery</h3>
           <div class="loc-value" id="eta">—</div>
           <div class="loc-time" id="etaNote"></div>
+          <div class="eta-confidence" id="etaConfidence" style="display:none"></div>
         </div>
+      </div>
+
+      <!-- Temperature (reefer loads) -->
+      <div id="tempSection" class="temp-section d-none">
+        <h3>Temperature Monitoring</h3>
+        <div class="temp-display">
+          <span class="temp-range" id="tempRange"></span>
+        </div>
+      </div>
+
+      <!-- Stops (FULL access) -->
+      <div id="stopsSection" class="stops-section d-none">
+        <h3>Route Stops</h3>
+        <div class="stops-list" id="stopsList"></div>
+      </div>
+
+      <!-- POD Download -->
+      <div id="podSection" class="pod-section d-none">
+        <h3>Proof of Delivery</h3>
+        <a id="podLink" class="pod-btn" target="_blank">Download POD</a>
       </div>
 
       <div class="timeline-section">
@@ -244,8 +265,20 @@
           }
         }
 
-        // ETA
-        if (d.estimatedDelivery) {
+        // ETA — prefer predictive ETA if available
+        if (d.predictiveEta) {
+          var pe = d.predictiveEta;
+          document.getElementById('eta').textContent =
+            new Date(pe.expected).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          var confPct = Math.round(pe.confidence * 100);
+          var confEl = document.getElementById('etaConfidence');
+          confEl.style.display = 'block';
+          confEl.innerHTML = '<span style="font-size:0.75rem;color:' + (confPct >= 70 ? '#16A34A' : confPct >= 40 ? '#EAB308' : '#94a3b8') + '">' +
+            confPct + '% confidence</span>' +
+            '<br><span style="font-size:0.7rem;color:#64748b">Window: ' +
+            new Date(pe.optimistic).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + ' – ' +
+            new Date(pe.pessimistic).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</span>';
+        } else if (d.estimatedDelivery) {
           document.getElementById('eta').textContent =
             new Date(d.estimatedDelivery).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         }
@@ -253,6 +286,41 @@
           document.getElementById('eta').textContent = 'Delivered';
           document.getElementById('etaNote').textContent =
             new Date(d.actualDelivery).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+          document.getElementById('etaConfidence').style.display = 'none';
+        }
+
+        // Temperature section (reefer)
+        if (d.temperatureControlled && d.tempRange) {
+          document.getElementById('tempSection').style.display = 'block';
+          document.getElementById('tempSection').classList.remove('d-none');
+          document.getElementById('tempRange').textContent = 'Required: ' + d.tempRange.min + '°F – ' + d.tempRange.max + '°F';
+        }
+
+        // Stops section (FULL access)
+        if (d.stops && d.stops.length > 0) {
+          document.getElementById('stopsSection').style.display = 'block';
+          document.getElementById('stopsSection').classList.remove('d-none');
+          var stopsHtml = '';
+          d.stops.forEach(function(s) {
+            var icon = s.type === 'PICKUP' ? '&#128230;' : '&#127968;';
+            var statusText = s.departed ? 'Completed' : s.arrived ? 'At Stop' : 'Upcoming';
+            var statusColor = s.departed ? '#16A34A' : s.arrived ? '#F97316' : '#64748b';
+            stopsHtml += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08)">' +
+              '<span style="font-size:1.2rem">' + icon + '</span>' +
+              '<div style="flex:1"><div style="font-weight:600;font-size:0.85rem">Stop ' + s.stopNumber + ': ' + s.type + '</div>' +
+              '<div style="font-size:0.78rem;color:#94a3b8">' + s.city + ', ' + s.state + '</div></div>' +
+              '<span style="font-size:0.75rem;color:' + statusColor + ';font-weight:600">' + statusText + '</span>' +
+              (s.onTime === true ? '<span style="font-size:0.7rem;color:#16A34A">On Time</span>' : s.onTime === false ? '<span style="font-size:0.7rem;color:#EF4444">Late</span>' : '') +
+              '</div>';
+          });
+          document.getElementById('stopsList').innerHTML = stopsHtml;
+        }
+
+        // POD download
+        if (d.podUrl) {
+          document.getElementById('podSection').style.display = 'block';
+          document.getElementById('podSection').classList.remove('d-none');
+          document.getElementById('podLink').href = d.podUrl;
         }
 
         // Timeline

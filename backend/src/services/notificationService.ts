@@ -16,7 +16,10 @@ export type NotificationType =
   | "DISPUTE_FILED"
   | "DISPUTE_RESOLVED"
   | "CHECK_CALL_DUE"
-  | "CREDIT_ALERT";
+  | "CREDIT_ALERT"
+  | "LOAD_UPDATE"
+  | "PASSWORD_EXPIRY"
+  | "POD_RECEIVED";
 
 /**
  * Create a single notification for a user.

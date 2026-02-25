@@ -53,6 +53,11 @@ import aiRoutes from "./ai";
 import blogRoutes from "./blog";
 import shipperPortalRoutes from "./shipperPortal";
 import delayRoutes from "./delays";
+import loadTrackingRoutes from "./loadTracking";
+import loadStopRoutes from "./loadStops";
+import loadAccessorialRoutes from "./loadAccessorials";
+import trackTraceBoardRoutes from "./trackTraceBoard";
+import trackTraceSSERoutes from "./trackTraceSSE";
 
 const router = Router();
 
@@ -194,5 +199,10 @@ router.use("/analytics", analyticsRoutes);
 router.use("/ai", aiRoutes);
 router.use("/shipper-portal", shipperPortalRoutes);
 router.use("/delays", delayRoutes);
+router.use("/load-tracking", loadTrackingRoutes);
+router.use("/load-stops", loadStopRoutes);
+router.use("/load-accessorials", loadAccessorialRoutes);
+router.use("/track-trace", trackTraceBoardRoutes);
+router.use("/track-trace", trackTraceSSERoutes);
 
 export default router;

@@ -12,6 +12,10 @@ import { processQueue } from "./aiLearningLoop/feedbackCollector";
 import { runAnomalyScan } from "./aiLearningLoop/anomalyDetector";
 import { runFullTrainingCycle } from "./aiLearningLoop/modelTrainer";
 import { scanActiveShipments } from "./shipmentMonitorService";
+import { runAlertScanner } from "./trackTraceAlertEngine";
+import { scanGeofences } from "./geofenceService";
+import { processSamsaraLocations } from "./samsaraService";
+import { processMotiveLocations } from "./motiveService";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -454,6 +458,37 @@ export function startSchedulers() {
       const result = await scanActiveShipments();
       console.log(`[Scheduler] Risk scan: ${result.scanned} loads, ${result.critical} critical, ${result.highRisk} high`);
     });
+  });
+
+  // ─── Track & Trace Phase 3 Crons ──────────────────────────────────
+
+  // Geofence scanner: every 5 minutes
+  cron.schedule("*/5 * * * *", async () => {
+    console.log("[Scheduler] Running geofence scanner...");
+    await withLock("geofence-scanner", 4 * 60 * 1000, scanGeofences);
+  });
+
+  // ELD GPS sync: every 15 minutes at :03, :18, :33, :48
+  cron.schedule("3,18,33,48 * * * *", async () => {
+    console.log("[Scheduler] Running ELD GPS sync...");
+    await withLock("eld-gps-sync", 10 * 60 * 1000, async () => {
+      const [samsara, motive] = await Promise.allSettled([
+        processSamsaraLocations(),
+        processMotiveLocations(),
+      ]);
+      const sRes = samsara.status === "fulfilled" ? samsara.value : { processed: 0, matched: 0 };
+      const mRes = motive.status === "fulfilled" ? motive.value : { processed: 0, matched: 0 };
+      const total = sRes.processed + mRes.processed;
+      if (total > 0) {
+        console.log(`[Scheduler] ELD sync: Samsara ${sRes.processed}/${sRes.matched}, Motive ${mRes.processed}/${mRes.matched}`);
+      }
+    });
+  });
+
+  // Alert engine (ETA vs appointment): every 15 minutes at :07, :22, :37, :52
+  cron.schedule("7,22,37,52 * * * *", async () => {
+    console.log("[Scheduler] Running track & trace alert engine...");
+    await withLock("tt-alert-engine", 10 * 60 * 1000, runAlertScanner);
   });
 
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);

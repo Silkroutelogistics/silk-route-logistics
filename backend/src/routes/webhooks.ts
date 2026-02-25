@@ -1,9 +1,13 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
 import { openPhoneWebhook } from "../controllers/communicationController";
 import { handleCheckCallResponse } from "../services/checkCallAutomation";
 import { handleResendWebhook } from "../services/emailSequenceService";
+import { processSamsaraWebhook } from "../services/samsaraService";
+import { processMotiveWebhook } from "../services/motiveService";
+import { parseCheckCallFromEmail } from "../services/emailCheckCallParser";
 
 const router = Router();
 
@@ -15,7 +19,6 @@ router.post("/openphone", (req, res, next) => {
       return res.status(401).json({ error: "Missing webhook signature" });
     }
 
-    const crypto = require("crypto");
     const payload = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
     const expected = crypto
       .createHmac("sha256", env.OPENPHONE_WEBHOOK_SECRET)
@@ -202,9 +205,112 @@ router.post("/inbound-email", async (req, res) => {
     });
 
     console.log(`[Inbound Email] Stored as ${entityType}/${entityId}`);
+
+    // Auto-try check-call parsing for carrier emails
+    if (entityType === "CARRIER" && body) {
+      try {
+        const ccResult = await parseCheckCallFromEmail(senderEmail, subject || "", body);
+        if (ccResult) {
+          console.log(`[Inbound Email] Auto-parsed check-call: ${ccResult.status} at ${ccResult.city}, ${ccResult.state}`);
+        }
+      } catch { /* non-blocking */ }
+    }
+
     res.json({ success: true });
   } catch (err: any) {
     console.error("[Inbound Email] Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Samsara ELD Webhook ───
+router.post("/samsara", async (req, res) => {
+  try {
+    // Verify signature if secret is configured
+    if (env.SAMSARA_WEBHOOK_SECRET) {
+      const signature = req.headers["x-samsara-hmac-sha256"] as string;
+      if (!signature) {
+        res.status(401).json({ error: "Missing webhook signature" });
+        return;
+      }
+      const payload = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+      const expected = crypto.createHmac("sha256", env.SAMSARA_WEBHOOK_SECRET).update(payload).digest("hex");
+      try {
+        if (!crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expected, "hex"))) {
+          res.status(403).json({ error: "Invalid signature" });
+          return;
+        }
+      } catch {
+        res.status(403).json({ error: "Invalid signature" });
+        return;
+      }
+    }
+
+    const { eventType, data } = req.body;
+    if (eventType && data) {
+      await processSamsaraWebhook(eventType, data);
+      console.log(`[Webhook] Samsara event processed: ${eventType}`);
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[Webhook] Samsara error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Motive ELD Webhook ───
+router.post("/motive", async (req, res) => {
+  try {
+    // Verify signature if secret is configured
+    if (env.MOTIVE_WEBHOOK_SECRET) {
+      const signature = req.headers["x-motive-signature"] as string;
+      if (!signature) {
+        res.status(401).json({ error: "Missing webhook signature" });
+        return;
+      }
+      const payload = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+      const expected = crypto.createHmac("sha256", env.MOTIVE_WEBHOOK_SECRET).update(payload).digest("hex");
+      try {
+        if (!crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expected, "hex"))) {
+          res.status(403).json({ error: "Invalid signature" });
+          return;
+        }
+      } catch {
+        res.status(403).json({ error: "Invalid signature" });
+        return;
+      }
+    }
+
+    const { event_type, data } = req.body;
+    if (event_type && data) {
+      await processMotiveWebhook(event_type, data);
+      console.log(`[Webhook] Motive event processed: ${event_type}`);
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[Webhook] Motive error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Inbound Email Check-Call Parser (Claude Cowork Prep) ───
+router.post("/inbound-checkcall", async (req, res) => {
+  try {
+    const { from, subject, text } = req.body;
+    if (!from || !text) {
+      res.status(400).json({ error: "Missing from or text" });
+      return;
+    }
+
+    const result = await parseCheckCallFromEmail(from, subject || "", text);
+    if (result) {
+      console.log(`[Webhook] Email check-call parsed: Load ${result.loadRef} → ${result.status}`);
+      res.json({ success: true, ...result });
+    } else {
+      res.json({ success: false, message: "Could not extract check-call data from email" });
+    }
+  } catch (err: any) {
+    console.error("[Webhook] Email check-call error:", err);
     res.status(500).json({ error: err.message });
   }
 });

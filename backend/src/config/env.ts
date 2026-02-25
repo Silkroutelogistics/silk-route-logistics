@@ -27,6 +27,11 @@ const envSchema = z.object({
   MILEMAKER_CLIENT_ID: z.string().optional(),
   MILEMAKER_CLIENT_SECRET: z.string().optional(),
   PCMILER_API_KEY: z.string().optional(),
+  // ELD Providers
+  SAMSARA_API_TOKEN: z.string().optional(),
+  MOTIVE_API_KEY: z.string().optional(),
+  SAMSARA_WEBHOOK_SECRET: z.string().optional(),
+  MOTIVE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

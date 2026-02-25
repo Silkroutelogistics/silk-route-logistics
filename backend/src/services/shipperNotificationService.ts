@@ -285,6 +285,98 @@ export async function sendShipperMilestoneEmail(loadId: string, newStatus: strin
 }
 
 /**
+ * Send delay alert email to shipper for RED/CRITICAL loads.
+ * Called by trackTraceAlertEngine when ETA exceeds appointment.
+ */
+export async function sendShipperDelayNotification(
+  load: any,
+  alert: { level: string; reason: string; eta?: Date | null; bufferHours?: number },
+  deliveryStop: any
+) {
+  // Resolve shipper email from customer or poster
+  let shipperEmail: string | null = null;
+  if (load.customer?.email) {
+    shipperEmail = load.customer.email;
+  } else if (load.customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: load.customerId },
+      select: { email: true },
+    });
+    shipperEmail = customer?.email || null;
+  }
+
+  if (!shipperEmail) return;
+
+  // Dedup: check if delay notification already sent in last 2 hours
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const alreadySent = await prisma.notification.findFirst({
+    where: {
+      type: "LOAD_UPDATE",
+      title: { contains: `Shipper Delay ${alert.level}: ${load.referenceNumber || load.loadNumber}` },
+      createdAt: { gte: twoHoursAgo },
+    },
+  });
+  if (alreadySent) return;
+
+  const refNum = load.referenceNumber || load.loadNumber || load.id;
+  const origin = `${load.originCity || ""}, ${load.originState || ""}`;
+  const dest = deliveryStop
+    ? `${deliveryStop.city || load.destCity || ""}, ${deliveryStop.state || load.destState || ""}`
+    : `${load.destCity || ""}, ${load.destState || ""}`;
+  const etaStr = alert.eta
+    ? new Date(alert.eta).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    : "Unknown";
+  const apptStr = deliveryStop?.appointmentDate
+    ? `${new Date(deliveryStop.appointmentDate).toLocaleDateString("en-US", { dateStyle: "medium" })} ${deliveryStop.appointmentTime || ""}`
+    : load.deliveryDate
+      ? load.deliveryDate.toLocaleDateString("en-US", { dateStyle: "medium" })
+      : "N/A";
+
+  const levelColor = alert.level === "CRITICAL" ? "#dc2626" : "#ef4444";
+  const levelLabel = alert.level === "CRITICAL" ? "CRITICAL DELAY" : "DELAY ALERT";
+
+  const body = `
+    <div style="background:${levelColor};color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;text-align:center">
+      <h2 style="margin:0;font-size:18px">${levelLabel}: Shipment ${refNum}</h2>
+    </div>
+    <div style="padding:20px">
+      <p style="color:#64748b;margin:0 0 16px">${alert.reason}</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">Reference</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">${refNum}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Route</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${origin} &rarr; ${dest}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Scheduled Delivery</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${apptStr}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Current ETA</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:${levelColor};font-weight:600">${etaStr}</td></tr>
+        <tr><td style="padding:8px 12px;color:#64748b">Status</td>
+            <td style="padding:8px 12px;color:${levelColor};font-weight:600">${alert.level}</td></tr>
+      </table>
+      <p style="color:#64748b;font-size:14px">Our team has been notified and is actively working to minimize the delay. We will keep you updated as new information becomes available.</p>
+      <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because you have an active shipment with Silk Route Logistics.</p>
+    </div>
+  `;
+
+  await sendEmail(shipperEmail, `${levelLabel}: Shipment ${refNum}`, wrap(body));
+
+  // Record notification for dedup
+  if (load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD_UPDATE",
+        title: `Shipper Delay ${alert.level}: ${refNum}`,
+        message: `Delay alert sent to ${shipperEmail} — ${alert.reason}`,
+        actionUrl: "/ae/track-trace.html",
+      },
+    });
+  }
+
+  console.log(`[ShipperNotify] ${alert.level} delay alert sent to ${shipperEmail} for ${refNum}`);
+}
+
+/**
  * Cron handler: query all IN_TRANSIT loads and send shipper transit updates.
  */
 export async function processShipperTransitUpdates() {

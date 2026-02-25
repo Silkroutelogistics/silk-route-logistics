@@ -469,6 +469,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   carrierProfile  CarrierProfile?
+  eldDevices      ELDDeviceMapping[]
   loadsPosted     Load[]          @relation("LoadPoster")
   loadsCarried    Load[]          @relation("LoadCarrier")
   invoices        Invoice[]
@@ -757,6 +758,11 @@ model Load {
   driverPhone     String?
   truckNumber     String?
   trailerNumber   String?
+  hookType        HookType?
+
+  // Track & Trace fields
+  customerRef     String?   @map("customer_ref")
+  urgencyLevel    String    @default("STANDARD") @db.VarChar(20) @map("urgency_level")
 
   // Financials
   rate            Float
@@ -852,6 +858,13 @@ model Load {
   fallOffEvents   FallOffEvent[]
   claims          Claim[]
   delays          LoadDelay[]
+
+  // Track & Trace relations
+  loadStops         LoadStop[]
+  trackingEvents    LoadTrackingEvent[]
+  loadAccessorials  LoadAccessorial[]
+  shipperTrackingTokens ShipperTrackingToken[]
+  eldEvents         ELDEvent[]
 
   @@index([status])
   @@index([loadNumber])
@@ -2671,4 +2684,248 @@ model LoadDelay {
   @@index([reasonCode])
   @@index([reportedAt])
   @@map("load_delays")
+}
+
+// ─── Track & Trace Enums ──────────────────────────────────
+
+enum StopType {
+  PICKUP
+  DELIVERY
+}
+
+enum HookType {
+  PRELOADED
+  LIVE_LOAD_UNLOAD
+  DROP_HOOK
+}
+
+enum TrackingEventType {
+  STATUS_CHANGE
+  LOCATION_UPDATE
+  CHECK_CALL
+  ALERT
+  DOCUMENT
+  NOTE
+  TEMPERATURE
+  GEOFENCE
+}
+
+enum LocationSource {
+  ELD
+  CARRIER_PORTAL
+  CHECK_CALL_EMAIL
+  AE_MANUAL
+  GEOFENCE
+}
+
+enum AccessorialType {
+  DETENTION_PU
+  DETENTION_DEL
+  LUMPER
+  TONU
+  LAYOVER
+  DEADHEAD
+  DRIVER_ASSIST
+  REEFER_FUEL
+  HAZMAT
+  INSIDE_DELIVERY
+  LIFTGATE
+  PALLET_EXCHANGE
+}
+
+enum AccessorialStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TrackingAccessLevel {
+  FULL
+  STATUS_ONLY
+}
+
+enum AlertLevel {
+  GREEN
+  YELLOW
+  RED
+  CRITICAL
+}
+
+// ─── Track & Trace Models ──────────────────────────────────
+
+model LoadStop {
+  id              String    @id @default(cuid())
+  loadId          String    @map("load_id")
+  stopNumber      Int       @map("stop_number")
+  stopType        StopType  @map("stop_type")
+  facilityName    String    @map("facility_name")
+  address         String
+  city            String
+  state           String    @db.VarChar(2)
+  zip             String    @db.VarChar(10)
+  latitude        Decimal?  @db.Decimal(10, 7)
+  longitude       Decimal?  @db.Decimal(10, 7)
+  appointmentDate DateTime? @map("appointment_date") @db.Date
+  appointmentTime String?   @map("appointment_time")
+  appointmentRef  String?   @map("appointment_ref") @db.VarChar(100)
+  actualArrival   DateTime? @map("actual_arrival")
+  actualDeparture DateTime? @map("actual_departure")
+  detentionStart  DateTime? @map("detention_start")
+  detentionMinutes Int?     @map("detention_minutes")
+  hookType        HookType? @map("hook_type")
+  trailerNumber   String?   @map("trailer_number") @db.VarChar(50)
+  sealNumber      String?   @map("seal_number") @db.VarChar(50)
+  commodity       String?
+  weight          Float?
+  pieces          Int?
+  onTime          Boolean?  @map("on_time")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  load            Load      @relation(fields: [loadId], references: [id])
+  trackingEvents  LoadTrackingEvent[]
+  accessorials    LoadAccessorial[]
+
+  @@index([loadId])
+  @@index([loadId, stopNumber])
+  @@map("load_stops")
+}
+
+model LoadTrackingEvent {
+  id              String            @id @default(cuid())
+  loadId          String            @map("load_id")
+  stopId          String?           @map("stop_id")
+  eventType       TrackingEventType @map("event_type")
+  statusFrom      LoadStatus?       @map("status_from")
+  statusTo        LoadStatus?       @map("status_to")
+  latitude        Decimal?          @db.Decimal(10, 7)
+  longitude       Decimal?          @db.Decimal(10, 7)
+  locationCity    String?           @map("location_city") @db.VarChar(100)
+  locationState   String?           @map("location_state") @db.VarChar(2)
+  locationSource  LocationSource?   @map("location_source")
+  etaDestination  DateTime?         @map("eta_destination")
+  temperatureF    Decimal?          @map("temperature_f") @db.Decimal(5, 1)
+  alertLevel      AlertLevel?       @map("alert_level")
+  notes           String?
+  createdBy       String?           @map("created_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  load            Load              @relation(fields: [loadId], references: [id])
+  stop            LoadStop?         @relation(fields: [stopId], references: [id])
+
+  @@index([loadId])
+  @@index([loadId, createdAt])
+  @@index([eventType])
+  @@index([alertLevel])
+  @@map("load_tracking_events")
+}
+
+model LoadAccessorial {
+  id               String            @id @default(cuid())
+  loadId           String            @map("load_id")
+  stopId           String?           @map("stop_id")
+  type             AccessorialType
+  amount           Decimal           @db.Decimal(10, 2)
+  quantity         Decimal?          @db.Decimal(10, 2)
+  unit             String?           @db.VarChar(20)
+  rate             Decimal?          @db.Decimal(10, 2)
+  status           AccessorialStatus @default(PENDING)
+  approvedBy       String?           @map("approved_by")
+  approvedAt       DateTime?         @map("approved_at")
+  rejectedReason   String?           @map("rejected_reason")
+  receiptDocId     String?           @map("receipt_document_id")
+  billedTo         String?           @map("billed_to") @db.VarChar(20)
+  carrierInvoiceId String?           @map("carrier_invoice_id")
+  shipperInvoiceId String?           @map("shipper_invoice_id")
+  notes            String?
+  createdBy        String?           @map("created_by")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  load             Load              @relation(fields: [loadId], references: [id])
+  stop             LoadStop?         @relation(fields: [stopId], references: [id])
+
+  @@index([loadId])
+  @@index([status])
+  @@map("load_accessorials")
+}
+
+model ShipperTrackingToken {
+  id              String              @id @default(cuid())
+  loadId          String              @map("load_id")
+  token           String              @unique @db.VarChar(12)
+  shipperId       String              @map("shipper_id")
+  accessLevel     TrackingAccessLevel @map("access_level")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  expiresAt       DateTime            @map("expires_at")
+  lastAccessedAt  DateTime?           @map("last_accessed_at")
+  accessCount     Int                 @default(0) @map("access_count")
+
+  load            Load                @relation(fields: [loadId], references: [id])
+
+  @@index([token])
+  @@index([loadId])
+  @@map("shipper_tracking_tokens")
+}
+
+// ─── ELD / Telematics Integration (Phase 5) ───
+
+model ELDEvent {
+  id              String    @id @default(cuid())
+  provider        String    @db.VarChar(20)   // SAMSARA, MOTIVE, OMNITRACS
+  externalId      String?   @map("external_id")
+  eventType       String    @map("event_type") @db.VarChar(40) // GPS_PING, HOS_CHANGE, FAULT, GEOFENCE_ENTRY
+  vehicleId       String?   @map("vehicle_id")
+  vehicleName     String?   @map("vehicle_name")
+  driverId        String?   @map("driver_id")
+  driverName      String?   @map("driver_name")
+  latitude        Decimal?  @db.Decimal(10, 6)
+  longitude       Decimal?  @db.Decimal(10, 6)
+  speedMph        Float?    @map("speed_mph")
+  heading         Float?
+  engineHours     Float?    @map("engine_hours")
+  odometerMiles   Float?    @map("odometer_miles")
+  fuelPct         Float?    @map("fuel_pct")
+  hosStatus       String?   @map("hos_status") @db.VarChar(20) // DRIVING, ON_DUTY, SLEEPER, OFF_DUTY
+  hosDriveRemain  Float?    @map("hos_drive_remain")
+  hosOnDutyRemain Float?    @map("hos_on_duty_remain")
+  address         String?
+  city            String?
+  state           String?   @db.VarChar(5)
+  payload         Json?
+  loadId          String?   @map("load_id")
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  load            Load?     @relation(fields: [loadId], references: [id])
+
+  @@index([provider, vehicleId])
+  @@index([loadId])
+  @@index([createdAt])
+  @@index([eventType])
+  @@map("eld_events")
+}
+
+model ELDDeviceMapping {
+  id              String    @id @default(cuid())
+  provider        String    @db.VarChar(20)
+  externalVehicleId String  @map("external_vehicle_id")
+  externalDriverId  String? @map("external_driver_id")
+  carrierId       String?   @map("carrier_id")
+  driverName      String?   @map("driver_name")
+  driverPhone     String?   @map("driver_phone")
+  vehicleName     String?   @map("vehicle_name")
+  isActive        Boolean   @default(true) @map("is_active")
+  lastSeenAt      DateTime? @map("last_seen_at")
+  lastLatitude    Decimal?  @map("last_latitude") @db.Decimal(10, 6)
+  lastLongitude   Decimal?  @map("last_longitude") @db.Decimal(10, 6)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  carrier         User?     @relation(fields: [carrierId], references: [id])
+
+  @@unique([provider, externalVehicleId])
+  @@index([carrierId])
+  @@map("eld_device_mappings")
 }
