@@ -28,6 +28,7 @@ export function requestLogger(req: AuthRequest, res: Response, next: NextFunctio
       path: req.path,
       statusCode: res.statusCode,
       duration,
+      requestId: (req as any).requestId || null,
       userAgent: req.headers["user-agent"] || null,
     };
 

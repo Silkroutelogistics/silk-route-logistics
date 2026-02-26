@@ -1,0 +1,11 @@
+# Silk Route Logistics — robots.txt
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /accounting/
+Disallow: /carrier/dashboard/
+Disallow: /shipper/dashboard/
+Disallow: /auth/
+Disallow: /api/
+
+Sitemap: https://silkroutelogistics.ai/sitemap.xml

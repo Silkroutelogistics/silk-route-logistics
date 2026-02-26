@@ -20,6 +20,7 @@ import routes from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeInput } from "./middleware/security";
 import { auditMiddleware } from "./middleware/auditTrail";
+import { requestIdMiddleware } from "./middleware/requestId";
 import { startSchedulers } from "./services/schedulerService";
 import { initCronJobs } from "./cron";
 import { seedCronRegistry } from "./services/cronRegistryService";
@@ -31,6 +32,9 @@ const BUILD_VERSION = Date.now().toString(); // changes on every deploy restart
 app.set("trust proxy", 1);
 
 // ─── Security Middleware (order matters) ────────────────────
+
+// 0. Request ID — must be first for correlation across all middleware
+app.use(requestIdMiddleware);
 
 // 1. Helmet with strict CSP
 app.use(
@@ -93,7 +97,7 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  exposedHeaders: ["Content-Disposition"],
+  exposedHeaders: ["Content-Disposition", "X-Request-ID"],
   maxAge: 86400,
 };
 
