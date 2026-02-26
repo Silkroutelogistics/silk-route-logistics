@@ -20,6 +20,18 @@ function daysBetween(a: Date, b: Date): number {
   return Math.floor((b.getTime() - a.getTime()) / 86_400_000);
 }
 
+/** Centralized quick-pay fee schedule — single source of truth */
+function getQuickPayFeePercent(tier: string): number {
+  switch (tier) {
+    case "FLASH": return 5;
+    case "EXPRESS": return 3.5;
+    case "PRIORITY": return 2;
+    case "PARTNER": return 1.5;
+    case "ELITE": return 0;
+    default: return 0; // STANDARD
+  }
+}
+
 function paginate(query: Record<string, any>) {
   const page = Math.max(1, parseInt(query.page as string) || 1);
   const limit = Math.min(200, Math.max(1, parseInt(query.limit as string) || 25));
@@ -284,14 +296,22 @@ export async function createInvoice(req: AuthRequest, res: Response) {
       return;
     }
 
-    // Generate invoice number: INV-YYYYMMDD-XXXX
+    // Generate invoice number atomically: INV-YYYYMMDD-XXXX
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const existingCount = await prisma.invoice.count({
-      where: { invoiceNumber: { startsWith: `INV-${todayStr}` } },
-    });
-    const invoiceNumber = `INV-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
+    let invoiceNumber: string;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const existingCount = await prisma.invoice.count({
+        where: { invoiceNumber: { startsWith: `INV-${todayStr}` } },
+      });
+      invoiceNumber = `INV-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
+      // Check uniqueness before creating
+      const dup = await prisma.invoice.findUnique({ where: { invoiceNumber } });
+      if (!dup) break;
+      if (attempt === 4) invoiceNumber = `INV-${todayStr}-${String(existingCount + 2).padStart(4, "0")}`;
+    }
 
-    const totalAmount = (lineHaulAmount ?? 0) + (fuelSurchargeAmount ?? 0) + (accessorialsAmount ?? 0) || amount;
+    const componentSum = Math.round(((lineHaulAmount ?? 0) + (fuelSurchargeAmount ?? 0) + (accessorialsAmount ?? 0)) * 100) / 100;
+    const totalAmount = componentSum > 0 ? componentSum : amount;
 
     const invoice = await prisma.invoice.create({
       data: {
@@ -313,7 +333,7 @@ export async function createInvoice(req: AuthRequest, res: Response) {
                 description: item.description,
                 quantity: item.quantity ?? 1,
                 rate: item.rate,
-                amount: item.amount ?? item.rate * (item.quantity ?? 1),
+                amount: Math.round((item.amount ?? item.rate * (item.quantity ?? 1)) * 100) / 100,
                 type: item.type ?? "LINEHAUL",
                 sortOrder: idx,
               })),
@@ -380,7 +400,7 @@ export async function updateInvoice(req: AuthRequest, res: Response) {
                 description: item.description,
                 quantity: item.quantity ?? 1,
                 rate: item.rate,
-                amount: item.amount ?? item.rate * (item.quantity ?? 1),
+                amount: Math.round((item.amount ?? item.rate * (item.quantity ?? 1)) * 100) / 100,
                 type: item.type ?? "LINEHAUL",
                 sortOrder: idx,
               })),
@@ -749,22 +769,21 @@ export async function preparePayment(req: AuthRequest, res: Response) {
 
     // Calculate quick-pay discount based on CPP tier
     const tier = paymentTier ?? "STANDARD";
-    let quickPayFeePercent = 0;
-    if (tier === "FLASH") quickPayFeePercent = 5;
-    else if (tier === "EXPRESS") quickPayFeePercent = 3.5;
-    else if (tier === "PRIORITY") quickPayFeePercent = 2;
-    else if (tier === "PARTNER") quickPayFeePercent = 1.5;
-    else if (tier === "ELITE") quickPayFeePercent = 0;
-
-    const quickPayFeeAmount = grossAmount * (quickPayFeePercent / 100);
+    const quickPayFeePercent = getQuickPayFeePercent(tier);
+    const quickPayFeeAmount = Math.round(grossAmount * (quickPayFeePercent / 100) * 100) / 100;
     const netAmount = grossAmount - quickPayFeeAmount;
 
-    // Generate payment number
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const existingCount = await prisma.carrierPay.count({
-      where: { paymentNumber: { startsWith: `CP-${todayStr}` } },
-    });
-    const paymentNumber = `CP-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
+    // Generate payment number with collision retry
+    const todayStr2 = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    let paymentNumber: string;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const existingCount = await prisma.carrierPay.count({
+        where: { paymentNumber: { startsWith: `CP-${todayStr2}` } },
+      });
+      paymentNumber = `CP-${todayStr2}-${String(existingCount + 1 + attempt).padStart(4, "0")}`;
+      const dup = await prisma.carrierPay.findUnique({ where: { paymentNumber } });
+      if (!dup) break;
+    }
 
     const payment = await prisma.carrierPay.create({
       data: {
@@ -835,12 +854,7 @@ export async function updatePayment(req: AuthRequest, res: Response) {
     const tier = paymentTier ?? existing.paymentTier;
     let quickPayFeePercent = existing.quickPayFeePercent ?? 0;
     if (paymentTier) {
-      if (tier === "FLASH") quickPayFeePercent = 5;
-      else if (tier === "EXPRESS") quickPayFeePercent = 3.5;
-      else if (tier === "PRIORITY") quickPayFeePercent = 2;
-      else if (tier === "PARTNER") quickPayFeePercent = 1.5;
-      else if (tier === "ELITE") quickPayFeePercent = 0;
-      else quickPayFeePercent = 0;
+      quickPayFeePercent = getQuickPayFeePercent(tier);
     }
 
     const quickPayFeeAmount = grossAmount * (quickPayFeePercent / 100);
