@@ -279,10 +279,10 @@ export async function finalizeRateConfirmation(req: AuthRequest, res: Response) 
   if (fd.pickupInstructions) loadUpdate.pickupInstructions = fd.pickupInstructions;
   if (fd.deliveryInstructions) loadUpdate.deliveryInstructions = fd.deliveryInstructions;
 
-  // Recalculate margins if we have both rates
+  // Recalculate margins if we have both rates (guard against division by zero)
   const custRate = (fd.customerRate ?? rc.load.customerRate ?? rc.load.rate) as number;
   const carrRate = fd.lineHaulRate ?? rc.load.carrierRate;
-  if (custRate && carrRate) {
+  if (custRate && custRate > 0 && carrRate && carrRate > 0) {
     loadUpdate.grossMargin = custRate - carrRate;
     loadUpdate.marginPercent = Math.round(((custRate - carrRate) / custRate) * 10000) / 100;
   }

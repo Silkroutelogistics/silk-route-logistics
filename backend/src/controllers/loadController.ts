@@ -209,12 +209,48 @@ export async function getLoadById(req: AuthRequest, res: Response) {
   res.json(load);
 }
 
+// Valid load status transitions — state machine enforcement
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ["PLANNED", "POSTED", "CANCELLED"],
+  PLANNED: ["POSTED", "CANCELLED"],
+  POSTED: ["TENDERED", "BOOKED", "CANCELLED"],
+  TENDERED: ["CONFIRMED", "BOOKED", "POSTED", "CANCELLED"],
+  CONFIRMED: ["BOOKED", "DISPATCHED", "CANCELLED"],
+  BOOKED: ["DISPATCHED", "CANCELLED", "TONU"],
+  DISPATCHED: ["AT_PICKUP", "CANCELLED", "TONU"],
+  AT_PICKUP: ["LOADED", "PICKED_UP", "CANCELLED", "TONU"],
+  LOADED: ["IN_TRANSIT", "PICKED_UP"],
+  PICKED_UP: ["IN_TRANSIT"],
+  IN_TRANSIT: ["AT_DELIVERY"],
+  AT_DELIVERY: ["DELIVERED"],
+  DELIVERED: ["POD_RECEIVED", "INVOICED", "COMPLETED"],
+  POD_RECEIVED: ["INVOICED", "COMPLETED"],
+  INVOICED: ["COMPLETED"],
+  COMPLETED: [],
+  TONU: [],
+  CANCELLED: [],
+};
+
+function isValidTransition(from: string, to: string): boolean {
+  const allowed = VALID_TRANSITIONS[from];
+  return allowed ? allowed.includes(to) : false;
+}
+
 export async function updateLoadStatus(req: AuthRequest, res: Response) {
   const { status } = updateLoadStatusSchema.parse(req.body);
 
   // Authorization: check user can update this load
   const existing = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
   if (!existing) { res.status(404).json({ error: "Load not found" }); return; }
+
+  // Validate status transition
+  if (!isValidTransition(existing.status, status)) {
+    res.status(400).json({
+      error: `Invalid status transition: ${existing.status} → ${status}`,
+      allowed: VALID_TRANSITIONS[existing.status] || [],
+    });
+    return;
+  }
 
   const isPoster = existing.posterId === req.user!.id;
   const isAssignedCarrier = existing.carrierId === req.user!.id;
@@ -226,7 +262,7 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
 
   const load = await prisma.load.update({
     where: { id: req.params.id },
-    data: { status, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },
+    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },
   });
 
   // Sync linked shipment status
@@ -409,20 +445,33 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (notes !== undefined) data.notes = notes;
   if (contactName !== undefined) data.contactName = contactName;
   if (contactPhone !== undefined) data.contactPhone = contactPhone;
-  if (customerId !== undefined) data.customerId = customerId;
+  if (customerId !== undefined) {
+    // Prevent changing customer on invoiced/completed loads (breaks credit tracking)
+    if (["INVOICED", "COMPLETED", "POD_RECEIVED"].includes(existing.status) && customerId !== existing.customerId) {
+      res.status(400).json({ error: "Cannot change customer on invoiced or completed loads" });
+      return;
+    }
+    data.customerId = customerId;
+  }
   if (carrierId !== undefined) data.carrierId = carrierId;
 
-  // Recalculate margin fields if rates changed
+  // Recalculate margin fields if rates changed (guard against division by zero)
   const finalCustRate = (customerRate ?? existing.customerRate ?? rate ?? existing.rate) as number;
   const finalCarrRate = (carrierRate ?? existing.carrierRate) as number | null;
   const finalDist = (distance ?? existing.distance) as number | null;
-  if (finalCarrRate) {
+  if (finalCarrRate && finalCarrRate > 0) {
     data.grossMargin = finalCustRate - finalCarrRate;
-    data.marginPercent = Math.round(((finalCustRate - finalCarrRate) / finalCustRate) * 10000) / 100;
+    if (finalCustRate > 0) {
+      data.marginPercent = Math.round(((finalCustRate - finalCarrRate) / finalCustRate) * 10000) / 100;
+    }
+    if ((data.grossMargin as number) < 0) {
+      console.warn(`[Load] Negative margin on load ${req.params.id}: customer=$${finalCustRate} carrier=$${finalCarrRate}`);
+    }
   }
   if (finalDist && finalDist > 0) {
-    data.revenuePerMile = Math.round((finalCustRate / finalDist) * 100) / 100;
-    if (finalCarrRate) data.costPerMile = Math.round((finalCarrRate / finalDist) * 100) / 100;
+    if (finalCustRate > 0) data.revenuePerMile = Math.round((finalCustRate / finalDist) * 100) / 100;
+    if (finalCarrRate && finalCarrRate > 0) data.costPerMile = Math.round((finalCarrRate / finalDist) * 100) / 100;
+    if (data.revenuePerMile && data.costPerMile) data.marginPerMile = Math.round(((data.revenuePerMile as number) - (data.costPerMile as number)) * 100) / 100;
   }
 
   const load = await prisma.load.update({ where: { id: req.params.id }, data });
