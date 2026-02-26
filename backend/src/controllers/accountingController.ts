@@ -86,6 +86,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
         customerRate: { not: null },
       },
       select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true },
+      take: 10000,
     });
 
     const mtdRevenue = mtdLoads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
@@ -552,6 +553,7 @@ export async function getInvoiceAging(req: AuthRequest, res: Response) {
         user: { select: { firstName: true, lastName: true, company: true } },
       },
       orderBy: { createdAt: "asc" },
+      take: 5000,
     });
 
     const buckets = {
@@ -1638,6 +1640,7 @@ export async function getCreditAlerts(req: AuthRequest, res: Response) {
       include: {
         customer: { select: { id: true, name: true, contactName: true, email: true } },
       },
+      take: 5000,
     });
 
     const alerts: any[] = [];
@@ -1794,12 +1797,14 @@ export async function getFundPerformance(req: AuthRequest, res: Response) {
     const mtdData = await prisma.factoringFund.findMany({
       where: { createdAt: { gte: monthStart } },
       select: { transactionType: true, amount: true, createdAt: true },
+      take: 10000,
     });
 
     // YTD metrics
     const ytdData = await prisma.factoringFund.findMany({
       where: { createdAt: { gte: yearStart } },
       select: { transactionType: true, amount: true, createdAt: true },
+      take: 50000,
     });
 
     function summarize(data: typeof mtdData) {
@@ -1993,6 +1998,7 @@ export async function getLaneProfitability(req: AuthRequest, res: Response) {
         distance: true,
         revenuePerMile: true,
       },
+      take: 10000,
     });
 
     // Group by lane (origin state -> dest state)
@@ -2098,6 +2104,7 @@ export async function getCarrierProfitability(req: AuthRequest, res: Response) {
         distance: true,
         carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
       },
+      take: 10000,
     });
 
     // Group by carrier
@@ -2189,6 +2196,7 @@ export async function getShipperProfitability(req: AuthRequest, res: Response) {
         distance: true,
         customer: { select: { id: true, name: true, contactName: true, paymentTerms: true } },
       },
+      take: 10000,
     });
 
     // Group by shipper/customer
@@ -2271,6 +2279,7 @@ export async function getWeeklyReport(req: AuthRequest, res: Response) {
         deliveryDate: { gte: weekStart },
       },
       select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, distance: true },
+      take: 5000,
     });
 
     // Previous week for comparison
@@ -2280,6 +2289,7 @@ export async function getWeeklyReport(req: AuthRequest, res: Response) {
         deliveryDate: { gte: prevWeekStart, lt: weekStart },
       },
       select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, distance: true },
+      take: 5000,
     });
 
     function summarizeLoads(loads: typeof thisWeekLoads) {
@@ -2376,6 +2386,7 @@ export async function getMonthlyReport(req: AuthRequest, res: Response) {
           deliveryDate: { gte: periodStart, lte: periodEnd },
         },
         select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, distance: true, equipmentType: true },
+        take: 10000,
       }),
       prisma.load.findMany({
         where: {
@@ -2383,6 +2394,7 @@ export async function getMonthlyReport(req: AuthRequest, res: Response) {
           deliveryDate: { gte: prevStart, lte: prevEnd },
         },
         select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, distance: true, equipmentType: true },
+        take: 10000,
       }),
     ]);
 
@@ -2949,6 +2961,7 @@ export async function getFundHealth(req: AuthRequest, res: Response) {
       where: { createdAt: { gte: weekAgo } },
       select: { amount: true, createdAt: true, transactionType: true },
       orderBy: { createdAt: "asc" },
+      take: 5000,
     });
 
     const dailyNet: Record<string, number> = {};
@@ -3046,18 +3059,22 @@ export async function generateFinancialReport(req: AuthRequest, res: Response) {
           deliveryDate: { gte: start, lte: end },
         },
         select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, distance: true },
+        take: 10000,
       }),
       prisma.invoice.findMany({
         where: { createdAt: { gte: start, lte: end } },
         select: { amount: true, status: true, paidAmount: true },
+        take: 10000,
       }),
       prisma.carrierPay.findMany({
         where: { createdAt: { gte: start, lte: end } },
         select: { netAmount: true, status: true, quickPayFeeAmount: true },
+        take: 10000,
       }),
       prisma.factoringFund.findMany({
         where: { createdAt: { gte: start, lte: end } },
         select: { amount: true, transactionType: true },
+        take: 10000,
       }),
     ]);
 
@@ -3143,6 +3160,7 @@ export async function processARReminders() {
         },
       },
     },
+    take: 5000,
   });
 
   let sent = 0;
@@ -3235,6 +3253,7 @@ export async function getAPAging(req: AuthRequest, res: Response) {
         load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
       },
       orderBy: { createdAt: "asc" },
+      take: 5000,
     });
 
     const buckets = {

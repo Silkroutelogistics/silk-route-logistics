@@ -4,16 +4,32 @@ import { prisma } from "../config/database";
 /**
  * SRL Cron Job System
  * Schedules: 5-min, hourly, daily, weekly, monthly
+ * Each job uses an in-memory mutex to prevent overlapping runs.
  */
+
+// In-memory concurrency guard — prevents overlapping runs of the same job
+const runningJobs = new Set<string>();
+
+async function withGuard(jobName: string, fn: () => Promise<void>): Promise<void> {
+  if (runningJobs.has(jobName)) {
+    console.warn(`[Cron] Skipping ${jobName} — previous run still in progress`);
+    return;
+  }
+  runningJobs.add(jobName);
+  try {
+    await fn();
+  } finally {
+    runningJobs.delete(jobName);
+  }
+}
 
 export function initCronJobs() {
   console.log("[Cron] Initializing scheduled jobs...");
 
   // ─── Every 5 minutes: Check call reminders ───────────────────
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("*/5 * * * *", () => withGuard("check-call-reminders", async () => {
     try {
       const now = new Date();
-      const fiveMinAgo = new Date(now.getTime() - 5 * 60_000);
 
       // Find loads in transit without recent check calls
       const loadsNeedingCheckCall = await prisma.load.findMany({
@@ -51,10 +67,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron 5min] Check call reminder error:", err);
     }
-  });
+  }));
 
   // ─── Hourly: Invoice aging & overdue detection ───────────────
-  cron.schedule("0 * * * *", async () => {
+  cron.schedule("0 * * * *", () => withGuard("invoice-aging", async () => {
     try {
       const now = new Date();
 
@@ -73,10 +89,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Hourly] Invoice aging error:", err);
     }
-  });
+  }));
 
   // ─── Daily at 6 AM: DSO calculation, CPP tier updates ─────
-  cron.schedule("0 6 * * *", async () => {
+  cron.schedule("0 6 * * *", () => withGuard("daily-cpp-cleanup", async () => {
     try {
       // Update CPP tiers based on total loads completed
       const carriers = await prisma.carrierProfile.findMany({
@@ -118,10 +134,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Daily] Error:", err);
     }
-  });
+  }));
 
   // ─── Daily at 7 AM: System health digest email to admins ────
-  cron.schedule("0 7 * * *", async () => {
+  cron.schedule("0 7 * * *", () => withGuard("health-digest", async () => {
     try {
       console.log("[Cron Daily] Generating system health digest...");
       const { sendHealthDigest } = require("../services/healthDigestService");
@@ -130,10 +146,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Daily] Health digest error:", err);
     }
-  });
+  }));
 
   // ─── Weekly (Monday 7 AM): Generate weekly report snapshot ───
-  cron.schedule("0 7 * * 1", async () => {
+  cron.schedule("0 7 * * 1", () => withGuard("weekly-report", async () => {
     try {
       const weekAgo = new Date(Date.now() - 7 * 86_400_000);
 
@@ -168,10 +184,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Weekly] Error:", err);
     }
-  });
+  }));
 
   // ─── Monthly (1st, 6 AM): Invoice reminder emails ───────────
-  cron.schedule("0 6 1 * *", async () => {
+  cron.schedule("0 6 1 * *", () => withGuard("monthly-invoice-reminders", async () => {
     try {
       // Find invoices needing 31/45/60 day reminders
       const now = new Date();
@@ -186,6 +202,7 @@ export function initCronJobs() {
             include: { poster: { select: { id: true, email: true, firstName: true } } },
           },
         },
+        take: 5000,
       });
 
       for (const inv of unpaidInvoices) {
@@ -206,10 +223,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Monthly] Invoice reminder error:", err);
     }
-  });
+  }));
 
   // ─── Weekly (Monday 3 AM): FMCSA compliance scan ─────────
-  cron.schedule("0 3 * * 1", async () => {
+  cron.schedule("0 3 * * 1", () => withGuard("fmcsa-compliance", async () => {
     try {
       console.log("[Cron Weekly] Starting FMCSA compliance scan...");
       const { weeklyFmcsaScan } = require("../services/complianceMonitorService");
@@ -218,10 +235,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Weekly] FMCSA scan error:", err);
     }
-  });
+  }));
 
   // ─── Daily (5 AM): Compliance reminder emails ──────────────
-  cron.schedule("0 5 * * *", async () => {
+  cron.schedule("0 5 * * *", () => withGuard("compliance-reminders", async () => {
     try {
       console.log("[Cron Daily] Sending compliance reminders...");
       const { dailyComplianceReminders } = require("../services/complianceMonitorService");
@@ -230,12 +247,12 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron Daily] Compliance reminder error:", err);
     }
-  });
+  }));
 
   // ─── AI Learning Cycles ─────────────────────────────────────────
 
   // Daily at 4:00 AM: Rate Intelligence learning
-  cron.schedule("0 4 * * *", async () => {
+  cron.schedule("0 4 * * *", () => withGuard("ai-rate-intelligence", async () => {
     try {
       console.log("[Cron AI] Running Rate Intelligence learning cycle...");
       const { runRateLearningCycle } = require("../services/rateIntelligenceService");
@@ -244,10 +261,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron AI] Rate Intelligence error:", err);
     }
-  });
+  }));
 
   // Daily at 4:15 AM: Carrier Intelligence learning
-  cron.schedule("15 4 * * *", async () => {
+  cron.schedule("15 4 * * *", () => withGuard("ai-carrier-intelligence", async () => {
     try {
       console.log("[Cron AI] Running Carrier Intelligence learning cycle...");
       const { runCarrierLearningCycle } = require("../services/carrierIntelligenceService");
@@ -256,10 +273,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron AI] Carrier Intelligence error:", err);
     }
-  });
+  }));
 
   // Weekly Monday at 4:30 AM: Lane Optimizer learning
-  cron.schedule("30 4 * * 1", async () => {
+  cron.schedule("30 4 * * 1", () => withGuard("ai-lane-optimizer", async () => {
     try {
       console.log("[Cron AI] Running Lane Optimizer learning cycle...");
       const { runLaneLearningCycle } = require("../services/laneOptimizerService");
@@ -268,10 +285,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron AI] Lane Optimizer error:", err);
     }
-  });
+  }));
 
   // Weekly Monday at 5:00 AM: Customer Intelligence learning
-  cron.schedule("0 5 * * 1", async () => {
+  cron.schedule("0 5 * * 1", () => withGuard("ai-customer-intelligence", async () => {
     try {
       console.log("[Cron AI] Running Customer Intelligence learning cycle...");
       const { runCustomerLearningCycle } = require("../services/customerIntelligenceService");
@@ -280,10 +297,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron AI] Customer Intelligence error:", err);
     }
-  });
+  }));
 
   // Daily at 5:30 AM: Compliance Forecast
-  cron.schedule("30 5 * * *", async () => {
+  cron.schedule("30 5 * * *", () => withGuard("ai-compliance-forecast", async () => {
     try {
       console.log("[Cron AI] Running Compliance Forecast cycle...");
       const { runComplianceForecastCycle } = require("../services/complianceForecastService");
@@ -292,10 +309,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron AI] Compliance Forecast error:", err);
     }
-  });
+  }));
 
   // Weekly Monday at 6:00 AM: System Self-Optimizer
-  cron.schedule("0 6 * * 1", async () => {
+  cron.schedule("0 6 * * 1", () => withGuard("ai-system-optimizer", async () => {
     try {
       console.log("[Cron AI] Running System Self-Optimizer...");
       const { runSystemOptimizationCycle } = require("../services/systemOptimizerService");
@@ -304,10 +321,10 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron AI] System Optimizer error:", err);
     }
-  });
+  }));
 
   // ─── Every 4 hours: Fetch latest trucking news ──────────────
-  cron.schedule("0 */4 * * *", async () => {
+  cron.schedule("0 */4 * * *", () => withGuard("news-fetch", async () => {
     try {
       console.log("[Cron] Fetching trucking news feeds...");
       const { fetchAllFeeds } = require("../services/newsAggregatorService");
@@ -316,7 +333,7 @@ export function initCronJobs() {
     } catch (err) {
       console.error("[Cron] News fetch error:", err);
     }
-  });
+  }));
 
   // Seed news sources on startup
   try {
