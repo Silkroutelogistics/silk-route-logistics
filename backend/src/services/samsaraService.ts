@@ -57,9 +57,13 @@ export async function fetchSamsaraVehicleLocations(): Promise<SamsaraLocation[]>
   if (!isConfigured()) return [];
 
   try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 10000);
     const res = await fetch(`${SAMSARA_BASE}/fleet/vehicles/locations`, {
       headers: getHeaders(),
+      signal: ac.signal,
     });
+    clearTimeout(t);
 
     if (!res.ok) {
       console.error(`[Samsara] Vehicle locations error: ${res.status} ${res.statusText}`);
@@ -81,9 +85,13 @@ export async function fetchSamsaraHOS(): Promise<SamsaraHOS[]> {
   if (!isConfigured()) return [];
 
   try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 10000);
     const res = await fetch(`${SAMSARA_BASE}/fleet/drivers/hos/current`, {
       headers: getHeaders(),
+      signal: ac.signal,
     });
+    clearTimeout(t);
 
     if (!res.ok) {
       console.error(`[Samsara] HOS error: ${res.status}`);
@@ -106,9 +114,13 @@ export async function fetchSamsaraVehicleStats() {
 
   try {
     const types = "engineStates,fuelPercents,obdOdometerMeters";
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 10000);
     const res = await fetch(`${SAMSARA_BASE}/fleet/vehicles/stats?types=${types}`, {
       headers: getHeaders(),
+      signal: ac.signal,
     });
+    clearTimeout(t);
 
     if (!res.ok) return [];
     const data: any = await res.json();

@@ -9,9 +9,12 @@ import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneE
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
 
 async function generateLoadNumber(): Promise<string> {
-  // Ensure sequence exists (idempotent)
-  await prisma.$executeRawUnsafe(`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121472`);
-  const result = await prisma.$queryRawUnsafe<{ nextval: bigint }[]>(`SELECT nextval('load_number_seq') as nextval`);
+  // Ensure sequence exists (idempotent) — safe static SQL, no user input
+  await prisma.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121472`;
+  const result = await prisma.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('load_number_seq') as nextval`;
+  if (!result || result.length === 0) {
+    throw new Error("Failed to generate load number: sequence returned no result");
+  }
   const num = Number(result[0].nextval);
   return `SRL-${num}`;
 }

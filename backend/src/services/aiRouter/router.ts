@@ -81,6 +81,8 @@ async function callOpenAI(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not set");
 
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 30000);
   const response = await fetch(`https://api.openai.com/v1/chat/completions`, {
     method: "POST",
     headers: {
@@ -93,7 +95,9 @@ async function callOpenAI(
       max_tokens: maxTokens,
       temperature,
     }),
+    signal: ac.signal,
   });
+  clearTimeout(t);
 
   if (!response.ok) {
     const errBody = await response.text();
@@ -125,6 +129,8 @@ async function callAnthropic(
     .filter((m) => m.role !== "system")
     .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 30000);
   const response = await fetch(`https://api.anthropic.com/v1/messages`, {
     method: "POST",
     headers: {
@@ -139,7 +145,9 @@ async function callAnthropic(
       max_tokens: maxTokens,
       temperature,
     }),
+    signal: ac.signal,
   });
+  clearTimeout(t);
 
   if (!response.ok) {
     const errBody = await response.text();

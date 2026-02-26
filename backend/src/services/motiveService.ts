@@ -67,9 +67,13 @@ export async function fetchMotiveVehicleLocations(): Promise<MotiveVehicle[]> {
   if (!isConfigured()) return [];
 
   try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 10000);
     const res = await fetch(`${MOTIVE_BASE}/vehicles?per_page=100`, {
       headers: getHeaders(),
+      signal: ac.signal,
     });
+    clearTimeout(t);
 
     if (!res.ok) {
       console.error(`[Motive] Vehicle locations error: ${res.status} ${res.statusText}`);
@@ -92,9 +96,13 @@ export async function fetchMotiveDriverLogs(): Promise<MotiveDriverLog[]> {
 
   try {
     const today = new Date().toISOString().split("T")[0];
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 10000);
     const res = await fetch(`${MOTIVE_BASE}/driver_daily_logs?date=${today}&per_page=100`, {
       headers: getHeaders(),
+      signal: ac.signal,
     });
+    clearTimeout(t);
 
     if (!res.ok) return [];
     const data: any = await res.json();

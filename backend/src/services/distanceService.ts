@@ -23,7 +23,10 @@ export async function calculateDrivingDistance(
     url.searchParams.set("units", "imperial");
     url.searchParams.set("key", apiKey);
 
-    const response = await fetch(url.toString());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch(url.toString(), { signal: controller.signal });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       return { distanceMiles: null, durationMinutes: null, error: `Google Maps API returned ${response.status}` };

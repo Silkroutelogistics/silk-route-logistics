@@ -38,7 +38,8 @@ export async function getRevenue(req: AuthRequest, res: Response) {
     const data = await analytics.getRevenueMetrics(range, groupBy, filters);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -49,7 +50,8 @@ export async function getLoads(req: AuthRequest, res: Response) {
     const data = await analytics.getLoadMetrics(range, filters);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -60,7 +62,8 @@ export async function getOnTime(req: AuthRequest, res: Response) {
     const data = await analytics.getOnTimeMetrics(range, filters);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -73,7 +76,8 @@ export async function getLanes(req: AuthRequest, res: Response) {
     const data = await analytics.getLaneProfitability(range, filters, sort, limit);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -86,7 +90,8 @@ export async function getCarriers(req: AuthRequest, res: Response) {
     const data = await analytics.getCarrierScorecard(range, filters, sort, limit);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -99,7 +104,8 @@ export async function getShippers(req: AuthRequest, res: Response) {
     const data = await analytics.getShipperScorecard(range, filters, sort, limit);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -109,7 +115,8 @@ export async function getCashFlow(req: AuthRequest, res: Response) {
     const data = await analytics.getCashFlowMetrics(range);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -118,7 +125,8 @@ export async function getARAging(req: AuthRequest, res: Response) {
     const data = await analytics.getARAgingMetrics();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -128,7 +136,8 @@ export async function getAP(req: AuthRequest, res: Response) {
     const data = await analytics.getAPMetrics(range);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -137,7 +146,8 @@ export async function getShipperCredit(req: AuthRequest, res: Response) {
     const data = await analytics.getShipperCreditHealth();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -147,7 +157,8 @@ export async function getCarrierEarnings(req: AuthRequest, res: Response) {
     const data = await analytics.getCarrierEarnings(range, req.user!.id);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
@@ -171,7 +182,8 @@ export async function exportReport(req: AuthRequest, res: Response) {
       res.json({ data, reportType: report_type, dateRange: { start: range.start, end: range.end } });
     }
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error("[Analytics]", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 }
 
