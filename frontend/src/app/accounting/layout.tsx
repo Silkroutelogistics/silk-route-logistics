@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { Logo } from "@/components/ui/Logo";
 import {
   LayoutDashboard, FileText, Clock, CreditCard, Zap, CheckCircle2,
@@ -60,6 +61,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
   const { user, logout } = useAuthStore();
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-[#0f172a] flex">
       {/* Sidebar */}
       <aside className="w-64 bg-[#0a1120] border-r border-white/5 flex flex-col shrink-0">
@@ -139,5 +141,6 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
         {children}
       </main>
     </div>
+    </AuthGuard>
   );
 }

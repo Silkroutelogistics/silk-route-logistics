@@ -24,7 +24,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const base = apiBase || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const base = apiBase || process.env.NEXT_PUBLIC_API_URL || "/api";
 
   useEffect(() => {
     if (open && inputRef.current) inputRef.current.focus();
