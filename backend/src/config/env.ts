@@ -27,6 +27,11 @@ const envSchema = z.object({
   MILEMAKER_CLIENT_ID: z.string().optional(),
   MILEMAKER_CLIENT_SECRET: z.string().optional(),
   PCMILER_API_KEY: z.string().optional(),
+  // AWS S3
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_REGION: z.string().default("us-east-1"),
+  S3_BUCKET_NAME: z.string().optional(),
   // ELD Providers
   SAMSARA_API_TOKEN: z.string().optional(),
   MOTIVE_API_KEY: z.string().optional(),

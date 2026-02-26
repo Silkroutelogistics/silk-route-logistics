@@ -316,13 +316,8 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
   // Generate PDF
   try {
     const pdfBuffer = await generateInvoicePdf(invoice as any);
-    const pdfUrl = `/uploads/invoices/${invoiceNumber}.pdf`;
-    const { env } = await import("../config/env");
-    const fsP = await import("fs/promises");
-    const pPath = await import("path");
-    const dir = pPath.resolve(env.UPLOAD_DIR, "invoices");
-    await fsP.mkdir(dir, { recursive: true });
-    await fsP.writeFile(pPath.resolve(dir, `${invoiceNumber}.pdf`), pdfBuffer);
+    const { uploadFileToPath } = await import("../services/storageService");
+    const pdfUrl = await uploadFileToPath(pdfBuffer, `invoices/${invoiceNumber}.pdf`, "application/pdf");
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { pdfUrl } });
   } catch (e: any) {
     console.error("[Invoice] PDF generation error:", e.message);

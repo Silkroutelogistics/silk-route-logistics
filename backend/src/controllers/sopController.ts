@@ -1,7 +1,9 @@
 import { Response } from "express";
+import path from "path";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createSOPSchema, updateSOPSchema, sopQuerySchema } from "../validators/sop";
+import { uploadFile } from "../services/storageService";
 
 export async function createSOP(req: AuthRequest, res: Response) {
   const data = createSOPSchema.parse(req.body);
@@ -48,9 +50,14 @@ export async function updateSOP(req: AuthRequest, res: Response) {
 
 export async function uploadSOPFile(req: AuthRequest, res: Response) {
   if (!req.file) { res.status(400).json({ error: "No file provided" }); return; }
+  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const key = `sops/${uniqueSuffix}${ext}`;
+  const fileUrl = await uploadFile(req.file.buffer, key, req.file.mimetype);
+
   const sop = await prisma.sOP.update({
     where: { id: req.params.id },
-    data: { fileUrl: `/uploads/${req.file.filename}` },
+    data: { fileUrl },
   });
   res.json(sop);
 }

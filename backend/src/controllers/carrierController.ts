@@ -1,12 +1,14 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import path from "path";
 import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { calculateTier, getBonusPercentage } from "../services/tierService";
 import { onCarrierApproved } from "../services/integrationService";
+import { uploadFile } from "../services/storageService";
 
 export async function registerCarrier(req: Request, res: Response) {
   const data = carrierRegisterSchema.parse(req.body);
@@ -61,17 +63,22 @@ export async function uploadCarrierDocuments(req: AuthRequest, res: Response) {
   }
 
   const documents = await Promise.all(
-    files.map((file) =>
-      prisma.document.create({
+    files.map(async (file) => {
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const ext = path.extname(file.originalname).toLowerCase();
+      const key = `carrier-docs/${uniqueSuffix}${ext}`;
+      const fileUrl = await uploadFile(file.buffer, key, file.mimetype);
+
+      return prisma.document.create({
         data: {
           fileName: file.originalname,
-          fileUrl: `/uploads/${file.filename}`,
+          fileUrl,
           fileType: file.mimetype,
           fileSize: file.size,
           userId: req.user!.id,
         },
-      })
-    )
+      });
+    })
   );
 
   const updateData: Record<string, boolean | string> = {};

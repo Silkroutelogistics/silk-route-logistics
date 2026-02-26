@@ -4,7 +4,7 @@ import fs from "fs";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
-import { validateFileSignature } from "../config/upload";
+import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile, validateBufferSignature, isS3Url } from "../services/storageService";
 import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded } from "../services/integrationService";
 
@@ -16,11 +16,9 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
     return;
   }
 
-  // Validate file content matches claimed MIME type (magic bytes check)
+  // Validate file content matches claimed MIME type (magic bytes check on buffer)
   for (const file of files) {
-    if (!validateFileSignature(file.path, file.mimetype)) {
-      // Delete the suspicious file
-      fs.unlinkSync(file.path);
+    if (!validateBufferSignature(file.buffer, file.mimetype)) {
       res.status(400).json({ error: `File "${file.originalname}" content does not match its file type. Upload rejected.` });
       return;
     }
@@ -29,11 +27,16 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
   const { loadId, invoiceId, entityType, entityId, docType } = req.body;
 
   const documents = await Promise.all(
-    files.map((file) =>
-      prisma.document.create({
+    files.map(async (file) => {
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const ext = path.extname(file.originalname).toLowerCase();
+      const key = `documents/${uniqueSuffix}${ext}`;
+      const fileUrl = await uploadFile(file.buffer, key, file.mimetype);
+
+      return prisma.document.create({
         data: {
           fileName: file.originalname,
-          fileUrl: `/uploads/${file.filename}`,
+          fileUrl,
           fileType: file.mimetype,
           fileSize: file.size,
           userId: req.user!.id,
@@ -43,8 +46,8 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
           entityId: entityId || null,
           docType: docType || null,
         },
-      })
-    )
+      });
+    })
   );
 
   // If POD uploaded for a load, trigger validation, shipper notification, and status advancement
@@ -116,6 +119,14 @@ export async function downloadDocument(req: AuthRequest, res: Response) {
     }
   }
 
+  // S3 files: redirect to presigned URL
+  if (isS3Url(doc.fileUrl)) {
+    const presignedUrl = await getDownloadUrl(doc.fileUrl);
+    res.redirect(presignedUrl);
+    return;
+  }
+
+  // Legacy local files
   const filePath = path.resolve(env.UPLOAD_DIR, path.basename(doc.fileUrl));
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: "File not found on disk" });
@@ -148,18 +159,17 @@ export async function generateRateConfirmation(req: AuthRequest, res: Response) 
 
   // Generate a simple HTML-based rate confirmation
   const html = buildRateConHTML(load);
-
-  // Store as a document record
   const fileName = `RateCon-${load.referenceNumber}-${Date.now()}.html`;
-  const filePath = path.resolve(env.UPLOAD_DIR, fileName);
-  fs.writeFileSync(filePath, html);
+  const key = `rate-cons/${fileName}`;
+  const htmlBuffer = Buffer.from(html, "utf-8");
+  const fileUrl = await uploadFileToPath(htmlBuffer, key, "text/html");
 
   const doc = await prisma.document.create({
     data: {
       fileName,
-      fileUrl: `/uploads/${fileName}`,
+      fileUrl,
       fileType: "text/html",
-      fileSize: Buffer.byteLength(html),
+      fileSize: htmlBuffer.length,
       userId: req.user!.id,
       loadId: load.id,
       entityType: "LOAD",
@@ -171,7 +181,7 @@ export async function generateRateConfirmation(req: AuthRequest, res: Response) 
   // Also update the load with the rate confirmation URL
   await prisma.load.update({
     where: { id: load.id },
-    data: { rateConfirmationPdfUrl: `/uploads/${fileName}` },
+    data: { rateConfirmationPdfUrl: fileUrl },
   });
 
   res.status(201).json(doc);
@@ -276,6 +286,9 @@ export async function deleteDocument(req: AuthRequest, res: Response) {
     res.status(403).json({ error: "Not authorized" });
     return;
   }
+
+  // Delete from storage
+  await deleteFile(doc.fileUrl);
 
   await prisma.document.delete({ where: { id: req.params.id } });
   res.status(204).send();

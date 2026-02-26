@@ -1,19 +1,11 @@
 import { Router, Response } from "express";
+import path from "path";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
-import multer from "multer";
-import path from "path";
-import { env } from "../config/env";
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, env.UPLOAD_DIR),
-    filename: (_req, file, cb) => cb(null, Date.now() + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")),
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-});
+import { upload } from "../config/upload";
+import { uploadFile } from "../services/storageService";
 
 const router = Router();
 
@@ -345,7 +337,10 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
   }
 
   const docType = (req.body.type || "OTHER").toUpperCase();
-  const fileUrl = "/uploads/" + req.file.filename;
+  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const key = `documents/${uniqueSuffix}${ext}`;
+  const fileUrl = await uploadFile(req.file.buffer, key, req.file.mimetype);
 
   const doc = await prisma.document.create({
     data: {
