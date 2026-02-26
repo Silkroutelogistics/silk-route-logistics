@@ -533,7 +533,7 @@ model User {
 model CarrierProfile {
   id                    String                  @id @default(cuid())
   userId                String                  @unique
-  user                  User                    @relation(fields: [userId], references: [id])
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   mcNumber              String?                 @unique
   dotNumber             String?                 @unique
   companyName           String?
@@ -881,15 +881,16 @@ model Load {
   @@index([deliveryDate])
   @@index([statusUpdatedAt])
   @@index([status, createdAt])
+    @@index([deletedAt])
   @@map("loads")
 }
 
 model LoadTender {
   id          String       @id @default(cuid())
   loadId      String
-  load        Load         @relation(fields: [loadId], references: [id])
+  load        Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
   carrierId   String
-  carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
+  carrier     CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Cascade)
   status      TenderStatus @default(OFFERED)
   offeredRate Float
   counterRate Float?
@@ -898,6 +899,7 @@ model LoadTender {
   createdAt   DateTime     @default(now())
   deletedAt   DateTime?
 
+  @@index([loadId])
   @@index([carrierId, status])
   @@map("load_tenders")
 }
@@ -907,7 +909,7 @@ model LoadTender {
 model RateConfirmation {
   id              String   @id @default(cuid())
   loadId          String
-  load            Load     @relation(fields: [loadId], references: [id])
+  load            Load     @relation(fields: [loadId], references: [id], onDelete: Restrict)
   rateConNumber   String?  @unique
   formData        Json
   pdfUrl          String?
@@ -943,7 +945,7 @@ model RateConfirmation {
 model CheckCall {
   id          String   @id @default(cuid())
   loadId      String
-  load        Load     @relation(fields: [loadId], references: [id])
+  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
   status      String
   driverStatus CheckCallDriverStatus?
   location    String?
@@ -968,7 +970,7 @@ model Invoice {
   id              String        @id @default(cuid())
   invoiceNumber   String        @unique
   loadId          String
-  load            Load          @relation(fields: [loadId], references: [id])
+  load            Load          @relation(fields: [loadId], references: [id], onDelete: Restrict)
   status          InvoiceStatus @default(DRAFT)
   amount          Float
   lineHaulAmount  Float?
@@ -1001,7 +1003,7 @@ model Invoice {
   updatedAt       DateTime      @updatedAt
 
   userId          String
-  user            User          @relation(fields: [userId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   createdById     String?
   createdBy       User?         @relation("InvoiceCreator", fields: [createdById], references: [id])
 
@@ -1041,9 +1043,9 @@ model CarrierPay {
   carrierId         String
   carrier           User            @relation("CarrierPayments", fields: [carrierId], references: [id])
   loadId            String
-  load              Load            @relation(fields: [loadId], references: [id])
+  load              Load            @relation(fields: [loadId], references: [id], onDelete: Restrict)
   rateConfirmationId String?
-  rateConfirmation  RateConfirmation? @relation(fields: [rateConfirmationId], references: [id])
+  rateConfirmation  RateConfirmation? @relation(fields: [rateConfirmationId], references: [id], onDelete: SetNull)
 
   // Payment tier
   paymentTier       PaymentTier     @default(STANDARD)
@@ -1258,9 +1260,9 @@ model Document {
   createdAt   DateTime @default(now())
 
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   loadId      String?
-  load        Load?    @relation(fields: [loadId], references: [id])
+  load        Load?    @relation(fields: [loadId], references: [id], onDelete: Cascade)
   invoiceId   String?
   invoice     Invoice? @relation(fields: [invoiceId], references: [id])
 
@@ -1275,7 +1277,7 @@ model Message {
   receiverId String
   receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
   loadId     String?
-  load       Load?    @relation(fields: [loadId], references: [id])
+  load       Load?    @relation(fields: [loadId], references: [id], onDelete: Cascade)
   content    String
   readAt     DateTime?
   createdAt  DateTime @default(now())
@@ -1288,7 +1290,7 @@ model Message {
 model Notification {
   id        String           @id @default(cuid())
   userId    String
-  user      User             @relation(fields: [userId], references: [id])
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String
   title     String
   message   String
@@ -1316,7 +1318,7 @@ model Customer {
 
   // Link to User account (shipper portal login)
   userId          String?      @unique
-  user            User?        @relation("CustomerUser", fields: [userId], references: [id])
+  user            User?        @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
   address         String?
   city            String?
   state           String?
@@ -1550,7 +1552,7 @@ model Shipment {
   equipment       Equipment? @relation(fields: [equipmentId], references: [id])
 
   loadId          String?
-  load            Load?      @relation(fields: [loadId], references: [id])
+  load            Load?      @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   lastLocation    String?
   lastLocationAt  DateTime?
@@ -1629,7 +1631,7 @@ model EDITransaction {
   transactionSet  String
   direction       String
   loadId          String?
-  load            Load?    @relation(fields: [loadId], references: [id])
+  load            Load?    @relation(fields: [loadId], references: [id], onDelete: Cascade)
   carrierId       String?
   rawPayload      String
   status          String   @default("PENDING")
@@ -1651,7 +1653,7 @@ model SystemLog {
   source      String
   endpoint    String?
   userId      String?
-  user        User?       @relation(fields: [userId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   message     String
   details     Json?
   ipAddress   String?
@@ -1685,7 +1687,7 @@ model AuditTrail {
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   action     String
   entity     String
   entityId   String?
@@ -1795,7 +1797,7 @@ model Communication {
   duration    Int?     // Call duration in seconds
   metadata    Json?
   userId      String   // Who logged this
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now())
 
   @@index([entityType, entityId])
@@ -1825,7 +1827,7 @@ model TokenBlacklist {
 model OtpCode {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   code      String
   expiresAt DateTime
   used           Boolean  @default(false)
@@ -1841,7 +1843,7 @@ model OtpCode {
 model MatchResult {
   id              String   @id @default(cuid())
   loadId          String
-  load            Load     @relation(fields: [loadId], references: [id])
+  load            Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
   carrierId       String   // CarrierProfile id
   userId          String   // User id of carrier
   matchScore      Float
@@ -1865,7 +1867,7 @@ model MatchResult {
 model CheckCallSchedule {
   id              String   @id @default(cuid())
   loadId          String
-  load            Load     @relation(fields: [loadId], references: [id])
+  load            Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
   scheduledTime   DateTime
   type            String   // PRE_PICKUP, AT_PICKUP, MIDPOINT, PRE_DELIVERY, AT_DELIVERY
   status          String   @default("PENDING")  // PENDING, SENT, RESPONDED, MISSED, ESCALATED
@@ -1888,7 +1890,7 @@ model CheckCallSchedule {
 model RiskLog {
   id          String   @id @default(cuid())
   loadId      String
-  load        Load     @relation(fields: [loadId], references: [id])
+  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
   score       Int      @default(0)
   level       String   // GREEN, AMBER, RED
   factors     Json     // Array of {factor, points, description}
@@ -1906,7 +1908,7 @@ model RiskLog {
 model FallOffEvent {
   id              String   @id @default(cuid())
   loadId          String
-  load            Load     @relation(fields: [loadId], references: [id])
+  load            Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
   originalCarrierId String?
   reason          String?
   recoveryMethod  String?  // CARAVAN_MATCH, DAT, MANUAL
@@ -1953,7 +1955,7 @@ model Claim {
   id              String      @id @default(cuid())
   claimNumber     String      @unique
   loadId          String
-  load            Load        @relation(fields: [loadId], references: [id])
+  load            Load        @relation(fields: [loadId], references: [id], onDelete: Cascade)
   claimType       ClaimType
   status          ClaimStatus @default(FILED)
   description     String      @db.Text
@@ -2346,7 +2348,7 @@ model MarcoPoloConversation {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([updatedAt])
@@ -2669,7 +2671,7 @@ model ShipmentRiskLog {
 model LoadDelay {
   id             String          @id @default(cuid())
   loadId         String
-  load           Load            @relation(fields: [loadId], references: [id])
+  load           Load            @relation(fields: [loadId], references: [id], onDelete: Cascade)
   reasonCode     DelayReasonCode
   description    String?
   delayMinutes   Int
@@ -2783,7 +2785,7 @@ model LoadStop {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  load            Load      @relation(fields: [loadId], references: [id])
+  load            Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
   trackingEvents  LoadTrackingEvent[]
   accessorials    LoadAccessorial[]
 
@@ -2811,7 +2813,7 @@ model LoadTrackingEvent {
   createdBy       String?           @map("created_by")
   createdAt       DateTime          @default(now()) @map("created_at")
 
-  load            Load              @relation(fields: [loadId], references: [id])
+  load            Load              @relation(fields: [loadId], references: [id], onDelete: Cascade)
   stop            LoadStop?         @relation(fields: [stopId], references: [id])
 
   @@index([loadId])
@@ -2843,7 +2845,7 @@ model LoadAccessorial {
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
 
-  load             Load              @relation(fields: [loadId], references: [id])
+  load             Load              @relation(fields: [loadId], references: [id], onDelete: Cascade)
   stop             LoadStop?         @relation(fields: [stopId], references: [id])
 
   @@index([loadId])
@@ -2862,7 +2864,7 @@ model ShipperTrackingToken {
   lastAccessedAt  DateTime?           @map("last_accessed_at")
   accessCount     Int                 @default(0) @map("access_count")
 
-  load            Load                @relation(fields: [loadId], references: [id])
+  load            Load                @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([loadId])
@@ -2898,7 +2900,7 @@ model ELDEvent {
   processedAt     DateTime? @map("processed_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  load            Load?     @relation(fields: [loadId], references: [id])
+  load            Load?     @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([provider, vehicleId])
   @@index([loadId])

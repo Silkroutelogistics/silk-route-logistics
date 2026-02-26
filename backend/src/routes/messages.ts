@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { sendMessage, getConversation, getConversations, getUnreadCount, getUsers } from "../controllers/messageController";
-import { authenticate } from "../middleware/auth";
+import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
 
 router.use(authenticate);
+router.use(authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "AE", "ACCOUNTING", "SHIPPER", "CARRIER"));
 
 router.post("/", sendMessage);
 router.get("/conversations", getConversations);

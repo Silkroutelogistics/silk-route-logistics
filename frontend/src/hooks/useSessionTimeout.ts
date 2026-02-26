@@ -8,12 +8,14 @@ interface SessionTimeoutOptions {
   timeoutMs: number;       // Total inactivity before logout
   warningBeforeMs: number; // Show warning this many ms before logout
   loginPath: string;       // Where to redirect on timeout
+  onLogout?: () => void;   // Custom logout handler (for carrier/shipper portals)
 }
 
 export function useSessionTimeout({
   timeoutMs = 60 * 60 * 1000,      // 60 minutes default (shippers)
   warningBeforeMs = 2 * 60 * 1000, // 2 minutes warning
   loginPath = "/shipper/login",
+  onLogout,
 }: Partial<SessionTimeoutOptions> = {}) {
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -26,10 +28,14 @@ export function useSessionTimeout({
   const warningAt = timeoutMs - warningBeforeMs;
 
   const forceLogout = useCallback(() => {
-    clearAuth();
+    if (onLogout) {
+      onLogout();
+    } else {
+      clearAuth();
+    }
     localStorage.removeItem("srl_last_activity");
     router.replace(`${loginPath}?expired=1`);
-  }, [clearAuth, router, loginPath]);
+  }, [clearAuth, router, loginPath, onLogout]);
 
   const extendSession = useCallback(() => {
     setShowWarning(false);

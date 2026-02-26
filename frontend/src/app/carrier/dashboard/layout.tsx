@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierSidebar } from "@/components/carrier";
-import { Search, Bell, X, LogOut } from "lucide-react";
+import { Search, Bell, X, LogOut, Clock } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
 
 interface Notification {
@@ -32,6 +33,12 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const { token, user, loadUser, logout } = useCarrierAuth();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
+  const { showWarning, countdown, extendSession } = useSessionTimeout({
+    timeoutMs: 45 * 60 * 1000,
+    warningBeforeMs: 2 * 60 * 1000,
+    loginPath: "/carrier/login",
+    onLogout: logout,
+  });
 
   const { data: notifData } = useQuery({
     queryKey: ["carrier-notifications"],
@@ -131,6 +138,34 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         {/* Content */}
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
+
+      {/* Session Timeout Warning */}
+      {showWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <Clock size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Session Expiring</h3>
+                <p className="text-xs text-gray-500">Your session will expire due to inactivity</p>
+              </div>
+            </div>
+            <div className="text-center py-3">
+              <span className="text-2xl font-mono font-bold text-red-600">{countdown}</span>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={logout} className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                Logout
+              </button>
+              <button onClick={extendSession} className="flex-1 px-4 py-2 text-sm bg-[#C9A84C] text-[#0D1B2A] rounded-lg font-semibold hover:bg-[#B8973F]">
+                Stay Logged In
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
