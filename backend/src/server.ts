@@ -164,6 +164,7 @@ app.get("/health", async (_req, res) => {
   } catch { /* db down */ }
 
   const mem = process.memoryUsage();
+  const { isS3Active } = await import("./services/storageService");
   res.json({
     status: dbOk ? "ok" : "degraded",
     uptime: process.uptime(),
@@ -171,6 +172,7 @@ app.get("/health", async (_req, res) => {
     version: "1.0.0",
     environment: env.NODE_ENV,
     database: { connected: dbOk, latencyMs: dbLatency },
+    storage: { mode: isS3Active() ? "s3" : "local", bucket: isS3Active() ? env.S3_BUCKET_NAME : null },
     memory: {
       rss: `${(mem.rss / 1024 / 1024).toFixed(1)} MB`,
       heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(1)} MB`,
