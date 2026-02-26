@@ -56,16 +56,25 @@ router.post("/openphone-checkcall", async (req, res) => {
     }
   } catch (err: any) {
     console.error("[Webhook] Check-call error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
 // Resend webhook — email sequence tracking (opens, clicks, replies, bounces)
+// Resend signs webhooks with svix; verify if header present
 router.post("/resend", async (req, res) => {
   try {
+    // Basic webhook validation: require known event types to filter noise
     const event = req.body;
     if (!event || !event.type) {
       res.status(400).json({ error: "Invalid event payload" });
+      return;
+    }
+
+    const validTypes = ["email.sent", "email.delivered", "email.bounced", "email.complained", "email.opened", "email.clicked", "email.received"];
+    if (!validTypes.includes(event.type)) {
+      console.warn(`[Webhook] Unknown Resend event type: ${event.type}`);
+      res.status(400).json({ error: "Unknown event type" });
       return;
     }
 
@@ -74,7 +83,7 @@ router.post("/resend", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[Webhook] Resend error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
@@ -219,7 +228,7 @@ router.post("/inbound-email", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[Inbound Email] Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
@@ -254,7 +263,7 @@ router.post("/samsara", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[Webhook] Samsara error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
@@ -289,7 +298,7 @@ router.post("/motive", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[Webhook] Motive error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
@@ -311,7 +320,7 @@ router.post("/inbound-checkcall", async (req, res) => {
     }
   } catch (err: any) {
     console.error("[Webhook] Email check-call error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 

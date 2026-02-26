@@ -21,6 +21,10 @@ export async function sendEmail(to: string, subject: string, html: string, attac
           to,
           subject,
           html,
+          headers: {
+            "List-Unsubscribe": `<mailto:unsubscribe@silkroutelogistics.ai?subject=unsubscribe>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           attachments: attachments?.map((a) => ({
             filename: a.filename,
             content: a.content,
