@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, FileText, Truck, MapPin, BarChart3, DollarSign,
-  File, MessageSquare, Warehouse, Code, Settings, Menu, ArrowLeft,
+  File, MessageSquare, Warehouse, Code, Settings, Menu, ArrowLeft, X,
 } from "lucide-react";
 
 const navItems = [
@@ -23,30 +23,30 @@ const navItems = [
 ];
 
 export function ShipperSidebar() {
-  const [open, setOpen] = useState(true);
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string) => {
     if (href === "/shipper/dashboard") return pathname === "/shipper/dashboard";
     return pathname.startsWith(href);
   };
 
-  return (
-    <aside
-      className="flex flex-col bg-[#0D1B2A] flex-shrink-0 transition-all duration-300 overflow-hidden"
-      style={{ width: open ? 220 : 64 }}
-    >
+  // Close sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className={`flex items-center gap-2.5 border-b border-[#C9A84C]/15 min-h-[56px] ${open ? "px-5 py-4" : "px-3 py-4"}`}>
+      <div className="flex items-center gap-2.5 border-b border-[#C9A84C]/15 min-h-[56px] px-5 py-4">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0D1B2A] flex-shrink-0">
           SR
         </div>
-        {open && (
-          <div>
-            <div className="font-serif text-[13px] font-bold text-white whitespace-nowrap">SILK ROUTE</div>
-            <div className="text-[7px] text-[#C9A84C] tracking-[2px]">SHIPPER PORTAL</div>
-          </div>
-        )}
+        <div>
+          <div className="font-serif text-[13px] font-bold text-white whitespace-nowrap">SILK ROUTE</div>
+          <div className="text-[7px] text-[#C9A84C] tracking-[2px]">SHIPPER PORTAL</div>
+        </div>
       </div>
 
       {/* Nav */}
@@ -58,16 +58,14 @@ export function ShipperSidebar() {
             <Link
               key={item.id}
               href={item.href}
-              className={`flex items-center gap-3 rounded-lg mb-0.5 transition-all duration-150 ${
-                open ? "px-3 py-2.5 justify-start" : "py-2.5 justify-center"
-              } ${active ? "bg-[#C9A84C]/15" : "hover:bg-white/5"}`}
+              className={`flex items-center gap-3 rounded-lg mb-0.5 transition-all duration-150 px-3 py-2.5 justify-start ${
+                active ? "bg-[#C9A84C]/15" : "hover:bg-white/5"
+              }`}
             >
               <Icon size={18} className={`flex-shrink-0 ${active ? "text-[#C9A84C]" : "text-gray-400"}`} />
-              {open && (
-                <span className={`text-[13px] whitespace-nowrap ${active ? "text-[#C9A84C] font-semibold" : "text-gray-400"}`}>
-                  {item.label}
-                </span>
-              )}
+              <span className={`text-[13px] whitespace-nowrap ${active ? "text-[#C9A84C] font-semibold" : "text-gray-400"}`}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -75,21 +73,54 @@ export function ShipperSidebar() {
 
       {/* Bottom controls */}
       <div className="py-3 px-2 border-t border-[#C9A84C]/10">
-        <button
-          onClick={() => setOpen(!open)}
-          className={`flex items-center gap-3 rounded-lg py-2 w-full ${open ? "px-3 justify-start" : "justify-center"} hover:bg-white/5`}
-        >
-          <Menu size={18} className="text-gray-400" />
-          {open && <span className="text-xs text-gray-400">Collapse</span>}
-        </button>
         <Link
           href="/shipper"
-          className={`flex items-center gap-3 rounded-lg py-2 mt-0.5 ${open ? "px-3 justify-start" : "justify-center"} hover:bg-white/5`}
+          className="flex items-center gap-3 rounded-lg py-2 mt-0.5 px-3 justify-start hover:bg-white/5"
         >
           <ArrowLeft size={18} className="text-gray-400" />
-          {open && <span className="text-xs text-gray-400">Back to Website</span>}
+          <span className="text-xs text-gray-400">Back to Website</span>
         </Link>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile header bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0D1B2A] border-b border-[#C9A84C]/15 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[11px] font-extrabold text-[#0D1B2A]">
+            SR
+          </div>
+          <span className="font-serif text-[12px] font-bold text-white">SILK ROUTE</span>
+        </div>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2 text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`w-[220px] bg-[#0D1B2A] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Spacer for mobile top bar */}
+      <div className="lg:hidden h-14 shrink-0" />
+    </>
   );
 }

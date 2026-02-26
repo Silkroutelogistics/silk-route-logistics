@@ -100,11 +100,25 @@
     .back-link{text-align:center;margin-top:40px}
     .back-link a{color:#c8a951;text-decoration:none;font-size:14px;font-weight:500}
 
-    @media(max-width:600px){
-      .doc-container{padding:20px 16px 60px}
+    @media(max-width:768px){
+      .nav-bar{padding:12px 16px}
+      .nav-bar a{font-size:13px}
+      .nav-logo span{font-size:11px;letter-spacing:1px}
       .doc-header{padding:30px 20px}
       .doc-header h1{font-size:24px}
-      .section{padding:20px 18px}
+      table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+      .section{padding:20px 16px}
+      .toc{padding:20px 18px}
+      h2{font-size:19px;margin:36px 0 16px}
+      h3{font-size:15px}
+    }
+
+    @media(max-width:600px){
+      .doc-container{padding:20px 16px 60px}
+      .doc-header{padding:24px 16px}
+      .doc-header h1{font-size:22px}
+      .section{padding:16px 14px}
       .doc-meta{flex-direction:column;align-items:center;gap:8px}
+      body{font-size:14px}
     }
   

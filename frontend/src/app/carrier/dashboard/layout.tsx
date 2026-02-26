@@ -83,18 +83,18 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
       <CarrierSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Search size={16} className="text-gray-400" />
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Search size={16} className="text-gray-400 shrink-0" />
             <input
               placeholder="Search loads, documents, payments..."
-              className="border-none outline-none text-[13px] text-gray-700 w-[280px] bg-transparent"
+              className="border-none outline-none text-[13px] text-gray-700 w-full max-w-[280px] bg-transparent"
             />
           </div>
           <div className="flex items-center gap-4">
             {/* Company name */}
             {companyName && (
-              <span className="text-xs text-gray-400 font-medium">{companyName}</span>
+              <span className="text-xs text-gray-400 font-medium hidden sm:inline">{companyName}</span>
             )}
             {/* Notifications */}
             <div className="relative">
@@ -107,7 +107,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                 )}
               </button>
               {notifOpen && (
-                <div className="absolute top-8 right-0 w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(13,27,42,0.15)] border border-gray-200 z-[100]">
+                <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(13,27,42,0.15)] border border-gray-200 z-[100]">
                   <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100">
                     <span className="text-[13px] font-bold text-[#0D1B2A]">Notifications</span>
                     <button onClick={() => setNotifOpen(false)}><X size={14} className="text-gray-400" /></button>
@@ -136,7 +136,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
       </div>
 
       {/* Session Timeout Warning */}
