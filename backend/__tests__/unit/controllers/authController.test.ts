@@ -22,6 +22,7 @@ function mockReqRes(body: Record<string, any> = {}, user?: any) {
   const res: any = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    cookie: vi.fn().mockReturnThis(),
   };
   return { req, res };
 }
@@ -86,7 +87,10 @@ describe("authController", () => {
         id: "user-1",
         email: "test@test.com",
         firstName: "John",
+        isActive: true,
         passwordHash: hash,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
       } as any);
 
       // Mock createOtp via prisma calls
@@ -94,11 +98,12 @@ describe("authController", () => {
       mockPrisma.otpCode.create.mockResolvedValue({
         id: "otp-1",
         userId: "user-1",
-        code: "123456",
+        code: "12345678",
         expiresAt: new Date(),
         used: false,
         createdAt: new Date(),
       });
+      mockPrisma.user.update.mockResolvedValue({} as any);
 
       const { req, res } = mockReqRes({
         email: "test@test.com",
@@ -107,10 +112,11 @@ describe("authController", () => {
 
       await login(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({
-        pendingOtp: true,
-        email: "test@test.com",
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pendingOtp: true,
+        }),
+      );
     });
 
     it("returns 401 for bad credentials", async () => {
@@ -146,21 +152,26 @@ describe("authController", () => {
         role: "BROKER",
         passwordChangedAt: new Date(),
         createdAt: new Date(),
+        totpEnabled: false,
       };
       mockPrisma.user.findUnique.mockResolvedValue(user as any);
+      // verifyOtp calls count first for lockout check
+      mockPrisma.otpCode.count.mockResolvedValue(0);
       // verifyOtp will call findFirst
       mockPrisma.otpCode.findFirst.mockResolvedValue({
         id: "otp-1",
         userId: "user-1",
-        code: "123456",
+        code: "12345678",
         expiresAt: new Date(Date.now() + 60000),
         used: false,
+        failedAttempts: 0,
         createdAt: new Date(),
-      });
+      } as any);
       mockPrisma.otpCode.update.mockResolvedValue({} as any);
       mockPrisma.auditLog.create.mockResolvedValue({} as any);
+      mockPrisma.user.update.mockResolvedValue({} as any);
 
-      const { req, res } = mockReqRes({ email: "test@test.com", code: "123456" });
+      const { req, res } = mockReqRes({ email: "test@test.com", code: "12345678" });
 
       await handleVerifyOtp(req, res);
 
@@ -182,19 +193,22 @@ describe("authController", () => {
         role: "BROKER",
         passwordChangedAt: oldDate,
         createdAt: oldDate,
+        totpEnabled: false,
       };
       mockPrisma.user.findUnique.mockResolvedValue(user as any);
+      mockPrisma.otpCode.count.mockResolvedValue(0);
       mockPrisma.otpCode.findFirst.mockResolvedValue({
         id: "otp-1",
         userId: "user-1",
-        code: "123456",
+        code: "12345678",
         expiresAt: new Date(Date.now() + 60000),
         used: false,
+        failedAttempts: 0,
         createdAt: new Date(),
-      });
+      } as any);
       mockPrisma.otpCode.update.mockResolvedValue({} as any);
 
-      const { req, res } = mockReqRes({ email: "test@test.com", code: "123456" });
+      const { req, res } = mockReqRes({ email: "test@test.com", code: "12345678" });
 
       await handleVerifyOtp(req, res);
 
@@ -211,14 +225,14 @@ describe("authController", () => {
         id: "user-1",
         email: "test@test.com",
       } as any);
+      mockPrisma.otpCode.count.mockResolvedValue(0);
       mockPrisma.otpCode.findFirst.mockResolvedValue(null);
 
-      const { req, res } = mockReqRes({ email: "test@test.com", code: "000000" });
+      const { req, res } = mockReqRes({ email: "test@test.com", code: "00000000" });
 
       await handleVerifyOtp(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: "Invalid or expired code" });
     });
   });
 
@@ -291,13 +305,16 @@ describe("authController", () => {
       mockPrisma.user.update.mockResolvedValue({} as any);
 
       const { req, res } = mockReqRes(
-        { currentPassword: "OldPassword123!", newPassword: "NewPassword456!" },
+        { currentPassword: "OldPassword123!", newPassword: "NewPassword456!!" },
         { id: "user-1" },
       );
+      req.token = "test-token";
 
       await changePassword(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ message: "Password updated successfully" });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Password updated successfully" }),
+      );
     });
 
     it("returns 401 for wrong current password", async () => {

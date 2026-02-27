@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createTenderSchema, counterTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
+import { complianceCheck } from "../services/complianceMonitorService";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -11,6 +12,13 @@ export async function createTender(req: AuthRequest, res: Response) {
 
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: carrierId } });
   if (!carrier) { res.status(404).json({ error: "Carrier not found" }); return; }
+
+  // Compliance gate: block non-compliant carriers
+  const compliance = await complianceCheck(carrierId);
+  if (!compliance.allowed) {
+    res.status(403).json({ error: "Carrier is non-compliant", blocked_reasons: compliance.blocked_reasons });
+    return;
+  }
 
   const tender = await prisma.loadTender.create({
     data: { loadId: load.id, carrierId, offeredRate, expiresAt },
@@ -26,13 +34,20 @@ export async function createTender(req: AuthRequest, res: Response) {
     },
   });
 
-  res.status(201).json(tender);
+  res.status(201).json({ ...tender, complianceWarnings: compliance.warnings.length > 0 ? compliance.warnings : undefined });
 }
 
 export async function acceptTender(req: AuthRequest, res: Response) {
   const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
+
+  // Compliance gate: re-check at acceptance time (carrier may have become non-compliant)
+  const compliance = await complianceCheck(tender.carrierId);
+  if (!compliance.allowed) {
+    res.status(403).json({ error: "Carrier is no longer compliant", blocked_reasons: compliance.blocked_reasons });
+    return;
+  }
 
   // Fetch full load details for shipment creation
   const load = await prisma.load.findUnique({ where: { id: tender.loadId } });

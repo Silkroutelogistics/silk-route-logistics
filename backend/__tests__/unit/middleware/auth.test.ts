@@ -66,12 +66,12 @@ describe("auth middleware", () => {
       const { req, res, next } = mockReqRes({
         headers: { authorization: `Bearer ${token}` },
       });
-      const mockUser = { id: "user-1", email: "test@test.com", role: "ADMIN" };
+      const mockUser = { id: "user-1", email: "test@test.com", role: "ADMIN", isActive: true };
       mockPrisma.user.findUnique.mockResolvedValue(mockUser as any);
 
       await authenticate(req, res, next);
 
-      expect(req.user).toEqual(mockUser);
+      expect(req.user).toEqual(expect.objectContaining({ id: "user-1", role: "ADMIN" }));
       expect(next).toHaveBeenCalled();
     });
   });

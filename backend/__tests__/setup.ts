@@ -14,19 +14,104 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
+      count: vi.fn(),
     },
     auditLog: {
       create: vi.fn(),
     },
+    auditTrail: {
+      create: vi.fn(),
+    },
     load: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
     },
     shipment: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
     },
     invoice: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      count: vi.fn(),
+      aggregate: vi.fn(),
+      groupBy: vi.fn(),
     },
+    loadTender: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      count: vi.fn(),
+    },
+    carrierProfile: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    customer: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    notification: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+    },
+    cronRegistry: {
+      findMany: vi.fn(),
+    },
+    errorLog: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      create: vi.fn(),
+    },
+    invoiceLineItem: {
+      createMany: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    checkCall: {
+      updateMany: vi.fn(),
+    },
+    message: {
+      findMany: vi.fn(),
+    },
+    document: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+    },
+    eDITransaction: {
+      create: vi.fn(),
+    },
+    brokerIntegration: {
+      findMany: vi.fn(),
+    },
+    riskLog: {
+      findMany: vi.fn(),
+    },
+    systemLog: {
+      create: vi.fn().mockResolvedValue({}),
+    },
+    tokenBlacklist: {
+      upsert: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+    $executeRaw: vi.fn(),
+    $queryRaw: vi.fn(),
+    $transaction: vi.fn(),
   },
 }));
 
@@ -44,5 +129,10 @@ vi.mock("../src/config/env", () => ({
     GEMINI_API_KEY: "test-gemini-key",
     RESEND_API_KEY: "",
     EMAIL_FROM: "noreply@test.com",
+    DAT_API_KEY: "",
+    DAT_API_SECRET: "",
+    DAT_API_URL: "",
+    HIGHWAY_API_KEY: "",
+    FMCSA_API_KEY: "",
   },
 }));

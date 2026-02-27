@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
-import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight, ClipboardCheck } from "lucide-react";
+import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight, ClipboardCheck, Globe } from "lucide-react";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 
@@ -21,6 +21,7 @@ interface Load {
   carrier?: { company: string | null; firstName: string; lastName: string; phone?: string } | null;
   tenders?: { id: string; status: string; offeredRate: number; counterRate: number | null; createdAt: string; carrier: { user: { company: string | null; firstName: string; lastName: string } } }[];
   documents?: { id: string; fileName: string; fileUrl: string }[];
+  datPostId?: string; datPostedAt?: string; datPostedFields?: any;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -70,11 +71,11 @@ export default function LoadsPage() {
   });
 
   const { data: suggestedCarriers } = useQuery({
-    queryKey: ["suggested-carriers", loadDetail?.equipmentType],
-    queryFn: () => api.get<{ carriers: { carrierId: string; company: string; tier: string; equipmentTypes: string[]; safetyScore: number | null }[]; total: number }>(
-      `/market/capacity?equipmentType=${encodeURIComponent(loadDetail?.equipmentType || "")}`
-    ).then((r) => r.data),
-    enabled: !!loadDetail && loadDetail.status === "POSTED" && canCreate,
+    queryKey: ["carrier-match", selectedLoadId],
+    queryFn: () => api.get<{ matches: { carrierId: string; company: string; tier: string; equipmentTypes: string[]; safetyScore: number | null; complianceStatus: string; matchScore: number }[]; totalCandidates: number; suggestDAT: boolean }>(
+      `/carrier-match/${selectedLoadId}`
+    ).then((r) => ({ carriers: r.data.matches, total: r.data.totalCandidates })),
+    enabled: !!selectedLoadId && !!loadDetail && loadDetail.status === "POSTED" && canCreate,
   });
 
   const queryClient = useQueryClient();
@@ -82,6 +83,8 @@ export default function LoadsPage() {
   const [showRateConf, setShowRateConf] = useState(false);
   const [tenderCarrierId, setTenderCarrierId] = useState("");
   const [tenderRate, setTenderRate] = useState("");
+  const [complianceResult, setComplianceResult] = useState<{ allowed: boolean; blocked_reasons: string[]; warnings: string[] } | null>(null);
+  const [checkingCompliance, setCheckingCompliance] = useState(false);
 
   const updateStatus = useMutation({
     mutationFn: ({ loadId, status }: { loadId: string; status: string }) =>
@@ -110,6 +113,41 @@ export default function LoadsPage() {
       setTenderCarrierId("");
       setTenderRate("");
     },
+  });
+
+  // DAT Load Board state
+  const [showDatAdvanced, setShowDatAdvanced] = useState(false);
+  const [datAdvForm, setDatAdvForm] = useState({ originCity: "", originState: "", destCity: "", destState: "", equipmentType: "", weight: "", rate: "", pickupDate: "", deliveryDate: "", loadType: "FULL", comments: "" });
+
+  const datPostMutation = useMutation({
+    mutationFn: (loadId: string) => api.post("/dat/post-load", { loadId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+    },
+  });
+
+  const datPostAdvancedMutation = useMutation({
+    mutationFn: (body: Record<string, any>) => api.post("/dat/post-load-advanced", body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      setShowDatAdvanced(false);
+    },
+  });
+
+  const datRemoveMutation = useMutation({
+    mutationFn: (datPostId: string) => api.delete(`/dat/remove-post/${datPostId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+    },
+  });
+
+  const { data: datResponses } = useQuery({
+    queryKey: ["dat-responses", selectedLoadId],
+    queryFn: () => api.get<{ responses: { id: string; carrierName: string; mcNumber: string; dotNumber: string; equipment: string; offeredRate: number; phone: string; email: string; driverAvailable: boolean; truckCount: number }[]; mock?: boolean }>(`/dat/responses/${selectedLoadId}`).then((r) => r.data),
+    enabled: !!selectedLoadId && !!(loadDetail?.datPostId || loadDetail?.status === "POSTED"),
   });
 
   const NEXT_STATUS: Record<string, string> = {
@@ -295,6 +333,77 @@ export default function LoadsPage() {
                 </div>
               </div>
             )}
+
+            {/* DAT Load Board */}
+            {canCreate && (
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-medium text-slate-400 flex items-center gap-2"><Globe className="w-4 h-4" /> DAT Load Board</h2>
+                  {load.datPostedAt && <span className="text-xs text-green-400">Posted {new Date(load.datPostedAt).toLocaleDateString()}</span>}
+                </div>
+
+                {!load.datPostId && ["POSTED", "TENDERED", "CONFIRMED"].includes(load.status) && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => datPostMutation.mutate(load.id)}
+                      disabled={datPostMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 disabled:opacity-50"
+                    >
+                      <Globe className="w-4 h-4" /> {datPostMutation.isPending ? "Posting..." : "Post to DAT"}
+                    </button>
+                    <button
+                      onClick={() => { setDatAdvForm({ originCity: load.originCity, originState: load.originState, destCity: load.destCity, destState: load.destState, equipmentType: load.equipmentType, weight: load.weight ? String(load.weight) : "", rate: String(load.rate), pickupDate: load.pickupDate?.slice(0, 10) || "", deliveryDate: load.deliveryDate?.slice(0, 10) || "", loadType: "FULL", comments: "" }); setShowDatAdvanced(true); }}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20"
+                    >
+                      Advanced Post
+                    </button>
+                  </div>
+                )}
+
+                {load.datPostId && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <div>
+                        <p className="text-sm text-green-400 font-medium">Active on DAT</p>
+                        <p className="text-xs text-slate-400">Post ID: {load.datPostId}</p>
+                      </div>
+                      <button
+                        onClick={() => datRemoveMutation.mutate(load.datPostId!)}
+                        disabled={datRemoveMutation.isPending}
+                        className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 disabled:opacity-50"
+                      >
+                        {datRemoveMutation.isPending ? "Removing..." : "Remove from DAT"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {datResponses && datResponses.responses.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-xs font-medium text-slate-400 mb-2">DAT Responses ({datResponses.responses.length})</h3>
+                    {datResponses.mock && <p className="text-xs text-yellow-400 mb-2">Demo mode — showing sample responses</p>}
+                    <div className="space-y-2">
+                      {datResponses.responses.map((r) => (
+                        <div key={r.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                          <div>
+                            <p className="text-sm text-white font-medium">{r.carrierName}</p>
+                            <p className="text-xs text-slate-400">MC# {r.mcNumber} | DOT# {r.dotNumber} | {r.equipment}</p>
+                            <p className="text-xs text-slate-400">{r.phone} | {r.email}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gold font-medium">${r.offeredRate.toLocaleString()}</p>
+                            <p className="text-xs text-slate-400">{r.truckCount} truck{r.truckCount !== 1 ? "s" : ""} {r.driverAvailable ? "— driver ready" : ""}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {datPostMutation.isError && <p className="text-xs text-red-400 mt-2">Failed to post to DAT. Please try again.</p>}
+                {datRemoveMutation.isError && <p className="text-xs text-red-400 mt-2">Failed to remove from DAT. Please try again.</p>}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -352,22 +461,33 @@ export default function LoadsPage() {
             {load.status === "POSTED" && canCreate && suggestedCarriers && suggestedCarriers.carriers.length > 0 && (
               <div className="bg-white/5 rounded-xl border border-gold/20 p-6">
                 <h2 className="text-sm font-medium text-gold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Suggested Carriers</h2>
-                <p className="text-xs text-slate-500 mb-3">{suggestedCarriers.total} carriers match this equipment type</p>
+                <p className="text-xs text-slate-500 mb-3">{suggestedCarriers.total} candidates evaluated</p>
                 <div className="space-y-2">
-                  {suggestedCarriers.carriers.slice(0, 5).map((c) => (
-                    <div key={c.carrierId} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                      <div>
-                        <p className="text-sm text-white">{c.company}</p>
-                        <p className="text-xs text-slate-500">{c.equipmentTypes.join(", ")}</p>
+                  {suggestedCarriers.carriers.slice(0, 5).map((c) => {
+                    const isRed = c.complianceStatus === "red";
+                    const isAmber = c.complianceStatus === "amber";
+                    return (
+                      <div key={c.carrierId} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isRed ? "bg-red-500" : isAmber ? "bg-amber-500" : "bg-green-500"}`} title={isRed ? "Non-Compliant" : isAmber ? "Expiring Soon" : "Compliant"} />
+                          <div>
+                            <p className="text-sm text-white">{c.company}</p>
+                            <p className="text-xs text-slate-500">{c.equipmentTypes.join(", ")}</p>
+                          </div>
+                        </div>
+                        {isRed ? (
+                          <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs">Non-Compliant</span>
+                        ) : (
+                          <button
+                            onClick={() => { setTenderCarrierId(c.carrierId); setTenderRate(String(load.rate)); setShowTender(true); setComplianceResult(null); }}
+                            className="px-2 py-1 bg-gold/20 text-gold rounded text-xs hover:bg-gold/30"
+                          >
+                            Quick Tender
+                          </button>
+                        )}
                       </div>
-                      <button
-                        onClick={() => { setTenderCarrierId(c.carrierId); setTenderRate(String(load.rate)); setShowTender(true); }}
-                        className="px-2 py-1 bg-gold/20 text-gold rounded text-xs hover:bg-gold/30"
-                      >
-                        Quick Tender
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -403,17 +523,17 @@ export default function LoadsPage() {
             <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Tender Load to Carrier</h2>
-                <button onClick={() => setShowTender(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => { setShowTender(false); setComplianceResult(null); }} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <p className="text-sm text-slate-400">{load.referenceNumber} — {load.originCity}, {load.originState} → {load.destCity}, {load.destState}</p>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Select Carrier</label>
-                <select value={tenderCarrierId} onChange={(e) => setTenderCarrierId(e.target.value)}
+                <select value={tenderCarrierId} onChange={(e) => { setTenderCarrierId(e.target.value); setComplianceResult(null); }}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
                   <option value="" className="bg-navy">Choose a carrier...</option>
-                  {suggestedCarriers?.carriers?.map((c) => (
+                  {suggestedCarriers?.carriers?.filter((c) => c.complianceStatus !== "red").map((c) => (
                     <option key={c.carrierId} value={c.carrierId} className="bg-navy">
-                      {c.company} ({c.tier})
+                      {c.company} ({c.tier}){c.complianceStatus === "amber" ? " - Expiring" : ""}
                     </option>
                   ))}
                 </select>
@@ -423,12 +543,151 @@ export default function LoadsPage() {
                 <input type="number" value={tenderRate} onChange={(e) => setTenderRate(e.target.value)}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
               </div>
+
+              {/* Compliance warnings/blocks */}
+              {complianceResult && !complianceResult.allowed && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <p className="text-sm font-medium text-red-400 mb-1">Carrier Blocked</p>
+                  {complianceResult.blocked_reasons.map((r, i) => (
+                    <p key={i} className="text-xs text-red-300">- {r}</p>
+                  ))}
+                </div>
+              )}
+              {complianceResult && complianceResult.allowed && complianceResult.warnings.length > 0 && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <p className="text-sm font-medium text-amber-400 mb-1">Compliance Warnings</p>
+                  {complianceResult.warnings.map((w, i) => (
+                    <p key={i} className="text-xs text-amber-300">- {w}</p>
+                  ))}
+                </div>
+              )}
+
               <button
-                onClick={() => createTender.mutate({ loadId: load.id, carrierId: tenderCarrierId, offeredRate: parseFloat(tenderRate) })}
-                disabled={!tenderCarrierId || !tenderRate || createTender.isPending}
+                onClick={async () => {
+                  if (!tenderCarrierId || !tenderRate) return;
+                  // Pre-flight compliance check
+                  if (!complianceResult) {
+                    setCheckingCompliance(true);
+                    try {
+                      const res = await api.post(`/compliance/carrier/${tenderCarrierId}/check`);
+                      const result = res.data as { allowed: boolean; blocked_reasons: string[]; warnings: string[] };
+                      setComplianceResult(result);
+                      if (result.allowed && result.warnings.length === 0) {
+                        createTender.mutate({ loadId: load.id, carrierId: tenderCarrierId, offeredRate: parseFloat(tenderRate) });
+                      }
+                    } catch {
+                      createTender.mutate({ loadId: load.id, carrierId: tenderCarrierId, offeredRate: parseFloat(tenderRate) });
+                    } finally {
+                      setCheckingCompliance(false);
+                    }
+                    return;
+                  }
+                  if (complianceResult.allowed) {
+                    createTender.mutate({ loadId: load.id, carrierId: tenderCarrierId, offeredRate: parseFloat(tenderRate) });
+                  }
+                }}
+                disabled={!tenderCarrierId || !tenderRate || createTender.isPending || checkingCompliance || (complianceResult !== null && !complianceResult.allowed)}
                 className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50"
               >
-                Send Tender
+                {checkingCompliance ? "Checking Compliance..." : complianceResult && complianceResult.allowed && complianceResult.warnings.length > 0 ? "Send Tender (with warnings)" : "Send Tender"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Advanced DAT Post Modal */}
+        {showDatAdvanced && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2"><Globe className="w-5 h-5 text-gold" /> Advanced DAT Post</h2>
+                <button onClick={() => setShowDatAdvanced(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <p className="text-sm text-slate-400">Override load details for the DAT posting. Leave blank to use load defaults.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Origin City</label>
+                  <input value={datAdvForm.originCity} onChange={(e) => setDatAdvForm((f) => ({ ...f, originCity: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Origin State</label>
+                  <input value={datAdvForm.originState} onChange={(e) => setDatAdvForm((f) => ({ ...f, originState: e.target.value }))} maxLength={2}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Dest City</label>
+                  <input value={datAdvForm.destCity} onChange={(e) => setDatAdvForm((f) => ({ ...f, destCity: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Dest State</label>
+                  <input value={datAdvForm.destState} onChange={(e) => setDatAdvForm((f) => ({ ...f, destState: e.target.value }))} maxLength={2}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Equipment Type</label>
+                  <select value={datAdvForm.equipmentType} onChange={(e) => setDatAdvForm((f) => ({ ...f, equipmentType: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                    <option value="" className="bg-navy">Use default</option>
+                    {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => <option key={t} value={t} className="bg-navy">{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Weight (lbs)</label>
+                  <input type="number" value={datAdvForm.weight} onChange={(e) => setDatAdvForm((f) => ({ ...f, weight: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Rate ($)</label>
+                  <input type="number" value={datAdvForm.rate} onChange={(e) => setDatAdvForm((f) => ({ ...f, rate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Load Type</label>
+                  <select value={datAdvForm.loadType} onChange={(e) => setDatAdvForm((f) => ({ ...f, loadType: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                    <option value="FULL" className="bg-navy">Full Truckload</option>
+                    <option value="PARTIAL" className="bg-navy">Partial</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Pickup Date</label>
+                  <input type="date" value={datAdvForm.pickupDate} onChange={(e) => setDatAdvForm((f) => ({ ...f, pickupDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Delivery Date</label>
+                  <input type="date" value={datAdvForm.deliveryDate} onChange={(e) => setDatAdvForm((f) => ({ ...f, deliveryDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Comments</label>
+                <textarea value={datAdvForm.comments} onChange={(e) => setDatAdvForm((f) => ({ ...f, comments: e.target.value }))} rows={2}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 resize-none" />
+              </div>
+              {datPostAdvancedMutation.isError && <p className="text-xs text-red-400">Failed to post. Please try again.</p>}
+              <button
+                onClick={() => {
+                  const body: Record<string, any> = { loadId: load.id };
+                  if (datAdvForm.originCity) body.originCity = datAdvForm.originCity;
+                  if (datAdvForm.originState) body.originState = datAdvForm.originState;
+                  if (datAdvForm.destCity) body.destCity = datAdvForm.destCity;
+                  if (datAdvForm.destState) body.destState = datAdvForm.destState;
+                  if (datAdvForm.equipmentType) body.equipmentType = datAdvForm.equipmentType;
+                  if (datAdvForm.weight) body.weight = parseFloat(datAdvForm.weight);
+                  if (datAdvForm.rate) body.rate = parseFloat(datAdvForm.rate);
+                  if (datAdvForm.pickupDate) body.pickupDate = datAdvForm.pickupDate;
+                  if (datAdvForm.deliveryDate) body.deliveryDate = datAdvForm.deliveryDate;
+                  if (datAdvForm.loadType) body.loadType = datAdvForm.loadType;
+                  if (datAdvForm.comments) body.comments = datAdvForm.comments;
+                  datPostAdvancedMutation.mutate(body);
+                }}
+                disabled={datPostAdvancedMutation.isPending}
+                className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50"
+              >
+                {datPostAdvancedMutation.isPending ? "Posting to DAT..." : "Post to DAT"}
               </button>
             </div>
           </div>

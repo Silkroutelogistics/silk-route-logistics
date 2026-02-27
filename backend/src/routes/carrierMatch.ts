@@ -100,15 +100,9 @@ router.get("/:loadId", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIO
     };
   });
 
-  // Sort by match score descending, filter to equipment matches first
-  const sorted = scored
+  // Sort by match score descending, always exclude red (non-compliant) carriers
+  const allMatches = scored
     .filter((c) => c.equipmentMatch && c.complianceStatus !== "red")
-    .sort((a, b) => b.matchScore - a.matchScore)
-    .slice(0, 10);
-
-  // If no good matches, include all equipment matches regardless of compliance
-  const allMatches = sorted.length > 0 ? sorted : scored
-    .filter((c) => c.equipmentMatch)
     .sort((a, b) => b.matchScore - a.matchScore)
     .slice(0, 10);
 

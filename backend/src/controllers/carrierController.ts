@@ -9,6 +9,7 @@ import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrie
 import { calculateTier, getBonusPercentage } from "../services/tierService";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
+import { runFmcsaScan } from "../services/complianceMonitorService";
 
 export async function registerCarrier(req: Request, res: Response) {
   const data = carrierRegisterSchema.parse(req.body);
@@ -152,6 +153,9 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
 
     // Integration: create initial CPP scorecard + GUEST tier
     onCarrierApproved(profile.id).catch((e) => console.error("[Integration] onCarrierApproved error:", e.message));
+
+    // Auto-trigger FMCSA scan to populate compliance data
+    runFmcsaScan(profile.id).catch((e) => console.error("[Compliance] Auto FMCSA scan error:", e.message));
   }
 
   res.json(updated);

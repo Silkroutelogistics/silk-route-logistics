@@ -150,6 +150,15 @@ export function Sidebar() {
         <DollarSign className="w-3.5 h-3.5" />
         Accounting Console
       </Link>
+      {admin && (
+        <Link
+          href="/admin/users"
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium bg-white/5 text-slate-400 hover:text-gold hover:bg-gold/10 transition mt-1"
+        >
+          <Shield className="w-3.5 h-3.5" />
+          Admin Console
+        </Link>
+      )}
     </div>
   ) : null;
 

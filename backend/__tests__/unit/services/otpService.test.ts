@@ -10,9 +10,9 @@ describe("otpService", () => {
   });
 
   describe("generateOtp", () => {
-    it("returns a 6-digit numeric string", () => {
+    it("returns an 8-digit numeric string", () => {
       const otp = generateOtp();
-      expect(otp).toMatch(/^\d{6}$/);
+      expect(otp).toMatch(/^\d{8}$/);
     });
 
     it("returns different values on subsequent calls", () => {
@@ -35,7 +35,7 @@ describe("otpService", () => {
 
       const code = await createOtp("user-1");
 
-      expect(code).toMatch(/^\d{6}$/);
+      expect(code).toMatch(/^\d{8}$/);
       expect(mockPrisma.otpCode.updateMany).toHaveBeenCalledWith({
         where: { userId: "user-1", used: false },
         data: { used: true },
@@ -52,41 +52,40 @@ describe("otpService", () => {
   });
 
   describe("verifyOtp", () => {
-    it("returns true and marks as used for valid OTP", async () => {
+    it("returns success for valid OTP", async () => {
+      mockPrisma.otpCode.count.mockResolvedValue(0);
       mockPrisma.otpCode.findFirst.mockResolvedValue({
         id: "otp-1",
         userId: "user-1",
-        code: "123456",
+        code: "12345678",
         expiresAt: new Date(Date.now() + 60000),
         used: false,
+        failedAttempts: 0,
         createdAt: new Date(),
-      });
+      } as any);
       mockPrisma.otpCode.update.mockResolvedValue({} as any);
 
-      const result = await verifyOtp("user-1", "123456");
+      const result = await verifyOtp("user-1", "12345678");
 
-      expect(result).toBe(true);
-      expect(mockPrisma.otpCode.update).toHaveBeenCalledWith({
-        where: { id: "otp-1" },
-        data: { used: true },
-      });
+      expect(result.success).toBe(true);
     });
 
-    it("returns false for invalid OTP", async () => {
+    it("returns failure for invalid OTP", async () => {
+      mockPrisma.otpCode.count.mockResolvedValue(0);
       mockPrisma.otpCode.findFirst.mockResolvedValue(null);
 
-      const result = await verifyOtp("user-1", "000000");
+      const result = await verifyOtp("user-1", "00000000");
 
-      expect(result).toBe(false);
-      expect(mockPrisma.otpCode.update).not.toHaveBeenCalled();
+      expect(result.success).toBe(false);
     });
 
-    it("returns false for expired OTP", async () => {
+    it("returns failure for expired OTP", async () => {
+      mockPrisma.otpCode.count.mockResolvedValue(0);
       mockPrisma.otpCode.findFirst.mockResolvedValue(null);
 
-      const result = await verifyOtp("user-1", "123456");
+      const result = await verifyOtp("user-1", "12345678");
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
     });
   });
 

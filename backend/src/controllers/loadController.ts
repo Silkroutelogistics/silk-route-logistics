@@ -7,6 +7,7 @@ import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
+import { complianceCheck } from "../services/complianceMonitorService";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -453,7 +454,18 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     }
     data.customerId = customerId;
   }
-  if (carrierId !== undefined) data.carrierId = carrierId;
+  if (carrierId !== undefined) {
+    // Compliance gate: check carrier before direct assignment
+    const carrierProfile = await prisma.carrierProfile.findFirst({ where: { userId: carrierId } });
+    if (carrierProfile) {
+      const compliance = await complianceCheck(carrierProfile.id);
+      if (!compliance.allowed) {
+        res.status(403).json({ error: "Carrier is non-compliant", blocked_reasons: compliance.blocked_reasons });
+        return;
+      }
+    }
+    data.carrierId = carrierId;
+  }
 
   // Recalculate margin fields if rates changed (guard against division by zero)
   const finalCustRate = (customerRate ?? existing.customerRate ?? rate ?? existing.rate) as number;
