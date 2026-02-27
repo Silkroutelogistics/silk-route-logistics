@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { Logo } from "@/components/ui/Logo";
+import { MarcoPolo } from "@/components/MarcoPolo";
 import {
   LayoutDashboard, FileText, Clock, CreditCard, Zap, CheckCircle2,
   RotateCcw, Landmark, BarChart3, FileSpreadsheet, LogOut, ChevronRight, DollarSign, Menu, X,
@@ -57,7 +58,7 @@ const NAV_SECTIONS = [
 
 export default function AccountingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user, token, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close sidebar on route change
@@ -180,6 +181,9 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
+
+      {/* Marco Polo AI Assistant */}
+      <MarcoPolo isAuthenticated={true} token={token} darkMode={true} />
     </div>
     </AuthGuard>
   );
