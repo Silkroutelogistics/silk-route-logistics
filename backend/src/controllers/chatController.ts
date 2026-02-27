@@ -56,6 +56,7 @@ const ROLE_CONTEXT: Record<string, string> = {
   ACCOUNTING: `\n\nThis user is in ACCOUNTING. They focus on AR/AP, fund management, invoices, and carrier payments. They have access to all financial data.`,
   DISPATCH: `\n\nThis user is in DISPATCH. They manage load assignments, carrier coordination, and check calls. They can see loads and carrier data but not detailed financials.`,
   OPERATIONS: `\n\nThis user is in OPERATIONS. They oversee load flow, carrier performance, and compliance. They can see loads, carriers, and compliance data.`,
+  SHIPPER: `\n\nThis user is a SHIPPER. They can only see their own shipments, invoices, and shipping analytics. They have dedicated tools: getShipperShipments, getShipperInvoices, getShipperAnalytics, getShipperTracking, and getShipperProfile. Do NOT reveal internal rates, margins, carrier rates, or other shippers' data. Guide them to the Shipper Portal features.`,
 };
 
 const PUBLIC_SYSTEM_PROMPT = `You are Marco Polo, the AI assistant on the Silk Route Logistics website. You help public visitors learn about SRL's freight brokerage services.

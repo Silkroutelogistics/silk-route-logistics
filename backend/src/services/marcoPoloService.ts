@@ -41,6 +41,10 @@ function isCarrier(role: string): boolean {
   return role === "CARRIER";
 }
 
+function isShipper(role: string): boolean {
+  return role === "SHIPPER";
+}
+
 function canSeeAllLoads(role: string): boolean {
   return isAdmin(role) || isOperations(role) || role === "ACCOUNTING";
 }
@@ -80,7 +84,16 @@ function applyLoadRoleFilter(ctx: UserContext): Record<string, any> {
   if (canSeeAllLoads(ctx.role)) return {};
   if (isCarrier(ctx.role)) return { carrierId: ctx.userId };
   if (isBroker(ctx.role)) return { posterId: ctx.userId };
-  return { posterId: ctx.userId }; // default: own loads only
+  // Shipper: handled by resolveShipperLoadWhere (async), so default to posterId here
+  return { posterId: ctx.userId };
+}
+
+async function resolveShipperFilter(userId: string): Promise<Record<string, any>> {
+  const customer = await prisma.customer.findUnique({ where: { userId } });
+  if (customer) {
+    return { deletedAt: null, OR: [{ customerId: customer.id }, { posterId: userId }] };
+  }
+  return { posterId: userId, deletedAt: null };
 }
 
 // ─── Sanitize Load for Role ──────────────────────────────────────────────────
@@ -94,6 +107,16 @@ function sanitizeLoadForRole(load: any, role: string): any {
     delete copy.marginPercent;
     delete copy.marginPerMile;
     delete copy.revenuePerMile;
+  }
+  // Shippers should NOT see internal rate or margin data
+  if (isShipper(role)) {
+    delete copy.rate;
+    delete copy.carrierRate;
+    delete copy.grossMargin;
+    delete copy.marginPercent;
+    delete copy.marginPerMile;
+    delete copy.revenuePerMile;
+    delete copy.costPerMile;
   }
   // Brokers/AE can see both rates but not fund-level data (handled elsewhere)
   return copy;
@@ -1528,6 +1551,308 @@ export async function getCarrierScore(ctx: UserContext, carrierId: string) {
   }
 }
 
+// ─── Shipper Tools ───────────────────────────────────────────────────────────
+
+async function getShipperLoadIds(userId: string): Promise<string[]> {
+  const where = await resolveShipperFilter(userId);
+  const loads = await prisma.load.findMany({ where, select: { id: true } });
+  return loads.map((l) => l.id);
+}
+
+export async function getShipperShipments(ctx: UserContext, status?: string, search?: string) {
+  try {
+    if (!isShipper(ctx.role)) return { error: "This tool is only available to shipper users." };
+
+    const where: any = await resolveShipperFilter(ctx.userId);
+
+    if (status) {
+      const statusMap: Record<string, string[]> = {
+        active: ["DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY"],
+        delivered: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"],
+        pending: ["DRAFT", "POSTED", "TENDERED", "CONFIRMED", "BOOKED", "PLANNED"],
+        at_risk: [],
+      };
+      const mapped = statusMap[status.toLowerCase()];
+      if (mapped && mapped.length > 0) {
+        where.status = { in: mapped };
+      } else if (!mapped) {
+        where.status = status.toUpperCase();
+      }
+    }
+
+    if (search) {
+      where.OR = [
+        ...(where.OR || []),
+        { referenceNumber: { contains: search, mode: "insensitive" } },
+        { originCity: { contains: search, mode: "insensitive" } },
+        { destCity: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const loads = await prisma.load.findMany({
+      where,
+      take: 15,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, referenceNumber: true, status: true,
+        originCity: true, originState: true, destCity: true, destState: true,
+        pickupDate: true, deliveryDate: true, actualPickupDatetime: true, actualDeliveryDatetime: true,
+        customerRate: true, weight: true, equipmentType: true, commodity: true, distance: true,
+        carrier: { select: { company: true } },
+      },
+    });
+
+    return {
+      shipments: loads.map((l) => ({
+        id: l.id,
+        ref: l.referenceNumber,
+        status: l.status,
+        origin: `${l.originCity}, ${l.originState}`,
+        destination: `${l.destCity}, ${l.destState}`,
+        pickupDate: l.pickupDate,
+        deliveryDate: l.deliveryDate,
+        actualPickup: l.actualPickupDatetime,
+        actualDelivery: l.actualDeliveryDatetime,
+        rate: l.customerRate,
+        weight: l.weight,
+        equipment: l.equipmentType,
+        commodity: l.commodity,
+        distance: l.distance,
+        carrier: l.carrier?.company || null,
+      })),
+      count: loads.length,
+    };
+  } catch (err: any) {
+    return { error: "Failed to fetch shipments: " + err.message };
+  }
+}
+
+export async function getShipperInvoices(ctx: UserContext, status?: string) {
+  try {
+    if (!isShipper(ctx.role)) return { error: "This tool is only available to shipper users." };
+
+    const loadIds = await getShipperLoadIds(ctx.userId);
+    if (loadIds.length === 0) return { invoices: [], metrics: { outstanding: 0, unpaid: 0, ytdBilled: 0 } };
+
+    const invoiceWhere: any = { loadId: { in: loadIds } };
+    if (status) {
+      const statusMap: Record<string, string[]> = {
+        unpaid: ["SENT", "OVERDUE"],
+        paid: ["PAID"],
+        processing: ["DRAFT", "APPROVED"],
+      };
+      const mapped = statusMap[status.toLowerCase()];
+      if (mapped) invoiceWhere.status = { in: mapped };
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where: invoiceWhere,
+      take: 20,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, invoiceNumber: true, status: true,
+        amount: true, totalAmount: true, dueDate: true, paidAt: true, createdAt: true,
+        load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
+      },
+    });
+
+    const allInvoices = await prisma.invoice.findMany({
+      where: { loadId: { in: loadIds } },
+      select: { status: true, totalAmount: true, amount: true, createdAt: true },
+    });
+
+    const yearStart = new Date(new Date().getFullYear(), 0, 1);
+    const outstanding = allInvoices
+      .filter((i) => ["SENT", "OVERDUE"].includes(i.status))
+      .reduce((sum, i) => sum + (Number(i.totalAmount) || Number(i.amount) || 0), 0);
+    const unpaid = allInvoices.filter((i) => ["SENT", "OVERDUE"].includes(i.status)).length;
+    const ytdBilled = allInvoices
+      .filter((i) => i.createdAt >= yearStart)
+      .reduce((sum, i) => sum + (Number(i.totalAmount) || Number(i.amount) || 0), 0);
+
+    return {
+      invoices: invoices.map((inv) => ({
+        invoiceNumber: inv.invoiceNumber,
+        status: inv.status,
+        amount: Number(inv.totalAmount) || Number(inv.amount) || 0,
+        dueDate: inv.dueDate,
+        paidAt: inv.paidAt,
+        createdAt: inv.createdAt,
+        loadRef: inv.load?.referenceNumber,
+        route: inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : null,
+      })),
+      metrics: { outstanding, unpaid, ytdBilled },
+    };
+  } catch (err: any) {
+    return { error: "Failed to fetch invoices: " + err.message };
+  }
+}
+
+export async function getShipperAnalytics(ctx: UserContext, period?: string) {
+  try {
+    if (!isShipper(ctx.role)) return { error: "This tool is only available to shipper users." };
+
+    const where = await resolveShipperFilter(ctx.userId);
+    const days = period === "7d" ? 7 : period === "90d" ? 90 : period === "ytd" ? 365 : 30;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    where.createdAt = { gte: since };
+
+    const loads = await prisma.load.findMany({
+      where,
+      select: {
+        id: true, status: true, customerRate: true, distance: true,
+        pickupDate: true, deliveryDate: true, actualDeliveryDatetime: true,
+        originCity: true, originState: true, destCity: true, destState: true,
+        createdAt: true,
+        carrier: { select: { company: true } },
+      },
+    });
+
+    const totalShipments = loads.length;
+    const totalSpend = loads.reduce((s, l) => s + (Number(l.customerRate) || 0), 0);
+    const totalMiles = loads.reduce((s, l) => s + (Number(l.distance) || 0), 0);
+    const avgCostPerMile = totalMiles > 0 ? totalSpend / totalMiles : 0;
+
+    const delivered = loads.filter((l) => ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(l.status));
+    const onTime = delivered.filter((l) => {
+      if (!l.deliveryDate || !l.actualDeliveryDatetime) return true;
+      return new Date(l.actualDeliveryDatetime) <= new Date(new Date(l.deliveryDate).getTime() + 24 * 60 * 60 * 1000);
+    });
+    const onTimePercent = delivered.length > 0 ? Math.round((onTime.length / delivered.length) * 100) : 100;
+
+    // Top lanes
+    const laneCounts: Record<string, { count: number; spend: number }> = {};
+    for (const l of loads) {
+      const lane = `${l.originCity}, ${l.originState} → ${l.destCity}, ${l.destState}`;
+      if (!laneCounts[lane]) laneCounts[lane] = { count: 0, spend: 0 };
+      laneCounts[lane].count++;
+      laneCounts[lane].spend += Number(l.customerRate) || 0;
+    }
+    const topLanes = Object.entries(laneCounts)
+      .sort((a, b) => b[1].spend - a[1].spend)
+      .slice(0, 5)
+      .map(([lane, data]) => ({ lane, loads: data.count, spend: data.spend }));
+
+    // Carrier performance
+    const carrierStats: Record<string, { loads: number; onTime: number; name: string }> = {};
+    for (const l of delivered) {
+      const name = l.carrier?.company || "Unknown";
+      if (!carrierStats[name]) carrierStats[name] = { loads: 0, onTime: 0, name };
+      carrierStats[name].loads++;
+      if (!l.deliveryDate || !l.actualDeliveryDatetime || new Date(l.actualDeliveryDatetime) <= new Date(new Date(l.deliveryDate).getTime() + 24 * 60 * 60 * 1000)) {
+        carrierStats[name].onTime++;
+      }
+    }
+    const carrierScorecard = Object.values(carrierStats)
+      .sort((a, b) => b.loads - a.loads)
+      .slice(0, 5)
+      .map((c) => ({ carrier: c.name, loads: c.loads, onTimePercent: c.loads > 0 ? Math.round((c.onTime / c.loads) * 100) : 0 }));
+
+    return {
+      period: period || "30d",
+      totalShipments,
+      totalSpend,
+      avgCostPerMile: Math.round(avgCostPerMile * 100) / 100,
+      onTimePercent,
+      topLanes,
+      carrierScorecard,
+    };
+  } catch (err: any) {
+    return { error: "Failed to fetch analytics: " + err.message };
+  }
+}
+
+export async function getShipperTracking(ctx: UserContext) {
+  try {
+    if (!isShipper(ctx.role)) return { error: "This tool is only available to shipper users." };
+
+    const where = await resolveShipperFilter(ctx.userId);
+    where.status = { in: ["DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY"] };
+
+    const loads = await prisma.load.findMany({
+      where,
+      orderBy: { pickupDate: "asc" },
+      take: 20,
+      include: {
+        carrier: { select: { company: true } },
+        checkCalls: { orderBy: { createdAt: "desc" }, take: 3 },
+        riskLogs: { orderBy: { createdAt: "desc" }, take: 1 },
+      },
+    });
+
+    return {
+      activeShipments: loads.map((l: any) => ({
+        ref: l.referenceNumber,
+        status: l.status,
+        origin: `${l.originCity}, ${l.originState}`,
+        destination: `${l.destCity}, ${l.destState}`,
+        pickupDate: l.pickupDate,
+        deliveryDate: l.deliveryDate,
+        carrier: l.carrier?.company || null,
+        riskLevel: l.riskLogs?.[0]?.riskLevel || "GREEN",
+        riskReason: l.riskLogs?.[0]?.reason || null,
+        lastCheckCall: l.checkCalls?.[0] ? {
+          status: l.checkCalls[0].status,
+          location: l.checkCalls[0].location,
+          notes: l.checkCalls[0].notes,
+          time: l.checkCalls[0].createdAt,
+        } : null,
+      })),
+      count: loads.length,
+    };
+  } catch (err: any) {
+    return { error: "Failed to fetch tracking data: " + err.message };
+  }
+}
+
+export async function getShipperProfile(ctx: UserContext) {
+  try {
+    if (!isShipper(ctx.role)) return { error: "This tool is only available to shipper users." };
+
+    const customer = await prisma.customer.findUnique({
+      where: { userId: ctx.userId },
+      include: {
+        shipperCredit: true,
+      },
+    });
+
+    if (!customer) {
+      return { profile: { name: ctx.firstName || "Unknown", status: "No customer profile linked" } };
+    }
+
+    const loadCount = await prisma.load.count({
+      where: { OR: [{ customerId: customer.id }, { posterId: ctx.userId }], deletedAt: null },
+    });
+
+    return {
+      profile: {
+        company: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        city: customer.city,
+        state: customer.state,
+        status: customer.status,
+        paymentTerms: customer.paymentTerms,
+        creditLimit: customer.creditLimit ? Number(customer.creditLimit) : null,
+        creditStatus: customer.creditStatus,
+        industry: customer.industry,
+        totalLoads: loadCount,
+      },
+      credit: customer.shipperCredit ? {
+        grade: customer.shipperCredit.creditGrade,
+        limit: Number(customer.shipperCredit.creditLimit) || 0,
+        utilized: Number(customer.shipperCredit.currentUtilized) || 0,
+        avgDaysToPay: customer.shipperCredit.avgDaysToPay,
+        onTimePayments: customer.shipperCredit.onTimePayments,
+        latePayments: customer.shipperCredit.latePayments,
+      } : null,
+    };
+  } catch (err: any) {
+    return { error: "Failed to fetch profile: " + err.message };
+  }
+}
+
 // ─── Tool Definitions (Gemini Function Calling Format) ────────────────────────
 
 export const TOOL_DEFINITIONS = [
@@ -1688,6 +2013,66 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  // ─── Shipper-Specific Tools ──────────────────────────────────────────────────
+  {
+    name: "getShipperShipments",
+    description: "Get the current shipper's shipments with optional filtering by status or search. Only available to SHIPPER users. Returns shipment details including route, carrier, rate, and dates.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          description: "Filter by status group. Values: 'active' (in transit/dispatched), 'delivered' (completed), 'pending' (booked/planned). Or a specific status like IN_TRANSIT, DELIVERED, etc.",
+        },
+        search: {
+          type: "string",
+          description: "Search by reference number, city name, or other details.",
+        },
+      },
+    },
+  },
+  {
+    name: "getShipperInvoices",
+    description: "Get the current shipper's invoices and billing metrics. Only available to SHIPPER users. Returns invoice list with amounts, due dates, and aggregate metrics (outstanding balance, unpaid count, YTD billed).",
+    parameters: {
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          description: "Filter invoices by status. Values: 'unpaid' (sent/overdue), 'paid', 'processing' (draft/approved).",
+        },
+      },
+    },
+  },
+  {
+    name: "getShipperAnalytics",
+    description: "Get shipping analytics for the current shipper. Only available to SHIPPER users. Returns total shipments, spend, cost per mile, on-time %, top lanes, and carrier performance scorecard.",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          description: "Time period to analyze. Values: '7d' (last week), '30d' (last month, default), '90d' (last quarter), 'ytd' (year to date).",
+        },
+      },
+    },
+  },
+  {
+    name: "getShipperTracking",
+    description: "Get real-time tracking for the current shipper's active shipments. Only available to SHIPPER users. Returns active loads with carrier info, check calls, risk levels, and ETAs.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "getShipperProfile",
+    description: "Get the current shipper's company profile and credit information. Only available to SHIPPER users. Returns company details, payment terms, credit grade, credit utilization, and payment history stats.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+  },
 ];
 
 // ─── Tool Executor ────────────────────────────────────────────────────────────
@@ -1728,6 +2113,17 @@ export async function executeTool(toolName: string, args: any, ctx: UserContext)
       }
       return getMyScore(ctx);
     }
+    // Shipper-specific tools
+    case "getShipperShipments":
+      return getShipperShipments(ctx, args?.status, args?.search);
+    case "getShipperInvoices":
+      return getShipperInvoices(ctx, args?.status);
+    case "getShipperAnalytics":
+      return getShipperAnalytics(ctx, args?.period);
+    case "getShipperTracking":
+      return getShipperTracking(ctx);
+    case "getShipperProfile":
+      return getShipperProfile(ctx);
     default:
       return { error: `Unknown tool: ${toolName}. Available tools: ${TOOL_DEFINITIONS.map((t) => t.name).join(", ")}` };
   }
