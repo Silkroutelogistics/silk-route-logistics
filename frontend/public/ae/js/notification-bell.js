@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  const API = window.SRL_API_BASE || (window.SRL && SRL.base) || "https://api.silkroutelogistics.ai/api";
+  const API = window.SRL_API_BASE || (window.SRL && SRL.BASE ? SRL.BASE + "/api" : null) || "https://api.silkroutelogistics.ai/api";
 
   function getToken() {
     return sessionStorage.getItem("token") || localStorage.getItem("srl_token") || localStorage.getItem("token") || "";
@@ -18,6 +18,7 @@
     try {
       const res = await fetch(`${API}${path}`, {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) return null;
       return await res.json();
@@ -33,6 +34,7 @@
       const res = await fetch(`${API}${path}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
       });
       if (!res.ok) return null;
       return await res.json();

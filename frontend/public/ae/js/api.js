@@ -75,6 +75,17 @@ var SRL = (function () {
     });
   }
 
+  // --- Logout (clears httpOnly cookie + local storage) ---
+  function logout(redirectUrl) {
+    window._srl_logging_out = true;
+    fetch(BASE + "/api/auth/logout", { method: "POST", credentials: "include" }).catch(function() {});
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("srl_last_activity");
+    window.location.href = redirectUrl || "/auth/login";
+  }
+
   // --- Data Fetching ---
   function getMe() {
     return request("/api/auth/me");
@@ -333,7 +344,7 @@ var SRL = (function () {
   function assignMatchedCarrier(loadId, userId) {
     return request("/api/automation/assign-match/" + loadId, {
       method: "POST",
-      body: JSON.stringify({ userId: userId }),
+      body: { userId: userId },
     });
   }
 
@@ -352,14 +363,14 @@ var SRL = (function () {
   function triggerFallOffRecovery(loadId, reason) {
     return request("/api/automation/fall-off-recovery/" + loadId, {
       method: "POST",
-      body: JSON.stringify({ reason: reason }),
+      body: { reason: reason },
     });
   }
 
   function acceptFallOff(loadId, carrierUserId) {
     return request("/api/automation/fall-off-accept/" + loadId, {
       method: "POST",
-      body: JSON.stringify({ carrierUserId: carrierUserId }),
+      body: { carrierUserId: carrierUserId },
     });
   }
 
@@ -371,14 +382,14 @@ var SRL = (function () {
   function startEmailSequence(prospectId) {
     return request("/api/automation/sequences/start", {
       method: "POST",
-      body: JSON.stringify({ prospectId: prospectId }),
+      body: { prospectId: prospectId },
     });
   }
 
   function stopEmailSequence(sequenceId, reason) {
     return request("/api/automation/sequences/" + sequenceId, {
       method: "DELETE",
-      body: JSON.stringify({ reason: reason || "MANUAL" }),
+      body: { reason: reason || "MANUAL" },
     });
   }
 
@@ -649,5 +660,6 @@ var SRL = (function () {
     getMileageProvider: getMileageProvider,
     batchMileage: batchMileage,
     renderMileageBadge: renderMileageBadge,
+    logout: logout,
   };
 })();

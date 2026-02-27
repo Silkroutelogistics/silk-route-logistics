@@ -1162,7 +1162,7 @@
     }
 
     // ─── Logout ───
-    function handleLogout() {
+    function handleLogout() { SRL.logout(); return;
       localStorage.removeItem("token");
       sessionStorage.removeItem("token");
       localStorage.removeItem("user");
@@ -1183,9 +1183,9 @@
 
     // ─── SSE Real-Time Stream ───
     (function initSSE() {
-      var token = localStorage.getItem("srl_token");
+      var token = sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) return;
-      var baseUrl = (typeof SRL !== "undefined" && SRL.API_BASE) ? SRL.API_BASE : "/api";
+      var baseUrl = (typeof SRL !== "undefined" && SRL.BASE) ? SRL.BASE + "/api" : "/api";
       var url = baseUrl + "/track-trace/stream";
       // SSE doesn't support Authorization header natively, so we use a custom fetch-based approach
       // For simplicity, we poll the EventSource and rely on cookie auth or fallback to polling

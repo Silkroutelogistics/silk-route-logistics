@@ -50,7 +50,9 @@ var SRLAuth = (function () {
     loginUrl = loginUrl || "/auth/login";
     clearAuth();
     // Call backend to clear httpOnly cookie
-    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(function(){});
+    var apiBase = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://localhost:4000" : "https://api.silkroutelogistics.ai";
+    fetch(apiBase + "/api/auth/logout", { method: "POST", credentials: "include" }).catch(function(){});
     window.location.href = loginUrl;
   }
 

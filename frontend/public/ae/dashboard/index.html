@@ -610,7 +610,7 @@
     }
 
     // --- Logout ---
-    function handleLogout() {
+    function handleLogout() { SRL.logout(); return;
       localStorage.removeItem("token");
       sessionStorage.removeItem("token");
       window.location.href = "/auth/login";
