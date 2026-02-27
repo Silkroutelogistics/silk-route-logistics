@@ -1,7 +1,7 @@
 (function () {
   if (typeof Sentry === "undefined") return;
 
-  var dsn = window.SENTRY_DSN || "";
+  var dsn = window.SENTRY_DSN || "https://461f8ff4ae22d71ba26038b4417bb2f9@o4510959811166208.ingest.us.sentry.io/4510959855403008";
   if (!dsn) return;
 
   Sentry.init({
