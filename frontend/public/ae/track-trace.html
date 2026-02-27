@@ -25,26 +25,25 @@
     .tt-header p { font-size:0.78rem; color:var(--theme-text-secondary, var(--gray-500)); margin:0; }
 
     /* ─── Stats Bar — horizontal row of cards ─── */
-    .tt-stats { display:flex; gap:10px; padding:14px 24px; border-bottom:1px solid var(--theme-border, var(--gray-200)); background:var(--theme-bg, var(--gray-50)); flex-wrap:wrap; align-items:stretch; }
-    .tt-stat { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 18px; border-radius:var(--radius); background:var(--theme-card-bg, var(--white)); border:1px solid var(--theme-card-border, var(--gray-200)); min-width:100px; text-align:center; box-shadow:var(--theme-card-shadow, var(--shadow-sm)); }
-    .tt-stat-value { font-size:1.4rem; font-weight:700; color:var(--theme-text-heading, var(--navy)); line-height:1.2; }
-    .tt-stat-label { font-size:0.65rem; color:var(--theme-text-muted, var(--gray-500)); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
-    .tt-stat.alert-yellow { border-color:#EAB308; background:rgba(234,179,8,0.1); }
-    .tt-stat.alert-yellow .tt-stat-value { color:#EAB308; }
-    .tt-stat.alert-red { border-color:#EF4444; background:rgba(239,68,68,0.1); }
-    .tt-stat.alert-red .tt-stat-value { color:#EF4444; }
-    .tt-stat.alert-critical { border-color:#7C3AED; background:rgba(124,58,237,0.1); }
-    .tt-stat.alert-critical .tt-stat-value { color:#7C3AED; }
+    .tt-stats { display:flex !important; flex-direction:row !important; gap:10px; padding:14px 24px; border-bottom:1px solid var(--theme-border, #e5e7eb); background:var(--theme-bg, #f9fafb); flex-wrap:wrap; align-items:stretch; }
+    .tt-stat { display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; padding:10px 18px; border-radius:8px; background:var(--theme-card-bg, #fff); border:1px solid var(--theme-card-border, #e5e7eb); min-width:90px; flex:1; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .tt-stat-value { font-size:1.4rem; font-weight:700; color:var(--theme-text-heading, #0f172a); line-height:1.2; }
+    .tt-stat-label { font-size:0.65rem; color:var(--theme-text-muted, #6b7280); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+    .tt-stat.alert-yellow { border-color:#EAB308 !important; background:rgba(234,179,8,0.1) !important; }
+    .tt-stat.alert-yellow .tt-stat-value { color:#EAB308 !important; }
+    .tt-stat.alert-red { border-color:#EF4444 !important; background:rgba(239,68,68,0.1) !important; }
+    .tt-stat.alert-red .tt-stat-value { color:#EF4444 !important; }
+    .tt-stat.alert-critical { border-color:#7C3AED !important; background:rgba(124,58,237,0.1) !important; }
+    .tt-stat.alert-critical .tt-stat-value { color:#7C3AED !important; }
 
-    /* ─── Map Section — compact placeholder ─── */
-    .tt-map-section { height:280px; min-height:200px; max-height:35vh; position:relative; border-bottom:1px solid var(--theme-border, var(--gray-300)); background:var(--theme-bg-alt, var(--gray-100)); }
-    .tt-map { width:100%; height:100%; }
-    .tt-map-placeholder { display:flex; align-items:center; justify-content:center; height:100%; color:var(--theme-text-muted, var(--gray-500)); flex-direction:column; gap:8px; }
-    .tt-map-placeholder svg { width:40px; height:40px; opacity:0.3; }
+    /* ─── Map Section — hidden until Google Maps API is configured ─── */
+    .tt-map-section { display:none !important; }
+    .tt-map-placeholder { display:none !important; }
+    .tt-map-placeholder svg { display:none !important; }
 
-    /* Filters row — inside map area */
-    .tt-map-filters { position:absolute; top:10px; left:10px; right:10px; z-index:10; display:flex; gap:8px; flex-wrap:wrap; }
-    .tt-map-filters select, .tt-map-filters input { font-size:0.78rem; padding:6px 10px; border-radius:6px; border:1px solid var(--theme-input-border, var(--gray-300)); background:var(--theme-input-bg, var(--white)); color:var(--theme-input-text, var(--gray-700)); box-shadow:var(--shadow-sm); }
+    /* ─── Filters bar — standalone row above table ─── */
+    .tt-filters-bar { display:flex; gap:8px; padding:10px 24px; flex-wrap:wrap; border-bottom:1px solid var(--theme-border, #e5e7eb); background:var(--theme-bg-alt, #f9fafb); align-items:center; }
+    .tt-filters-bar select, .tt-filters-bar input { font-size:0.78rem; padding:6px 10px; border-radius:6px; border:1px solid var(--theme-input-border, #d1d5db); background:var(--theme-input-bg, #fff); color:var(--theme-input-text, #374151); }
 
     /* View toggle */
     .tt-view-toggle { position:static; display:flex; border-radius:6px; box-shadow:var(--shadow-sm); border:1px solid var(--theme-card-border, var(--gray-200)); overflow:hidden; background:var(--theme-card-bg, var(--white)); }
@@ -233,7 +232,7 @@
 
     /* ─── Responsive ─── */
     @media(max-width:768px) {
-      .tt-map-section { height:180px; min-height:150px; }
+      .tt-map-section { display:none !important; }
       .tt-stats { padding:8px 12px; gap:6px; }
       .tt-stat { min-width:80px; padding:6px 10px; }
       .tt-stat-value { font-size:1.1rem; }
@@ -344,55 +343,50 @@
 
       <div class="tt-container">
         <!-- Stats Bar -->
-        <div class="tt-stats" id="tt-stats">
-          <div class="tt-stat"><div><div class="tt-stat-value" id="stat-active">--</div><div class="tt-stat-label">Active</div></div></div>
-          <div class="tt-stat"><div><div class="tt-stat-value" id="stat-transit">--</div><div class="tt-stat-label">In Transit</div></div></div>
-          <div class="tt-stat"><div><div class="tt-stat-value" id="stat-pickup">--</div><div class="tt-stat-label">At Pickup</div></div></div>
-          <div class="tt-stat"><div><div class="tt-stat-value" id="stat-delivery">--</div><div class="tt-stat-label">At Delivery</div></div></div>
-          <div class="tt-stat"><div><div class="tt-stat-value" id="stat-delivered">--</div><div class="tt-stat-label">Delivered 24h</div></div></div>
-          <div class="tt-stat"><div><div class="tt-stat-value" id="stat-ontime">--</div><div class="tt-stat-label">On-Time %</div></div></div>
-          <div class="tt-stat alert-yellow"><div><div class="tt-stat-value" id="stat-yellow">--</div><div class="tt-stat-label">Warning</div></div></div>
-          <div class="tt-stat alert-red"><div><div class="tt-stat-value" id="stat-red">--</div><div class="tt-stat-label">At Risk</div></div></div>
-          <div class="tt-stat alert-critical"><div><div class="tt-stat-value" id="stat-critical">--</div><div class="tt-stat-label">Critical</div></div></div>
+        <div class="tt-stats" id="tt-stats" style="display:flex;flex-direction:row;gap:10px;padding:14px 24px;flex-wrap:wrap;align-items:stretch">
+          <div class="tt-stat" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #e5e7eb;min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-active" style="font-size:1.4rem;font-weight:700">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Active</div></div>
+          <div class="tt-stat" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #e5e7eb;min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-transit" style="font-size:1.4rem;font-weight:700">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">In Transit</div></div>
+          <div class="tt-stat" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #e5e7eb;min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-pickup" style="font-size:1.4rem;font-weight:700">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">At Pickup</div></div>
+          <div class="tt-stat" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #e5e7eb;min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-delivery" style="font-size:1.4rem;font-weight:700">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">At Delivery</div></div>
+          <div class="tt-stat" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #e5e7eb;min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-delivered" style="font-size:1.4rem;font-weight:700">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Delivered 24h</div></div>
+          <div class="tt-stat" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #e5e7eb;min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-ontime" style="font-size:1.4rem;font-weight:700">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">On-Time %</div></div>
+          <div class="tt-stat alert-yellow" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #EAB308;background:rgba(234,179,8,0.1);min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-yellow" style="font-size:1.4rem;font-weight:700;color:#EAB308">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Warning</div></div>
+          <div class="tt-stat alert-red" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #EF4444;background:rgba(239,68,68,0.1);min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-red" style="font-size:1.4rem;font-weight:700;color:#EF4444">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">At Risk</div></div>
+          <div class="tt-stat alert-critical" style="display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:8px;border:1px solid #7C3AED;background:rgba(124,58,237,0.1);min-width:90px;flex:1;text-align:center"><div class="tt-stat-value" id="stat-critical" style="font-size:1.4rem;font-weight:700;color:#7C3AED">--</div><div class="tt-stat-label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Critical</div></div>
         </div>
 
-        <!-- Map Section (40%) -->
-        <div class="tt-map-section">
-          <div class="tt-map-filters">
-            <select id="map-filter-status" onchange="applyMapFilter()">
-              <option value="">All Statuses</option>
-              <option value="TENDERED">Tendered</option>
-              <option value="DISPATCHED">Dispatched</option>
-              <option value="AT_PICKUP">At Pickup</option>
-              <option value="LOADED">Loaded</option>
-              <option value="IN_TRANSIT">In Transit</option>
-              <option value="AT_DELIVERY">At Delivery</option>
-              <option value="DELIVERED">Delivered</option>
-            </select>
-            <select id="map-filter-equipment" onchange="applyMapFilter()">
-              <option value="">All Equipment</option>
-              <option value="DRY_VAN">Dry Van</option>
-              <option value="REEFER">Reefer</option>
-              <option value="FLATBED">Flatbed</option>
-              <option value="STEP_DECK">Step Deck</option>
-              <option value="POWER_ONLY">Power Only</option>
-            </select>
-            <select id="map-filter-alert" onchange="applyMapFilter()">
-              <option value="">All Alerts</option>
-              <option value="YELLOW">Warning Only</option>
-              <option value="RED">At Risk Only</option>
-              <option value="CRITICAL">Critical Only</option>
-            </select>
-            <input type="text" id="map-search" placeholder="Search load #, carrier, city..." oninput="debounceMapSearch()" style="min-width:200px">
-          </div>
-          <div class="tt-map" id="tt-map">
-            <div class="tt-map-placeholder" id="map-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/></svg>
-              <span>Google Maps loads here</span>
-              <span style="font-size:0.7rem">Showing <strong id="map-pin-count">0</strong> active loads</span>
-            </div>
-          </div>
+        <!-- Filters Bar -->
+        <div class="tt-filters-bar" style="display:flex;gap:8px;padding:10px 24px;flex-wrap:wrap;border-bottom:1px solid #e5e7eb;align-items:center">
+          <select id="map-filter-status" onchange="applyMapFilter()" style="font-size:0.78rem;padding:6px 10px;border-radius:6px;border:1px solid #d1d5db">
+            <option value="">All Statuses</option>
+            <option value="TENDERED">Tendered</option>
+            <option value="DISPATCHED">Dispatched</option>
+            <option value="AT_PICKUP">At Pickup</option>
+            <option value="LOADED">Loaded</option>
+            <option value="IN_TRANSIT">In Transit</option>
+            <option value="AT_DELIVERY">At Delivery</option>
+            <option value="DELIVERED">Delivered</option>
+          </select>
+          <select id="map-filter-equipment" onchange="applyMapFilter()" style="font-size:0.78rem;padding:6px 10px;border-radius:6px;border:1px solid #d1d5db">
+            <option value="">All Equipment</option>
+            <option value="DRY_VAN">Dry Van</option>
+            <option value="REEFER">Reefer</option>
+            <option value="FLATBED">Flatbed</option>
+            <option value="STEP_DECK">Step Deck</option>
+            <option value="POWER_ONLY">Power Only</option>
+          </select>
+          <select id="map-filter-alert" onchange="applyMapFilter()" style="font-size:0.78rem;padding:6px 10px;border-radius:6px;border:1px solid #d1d5db">
+            <option value="">All Alerts</option>
+            <option value="YELLOW">Warning Only</option>
+            <option value="RED">At Risk Only</option>
+            <option value="CRITICAL">Critical Only</option>
+          </select>
+          <input type="text" id="map-search" placeholder="Search load #, carrier, city..." oninput="debounceMapSearch()" style="min-width:200px;font-size:0.78rem;padding:6px 10px;border-radius:6px;border:1px solid #d1d5db">
+          <span style="margin-left:auto;font-size:0.72rem;color:#9ca3af">Showing <strong id="map-pin-count">0</strong> active loads</span>
         </div>
+
+        <!-- Map (hidden until Google Maps API key is configured) -->
+        <div class="tt-map-section" id="tt-map" style="display:none"></div>
 
         <!-- Dispatch Table (60%) -->
         <div class="tt-table-section">
@@ -661,14 +655,17 @@
 
     // Google Maps callback (called when API loads)
     function initGoogleMap() {
-      googleMap = new google.maps.Map(document.getElementById("tt-map"), {
+      var mapEl = document.getElementById("tt-map");
+      mapEl.style.display = "block";
+      mapEl.style.height = "280px";
+      mapEl.style.maxHeight = "35vh";
+      googleMap = new google.maps.Map(mapEl, {
         zoom: 4,
         center: { lat: 39.8, lng: -98.5 }, // Center of US
         mapTypeControl: false,
         streetViewControl: false,
         styles: [{ featureType:"poi", stylers:[{ visibility:"off" }] }],
       });
-      document.getElementById("map-placeholder").style.display = "none";
       renderMapPins();
     }
 
