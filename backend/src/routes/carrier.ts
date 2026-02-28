@@ -12,8 +12,18 @@ import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrie
 
 const router = Router();
 
-// Public
-router.post("/register", validateBody(carrierRegisterSchema), registerCarrier);
+// Public: carrier self-registration (multipart/form-data for file uploads)
+router.post("/register",
+  upload.fields([{ name: "photoId", maxCount: 1 }, { name: "articlesOfInc", maxCount: 1 }]),
+  (req: any, _res: any, next: any) => {
+    // Normalize FormData array fields (equipmentTypes, operatingRegions come as repeated fields)
+    if (typeof req.body.equipmentTypes === "string") req.body.equipmentTypes = [req.body.equipmentTypes];
+    if (typeof req.body.operatingRegions === "string") req.body.operatingRegions = [req.body.operatingRegions];
+    next();
+  },
+  validateBody(carrierRegisterSchema),
+  registerCarrier
+);
 
 // Authenticated carrier
 router.use(authenticate);
