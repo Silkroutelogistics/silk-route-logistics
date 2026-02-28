@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import path from "path";
+import multer from "multer";
 import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
@@ -10,6 +11,10 @@ import { calculateTier, getBonusPercentage } from "../services/tierService";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
 import { runFmcsaScan } from "../services/complianceMonitorService";
+import { vetAndStoreReport } from "../services/carrierVettingService";
+import { sendEmail, wrap } from "../services/emailService";
+import { runIdentityCheck } from "../services/identityVerificationService";
+import { screenCarrier } from "../services/ofacScreeningService";
 
 export async function registerCarrier(req: Request, res: Response) {
   const data = carrierRegisterSchema.parse(req.body);
@@ -42,12 +47,95 @@ export async function registerCarrier(req: Request, res: Response) {
     include: { carrierProfile: true },
   });
 
-  const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
+  // Handle file uploads (photoId, articlesOfInc) if present
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+  if (files && user.carrierProfile) {
+    const profileId = user.carrierProfile.id;
+    const uploadPromises: Promise<void>[] = [];
+
+    if (files.photoId?.[0]) {
+      const file = files.photoId[0];
+      const key = `carrier-docs/${profileId}/photo-id-${Date.now()}${path.extname(file.originalname)}`;
+      uploadPromises.push(
+        uploadFile(file.buffer, key, file.mimetype).then(async (url) => {
+          await prisma.document.create({
+            data: { fileName: file.originalname, fileUrl: url, fileType: file.mimetype, fileSize: file.size, userId: user.id },
+          });
+        })
+      );
+    }
+
+    if (files.articlesOfInc?.[0]) {
+      const file = files.articlesOfInc[0];
+      const key = `carrier-docs/${profileId}/articles-${Date.now()}${path.extname(file.originalname)}`;
+      uploadPromises.push(
+        uploadFile(file.buffer, key, file.mimetype).then(async (url) => {
+          await prisma.document.create({
+            data: { fileName: file.originalname, fileUrl: url, fileType: file.mimetype, fileSize: file.size, userId: user.id },
+          });
+          await prisma.carrierProfile.update({ where: { id: profileId }, data: { authorityDocUploaded: true } });
+        })
+      );
+    }
+
+    // Fire and forget — don't block response
+    Promise.all(uploadPromises).catch((e) => console.error("[Registration Files] Upload error:", e.message));
+  }
+
+  // No JWT issued at registration — carrier must be approved first
   res.status(201).json({
+    message: "Carrier application submitted successfully. Your application is under review.",
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     carrierProfile: user.carrierProfile,
-    token,
   });
+
+  // ── Post-registration automation (fire-and-forget) ──
+  const profileId = user.carrierProfile?.id;
+  const dot = data.dotNumber;
+  const mc = data.mcNumber;
+
+  // 1. Send registration confirmation email
+  sendEmail(
+    data.email,
+    "Application Received — Silk Route Logistics",
+    wrap(`
+      <h2 style="color:#0f172a">Welcome, ${data.firstName}!</h2>
+      <p>Thank you for registering with <strong>Silk Route Logistics</strong>. Your carrier application has been received.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.company}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">DOT#</td><td style="padding:8px;border:1px solid #e2e8f0">${dot}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">MC#</td><td style="padding:8px;border:1px solid #e2e8f0">${mc}</td></tr>
+      </table>
+      <h3 style="color:#0f172a">What Happens Next?</h3>
+      <ol style="line-height:1.8">
+        <li>Our <strong>Compass</strong> compliance engine will automatically vet your FMCSA authority, safety record, and OFAC status.</li>
+        <li>A team member will review your application and may request additional documents.</li>
+        <li>Once approved, you'll receive an email with instructions to log in.</li>
+      </ol>
+      <p style="color:#64748b;font-size:13px;margin-top:24px">Typical review time: 1-2 business days. For urgent inquiries, contact <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.</p>
+    `)
+  ).catch((e) => console.error("[Registration Email] Error:", e.message));
+
+  // 2. Auto-trigger Compass vetting (background)
+  if (dot) {
+    vetAndStoreReport(dot, profileId, mc, "AUTO_REGISTRATION").catch((e) =>
+      console.error("[Compass Auto-Vet] Registration vetting error:", e.message)
+    );
+  }
+
+  // 3. Auto-trigger identity verification (background)
+  if (profileId) {
+    runIdentityCheck(profileId).catch((e) =>
+      console.error("[Compass Identity] Auto identity check error:", e.message)
+    );
+  }
+
+  // 4. Auto-trigger OFAC screening (background)
+  if (profileId) {
+    screenCarrier(profileId).catch((e) =>
+      console.error("[Compass OFAC] Auto OFAC screening error:", e.message)
+    );
+  }
 }
 
 export async function uploadCarrierDocuments(req: AuthRequest, res: Response) {
@@ -156,6 +244,29 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
 
     // Auto-trigger FMCSA scan to populate compliance data
     runFmcsaScan(profile.id).catch((e) => console.error("[Compliance] Auto FMCSA scan error:", e.message));
+
+    // Send approval email to carrier
+    const carrierUser = await prisma.user.findUnique({ where: { id: profile.userId } });
+    if (carrierUser) {
+      sendEmail(
+        carrierUser.email,
+        "Application Approved — Welcome to Silk Route Logistics!",
+        wrap(`
+          <h2 style="color:#0f172a">Congratulations, ${carrierUser.firstName}!</h2>
+          <p>Your carrier application has been <strong style="color:#16a34a">approved</strong>. You can now log in to the Silk Route Logistics carrier portal.</p>
+          <div style="text-align:center;margin:24px 0">
+            <a href="https://silkroutelogistics.ai/carrier/login.html" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Log In to Your Dashboard</a>
+          </div>
+          <h3 style="color:#0f172a">Getting Started</h3>
+          <ul style="line-height:1.8">
+            <li>Upload your W-9, Certificate of Insurance, and Operating Authority documents</li>
+            <li>Set up two-factor authentication for account security</li>
+            <li>Browse available loads on the load board</li>
+          </ul>
+          <p style="color:#64748b;font-size:13px;margin-top:24px">Questions? Contact your account representative or email <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.</p>
+        `)
+      ).catch((e) => console.error("[Approval Email] Error:", e.message));
+    }
   }
 
   res.json(updated);

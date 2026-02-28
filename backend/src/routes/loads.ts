@@ -22,4 +22,8 @@ router.patch("/:id/carrier-status", authorize("CARRIER"), validateBody(updateLoa
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
 
+// Compass by SRL: load-level compliance check
+import { runLoadComplianceCheck } from "../controllers/carrierVettingController";
+router.post("/:loadId/compliance-check", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), runLoadComplianceCheck);
+
 export default router;

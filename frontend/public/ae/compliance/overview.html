@@ -6,7 +6,7 @@
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compliance Overview - Silk Route Logistics</title>
+  <title>Compass - Compliance Overview - Silk Route Logistics</title>
   <link rel="icon" href="/logo.png" type="image/png">
   <link rel="stylesheet" href="/ae/css/console.css">
   <link rel="stylesheet" href="/shared/css/themes.css">
@@ -67,7 +67,7 @@
           Accounting
         </a>
         <div class="divider-top">
-          <div class="section-label">Compliance</div>
+          <div class="section-label">Compass</div>
           <a href="/ae/compliance/dashboard.html">
             <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             Dashboard
@@ -98,7 +98,7 @@
     <main class="main">
       <div class="main-header">
         <div>
-          <h1>Compliance Overview</h1>
+          <h1>Compass <span style="font-size:0.5em;opacity:0.5;font-weight:400">by SRL</span></h1>
           <p>Carrier compliance matrix &mdash; all items at a glance</p>
         </div>
       </div>
@@ -153,6 +153,9 @@
           <thead>
             <tr>
               <th>Carrier</th>
+              <th>Grade</th>
+              <th>Identity Status</th>
+              <th>Chameleon Risk</th>
               <th>Authority</th>
               <th>Auto Insurance</th>
               <th>Cargo Insurance</th>
@@ -421,7 +424,9 @@
         var mc = c.mcNumber || c.mc || "";
         var tier = c.tier || "NONE";
 
-        html += '<tr class="clickable-row" onclick="goToCarrier(\'' + esc(carrierId) + '\')">';
+        var gradeVal = c.vettingGrade || c.grade || "";
+        var rowGradeStyle = gradeVal ? ' style="border-left:3px solid ' + getGradeColor(gradeVal) + '"' : '';
+        html += '<tr class="clickable-row" onclick="goToCarrier(\'' + esc(carrierId) + '\')"' + rowGradeStyle + '>';
 
         // Carrier column (sticky)
         html += '<td><div class="carrier-info">';
@@ -429,6 +434,15 @@
         html += '<div class="carrier-mc">MC# ' + esc(mc) + '</div>';
         html += '<div class="carrier-cell-badges"><span class="tier-badge tier-' + esc(tier) + '">' + esc(tier) + '</span></div>';
         html += '</div></td>';
+
+        // Grade column
+        html += '<td>' + renderGradeBadge(c.vettingGrade || c.grade) + '</td>';
+
+        // Identity Status column
+        html += '<td>' + renderIdentityBadge(c.identityStatus || c.identityVerification) + '</td>';
+
+        // Chameleon Risk column
+        html += '<td>' + renderChameleonBadge(c.chameleonRisk || c.chameleonRiskLevel) + '</td>';
 
         // Compliance fields
         COMPLIANCE_FIELDS.forEach(function(f) {
@@ -481,6 +495,56 @@
     }
 
     /* =========================================
+       VETTING BADGE RENDERERS
+       ========================================= */
+    function getGradeColor(grade) {
+      var g = String(grade).toUpperCase().charAt(0);
+      switch (g) {
+        case "A": return "#22c55e";
+        case "B": return "#3b82f6";
+        case "C": return "#f59e0b";
+        case "D": return "#f97316";
+        case "F": return "#ef4444";
+        default:  return "#64748b";
+      }
+    }
+
+    function renderGradeBadge(grade) {
+      if (!grade) return '<span class="status-cell status-na">&mdash;</span>';
+      var g = String(grade).toUpperCase().charAt(0);
+      var color = getGradeColor(g);
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-weight:600;font-size:0.85rem;color:#fff;background:' + color + '">' + esc(g) + '</span>';
+    }
+
+    function renderIdentityBadge(status) {
+      if (!status) return '<span class="status-cell status-na">&mdash;</span>';
+      var s = String(status).toUpperCase();
+      var color, label;
+      switch (s) {
+        case "VERIFIED": color = "#22c55e"; label = "Verified"; break;
+        case "PARTIAL":  color = "#f59e0b"; label = "Partial"; break;
+        case "UNVERIFIED": color = "#64748b"; label = "Unverified"; break;
+        case "FAILED":   color = "#ef4444"; label = "Failed"; break;
+        default:         color = "#64748b"; label = esc(s); break;
+      }
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-weight:600;font-size:0.8rem;color:#fff;background:' + color + '">' + label + '</span>';
+    }
+
+    function renderChameleonBadge(risk) {
+      if (!risk) return '<span class="status-cell status-na">&mdash;</span>';
+      var r = String(risk).toUpperCase();
+      var color, label;
+      switch (r) {
+        case "NONE":   color = "#64748b"; label = "None"; break;
+        case "LOW":    color = "#3b82f6"; label = "Low"; break;
+        case "MEDIUM": color = "#f59e0b"; label = "Medium"; break;
+        case "HIGH":   color = "#ef4444"; label = "High"; break;
+        default:       color = "#64748b"; label = esc(r); break;
+      }
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-weight:600;font-size:0.8rem;color:#fff;background:' + color + '">' + label + '</span>';
+    }
+
+    /* =========================================
        NAVIGATION
        ========================================= */
     function goToCarrier(id) {
@@ -499,7 +563,7 @@
         return;
       }
 
-      var headers = ["Carrier Name", "MC#", "Tier"];
+      var headers = ["Carrier Name", "MC#", "Tier", "Grade", "Identity Status", "Chameleon Risk"];
       COMPLIANCE_FIELDS.forEach(function(f) {
         headers.push(f.label + " Status");
         headers.push(f.label + " Expiry");
@@ -513,6 +577,9 @@
         row.push(csvEscape(c.companyName || c.name || ""));
         row.push(csvEscape(c.mcNumber || c.mc || ""));
         row.push(c.tier || "NONE");
+        row.push(c.vettingGrade || c.grade || "");
+        row.push(c.identityStatus || c.identityVerification || "");
+        row.push(c.chameleonRisk || c.chameleonRiskLevel || "");
 
         COMPLIANCE_FIELDS.forEach(function(f) {
           var comp = c._compliance[f.key];

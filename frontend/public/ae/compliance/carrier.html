@@ -6,7 +6,7 @@
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carrier Compliance Profile - Silk Route Logistics</title>
+  <title>Compass - Carrier Compliance - Silk Route Logistics</title>
   <link rel="icon" href="/logo.png" type="image/png">
   <link rel="stylesheet" href="/ae/css/console.css">
   <link rel="stylesheet" href="/shared/css/themes.css">
@@ -68,7 +68,7 @@
           Accounting
         </a>
         <div class="divider-top">
-          <div class="section-label">Compliance</div>
+          <div class="section-label">Compass</div>
           <a href="/ae/compliance/dashboard.html">
             <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             Dashboard
@@ -121,6 +121,9 @@
           <div class="tab-bar">
             <button class="tab-btn active" data-tab="items" onclick="switchTab('items')">Items</button>
             <button class="tab-btn" data-tab="history" onclick="switchTab('history')">Verification History</button>
+            <button class="tab-btn" data-tab="identity" onclick="switchTab('identity')">Identity</button>
+            <button class="tab-btn" data-tab="fraud" onclick="switchTab('fraud')">Fraud Detection</button>
+            <button class="tab-btn" data-tab="agreements" onclick="switchTab('agreements')">Agreements</button>
             <button class="tab-btn" data-tab="actions" onclick="switchTab('actions')">Admin Actions</button>
             <button class="tab-btn" data-tab="notes" onclick="switchTab('notes')">Notes</button>
           </div>
@@ -137,6 +140,37 @@
           <!-- VERIFICATION HISTORY TAB -->
           <div class="tab-panel" id="tab-history">
             <div id="timeline-container">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-line w-75"></div>
+            </div>
+          </div>
+
+          <!-- IDENTITY TAB -->
+          <div class="tab-panel" id="tab-identity">
+            <div id="identity-container">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-line w-75"></div>
+            </div>
+          </div>
+
+          <!-- FRAUD DETECTION TAB -->
+          <div class="tab-panel" id="tab-fraud">
+            <div id="fraud-container">
+              <div class="skeleton skeleton-block"></div>
+              <div class="skeleton skeleton-line w-75"></div>
+            </div>
+          </div>
+
+          <!-- AGREEMENTS TAB -->
+          <div class="tab-panel" id="tab-agreements">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <span style="font-size:14px;font-weight:600;color:var(--navy)">Carrier-Broker Agreements</span>
+              <button class="action-btn btn-gold" id="btn-send-agreement" onclick="openSendAgreementModal()" style="padding:6px 16px;font-size:13px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Send Agreement
+              </button>
+            </div>
+            <div id="agreements-container">
               <div class="skeleton skeleton-block"></div>
               <div class="skeleton skeleton-line w-75"></div>
             </div>
@@ -173,6 +207,27 @@
               <div id="overrides-list">
                 <div class="empty-state">No active overrides</div>
               </div>
+            </div>
+
+            <!-- Insurance Grace Period -->
+            <div class="overrides-section" style="margin-top:24px">
+              <h4>Insurance Grace Period</h4>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+                <select id="grace-period-days" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px">
+                  <option value="1">1 day</option>
+                  <option value="2">2 days</option>
+                  <option value="3">3 days</option>
+                  <option value="4">4 days</option>
+                  <option value="5">5 days</option>
+                  <option value="6">6 days</option>
+                  <option value="7">7 days</option>
+                </select>
+                <button class="action-btn btn-amber" id="btn-grace-period" onclick="grantGracePeriod()" style="padding:8px 20px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Grant Insurance Grace Period
+                </button>
+              </div>
+              <div id="grace-period-status" style="margin-top:8px;font-size:13px;color:var(--gray-600)"></div>
             </div>
           </div>
 
@@ -282,6 +337,63 @@
       <div class="modal-footer">
         <button class="modal-btn modal-btn-cancel" onclick="closeModal('deactivate-modal')">Cancel</button>
         <button class="modal-btn modal-btn-danger" id="deactivate-submit-btn" onclick="confirmDeactivate()">Deactivate Carrier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fraud Report Modal -->
+  <div class="modal-backdrop" id="fraud-report-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>File Fraud Report</h3>
+        <button class="modal-close" onclick="closeModal('fraud-report-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="fraud-report-category">Category</label>
+        <select id="fraud-report-category" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;margin-bottom:12px">
+          <option value="">Select category...</option>
+          <option value="IDENTITY_THEFT">Identity Theft</option>
+          <option value="DOUBLE_BROKERING">Double Brokering</option>
+          <option value="CARGO_THEFT">Cargo Theft</option>
+          <option value="INSURANCE_FRAUD">Insurance Fraud</option>
+          <option value="DOCUMENT_FORGERY">Document Forgery</option>
+          <option value="PHANTOM_CARRIER">Phantom Carrier</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <label for="fraud-report-description">Description</label>
+        <textarea id="fraud-report-description" placeholder="Describe the suspected fraudulent activity in detail..." style="min-height:100px"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('fraud-report-modal')">Cancel</button>
+        <button class="modal-btn modal-btn-submit" id="fraud-report-submit-btn" onclick="submitFraudReport()">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Agreement Modal -->
+  <div class="modal-backdrop" id="send-agreement-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Send Agreement to Carrier</h3>
+        <button class="modal-close" onclick="closeModal('send-agreement-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="agreement-type">Agreement Type</label>
+        <select id="agreement-type" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;margin-bottom:12px">
+          <option value="BROKER_CARRIER">Broker-Carrier Agreement</option>
+          <option value="RATE_CONFIRMATION">Rate Confirmation</option>
+          <option value="NDA">Non-Disclosure Agreement</option>
+          <option value="SAFETY_COMPLIANCE">Safety Compliance Agreement</option>
+        </select>
+        <label for="agreement-version">Version</label>
+        <input id="agreement-version" type="text" placeholder="e.g. 2.1" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;margin-bottom:12px">
+        <div class="modal-hint">
+          The carrier will receive an email with a link to review and sign the agreement.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('send-agreement-modal')">Cancel</button>
+        <button class="modal-btn modal-btn-submit" id="send-agreement-submit-btn" onclick="submitSendAgreement()">Send Agreement</button>
       </div>
     </div>
   </div>
@@ -400,6 +512,11 @@
       loadCarrierData();
       loadScanHistory();
       loadNotes();
+      loadIdentityData();
+      loadFraudData();
+      loadFraudReports();
+      loadAgreements();
+      loadVettingHistory();
     })();
 
     function loadUser() {
@@ -799,6 +916,687 @@
           '</div>' +
         '</div>';
       }).join("");
+    }
+
+    /* =========================================
+       IDENTITY VERIFICATION
+       ========================================= */
+    var identityData = null;
+
+    function loadIdentityData() {
+      SRL.request("/api/carriers/" + carrierId + "/identity").then(function(data) {
+        identityData = data;
+        renderIdentity(data);
+      }).catch(function() {
+        document.getElementById("identity-container").innerHTML =
+          '<div class="empty-state">Identity verification data not available</div>';
+      });
+    }
+
+    function identityScoreColor(score) {
+      if (score >= 80) return "green";
+      if (score >= 50) return "amber";
+      return "red";
+    }
+
+    function verificationBadge(status) {
+      var color = status === "VERIFIED" ? "green" : status === "PENDING" ? "amber" : "red";
+      return '<span class="status-badge status-badge-' + color + '" style="font-size:12px;padding:2px 10px">' + esc(status || "UNKNOWN") + '</span>';
+    }
+
+    function renderIdentity(data) {
+      var container = document.getElementById("identity-container");
+      var scoreColor = identityScoreColor(data.identityScore || 0);
+      var html = '';
+
+      // Identity Score header
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding:16px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border)">';
+      html += '<div><span style="font-size:13px;color:var(--gray-600)">Identity Score</span>';
+      html += '<div style="font-size:28px;font-weight:700;color:var(--' + scoreColor + ')">' + (data.identityScore || 0) + '<span style="font-size:14px;color:var(--gray-600)"> / 100</span></div></div>';
+      html += '<div>' + verificationBadge(data.identityStatus) + '</div>';
+      html += '</div>';
+
+      // Photo ID
+      html += '<div class="accordion-detail-grid" style="margin-bottom:16px">';
+      html += '<div class="accordion-field"><label>Photo ID Status</label>' + verificationBadge(data.photoIdStatus) + '</div>';
+      html += '<div class="accordion-field"><label>Photo ID Type</label><span>' + esc(data.photoIdType || "--") + '</span></div>';
+      html += '</div>';
+
+      // Email Validation
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:16px 0 8px">Email Validation</h4>';
+      html += '<div class="accordion-detail-grid" style="margin-bottom:16px">';
+      html += '<div class="accordion-field"><label>Domain Valid</label><span>' + (data.emailDomainValid ? '<span style="color:var(--green)">Yes</span>' : '<span style="color:var(--red)">No</span>') + '</span></div>';
+      html += '<div class="accordion-field"><label>Domain Age</label><span>' + esc(data.emailDomainAge ? data.emailDomainAge + ' days' : "--") + '</span></div>';
+      html += '<div class="accordion-field"><label>Disposable Email</label><span>' + (data.emailIsDisposable ? '<span style="color:var(--red)">Yes</span>' : '<span style="color:var(--green)">No</span>') + '</span></div>';
+      html += '<div class="accordion-field"><label>Email Provider</label><span>' + esc(data.emailProvider || "--") + '</span></div>';
+      html += '</div>';
+
+      // Phone Validation
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:16px 0 8px">Phone Validation</h4>';
+      html += '<div class="accordion-detail-grid" style="margin-bottom:16px">';
+      html += '<div class="accordion-field"><label>Phone Type</label><span>' + esc(data.phoneType || "--") + '</span></div>';
+      html += '<div class="accordion-field"><label>Carrier</label><span>' + esc(data.phoneCarrier || "--") + '</span></div>';
+      html += '<div class="accordion-field"><label>VoIP Detected</label><span>' + (data.phoneIsVoip ? '<span style="color:var(--amber)">Yes</span>' : '<span style="color:var(--green)">No</span>') + '</span></div>';
+      html += '</div>';
+
+      // Secretary of State
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:16px 0 8px">Secretary of State Verification</h4>';
+      html += '<div class="accordion-detail-grid">';
+      html += '<div class="accordion-field"><label>SoS Verified</label><span>' + (data.sosVerified ? '<span style="color:var(--green)">Verified</span>' : '<span style="color:var(--gray-600)">Not Verified</span>') + '</span></div>';
+      html += '<div class="accordion-field"><label>State</label><span>' + esc(data.sosState || "--") + '</span></div>';
+      html += '<div class="accordion-field"><label>Entity Name</label><span>' + esc(data.sosEntityName || "--") + '</span></div>';
+      html += '<div class="accordion-field"><label>Filing Number</label><span>' + esc(data.sosFilingNumber || "--") + '</span></div>';
+      html += '<div class="accordion-field"><label>SoS Status</label><span>' + esc(data.sosStatus || "--") + '</span></div>';
+      html += '</div>';
+
+      // OFAC/SDN Screening
+      var ofacStatusColors = { CLEAR: "green", POTENTIAL_MATCH: "red", ERROR: "amber", PENDING: "gray" };
+      var ofacColor = ofacStatusColors[data.ofacStatus] || "gray";
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:24px 0 8px">OFAC/SDN Screening</h4>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+      html += '<div style="display:flex;align-items:center;gap:12px">';
+      html += '<span class="status-badge status-badge-' + ofacColor + '" style="font-size:12px;padding:2px 10px">' + esc(data.ofacStatus || "PENDING") + '</span>';
+      html += '<span style="font-size:13px;color:var(--gray-600)">Last screened: ' + shortDate(data.ofacLastScreened) + '</span>';
+      html += '</div>';
+      html += '<button class="action-btn btn-blue-outline" id="btn-ofac-screen" onclick="runOfacScreen()" style="padding:6px 16px;font-size:13px">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      html += ' Run OFAC Screen</button>';
+      html += '</div>';
+
+      // OFAC match details (expandable)
+      if (data.ofacMatches && data.ofacMatches.length > 0) {
+        html += '<div style="margin-bottom:16px">';
+        html += '<details style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--card-bg)">';
+        html += '<summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--red)">OFAC Match Details (' + data.ofacMatches.length + ' potential match' + (data.ofacMatches.length > 1 ? 'es' : '') + ')</summary>';
+        html += '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">';
+        data.ofacMatches.forEach(function(m) {
+          html += '<div style="padding:10px;border-radius:6px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)">';
+          html += '<div style="font-weight:600;color:var(--navy);font-size:13px">' + esc(m.name || "Unknown") + '</div>';
+          if (m.score) html += '<div style="font-size:12px;color:var(--gray-600)">Match Score: ' + m.score + '%</div>';
+          if (m.program) html += '<div style="font-size:12px;color:var(--gray-600)">Program: ' + esc(m.program) + '</div>';
+          if (m.remarks) html += '<div style="font-size:12px;color:var(--gray-600);margin-top:4px">' + esc(m.remarks) + '</div>';
+          html += '</div>';
+        });
+        html += '</div></details></div>';
+      }
+
+      // Biometric Verification
+      var facialStatusColors = { MATCHED: "green", MISMATCH: "red", SKIPPED: "amber", PENDING: "gray" };
+      var facialColor = facialStatusColors[data.facialMatchStatus] || "gray";
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:16px 0 8px">Biometric Verification</h4>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+      html += '<div style="display:flex;align-items:center;gap:12px">';
+      html += '<span class="status-badge status-badge-' + facialColor + '" style="font-size:12px;padding:2px 10px">' + esc(data.facialMatchStatus || "PENDING") + '</span>';
+      if (data.facialMatchScore !== undefined && data.facialMatchScore !== null) {
+        var fmScoreColor = data.facialMatchScore >= 80 ? "var(--green)" : data.facialMatchScore >= 50 ? "var(--amber)" : "var(--red)";
+        html += '<span style="font-size:13px;font-weight:600;color:' + fmScoreColor + '">' + data.facialMatchScore + '% match</span>';
+      }
+      html += '</div>';
+      html += '<button class="action-btn btn-blue-outline" id="btn-facial-verify" onclick="runFacialVerify()" style="padding:6px 16px;font-size:13px">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+      html += ' Run Facial Verify</button>';
+      html += '</div>';
+
+      // ELD Verification
+      var eldStatusColors = { VALIDATED: "green", INVALID: "red", SKIPPED: "amber", PENDING: "gray" };
+      var eldColor = eldStatusColors[data.eldStatus] || "gray";
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:16px 0 8px">ELD Verification</h4>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+      html += '<div style="display:flex;align-items:center;gap:12px">';
+      html += '<span class="status-badge status-badge-' + eldColor + '" style="font-size:12px;padding:2px 10px">' + esc(data.eldStatus || "PENDING") + '</span>';
+      if (data.eldProvider) {
+        html += '<span style="font-size:13px;color:var(--gray-600)">Provider: ' + esc(data.eldProvider) + '</span>';
+      }
+      html += '</div>';
+      html += '<button class="action-btn btn-blue-outline" id="btn-eld-validate" onclick="runEldValidate()" style="padding:6px 16px;font-size:13px">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+      html += ' Validate ELD</button>';
+      html += '</div>';
+
+      // W-9 TIN Match
+      var tinStatusColors = { MATCHED: "green", MISMATCH: "red", ERROR: "amber", PENDING: "gray" };
+      var tinColor = tinStatusColors[data.tinMatchStatus] || "gray";
+      html += '<h4 style="font-size:14px;font-weight:600;color:var(--navy);margin:16px 0 8px">W-9 TIN Match</h4>';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+      html += '<div style="display:flex;align-items:center;gap:12px">';
+      html += '<span class="status-badge status-badge-' + tinColor + '" style="font-size:12px;padding:2px 10px">' + esc(data.tinMatchStatus || "PENDING") + '</span>';
+      html += '</div>';
+      html += '<button class="action-btn btn-blue-outline" id="btn-tin-verify" onclick="runTinVerify()" style="padding:6px 16px;font-size:13px">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>';
+      html += ' Verify TIN</button>';
+      html += '</div>';
+
+      container.innerHTML = html;
+    }
+
+    /* =========================================
+       FRAUD DETECTION
+       ========================================= */
+    var fraudMatches = [];
+
+    function loadFraudData() {
+      SRL.request("/api/carriers/" + carrierId + "/chameleon-matches").then(function(data) {
+        fraudMatches = data.matches || data || [];
+        renderFraudDetection(fraudMatches, data.riskLevel || "NONE");
+      }).catch(function() {
+        document.getElementById("fraud-container").innerHTML =
+          '<div class="empty-state">Fraud detection data not available</div>';
+      });
+    }
+
+    function chameleonRiskBadge(level) {
+      var colors = { NONE: "green", LOW: "green", MEDIUM: "amber", HIGH: "red" };
+      var color = colors[level] || "gray";
+      return '<span class="status-badge status-badge-' + color + '" style="font-size:12px;padding:2px 10px">' + esc(level || "NONE") + ' Risk</span>';
+    }
+
+    function matchTypeBadge(type) {
+      var colors = { PHONE: "blue", EMAIL: "blue", ADDRESS: "amber", EIN: "red", MULTI: "red" };
+      var color = colors[type] || "gray";
+      return '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:var(--' + color + ');color:#fff">' + esc(type) + '</span>';
+    }
+
+    function renderFraudDetection(matches, riskLevel) {
+      var container = document.getElementById("fraud-container");
+      var html = '';
+
+      // Header with risk level and action button
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">';
+      html += '<div style="display:flex;align-items:center;gap:12px">';
+      html += '<span style="font-size:14px;font-weight:600;color:var(--navy)">Chameleon Carrier Detection</span>';
+      html += chameleonRiskBadge(riskLevel);
+      html += '</div>';
+      html += '<button class="action-btn btn-blue-outline" id="btn-chameleon-check" onclick="runChameleonCheck()" style="padding:6px 16px;font-size:13px">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>';
+      html += ' Run Chameleon Check</button>';
+      html += '</div>';
+
+      if (!matches || matches.length === 0) {
+        html += '<div class="empty-state">No chameleon carrier matches detected</div>';
+        container.innerHTML = html;
+        return;
+      }
+
+      // Matches list
+      html += '<div style="display:flex;flex-direction:column;gap:12px">';
+      matches.forEach(function(match) {
+        var scoreColor = (match.riskScore || 0) >= 70 ? "var(--red)" : (match.riskScore || 0) >= 40 ? "var(--amber)" : "var(--green)";
+        var statusBadge = match.status === "CONFIRMED_FRAUD" ? '<span style="color:var(--red);font-weight:600">Confirmed Fraud</span>' :
+                          match.status === "DISMISSED" ? '<span style="color:var(--gray-600)">Dismissed</span>' :
+                          '<span style="color:var(--amber)">Pending Review</span>';
+
+        html += '<div style="padding:16px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border)">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += '<span style="font-weight:600;color:var(--navy)">' + esc(match.matchedCompanyName || match.companyName || "Unknown") + '</span>';
+        html += matchTypeBadge(match.matchType || match.type);
+        html += '</div>';
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += '<span style="font-size:13px;font-weight:600;color:' + scoreColor + '">Risk: ' + (match.riskScore || 0) + '</span>';
+        html += statusBadge;
+        html += '</div></div>';
+
+        // Action buttons for pending matches
+        if (match.status !== "CONFIRMED_FRAUD" && match.status !== "DISMISSED") {
+          html += '<div style="display:flex;gap:8px;margin-top:12px">';
+          html += '<button class="action-btn btn-red-outline" onclick="reviewChameleonMatch(\'' + (match.id || "") + '\', \'DISMISSED\')" style="padding:4px 14px;font-size:12px">Dismiss</button>';
+          html += '<button class="action-btn btn-red-solid" onclick="reviewChameleonMatch(\'' + (match.id || "") + '\', \'CONFIRMED_FRAUD\')" style="padding:4px 14px;font-size:12px">Confirm Fraud</button>';
+          html += '</div>';
+        }
+
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // Fraud Reports section
+      html += '<div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">';
+      html += '<span style="font-size:14px;font-weight:600;color:var(--navy)">Fraud Reports</span>';
+      html += '<button class="action-btn btn-red-outline" onclick="openFraudReportModal()" style="padding:6px 16px;font-size:13px">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      html += ' File Report</button>';
+      html += '</div>';
+      html += '<div id="fraud-reports-list">';
+      html += '<div class="empty-state">Loading fraud reports...</div>';
+      html += '</div>';
+      html += '</div>';
+
+      container.innerHTML = html;
+
+      // Render fraud reports if already loaded
+      if (fraudReportsData) {
+        renderFraudReportsList(fraudReportsData);
+      }
+    }
+
+    function runChameleonCheck() {
+      var btn = document.getElementById("btn-chameleon-check");
+      btn.disabled = true;
+      btn.textContent = "Running...";
+      SRL.request("/api/carriers/" + carrierId + "/chameleon-check", { method: "POST" }).then(function() {
+        showToast("Chameleon check completed", "success");
+        loadFraudData();
+      }).catch(function(err) {
+        showToast("Chameleon check failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Run Chameleon Check';
+      });
+    }
+
+    function reviewChameleonMatch(matchId, status) {
+      if (!matchId) return;
+      SRL.request("/api/carriers/chameleon-matches/" + matchId + "/review", {
+        method: "PUT",
+        body: { status: status }
+      }).then(function() {
+        showToast("Match " + (status === "DISMISSED" ? "dismissed" : "confirmed as fraud"), "success");
+        loadFraudData();
+      }).catch(function(err) {
+        showToast("Review failed: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       OFAC SCREENING
+       ========================================= */
+    function runOfacScreen() {
+      var btn = document.getElementById("btn-ofac-screen");
+      btn.disabled = true;
+      btn.textContent = "Screening...";
+      SRL.request("/api/carriers/" + carrierId + "/ofac-screen", { method: "POST" }).then(function() {
+        showToast("OFAC screening completed", "success");
+        loadIdentityData();
+      }).catch(function(err) {
+        showToast("OFAC screening failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Run OFAC Screen';
+      });
+    }
+
+    /* =========================================
+       BIOMETRIC VERIFICATION
+       ========================================= */
+    function runFacialVerify() {
+      var btn = document.getElementById("btn-facial-verify");
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+      SRL.request("/api/carriers/" + carrierId + "/facial-verify", { method: "POST" }).then(function() {
+        showToast("Facial verification completed", "success");
+        loadIdentityData();
+      }).catch(function(err) {
+        showToast("Facial verification failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Run Facial Verify';
+      });
+    }
+
+    /* =========================================
+       ELD VALIDATION
+       ========================================= */
+    function runEldValidate() {
+      var btn = document.getElementById("btn-eld-validate");
+      btn.disabled = true;
+      btn.textContent = "Validating...";
+      SRL.request("/api/carriers/" + carrierId + "/eld-validate", { method: "POST" }).then(function() {
+        showToast("ELD validation completed", "success");
+        loadIdentityData();
+      }).catch(function(err) {
+        showToast("ELD validation failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Validate ELD';
+      });
+    }
+
+    /* =========================================
+       TIN VERIFICATION
+       ========================================= */
+    function runTinVerify() {
+      var btn = document.getElementById("btn-tin-verify");
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+      SRL.request("/api/carriers/" + carrierId + "/tin-verify", { method: "POST" }).then(function() {
+        showToast("TIN verification completed", "success");
+        loadIdentityData();
+      }).catch(function(err) {
+        showToast("TIN verification failed: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg> Verify TIN';
+      });
+    }
+
+    /* =========================================
+       FRAUD REPORTS
+       ========================================= */
+    var fraudReportsData = null;
+    var currentUserRole = null;
+
+    function loadFraudReports() {
+      SRL.getMe().then(function(u) {
+        currentUserRole = u.role;
+      }).catch(function() {});
+
+      SRL.request("/api/carriers/" + carrierId + "/fraud-reports").then(function(data) {
+        fraudReportsData = data.reports || data || [];
+        renderFraudReportsList(fraudReportsData);
+      }).catch(function() {
+        fraudReportsData = [];
+        renderFraudReportsList([]);
+      });
+    }
+
+    function fraudReportStatusBadge(status) {
+      var colors = { OPEN: "amber", CONFIRMED: "red", DISMISSED: "gray", UNDER_REVIEW: "blue" };
+      var color = colors[status] || "gray";
+      return '<span class="status-badge status-badge-' + color + '" style="font-size:11px;padding:2px 8px">' + esc(status || "OPEN") + '</span>';
+    }
+
+    function fraudCategoryBadge(category) {
+      return '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.12);color:var(--red)">' + esc((category || "OTHER").replace(/_/g, " ")) + '</span>';
+    }
+
+    function renderFraudReportsList(reports) {
+      var container = document.getElementById("fraud-reports-list");
+      if (!container) return;
+
+      if (!reports || reports.length === 0) {
+        container.innerHTML = '<div class="empty-state">No fraud reports filed for this carrier</div>';
+        return;
+      }
+
+      var sorted = reports.slice().sort(function(a, b) {
+        return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date);
+      });
+
+      container.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px">' + sorted.map(function(report) {
+        var html = '<div style="padding:16px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border)">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += fraudCategoryBadge(report.category);
+        html += fraudReportStatusBadge(report.status);
+        html += '</div>';
+        html += '<span style="font-size:12px;color:var(--gray-600)">' + shortDate(report.createdAt || report.date) + '</span>';
+        html += '</div>';
+
+        html += '<div style="font-size:13px;color:var(--text);margin-bottom:8px">' + esc(report.description || "--") + '</div>';
+
+        if (report.reporterName || report.reporter) {
+          html += '<div style="font-size:12px;color:var(--gray-600)">Reported by: ' + esc(report.reporterName || report.reporter) + '</div>';
+        }
+
+        if (report.carrierResponse) {
+          html += '<div style="margin-top:8px;padding:10px;border-radius:6px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2)">';
+          html += '<div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px">Carrier Response</div>';
+          html += '<div style="font-size:13px;color:var(--text)">' + esc(report.carrierResponse) + '</div>';
+          html += '</div>';
+        }
+
+        // Review actions for ADMIN users on open reports
+        if (currentUserRole === "ADMIN" && report.status !== "CONFIRMED" && report.status !== "DISMISSED") {
+          html += '<div style="display:flex;gap:8px;margin-top:12px">';
+          html += '<button class="action-btn btn-red-outline" onclick="reviewFraudReport(\'' + (report.id || "") + '\', \'DISMISSED\')" style="padding:4px 14px;font-size:12px">Dismiss</button>';
+          html += '<button class="action-btn btn-red-solid" onclick="reviewFraudReport(\'' + (report.id || "") + '\', \'CONFIRMED\')" style="padding:4px 14px;font-size:12px">Confirm Fraud</button>';
+          html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+      }).join("") + '</div>';
+    }
+
+    function openFraudReportModal() {
+      document.getElementById("fraud-report-category").value = "";
+      document.getElementById("fraud-report-description").value = "";
+      openModal("fraud-report-modal");
+    }
+
+    function submitFraudReport() {
+      var category = document.getElementById("fraud-report-category").value;
+      var description = document.getElementById("fraud-report-description").value.trim();
+      if (!category) {
+        showToast("Please select a fraud category", "error");
+        return;
+      }
+      if (!description) {
+        showToast("Please provide a description", "error");
+        return;
+      }
+      var btn = document.getElementById("fraud-report-submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
+      SRL.request("/api/carriers/" + carrierId + "/fraud-reports", {
+        method: "POST",
+        body: { category: category, description: description }
+      }).then(function() {
+        showToast("Fraud report submitted successfully", "success");
+        closeModal("fraud-report-modal");
+        loadFraudReports();
+      }).catch(function(err) {
+        showToast("Failed to submit fraud report: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "Submit Report";
+      });
+    }
+
+    function reviewFraudReport(reportId, status) {
+      if (!reportId) return;
+      SRL.request("/api/carriers/" + carrierId + "/fraud-reports/" + reportId + "/review", {
+        method: "PUT",
+        body: { status: status }
+      }).then(function() {
+        showToast("Report " + (status === "DISMISSED" ? "dismissed" : "confirmed"), "success");
+        loadFraudReports();
+      }).catch(function(err) {
+        showToast("Review failed: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       AGREEMENTS
+       ========================================= */
+    var agreementsData = null;
+
+    function loadAgreements() {
+      SRL.request("/api/carriers/" + carrierId + "/agreements").then(function(data) {
+        agreementsData = data.agreements || data || [];
+        renderAgreements(agreementsData);
+      }).catch(function() {
+        agreementsData = [];
+        renderAgreements([]);
+      });
+    }
+
+    function agreementStatusBadge(status) {
+      var colors = { SIGNED: "green", SENT: "amber", EXPIRED: "red", REVOKED: "red", DRAFT: "gray" };
+      var color = colors[status] || "gray";
+      return '<span class="status-badge status-badge-' + color + '" style="font-size:12px;padding:2px 10px">' + esc(status || "DRAFT") + '</span>';
+    }
+
+    function renderAgreements(agreements) {
+      var container = document.getElementById("agreements-container");
+      if (!container) return;
+
+      if (!agreements || agreements.length === 0) {
+        container.innerHTML = '<div class="empty-state">No agreements found for this carrier</div>';
+        return;
+      }
+
+      var sorted = agreements.slice().sort(function(a, b) {
+        return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date);
+      });
+
+      container.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px">' + sorted.map(function(agreement) {
+        var html = '<div style="padding:16px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border)">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += '<span style="font-weight:600;color:var(--navy);font-size:14px">' + esc(agreement.type || agreement.agreementType || "Broker-Carrier Agreement") + '</span>';
+        html += agreementStatusBadge(agreement.status);
+        html += '</div>';
+        if (agreement.version) {
+          html += '<span style="font-size:12px;color:var(--gray-600)">v' + esc(agreement.version) + '</span>';
+        }
+        html += '</div>';
+
+        html += '<div class="accordion-detail-grid" style="margin-bottom:8px">';
+        if (agreement.signedAt || agreement.signedDate) {
+          html += '<div class="accordion-field"><label>Signed</label><span>' + shortDate(agreement.signedAt || agreement.signedDate) + '</span></div>';
+        }
+        if (agreement.signerName || agreement.signer) {
+          html += '<div class="accordion-field"><label>Signer</label><span>' + esc(agreement.signerName || agreement.signer) + '</span></div>';
+        }
+        html += '<div class="accordion-field"><label>Sent</label><span>' + shortDate(agreement.createdAt || agreement.sentAt || agreement.date) + '</span></div>';
+        if (agreement.expiresAt) {
+          html += '<div class="accordion-field"><label>Expires</label><span>' + shortDate(agreement.expiresAt) + '</span></div>';
+        }
+        html += '</div>';
+
+        // Sign button for SENT agreements (carrier viewing)
+        if (agreement.status === "SENT") {
+          html += '<div style="margin-top:8px">';
+          html += '<button class="action-btn btn-gold" onclick="signAgreement(\'' + (agreement.id || "") + '\')" style="padding:6px 16px;font-size:13px">';
+          html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>';
+          html += ' Sign Agreement</button>';
+          html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+      }).join("") + '</div>';
+    }
+
+    function openSendAgreementModal() {
+      document.getElementById("agreement-type").value = "BROKER_CARRIER";
+      document.getElementById("agreement-version").value = "";
+      openModal("send-agreement-modal");
+    }
+
+    function submitSendAgreement() {
+      var type = document.getElementById("agreement-type").value;
+      var version = document.getElementById("agreement-version").value.trim();
+      var btn = document.getElementById("send-agreement-submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+      SRL.request("/api/carriers/" + carrierId + "/agreements", {
+        method: "POST",
+        body: { type: type, version: version || undefined }
+      }).then(function() {
+        showToast("Agreement sent to carrier", "success");
+        closeModal("send-agreement-modal");
+        loadAgreements();
+      }).catch(function(err) {
+        showToast("Failed to send agreement: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = "Send Agreement";
+      });
+    }
+
+    function signAgreement(agreementId) {
+      if (!agreementId) return;
+      SRL.request("/api/carriers/" + carrierId + "/agreements/" + agreementId + "/sign", {
+        method: "POST"
+      }).then(function() {
+        showToast("Agreement signed successfully", "success");
+        loadAgreements();
+      }).catch(function(err) {
+        showToast("Failed to sign agreement: " + err.message, "error");
+      });
+    }
+
+    /* =========================================
+       GRACE PERIOD
+       ========================================= */
+    function grantGracePeriod() {
+      var days = parseInt(document.getElementById("grace-period-days").value, 10);
+      var btn = document.getElementById("btn-grace-period");
+      btn.disabled = true;
+      btn.textContent = "Granting...";
+      SRL.request("/api/carriers/" + carrierId + "/grace-period", {
+        method: "POST",
+        body: { days: days }
+      }).then(function(res) {
+        showToast("Insurance grace period of " + days + " day(s) granted", "success");
+        var statusEl = document.getElementById("grace-period-status");
+        statusEl.innerHTML = '<span style="color:var(--green)">Grace period active: ' + days + ' day(s) from now</span>';
+        loadCarrierData();
+      }).catch(function(err) {
+        showToast("Failed to grant grace period: " + err.message, "error");
+      }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Grant Insurance Grace Period';
+      });
+    }
+
+    /* =========================================
+       VETTING HISTORY / SCORE TREND
+       ========================================= */
+    var vettingHistory = null;
+
+    function loadVettingHistory() {
+      SRL.request("/api/carriers/" + carrierId + "/vetting-history").then(function(data) {
+        vettingHistory = data;
+        renderScoreTrend(data);
+      }).catch(function() {
+        // Score trend is optional; no error shown
+      });
+    }
+
+    function renderScoreTrend(data) {
+      if (!data || !data.historicalScores || data.historicalScores.length === 0) return;
+
+      var scores = data.historicalScores;
+      var trend = data.trendDirection || "STABLE";
+      var trendIcon = trend === "UP" ? "&#9650;" : trend === "DOWN" ? "&#9660;" : "&#9644;";
+      var trendColor = trend === "UP" ? "var(--green)" : trend === "DOWN" ? "var(--red)" : "var(--amber)";
+
+      // Build sparkline SVG
+      var max = Math.max.apply(null, scores);
+      var min = Math.min.apply(null, scores);
+      var range = max - min || 1;
+      var width = 120;
+      var height = 32;
+      var points = scores.map(function(s, i) {
+        var x = (i / Math.max(1, scores.length - 1)) * width;
+        var y = height - ((s - min) / range) * (height - 4) - 2;
+        return x.toFixed(1) + "," + y.toFixed(1);
+      }).join(" ");
+
+      var sparklineSvg = '<svg width="' + width + '" height="' + height + '" style="vertical-align:middle">' +
+        '<polyline points="' + points + '" fill="none" stroke="' + trendColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+
+      // Inject after the safety score bar in the carrier info card
+      var infoCard = document.getElementById("carrier-info-card");
+      if (!infoCard) return;
+
+      var trendHtml = '<div class="info-row" style="align-items:center;gap:8px;margin-top:4px">' +
+        '<span class="info-row-label">Score Trend</span>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+        sparklineSvg +
+        '<span style="font-size:16px;color:' + trendColor + ';font-weight:700">' + trendIcon + '</span>' +
+        '<span style="font-size:12px;color:var(--gray-600)">' + scores.length + ' checks</span>' +
+        '</div></div>';
+
+      // Append trend to the info card (after existing content)
+      var existing = infoCard.innerHTML;
+      // Find the safety score bar section and append after it
+      var safetyBarIdx = existing.lastIndexOf('safety-score-bar');
+      if (safetyBarIdx !== -1) {
+        // Find the closing div of the safety score row
+        var closingIdx = existing.indexOf('</div></div>', safetyBarIdx);
+        if (closingIdx !== -1) {
+          var insertAt = closingIdx + '</div></div>'.length;
+          infoCard.innerHTML = existing.substring(0, insertAt) + trendHtml + existing.substring(insertAt);
+          return;
+        }
+      }
+      // Fallback: append at end
+      infoCard.innerHTML = existing + trendHtml;
     }
 
     /* =========================================

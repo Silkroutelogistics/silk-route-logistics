@@ -395,6 +395,10 @@ enum NotificationType {
   POD_RECEIVED
   SYSTEM_ERROR
   GENERAL
+  OFAC_MATCH
+  FRAUD_REPORT
+  ELD_INVALID
+  AGREEMENT_SIGNED
 }
 
 enum ShipmentType {
@@ -421,6 +425,153 @@ enum CarrierPaymentMethod {
   QUICK_PAY
   STANDARD
   FACTORING
+}
+
+enum PhotoIdType {
+  DRIVERS_LICENSE
+  PASSPORT
+  STATE_ID
+}
+
+enum PhotoIdStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum IdentityStatus {
+  UNVERIFIED
+  PARTIAL
+  VERIFIED
+  FAILED
+}
+
+enum SosStatus {
+  ACTIVE
+  INACTIVE
+  DISSOLVED
+  NOT_FOUND
+}
+
+enum EmailProviderType {
+  BUSINESS
+  FREE
+  DISPOSABLE
+}
+
+enum PhoneLineType {
+  LANDLINE
+  MOBILE
+  VOIP
+}
+
+enum ChameleonMatchType {
+  PHONE
+  EMAIL
+  ADDRESS
+  EIN
+  MULTI
+}
+
+enum ChameleonMatchStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+  CONFIRMED_FRAUD
+}
+
+enum VettingGrade {
+  A
+  B
+  C
+  D
+  F
+}
+
+enum ChameleonRiskLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum OfacStatus {
+  CLEAR
+  POTENTIAL_MATCH
+  CONFIRMED_MATCH
+  PENDING
+  ERROR
+}
+
+enum FacialMatchStatus {
+  PENDING
+  MATCHED
+  MISMATCH
+  SKIPPED
+  ERROR
+}
+
+enum EldVerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  NOT_ON_FMCSA_LIST
+  EXEMPT
+}
+
+enum TinMatchStatus {
+  UNVERIFIED
+  MATCHED
+  MISMATCHED
+  IRS_ERROR
+  FORMAT_VALID
+}
+
+enum FraudReportCategory {
+  DOUBLE_BROKERING
+  CARGO_THEFT
+  IDENTITY_THEFT
+  NO_SHOW
+  PAYMENT_ISSUE
+  IMPERSONATION
+  OTHER
+}
+
+enum FraudReportStatus {
+  PENDING
+  UNDER_REVIEW
+  CONFIRMED
+  DISMISSED
+  PERMANENT
+}
+
+enum AgreementStatus {
+  DRAFT
+  SENT
+  SIGNED
+  EXPIRED
+  TERMINATED
+}
+
+enum UcrStatus {
+  VERIFIED
+  UNVERIFIED
+  EXPIRED
+  NOT_REQUIRED
+}
+
+enum VinVerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  MISMATCH
+  NOT_FOUND
+}
+
+enum OverbookingRisk {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 enum CheckCallDriverStatus {
@@ -520,6 +671,7 @@ model User {
   customerAccount     Customer?            @relation("CustomerUser")
 
   reportedDelays      LoadDelay[]          @relation("DelayReporter")
+  fraudReports        FraudReport[]        @relation("FraudReporter")
 
   @@index([email])
   @@index([role])
@@ -599,6 +751,49 @@ model CarrierProfile {
   emergencyApprovedById String?
   emergencyApprovedAt   DateTime?
 
+  // Insurance grace period
+  insuranceGracePeriodEnd DateTime?
+  insuranceGraceGrantedBy String?
+
+  // Enhanced vetting
+  vettingGrade          VettingGrade?
+  autoSuspendedAt       DateTime?
+  autoSuspendReason     String?
+
+  // Chameleon detection
+  lastChameleonCheckAt  DateTime?
+  chameleonRiskLevel    ChameleonRiskLevel      @default(NONE)
+
+  // Authority age tracking
+  authorityGrantedDate  DateTime?
+  authorityAgeDays      Int?
+
+  // OFAC screening
+  ofacStatus            OfacStatus?
+  ofacScreenedAt        DateTime?
+  ofacMatchDetails      Json?
+
+  // ELD verification
+  eldDeviceVerified     Boolean               @default(false)
+  eldOnFmcsaList        EldVerificationStatus  @default(UNVERIFIED)
+  eldVerifiedAt         DateTime?
+
+  // UCR registration
+  ucrStatus             UcrStatus             @default(UNVERIFIED)
+  ucrYear               Int?
+  ucrVerifiedAt         DateTime?
+
+  // FMCSA contact snapshot (for change detection)
+  fmcsaPhone            String?
+  fmcsaEmail            String?
+  fmcsaAddress          String?
+  fmcsaContactLastSync  DateTime?
+
+  // Overbooking / capacity
+  overbookingRisk       OverbookingRisk       @default(NONE)
+  overbookingLastCheck  DateTime?
+  activeLoadCount       Int                   @default(0)
+
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
@@ -615,6 +810,15 @@ model CarrierProfile {
   aiIntelligence      CarrierIntelligence[] @relation("CarrierIntelligence")
   complianceForecast  ComplianceForecast?   @relation("ComplianceForecast")
 
+  // Vetting upgrade relations
+  identityVerification CarrierIdentityVerification?
+  fingerprint          CarrierFingerprint?
+  chameleonMatches     ChameleonMatch[]      @relation("ChameleonCarrier")
+  chameleonMatchedBy   ChameleonMatch[]      @relation("ChameleonMatched")
+  vettingReports       VettingReport[]
+  fraudReports         FraudReport[]
+  agreements           CarrierAgreement[]
+
   @@index([mcNumber])
   @@index([dotNumber])
   deletedAt   DateTime?
@@ -623,6 +827,8 @@ model CarrierProfile {
   @@index([status])
   @@index([cppTier])
   @@index([source])
+  @@index([vettingGrade])
+  @@index([chameleonRiskLevel])
   @@map("carrier_profiles")
 }
 
@@ -1414,6 +1620,17 @@ model Truck {
   ifta                Boolean       @default(false)
   iftaExpiry          DateTime?
 
+  // VIN verification
+  vinVerificationStatus VinVerificationStatus @default(UNVERIFIED)
+  vinVerifiedAt       DateTime?
+  vinDecodedMake      String?
+  vinDecodedModel     String?
+  vinDecodedYear      Int?
+  vinModelYear        String?
+  vinPlantCountry     String?
+  vinBodyClass        String?
+  vinGvwr             String?
+
   lastServiceDate     DateTime?
   nextServiceDate     DateTime?
   nextServiceMileage  Int?
@@ -1720,6 +1937,141 @@ model ComplianceAlert {
   @@index([entityType, entityId])
   @@index([expiryDate])
   @@map("compliance_alerts")
+}
+
+// ─── Carrier Identity & Fraud Detection ──────────────────────
+
+model CarrierIdentityVerification {
+  id                    String   @id @default(cuid())
+  carrierId             String   @unique
+  carrier               CarrierProfile @relation(fields: [carrierId], references: [id])
+
+  // Photo ID
+  photoIdUploaded       Boolean  @default(false)
+  photoIdUrl            String?
+  photoIdType           PhotoIdType?
+  photoIdStatus         PhotoIdStatus @default(PENDING)
+  photoIdVerifiedAt     DateTime?
+  photoIdVerifiedBy     String?
+
+  // Biometric facial match
+  selfieUploaded        Boolean  @default(false)
+  selfieUrl             String?
+  facialMatchScore      Float?    // 0-100 confidence
+  facialMatchStatus     FacialMatchStatus @default(PENDING)
+  facialMatchVerifiedAt DateTime?
+
+  // Secretary of State
+  sosVerified           Boolean  @default(false)
+  sosState              String?
+  sosEntityName         String?
+  sosFilingNumber       String?
+  sosStatus             SosStatus?
+  articlesOfIncUrl      String?
+
+  // W-9 IRS TIN
+  w9TinVerified         Boolean  @default(false)
+  w9TinLastFour         String?
+  w9VerifiedAt          DateTime?
+  w9TinMatchStatus      TinMatchStatus @default(UNVERIFIED)
+  w9TinMatchVerifiedAt  DateTime?
+  w9CompanyName         String?
+  w9TinFull             String?   // Encrypted, used for IRS match only
+
+  // Email domain analysis
+  emailDomainValid      Boolean?
+  emailDomainAge        Int?      // days since domain registration
+  emailIsDisposable     Boolean?
+  emailProvider         EmailProviderType?
+
+  // Phone analysis
+  phoneType             PhoneLineType?
+  phoneCarrier          String?
+  phoneIsVoip           Boolean?
+
+  // Overall score
+  identityScore         Int       @default(0) // 0-100
+  identityStatus        IdentityStatus @default(UNVERIFIED)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([identityStatus])
+  @@map("carrier_identity_verifications")
+}
+
+model CarrierFingerprint {
+  id          String   @id @default(cuid())
+  carrierId   String   @unique
+  carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
+
+  phoneHash   String?  // SHA-256 of normalized phone
+  emailHash   String?  // SHA-256 of email domain
+  addressHash String?  // SHA-256 of normalized address
+  einHash     String?  // SHA-256 of EIN/TIN
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([phoneHash])
+  @@index([emailHash])
+  @@index([addressHash])
+  @@index([einHash])
+  @@map("carrier_fingerprints")
+}
+
+model ChameleonMatch {
+  id                String   @id @default(cuid())
+  carrierId         String
+  carrier           CarrierProfile @relation("ChameleonCarrier", fields: [carrierId], references: [id])
+  matchedCarrierId  String
+  matchedCarrier    CarrierProfile @relation("ChameleonMatched", fields: [matchedCarrierId], references: [id])
+
+  matchType         ChameleonMatchType
+  riskScore         Int       @default(0) // 0-100
+  status            ChameleonMatchStatus @default(OPEN)
+
+  reviewedById      String?
+  reviewedAt        DateTime?
+  reviewNotes       String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([carrierId])
+  @@index([matchedCarrierId])
+  @@index([status])
+  @@map("chameleon_matches")
+}
+
+model VettingReport {
+  id              String   @id @default(cuid())
+  carrierId       String
+  carrier         CarrierProfile @relation(fields: [carrierId], references: [id])
+
+  score           Int       @default(0)
+  grade           VettingGrade
+  riskLevel       String    // LOW, MEDIUM, HIGH, CRITICAL
+  recommendation  String    // APPROVE, REVIEW, REJECT
+
+  checksJson      Json      // Array of check results
+  flagsJson       Json?     // Array of flag strings
+  fmcsaSnapshot   Json?     // FMCSA data at time of vetting
+  identityData    Json?     // Identity check data at time of vetting
+
+  previousScore   Int?
+  scoreDelta      Int?
+  trendDirection  String?   // IMPROVING, STABLE, DECLINING
+
+  triggeredBy     String?   // USER, CRON, REGISTRATION
+  vettingType     String    @default("FULL") // FULL, FMCSA_ONLY, IDENTITY_ONLY
+
+  createdAt       DateTime  @default(now())
+
+  @@index([carrierId])
+  @@index([grade])
+  @@index([createdAt])
+  @@map("vetting_reports")
 }
 
 model ComplianceScan {
@@ -2930,4 +3282,69 @@ model ELDDeviceMapping {
   @@unique([provider, externalVehicleId])
   @@index([carrierId])
   @@map("eld_device_mappings")
+}
+
+// ─── Fraud Reporting ──────────────────────────────────────
+model FraudReport {
+  id              String              @id @default(cuid())
+  carrierId       String
+  carrier         CarrierProfile      @relation(fields: [carrierId], references: [id])
+
+  reportedById    String
+  reportedBy      User                @relation("FraudReporter", fields: [reportedById], references: [id])
+
+  category        FraudReportCategory
+  description     String
+  evidence        String[]            // URLs to uploaded evidence files
+  loadId          String?             // Optional link to the load involved
+
+  status          FraudReportStatus   @default(PENDING)
+  permanentAt     DateTime?           // Becomes permanent 72h after creation
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+  carrierResponse String?             // Carrier's rebuttal
+  carrierRespondedAt DateTime?
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([carrierId])
+  @@index([status])
+  @@index([category])
+  @@index([reportedById])
+  @@map("fraud_reports")
+}
+
+// ─── Carrier-Broker Agreement ─────────────────────────────
+model CarrierAgreement {
+  id              String            @id @default(cuid())
+  carrierId       String
+  carrier         CarrierProfile    @relation(fields: [carrierId], references: [id])
+
+  version         String            @default("1.0")
+  templateName    String            @default("standard")
+  documentUrl     String?           // URL to the agreement PDF
+  status          AgreementStatus   @default(DRAFT)
+
+  sentAt          DateTime?
+  signedAt        DateTime?
+  signedByName    String?           // Full name as entered for e-signature
+  signedByTitle   String?           // Title (e.g. "Owner", "Manager")
+  signatureData   String?           // Base64 signature image or typed name
+  signerIp        String?           // IP address at time of signing
+  signerUserAgent String?
+
+  expiresAt       DateTime?
+  terminatedAt    DateTime?
+  terminatedBy    String?
+  terminationReason String?
+
+  createdById     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([carrierId])
+  @@index([status])
+  @@map("carrier_agreements")
 }

@@ -1,5 +1,5 @@
 /**
- * Compliance Monitor Service
+ * Compass by SRL — Compliance Monitor
  * Core enforcement logic for the SRL Compliance Console.
  *
  * - complianceCheck: gate-check before carrier assignment
@@ -57,9 +57,15 @@ export async function complianceCheck(carrierId: string): Promise<{
     blocked_reasons.push("Carrier application rejected");
   }
 
-  // HARD BLOCK: expired insurance (auto/cargo)
+  // HARD BLOCK: expired insurance (with grace period check)
   if (carrier.insuranceExpiry && carrier.insuranceExpiry <= now) {
-    blocked_reasons.push("Insurance has expired");
+    // Check for active insurance grace period
+    if (carrier.insuranceGracePeriodEnd && carrier.insuranceGracePeriodEnd > now) {
+      const graceDaysLeft = Math.ceil((carrier.insuranceGracePeriodEnd.getTime() - now.getTime()) / 86_400_000);
+      warnings.push(`Insurance expired but grace period active (${graceDaysLeft} days remaining)`);
+    } else {
+      blocked_reasons.push("Insurance has expired");
+    }
   }
 
   // HARD BLOCK: FMCSA authority revoked or out of service
@@ -261,6 +267,7 @@ export async function getOverviewMatrix(filters?: {
     where,
     include: {
       user: { select: { company: true, firstName: true, lastName: true, email: true } },
+      identityVerification: { select: { identityStatus: true, identityScore: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -316,6 +323,10 @@ export async function getOverviewMatrix(filters?: {
       items,
       insuranceExpiry: c.insuranceExpiry,
       fmcsaLastChecked: c.fmcsaLastChecked,
+      // Vetting upgrade fields
+      vettingGrade: c.vettingGrade || null,
+      identityStatus: c.identityVerification?.identityStatus || null,
+      chameleonRiskLevel: c.chameleonRiskLevel || null,
     };
   });
 
@@ -692,7 +703,7 @@ export async function weeklyFmcsaScan() {
         });
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
-          data: { onboardingStatus: "SUSPENDED" },
+          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
         });
         results.alerts++;
       }
@@ -735,6 +746,43 @@ export async function weeklyFmcsaScan() {
         results.alerts++;
       }
 
+      // FMCSA contact change detection (Compass)
+      const fmcsaPhone = (fmcsaResult as any).phone || null;
+      const fmcsaEmail = (fmcsaResult as any).email || null;
+      const fmcsaAddress = (fmcsaResult as any).physicalAddress || null;
+      if (carrier.fmcsaContactLastSync) {
+        const contactChanges: string[] = [];
+        if (fmcsaPhone && carrier.fmcsaPhone && fmcsaPhone !== carrier.fmcsaPhone) contactChanges.push(`Phone: ${carrier.fmcsaPhone} → ${fmcsaPhone}`);
+        if (fmcsaEmail && carrier.fmcsaEmail && fmcsaEmail !== carrier.fmcsaEmail) contactChanges.push(`Email: ${carrier.fmcsaEmail} → ${fmcsaEmail}`);
+        if (fmcsaAddress && carrier.fmcsaAddress && fmcsaAddress !== carrier.fmcsaAddress) contactChanges.push(`Address changed`);
+
+        if (contactChanges.length > 0) {
+          await prisma.complianceAlert.create({
+            data: {
+              type: "FMCSA_CONTACT_CHANGE",
+              entityType: "CarrierProfile",
+              entityId: carrier.id,
+              entityName: carrierName,
+              expiryDate: new Date(Date.now() + 7 * 86_400_000),
+              severity: contactChanges.length >= 2 ? "CRITICAL" : "WARNING",
+              status: "ACTIVE",
+            },
+          });
+          results.alerts++;
+          console.log(`[Compass] FMCSA contact change for ${carrierName}: ${contactChanges.join(", ")}`);
+        }
+      }
+      // Store current FMCSA contact info for next comparison
+      await prisma.carrierProfile.update({
+        where: { id: carrier.id },
+        data: {
+          fmcsaPhone: fmcsaPhone || carrier.fmcsaPhone,
+          fmcsaEmail: fmcsaEmail || carrier.fmcsaEmail,
+          fmcsaAddress: fmcsaAddress || carrier.fmcsaAddress,
+          fmcsaContactLastSync: new Date(),
+        },
+      }).catch(() => {});
+
       // Out of service -> CRITICAL alert + auto-block
       if (fmcsaResult.outOfServiceDate) {
         await prisma.complianceAlert.create({
@@ -750,7 +798,7 @@ export async function weeklyFmcsaScan() {
         });
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
-          data: { onboardingStatus: "SUSPENDED" },
+          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
         });
         results.alerts++;
       }
@@ -878,4 +926,112 @@ export async function dailyComplianceReminders() {
   }
 
   return results;
+}
+
+// ────────────────────────────────────────────────────────────
+// checkAutoReversal — auto-reinstate suspended carriers
+// ────────────────────────────────────────────────────────────
+
+export async function checkAutoReversal() {
+  const results = { checked: 0, reinstated: 0, errors: 0 };
+
+  const suspendedCarriers = await prisma.carrierProfile.findMany({
+    where: {
+      autoSuspendedAt: { not: null },
+      onboardingStatus: "SUSPENDED",
+      dotNumber: { not: null },
+    },
+    include: {
+      user: { select: { company: true, firstName: true, lastName: true, email: true } },
+    },
+  });
+
+  for (const carrier of suspendedCarriers) {
+    try {
+      if (!carrier.dotNumber) continue;
+      results.checked++;
+
+      const fmcsaResult = await verifyCarrierWithFMCSA(carrier.dotNumber);
+
+      if (
+        fmcsaResult.verified &&
+        fmcsaResult.operatingStatus === "AUTHORIZED" &&
+        !fmcsaResult.outOfServiceDate &&
+        fmcsaResult.insuranceOnFile
+      ) {
+        await prisma.carrierProfile.update({
+          where: { id: carrier.id },
+          data: {
+            onboardingStatus: "APPROVED",
+            autoSuspendedAt: null,
+            autoSuspendReason: null,
+            fmcsaAuthorityStatus: "AUTHORIZED",
+            fmcsaLastChecked: new Date(),
+          },
+        });
+
+        const carrierName = carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
+        await prisma.complianceAlert.create({
+          data: {
+            type: "AUTO_REINSTATED",
+            entityType: "CarrierProfile",
+            entityId: carrier.id,
+            entityName: carrierName,
+            expiryDate: new Date(Date.now() + 365 * 86_400_000),
+            severity: "INFO",
+            status: "ACTIVE",
+          },
+        });
+
+        try {
+          await sendEmail(
+            carrier.user.email,
+            `[SRL] Account Reinstated - ${carrierName}`,
+            `<div style="font-family: Arial, sans-serif;">
+              <h2>Your Account Has Been Reinstated</h2>
+              <p>Dear ${carrierName},</p>
+              <p>Your carrier account has been automatically reinstated after our system verified
+              your FMCSA authority is active, no out-of-service status, and insurance is on file.</p>
+              <p>You may now accept loads again.</p>
+              <p>— SRL Compliance Team</p>
+            </div>`,
+          );
+        } catch { /* non-critical */ }
+
+        results.reinstated++;
+      }
+    } catch (err) {
+      console.error(`[AutoReversal] Error for carrier ${carrier.id}:`, err);
+      results.errors++;
+    }
+  }
+
+  console.log(`[AutoReversal] ${results.checked} checked, ${results.reinstated} reinstated, ${results.errors} errors`);
+  return results;
+}
+
+// ────────────────────────────────────────────────────────────
+// grantGracePeriod — admin grants insurance grace period (max 7 days)
+// ────────────────────────────────────────────────────────────
+
+export async function grantGracePeriod(
+  carrierId: string,
+  grantedBy: string,
+  days: number = 7,
+): Promise<{ success: boolean; expiresAt: Date }> {
+  if (days < 1 || days > 7) {
+    throw new Error("Grace period must be between 1 and 7 days");
+  }
+
+  const expiresAt = new Date(Date.now() + days * 86_400_000);
+
+  await prisma.carrierProfile.update({
+    where: { id: carrierId },
+    data: {
+      insuranceGracePeriodEnd: expiresAt,
+      insuranceGraceGrantedBy: grantedBy,
+    },
+  });
+
+  return { success: true, expiresAt };
 }

@@ -87,6 +87,12 @@
           </div>
 
           <div class="form-group">
+            <label for="articlesOfInc">Articles of Incorporation (optional)</label>
+            <input type="file" id="articlesOfInc" class="form-control" accept=".pdf,.jpg,.jpeg,.png" style="padding:8px">
+            <small style="color:var(--slate);font-size:11px">PDF or image of your Articles of Incorporation / business formation document</small>
+          </div>
+
+          <div class="form-group">
             <label for="companyEmail" class="required">Company Email</label>
             <input type="email" id="companyEmail" class="form-control" placeholder="e.g. dispatch@yourcompany.com" required>
           </div>
@@ -140,6 +146,12 @@
           <div class="form-group">
             <label for="confirmPassword" class="required">Confirm Password</label>
             <input type="password" id="confirmPassword" class="form-control" placeholder="Confirm your password" minlength="8" required>
+          </div>
+
+          <div class="form-group">
+            <label for="photoId">Photo ID (Driver's License or State ID)</label>
+            <input type="file" id="photoId" class="form-control" accept=".jpg,.jpeg,.png,.pdf" style="padding:8px">
+            <small style="color:var(--slate);font-size:11px">Upload a clear photo of the primary contact's government-issued ID</small>
           </div>
 
           <div class="form-nav">
@@ -238,8 +250,8 @@
         <!-- Success State -->
         <div class="success-state" id="successState">
           <div class="success-icon">&#10003;</div>
-          <h2>Application Submitted!</h2>
-          <p>Our team will review your application and get back to you within 24 hours.</p>
+          <h2>Application Under Review</h2>
+          <p>Your carrier application has been submitted successfully. Our compliance team will verify your DOT authority, insurance, and identity before granting access. You will receive an email notification once approved.</p>
           <a href="/carrier/login.html" class="btn btn-primary" style="justify-content:center">
             Go to Sign In
           </a>
@@ -287,6 +299,7 @@
         if (!company) { showError("Company Name is required."); return false; }
         if (!mc) { showError("MC Number is required."); return false; }
         if (!dot) { showError("DOT Number is required."); return false; }
+        if (!/^\d{5,}$/.test(dot)) { showError("DOT Number must be at least 5 digits (numbers only)."); return false; }
         if (!email) { showError("Company Email is required."); return false; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError("Please enter a valid company email address."); return false; }
         return true;
@@ -389,23 +402,33 @@
       submitBtn.textContent = "Submitting...";
       hideError();
 
-      var payload = {
-        company: document.getElementById("company").value.trim(),
-        mcNumber: document.getElementById("mcNumber").value.trim(),
-        dotNumber: document.getElementById("dotNumber").value.trim(),
-        phone: document.getElementById("companyPhone").value.trim() || document.getElementById("contactPhone").value.trim() || undefined,
-        email: document.getElementById("contactEmail").value.trim(),
-        firstName: document.getElementById("firstName").value.trim(),
-        lastName: document.getElementById("lastName").value.trim(),
-        password: document.getElementById("password").value,
-        equipmentTypes: getCheckedValues("equipment"),
-        operatingRegions: getCheckedValues("region"),
-      };
+      // Build FormData to include file uploads
+      var fd = new FormData();
+      fd.append("company", document.getElementById("company").value.trim());
+      fd.append("mcNumber", document.getElementById("mcNumber").value.trim());
+      fd.append("dotNumber", document.getElementById("dotNumber").value.trim());
+      fd.append("phone", document.getElementById("companyPhone").value.trim() || document.getElementById("contactPhone").value.trim() || "");
+      fd.append("email", document.getElementById("contactEmail").value.trim());
+      fd.append("firstName", document.getElementById("firstName").value.trim());
+      fd.append("lastName", document.getElementById("lastName").value.trim());
+      fd.append("password", document.getElementById("password").value);
+      getCheckedValues("equipment").forEach(function(v) { fd.append("equipmentTypes", v); });
+      getCheckedValues("region").forEach(function(v) { fd.append("operatingRegions", v); });
 
-      CARRIER.request("/api/carrier/register", {
+      // Attach files if selected
+      var photoIdFile = document.getElementById("photoId").files[0];
+      if (photoIdFile) fd.append("photoId", photoIdFile);
+      var articlesFile = document.getElementById("articlesOfInc").files[0];
+      if (articlesFile) fd.append("articlesOfInc", articlesFile);
+
+      // Send as multipart/form-data (no Content-Type header — browser sets it with boundary)
+      var apiUrl = window.API_URL || "https://api.silkroutelogistics.ai";
+      fetch(apiUrl + "/api/carrier/register", {
         method: "POST",
-        body: payload,
+        body: fd,
+        credentials: "include",
       })
+        .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || "Registration failed"); return d; }); })
         .then(function (data) {
           // Hide form, show success
           for (var i = 1; i <= totalSteps; i++) {

@@ -111,21 +111,21 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     debugErrors.push(`Public: ${msg}`);
   }
 
-  // Fall back to demo/mock verification
-  console.warn(`[FMCSA] Falling back to demo mode for DOT ${dotNumber}. Errors: ${debugErrors.join(" | ")}`);
+  // Fail safe — do NOT default to verified
+  console.error(`[FMCSA] All verification attempts failed for DOT ${dotNumber}. Errors: ${debugErrors.join(" | ")}`);
   return {
-    verified: true,
-    legalName: "Carrier Verified (Demo Mode)",
+    verified: false,
+    legalName: null,
     dbaName: null,
     mcNumber: null,
     dotNumber,
-    operatingStatus: "AUTHORIZED",
-    entityType: "CARRIER",
-    safetyRating: "SATISFACTORY",
-    insuranceOnFile: true,
+    operatingStatus: "VERIFICATION_FAILED",
+    entityType: null,
+    safetyRating: null,
+    insuranceOnFile: false,
     outOfServiceDate: null,
     totalDrivers: null,
     totalPowerUnits: null,
-    errors: ["FMCSA API unavailable - using demo mode", ...debugErrors],
+    errors: ["FMCSA API unavailable - verification failed (fail-safe)", ...debugErrors],
   };
 }

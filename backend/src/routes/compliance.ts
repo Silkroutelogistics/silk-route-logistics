@@ -20,6 +20,7 @@ import {
   getLatestScan,
   checkCarrier,
 } from "../controllers/complianceController";
+import { triggerAutoReversal, triggerChameleonScan, triggerLoadComplianceScan, runSingleVinVerify } from "../controllers/carrierVettingController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 
@@ -49,5 +50,11 @@ router.post("/carrier/:carrierId/override-block", authorize("ADMIN"), overrideBl
 router.post("/carrier/:carrierId/suspend", authorize("ADMIN"), suspendCarrier);
 router.post("/carrier/:carrierId/notes", authorize("ADMIN", "OPERATIONS", "BROKER"), addNote);
 router.post("/carrier/:carrierId/check", authorize("ADMIN", "OPERATIONS", "CEO", "BROKER", "DISPATCH"), checkCarrier);
+
+// Vetting upgrade routes
+router.post("/check-reversals", authorize("ADMIN", "OPERATIONS"), triggerAutoReversal);
+router.post("/chameleon-scan", authorize("ADMIN"), triggerChameleonScan);
+router.post("/load-compliance-scan", authorize("ADMIN", "OPERATIONS"), triggerLoadComplianceScan);
+router.post("/truck/:truckId/vin-verify", authorize("ADMIN", "OPERATIONS"), runSingleVinVerify);
 
 export default router;

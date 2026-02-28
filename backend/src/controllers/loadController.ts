@@ -8,6 +8,7 @@ import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
 import { complianceCheck } from "../services/complianceMonitorService";
+import { onLoadAssigned } from "../services/loadComplianceService";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -465,6 +466,11 @@ export async function updateLoad(req: AuthRequest, res: Response) {
       }
     }
     data.carrierId = carrierId;
+
+    // Fire post-assignment load-level compliance scan (non-blocking)
+    onLoadAssigned(req.params.id, carrierId).catch((e) =>
+      console.error("[Compass] onLoadAssigned compliance scan error:", e.message)
+    );
   }
 
   // Recalculate margin fields if rates changed (guard against division by zero)

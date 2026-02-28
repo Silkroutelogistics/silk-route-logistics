@@ -237,6 +237,35 @@ export function initCronJobs() {
     }
   }));
 
+  // ─── Daily (6 AM): Identity/email/phone validation for pending carriers ──
+  cron.schedule("0 6 * * *", () => withGuard("identity-validation", async () => {
+    try {
+      console.log("[Cron Daily] Running identity validation for pending carriers...");
+      const { runIdentityCheck } = require("../services/identityVerificationService");
+      const pendingCarriers = await prisma.carrierProfile.findMany({
+        where: {
+          onboardingStatus: { in: ["PENDING", "UNDER_REVIEW", "DOCUMENTS_SUBMITTED"] },
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      let checked = 0, errors = 0;
+      for (const carrier of pendingCarriers) {
+        try {
+          await runIdentityCheck(carrier.id);
+          checked++;
+        } catch (err) {
+          errors++;
+          console.error(`[Cron Identity] Error for ${carrier.id}:`, (err as Error).message);
+        }
+      }
+      console.log(`[Cron Daily] Identity validation: ${checked} checked, ${errors} errors`);
+    } catch (err) {
+      console.error("[Cron Daily] Identity validation error:", err);
+    }
+  }));
+
   // ─── Daily (5 AM): Compliance reminder emails ──────────────
   cron.schedule("0 5 * * *", () => withGuard("compliance-reminders", async () => {
     try {
@@ -246,6 +275,30 @@ export function initCronJobs() {
       console.log("[Cron Daily] Compliance reminders sent:", result);
     } catch (err) {
       console.error("[Cron Daily] Compliance reminder error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 3:30 AM): Full chameleon scan ─────────────
+  cron.schedule("30 3 * * 1", () => withGuard("chameleon-scan", async () => {
+    try {
+      console.log("[Cron Weekly] Starting full chameleon detection scan...");
+      const { runFullChameleonScan } = require("../services/chameleonDetectionService");
+      const result = await runFullChameleonScan();
+      console.log("[Cron Weekly] Chameleon scan complete:", result);
+    } catch (err) {
+      console.error("[Cron Weekly] Chameleon scan error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 4 AM): Auto-reversal check for suspended carriers ──
+  cron.schedule("0 4 * * 1", () => withGuard("auto-reversal", async () => {
+    try {
+      console.log("[Cron Weekly] Checking auto-reversal for suspended carriers...");
+      const { checkAutoReversal } = require("../services/complianceMonitorService");
+      const result = await checkAutoReversal();
+      console.log("[Cron Weekly] Auto-reversal complete:", result);
+    } catch (err) {
+      console.error("[Cron Weekly] Auto-reversal error:", err);
     }
   }));
 
@@ -332,6 +385,109 @@ export function initCronJobs() {
       console.log("[Cron] News fetch complete:", result);
     } catch (err) {
       console.error("[Cron] News fetch error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 2 AM): OFAC/SDN rescan ──────────────
+  cron.schedule("0 2 * * 1", () => withGuard("ofac-rescan", async () => {
+    try {
+      console.log("[Cron Weekly] Running OFAC/SDN rescan...");
+      const { weeklyOfacRescan } = require("../services/ofacScreeningService");
+      const result = await weeklyOfacRescan();
+      console.log("[Cron Weekly] OFAC rescan complete:", result);
+    } catch (err) {
+      console.error("[Cron Weekly] OFAC rescan error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 2:30 AM): ELD validation sweep ─────
+  cron.schedule("30 2 * * 1", () => withGuard("eld-validation", async () => {
+    try {
+      console.log("[Cron Weekly] Running ELD validation sweep...");
+      const { validateAllCarrierElds } = require("../services/eldValidationService");
+      const result = await validateAllCarrierElds();
+      console.log("[Cron Weekly] ELD validation complete:", result);
+    } catch (err) {
+      console.error("[Cron Weekly] ELD validation error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 2:45 AM): TIN verification batch ───
+  cron.schedule("45 2 * * 1", () => withGuard("tin-verification", async () => {
+    try {
+      console.log("[Cron Weekly] Running TIN verification batch...");
+      const { batchVerifyTins } = require("../services/tinMatchService");
+      const result = await batchVerifyTins();
+      console.log("[Cron Weekly] TIN verification complete:", result);
+    } catch (err) {
+      console.error("[Cron Weekly] TIN verification error:", err);
+    }
+  }));
+
+  // ─── Every 2 hours: Post-booking load compliance scan (Compass) ──
+  cron.schedule("0 */2 * * *", () => withGuard("load-compliance-scan", async () => {
+    try {
+      console.log("[Compass] Running load-level compliance scan...");
+      const { checkAllActiveLoadCompliance } = require("../services/loadComplianceService");
+      const result = await checkAllActiveLoadCompliance();
+      console.log("[Compass] Load compliance scan:", result);
+    } catch (err) {
+      console.error("[Compass] Load compliance error:", err);
+    }
+  }));
+
+  // ─── Every 4 hours: Overbooking detection ─────────────
+  cron.schedule("30 */4 * * *", () => withGuard("overbooking-check", async () => {
+    try {
+      console.log("[Compass] Running overbooking detection...");
+      const { checkAllCarrierOverbooking } = require("../services/overbookingService");
+      const result = await checkAllCarrierOverbooking();
+      console.log("[Compass] Overbooking check:", result);
+    } catch (err) {
+      console.error("[Compass] Overbooking error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 1:30 AM): CSA BASIC score update ──
+  cron.schedule("30 1 * * 1", () => withGuard("csa-basic-update", async () => {
+    try {
+      console.log("[Compass] Running CSA BASIC score update...");
+      const { batchUpdateCsaScores } = require("../services/csaBasicService");
+      const result = await batchUpdateCsaScores();
+      console.log("[Compass] CSA update:", result);
+    } catch (err) {
+      console.error("[Compass] CSA update error:", err);
+    }
+  }));
+
+  // ─── Weekly (Monday 3:00 AM): Batch VIN verification sweep ──
+  cron.schedule("0 3 * * 1", () => withGuard("vin-batch-verify", async () => {
+    try {
+      console.log("[Compass] Running batch VIN verification...");
+      const { verifyAllCarrierVins } = require("../services/vinVerificationService");
+      const result = await verifyAllCarrierVins();
+      console.log("[Compass] VIN batch verify:", result);
+    } catch (err) {
+      console.error("[Compass] VIN batch verify error:", err);
+    }
+  }));
+
+  // ─── Daily (7:30 AM): Auto-permanent fraud reports ──────
+  cron.schedule("30 7 * * *", () => withGuard("fraud-report-permanence", async () => {
+    try {
+      const { prisma } = require("../config/database");
+      const result = await prisma.fraudReport.updateMany({
+        where: {
+          status: "PENDING",
+          permanentAt: { lte: new Date() },
+        },
+        data: { status: "PERMANENT" },
+      });
+      if (result.count > 0) {
+        console.log(`[Cron Daily] ${result.count} fraud reports made permanent`);
+      }
+    } catch (err) {
+      console.error("[Cron Daily] Fraud report permanence error:", err);
     }
   }));
 

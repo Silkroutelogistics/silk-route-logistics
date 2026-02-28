@@ -167,6 +167,23 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
     return;
   }
 
+  // Block login if carrier is not approved
+  const profile = user.carrierProfile!;
+  if (profile.onboardingStatus !== "APPROVED") {
+    const statusMessages: Record<string, string> = {
+      PENDING: "Your application is under review. You will be notified once approved.",
+      DOCUMENTS_SUBMITTED: "Your documents are being reviewed. You will be notified once approved.",
+      UNDER_REVIEW: "Your application is under review. You will be notified once approved.",
+      REJECTED: "Your carrier application has been rejected. Contact support for more information.",
+      SUSPENDED: "Your carrier account has been suspended. Contact support for more information.",
+    };
+    res.status(403).json({
+      error: statusMessages[profile.onboardingStatus] || "Your account is not yet approved for access.",
+      onboardingStatus: profile.onboardingStatus,
+    });
+    return;
+  }
+
   // Check if TOTP 2FA is enabled — require additional verification
   if (user.totpEnabled) {
     const totpTempToken = jwt.sign(
@@ -178,8 +195,7 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
     return;
   }
 
-  // Issue full JWT
-  const profile = user.carrierProfile!;
+  // Issue full JWT (profile already declared above)
   const mustChangePassword = !user.passwordChangedAt;
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
@@ -238,6 +254,15 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
 
   if (!user || !user.carrierProfile) {
     res.status(401).json({ error: "User not found" });
+    return;
+  }
+
+  // Block login if carrier is not approved
+  if (user.carrierProfile.onboardingStatus !== "APPROVED") {
+    res.status(403).json({
+      error: "Your account is not yet approved for access.",
+      onboardingStatus: user.carrierProfile.onboardingStatus,
+    });
     return;
   }
 

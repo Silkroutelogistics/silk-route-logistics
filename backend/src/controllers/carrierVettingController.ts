@@ -1,17 +1,27 @@
 /**
  * Carrier Vetting Controller
- * Endpoints for one-click carrier vetting and report retrieval.
+ * Endpoints for vetting, identity verification, chameleon detection,
+ * vetting history, and grace periods.
  */
 
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth";
-import { vetCarrier, vetAndStoreReport } from "../services/carrierVettingService";
+import { vetAndStoreReport } from "../services/carrierVettingService";
+import { runIdentityCheck } from "../services/identityVerificationService";
+import { checkChameleon, runFullChameleonScan } from "../services/chameleonDetectionService";
+import { grantGracePeriod, checkAutoReversal } from "../services/complianceMonitorService";
+import { screenCarrier } from "../services/ofacScreeningService";
+import { verifyFacialMatch } from "../services/biometricVerificationService";
+import { validateEldProvider } from "../services/eldValidationService";
+import { verifyTin } from "../services/tinMatchService";
+import { updateCarrierCsaScores } from "../services/csaBasicService";
+import { checkOverbooking, getOverbookingReport } from "../services/overbookingService";
+import { checkLoadCompliance, checkAllActiveLoadCompliance } from "../services/loadComplianceService";
+import { verifyTruckVin, verifyAllCarrierVins } from "../services/vinVerificationService";
 import { prisma } from "../config/database";
 
 /**
  * POST /api/carriers/vet
- * Body: { dotNumber: string, mcNumber?: string, carrierId?: string }
- * Returns full vetting report and stores result if carrier exists in DB.
  */
 export async function vetCarrierEndpoint(req: AuthRequest, res: Response) {
   const { dotNumber, mcNumber, carrierId } = req.body;
@@ -26,24 +36,18 @@ export async function vetCarrierEndpoint(req: AuthRequest, res: Response) {
     res.json(report);
   } catch (err) {
     console.error("[CarrierVetting] Error vetting carrier:", err);
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Vetting failed",
-    });
+    res.status(500).json({ error: err instanceof Error ? err.message : "Vetting failed" });
   }
 }
 
 /**
  * GET /api/carriers/:id/vetting-report
- * Returns the latest stored vetting report from ComplianceScan.
  */
 export async function getVettingReport(req: AuthRequest, res: Response) {
   const { id } = req.params;
 
   const scan = await prisma.complianceScan.findFirst({
-    where: {
-      carrierId: id,
-      scanType: "VETTING_REPORT",
-    },
+    where: { carrierId: id, scanType: "VETTING_REPORT" },
     orderBy: { scannedAt: "desc" },
   });
 
@@ -53,4 +57,548 @@ export async function getVettingReport(req: AuthRequest, res: Response) {
   }
 
   res.json(scan.fmcsaData);
+}
+
+/**
+ * POST /api/carriers/:id/identity-check
+ */
+export async function runIdentityCheckEndpoint(req: AuthRequest, res: Response) {
+  try {
+    const result = await runIdentityCheck(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[IdentityCheck] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Identity check failed" });
+  }
+}
+
+/**
+ * GET /api/carriers/:id/identity
+ */
+export async function getIdentityStatus(req: AuthRequest, res: Response) {
+  const idv = await prisma.carrierIdentityVerification.findUnique({
+    where: { carrierId: req.params.id },
+  });
+
+  if (!idv) {
+    res.status(404).json({ error: "No identity verification found" });
+    return;
+  }
+
+  res.json(idv);
+}
+
+/**
+ * POST /api/carriers/:id/chameleon-check
+ */
+export async function runChameleonCheckEndpoint(req: AuthRequest, res: Response) {
+  try {
+    const result = await checkChameleon(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[ChameleonCheck] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Chameleon check failed" });
+  }
+}
+
+/**
+ * GET /api/carriers/:id/chameleon-matches
+ */
+export async function getChameleonMatches(req: AuthRequest, res: Response) {
+  const matches = await prisma.chameleonMatch.findMany({
+    where: { carrierId: req.params.id },
+    include: {
+      matchedCarrier: {
+        select: { id: true, companyName: true, onboardingStatus: true, dotNumber: true, mcNumber: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(matches);
+}
+
+/**
+ * PUT /api/carriers/chameleon-matches/:matchId/review
+ */
+export async function reviewChameleonMatch(req: AuthRequest, res: Response) {
+  const { matchId } = req.params;
+  const { status, notes } = req.body;
+
+  if (!["REVIEWED", "DISMISSED", "CONFIRMED_FRAUD"].includes(status)) {
+    res.status(400).json({ error: "Invalid status. Must be REVIEWED, DISMISSED, or CONFIRMED_FRAUD" });
+    return;
+  }
+
+  const match = await prisma.chameleonMatch.findUnique({ where: { id: matchId } });
+  if (!match) {
+    res.status(404).json({ error: "Match not found" });
+    return;
+  }
+
+  const updated = await prisma.chameleonMatch.update({
+    where: { id: matchId },
+    data: {
+      status,
+      reviewNotes: notes || null,
+      reviewedById: req.user!.id,
+      reviewedAt: new Date(),
+    },
+  });
+
+  res.json(updated);
+}
+
+/**
+ * GET /api/carriers/:id/vetting-history
+ */
+export async function getVettingHistory(req: AuthRequest, res: Response) {
+  const reports = await prisma.vettingReport.findMany({
+    where: { carrierId: req.params.id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+
+  // Calculate trend from scores
+  const scores = reports.map((r) => r.score).reverse();
+  let trendDirection = "STABLE";
+  if (scores.length >= 2) {
+    const recent = scores.slice(-3);
+    const older = scores.slice(0, Math.max(1, scores.length - 3));
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+    if (recentAvg - olderAvg > 5) trendDirection = "IMPROVING";
+    else if (olderAvg - recentAvg > 5) trendDirection = "DECLINING";
+  }
+
+  res.json({
+    reports,
+    historicalScores: scores,
+    trendDirection,
+  });
+}
+
+/**
+ * POST /api/carriers/:id/grace-period
+ */
+export async function grantGracePeriodEndpoint(req: AuthRequest, res: Response) {
+  const { days } = req.body;
+
+  try {
+    const result = await grantGracePeriod(req.params.id, req.user!.id, days || 7);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Failed to grant grace period" });
+  }
+}
+
+/**
+ * POST /api/compliance/check-reversals
+ */
+export async function triggerAutoReversal(req: AuthRequest, res: Response) {
+  try {
+    const result = await checkAutoReversal();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Auto-reversal check failed" });
+  }
+}
+
+/**
+ * POST /api/compliance/chameleon-scan
+ */
+export async function triggerChameleonScan(req: AuthRequest, res: Response) {
+  try {
+    const result = await runFullChameleonScan();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Chameleon scan failed" });
+  }
+}
+
+/**
+ * POST /api/carriers/:id/ofac-screen — Run OFAC/SDN screening
+ */
+export async function runOfacScreen(req: AuthRequest, res: Response) {
+  try {
+    const result = await screenCarrier(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[OFAC Screen] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "OFAC screening failed" });
+  }
+}
+
+/**
+ * POST /api/carriers/:id/facial-verify — Run biometric facial match
+ */
+export async function runFacialVerify(req: AuthRequest, res: Response) {
+  try {
+    const result = await verifyFacialMatch(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[FacialVerify] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Facial verification failed" });
+  }
+}
+
+/**
+ * POST /api/carriers/:id/eld-validate — Validate ELD provider
+ */
+export async function runEldValidation(req: AuthRequest, res: Response) {
+  try {
+    const result = await validateEldProvider(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[ELD Validate] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "ELD validation failed" });
+  }
+}
+
+/**
+ * POST /api/carriers/:id/tin-verify — Verify W-9 TIN
+ */
+export async function runTinVerify(req: AuthRequest, res: Response) {
+  try {
+    const result = await verifyTin(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[TIN Verify] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "TIN verification failed" });
+  }
+}
+
+/**
+ * GET /api/carriers/:id/fraud-reports — Get fraud reports for a carrier
+ */
+export async function getFraudReports(req: AuthRequest, res: Response) {
+  const reports = await prisma.fraudReport.findMany({
+    where: { carrierId: req.params.id },
+    include: {
+      reportedBy: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(reports);
+}
+
+/**
+ * POST /api/carriers/:id/fraud-reports — File a fraud report
+ */
+export async function fileFraudReport(req: AuthRequest, res: Response) {
+  const { category, description, evidence, loadId } = req.body;
+
+  if (!category || !description) {
+    res.status(400).json({ error: "category and description are required" });
+    return;
+  }
+
+  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const report = await prisma.fraudReport.create({
+    data: {
+      carrierId: req.params.id,
+      reportedById: req.user!.id,
+      category,
+      description,
+      evidence: evidence || [],
+      loadId: loadId || null,
+      permanentAt: new Date(Date.now() + 72 * 60 * 60 * 1000), // 72 hours from now
+    },
+  });
+
+  // Notify admins
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  await prisma.notification.createMany({
+    data: admins.map((a) => ({
+      userId: a.id,
+      type: "FRAUD_REPORT" as const,
+      title: "Fraud Report Filed",
+      message: `${category} report filed against ${carrier.companyName || "Unknown"}`,
+      link: `/carriers/${carrier.id}`,
+    })),
+  }).catch(() => {});
+
+  res.status(201).json(report);
+}
+
+/**
+ * PATCH /api/carriers/fraud-reports/:reportId/review — Review a fraud report
+ */
+export async function reviewFraudReport(req: AuthRequest, res: Response) {
+  const { reportId } = req.params;
+  const { status, notes } = req.body;
+
+  if (!["UNDER_REVIEW", "CONFIRMED", "DISMISSED"].includes(status)) {
+    res.status(400).json({ error: "Invalid status" });
+    return;
+  }
+
+  const report = await prisma.fraudReport.findUnique({ where: { id: reportId } });
+  if (!report) {
+    res.status(404).json({ error: "Fraud report not found" });
+    return;
+  }
+
+  // Cannot dismiss a permanent report
+  if (status === "DISMISSED" && report.permanentAt && report.permanentAt <= new Date()) {
+    res.status(400).json({ error: "Cannot dismiss a permanent report" });
+    return;
+  }
+
+  const updated = await prisma.fraudReport.update({
+    where: { id: reportId },
+    data: {
+      status,
+      reviewNotes: notes || null,
+      reviewedById: req.user!.id,
+      reviewedAt: new Date(),
+    },
+  });
+
+  res.json(updated);
+}
+
+/**
+ * POST /api/carriers/fraud-reports/:reportId/respond — Carrier response to fraud report
+ */
+export async function respondToFraudReport(req: AuthRequest, res: Response) {
+  const { reportId } = req.params;
+  const { response } = req.body;
+
+  if (!response) {
+    res.status(400).json({ error: "response is required" });
+    return;
+  }
+
+  const report = await prisma.fraudReport.findUnique({ where: { id: reportId } });
+  if (!report) {
+    res.status(404).json({ error: "Fraud report not found" });
+    return;
+  }
+
+  const updated = await prisma.fraudReport.update({
+    where: { id: reportId },
+    data: {
+      carrierResponse: response,
+      carrierRespondedAt: new Date(),
+    },
+  });
+
+  res.json(updated);
+}
+
+/**
+ * GET /api/carriers/:id/agreements — Get carrier agreements
+ */
+export async function getCarrierAgreements(req: AuthRequest, res: Response) {
+  const agreements = await prisma.carrierAgreement.findMany({
+    where: { carrierId: req.params.id },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(agreements);
+}
+
+/**
+ * POST /api/carriers/:id/agreements — Create/send a new agreement
+ */
+export async function createAgreement(req: AuthRequest, res: Response) {
+  const { version, templateName, documentUrl, expiresAt } = req.body;
+
+  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const agreement = await prisma.carrierAgreement.create({
+    data: {
+      carrierId: req.params.id,
+      version: version || "1.0",
+      templateName: templateName || "standard",
+      documentUrl: documentUrl || null,
+      status: "SENT",
+      sentAt: new Date(),
+      expiresAt: expiresAt ? new Date(expiresAt) : new Date(Date.now() + 90 * 86_400_000), // 90 days default
+      createdById: req.user!.id,
+    },
+  });
+
+  res.status(201).json(agreement);
+}
+
+/**
+ * POST /api/carriers/agreements/:agreementId/sign — Carrier signs an agreement
+ */
+export async function signAgreement(req: AuthRequest, res: Response) {
+  const { agreementId } = req.params;
+  const { signedByName, signedByTitle, signatureData } = req.body;
+
+  if (!signedByName || !signatureData) {
+    res.status(400).json({ error: "signedByName and signatureData are required" });
+    return;
+  }
+
+  const agreement = await prisma.carrierAgreement.findUnique({ where: { id: agreementId } });
+  if (!agreement) {
+    res.status(404).json({ error: "Agreement not found" });
+    return;
+  }
+
+  if (agreement.status !== "SENT" && agreement.status !== "DRAFT") {
+    res.status(400).json({ error: `Cannot sign agreement in ${agreement.status} status` });
+    return;
+  }
+
+  if (agreement.expiresAt && agreement.expiresAt < new Date()) {
+    res.status(400).json({ error: "Agreement has expired" });
+    return;
+  }
+
+  const updated = await prisma.carrierAgreement.update({
+    where: { id: agreementId },
+    data: {
+      status: "SIGNED",
+      signedAt: new Date(),
+      signedByName,
+      signedByTitle: signedByTitle || null,
+      signatureData,
+      signerIp: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+      signerUserAgent: req.headers["user-agent"] || "",
+    },
+  });
+
+  // Notify admins
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+  await prisma.notification.createMany({
+    data: admins.map((a) => ({
+      userId: a.id,
+      type: "AGREEMENT_SIGNED" as const,
+      title: "Carrier Agreement Signed",
+      message: `Agreement signed by ${signedByName} for carrier ${agreement.carrierId}`,
+      link: `/carriers/${agreement.carrierId}`,
+    })),
+  }).catch(() => {});
+
+  res.json(updated);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Phase B: CSA, Overbooking, Load Compliance, VIN, UCR
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * POST /api/carriers/:id/csa-update — Fetch and store CSA BASIC scores
+ */
+export async function runCsaUpdate(req: AuthRequest, res: Response) {
+  try {
+    const result = await updateCarrierCsaScores(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "CSA update failed" });
+  }
+}
+
+/**
+ * POST /api/carriers/:id/overbooking-check — Check overbooking risk
+ */
+export async function runOverbookingCheck(req: AuthRequest, res: Response) {
+  try {
+    const result = await checkOverbooking(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Overbooking check failed" });
+  }
+}
+
+/**
+ * GET /api/carriers/:id/overbooking-report — Detailed overbooking report
+ */
+export async function getOverbookingReportEndpoint(req: AuthRequest, res: Response) {
+  try {
+    const result = await getOverbookingReport(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Overbooking report failed" });
+  }
+}
+
+/**
+ * POST /api/carriers/:id/vin-verify — Verify all VINs for a carrier's trucks
+ */
+export async function runVinVerification(req: AuthRequest, res: Response) {
+  try {
+    const result = await verifyAllCarrierVins(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "VIN verification failed" });
+  }
+}
+
+/**
+ * POST /api/trucks/:truckId/vin-verify — Verify a single truck VIN
+ */
+export async function runSingleVinVerify(req: AuthRequest, res: Response) {
+  try {
+    const result = await verifyTruckVin(req.params.truckId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "VIN verification failed" });
+  }
+}
+
+/**
+ * POST /api/loads/:loadId/compliance-check — Check load-level compliance
+ */
+export async function runLoadComplianceCheck(req: AuthRequest, res: Response) {
+  try {
+    const result = await checkLoadCompliance(req.params.loadId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Load compliance check failed" });
+  }
+}
+
+/**
+ * POST /api/compliance/load-compliance-scan — Batch check all active loads
+ */
+export async function triggerLoadComplianceScan(req: AuthRequest, res: Response) {
+  try {
+    const result = await checkAllActiveLoadCompliance();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Load compliance scan failed" });
+  }
+}
+
+/**
+ * PATCH /api/carriers/:id/ucr — Update UCR status
+ */
+export async function updateUcrStatus(req: AuthRequest, res: Response) {
+  const { ucrStatus, ucrYear } = req.body;
+  if (!["VERIFIED", "UNVERIFIED", "EXPIRED", "NOT_REQUIRED"].includes(ucrStatus)) {
+    res.status(400).json({ error: "Invalid UCR status" });
+    return;
+  }
+
+  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const updated = await prisma.carrierProfile.update({
+    where: { id: req.params.id },
+    data: {
+      ucrStatus,
+      ucrYear: ucrYear || new Date().getFullYear(),
+      ucrVerifiedAt: ucrStatus === "VERIFIED" ? new Date() : undefined,
+    },
+  });
+
+  res.json({ ucrStatus: updated.ucrStatus, ucrYear: updated.ucrYear, ucrVerifiedAt: updated.ucrVerifiedAt });
 }
