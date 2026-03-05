@@ -10,6 +10,11 @@ import {
   getActiveSequences,
 } from "../services/emailSequenceService";
 import { prisma } from "../config/database";
+import { classifyEmail } from "../automation/webhooks/email-classifier";
+import { parseCheckCallReply } from "../automation/webhooks/checkcall-parser";
+import { processDocument } from "../automation/webhooks/pod-processor";
+import { generateMorningBriefing } from "../automation/tools/morning-briefing";
+import { isFeatureUnlocked } from "../ai/volumeGates";
 
 const router = Router();
 router.use(authenticate);
@@ -289,6 +294,95 @@ router.get(
       risk: { red: redRiskCount, amber: amberRiskCount },
       matching: { recentMatches },
     });
+  },
+);
+
+// ──── AI Automation Endpoints ────
+
+// POST /api/automation/ai/classify-email — Classify an inbound email
+router.post(
+  "/ai/classify-email",
+  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!(await isFeatureUnlocked("emailClassification"))) {
+        res.status(403).json({ error: "Email classification not yet unlocked (volume gate)" });
+        return;
+      }
+      const { subject, body, sender, emailId } = req.body;
+      if (!subject || !body || !sender) {
+        res.status(400).json({ error: "subject, body, and sender are required" });
+        return;
+      }
+      const result = await classifyEmail({ subject, body, sender, emailId });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+// POST /api/automation/ai/parse-checkcall — Parse a check-call reply
+router.post(
+  "/ai/parse-checkcall",
+  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!(await isFeatureUnlocked("checkCallParsing"))) {
+        res.status(403).json({ error: "Check-call parsing not yet unlocked (volume gate)" });
+        return;
+      }
+      const { replyText, loadId, carrierId } = req.body;
+      if (!replyText || !loadId || !carrierId) {
+        res.status(400).json({ error: "replyText, loadId, and carrierId are required" });
+        return;
+      }
+      const result = await parseCheckCallReply({ replyText, loadId, carrierId });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+// POST /api/automation/ai/process-document — OCR a document (base64 image)
+router.post(
+  "/ai/process-document",
+  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!(await isFeatureUnlocked("documentProcessing"))) {
+        res.status(403).json({ error: "Document processing not yet unlocked (volume gate)" });
+        return;
+      }
+      const { imageBase64, mediaType, loadId, carrierId, documentUrl } = req.body;
+      if (!imageBase64 || !mediaType || !loadId) {
+        res.status(400).json({ error: "imageBase64, mediaType, and loadId are required" });
+        return;
+      }
+      const result = await processDocument({ imageBase64, mediaType, loadId, carrierId, documentUrl });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+// POST /api/automation/ai/morning-briefing — Generate morning briefing on demand
+router.post(
+  "/ai/morning-briefing",
+  authorize("ADMIN", "CEO"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!(await isFeatureUnlocked("morningBriefing"))) {
+        res.status(403).json({ error: "Morning briefing not yet unlocked (volume gate)" });
+        return;
+      }
+      const result = await generateMorningBriefing();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 

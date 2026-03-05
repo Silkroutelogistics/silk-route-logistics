@@ -108,7 +108,7 @@ export async function runFullVetting(req: AuthRequest, res: Response) {
 
   // 8. VIN Verification (for all trucks)
   try {
-    const vins = await verifyAllCarrierVins();
+    const vins = await verifyAllCarrierVins(carrierId);
     results.vin = { status: "completed", data: { message: "Batch VIN verification triggered" } };
   } catch (err) {
     results.vin = { status: "error", error: err instanceof Error ? err.message : "VIN verification failed" };

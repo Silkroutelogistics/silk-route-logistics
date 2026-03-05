@@ -388,6 +388,23 @@ export function initCronJobs() {
     }
   }));
 
+  // ─── Daily (6:30 AM): AI Morning Briefing ──────────────
+  cron.schedule("30 6 * * *", () => withGuard("ai-morning-briefing", async () => {
+    try {
+      const { isFeatureUnlocked } = require("../ai/volumeGates");
+      if (!(await isFeatureUnlocked("morningBriefing"))) {
+        console.log("[Cron AI] Morning briefing skipped — volume gate locked");
+        return;
+      }
+      console.log("[Cron AI] Generating morning briefing...");
+      const { generateMorningBriefing } = require("../automation/tools/morning-briefing");
+      const result = await generateMorningBriefing();
+      console.log("[Cron AI] Morning briefing complete:", result.summary?.slice(0, 80));
+    } catch (err) {
+      console.error("[Cron AI] Morning briefing error:", err);
+    }
+  }));
+
   // ─── Weekly (Monday 2 AM): OFAC/SDN rescan ──────────────
   cron.schedule("0 2 * * 1", () => withGuard("ofac-rescan", async () => {
     try {
@@ -460,8 +477,8 @@ export function initCronJobs() {
     }
   }));
 
-  // ─── Weekly (Monday 3:00 AM): Batch VIN verification sweep ──
-  cron.schedule("0 3 * * 1", () => withGuard("vin-batch-verify", async () => {
+  // ─── Weekly (Monday 3:15 AM): Batch VIN verification sweep ──
+  cron.schedule("15 3 * * 1", () => withGuard("vin-batch-verify", async () => {
     try {
       console.log("[Compass] Running batch VIN verification...");
       const { verifyAllCarrierVins } = require("../services/vinVerificationService");
