@@ -18,7 +18,114 @@ import { updateCarrierCsaScores } from "../services/csaBasicService";
 import { checkOverbooking, getOverbookingReport } from "../services/overbookingService";
 import { checkLoadCompliance, checkAllActiveLoadCompliance } from "../services/loadComplianceService";
 import { verifyTruckVin, verifyAllCarrierVins } from "../services/vinVerificationService";
+import { buildFingerprint } from "../services/chameleonDetectionService";
 import { prisma } from "../config/database";
+
+/**
+ * POST /api/carriers/:id/full-vet
+ * Runs all vetting checks in sequence and returns a consolidated report.
+ * Replaces the need for frontend to orchestrate 8+ separate API calls.
+ */
+export async function runFullVetting(req: AuthRequest, res: Response) {
+  const carrierId = req.params.id;
+
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: carrierId },
+    select: { id: true, dotNumber: true, mcNumber: true, companyName: true },
+  });
+
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const results: Record<string, { status: string; data?: unknown; error?: string }> = {};
+
+  // 1. FMCSA Vetting (requires DOT number)
+  if (carrier.dotNumber) {
+    try {
+      const report = await vetAndStoreReport(carrier.dotNumber, carrierId, carrier.mcNumber || undefined);
+      results.fmcsa = { status: "completed", data: { grade: report.grade, score: report.score, operatingStatus: report.fmcsaData.operatingStatus } };
+    } catch (err) {
+      results.fmcsa = { status: "error", error: err instanceof Error ? err.message : "FMCSA vetting failed" };
+    }
+  } else {
+    results.fmcsa = { status: "skipped", error: "No DOT number" };
+  }
+
+  // 2. Identity Check
+  try {
+    const identity = await runIdentityCheck(carrierId);
+    results.identity = { status: "completed", data: identity };
+  } catch (err) {
+    results.identity = { status: "error", error: err instanceof Error ? err.message : "Identity check failed" };
+  }
+
+  // 3. Chameleon Fingerprint + Cross-reference
+  try {
+    await buildFingerprint(carrierId);
+    const chameleon = await checkChameleon(carrierId);
+    results.chameleon = { status: "completed", data: { riskLevel: chameleon.riskLevel, matches: chameleon.totalMatches } };
+  } catch (err) {
+    results.chameleon = { status: "error", error: err instanceof Error ? err.message : "Chameleon check failed" };
+  }
+
+  // 4. OFAC Screening
+  try {
+    const ofac = await screenCarrier(carrierId);
+    results.ofac = { status: "completed", data: ofac };
+  } catch (err) {
+    results.ofac = { status: "error", error: err instanceof Error ? err.message : "OFAC screening failed" };
+  }
+
+  // 5. ELD Validation
+  try {
+    const eld = await validateEldProvider(carrierId);
+    results.eld = { status: "completed", data: eld };
+  } catch (err) {
+    results.eld = { status: "error", error: err instanceof Error ? err.message : "ELD validation failed" };
+  }
+
+  // 6. TIN Verification
+  try {
+    const tin = await verifyTin(carrierId);
+    results.tin = { status: "completed", data: tin };
+  } catch (err) {
+    results.tin = { status: "error", error: err instanceof Error ? err.message : "TIN verification failed" };
+  }
+
+  // 7. CSA BASIC Scores (requires DOT number)
+  if (carrier.dotNumber) {
+    try {
+      const csa = await updateCarrierCsaScores(carrierId);
+      results.csa = { status: "completed", data: csa };
+    } catch (err) {
+      results.csa = { status: "error", error: err instanceof Error ? err.message : "CSA update failed" };
+    }
+  } else {
+    results.csa = { status: "skipped", error: "No DOT number" };
+  }
+
+  // 8. VIN Verification (for all trucks)
+  try {
+    const vins = await verifyAllCarrierVins();
+    results.vin = { status: "completed", data: { message: "Batch VIN verification triggered" } };
+  } catch (err) {
+    results.vin = { status: "error", error: err instanceof Error ? err.message : "VIN verification failed" };
+  }
+
+  // Summary
+  const completed = Object.values(results).filter((r) => r.status === "completed").length;
+  const errors = Object.values(results).filter((r) => r.status === "error").length;
+  const skipped = Object.values(results).filter((r) => r.status === "skipped").length;
+
+  res.json({
+    carrierId,
+    carrierName: carrier.companyName,
+    summary: { completed, errors, skipped, total: Object.keys(results).length },
+    results,
+  });
+}
 
 /**
  * POST /api/carriers/vet

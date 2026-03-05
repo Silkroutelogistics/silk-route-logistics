@@ -4,7 +4,7 @@ import {
   getCarrierScore,
 } from "../controllers/carrierController";
 import {
-  vetCarrierEndpoint, getVettingReport,
+  vetCarrierEndpoint, getVettingReport, runFullVetting,
   runIdentityCheckEndpoint, getIdentityStatus,
   runChameleonCheckEndpoint, getChameleonMatches, reviewChameleonMatch,
   getVettingHistory, grantGracePeriodEndpoint,
@@ -71,6 +71,9 @@ router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS")
 router.get("/:id/score", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierScore);
 router.get("/:id/vetting-report", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getVettingReport);
 router.put("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
+
+// Full vetting — runs all checks in one call
+router.post("/:id/full-vet", authorize("ADMIN", "CEO", "OPERATIONS"), runFullVetting);
 
 // Identity & fraud detection
 router.post("/:id/identity-check", authorize("ADMIN", "CEO", "OPERATIONS"), runIdentityCheckEndpoint);

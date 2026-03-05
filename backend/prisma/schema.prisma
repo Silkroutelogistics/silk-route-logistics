@@ -2952,9 +2952,29 @@ model AIApiUsage {
   createdAt    DateTime @default(now())
 
   @@index([provider])
+  @@index([model])
+  @@index([queryType])
+  @@index([userId])
   @@index([createdAt])
   @@index([source])
   @@map("ai_api_usage")
+}
+
+model AutomationEvent {
+  id         String   @id @default(uuid())
+  type       String   // "fmcsa_check", "insurance_alert", "score_update", "email_classified", etc.
+  source     String   // "cron", "webhook", "tool", "agent", "manual"
+  entityType String   // "carrier", "load", "invoice"
+  entityId   String
+  data       Json     @default("{}")
+  actionTaken String  // "alert_sent", "carrier_suspended", "invoice_created", "no_action"
+  createdAt  DateTime @default(now())
+
+  @@index([type])
+  @@index([source])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("automation_events")
 }
 
 model EmailQuoteLog {

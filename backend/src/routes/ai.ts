@@ -17,6 +17,8 @@ import { findBackhaulLoads, getDeadheadAnalytics } from "../services/deadheadOpt
 import { canInstantBook, isLoadInstantBookable, instantBook, getInstantBookAnalytics } from "../services/instantBookService";
 import { processQuoteEmail, getEmailQuoteAnalytics } from "../services/emailQuoteService";
 import { getCostSummary, getTodaySpend, checkBudget } from "../services/aiRouter/costTracker";
+import { getGateStatus, isFeatureUnlocked } from "../ai/volumeGates";
+import { getCircuitBreakerStatus } from "../security/circuitBreaker";
 
 const router = Router();
 router.use(authenticate);
@@ -486,6 +488,35 @@ router.get("/costs/budget", authorize("ADMIN", "CEO") as any, async (req: AuthRe
     res.json(budget);
   } catch (err) {
     res.status(500).json({ error: "Budget check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
+  }
+});
+
+// ─── Volume Gate Status ──────────────────────────────────────────
+router.get("/gates/status", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const status = await getGateStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: "Gate status check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
+  }
+});
+
+router.get("/gates/feature/:featureName", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const unlocked = await isFeatureUnlocked(req.params.featureName);
+    res.json({ feature: req.params.featureName, unlocked });
+  } catch (err) {
+    res.status(500).json({ error: "Feature check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
+  }
+});
+
+// ─── Circuit Breaker Status ──────────────────────────────────────
+router.get("/circuit-breaker/status", authorize("ADMIN", "CEO") as any, async (_req: AuthRequest, res: Response) => {
+  try {
+    const status = getCircuitBreakerStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: "Circuit breaker status failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 

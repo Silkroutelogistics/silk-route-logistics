@@ -329,7 +329,7 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
 
   const updated = await prisma.load.update({
     where: { id: req.params.id },
-    data: { status },
+    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id },
   });
 
   // Sync linked shipment

@@ -6,6 +6,7 @@
 
 import crypto from "crypto";
 import { prisma } from "../config/database";
+import { sendEmail, wrap } from "./emailService";
 
 // ── Helpers ──
 
@@ -184,6 +185,13 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
     },
   });
 
+  // Email admins on MEDIUM or HIGH risk chameleon matches
+  if (riskLevel === "MEDIUM" || riskLevel === "HIGH") {
+    sendChameleonAlertEmail(carrierId, riskLevel, matches).catch((e) =>
+      console.error("[Chameleon] Alert email error:", e.message)
+    );
+  }
+
   return {
     matches,
     riskLevel,
@@ -230,4 +238,67 @@ export async function runFullChameleonScan(): Promise<{
 
   console.log(`[Chameleon] Full scan complete: ${scanned} scanned, ${matchesFound} matches, ${errors} errors`);
   return { scanned, matchesFound, errors };
+}
+
+// ── Chameleon Alert Email ──
+
+async function sendChameleonAlertEmail(
+  carrierId: string,
+  riskLevel: string,
+  matches: { matchedCarrierId: string; matchedCompany: string; fields: string[]; riskScore: number }[],
+) {
+  // Look up the flagged carrier
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: carrierId },
+    include: { user: { select: { company: true, firstName: true, lastName: true, email: true } } },
+  });
+  if (!carrier) return;
+
+  const carrierName = carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
+  const levelColor = riskLevel === "HIGH" ? "#dc2626" : "#f59e0b";
+
+  const matchRows = matches.map((m) =>
+    `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${m.matchedCompany}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${m.fields.join(", ")}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:center">${m.riskScore}</td>
+    </tr>`
+  ).join("");
+
+  const body = `
+    <div style="background:${levelColor};color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;text-align:center">
+      <h2 style="margin:0;font-size:18px">CHAMELEON ALERT: ${riskLevel} RISK</h2>
+    </div>
+    <div style="padding:20px">
+      <p style="color:#64748b;margin:0 0 16px">Potential identity fraud detected for carrier <strong>${carrierName}</strong> (MC# ${carrier.mcNumber || "N/A"}, DOT# ${carrier.dotNumber || "N/A"}).</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <tr style="background:#f1f5f9">
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e2e8f0">Matched Carrier</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e2e8f0">Matching Fields</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e2e8f0">Risk Score</th>
+        </tr>
+        ${matchRows}
+      </table>
+      <p style="color:#64748b;font-size:14px">Please review this carrier in the Compliance Console and take appropriate action.</p>
+      <p style="text-align:center;margin-top:16px">
+        <a href="https://silkroutelogistics.ai/dashboard/compliance" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Review in Console</a>
+      </p>
+    </div>
+  `;
+
+  // Send to ADMIN and OPERATIONS users
+  const recipients = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "OPERATIONS"] }, isActive: true },
+    select: { email: true },
+  });
+
+  for (const admin of recipients) {
+    await sendEmail(
+      admin.email,
+      `[SRL FRAUD ALERT] Chameleon ${riskLevel} Risk: ${carrierName}`,
+      wrap(body),
+    ).catch((e) => console.error(`[Chameleon] Email to ${admin.email} failed:`, e.message));
+  }
+
+  console.log(`[Chameleon] Alert email sent to ${recipients.length} admins for ${carrierName} (${riskLevel})`);
 }

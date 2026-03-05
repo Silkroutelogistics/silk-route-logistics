@@ -12,7 +12,7 @@
 
 import { prisma } from "../config/database";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
-import { sendEmail } from "./emailService";
+import { sendEmail, wrap } from "./emailService";
 
 // ────────────────────────────────────────────────────────────
 // complianceCheck — called before carrier assignment
@@ -611,7 +611,7 @@ export async function weeklyFmcsaScan() {
       onboardingStatus: "APPROVED",
       dotNumber: { not: null },
     },
-    include: { user: { select: { company: true, firstName: true, lastName: true } } },
+    include: { user: { select: { company: true, firstName: true, lastName: true, email: true } } },
   });
 
   const results = { scanned: 0, passed: 0, failed: 0, alerts: 0, errors: 0 };
@@ -685,7 +685,7 @@ export async function weeklyFmcsaScan() {
         results.failed++;
       }
 
-      // Authority revoked/suspended -> CRITICAL alert + auto-block
+      // Authority revoked/suspended -> CRITICAL alert + auto-block + email
       if (
         fmcsaResult.operatingStatus &&
         ["NOT AUTHORIZED", "REVOKED"].includes(fmcsaResult.operatingStatus.toUpperCase())
@@ -706,9 +706,17 @@ export async function weeklyFmcsaScan() {
           data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
         });
         results.alerts++;
+
+        // Email carrier about suspension
+        sendFmcsaSuspensionEmail(carrier.user.email, carrierName, fmcsaResult.operatingStatus, carrier.dotNumber!, "AUTHORITY_REVOKED")
+          .catch((e) => console.error(`[WeeklyFMCSA] Suspension email error for ${carrierName}:`, e.message));
+
+        // Email admins about critical finding
+        sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, fmcsaResult.operatingStatus, "Authority revoked/not authorized")
+          .catch((e) => console.error(`[WeeklyFMCSA] Admin alert email error:`, e.message));
       }
 
-      // Insurance not on file -> CRITICAL alert + auto-block
+      // Insurance not on file -> CRITICAL alert + auto-block + email
       if (!fmcsaResult.insuranceOnFile) {
         await prisma.complianceAlert.create({
           data: {
@@ -722,6 +730,14 @@ export async function weeklyFmcsaScan() {
           },
         });
         results.alerts++;
+
+        // Email carrier about missing insurance
+        sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "INSURANCE NOT ON FILE", carrier.dotNumber!, "OUT_OF_SERVICE")
+          .catch((e) => console.error(`[WeeklyFMCSA] Insurance email error for ${carrierName}:`, e.message));
+
+        // Email admins
+        sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, "INSURANCE NOT ON FILE", "FMCSA reports no insurance on file for this carrier")
+          .catch((e) => console.error(`[WeeklyFMCSA] Admin insurance alert error:`, e.message));
       }
 
       // Safety rating downgraded -> WARNING alert
@@ -783,7 +799,7 @@ export async function weeklyFmcsaScan() {
         },
       }).catch(() => {});
 
-      // Out of service -> CRITICAL alert + auto-block
+      // Out of service -> CRITICAL alert + auto-block + email
       if (fmcsaResult.outOfServiceDate) {
         await prisma.complianceAlert.create({
           data: {
@@ -801,6 +817,14 @@ export async function weeklyFmcsaScan() {
           data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
         });
         results.alerts++;
+
+        // Email carrier about out-of-service suspension
+        sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "OUT OF SERVICE", carrier.dotNumber!, "OUT_OF_SERVICE")
+          .catch((e) => console.error(`[WeeklyFMCSA] OOS email error for ${carrierName}:`, e.message));
+
+        // Email admins
+        sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, "OUT OF SERVICE", `Out-of-service date: ${fmcsaResult.outOfServiceDate}`)
+          .catch((e) => console.error(`[WeeklyFMCSA] Admin OOS alert error:`, e.message));
       }
     } catch (err) {
       console.error(
@@ -1034,4 +1058,88 @@ export async function grantGracePeriod(
   });
 
   return { success: true, expiresAt };
+}
+
+// ────────────────────────────────────────────────────────────
+// FMCSA Suspension Email — sent to carrier when auto-suspended
+// ────────────────────────────────────────────────────────────
+
+async function sendFmcsaSuspensionEmail(
+  carrierEmail: string,
+  carrierName: string,
+  fmcsaStatus: string,
+  dotNumber: string,
+  reason: "AUTHORITY_REVOKED" | "OUT_OF_SERVICE",
+) {
+  const reasonLabel = reason === "AUTHORITY_REVOKED"
+    ? "your FMCSA operating authority is no longer active"
+    : "your carrier has been placed Out of Service by FMCSA";
+
+  const body = `
+    <div style="background:#dc2626;color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;text-align:center">
+      <h2 style="margin:0;font-size:18px">ACCOUNT SUSPENDED</h2>
+    </div>
+    <div style="padding:20px">
+      <p>Dear ${carrierName},</p>
+      <p>Your carrier account with Silk Route Logistics has been <strong>automatically suspended</strong> because ${reasonLabel}.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">DOT Number</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">${dotNumber}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">FMCSA Status</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#dc2626;font-weight:600">${fmcsaStatus}</td></tr>
+        <tr><td style="padding:8px 12px;color:#64748b">Action Required</td>
+            <td style="padding:8px 12px">Resolve the FMCSA issue and your account will be automatically reinstated during our next compliance scan.</td></tr>
+      </table>
+      <p style="color:#64748b;font-size:14px">If you believe this is an error, please contact our compliance team at compliance@silkroutelogistics.ai.</p>
+    </div>
+  `;
+
+  await sendEmail(carrierEmail, `[SRL] Account Suspended — ${carrierName}`, wrap(body));
+  console.log(`[FMCSA] Suspension email sent to ${carrierEmail} (${reason})`);
+}
+
+// ────────────────────────────────────────────────────────────
+// FMCSA Admin Alert — sent to admins on critical findings
+// ────────────────────────────────────────────────────────────
+
+async function sendFmcsaAdminAlert(
+  carrierName: string,
+  dotNumber: string,
+  fmcsaStatus: string,
+  detail: string,
+) {
+  const body = `
+    <div style="background:#dc2626;color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;text-align:center">
+      <h2 style="margin:0;font-size:18px">FMCSA CRITICAL ALERT</h2>
+    </div>
+    <div style="padding:20px">
+      <p style="color:#64748b;margin:0 0 16px">A carrier has been <strong>auto-suspended</strong> due to a critical FMCSA finding.</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">Carrier</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">DOT Number</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${dotNumber}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">FMCSA Status</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#dc2626;font-weight:600">${fmcsaStatus}</td></tr>
+        <tr><td style="padding:8px 12px;color:#64748b">Detail</td>
+            <td style="padding:8px 12px">${detail}</td></tr>
+      </table>
+      <p style="color:#64748b;font-size:14px"><strong>Action taken:</strong> Carrier auto-suspended. Any active loads assigned to this carrier should be reassigned immediately.</p>
+      <p style="text-align:center;margin-top:16px">
+        <a href="https://silkroutelogistics.ai/dashboard/compliance" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Review in Console</a>
+      </p>
+    </div>
+  `;
+
+  const admins = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "DISPATCH", "OPERATIONS"] }, isActive: true },
+    select: { email: true },
+  });
+
+  for (const admin of admins) {
+    await sendEmail(admin.email, `[SRL CRITICAL] FMCSA Alert: ${carrierName} — ${fmcsaStatus}`, wrap(body))
+      .catch((e) => console.error(`[FMCSA] Admin email to ${admin.email} failed:`, e.message));
+  }
+
+  console.log(`[FMCSA] Admin alert sent to ${admins.length} users for ${carrierName}`);
 }
