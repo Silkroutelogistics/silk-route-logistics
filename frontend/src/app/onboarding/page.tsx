@@ -13,6 +13,21 @@ const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Rev
 const equipmentOptions = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Tanker", "Intermodal", "Power Only", "Box Truck"];
 const regionOptions = ["Great Lakes", "Upper Midwest", "Southeast", "Northeast", "South Central", "West", "Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
 
+interface FmcsaResult {
+  verified: boolean;
+  legalName: string | null;
+  dbaName: string | null;
+  mcNumber: string | null;
+  operatingStatus: string | null;
+  entityType: string | null;
+  safetyRating: string | null;
+  insuranceOnFile: boolean;
+  totalPowerUnits: number | null;
+  totalDrivers: number | null;
+  outOfServiceDate: string | null;
+  errors: string[];
+}
+
 interface FormData {
   firstName: string; lastName: string; email: string; password: string;
   company: string; phone: string; mcNumber: string; dotNumber: string;
@@ -38,6 +53,34 @@ export default function OnboardingPage() {
     agreeTerms: false,
   });
 
+  const [fmcsaResult, setFmcsaResult] = useState<FmcsaResult | null>(null);
+  const [fmcsaLoading, setFmcsaLoading] = useState(false);
+  const fmcsaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced FMCSA auto-lookup when DOT# is 5+ digits
+  const lookupFmcsa = useCallback((dot: string) => {
+    if (fmcsaTimer.current) clearTimeout(fmcsaTimer.current);
+    setFmcsaResult(null);
+    if (!dot || dot.length < 5 || !/^\d+$/.test(dot)) return;
+    fmcsaTimer.current = setTimeout(async () => {
+      setFmcsaLoading(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrl) { setFmcsaLoading(false); return; }
+        const res = await fetch(`${apiUrl}/carrier/fmcsa-lookup/${dot}`);
+        if (res.ok) {
+          const data = await res.json();
+          setFmcsaResult(data);
+          // Auto-fill company name and MC# from FMCSA if empty
+          if (data.legalName && !form.company) set("company", data.legalName);
+          if (data.mcNumber && !form.mcNumber) set("mcNumber", data.mcNumber);
+          if (data.totalPowerUnits && !form.numberOfTrucks) set("numberOfTrucks", String(data.totalPowerUnits));
+        }
+      } catch { /* silently fail — user can still proceed */ }
+      setFmcsaLoading(false);
+    }, 600);
+  }, [form.company, form.mcNumber, form.numberOfTrucks]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = (field: keyof FormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
@@ -45,7 +88,7 @@ export default function OnboardingPage() {
   };
 
   const canNext = () => {
-    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company;
+    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber);
     if (step === 1) return form.equipmentTypes.length > 0 && form.operatingRegions.length > 0;
     if (step === 3) return form.agreeTerms;
     return true;
@@ -221,18 +264,53 @@ export default function OnboardingPage() {
                   <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">MC Number</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">MC Number <span className="text-slate-400 text-xs font-normal">(optional)</span></label>
                   <input value={form.mcNumber} onChange={(e) => set("mcNumber", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="MC-" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">DOT Number</label>
-                  <input value={form.dotNumber} onChange={(e) => set("dotNumber", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="DOT-" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">DOT Number *</label>
+                  <input value={form.dotNumber} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); set("dotNumber", v); lookupFmcsa(v); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", form.dotNumber && form.dotNumber.length < 5 ? "border-red-300" : fmcsaResult?.verified ? "border-green-400" : fmcsaResult && !fmcsaResult.verified ? "border-red-400" : "")} placeholder="e.g. 1234567" />
+                  {form.dotNumber && form.dotNumber.length < 5 && (
+                    <p className="text-xs text-red-500 mt-1">DOT number must be at least 5 digits</p>
+                  )}
+                  {fmcsaLoading && <p className="text-xs text-slate-500 mt-1">Verifying with FMCSA...</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1"># of Trucks</label>
                   <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
                 </div>
               </div>
+
+              {/* FMCSA Verification Result */}
+              {fmcsaResult && (
+                <div className={cn("p-4 rounded-lg border text-sm", fmcsaResult.verified ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {fmcsaResult.verified ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold">!</div>
+                    )}
+                    <span className={cn("font-semibold", fmcsaResult.verified ? "text-green-800" : "text-red-800")}>
+                      {fmcsaResult.verified ? "FMCSA Verified — Authority Active" : fmcsaResult.errors.length > 0 ? "Carrier Not Found in FMCSA" : "Authority Not Active"}
+                    </span>
+                  </div>
+                  {fmcsaResult.legalName && (
+                    <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 ml-7 text-slate-700">
+                      <p><span className="font-medium">Legal Name:</span> {fmcsaResult.legalName}</p>
+                      {fmcsaResult.dbaName && <p><span className="font-medium">DBA:</span> {fmcsaResult.dbaName}</p>}
+                      {fmcsaResult.mcNumber && <p><span className="font-medium">MC#:</span> {fmcsaResult.mcNumber}</p>}
+                      <p><span className="font-medium">Status:</span> {fmcsaResult.operatingStatus}</p>
+                      {fmcsaResult.entityType && <p><span className="font-medium">Type:</span> {fmcsaResult.entityType}</p>}
+                      <p><span className="font-medium">Insurance:</span> {fmcsaResult.insuranceOnFile ? "On File" : "Not on File"}</p>
+                      {fmcsaResult.totalPowerUnits != null && <p><span className="font-medium">Power Units:</span> {fmcsaResult.totalPowerUnits}</p>}
+                      {fmcsaResult.safetyRating && <p><span className="font-medium">Safety Rating:</span> {fmcsaResult.safetyRating}</p>}
+                    </div>
+                  )}
+                  {!fmcsaResult.verified && fmcsaResult.outOfServiceDate && (
+                    <p className="ml-7 text-red-700 font-medium mt-1">Out of Service: {fmcsaResult.outOfServiceDate}</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -349,8 +427,9 @@ export default function OnboardingPage() {
                     {form.address && `${form.address}, `}{form.city && `${form.city}, `}{form.state} {form.zip}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {form.mcNumber && `MC: ${form.mcNumber}`} {form.dotNumber && `| DOT: ${form.dotNumber}`}
+                    DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
                     {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
+                    {fmcsaResult?.verified && <span className="ml-2 text-green-600 font-medium">FMCSA Verified</span>}
                   </p>
                 </div>
                 <div className="p-4 rounded-lg bg-slate-50 border">
