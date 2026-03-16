@@ -496,20 +496,92 @@ export default function OnboardingPage() {
           {step === 3 && (
             <div className="space-y-5">
               <h2 className="text-xl font-bold">Terms & Agreement</h2>
-              <div className="p-4 rounded-lg bg-slate-50 border max-h-64 overflow-y-auto text-sm text-slate-600 leading-relaxed">
-                <p className="font-semibold mb-2">Silk Route Logistics Carrier Agreement</p>
-                <p className="mb-2">By registering as a carrier on the Silk Route Logistics platform, you agree to:</p>
+              <div className="p-4 rounded-lg bg-slate-50 border max-h-80 overflow-y-auto text-sm text-slate-600 leading-relaxed space-y-4">
+                <p className="font-bold text-slate-800 text-base">Silk Route Logistics — Carrier Transportation Agreement</p>
+                <p>This Carrier Transportation Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics LLC (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
+
+                <p className="font-semibold text-slate-800 mt-3">1. Authority & Compliance</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Maintain valid operating authority and insurance coverage at all times</li>
-                  <li>Comply with all FMCSA regulations, DOT requirements, and applicable Canadian provincial regulations</li>
-                  <li>Provide accurate and timely updates on load status and location</li>
-                  <li>Submit required documentation (BOL, POD) within 24 hours of delivery</li>
-                  <li>Maintain professional communication with dispatchers and operations staff</li>
-                  <li>Accept that your performance will be tracked and used for tier placement</li>
-                  <li>Understand that tier status affects bonus eligibility and load access priority</li>
-                  <li>Comply with ELD and GPS tracking requirements while on company loads</li>
-                  <li>Maintain valid Safety Fitness Certificate (for Canadian interprovincial operations)</li>
+                  <li>Carrier shall maintain valid operating authority (MC/DOT) issued by the FMCSA at all times during the term of this Agreement.</li>
+                  <li>Carrier shall comply with all applicable federal, state, provincial, and local laws, including FMCSA regulations, DOT requirements, FMCSA safety regulations (49 CFR Parts 382-399), and applicable Canadian provincial/territorial regulations.</li>
+                  <li>Carrier shall maintain a &quot;Satisfactory&quot; or better safety rating with the FMCSA. If Carrier&apos;s rating is downgraded to &quot;Conditional&quot; or &quot;Unsatisfactory,&quot; Carrier shall notify Broker within 24 hours.</li>
+                  <li>Carrier shall maintain valid Safety Fitness Certificate for Canadian interprovincial operations where applicable.</li>
                 </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">2. Insurance Requirements</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier shall maintain at minimum: (a) Commercial Auto Liability — $1,000,000 per occurrence; (b) Motor Cargo/Freight Insurance — $100,000 per occurrence; (c) General Liability — $1,000,000 per occurrence; (d) Workers&apos; Compensation — as required by applicable law.</li>
+                  <li>Carrier shall name Silk Route Logistics LLC as an additional insured and certificate holder on all policies.</li>
+                  <li>Carrier shall provide certificates of insurance prior to hauling any loads and shall provide updated certificates upon renewal or policy change.</li>
+                  <li>Carrier shall provide Broker with 30 days&apos; written notice prior to cancellation, non-renewal, or material modification of any insurance policy.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">3. Independent Contractor Relationship</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier is an independent contractor and not an employee, agent, or partner of Broker. Nothing in this Agreement creates an employer-employee relationship.</li>
+                  <li>Carrier retains full control over drivers, equipment, routes, and methods of transportation, subject to shipper requirements.</li>
+                  <li>Carrier is solely responsible for all taxes, including self-employment tax, income tax withholding, and unemployment insurance for its employees and drivers.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">4. Load Acceptance & Transportation</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier has the right to accept or reject any load tendered by Broker. Once accepted, Carrier is obligated to complete the transportation as agreed.</li>
+                  <li>Carrier shall not double-broker, co-broker, or assign any load to a third party without prior written consent from Broker.</li>
+                  <li>Carrier shall provide accurate and timely updates on load status, location, and any delays or exceptions.</li>
+                  <li>Carrier shall comply with ELD mandates and GPS tracking requirements while transporting loads arranged by Broker.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">5. Documentation & Payment</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier shall submit all required documentation, including Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within 24 hours of delivery.</li>
+                  <li>Payment terms are Net 30 days from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
+                  <li>Carrier shall submit a completed W-9 form prior to receiving any payment.</li>
+                  <li>Rates shall be as agreed upon in each individual rate confirmation/load tender.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">6. Cargo Claims & Liability</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier assumes full liability for loss, damage, or delay to cargo from the time of pickup to delivery, pursuant to the Carmack Amendment (49 U.S.C. § 14706) for domestic shipments.</li>
+                  <li>Carrier shall notify Broker immediately upon discovery of any cargo loss, damage, shortage, or delay.</li>
+                  <li>Carrier shall cooperate fully in the investigation and processing of all cargo claims.</li>
+                  <li>Carrier shall indemnify and hold Broker harmless from any claims, damages, or liabilities arising from Carrier&apos;s performance or failure to perform under this Agreement.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">7. Performance Tracking & Tier Program</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier acknowledges that Broker tracks performance metrics including on-time pickup/delivery, communication responsiveness, claims ratio, and documentation timeliness.</li>
+                  <li>Performance metrics determine Carrier&apos;s tier placement (Guest, Bronze, Silver, Gold, Platinum), which affects bonus eligibility and load access priority.</li>
+                  <li>Broker reserves the right to modify tier criteria and bonus structures with 30 days&apos; notice.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">8. Confidentiality</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier shall not disclose Broker&apos;s customer information, rates, or business practices to any third party.</li>
+                  <li>Carrier shall not solicit or conduct business directly with any shipper/customer introduced through Broker for a period of 12 months after the last load transported.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">9. Termination</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Either party may terminate this Agreement with 30 days&apos; written notice.</li>
+                  <li>Broker may terminate immediately if Carrier&apos;s operating authority is revoked, insurance lapses, or Carrier breaches any material term of this Agreement.</li>
+                  <li>Termination does not relieve Carrier of obligations for loads already in transit or payment obligations already incurred.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">10. Governing Law & Dispute Resolution</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>This Agreement shall be governed by federal transportation law (49 U.S.C. § 14101(b)) and, to the extent not preempted, the laws of the State of Michigan.</li>
+                  <li>Any dispute arising under this Agreement shall first be subject to mediation. If mediation fails, disputes shall be resolved by binding arbitration in Kalamazoo, Michigan.</li>
+                  <li>The prevailing party in any dispute shall be entitled to recover reasonable attorney&apos;s fees and costs.</li>
+                </ul>
+
+                <p className="font-semibold text-slate-800 mt-3">11. Data Privacy & Consent</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Carrier consents to Broker collecting, storing, and processing Carrier&apos;s business information, FMCSA data, insurance records, and performance data for operational purposes.</li>
+                  <li>Broker shall handle Carrier&apos;s data in accordance with its Privacy Policy and applicable data protection laws.</li>
+                  <li>Carrier consents to automated FMCSA compliance monitoring, safety scoring, and OFAC screening.</li>
+                </ul>
+
+                <p className="text-xs text-slate-400 mt-4 italic">Last updated: March 2026. Silk Route Logistics LLC reserves the right to update these terms with 30 days&apos; notice to registered carriers.</p>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.agreeTerms}
