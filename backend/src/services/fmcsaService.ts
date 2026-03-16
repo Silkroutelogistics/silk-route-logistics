@@ -22,6 +22,11 @@ interface FMCSACarrierResult {
   outOfServiceDate: string | null;
   totalDrivers: number | null;
   totalPowerUnits: number | null;
+  phyStreet: string | null;
+  phyCity: string | null;
+  phyState: string | null;
+  phyZipcode: string | null;
+  phone: string | null;
   errors: string[];
 }
 
@@ -33,7 +38,9 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
       verified: false, legalName: null, dbaName: null, mcNumber: null,
       dotNumber, operatingStatus: null, entityType: null, safetyRating: null,
       insuranceOnFile: false, outOfServiceDate: null, totalDrivers: null,
-      totalPowerUnits: null, errors: ["Carrier not found in FMCSA database"],
+      totalPowerUnits: null, phyStreet: null, phyCity: null, phyState: null,
+      phyZipcode: null, phone: null,
+      errors: ["Carrier not found in FMCSA database"],
     };
   }
 
@@ -52,6 +59,11 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
     outOfServiceDate: carrier.oosDate || null,
     totalDrivers: carrier.totalDrivers || null,
     totalPowerUnits: carrier.totalPowerUnits || null,
+    phyStreet: carrier.phyStreet || null,
+    phyCity: carrier.phyCity || null,
+    phyState: carrier.phyState || null,
+    phyZipcode: carrier.phyZipcode || null,
+    phone: carrier.telephone || null,
     errors: [],
   };
 }
@@ -126,6 +138,11 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     outOfServiceDate: null,
     totalDrivers: null,
     totalPowerUnits: null,
+    phyStreet: null,
+    phyCity: null,
+    phyState: null,
+    phyZipcode: null,
+    phone: null,
     errors: ["FMCSA API unavailable - verification failed (fail-safe)", ...debugErrors],
   };
 }

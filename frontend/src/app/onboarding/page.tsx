@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2 } from "lucide-react";
-import { FileUpload } from "@/components/ui/FileUpload";
+import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +24,11 @@ interface FmcsaResult {
   totalPowerUnits: number | null;
   totalDrivers: number | null;
   outOfServiceDate: string | null;
+  phyStreet: string | null;
+  phyCity: string | null;
+  phyState: string | null;
+  phyZipcode: string | null;
+  phone: string | null;
   errors: string[];
 }
 
@@ -71,15 +75,20 @@ export default function OnboardingPage() {
         if (res.ok) {
           const data = await res.json();
           setFmcsaResult(data);
-          // Auto-fill company name and MC# from FMCSA if empty
+          // Auto-fill fields from FMCSA if empty
           if (data.legalName && !form.company) set("company", data.legalName);
           if (data.mcNumber && !form.mcNumber) set("mcNumber", data.mcNumber);
           if (data.totalPowerUnits && !form.numberOfTrucks) set("numberOfTrucks", String(data.totalPowerUnits));
+          if (data.phyStreet && !form.address) set("address", data.phyStreet);
+          if (data.phyCity && !form.city) set("city", data.phyCity);
+          if (data.phyState && !form.state) set("state", data.phyState);
+          if (data.phyZipcode && !form.zip) set("zip", data.phyZipcode);
+          if (data.phone && !form.phone) set("phone", data.phone);
         }
       } catch { /* silently fail — user can still proceed */ }
       setFmcsaLoading(false);
     }, 600);
-  }, [form.company, form.mcNumber, form.numberOfTrucks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.company, form.mcNumber, form.numberOfTrucks, form.address, form.city, form.state, form.zip, form.phone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (field: keyof CarrierFormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
@@ -304,6 +313,8 @@ export default function OnboardingPage() {
                       <p><span className="font-medium">Insurance:</span> {fmcsaResult.insuranceOnFile ? "On File" : "Not on File"}</p>
                       {fmcsaResult.totalPowerUnits != null && <p><span className="font-medium">Power Units:</span> {fmcsaResult.totalPowerUnits}</p>}
                       {fmcsaResult.safetyRating && <p><span className="font-medium">Safety Rating:</span> {fmcsaResult.safetyRating}</p>}
+                      {fmcsaResult.phyCity && <p><span className="font-medium">Address:</span> {[fmcsaResult.phyStreet, fmcsaResult.phyCity, fmcsaResult.phyState, fmcsaResult.phyZipcode].filter(Boolean).join(", ")}</p>}
+                      {fmcsaResult.phone && <p><span className="font-medium">Phone:</span> {fmcsaResult.phone}</p>}
                     </div>
                   )}
                   {!fmcsaResult.verified && fmcsaResult.outOfServiceDate && (
@@ -347,38 +358,95 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div className="space-y-5">
               <h2 className="text-xl font-bold">Document Upload</h2>
-              <p className="text-sm text-slate-500">Upload your carrier documents. PDF, JPEG, or PNG accepted (max 10MB each).</p>
+              <p className="text-sm text-slate-500">Upload your carrier documents. PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
               <div className="grid gap-4">
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <div className="flex items-center gap-3 mb-1">
-                    <Upload className="w-4 h-4 text-gold" />
-                    <span className="text-sm font-medium">W-9 Form</span>
-                  </div>
-                  <p className="text-xs text-slate-400 ml-7">Required for tax reporting</p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <div className="flex items-center gap-3 mb-1">
-                    <Upload className="w-4 h-4 text-gold" />
-                    <span className="text-sm font-medium">Insurance Certificate</span>
-                  </div>
-                  <p className="text-xs text-slate-400 ml-7">Auto liability, cargo, and general liability</p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <div className="flex items-center gap-3 mb-1">
-                    <Upload className="w-4 h-4 text-gold" />
-                    <span className="text-sm font-medium">Authority Letter / Operating Authority</span>
-                  </div>
-                  <p className="text-xs text-slate-400 ml-7">FMCSA operating authority</p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <div className="flex items-center gap-3 mb-1">
-                    <Upload className="w-4 h-4 text-gold" />
-                    <span className="text-sm font-medium">Safety Fitness Certificate (Canadian carriers)</span>
-                  </div>
-                  <p className="text-xs text-slate-400 ml-7">Required for Canadian-based carriers operating interprovincially</p>
-                </div>
+                {[
+                  { key: "w9", label: "W-9 Form", desc: "Required for tax reporting" },
+                  { key: "insurance", label: "Insurance Certificate", desc: "Auto liability, cargo, and general liability" },
+                  { key: "authority", label: "Authority Letter / Operating Authority", desc: "FMCSA operating authority" },
+                  { key: "safety", label: "Safety Fitness Certificate (Canadian carriers)", desc: "Required for Canadian-based carriers operating interprovincially" },
+                ].map((doc) => {
+                  const docFile = files.find((f) => (f as any).__docType === doc.key);
+                  return (
+                    <label key={doc.key} className={cn(
+                      "p-4 rounded-lg border cursor-pointer transition hover:border-gold/50 hover:bg-gold/5",
+                      docFile ? "bg-green-50 border-green-300" : "bg-slate-50 border-slate-200"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        {docFile ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                        ) : (
+                          <Upload className="w-5 h-5 text-gold shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium block">{doc.label}</span>
+                          {docFile ? (
+                            <span className="text-xs text-green-600 truncate block">{docFile.name} ({(docFile.size / 1024).toFixed(0)} KB)</span>
+                          ) : (
+                            <span className="text-xs text-slate-400 block">{doc.desc}</span>
+                          )}
+                        </div>
+                        {docFile && (
+                          <button type="button" onClick={(e) => { e.preventDefault(); setFiles(files.filter((f) => (f as any).__docType !== doc.key)); }}
+                            className="p-1 hover:bg-red-50 rounded transition shrink-0">
+                            <X className="w-4 h-4 text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 10 * 1024 * 1024) { setError("File must be under 10 MB"); return; }
+                        if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) { setError("Only PDF, JPEG, and PNG files are allowed"); return; }
+                        setError(null);
+                        Object.defineProperty(file, "__docType", { value: doc.key, writable: false });
+                        setFiles((prev) => [...prev.filter((f) => (f as any).__docType !== doc.key), file]);
+                        e.target.value = "";
+                      }} />
+                    </label>
+                  );
+                })}
               </div>
-              <FileUpload files={files} onChange={setFiles} maxFiles={10} />
+              {/* Additional documents drop zone */}
+              <div
+                className="border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer border-slate-200 hover:border-gold/40 hover:bg-gold/5"
+                onClick={() => document.getElementById("extra-file-input")?.click()}
+              >
+                <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-medium text-slate-600">Drop additional files here or click to browse</p>
+                <p className="text-xs text-slate-400 mt-1">Any other supporting documents</p>
+                <input id="extra-file-input" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                  onChange={(e) => {
+                    if (!e.target.files) return;
+                    const newFiles = Array.from(e.target.files).filter((f) => {
+                      if (f.size > 10 * 1024 * 1024) { setError("Files must be under 10 MB"); return false; }
+                      if (!["application/pdf", "image/jpeg", "image/png"].includes(f.type)) { setError("Only PDF, JPEG, and PNG files are allowed"); return false; }
+                      return true;
+                    });
+                    setError(null);
+                    setFiles((prev) => [...prev, ...newFiles]);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              {/* Show extra (non-typed) files */}
+              {files.filter((f) => !(f as any).__docType).length > 0 && (
+                <ul className="space-y-2">
+                  {files.filter((f) => !(f as any).__docType).map((file, i) => (
+                    <li key={`${file.name}-${i}`} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                      {file.type === "application/pdf" ? <FileText className="w-5 h-5 text-red-400 shrink-0" /> : <ImageIcon className="w-5 h-5 text-blue-400 shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 truncate">{file.name}</p>
+                        <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                      <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== files.indexOf(file)))}
+                        className="p-1 hover:bg-red-50 rounded transition">
+                        <X className="w-4 h-4 text-red-400" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
@@ -442,7 +510,18 @@ export default function OnboardingPage() {
                 </div>
                 <div className="p-4 rounded-lg bg-slate-50 border">
                   <p className="text-xs text-slate-500 uppercase mb-1">Documents</p>
-                  <p className="text-sm">{files.length > 0 ? `${files.length} file(s) uploaded` : "No documents uploaded yet"}</p>
+                  {files.length > 0 ? (
+                    <ul className="text-sm space-y-1">
+                      {files.map((f, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                          <span>{(f as any).__docType ? `${(f as any).__docType.toUpperCase()}: ` : ""}{f.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-400">No documents uploaded yet</p>
+                  )}
                 </div>
               </div>
             </div>

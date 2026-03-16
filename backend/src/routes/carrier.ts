@@ -34,6 +34,11 @@ router.get("/fmcsa-lookup/:dotNumber", async (req: Request, res: Response) => {
       totalPowerUnits: result.totalPowerUnits,
       totalDrivers: result.totalDrivers,
       outOfServiceDate: result.outOfServiceDate,
+      phyStreet: result.phyStreet,
+      phyCity: result.phyCity,
+      phyState: result.phyState,
+      phyZipcode: result.phyZipcode,
+      phone: result.phone,
       errors: result.errors,
     });
   } catch (err) {
