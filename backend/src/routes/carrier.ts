@@ -9,7 +9,7 @@ import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
 import { validateBody } from "../middleware/validate";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
-import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
+import { verifyCarrierWithFMCSA, lookupByMcNumber } from "../services/fmcsaService";
 
 const router = Router();
 
@@ -44,6 +44,41 @@ router.get("/fmcsa-lookup/:dotNumber", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("[FMCSA Lookup] Error:", err);
     res.status(500).json({ error: "FMCSA lookup failed. Please try again." });
+  }
+});
+
+// Public: FMCSA MC# reverse lookup (MC → DOT + carrier data)
+router.get("/fmcsa-mc-lookup/:mcNumber", async (req: Request, res: Response) => {
+  const mc = String(req.params.mcNumber).replace(/^MC-?/i, "").trim();
+  if (!mc || !/^\d+$/.test(mc)) {
+    res.status(400).json({ error: "Invalid MC number. Enter digits only (e.g. 156588)." });
+    return;
+  }
+  try {
+    const result = await lookupByMcNumber(mc);
+    res.json({
+      verified: result.verified,
+      legalName: result.legalName,
+      dbaName: result.dbaName,
+      mcNumber: result.mcNumber,
+      dotNumber: result.dotNumber,
+      operatingStatus: result.operatingStatus,
+      entityType: result.entityType,
+      safetyRating: result.safetyRating,
+      insuranceOnFile: result.insuranceOnFile,
+      totalPowerUnits: result.totalPowerUnits,
+      totalDrivers: result.totalDrivers,
+      outOfServiceDate: result.outOfServiceDate,
+      phyStreet: result.phyStreet,
+      phyCity: result.phyCity,
+      phyState: result.phyState,
+      phyZipcode: result.phyZipcode,
+      phone: result.phone,
+      errors: result.errors,
+    });
+  } catch (err) {
+    console.error("[FMCSA MC Lookup] Error:", err);
+    res.status(500).json({ error: "FMCSA MC lookup failed. Please try again." });
   }
 });
 

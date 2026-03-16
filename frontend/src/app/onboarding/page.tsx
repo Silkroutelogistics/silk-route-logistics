@@ -17,6 +17,7 @@ interface FmcsaResult {
   legalName: string | null;
   dbaName: string | null;
   mcNumber: string | null;
+  dotNumber: string | null;
   operatingStatus: string | null;
   entityType: string | null;
   safetyRating: string | null;
@@ -61,6 +62,20 @@ export default function OnboardingPage() {
   const [fmcsaLoading, setFmcsaLoading] = useState(false);
   const fmcsaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Auto-fill form fields from FMCSA data
+  const applyFmcsaData = useCallback((data: FmcsaResult) => {
+    setFmcsaResult(data);
+    if (data.legalName) set("company", data.legalName);
+    if (data.mcNumber) set("mcNumber", data.mcNumber);
+    if (data.dotNumber) set("dotNumber", data.dotNumber);
+    if (data.totalPowerUnits) set("numberOfTrucks", String(data.totalPowerUnits));
+    if (data.phyStreet) set("address", data.phyStreet);
+    if (data.phyCity) set("city", data.phyCity);
+    if (data.phyState) set("state", data.phyState);
+    if (data.phyZipcode) set("zip", data.phyZipcode);
+    if (data.phone) set("phone", data.phone);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Debounced FMCSA auto-lookup when DOT# is 5+ digits
   const lookupFmcsa = useCallback((dot: string) => {
     if (fmcsaTimer.current) clearTimeout(fmcsaTimer.current);
@@ -74,21 +89,36 @@ export default function OnboardingPage() {
         const res = await fetch(`${apiUrl}/carrier/fmcsa-lookup/${dot}`);
         if (res.ok) {
           const data = await res.json();
-          setFmcsaResult(data);
-          // Auto-fill fields from FMCSA if empty
-          if (data.legalName && !form.company) set("company", data.legalName);
-          if (data.mcNumber && !form.mcNumber) set("mcNumber", data.mcNumber);
-          if (data.totalPowerUnits && !form.numberOfTrucks) set("numberOfTrucks", String(data.totalPowerUnits));
-          if (data.phyStreet && !form.address) set("address", data.phyStreet);
-          if (data.phyCity && !form.city) set("city", data.phyCity);
-          if (data.phyState && !form.state) set("state", data.phyState);
-          if (data.phyZipcode && !form.zip) set("zip", data.phyZipcode);
-          if (data.phone && !form.phone) set("phone", data.phone);
+          applyFmcsaData(data);
         }
       } catch { /* silently fail — user can still proceed */ }
       setFmcsaLoading(false);
     }, 600);
-  }, [form.company, form.mcNumber, form.numberOfTrucks, form.address, form.city, form.state, form.zip, form.phone]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [applyFmcsaData]);
+
+  // Debounced FMCSA reverse lookup when MC# is entered
+  const lookupByMc = useCallback((mc: string) => {
+    if (fmcsaTimer.current) clearTimeout(fmcsaTimer.current);
+    const mcNum = mc.replace(/^MC-?/i, "").trim();
+    if (!mcNum || mcNum.length < 3 || !/^\d+$/.test(mcNum)) return;
+    // Don't lookup if DOT is already filled and verified
+    if (fmcsaResult?.verified) return;
+    fmcsaTimer.current = setTimeout(async () => {
+      setFmcsaLoading(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrl) { setFmcsaLoading(false); return; }
+        const res = await fetch(`${apiUrl}/carrier/fmcsa-mc-lookup/${mcNum}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.verified || data.legalName) {
+            applyFmcsaData(data);
+          }
+        }
+      } catch { /* silently fail */ }
+      setFmcsaLoading(false);
+    }, 800);
+  }, [applyFmcsaData, fmcsaResult?.verified]);
 
   const set = (field: keyof CarrierFormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
@@ -228,7 +258,7 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">MC Number *</label>
-                  <input value={form.mcNumber} onChange={(e) => set("mcNumber", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="MC-" />
+                  <input value={form.mcNumber} onChange={(e) => { set("mcNumber", e.target.value); lookupByMc(e.target.value); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", fmcsaResult?.verified && form.mcNumber ? "border-green-400" : "")} placeholder="MC-156588" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1"># of Trucks</label>

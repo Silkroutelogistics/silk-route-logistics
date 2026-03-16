@@ -73,6 +73,84 @@ const FMCSA_HEADERS = {
   "User-Agent": "SilkRouteLogistics/1.0",
 };
 
+/** Fetch MC# from FMCSA docket-numbers endpoint (DOT → MC) */
+async function fetchMcNumber(dotNumber: string, webKey: string): Promise<string | null> {
+  try {
+    const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}/docket-numbers?webKey=${webKey}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, { headers: FMCSA_HEADERS, signal: controller.signal });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json() as Record<string, any>;
+      const dockets = Array.isArray(data?.content) ? data.content : [];
+      const mc = dockets.find((d: any) => d.prefix === "MC");
+      if (mc?.docketNumber) return `MC-${mc.docketNumber}`;
+    }
+  } catch { /* non-critical — MC# is optional enrichment */ }
+  return null;
+}
+
+/** Reverse lookup: MC# → full carrier data (MC → DOT → carrier) */
+export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierResult> {
+  const webKey = env.FMCSA_WEB_KEY;
+  if (!webKey) {
+    return {
+      verified: false, legalName: null, dbaName: null, mcNumber: null,
+      dotNumber: "", operatingStatus: "VERIFICATION_FAILED", entityType: null,
+      safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
+      totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
+      phyState: null, phyZipcode: null, phone: null,
+      errors: ["No FMCSA_WEB_KEY configured"],
+    };
+  }
+
+  // Strip "MC-" prefix if present
+  const mcNum = mcNumber.replace(/^MC-?/i, "").trim();
+  if (!mcNum || !/^\d+$/.test(mcNum)) {
+    return {
+      verified: false, legalName: null, dbaName: null, mcNumber: null,
+      dotNumber: "", operatingStatus: null, entityType: null,
+      safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
+      totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
+      phyState: null, phyZipcode: null, phone: null,
+      errors: ["Invalid MC number"],
+    };
+  }
+
+  try {
+    const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/docket-number/${mcNum}?webKey=${webKey}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch(url, { headers: FMCSA_HEADERS, signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const data = await response.json() as Record<string, any>;
+      // Response is an array of carriers — take the first one
+      const carriers = Array.isArray(data?.content) ? data.content : [];
+      if (carriers.length > 0 && carriers[0].carrier) {
+        const carrier = carriers[0].carrier;
+        const dotNumber = carrier.dotNumber?.toString() || "";
+        const result = parseCarrierResponse({ content: { carrier } }, dotNumber);
+        result.mcNumber = `MC-${mcNum}`;
+        return result;
+      }
+    }
+  } catch (err) {
+    console.error(`[FMCSA] MC lookup error for MC-${mcNum}:`, err instanceof Error ? err.message : err);
+  }
+
+  return {
+    verified: false, legalName: null, dbaName: null, mcNumber: `MC-${mcNum}`,
+    dotNumber: "", operatingStatus: null, entityType: null,
+    safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
+    totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
+    phyState: null, phyZipcode: null, phone: null,
+    errors: ["Carrier not found for this MC number"],
+  };
+}
+
 export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACarrierResult> {
   const webKey = env.FMCSA_WEB_KEY;
   const debugErrors: string[] = [];
@@ -89,7 +167,13 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
       if (response.ok) {
         const data = await response.json() as Record<string, any>;
         const result = parseCarrierResponse(data, dotNumber);
-        if (result.legalName) return result;
+        if (result.legalName) {
+          // Enrich with MC# from docket-numbers if not already set
+          if (!result.mcNumber) {
+            result.mcNumber = await fetchMcNumber(dotNumber, webKey);
+          }
+          return result;
+        }
         debugErrors.push(`Keyed: 200 but no legalName in response`);
       } else {
         debugErrors.push(`Keyed: HTTP ${response.status}`);
