@@ -17,11 +17,28 @@ import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 
 export async function registerCarrier(req: Request, res: Response) {
+  try {
   const data = carrierRegisterSchema.parse(req.body);
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
     res.status(409).json({ error: "Email already registered" });
     return;
+  }
+
+  // Check for existing DOT/MC before attempting create
+  if (data.dotNumber) {
+    const existingDot = await prisma.carrierProfile.findUnique({ where: { dotNumber: data.dotNumber } });
+    if (existingDot) {
+      res.status(409).json({ error: `DOT number ${data.dotNumber} is already registered with another carrier` });
+      return;
+    }
+  }
+  if (data.mcNumber) {
+    const existingMc = await prisma.carrierProfile.findUnique({ where: { mcNumber: data.mcNumber } });
+    if (existingMc) {
+      res.status(409).json({ error: `MC number ${data.mcNumber} is already registered with another carrier` });
+      return;
+    }
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);
@@ -135,6 +152,15 @@ export async function registerCarrier(req: Request, res: Response) {
     screenCarrier(profileId).catch((e) =>
       console.error("[Compass OFAC] Auto OFAC screening error:", e.message)
     );
+  }
+  } catch (err: unknown) {
+    console.error("[Carrier Registration] Error:", err);
+    const message = err instanceof Error ? err.message : "Registration failed";
+    if (message.includes("Unique constraint")) {
+      res.status(409).json({ error: "A carrier with this email, DOT, or MC number is already registered" });
+    } else {
+      res.status(500).json({ error: message });
+    }
   }
 }
 
