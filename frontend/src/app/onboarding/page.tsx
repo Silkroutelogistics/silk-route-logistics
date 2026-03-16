@@ -28,7 +28,7 @@ interface FmcsaResult {
   errors: string[];
 }
 
-interface FormData {
+interface CarrierFormData {
   firstName: string; lastName: string; email: string; password: string;
   company: string; phone: string; mcNumber: string; dotNumber: string;
   address: string; city: string; state: string; zip: string;
@@ -44,7 +44,7 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [form, setForm] = useState<FormData>({
+  const [form, setForm] = useState<CarrierFormData>({
     firstName: "", lastName: "", email: "", password: "",
     company: "", phone: "", mcNumber: "", dotNumber: "",
     address: "", city: "", state: "", zip: "",
@@ -81,14 +81,14 @@ export default function OnboardingPage() {
     }, 600);
   }, [form.company, form.mcNumber, form.numberOfTrucks]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (field: keyof FormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
+  const set = (field: keyof CarrierFormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
     set(field, arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
   };
 
   const canNext = () => {
-    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber);
+    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber);
     if (step === 1) return form.equipmentTypes.length > 0 && form.operatingRegions.length > 0;
     if (step === 3) return form.agreeTerms;
     return true;
@@ -261,10 +261,10 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                  <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">MC Number <span className="text-slate-400 text-xs font-normal">(optional)</span></label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">MC Number *</label>
                   <input value={form.mcNumber} onChange={(e) => set("mcNumber", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="MC-" />
                 </div>
                 <div>

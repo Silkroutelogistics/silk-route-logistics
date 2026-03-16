@@ -7,7 +7,7 @@ export const carrierRegisterSchema = z.object({
   lastName: z.string().min(1),
   company: z.string().min(1),
   phone: z.string().optional(),
-  mcNumber: z.string().optional(),
+  mcNumber: z.string().min(1, "MC number is required"),
   dotNumber: z.string().min(5, "DOT number is required (minimum 5 digits)").regex(/^\d+$/, "DOT number must be numeric"),
   equipmentTypes: z.array(z.string()).min(1),
   operatingRegions: z.array(z.string()).min(1),
