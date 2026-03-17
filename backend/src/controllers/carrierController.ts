@@ -133,21 +133,51 @@ export async function registerCarrier(req: Request, res: Response) {
     `)
   ).catch((e) => console.error("[Registration Email] Error:", e.message));
 
-  // 2. Auto-trigger Compass vetting (background)
+  // 2. Notify all ADMIN users about the new application
+  prisma.user.findMany({ where: { role: "ADMIN" } }).then((admins) => {
+    if (admins.length === 0) return;
+    const reviewUrl = "https://silkroutelogistics.ai/dashboard/carriers";
+    for (const admin of admins) {
+      sendEmail(
+        admin.email,
+        `New Carrier Application — ${data.company}`,
+        wrap(`
+          <h2 style="color:#0f172a">New Carrier Application Received</h2>
+          <p>Hi ${admin.firstName},</p>
+          <p>A new carrier has submitted an onboarding application and is awaiting review.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.company}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Contact</td><td style="padding:8px;border:1px solid #e2e8f0">${data.firstName} ${data.lastName}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Email</td><td style="padding:8px;border:1px solid #e2e8f0">${data.email}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">DOT#</td><td style="padding:8px;border:1px solid #e2e8f0">${dot}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">MC#</td><td style="padding:8px;border:1px solid #e2e8f0">${mc}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #e2e8f0">${data.equipmentTypes.join(", ")}</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Regions</td><td style="padding:8px;border:1px solid #e2e8f0">${data.operatingRegions.join(", ")}</td></tr>
+          </table>
+          <p>Compass compliance checks have been triggered automatically. Review the application once vetting is complete.</p>
+          <div style="text-align:center;margin:24px 0">
+            <a href="${reviewUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Review Application</a>
+          </div>
+        `)
+      ).catch((e) => console.error(`[Admin Notify] Error emailing ${admin.email}:`, e.message));
+    }
+  }).catch((e) => console.error("[Admin Notify] Error fetching admins:", e.message));
+
+  // 3. Auto-trigger Compass vetting (background)
   if (dot) {
     vetAndStoreReport(dot, profileId, mc, "AUTO_REGISTRATION").catch((e) =>
       console.error("[Compass Auto-Vet] Registration vetting error:", e.message)
     );
   }
 
-  // 3. Auto-trigger identity verification (background)
+  // 4. Auto-trigger identity verification (background)
   if (profileId) {
     runIdentityCheck(profileId).catch((e) =>
       console.error("[Compass Identity] Auto identity check error:", e.message)
     );
   }
 
-  // 4. Auto-trigger OFAC screening (background)
+  // 5. Auto-trigger OFAC screening (background)
   if (profileId) {
     screenCarrier(profileId).catch((e) =>
       console.error("[Compass OFAC] Auto OFAC screening error:", e.message)
@@ -233,7 +263,7 @@ export async function getOnboardingStatus(req: AuthRequest, res: Response) {
 }
 
 export async function verifyCarrier(req: AuthRequest, res: Response) {
-  const { status, safetyScore } = verifyCarrierSchema.parse(req.body);
+  const { status, safetyScore, notes } = verifyCarrierSchema.parse(req.body);
   const profile = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
   if (!profile) {
     res.status(404).json({ error: "Carrier not found" });
@@ -293,6 +323,46 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
         `)
       ).catch((e) => console.error("[Approval Email] Error:", e.message));
     }
+  }
+
+  if (status === "REJECTED") {
+    // Send rejection email to carrier
+    const carrierUser = await prisma.user.findUnique({ where: { id: profile.userId } });
+    if (carrierUser) {
+      const reasonText = notes
+        ? `<p><strong>Reason:</strong> ${notes}</p>`
+        : `<p>If you believe this was in error or would like more information, please contact our team.</p>`;
+
+      sendEmail(
+        carrierUser.email,
+        "Application Update — Silk Route Logistics",
+        wrap(`
+          <h2 style="color:#0f172a">Application Update</h2>
+          <p>Hi ${carrierUser.firstName},</p>
+          <p>After careful review, we are unable to approve your carrier application at this time.</p>
+          ${reasonText}
+          <h3 style="color:#0f172a">What You Can Do</h3>
+          <ul style="line-height:1.8">
+            <li>Review your FMCSA authority status and ensure it is active</li>
+            <li>Verify your insurance coverage meets our minimum requirements ($1M liability, $100K cargo)</li>
+            <li>Ensure all uploaded documents are current and legible</li>
+            <li>Contact our operations team to discuss next steps</li>
+          </ul>
+          <p>You may reapply once the issues above have been resolved.</p>
+          <p style="color:#64748b;font-size:13px;margin-top:24px">Questions? Contact <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.</p>
+        `)
+      ).catch((e) => console.error("[Rejection Email] Error:", e.message));
+    }
+
+    await prisma.notification.create({
+      data: {
+        userId: profile.userId,
+        type: "ONBOARDING",
+        title: "Application Not Approved",
+        message: notes || "Your carrier application was not approved at this time. Contact support for more information.",
+        actionUrl: "/onboarding",
+      },
+    });
   }
 
   res.json(updated);

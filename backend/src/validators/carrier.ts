@@ -16,4 +16,5 @@ export const carrierRegisterSchema = z.object({
 export const verifyCarrierSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
   safetyScore: z.number().min(0).max(100).optional(),
+  notes: z.string().optional(),
 });
