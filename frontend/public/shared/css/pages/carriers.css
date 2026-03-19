@@ -11,10 +11,25 @@
       -webkit-text-size-adjust: 100%;
     }
 
+    :root {
+      --navy: #0D1B2A;
+      --navy-mid: #1B2838;
+      --navy-deep: #0A1628;
+      --gold: #C8963E;
+      --gold-light: #D4A84E;
+      --gold-dark: #B8862E;
+      --white: #FFFFFF;
+      --light-gray: #F5F5F5;
+      --dark-text: #1A1A2E;
+      --text-muted: #6B7280;
+      --font-headline: 'DM Serif Display', Georgia, serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #0D1B2A;
-      color: #E0E7EE;
+      background: #FFFFFF;
+      color: #1A1A2E;
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
@@ -546,7 +561,7 @@
 
     /* ===== WHY CARRIERS SECTION ===== */
     .why-carriers {
-      background: linear-gradient(180deg, #0D1B2A 0%, #0F2035 100%);
+      background: var(--white);
     }
 
     .section-header {
@@ -559,7 +574,7 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 12px;
       font-weight: 700;
-      color: #C8963E;
+      color: var(--gold);
       letter-spacing: 3px;
       text-transform: uppercase;
       margin-bottom: 16px;
@@ -567,13 +582,13 @@
 
     .section-title {
       font-size: 42px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 16px;
     }
 
     .section-desc {
       font-size: 17px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       max-width: 600px;
       margin: 0 auto;
       line-height: 1.7;
@@ -581,65 +596,57 @@
 
     .benefits-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 28px;
     }
 
     .benefit-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 16px;
-      padding: 36px 28px;
-      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      background: var(--white);
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     }
 
     .benefit-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(200, 150, 62, 0.25);
-      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+      transform: translateY(-6px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      border-color: transparent;
     }
 
-    .benefit-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      background: rgba(200, 150, 62, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 24px;
-      font-size: 24px;
-      transition: background 0.3s ease;
+    .benefit-img {
+      width: 100%;
+      height: 180px;
+      overflow: hidden;
     }
 
-    .benefit-card:hover .benefit-icon {
-      background: rgba(200, 150, 62, 0.18);
+    .benefit-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s ease;
     }
 
-    .benefit-icon svg {
-      width: 28px;
-      height: 28px;
-      stroke: #C8963E;
-      fill: none;
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+    .benefit-card:hover .benefit-img img {
+      transform: scale(1.05);
     }
 
     .benefit-card h3 {
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 18px;
       font-weight: 700;
-      color: #FFFFFF;
-      margin-bottom: 12px;
+      color: var(--dark-text);
+      margin-bottom: 8px;
+      padding: 24px 28px 0;
     }
 
     .benefit-card p {
       font-size: 14px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       line-height: 1.7;
+      padding: 0 28px 28px;
     }
 
     /* ===== CARAVAN CARRIER PROGRAM ===== */
@@ -825,7 +832,7 @@
 
     /* ===== COVERAGE MAP SECTION ===== */
     .coverage {
-      background: linear-gradient(180deg, #0F2035 0%, #0D1B2A 100%);
+      background: var(--light-gray);
     }
 
     .coverage-layout {
@@ -837,13 +844,13 @@
 
     .coverage-text h2 {
       font-size: 40px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 16px;
     }
 
     .coverage-text > p {
       font-size: 16px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       line-height: 1.7;
       margin-bottom: 32px;
     }
@@ -856,30 +863,30 @@
     }
 
     .coverage-stat {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       border-radius: 12px;
       padding: 20px;
       text-align: center;
-      transition: transform 0.3s ease, border-color 0.3s ease;
+      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .coverage-stat:hover {
       transform: translateY(-2px);
-      border-color: rgba(200, 150, 62, 0.2);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
     .coverage-stat-num {
       font-family: 'DM Serif Display', serif;
       font-size: 32px;
-      color: #C8963E;
+      color: var(--gold);
       line-height: 1;
       margin-bottom: 4px;
     }
 
     .coverage-stat-label {
       font-size: 12px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       font-weight: 500;
     }
 
@@ -894,15 +901,15 @@
       align-items: center;
       gap: 16px;
       padding: 18px 20px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       border-radius: 12px;
-      transition: transform 0.3s ease, border-color 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
     .lane-item:hover {
       transform: translateX(4px);
-      border-color: rgba(200, 150, 62, 0.2);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
     .lane-route {
@@ -915,25 +922,25 @@
     .lane-city {
       font-size: 14px;
       font-weight: 600;
-      color: #E0E7EE;
+      color: var(--dark-text);
     }
 
     .lane-arrow {
-      color: #C8963E;
+      color: var(--gold);
       font-size: 14px;
     }
 
     .lane-arrow svg {
       width: 20px;
       height: 20px;
-      stroke: #C8963E;
+      stroke: var(--gold);
       fill: none;
       stroke-width: 2;
     }
 
     .lane-miles {
       font-size: 13px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       font-weight: 500;
       white-space: nowrap;
     }
@@ -941,8 +948,8 @@
     .lane-tag {
       font-size: 10px;
       font-weight: 700;
-      color: #C8963E;
-      background: rgba(200, 150, 62, 0.1);
+      color: var(--gold-dark);
+      background: rgba(200, 150, 62, 0.12);
       padding: 3px 10px;
       border-radius: 100px;
       letter-spacing: 0.5px;
@@ -952,7 +959,7 @@
 
     /* ===== REQUIREMENTS SECTION ===== */
     .requirements {
-      background: #0D1B2A;
+      background: var(--white);
     }
 
     .requirements-layout {
@@ -964,13 +971,13 @@
 
     .requirements-text h2 {
       font-size: 40px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 16px;
     }
 
     .requirements-text > p {
       font-size: 16px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       line-height: 1.7;
       margin-bottom: 32px;
     }
@@ -988,7 +995,7 @@
     .req-note svg {
       width: 20px;
       height: 20px;
-      stroke: #C8963E;
+      stroke: var(--gold);
       fill: none;
       flex-shrink: 0;
       margin-top: 2px;
@@ -996,7 +1003,7 @@
 
     .req-note p {
       font-size: 14px;
-      color: #B0BFCF;
+      color: #374151;
       line-height: 1.6;
     }
 
@@ -1011,15 +1018,15 @@
       align-items: flex-start;
       gap: 16px;
       padding: 24px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--light-gray);
+      border: 1px solid #E5E7EB;
       border-radius: 14px;
-      transition: transform 0.3s ease, border-color 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
     .req-item:hover {
       transform: translateY(-2px);
-      border-color: rgba(200, 150, 62, 0.2);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
     .req-check {
@@ -1036,7 +1043,7 @@
     .req-check svg {
       width: 18px;
       height: 18px;
-      stroke: #C8963E;
+      stroke: var(--gold);
       fill: none;
       stroke-width: 2.5;
     }
@@ -1045,69 +1052,59 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 4px;
     }
 
     .req-item-text p {
       font-size: 13px;
-      color: #8A9BB5;
+      color: var(--text-muted);
       line-height: 1.5;
     }
 
-    /* ===== REGISTRATION CTA SECTION ===== */
-    .registration-cta {
-      background: linear-gradient(180deg, #0D1B2A 0%, #0F2035 60%, #0D1B2A 100%);
+    /* ===== CTA BANNER SECTION ===== */
+    .cta-banner {
+      background: linear-gradient(135deg, var(--navy) 0%, #162233 50%, var(--navy) 100%);
       position: relative;
       overflow: hidden;
+      padding: 80px 0;
     }
 
-    .registration-cta::before {
+    .cta-banner::before {
       content: '';
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 600px;
-      height: 600px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(200, 150, 62, 0.06) 0%, transparent 60%);
+      inset: 0;
+      background: radial-gradient(ellipse 50% 80% at 50% 50%, rgba(200,150,62,0.08) 0%, transparent 70%);
       pointer-events: none;
     }
 
-    .cta-card {
+    .cta-banner-inner {
       position: relative;
       z-index: 1;
       text-align: center;
-      max-width: 700px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(200, 150, 62, 0.15);
-      border-radius: 24px;
-      padding: 64px 48px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
     }
 
-    .cta-card h2 {
-      font-size: 40px;
-      color: #FFFFFF;
-      margin-bottom: 16px;
+    .cta-banner h2 {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      color: var(--white);
+      margin-bottom: 12px;
     }
 
-    .cta-card > p {
-      font-size: 17px;
-      color: #8A9BB5;
+    .cta-banner .cta-sub {
+      color: rgba(255,255,255,0.65);
+      font-size: 1.05rem;
       margin-bottom: 36px;
-      line-height: 1.7;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
-    .cta-buttons {
+    .cta-banner-btns {
       display: flex;
+      align-items: center;
       justify-content: center;
       gap: 16px;
       flex-wrap: wrap;
-      margin-bottom: 32px;
     }
 
     .btn-large {
@@ -1115,42 +1112,10 @@
       font-size: 16px;
     }
 
-    .cta-sub {
-      font-size: 14px;
-      color: #8A9BB5;
-    }
-
-    .cta-sub a {
-      color: #C8963E;
-      font-weight: 600;
-      transition: color 0.2s ease;
-    }
-
-    .cta-sub a:hover {
-      color: #B8862E;
-    }
-
-    .cta-phone {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 16px;
-      color: #C8963E;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .cta-phone svg {
-      width: 20px;
-      height: 20px;
-      stroke: #C8963E;
-      fill: none;
-    }
-
     /* ===== FOOTER ===== */
     .footer {
-      background: #080F1A;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--navy);
+      border-top: 1px solid rgba(200, 150, 62, 0.15);
       padding: 64px 0 0;
     }
 
@@ -1211,7 +1176,7 @@
     }
 
     .footer-social a:hover svg {
-      stroke: #C8963E;
+      stroke: var(--gold);
     }
 
     .footer-col h4 {
@@ -1230,6 +1195,7 @@
       gap: 12px;
     }
 
+    .footer-col li,
     .footer-col li a {
       font-size: 14px;
       color: #6B7F99;
@@ -1237,7 +1203,7 @@
     }
 
     .footer-col li a:hover {
-      color: #C8963E;
+      color: var(--gold);
     }
 
     .footer-bottom {
@@ -1288,7 +1254,7 @@
       .caravan-header h2,
       .coverage-text h2,
       .requirements-text h2,
-      .cta-card h2 {
+      .cta-banner h2 {
         font-size: 34px;
       }
     }
@@ -1374,7 +1340,7 @@
       .caravan-header h2,
       .coverage-text h2,
       .requirements-text h2,
-      .cta-card h2 {
+      .cta-banner h2 {
         font-size: 28px;
       }
 
@@ -1388,15 +1354,11 @@
         text-align: center;
       }
 
-      .cta-card {
-        padding: 40px 24px;
-      }
-
-      .cta-buttons {
+      .cta-banner-btns {
         flex-direction: column;
       }
 
-      .cta-buttons a {
+      .cta-banner-btns a {
         text-align: center;
         justify-content: center;
       }
