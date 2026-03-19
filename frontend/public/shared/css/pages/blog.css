@@ -10,10 +10,20 @@
       -webkit-text-size-adjust: 100%;
     }
 
+    :root {
+      --navy: #0D1B2A;
+      --gold: #C8963E;
+      --gold-light: #D4A84E;
+      --white: #FFFFFF;
+      --light-gray: #F5F5F5;
+      --dark-text: #1A1A2E;
+      --text-muted: #6B7280;
+    }
+
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #0D1B2A;
-      color: #E0E7EE;
+      background: #FFFFFF;
+      color: #1A1A2E;
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
@@ -48,7 +58,7 @@
 
     .section-title {
       font-size: clamp(28px, 4vw, 40px);
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 20px;
     }
 
@@ -243,6 +253,7 @@
 
     /* ── HERO ── */
     .hero {
+      background: var(--navy);
       position: relative;
       padding: 160px 0 60px;
       overflow: hidden;
@@ -351,6 +362,7 @@
 
     /* ── CATEGORY PILLS ── */
     .category-bar {
+      background: var(--white);
       padding: 0 0 48px;
       position: relative;
       z-index: 1;
@@ -388,15 +400,15 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.04);
-      color: #8899AA;
+      border: 1px solid #E5E7EB;
+      background: var(--white);
+      color: var(--text-muted);
       white-space: nowrap;
     }
 
     .category-pill:hover {
-      border-color: rgba(200, 150, 62, 0.4);
-      color: #FFFFFF;
+      border-color: var(--gold);
+      color: var(--dark-text);
     }
 
     .category-pill.active {
@@ -415,7 +427,9 @@
 
     /* ── FEATURED SECTION ── */
     .featured-section {
-      padding: 0 0 64px;
+      background: var(--light-gray);
+      padding-top: 48px;
+      padding-bottom: 64px;
     }
 
     .featured-header {
@@ -433,8 +447,8 @@
       position: relative;
       border-radius: 16px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
       text-decoration: none;
       color: inherit;
@@ -442,8 +456,8 @@
 
     .featured-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(200, 150, 62, 0.3);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+      border-color: transparent;
     }
 
     .featured-img {
@@ -500,7 +514,7 @@
 
     .featured-body h3 {
       font-size: 20px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 10px;
       line-height: 1.3;
       display: -webkit-box;
@@ -511,7 +525,7 @@
 
     .featured-body .excerpt {
       font-size: 14px;
-      color: #8899AA;
+      color: var(--text-muted);
       line-height: 1.6;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -527,6 +541,7 @@
 
     /* ── ARTICLE GRID ── */
     .articles-section {
+      background: var(--white);
       padding: 0 0 80px;
     }
 
@@ -541,7 +556,7 @@
 
     .articles-header .result-count {
       font-size: 14px;
-      color: #667788;
+      color: var(--text-muted);
     }
 
     .articles-grid {
@@ -555,8 +570,8 @@
       flex-direction: column;
       border-radius: 14px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
       text-decoration: none;
       color: inherit;
@@ -564,8 +579,8 @@
 
     .article-card:hover {
       transform: translateY(-3px);
-      border-color: rgba(200, 150, 62, 0.25);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      border-color: transparent;
     }
 
     .article-thumb {
@@ -601,7 +616,7 @@
 
     .article-body h3 {
       font-size: 17px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 8px;
       line-height: 1.3;
       display: -webkit-box;
@@ -612,7 +627,7 @@
 
     .article-body .excerpt {
       font-size: 13px;
-      color: #8899AA;
+      color: var(--text-muted);
       line-height: 1.6;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -657,8 +672,8 @@
       align-items: center;
       gap: 10px;
       padding: 14px 40px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(200, 150, 62, 0.3);
+      background: var(--white);
+      border: 1px solid var(--gold);
       border-radius: 10px;
       color: #C8963E;
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -710,13 +725,13 @@
 
     .empty-state h3 {
       font-size: 24px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 12px;
     }
 
     .empty-state p {
       font-size: 16px;
-      color: #667788;
+      color: var(--text-muted);
       max-width: 400px;
       margin: 0 auto;
       line-height: 1.7;
@@ -746,14 +761,14 @@
     .skeleton-card {
       border-radius: 14px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
     }
 
     .skeleton-thumb {
       width: 100%;
       height: 160px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+      background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }
@@ -765,7 +780,7 @@
     .skeleton-line {
       height: 12px;
       border-radius: 6px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+      background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       margin-bottom: 10px;
@@ -782,6 +797,7 @@
 
     /* ── FOOTER ── */
     .footer {
+      background: var(--navy);
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding: 80px 0 40px;
       position: relative;

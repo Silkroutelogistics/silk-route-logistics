@@ -8,6 +8,16 @@
       padding: 0;
     }
 
+    :root {
+      --navy: #0D1B2A;
+      --gold: #C8963E;
+      --gold-light: #D4A84E;
+      --white: #FFFFFF;
+      --light-gray: #F5F5F5;
+      --dark-text: #1A1A2E;
+      --text-muted: #6B7280;
+    }
+
     html {
       scroll-behavior: smooth;
       -webkit-text-size-adjust: 100%;
@@ -15,8 +25,8 @@
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #0D1B2A;
-      color: #E0E7EE;
+      background: #FFFFFF;
+      color: #1A1A2E;
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
@@ -64,13 +74,13 @@
 
     .section-title {
       font-size: clamp(32px, 5vw, 48px);
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 20px;
     }
 
     .section-subtitle {
       font-size: 18px;
-      color: #8899AA;
+      color: var(--text-muted);
       max-width: 640px;
       line-height: 1.7;
     }
@@ -309,6 +319,7 @@
       padding: 180px 0 120px;
       overflow: hidden;
       text-align: center;
+      background: var(--navy);
     }
 
     .hero-bg {
@@ -391,6 +402,7 @@
     .story-section {
       padding: 100px 0;
       position: relative;
+      background: var(--white);
     }
 
     .story-grid {
@@ -418,7 +430,7 @@
 
     .story-right p {
       font-size: 16px;
-      color: #A0AEBB;
+      color: #374151;
       line-height: 1.8;
       margin-bottom: 20px;
     }
@@ -438,13 +450,14 @@
     .mvp-section {
       padding: 100px 0;
       position: relative;
+      background: var(--light-gray);
     }
 
     .mvp-section::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, rgba(200, 150, 62, 0.02) 0%, transparent 50%, rgba(200, 150, 62, 0.02) 100%);
+      background: none;
       pointer-events: none;
     }
 
@@ -464,10 +477,8 @@
     }
 
     .mvp-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       border-radius: 16px;
       padding: 40px 32px;
       transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
@@ -475,8 +486,8 @@
 
     .mvp-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(200, 150, 62, 0.25);
-      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+      border-color: transparent;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
     }
 
     .mvp-icon {
@@ -493,13 +504,13 @@
 
     .mvp-card h3 {
       font-size: 24px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 16px;
     }
 
     .mvp-card p {
       font-size: 15px;
-      color: #8899AA;
+      color: var(--text-muted);
       line-height: 1.7;
     }
 
@@ -509,6 +520,15 @@
     .stats-section {
       padding: 100px 0;
       position: relative;
+      background: var(--navy);
+    }
+
+    .stats-section .section-title {
+      color: #FFFFFF;
+    }
+
+    .stats-section .section-subtitle {
+      color: #8899AA;
     }
 
     .stats-header {
@@ -560,13 +580,14 @@
     .apart-section {
       padding: 100px 0;
       position: relative;
+      background: var(--white);
     }
 
     .apart-section::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, transparent 0%, rgba(200, 150, 62, 0.02) 50%, transparent 100%);
+      background: none;
       pointer-events: none;
     }
 
@@ -586,10 +607,8 @@
     }
 
     .apart-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       border-radius: 16px;
       padding: 36px 28px;
       transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
@@ -597,8 +616,8 @@
 
     .apart-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(200, 150, 62, 0.25);
-      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+      border-color: transparent;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
     }
 
     .apart-card-icon {
@@ -615,13 +634,13 @@
 
     .apart-card h3 {
       font-size: 20px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 12px;
     }
 
     .apart-card p {
       font-size: 14px;
-      color: #8899AA;
+      color: var(--text-muted);
       line-height: 1.7;
     }
 
@@ -631,6 +650,7 @@
     .leadership-section {
       padding: 100px 0;
       position: relative;
+      background: var(--light-gray);
     }
 
     .leadership-header {
@@ -645,10 +665,8 @@
     }
 
     .leader-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: var(--white);
+      border: 1px solid #E5E7EB;
       border-radius: 16px;
       padding: 40px 28px;
       text-align: center;
@@ -657,8 +675,8 @@
 
     .leader-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(200, 150, 62, 0.25);
-      box-shadow: 0 8px 40px rgba(200, 150, 62, 0.08);
+      border-color: transparent;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
     }
 
     .leader-avatar {
@@ -697,7 +715,7 @@
 
     .leader-name {
       font-size: 22px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 6px;
     }
 
@@ -713,7 +731,7 @@
 
     .leader-bio {
       font-size: 14px;
-      color: #8899AA;
+      color: var(--text-muted);
       line-height: 1.7;
     }
 
@@ -724,6 +742,11 @@
       padding: 100px 0;
       position: relative;
       text-align: center;
+      background: var(--navy);
+    }
+
+    .cta-section .section-title {
+      color: #FFFFFF;
     }
 
     .cta-box {
@@ -836,6 +859,7 @@
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding: 80px 0 40px;
       position: relative;
+      background: var(--navy);
     }
 
     .footer-grid {
