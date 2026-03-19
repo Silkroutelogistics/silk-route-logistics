@@ -498,7 +498,7 @@ export default function OnboardingPage() {
               <h2 className="text-xl font-bold">Terms & Agreement</h2>
               <div className="p-4 rounded-lg bg-slate-50 border max-h-80 overflow-y-auto text-sm text-slate-600 leading-relaxed space-y-4">
                 <p className="font-bold text-slate-800 text-base">Silk Route Logistics — Carrier Transportation Agreement</p>
-                <p>This Carrier Transportation Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics LLC (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
+                <p>This Carrier Transportation Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics Inc. (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
 
                 <p className="font-semibold text-slate-800 mt-3">1. Authority & Compliance</p>
                 <ul className="list-disc ml-5 space-y-1">
@@ -511,7 +511,7 @@ export default function OnboardingPage() {
                 <p className="font-semibold text-slate-800 mt-3">2. Insurance Requirements</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall maintain at minimum: (a) Commercial Auto Liability — $1,000,000 per occurrence; (b) Motor Cargo/Freight Insurance — $100,000 per occurrence; (c) General Liability — $1,000,000 per occurrence; (d) Workers&apos; Compensation — as required by applicable law.</li>
-                  <li>Carrier shall name Silk Route Logistics LLC as an additional insured and certificate holder on all policies.</li>
+                  <li>Carrier shall name Silk Route Logistics Inc. as an additional insured and certificate holder on all policies.</li>
                   <li>Carrier shall provide certificates of insurance prior to hauling any loads and shall provide updated certificates upon renewal or policy change.</li>
                   <li>Carrier shall provide Broker with 30 days&apos; written notice prior to cancellation, non-renewal, or material modification of any insurance policy.</li>
                 </ul>
@@ -581,7 +581,7 @@ export default function OnboardingPage() {
                   <li>Carrier consents to automated FMCSA compliance monitoring, safety scoring, and OFAC screening.</li>
                 </ul>
 
-                <p className="text-xs text-slate-400 mt-4 italic">Last updated: March 2026. Silk Route Logistics LLC reserves the right to update these terms with 30 days&apos; notice to registered carriers.</p>
+                <p className="text-xs text-slate-400 mt-4 italic">Last updated: March 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers.</p>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.agreeTerms}
