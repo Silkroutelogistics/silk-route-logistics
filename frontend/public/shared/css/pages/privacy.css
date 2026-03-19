@@ -1,5 +1,17 @@
 
     /* ========================================
+       CSS VARIABLES
+       ======================================== */
+    :root {
+      --navy: #0D1B2A;
+      --gold: #C8963E;
+      --white: #FFFFFF;
+      --light-gray: #F5F5F5;
+      --dark-text: #1A1A2E;
+      --text-muted: #6B7280;
+    }
+
+    /* ========================================
        RESET & BASE
        ======================================== */
     *, *::before, *::after {
@@ -15,8 +27,8 @@
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #0D1B2A;
-      color: #E0E7EE;
+      background: var(--white);
+      color: var(--dark-text);
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
@@ -64,7 +76,7 @@
 
     .section-title {
       font-size: clamp(32px, 5vw, 48px);
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 20px;
     }
 
@@ -298,6 +310,7 @@
       padding: 180px 0 80px;
       overflow: hidden;
       text-align: center;
+      background: var(--navy);
     }
 
     .hero-bg {
@@ -379,6 +392,7 @@
        ======================================== */
     .legal-section {
       padding: 60px 0 100px;
+      background: var(--white);
     }
 
     .legal-content {
@@ -388,10 +402,10 @@
 
     .legal-updated {
       font-size: 14px;
-      color: #667788;
+      color: var(--text-muted);
       margin-bottom: 48px;
       padding-bottom: 24px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid #E5E7EB;
     }
 
     .legal-block {
@@ -400,7 +414,7 @@
 
     .legal-block h2 {
       font-size: 28px;
-      color: #FFFFFF;
+      color: var(--dark-text);
       margin-bottom: 16px;
     }
 
@@ -413,7 +427,7 @@
 
     .legal-block p {
       font-size: 15px;
-      color: #A0AEBB;
+      color: #374151;
       line-height: 1.8;
       margin-bottom: 16px;
     }
@@ -426,7 +440,7 @@
 
     .legal-block ul li {
       font-size: 15px;
-      color: #A0AEBB;
+      color: #374151;
       line-height: 1.8;
       margin-bottom: 8px;
     }
@@ -446,6 +460,8 @@
        FOOTER
        ======================================== */
     .footer {
+      background: var(--navy);
+      color: #E0E7EE;
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding: 80px 0 40px;
       position: relative;
