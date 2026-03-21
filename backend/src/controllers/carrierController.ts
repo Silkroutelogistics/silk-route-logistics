@@ -112,24 +112,52 @@ export async function registerCarrier(req: Request, res: Response) {
   const mc = data.mcNumber;
 
   // 1. Send registration confirmation email
+  const submittedDate = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   sendEmail(
     data.email,
     "Application Received — Silk Route Logistics",
     wrap(`
-      <h2 style="color:#0f172a">Welcome, ${data.firstName}!</h2>
-      <p>Thank you for registering with <strong>Silk Route Logistics</strong>. Your carrier application has been received.</p>
-      <table style="width:100%;border-collapse:collapse;margin:16px 0">
-        <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.company}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">DOT#</td><td style="padding:8px;border:1px solid #e2e8f0">${dot}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">MC#</td><td style="padding:8px;border:1px solid #e2e8f0">${mc}</td></tr>
+      <h2 style="color:#0f172a;margin-bottom:4px">Welcome, ${data.firstName}!</h2>
+      <p style="color:#64748b;font-size:14px;margin-bottom:24px">Your carrier application has been received and is under review.</p>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:24px">
+        <p style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Application Details</p>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155;width:40%">Company</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.company}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Contact</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.firstName} ${data.lastName}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">DOT Number</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${dot}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">MC Number</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${mc || "N/A"}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Equipment</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.equipmentTypes.join(", ")}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Regions</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.operatingRegions.join(", ")}</td></tr>
+          <tr><td style="padding:10px 12px;font-weight:600;color:#334155">Submitted</td><td style="padding:10px 12px;color:#475569">${submittedDate}</td></tr>
+        </table>
+      </div>
+
+      <h3 style="color:#0f172a;font-size:16px;margin-bottom:16px">What Happens Next</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+        <tr>
+          <td style="padding:12px 0;vertical-align:top;width:36px"><div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;text-align:center;line-height:28px;font-weight:700;font-size:13px">1</div></td>
+          <td style="padding:12px 0;padding-left:12px"><strong style="color:#334155">Compliance Verification</strong><br><span style="color:#64748b;font-size:14px">Our Compass engine is verifying your FMCSA authority, insurance, safety record, and OFAC status automatically.</span></td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0;vertical-align:top"><div style="width:28px;height:28px;background:#d4a574;color:#0f172a;border-radius:50%;text-align:center;line-height:28px;font-weight:700;font-size:13px">2</div></td>
+          <td style="padding:12px 0;padding-left:12px"><strong style="color:#334155">Team Review</strong><br><span style="color:#64748b;font-size:14px">A carrier relations specialist will review your application. We may contact you for additional documentation.</span></td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0;vertical-align:top"><div style="width:28px;height:28px;background:#e2e8f0;color:#64748b;border-radius:50%;text-align:center;line-height:28px;font-weight:700;font-size:13px">3</div></td>
+          <td style="padding:12px 0;padding-left:12px"><strong style="color:#334155">Approval & Portal Access</strong><br><span style="color:#64748b;font-size:14px">Once approved, you'll receive your login credentials and can start browsing available loads immediately.</span></td>
+        </tr>
       </table>
-      <h3 style="color:#0f172a">What Happens Next?</h3>
-      <ol style="line-height:1.8">
-        <li>Our <strong>Compass</strong> compliance engine will automatically vet your FMCSA authority, safety record, and OFAC status.</li>
-        <li>A team member will review your application and may request additional documents.</li>
-        <li>Once approved, you'll receive an email with instructions to log in.</li>
-      </ol>
-      <p style="color:#64748b;font-size:13px;margin-top:24px">Typical review time: 1-2 business days. For urgent inquiries, contact <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.</p>
+
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px">
+        <p style="color:#92400e;font-size:14px;margin:0"><strong>Typical review time:</strong> 1–2 business days. Most applications are reviewed within 24 hours.</p>
+      </div>
+
+      <div style="text-align:center;margin:24px 0;padding:20px;background:#f8fafc;border-radius:8px">
+        <p style="color:#64748b;font-size:14px;margin-bottom:8px">Questions about your application?</p>
+        <p style="margin:0"><a href="tel:+12692206760" style="color:#d4a574;font-weight:700;font-size:16px;text-decoration:none">(269) 220-6760</a></p>
+        <p style="color:#94a3b8;font-size:13px;margin-top:4px"><a href="mailto:operations@silkroutelogistics.ai" style="color:#d4a574">operations@silkroutelogistics.ai</a> &bull; Mon–Fri 7AM–7PM ET</p>
+      </div>
     `)
   ).catch((e) => console.error("[Registration Email] Error:", e.message));
 
@@ -137,26 +165,35 @@ export async function registerCarrier(req: Request, res: Response) {
   prisma.user.findMany({ where: { role: "ADMIN" } }).then((admins) => {
     if (admins.length === 0) return;
     const reviewUrl = "https://silkroutelogistics.ai/dashboard/carriers";
+    const truckCount = (req.body as Record<string, unknown>).numberOfTrucks || "—";
     for (const admin of admins) {
       sendEmail(
         admin.email,
-        `New Carrier Application — ${data.company}`,
+        `New Carrier Application — ${data.company} (DOT: ${dot})`,
         wrap(`
-          <h2 style="color:#0f172a">New Carrier Application Received</h2>
-          <p>Hi ${admin.firstName},</p>
-          <p>A new carrier has submitted an onboarding application and is awaiting review.</p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0">
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.company}</td></tr>
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Contact</td><td style="padding:8px;border:1px solid #e2e8f0">${data.firstName} ${data.lastName}</td></tr>
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Email</td><td style="padding:8px;border:1px solid #e2e8f0">${data.email}</td></tr>
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">DOT#</td><td style="padding:8px;border:1px solid #e2e8f0">${dot}</td></tr>
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">MC#</td><td style="padding:8px;border:1px solid #e2e8f0">${mc}</td></tr>
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #e2e8f0">${data.equipmentTypes.join(", ")}</td></tr>
-            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Regions</td><td style="padding:8px;border:1px solid #e2e8f0">${data.operatingRegions.join(", ")}</td></tr>
-          </table>
-          <p>Compass compliance checks have been triggered automatically. Review the application once vetting is complete.</p>
+          <h2 style="color:#0f172a;margin-bottom:4px">New Carrier Application</h2>
+          <p style="color:#64748b;font-size:14px">Hi ${admin.firstName}, a new carrier has submitted an application and is awaiting review.</p>
+
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0">
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155;width:40%">Company</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.company}</td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Contact</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.firstName} ${data.lastName}</td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Email</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569"><a href="mailto:${data.email}" style="color:#d4a574">${data.email}</a></td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Phone</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.phone || "Not provided"}</td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">DOT#</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${dot}</td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">MC#</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${mc || "N/A"}</td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Trucks</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${truckCount}</td></tr>
+              <tr><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#334155">Equipment</td><td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#475569">${data.equipmentTypes.join(", ")}</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:600;color:#334155">Regions</td><td style="padding:10px 12px;color:#475569">${data.operatingRegions.join(", ")}</td></tr>
+            </table>
+          </div>
+
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:20px">
+            <p style="color:#166534;font-size:14px;margin:0">Compass compliance checks (FMCSA, OFAC, identity verification) have been triggered automatically.</p>
+          </div>
+
           <div style="text-align:center;margin:24px 0">
-            <a href="${reviewUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Review Application</a>
+            <a href="${reviewUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Review Application</a>
           </div>
         `)
       ).catch((e) => console.error(`[Admin Notify] Error emailing ${admin.email}:`, e.message));

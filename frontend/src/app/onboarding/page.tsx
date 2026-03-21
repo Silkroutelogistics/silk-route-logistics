@@ -182,21 +182,110 @@ export default function OnboardingPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border p-8 text-center">
-          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Application Submitted!</h2>
-          <p className="text-slate-600 mb-6">
-            Thank you for registering with Silk Route Logistics. Our team will review your application
-            and get back to you within 24-48 hours.
-          </p>
-          <div className="space-y-3">
-            <Link href="/dashboard/overview" className="block w-full px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light transition">
-              Go to Dashboard
-            </Link>
-            <Link href="/" className="block w-full px-6 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm">
-              Back to Home
-            </Link>
+      <div className="min-h-screen bg-slate-50">
+        <nav className="bg-navy text-white px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size="sm" />
+            <span className="text-sm font-semibold">Silk Route Logistics</span>
+          </Link>
+        </nav>
+
+        <div className="max-w-2xl mx-auto px-6 py-12">
+          {/* Success Header */}
+          <div className="bg-white rounded-2xl shadow-sm border p-8 text-center mb-6">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+              <CheckCircle2 className="w-10 h-10 text-green-500" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Application Submitted Successfully</h2>
+            <p className="text-slate-500 text-sm">
+              A confirmation email has been sent to <strong className="text-slate-700">{form.email}</strong>
+            </p>
+          </div>
+
+          {/* Application Summary */}
+          <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+            <h3 className="text-lg font-bold mb-4">Application Summary</h3>
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Company</p>
+                <p className="font-medium">{form.company}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Contact</p>
+                <p className="font-medium">{form.firstName} {form.lastName}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">DOT Number</p>
+                <p className="font-medium">{form.dotNumber}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">MC Number</p>
+                <p className="font-medium">{form.mcNumber || "—"}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Equipment</p>
+                <p className="font-medium">{form.equipmentTypes.join(", ")}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Regions</p>
+                <p className="font-medium">{form.operatingRegions.join(", ")}</p>
+              </div>
+            </div>
+            {fmcsaResult?.verified && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <span className="text-green-800">FMCSA Authority Verified — {fmcsaResult.operatingStatus}</span>
+              </div>
+            )}
+          </div>
+
+          {/* What Happens Next */}
+          <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
+            <h3 className="text-lg font-bold mb-5">What Happens Next</h3>
+            <div className="space-y-5">
+              <div className="flex gap-4">
+                <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div>
+                  <p className="font-semibold text-sm">Compliance Verification</p>
+                  <p className="text-slate-500 text-sm">Our Compass engine is already verifying your FMCSA authority, insurance, safety record, and OFAC status.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-8 h-8 bg-gold/20 text-gold rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div>
+                  <p className="font-semibold text-sm">Team Review</p>
+                  <p className="text-slate-500 text-sm">A carrier relations specialist will review your application. We may reach out for additional documentation.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-8 h-8 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                <div>
+                  <p className="font-semibold text-sm">Approval &amp; Portal Access</p>
+                  <p className="text-slate-500 text-sm">Once approved, you&#39;ll receive login credentials and can start browsing available loads immediately.</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+              <p className="text-amber-800"><strong>Typical review time:</strong> 1–2 business days. Most applications are reviewed within 24 hours.</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="bg-white rounded-2xl shadow-sm border p-8 text-center">
+            <p className="text-slate-500 text-sm mb-5">Questions about your application?</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <a href="tel:+12692206760" className="px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light transition text-sm">
+                Call (269) 220-6760
+              </a>
+              <a href="mailto:operations@silkroutelogistics.ai" className="px-6 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm">
+                Email Operations Team
+              </a>
+            </div>
+            <div className="mt-5 pt-5 border-t">
+              <Link href="/" className="text-gold text-sm font-medium hover:underline">
+                Return to Homepage
+              </Link>
+            </div>
           </div>
         </div>
       </div>
