@@ -9,6 +9,26 @@
 
 import { env } from "../config/env";
 
+// In-memory cache: DOT/MC → result, expires after 1 hour
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const cache = new Map<string, { data: FMCSACarrierResult; ts: number }>();
+
+function cacheGet(key: string): FMCSACarrierResult | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL) { cache.delete(key); return null; }
+  return entry.data;
+}
+
+function cacheSet(key: string, data: FMCSACarrierResult) {
+  cache.set(key, { data, ts: Date.now() });
+  // Evict old entries if cache gets too large
+  if (cache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of cache) { if (now - v.ts > CACHE_TTL) cache.delete(k); }
+  }
+}
+
 interface FMCSACarrierResult {
   verified: boolean;
   legalName: string | null;
@@ -93,6 +113,10 @@ async function fetchMcNumber(dotNumber: string, webKey: string): Promise<string 
 
 /** Reverse lookup: MC# → full carrier data (MC → DOT → carrier) */
 export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierResult> {
+  // Check cache first
+  const cached = cacheGet(`mc:${mcNumber}`);
+  if (cached) return cached;
+
   const webKey = env.FMCSA_WEB_KEY;
   if (!webKey) {
     return {
@@ -121,7 +145,7 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
   try {
     const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/docket-number/${mcNum}?webKey=${webKey}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
     const response = await fetch(url, { headers: FMCSA_HEADERS, signal: controller.signal });
     clearTimeout(timeout);
 
@@ -134,6 +158,8 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
         const dotNumber = carrier.dotNumber?.toString() || "";
         const result = parseCarrierResponse({ content: { carrier } }, dotNumber);
         result.mcNumber = `MC-${mcNum}`;
+        cacheSet(`mc:${mcNumber}`, result);
+        cacheSet(`dot:${dotNumber}`, result);
         return result;
       }
     }
@@ -152,6 +178,10 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
 }
 
 export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACarrierResult> {
+  // Check cache first
+  const cached = cacheGet(`dot:${dotNumber}`);
+  if (cached) return cached;
+
   const webKey = env.FMCSA_WEB_KEY;
   const debugErrors: string[] = [];
 
@@ -160,7 +190,7 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     try {
       const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}?webKey=${webKey}`;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 6000);
       const response = await fetch(url, { headers: FMCSA_HEADERS, signal: controller.signal });
       clearTimeout(timeout);
 
@@ -172,6 +202,7 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
           if (!result.mcNumber) {
             result.mcNumber = await fetchMcNumber(dotNumber, webKey);
           }
+          cacheSet(`dot:${dotNumber}`, result);
           return result;
         }
         debugErrors.push(`Keyed: 200 but no legalName in response`);
@@ -191,13 +222,13 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
   try {
     const publicUrl = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
     const publicRes = await fetch(publicUrl, { headers: FMCSA_HEADERS, signal: controller.signal });
     clearTimeout(timeout);
     if (publicRes.ok) {
       const data = await publicRes.json() as Record<string, any>;
       const result = parseCarrierResponse(data, dotNumber);
-      if (result.legalName) return result;
+      if (result.legalName) { cacheSet(`dot:${dotNumber}`, result); return result; }
       debugErrors.push(`Public: 200 but no legalName`);
     } else {
       debugErrors.push(`Public: HTTP ${publicRes.status}`);

@@ -81,8 +81,8 @@ export default function OnboardingPage() {
     if (fmcsaTimer.current) clearTimeout(fmcsaTimer.current);
     setFmcsaResult(null);
     if (!dot || dot.length < 5 || !/^\d+$/.test(dot)) return;
+    setFmcsaLoading(true);
     fmcsaTimer.current = setTimeout(async () => {
-      setFmcsaLoading(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) { setFmcsaLoading(false); return; }
@@ -93,7 +93,7 @@ export default function OnboardingPage() {
         }
       } catch { /* silently fail — user can still proceed */ }
       setFmcsaLoading(false);
-    }, 600);
+    }, 300);
   }, [applyFmcsaData]);
 
   // Debounced FMCSA reverse lookup when MC# is entered
@@ -103,8 +103,8 @@ export default function OnboardingPage() {
     if (!mcNum || mcNum.length < 3 || !/^\d+$/.test(mcNum)) return;
     // Don't lookup if DOT is already filled and verified
     if (fmcsaResult?.verified) return;
+    setFmcsaLoading(true);
     fmcsaTimer.current = setTimeout(async () => {
-      setFmcsaLoading(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) { setFmcsaLoading(false); return; }
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
         }
       } catch { /* silently fail */ }
       setFmcsaLoading(false);
-    }, 800);
+    }, 400);
   }, [applyFmcsaData, fmcsaResult?.verified]);
 
   const set = (field: keyof CarrierFormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
