@@ -37,6 +37,13 @@ export default function EmployeeLoginPage() {
   const [localLoading, setLocalLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [totpSetupStep, setTotpSetupStep] = useState(false);
+  const [totpSetupToken, setTotpSetupToken] = useState("");
+  const [totpQrCode, setTotpQrCode] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [totpVerifyStep, setTotpVerifyStep] = useState(false);
+  const [totpVerifyToken, setTotpVerifyToken] = useState("");
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -110,6 +117,91 @@ export default function EmployeeLoginPage() {
         window.location.href = "/auth/force-password-change";
         return;
       }
+      if (data.require2FASetup) {
+        // ADMIN/CEO must set up TOTP 2FA — store token and redirect to setup
+        sessionStorage.setItem("srl_2fa_setup_token", data.setupToken);
+        setTotpSetupToken(data.setupToken);
+        setTotpSetupStep(true);
+        setOtpStep(false);
+        setLocalLoading(false);
+        // Fetch QR code for setup
+        try {
+          const setupRes = await fetch(`${BASE}/api/auth/totp/force-setup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ setupToken: data.setupToken }),
+            ...fetchOpts,
+          });
+          const setupData = await setupRes.json();
+          if (setupData.qrCodeDataURL) {
+            setTotpQrCode(setupData.qrCodeDataURL);
+            setTotpSecret(setupData.secret || "");
+          }
+        } catch { /* QR fetch failed — user can still enter secret manually */ }
+        return;
+      }
+      if (data.pendingTotp) {
+        // TOTP 2FA verification required
+        setTotpVerifyToken(data.totpToken);
+        setTotpVerifyStep(true);
+        setOtpStep(false);
+        setLocalLoading(false);
+        return;
+      }
+      if (data.user) {
+        window.location.href = "/dashboard/overview";
+      }
+    } catch {
+      setLocalError("Unable to connect to server. Please try again.");
+    }
+    setLocalLoading(false);
+  };
+
+  const handleTotpSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!totpCode || totpCode.length < 6) { setLocalError("Please enter the 6-digit code from your authenticator app."); return; }
+    setLocalError("");
+    setLocalLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/totp/force-enable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ setupToken: totpSetupToken, code: totpCode }),
+        ...fetchOpts,
+      });
+      const data = await res.json();
+      if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
+      if (data.user) {
+        window.location.href = "/dashboard/overview";
+      } else {
+        // 2FA enabled but need to log in again
+        setTotpSetupStep(false);
+        setOtpStep(false);
+        setSuccessMsg("Two-factor authentication enabled! Please log in again.");
+        setPassword("");
+        setOtp("");
+        setTotpCode("");
+      }
+    } catch {
+      setLocalError("Unable to connect to server. Please try again.");
+    }
+    setLocalLoading(false);
+  };
+
+  const handleTotpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!totpCode || totpCode.length < 6) { setLocalError("Please enter the 6-digit code from your authenticator app."); return; }
+    setLocalError("");
+    setLocalLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/totp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ totpToken: totpVerifyToken, code: totpCode }),
+        ...fetchOpts,
+      });
+      const data = await res.json();
+      if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
       if (data.user) {
         window.location.href = "/dashboard/overview";
       }
@@ -227,7 +319,68 @@ export default function EmployeeLoginPage() {
             </div>
           )}
 
-          {!otpStep ? (
+          {totpSetupStep ? (
+            /* TOTP 2FA Setup — required for ADMIN/CEO first login */
+            <form onSubmit={handleTotpSetup}>
+              <div className="mb-4">
+                <p className="text-[13px] text-[#8899aa] mb-4">
+                  As an administrator, two-factor authentication is required. Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.).
+                </p>
+                {totpQrCode && (
+                  <div className="flex justify-center mb-4">
+                    <img src={totpQrCode} alt="TOTP QR Code" className="rounded-lg" style={{ width: 180, height: 180 }} />
+                  </div>
+                )}
+                {totpSecret && (
+                  <div className="mb-4 p-3 rounded-lg text-center" style={{ background: "#162236", border: "1px solid #243447" }}>
+                    <p className="text-[11px] text-[#6a8090] mb-1">Manual entry key:</p>
+                    <p className="text-[13px] text-[#c8a951] font-mono tracking-wider select-all">{totpSecret}</p>
+                  </div>
+                )}
+                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Authenticator Code</label>
+                <input type="text" value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter 6-digit code" maxLength={6} inputMode="numeric" autoFocus
+                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
+                  style={{ background: "#162236", border: "1px solid #243447" }}
+                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                />
+              </div>
+              <button type="submit" disabled={localLoading}
+                className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A" }}>
+                {localLoading ? "Enabling 2FA..." : "Enable Two-Factor Authentication"}
+              </button>
+            </form>
+          ) : totpVerifyStep ? (
+            /* TOTP 2FA Verification — for users with 2FA already enabled */
+            <form onSubmit={handleTotpVerify}>
+              <div className="mb-4">
+                <p className="text-[13px] text-[#8899aa] mb-4">
+                  Enter the 6-digit code from your authenticator app.
+                </p>
+                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Authenticator Code</label>
+                <input type="text" value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter 6-digit code" maxLength={6} inputMode="numeric" autoFocus
+                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
+                  style={{ background: "#162236", border: "1px solid #243447" }}
+                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                />
+              </div>
+              <button type="submit" disabled={localLoading}
+                className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A" }}>
+                {localLoading ? "Verifying..." : "Verify"}
+              </button>
+              <div className="text-center mt-4">
+                <button type="button" onClick={() => { setTotpVerifyStep(false); setTotpCode(""); setLocalError(""); }}
+                  className="text-[13px] text-[#6a8090] underline hover:text-[#c8a951] transition-colors bg-transparent border-none cursor-pointer">
+                  Back to sign in
+                </button>
+              </div>
+            </form>
+          ) : !otpStep ? (
             <form onSubmit={handleLogin}>
               <div className="mb-4">
                 <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Email Address</label>
