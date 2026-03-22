@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import * as Sentry from "@sentry/node";
 import { env } from "../config/env";
@@ -30,8 +31,7 @@ const MAX_SESSIONS_ADMIN = 1;  // ADMIN/CEO: 1 concurrent session
 const MAX_SESSIONS_DEFAULT = 3; // Others: 3 concurrent sessions
 
 function getTokenHash(token: string): string {
-  // Use last 16 chars as a lightweight fingerprint to avoid storing full tokens
-  return token.slice(-16);
+  return crypto.createHash("sha256").update(token).digest("hex").slice(0, 32);
 }
 
 function getMaxSessions(role: string): number {

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import {
   registerCarrier, uploadCarrierDocuments, getOnboardingStatus, verifyCarrier,
   getDashboard, getScorecard, getRevenue, getBonuses,
@@ -13,8 +14,17 @@ import { verifyCarrierWithFMCSA, lookupByMcNumber } from "../services/fmcsaServi
 
 const router = Router();
 
+// Rate limiter for public FMCSA lookup endpoints: 30 requests per 15 min per IP
+const fmcsaLookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many FMCSA lookup requests, please try again later" },
+});
+
 // Public: FMCSA DOT lookup for onboarding form auto-verification
-router.get("/fmcsa-lookup/:dotNumber", async (req: Request, res: Response) => {
+router.get("/fmcsa-lookup/:dotNumber", fmcsaLookupLimiter, async (req: Request, res: Response) => {
   const dot = String(req.params.dotNumber);
   if (!dot || dot.length < 5 || !/^\d+$/.test(dot)) {
     res.status(400).json({ error: "Invalid DOT number. Must be at least 5 digits." });
@@ -48,7 +58,7 @@ router.get("/fmcsa-lookup/:dotNumber", async (req: Request, res: Response) => {
 });
 
 // Public: FMCSA MC# reverse lookup (MC → DOT + carrier data)
-router.get("/fmcsa-mc-lookup/:mcNumber", async (req: Request, res: Response) => {
+router.get("/fmcsa-mc-lookup/:mcNumber", fmcsaLookupLimiter, async (req: Request, res: Response) => {
   const mc = String(req.params.mcNumber).replace(/^MC-?/i, "").trim();
   if (!mc || !/^\d+$/.test(mc)) {
     res.status(400).json({ error: "Invalid MC number. Enter digits only (e.g. 156588)." });

@@ -1,10 +1,10 @@
 
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap');
 
     *{margin:0;padding:0;box-sizing:border-box}
 
     body{
-      font-family:'Inter',system-ui,sans-serif;
+      font-family:'Plus Jakarta Sans',sans-serif;
       background:#FFFFFF;color:#1A1A2E;
       line-height:1.8;font-size:15px;
     }
@@ -54,7 +54,7 @@
 
     .download-bar{text-align:center;margin-bottom:40px}
     .download-bar button{
-      padding:10px 24px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;
+      padding:10px 24px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;
       background:linear-gradient(135deg,#c8a951,#b8963e);color:#0D1B2A;
       border:none;border-radius:8px;cursor:pointer;transition:all .25s;
     }
@@ -68,8 +68,8 @@
     .toc h2{font-size:16px;color:#1A1A2E;margin-bottom:16px;border:none;padding:0;font-weight:700}
     .toc ol{padding-left:20px;counter-reset:toc}
     .toc li{margin-bottom:8px;font-size:14px;color:#374151}
-    .toc a{color:#2563EB;text-decoration:none;transition:color .2s}
-    .toc a:hover{color:#1D4ED8}
+    .toc a{color:#C8963E;text-decoration:none;transition:color .2s}
+    .toc a:hover{color:#b8862e}
 
     h2{
       font-family:'DM Serif Display',serif;font-size:22px;color:#1A1A2E;
