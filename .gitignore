@@ -36,3 +36,6 @@ coverage/
 
 # Misc
 .turbo/
+
+# Frontend production env (contains API keys)
+frontend/.env.production
