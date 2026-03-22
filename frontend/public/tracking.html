@@ -35,7 +35,17 @@
         <a href="/about.html">About</a>
         <a href="/contact.html">Contact</a>
         <a href="/tracking.html" class="active">Track</a>
-        <a href="/shippers.html" class="nav-cta">Get a Quote</a>
+        <div class="login-dropdown" id="loginDropdown">
+          <button class="login-dropdown-btn" aria-haspopup="true" aria-expanded="false">
+            Login
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="login-dropdown-menu">
+            <a href="/auth/login.html">AE Login</a>
+            <a href="/carrier/login.html">Carrier Login</a>
+            <a href="/shipper/login">Shipper Login</a>
+          </div>
+        </div>
       </div>
 
       <button class="hamburger" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
@@ -50,6 +60,12 @@
     <a href="/about.html" class="mobile-nav-link">About</a>
     <a href="/contact.html" class="mobile-nav-link">Contact</a>
     <a href="/tracking.html" class="mobile-nav-link">Track Shipment</a>
+    <div class="mobile-login-section">
+      <div class="mobile-login-label">Login Portal</div>
+      <a href="/auth/login.html" class="mobile-nav-link">AE Login</a>
+      <a href="/carrier/login.html" class="mobile-nav-link">Carrier Login</a>
+      <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
+    </div>
   </div>
 
   <div class="container">
@@ -152,9 +168,64 @@
     </div>
   </div>
 
-  <div class="footer">
-    &copy; 2026 Silk Route Logistics Inc. &bull; <a href="/">silkroutelogistics.ai</a>
-  </div>
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="footer-logo-bar" aria-hidden="true"></div>
+          </div>
+          <p>
+            A technology-driven freight brokerage connecting shippers and carriers
+            across North America with transparency, reliability, and innovation.
+          </p>
+          <p style="margin-top: 12px; color: #4A5568;">
+            Silk Route Logistics Inc.<br>
+            Kalamazoo, MI<br>
+            (269) 220-6760
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about.html">About Us</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+            <li><a href="/blog.html">Blog</a></li>
+            <li><a href="/careers.html">Careers</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Services</h4>
+          <ul>
+            <li><a href="/shippers.html">For Shippers</a></li>
+            <li><a href="/carriers.html">For Carriers</a></li>
+            <li><a href="/tracking.html">Track Shipment</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Connect</h4>
+          <ul>
+            <li><a href="tel:+12692206760">(269) 220-6760</a></li>
+            <li><a href="mailto:info@silkroutelogistics.ai">info@silkroutelogistics.ai</a></li>
+            <li>Kalamazoo, MI</li>
+            <li><a href="/carrier/login.html">Carrier Portal</a></li>
+            <li><a href="/shipper/login">Shipper Portal</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics Inc. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy.html">Privacy Policy</a>
+          <a href="/terms.html">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <script>
     (function() {
@@ -162,6 +233,21 @@
 
       var BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
+
+      /* LOGIN DROPDOWN TOGGLE */
+      var loginDropdown = document.getElementById('loginDropdown');
+      if (loginDropdown) {
+        var loginBtn = loginDropdown.querySelector('.login-dropdown-btn');
+        loginBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          loginDropdown.classList.toggle('open');
+          loginBtn.setAttribute('aria-expanded', loginDropdown.classList.contains('open').toString());
+        });
+        document.addEventListener('click', function () {
+          loginDropdown.classList.remove('open');
+          loginBtn.setAttribute('aria-expanded', 'false');
+        });
+      }
 
       /* MOBILE MENU */
       var hamburger = document.getElementById('hamburger');

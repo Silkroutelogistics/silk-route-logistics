@@ -3,15 +3,88 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ArrowRight, MapPin, User } from "lucide-react";
+import { Check, ArrowRight, MapPin, User, CheckCircle2, Loader2 } from "lucide-react";
 
 const steps = ["Company Info", "Shipping Profile", "Preferences", "Review"];
 
 export default function ShipperRegisterPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const router = useRouter();
   const upd = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+
+      // Split contact name into first/last
+      const contactParts = (form.contact || "").trim().split(/\s+/);
+      const firstName = contactParts[0] || "";
+      const lastName = contactParts.slice(1).join(" ") || firstName;
+
+      const res = await fetch(`${apiUrl}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          firstName,
+          lastName,
+          company: form.company,
+          phone: form.phone,
+          role: "SHIPPER",
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || body?.passwordErrors?.[0] || "Registration failed. Please try again.");
+      }
+
+      setSuccess(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="bg-[#F8F5ED] min-h-screen">
+        <nav className="bg-[#0D1B2A] px-6 h-14 flex items-center justify-between">
+          <Link href="/shipper" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0D1B2A]">SR</div>
+            <span className="font-serif text-sm text-white tracking-[1px]">SILK ROUTE LOGISTICS</span>
+          </Link>
+        </nav>
+        <div className="max-w-[640px] mx-auto px-6 py-16">
+          <div className="bg-white rounded-md border border-gray-200 p-9 text-center">
+            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            </div>
+            <h2 className="font-serif text-2xl text-[#0D1B2A] mb-2">Account Created Successfully</h2>
+            <p className="text-[13px] text-gray-500 mb-6 leading-relaxed max-w-md mx-auto">
+              Your shipper account has been created. You can now log in to access your portal, request quotes, and track your shipments.
+            </p>
+            <button
+              onClick={() => router.push("/shipper/login")}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all"
+            >
+              <ArrowRight size={16} /> Continue to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#F8F5ED] min-h-screen">
@@ -151,10 +224,17 @@ export default function ShipperRegisterPage() {
             </>
           )}
 
+          {/* Error message */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-[13px] text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Navigation buttons */}
           <div className="flex justify-between mt-7 gap-3">
             {step > 1 ? (
-              <button onClick={() => setStep(step - 1)} className="px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-[1.5px] hover:text-[#C9A84C] transition-colors">
+              <button onClick={() => setStep(step - 1)} disabled={submitting} className="px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-[1.5px] hover:text-[#C9A84C] transition-colors disabled:opacity-50">
                 Back
               </button>
             ) : <div />}
@@ -163,8 +243,12 @@ export default function ShipperRegisterPage() {
                 <ArrowRight size={16} /> Continue
               </button>
             ) : (
-              <button onClick={() => router.push("/shipper/dashboard")} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all">
-                <Check size={16} /> Create Account &amp; Enter Portal
+              <button onClick={handleSubmit} disabled={submitting} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                {submitting ? (
+                  <><Loader2 size={16} className="animate-spin" /> Creating Account...</>
+                ) : (
+                  <><Check size={16} /> Create Account</>
+                )}
               </button>
             )}
           </div>

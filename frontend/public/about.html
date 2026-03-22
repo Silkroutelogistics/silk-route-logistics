@@ -53,10 +53,19 @@
         <a href="/carriers.html">Carriers</a>
         <a href="/about.html" class="active" aria-current="page">About</a>
         <a href="/contact.html">Contact</a>
-        <a href="/tracking.html">Tracking</a>
+        <a href="/tracking.html">Track</a>
+        <div class="login-dropdown" id="loginDropdown">
+          <button class="login-dropdown-btn" aria-haspopup="true" aria-expanded="false">
+            Login
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="login-dropdown-menu">
+            <a href="/auth/login.html">AE Login</a>
+            <a href="/carrier/login.html">Carrier Login</a>
+            <a href="/shipper/login">Shipper Login</a>
+          </div>
+        </div>
       </div>
-
-      <a href="/shippers.html" class="navbar-cta navbar-cta-desktop">Get a Quote</a>
 
       <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
         <span></span>
@@ -71,8 +80,13 @@
       <a href="/carriers.html" role="menuitem">Carriers</a>
       <a href="/about.html" class="active" role="menuitem" aria-current="page">About</a>
       <a href="/contact.html" role="menuitem">Contact</a>
-      <a href="/tracking.html" role="menuitem">Tracking</a>
-      <a href="/shippers.html" class="navbar-cta" role="menuitem">Get a Quote</a>
+      <a href="/tracking.html" role="menuitem">Track</a>
+      <div class="mobile-login-section">
+        <div class="mobile-login-label">Login Portal</div>
+        <a href="/auth/login.html" role="menuitem">AE Login</a>
+        <a href="/carrier/login.html" role="menuitem">Carrier Login</a>
+        <a href="/shipper/login" role="menuitem">Shipper Login</a>
+      </div>
     </div>
   </nav>
 
@@ -444,7 +458,8 @@
           </p>
           <p style="margin-top: 12px; color: #4A5568;">
             Silk Route Logistics Inc.<br>
-            Kalamazoo, MI
+            Kalamazoo, MI<br>
+            (269) 220-6760
           </p>
         </div>
 
@@ -454,7 +469,8 @@
           <ul>
             <li><a href="/about.html">About Us</a></li>
             <li><a href="/contact.html">Contact</a></li>
-            <li><a href="/tracking.html">Track Shipment</a></li>
+            <li><a href="/blog.html">Blog</a></li>
+            <li><a href="/careers.html">Careers</a></li>
           </ul>
         </div>
 
@@ -462,21 +478,20 @@
         <div class="footer-col">
           <h4>Services</h4>
           <ul>
-            <li><a href="/shippers.html">Shipper Solutions</a></li>
-            <li><a href="/shippers.html">Full Truckload (FTL)</a></li>
-            <li><a href="/shippers.html">Less Than Truckload (LTL)</a></li>
-            <li><a href="/shippers.html">Specialized Freight</a></li>
+            <li><a href="/shippers.html">For Shippers</a></li>
+            <li><a href="/carriers.html">For Carriers</a></li>
+            <li><a href="/tracking.html">Track Shipment</a></li>
           </ul>
         </div>
 
-        <!-- Carriers Column -->
+        <!-- Connect Column -->
         <div class="footer-col">
-          <h4>Carriers</h4>
+          <h4>Connect</h4>
           <ul>
-            <li><a href="/carriers.html">Haul With Us</a></li>
-            <li><a href="/carriers.html">Quick Pay Program</a></li>
-            <li><a href="/carriers.html">Carrier Portal</a></li>
-            <li><a href="/carrier/login.html">Carrier Login</a></li>
+            <li><a href="tel:+12692206760">(269) 220-6760</a></li>
+            <li><a href="mailto:info@silkroutelogistics.ai">info@silkroutelogistics.ai</a></li>
+            <li>Kalamazoo, MI</li>
+            <li><a href="/carrier/login.html">Carrier Portal</a></li>
             <li><a href="/shipper/login">Shipper Portal</a></li>
           </ul>
         </div>
@@ -498,6 +513,23 @@
   <script>
     (function() {
       'use strict';
+
+      /* ========================================
+         LOGIN DROPDOWN TOGGLE
+         ======================================== */
+      var loginDropdown = document.getElementById('loginDropdown');
+      if (loginDropdown) {
+        var loginBtn = loginDropdown.querySelector('.login-dropdown-btn');
+        loginBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          loginDropdown.classList.toggle('open');
+          loginBtn.setAttribute('aria-expanded', loginDropdown.classList.contains('open').toString());
+        });
+        document.addEventListener('click', function () {
+          loginDropdown.classList.remove('open');
+          loginBtn.setAttribute('aria-expanded', 'false');
+        });
+      }
 
       /* ========================================
          NAVBAR SCROLL EFFECT

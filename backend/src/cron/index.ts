@@ -50,18 +50,19 @@ export function initCronJobs() {
           select: { id: true },
         });
 
-        for (const load of loadsNeedingCheckCall) {
-          for (const admin of adminUsers) {
-            await prisma.notification.create({
-              data: {
-                userId: admin.id,
-                type: "CHECK_CALL_DUE",
-                title: "Check Call Overdue",
-                message: `Load ${load.referenceNumber} has no check call in the last 2 hours.`,
-                link: `/dashboard/tracking?load=${load.id}`,
-              },
-            }).catch(err => console.error('[Cron] Error:', err.message));
-          }
+        const notificationData = loadsNeedingCheckCall.flatMap(load =>
+          adminUsers.map(admin => ({
+            userId: admin.id,
+            type: "CHECK_CALL_DUE" as const,
+            title: "Check Call Overdue",
+            message: `Load ${load.referenceNumber} has no check call in the last 2 hours.`,
+            link: `/dashboard/tracking?load=${load.id}`,
+          }))
+        );
+
+        if (notificationData.length > 0) {
+          await prisma.notification.createMany({ data: notificationData })
+            .catch(err => console.error('[Cron] Error:', err.message));
         }
       }
     } catch (err) {
@@ -205,21 +206,31 @@ export function initCronJobs() {
         take: 5000,
       });
 
+      const ids60: string[] = [];
+      const ids45: string[] = [];
+      const ids31: string[] = [];
+
       for (const inv of unpaidInvoices) {
         if (!inv.dueDate) continue;
         const daysSinceDue = Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / 86_400_000);
 
         if (daysSinceDue >= 60 && !inv.reminderSent60) {
-          await prisma.invoice.update({ where: { id: inv.id }, data: { reminderSent60: true } });
+          ids60.push(inv.id);
           console.log(`[Cron Monthly] 60-day reminder for invoice ${inv.invoiceNumber}`);
         } else if (daysSinceDue >= 45 && !inv.reminderSent45) {
-          await prisma.invoice.update({ where: { id: inv.id }, data: { reminderSent45: true } });
+          ids45.push(inv.id);
           console.log(`[Cron Monthly] 45-day reminder for invoice ${inv.invoiceNumber}`);
         } else if (daysSinceDue >= 31 && !inv.reminderSent31) {
-          await prisma.invoice.update({ where: { id: inv.id }, data: { reminderSent31: true } });
+          ids31.push(inv.id);
           console.log(`[Cron Monthly] 31-day reminder for invoice ${inv.invoiceNumber}`);
         }
       }
+
+      await prisma.$transaction([
+        ...(ids60.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids60 } }, data: { reminderSent60: true } })] : []),
+        ...(ids45.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids45 } }, data: { reminderSent45: true } })] : []),
+        ...(ids31.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids31 } }, data: { reminderSent31: true } })] : []),
+      ]);
     } catch (err) {
       console.error("[Cron Monthly] Invoice reminder error:", err);
     }
