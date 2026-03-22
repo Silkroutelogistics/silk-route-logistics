@@ -116,7 +116,7 @@
           <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
         </div>
 
-        <!-- Step 3: TOTP 2FA Verification -->
+        <!-- Step 3: TOTP 2FA Verification (existing users with 2FA enabled) -->
         <div id="totp-section" class="totp-section">
           <div class="totp-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8a951" stroke-width="1.5" stroke-linecap="round">
@@ -130,6 +130,33 @@
             <input type="text" id="totpCode" class="field-input" placeholder="000000" maxlength="8" autocomplete="one-time-code" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:20px">
           </div>
           <button id="totpBtn" class="btn-submit" onclick="handleTotp()">Verify 2FA</button>
+          <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
+        </div>
+
+        <!-- Step 3b: TOTP 2FA Setup (ADMIN/CEO first-time setup) -->
+        <div id="totp-setup-section" class="totp-section">
+          <div class="totp-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8a951" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
+            </svg>
+          </div>
+          <div class="totp-hint" style="margin-bottom:16px">
+            <strong style="color:#e8edf2">Two-factor authentication required.</strong><br>
+            Scan the QR code below with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator).
+          </div>
+          <div id="setup-qr-container" style="text-align:center;margin-bottom:16px">
+            <div id="setup-qr-loading" style="color:#6a8090;font-size:13px;padding:20px">Loading QR code...</div>
+            <img id="setup-qr-img" style="display:none;margin:0 auto;border-radius:8px;background:#fff;padding:8px" width="180" height="180" alt="2FA QR Code">
+          </div>
+          <div id="setup-secret-box" style="display:none;background:#162236;border:1px solid #243447;border-radius:8px;padding:10px;text-align:center;margin-bottom:16px">
+            <div style="font-size:11px;color:#6a8090;margin-bottom:4px">Manual entry key</div>
+            <div id="setup-secret-text" style="font-family:monospace;font-size:13px;color:#c8a951;letter-spacing:2px;user-select:all"></div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Authenticator Code</label>
+            <input type="text" id="setupTotpCode" class="field-input" placeholder="000000" maxlength="6" autocomplete="one-time-code" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:20px">
+          </div>
+          <button id="setupTotpBtn" class="btn-submit" onclick="handleTotpSetup()">Enable Two-Factor Authentication</button>
           <div class="back-link"><a onclick="goBack()">Back to sign in</a></div>
         </div>
 
@@ -151,6 +178,7 @@
       ? 'http://localhost:4000' : 'https://api.silkroutelogistics.ai';
     var pendingEmail = '';
     var pendingTotpToken = '';
+    var pending2FASetupToken = '';
 
     // Session expired banner
     if (new URLSearchParams(window.location.search).get('expired') === '1') {
@@ -250,6 +278,37 @@
       .then(function(data) {
         btn.disabled = false; btn.textContent = 'Verify';
         if (data.error) { showAlert(data.error, 'error'); return; }
+        if (data.require2FASetup) {
+          pending2FASetupToken = data.setupToken;
+          document.getElementById('otp-section').classList.remove('show');
+          document.getElementById('totp-setup-section').classList.add('show');
+          showAlert('', 'error');
+          // Fetch QR code
+          fetch(BASE + '/api/auth/totp/force-setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ setupToken: data.setupToken })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(setupData) {
+            document.getElementById('setup-qr-loading').style.display = 'none';
+            if (setupData.qrCodeDataURL) {
+              var img = document.getElementById('setup-qr-img');
+              img.src = setupData.qrCodeDataURL;
+              img.style.display = 'block';
+            }
+            if (setupData.secret) {
+              document.getElementById('setup-secret-text').textContent = setupData.secret;
+              document.getElementById('setup-secret-box').style.display = 'block';
+            }
+          })
+          .catch(function() {
+            document.getElementById('setup-qr-loading').textContent = 'Could not load QR code. Use the manual key below.';
+          });
+          setTimeout(function() { document.getElementById('setupTotpCode').focus(); }, 100);
+          return;
+        }
         if (data.pendingTotp) {
           pendingTotpToken = data.totpToken;
           document.getElementById('otp-section').classList.remove('show');
@@ -296,6 +355,34 @@
       });
     }
 
+    function handleTotpSetup() {
+      var code = document.getElementById('setupTotpCode').value.trim();
+      if (!code || code.length < 6) { showAlert('Please enter the 6-digit code from your authenticator app.', 'error'); return; }
+
+      var btn = document.getElementById('setupTotpBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      showAlert('', 'error');
+
+      fetch(BASE + '/api/auth/totp/force-enable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ setupToken: pending2FASetupToken, code: code })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false; btn.textContent = 'Enable Two-Factor Authentication';
+        if (data.error) { showAlert(data.error, 'error'); return; }
+        if (data.token) {
+          completeLogin(data);
+        }
+      })
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Enable Two-Factor Authentication';
+        showAlert('Unable to connect to server. Please try again.', 'error');
+      });
+    }
+
     function completeLogin(data) {
       var remember = document.getElementById('rememberMe').checked;
       SRLAuth.setToken('token', data.token, remember);
@@ -314,9 +401,12 @@
       document.getElementById('email-section').classList.remove('hide');
       document.getElementById('otp-section').classList.remove('show');
       document.getElementById('totp-section').classList.remove('show');
+      document.getElementById('totp-setup-section').classList.remove('show');
       document.getElementById('otp').value = '';
       document.getElementById('totpCode').value = '';
+      document.getElementById('setupTotpCode').value = '';
       pendingTotpToken = '';
+      pending2FASetupToken = '';
       showAlert('', 'error');
     }
   </script>
