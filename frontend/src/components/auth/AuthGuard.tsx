@@ -8,30 +8,37 @@ import { isShipper } from "@/lib/roles";
 import { Logo } from "@/components/ui/Logo";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { token, user, loadUser } = useAuthStore();
+  const { user, isAuthenticated, loadUser } = useAuthStore();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/auth/login");
-      return;
-    }
+    // Auth is cookie-based (httpOnly) — verify session by calling /auth/profile
     if (!user) {
-      loadUser().finally(() => setChecking(false));
+      loadUser().then(() => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) {
+          router.replace("/auth/login");
+          return;
+        }
+        if (isShipper(currentUser.role)) {
+          router.replace("/shipper/dashboard");
+          return;
+        }
+        setChecking(false);
+      });
     } else {
-      // Shipper users on the internal dashboard get redirected to shipper portal
       if (isShipper(user.role)) {
         router.replace("/shipper/dashboard");
         return;
       }
       setChecking(false);
     }
-  }, [token, user, loadUser, router]);
+  }, [user, loadUser, router]);
 
   useRoleGuard();
 
-  if (!token || checking) {
+  if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-navy">
         <div className="text-center">
