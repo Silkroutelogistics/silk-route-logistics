@@ -68,7 +68,7 @@
   if (footer) {
     var versionEl = document.createElement("div");
     versionEl.className = "sidebar-version";
-    versionEl.textContent = "v1.O";
+    versionEl.textContent = "v2.0";
     footer.appendChild(versionEl);
   }
 
