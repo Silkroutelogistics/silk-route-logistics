@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
 import { TierBadge } from "@/components/ui/TierBadge";
 import { Save, Lock, Bell, User, Shield } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -35,7 +36,26 @@ export default function SettingsPage() {
     onError: (err: any) => { setPwError(err.response?.data?.error || "Failed to change password"); },
   });
 
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState({ loads: true, payments: true, scorecard: true, announcements: true });
+  const notifDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Persist notification preferences to backend with debounce
+  const savePrefs = useMutation({
+    mutationFn: (prefs: typeof notifications) => api.patch("/auth/preferences", { notifications: prefs }),
+    onSuccess: () => toast("Notification preferences saved", "success"),
+    onError: () => toast("Failed to save preferences", "error"),
+  });
+
+  const handleNotifToggle = (key: string) => {
+    setNotifications((n) => {
+      const updated = { ...n, [key]: !n[key as keyof typeof n] };
+      // Debounce save: wait 800ms after last toggle
+      if (notifDebounce.current) clearTimeout(notifDebounce.current);
+      notifDebounce.current = setTimeout(() => savePrefs.mutate(updated), 800);
+      return updated;
+    });
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
@@ -139,7 +159,7 @@ export default function SettingsPage() {
             <label key={pref.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg cursor-pointer">
               <span className="text-sm text-slate-300">{pref.label}</span>
               <div className={`w-8 h-4 rounded-full transition relative cursor-pointer ${notifications[pref.key as keyof typeof notifications] ? "bg-gold" : "bg-white/10"}`}
-                onClick={() => setNotifications((n) => ({ ...n, [pref.key]: !n[pref.key as keyof typeof n] }))}>
+                onClick={() => handleNotifToggle(pref.key)}>
                 <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all ${notifications[pref.key as keyof typeof notifications] ? "left-4" : "left-0.5"}`} />
               </div>
             </label>

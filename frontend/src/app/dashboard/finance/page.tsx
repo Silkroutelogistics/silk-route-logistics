@@ -9,6 +9,7 @@ import {
   ArrowDownRight, ArrowUpRight, Download, FileText, Truck,
   PieChart as PieChartIcon, BarChart3,
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
@@ -196,7 +197,9 @@ function OverviewTab({ period }: { period: string }) {
 // ---- Receivables Tab ----
 function ReceivablesTab() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
+  const [confirmPayId, setConfirmPayId] = useState<{ id: string; invoiceNumber: string; amount: number } | null>(null);
 
   const { data: receivables } = useQuery({
     queryKey: ["finance-ar"],
@@ -214,7 +217,10 @@ function ReceivablesTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-ar"] });
       queryClient.invalidateQueries({ queryKey: ["aging-detail"] });
+      toast("Invoice marked as paid", "success");
+      setConfirmPayId(null);
     },
+    onError: () => toast("Failed to mark invoice as paid", "error"),
   });
 
   const bucketColors: Record<string, string> = {
@@ -280,7 +286,7 @@ function ReceivablesTab() {
                   <td className="px-4 py-3 text-right text-white">${inv.amount.toLocaleString()}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs">{inv.status}</span></td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => markPaid.mutate(inv.id)} className="text-xs text-gold hover:underline flex items-center gap-1 ml-auto">
+                    <button onClick={() => setConfirmPayId({ id: inv.id, invoiceNumber: inv.invoiceNumber, amount: inv.amount })} className="text-xs text-gold hover:underline flex items-center gap-1 ml-auto">
                       <CheckCircle2 className="w-3 h-3" /> Mark Paid
                     </button>
                   </td>
@@ -315,7 +321,7 @@ function ReceivablesTab() {
                   <td className="px-4 py-3 text-right text-white">${inv.amount.toLocaleString()}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs">{inv.status}</span></td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => markPaid.mutate(inv.id)} className="text-xs text-gold hover:underline flex items-center gap-1 ml-auto">
+                    <button onClick={() => setConfirmPayId({ id: inv.id, invoiceNumber: inv.invoiceNumber, amount: inv.amount })} className="text-xs text-gold hover:underline flex items-center gap-1 ml-auto">
                       <CheckCircle2 className="w-3 h-3" /> Mark Paid
                     </button>
                   </td>
@@ -326,6 +332,31 @@ function ReceivablesTab() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Confirm Mark Paid Modal */}
+      {confirmPayId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0f172a] rounded-xl border border-white/10 w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Confirm Payment</h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Mark invoice <strong className="text-white">{confirmPayId.invoiceNumber}</strong> as paid for{" "}
+              <strong className="text-green-400">${confirmPayId.amount.toLocaleString()}</strong>?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmPayId(null)}
+                className="flex-1 px-4 py-2.5 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition">
+                Cancel
+              </button>
+              <button
+                onClick={() => markPaid.mutate(confirmPayId.id)}
+                disabled={markPaid.isPending}
+                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50">
+                {markPaid.isPending ? "Processing..." : "Confirm Paid"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

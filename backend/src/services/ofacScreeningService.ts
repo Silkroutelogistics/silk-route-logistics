@@ -155,7 +155,12 @@ export async function weeklyOfacRescan() {
       if (result.ofacStatus === "POTENTIAL_MATCH") {
         matchCount++;
 
-        // Create compliance alert for each match
+        // Determine highest match score
+        const topScore = result.matches.length > 0
+          ? Math.max(...result.matches.map((m) => m.score))
+          : 0;
+
+        // Create compliance alert
         await prisma.complianceAlert.create({
           data: {
             type: "OFAC_MATCH",
@@ -169,6 +174,37 @@ export async function weeklyOfacRescan() {
             ),
           },
         });
+
+        // AUTO-SUSPEND: score ≥90 warrants immediate suspension pending review
+        if (topScore >= 90) {
+          await prisma.carrierProfile.update({
+            where: { id: carrier.id },
+            data: {
+              onboardingStatus: "SUSPENDED",
+              suspensionReason: `Auto-suspended: OFAC/SDN match detected (score: ${topScore}). Immediate review required.`,
+              suspendedAt: new Date(),
+            },
+          });
+
+          // Notify the carrier's user account
+          const profile = await prisma.carrierProfile.findUnique({
+            where: { id: carrier.id },
+            select: { userId: true },
+          });
+          if (profile?.userId) {
+            await prisma.notification.create({
+              data: {
+                userId: profile.userId,
+                type: "COMPLIANCE",
+                title: "Account Suspended — Compliance Review",
+                message: "Your carrier account has been suspended pending compliance review. Please contact support for more information.",
+                actionUrl: "/carrier/dashboard",
+              },
+            });
+          }
+
+          console.log(`[OFAC Rescan] AUTO-SUSPENDED carrier ${carrier.id} — OFAC match score ${topScore}`);
+        }
       }
 
       if (result.ofacStatus === "ERROR") {

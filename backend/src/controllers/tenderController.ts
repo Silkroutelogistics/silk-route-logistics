@@ -10,6 +10,12 @@ export async function createTender(req: AuthRequest, res: Response) {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
+  // Only allow tendering on POSTED or TENDERED loads
+  if (!["POSTED", "TENDERED"].includes(load.status)) {
+    res.status(400).json({ error: `Cannot tender a load with status ${load.status}` });
+    return;
+  }
+
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: carrierId } });
   if (!carrier) { res.status(404).json({ error: "Carrier not found" }); return; }
 
@@ -23,6 +29,14 @@ export async function createTender(req: AuthRequest, res: Response) {
   const tender = await prisma.loadTender.create({
     data: { loadId: load.id, carrierId, offeredRate, expiresAt },
   });
+
+  // Auto-advance load to TENDERED on first tender (if currently POSTED)
+  if (load.status === "POSTED") {
+    await prisma.load.update({
+      where: { id: load.id },
+      data: { status: "TENDERED", tenderedAt: new Date(), tenderedById: req.user!.id },
+    });
+  }
 
   await prisma.notification.create({
     data: {
@@ -41,6 +55,13 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
+
+  // Block action on expired tenders
+  if (tender.expiresAt && new Date() > tender.expiresAt) {
+    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    res.status(400).json({ error: "This tender has expired" });
+    return;
+  }
 
   // Compliance gate: re-check at acceptance time (carrier may have become non-compliant)
   const compliance = await complianceCheck(tender.carrierId);
@@ -113,14 +134,35 @@ export async function acceptTender(req: AuthRequest, res: Response) {
 
 export async function counterTender(req: AuthRequest, res: Response) {
   const { counterRate } = counterTenderSchema.parse(req.body);
-  const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
+  const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true, load: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
+
+  // Block action on expired tenders
+  if (tender.expiresAt && new Date() > tender.expiresAt) {
+    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    res.status(400).json({ error: "This tender has expired" });
+    return;
+  }
 
   const updated = await prisma.loadTender.update({
     where: { id: tender.id },
     data: { status: "COUNTERED", counterRate, respondedAt: new Date() },
   });
+
+  // Notify the broker/poster about the counter-offer
+  if (tender.load.posterId) {
+    const carrierName = tender.carrier.companyName || `Carrier #${tender.carrierId.slice(-6)}`;
+    await prisma.notification.create({
+      data: {
+        userId: tender.load.posterId,
+        type: "TENDER",
+        title: "Counter-Offer Received",
+        message: `${carrierName} countered load ${tender.load.referenceNumber} at $${counterRate} (offered: $${tender.offeredRate}).`,
+        actionUrl: "/dashboard/loads",
+      },
+    });
+  }
 
   res.json(updated);
 }
@@ -129,6 +171,11 @@ export async function declineTender(req: AuthRequest, res: Response) {
   const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true, load: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
+
+  // Already expired — just mark it
+  if (tender.expiresAt && new Date() > tender.expiresAt) {
+    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+  }
 
   const updated = await prisma.loadTender.update({
     where: { id: tender.id },
@@ -170,4 +217,81 @@ export async function getCarrierTenders(req: AuthRequest, res: Response) {
   });
 
   res.json(tenders);
+}
+
+/** Broker/admin: view all tenders for a specific load */
+export async function getLoadTenders(req: AuthRequest, res: Response) {
+  const load = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  const tenders = await prisma.loadTender.findMany({
+    where: { loadId: load.id, deletedAt: null },
+    include: {
+      carrier: {
+        include: {
+          user: { select: { id: true, company: true, firstName: true, lastName: true, email: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(tenders);
+}
+
+/** Cron job: expire stale tenders and revert load to POSTED if all expired */
+export async function processExpiredTenders() {
+  const now = new Date();
+
+  // Find all OFFERED tenders past their expiration
+  const expired = await prisma.loadTender.findMany({
+    where: {
+      status: { in: ["OFFERED", "COUNTERED"] },
+      expiresAt: { lt: now },
+      deletedAt: null,
+    },
+    select: { id: true, loadId: true, carrierId: true },
+  });
+
+  if (expired.length === 0) return { expired: 0, loadsReverted: 0 };
+
+  // Batch-expire them
+  await prisma.loadTender.updateMany({
+    where: { id: { in: expired.map((t) => t.id) } },
+    data: { status: "EXPIRED", respondedAt: now },
+  });
+
+  // For each affected load, check if any active tenders remain
+  const affectedLoadIds = [...new Set(expired.map((t) => t.loadId))];
+  let loadsReverted = 0;
+
+  for (const loadId of affectedLoadIds) {
+    const remaining = await prisma.loadTender.count({
+      where: { loadId, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
+    });
+    if (remaining === 0) {
+      // Revert load to POSTED so it's back on the board
+      const load = await prisma.load.findUnique({ where: { id: loadId } });
+      if (load && load.status === "TENDERED") {
+        await prisma.load.update({ where: { id: loadId }, data: { status: "POSTED" } });
+        loadsReverted++;
+
+        // Notify poster
+        if (load.posterId) {
+          await prisma.notification.create({
+            data: {
+              userId: load.posterId,
+              type: "LOAD_UPDATE",
+              title: "All Tenders Expired",
+              message: `All tenders for load ${load.referenceNumber} have expired. Load returned to POSTED.`,
+              actionUrl: "/dashboard/loads",
+            },
+          });
+        }
+      }
+    }
+  }
+
+  console.log(`[TenderExpiry] ${expired.length} tenders expired, ${loadsReverted} loads reverted to POSTED`);
+  return { expired: expired.length, loadsReverted };
 }

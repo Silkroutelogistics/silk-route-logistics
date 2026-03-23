@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { X, ChevronRight, ChevronLeft, Check, MapPin, AlertTriangle } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 const EQUIPMENT_TYPES = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"];
 const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "100", "110", "125", "150", "175", "200", "250", "300", "400", "500"];
@@ -33,6 +34,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [attempted, setAttempted] = useState<Record<number, boolean>>({});
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [form, setForm] = useState({
     originAddress: "", originCity: "", originState: "", originZip: "",
     destAddress: "", destCity: "", destState: "", destZip: "",
@@ -151,7 +153,17 @@ export function CreateLoadModal({ open, onClose }: Props) {
       if (form.contactEmail) payload.contactEmail = form.contactEmail;
       return api.post("/loads", payload);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["loads"] }); onClose(); setStep(1); },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      toast(
+        variables === "POSTED"
+          ? "Load posted to load board — carriers have been notified"
+          : "Load saved as draft",
+        "success"
+      );
+      onClose();
+      setStep(1);
+    },
     onError: (err: unknown) => {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Failed to create load";
       setErrors({ submit: message });

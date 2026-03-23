@@ -140,16 +140,19 @@ export function EmployeeOverview() {
           </div>
 
           <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-            <h3 className="font-semibold text-sm text-white mb-3">Recent Activity</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm text-white">Recent Activity</h3>
+              <Link href="/dashboard/audit" className="text-xs text-gold hover:text-gold/80">View all</Link>
+            </div>
             <div className="space-y-3">
-              {notifications?.slice(0, 4).map((n: { id: string; title: string; message: string; readAt: string | null }) => (
-                <div key={n.id} className="flex items-start gap-3">
+              {notifications?.slice(0, 4).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string }) => (
+                <Link key={n.id} href={n.actionUrl || "/dashboard/overview"} className="flex items-start gap-3 no-underline hover:bg-white/5 rounded-lg p-1 -m-1 transition">
                   <Bell className={`w-4 h-4 mt-0.5 shrink-0 ${n.readAt ? "text-slate-600" : "text-gold"}`} />
                   <div>
                     <p className="text-sm font-medium text-white">{n.title}</p>
                     <p className="text-xs text-slate-500 line-clamp-1">{n.message}</p>
                   </div>
-                </div>
+                </Link>
               ))}
               {!notifications?.length && (
                 <p className="text-sm text-slate-500">No recent activity</p>

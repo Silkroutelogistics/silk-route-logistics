@@ -1,7 +1,8 @@
 /**
- * Compass by SRL — Vetting Engine — 26-Check Composite Risk Scoring
+ * Compass by SRL — Vetting Engine — 29-Check Composite Risk Scoring
  * Covers FMCSA, identity, fraud, OFAC/SDN, biometrics, ELD, TIN match,
- * UCR, overbooking, fraud reports, agreements, and historical performance.
+ * UCR, overbooking, fraud reports, agreements, historical performance,
+ * fleet VIN verification (NHTSA), probationary period, and document expiry.
  */
 
 import { prisma } from "../config/database";
@@ -10,6 +11,7 @@ import { screenCarrier } from "./ofacScreeningService";
 import { validateEldProvider } from "./eldValidationService";
 import { checkOverbooking } from "./overbookingService";
 import { updateCarrierCsaScores } from "./csaBasicService";
+import { verifyAllCarrierVins } from "./vinVerificationService";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -647,6 +649,107 @@ export async function vetCarrier(
   } else {
     checks.push({ name: "Carrier-Broker Agreement", result: "WARNING", detail: "No carrier record", deduction: 5 });
     score -= 5;
+  }
+
+  // ── 27. Fleet VIN Verification (NHTSA API) ──
+  if (existingCarrier) {
+    try {
+      const vinStats = await verifyAllCarrierVins(existingCarrier.userId);
+      const totalChecked = vinStats.verified + vinStats.mismatch + vinStats.notFound;
+      if (totalChecked === 0) {
+        checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: "No trucks with VINs on file", deduction: 5 });
+        score -= 5;
+      } else if (vinStats.mismatch > 0) {
+        const deduction = Math.min(vinStats.mismatch * 8, 20);
+        checks.push({ name: "Fleet VIN Verification", result: "FAIL", detail: `${vinStats.mismatch} VIN mismatch(es) of ${totalChecked} checked`, deduction });
+        score -= deduction;
+        flags.push(`${vinStats.mismatch} truck VIN(s) don't match NHTSA records`);
+      } else if (vinStats.notFound > 0) {
+        checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: `${vinStats.notFound} VIN(s) not found in NHTSA`, deduction: 3 });
+        score -= 3;
+      } else {
+        checks.push({ name: "Fleet VIN Verification", result: "PASS", detail: `${vinStats.verified} truck(s) verified via NHTSA`, deduction: 0 });
+      }
+    } catch (e) {
+      checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: "VIN verification unavailable", deduction: 3 });
+      score -= 3;
+    }
+  } else {
+    checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: "No carrier record", deduction: 3 });
+    score -= 3;
+  }
+
+  // ── 28. Probationary Period (New Carrier Risk Gate) ──
+  if (existingCarrier) {
+    const completedLoads = existingCarrier.cppTotalLoads || 0;
+    const daysSinceApproval = existingCarrier.cppJoinedDate
+      ? Math.floor((Date.now() - new Date(existingCarrier.cppJoinedDate).getTime()) / 86_400_000)
+      : 0;
+
+    if (completedLoads < 3 && daysSinceApproval < 90) {
+      checks.push({
+        name: "Probationary Period",
+        result: "WARNING",
+        detail: `${completedLoads}/3 loads completed, ${daysSinceApproval} days since approval — probationary`,
+        deduction: 5,
+      });
+      score -= 5;
+      flags.push(`Probationary carrier: ${completedLoads}/3 loads, ${daysSinceApproval}/90 days`);
+    } else {
+      checks.push({
+        name: "Probationary Period",
+        result: "PASS",
+        detail: `${completedLoads} loads completed, ${daysSinceApproval} days active`,
+        deduction: 0,
+      });
+    }
+  } else {
+    checks.push({ name: "Probationary Period", result: "WARNING", detail: "New carrier", deduction: 5 });
+    score -= 5;
+  }
+
+  // ── 29. Document Expiry Enforcement ──
+  if (existingCarrier) {
+    const docIssues: string[] = [];
+    let docDeduction = 0;
+    const now2 = new Date();
+    const thirtyDays = new Date(now2.getTime() + 30 * 86_400_000);
+
+    // W-9 expiry (annual)
+    if (existingCarrier.w9ExpiryDate) {
+      if (new Date(existingCarrier.w9ExpiryDate) < now2) {
+        docDeduction += 5; docIssues.push("W-9 expired");
+      } else if (new Date(existingCarrier.w9ExpiryDate) < thirtyDays) {
+        docDeduction += 3; docIssues.push("W-9 expiring within 30 days");
+      }
+    }
+    // COI expiry
+    if (existingCarrier.coiExpiryDate) {
+      if (new Date(existingCarrier.coiExpiryDate) < now2) {
+        docDeduction += 8; docIssues.push("Certificate of Insurance expired");
+      } else if (new Date(existingCarrier.coiExpiryDate) < thirtyDays) {
+        docDeduction += 3; docIssues.push("COI expiring within 30 days");
+      }
+    }
+    // Authority letter expiry
+    if (existingCarrier.authorityDocExpiryDate) {
+      if (new Date(existingCarrier.authorityDocExpiryDate) < now2) {
+        docDeduction += 5; docIssues.push("Authority document expired");
+      } else if (new Date(existingCarrier.authorityDocExpiryDate) < thirtyDays) {
+        docDeduction += 3; docIssues.push("Authority doc expiring within 30 days");
+      }
+    }
+
+    if (docDeduction > 0) {
+      checks.push({ name: "Document Expiry Enforcement", result: docDeduction >= 8 ? "FAIL" : "WARNING", detail: docIssues.join("; "), deduction: docDeduction });
+      score -= docDeduction;
+      flags.push(...docIssues);
+    } else {
+      checks.push({ name: "Document Expiry Enforcement", result: "PASS", detail: "All documents current", deduction: 0 });
+    }
+  } else {
+    checks.push({ name: "Document Expiry Enforcement", result: "WARNING", detail: "No carrier record", deduction: 3 });
+    score -= 3;
   }
 
   // ── Clamp Score & Calculate Results ──

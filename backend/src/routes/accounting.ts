@@ -20,6 +20,8 @@ import {
   holdPayment,
   markPaymentPaid,
   bulkApprovePayments,
+  schedulePaymentProcessing,
+  bulkProcessPayments,
   getPaymentQueue,
   getDisputes,
   getDisputeById,
@@ -86,7 +88,9 @@ router.post("/payments/:id/submit", authorize("ADMIN", "CEO", "ACCOUNTING", "BRO
 router.post("/payments/:id/approve", authorize("ADMIN", "CEO"), approvePayment);
 router.post("/payments/:id/reject", authorize("ADMIN", "CEO"), rejectPayment);
 router.post("/payments/:id/hold", authorize("ADMIN", "CEO"), holdPayment);
+router.post("/payments/:id/process", authorize("ADMIN", "CEO", "ACCOUNTING"), schedulePaymentProcessing);
 router.post("/payments/:id/mark-paid", authorize("ADMIN", "CEO", "ACCOUNTING"), markPaymentPaid);
+router.post("/payments/bulk-process", authorize("ADMIN", "CEO"), bulkProcessPayments);
 
 // --- Disputes ---
 router.get("/disputes", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDisputes);

@@ -6,6 +6,7 @@ import {
   Shield, AlertTriangle, CheckCircle2, Clock, RefreshCw,
   Truck, User, UserCheck, Calendar, XCircle,
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface Alert {
   id: string; type: string; entityType: string; entityId: string;
@@ -40,6 +41,7 @@ function daysUntil(date: string) {
 
 export default function CompliancePage() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: stats } = useQuery({
     queryKey: ["compliance-stats"],
@@ -52,11 +54,19 @@ export default function CompliancePage() {
   });
 
   const scanMutation = useMutation({
-    mutationFn: () => api.post("/compliance/scan"),
-    onSuccess: () => {
+    mutationFn: () => api.post<{ alertsCreated: number; scanned: number }>("/compliance/scan"),
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["compliance-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["compliance-stats"] });
+      const d = res.data;
+      toast(
+        d?.alertsCreated > 0
+          ? `Scan complete: ${d.alertsCreated} new alert${d.alertsCreated > 1 ? "s" : ""} found across ${d.scanned} entities`
+          : `Scan complete: all ${d?.scanned || 0} entities passed`,
+        d?.alertsCreated > 0 ? "info" : "success"
+      );
     },
+    onError: () => toast("Compliance scan failed — please try again", "error"),
   });
 
   const resolveMutation = useMutation({
@@ -64,7 +74,9 @@ export default function CompliancePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["compliance-stats"] });
+      toast("Alert marked as resolved", "success");
     },
+    onError: () => toast("Failed to resolve alert", "error"),
   });
 
   const dismissMutation = useMutation({
@@ -72,7 +84,9 @@ export default function CompliancePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["compliance-stats"] });
+      toast("Alert dismissed", "info");
     },
+    onError: () => toast("Failed to dismiss alert", "error"),
   });
 
   const alerts = alertsData?.alerts || [];

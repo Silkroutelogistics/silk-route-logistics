@@ -6,6 +6,7 @@ import { z } from "zod";
 import { validateBody } from "../middleware/validate";
 import { upload } from "../config/upload";
 import { uploadFile } from "../services/storageService";
+import { nextShipmentNumber } from "../controllers/shipmentController";
 
 const router = Router();
 
@@ -169,15 +170,47 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     },
   });
 
+  // Auto-create linked Shipment (same as tender acceptance path)
+  const shipmentNumber = await nextShipmentNumber();
+  await prisma.shipment.create({
+    data: {
+      shipmentNumber,
+      loadId: load.id,
+      status: "BOOKED",
+      originCity: load.originCity,
+      originState: load.originState,
+      originZip: load.originZip,
+      destCity: load.destCity,
+      destState: load.destState,
+      destZip: load.destZip,
+      equipmentType: load.equipmentType,
+      commodity: load.commodity,
+      weight: load.weight,
+      pieces: load.pieces,
+      rate: load.carrierRate || load.rate,
+      distance: load.distance,
+      specialInstructions: load.specialInstructions,
+      customerId: load.customerId,
+      pickupDate: load.pickupDate,
+      deliveryDate: load.deliveryDate,
+    },
+  });
+
+  // Auto-decline any other active tenders for this load
+  await prisma.loadTender.updateMany({
+    where: { loadId: load.id, status: { in: ["OFFERED", "COUNTERED"] } },
+    data: { status: "DECLINED", respondedAt: new Date() },
+  });
+
   // Create notification for the poster/broker
   if (load.posterId) {
     await prisma.notification.create({
       data: {
         userId: load.posterId,
-        type: "LOAD",
+        type: "LOAD_UPDATE",
         title: "Load Accepted",
-        message: `Load ${load.referenceNumber} has been accepted by carrier.`,
-        actionUrl: "/ae/loads.html?id=" + load.id,
+        message: `Load ${load.referenceNumber} has been accepted by carrier. Shipment ${shipmentNumber} created for tracking.`,
+        actionUrl: "/dashboard/tracking",
       },
     });
   }

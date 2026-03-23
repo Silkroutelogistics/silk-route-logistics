@@ -338,6 +338,41 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
     }
   }
 
+  // Release factoring reserves for the related carrier payment (if carrier was already paid)
+  if (invoice.load) {
+    const carrierPay = await prisma.carrierPay.findFirst({
+      where: { loadId: invoice.load.id, status: "PAID" },
+    });
+    if (carrierPay && carrierPay.quickPayFeeAmount === 0 && carrierPay.grossAmount > 0) {
+      // Check if reserve exists and hasn't been released yet
+      const existingRelease = await prisma.factoringFund.findFirst({
+        where: { referenceId: carrierPay.id, transactionType: "RESERVE_RELEASE" },
+      });
+      if (!existingRelease) {
+        const FACTORING_RESERVE_PCT = 2;
+        const reserveRelease = Math.round(carrierPay.grossAmount * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
+
+        const latestBalance = await prisma.factoringFund.findFirst({
+          orderBy: { createdAt: "desc" },
+          select: { runningBalance: true },
+        });
+        const balance = (latestBalance?.runningBalance ?? 0) + reserveRelease;
+
+        await prisma.factoringFund.create({
+          data: {
+            transactionType: "RESERVE_RELEASE",
+            amount: reserveRelease,
+            runningBalance: balance,
+            referenceType: "CarrierPay",
+            referenceId: carrierPay.id,
+            description: `Factoring reserve released — shipper paid invoice ${invoice.invoiceNumber}`,
+          },
+        });
+        console.log(`[Integration] Factoring reserve $${reserveRelease} released for carrier pay ${carrierPay.paymentNumber}`);
+      }
+    }
+  }
+
   console.log(`[Integration] Invoice ${invoice.invoiceNumber} paid → fund credited $${paidAmount}, shipper credit released`);
 }
 
@@ -595,6 +630,113 @@ export async function enforceShipperCredit(customerId: string): Promise<{ allowe
   }
 
   return { allowed: true };
+}
+
+// ──────────────────────────────────────────────────
+// LOOP 6 — Load Cancellation / TONU cleanup
+// ──────────────────────────────────────────────────
+
+export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    include: {
+      customer: { select: { id: true } },
+      carrier: { select: { id: true, carrierProfile: { select: { id: true } } } },
+    },
+  });
+  if (!load) return;
+
+  // 1. Cancel all active tenders for this load
+  await prisma.loadTender.updateMany({
+    where: { loadId, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
+    data: { status: "DECLINED", respondedAt: new Date(), deletedAt: new Date() },
+  });
+
+  // 2. Reverse shipper credit utilization if it was incremented on delivery
+  if (load.customerId && ["DELIVERED", "POD_RECEIVED", "INVOICED"].includes(load.status)) {
+    const invoiceAmount = (load as any).customerRate || (load as any).rate || 0;
+    if (invoiceAmount > 0) {
+      const credit = await prisma.shipperCredit.findUnique({
+        where: { customerId: load.customerId },
+      });
+      if (credit) {
+        const newUtilized = Math.max(0, credit.currentUtilized - invoiceAmount);
+        const updateData: Record<string, any> = { currentUtilized: newUtilized };
+
+        // Unblock if was auto-blocked and now under limit
+        if (credit.autoBlocked && newUtilized < credit.creditLimit) {
+          updateData.autoBlocked = false;
+          updateData.blockedReason = null;
+          updateData.blockedAt = null;
+          console.log(`[Integration] Shipper credit UNBLOCKED after load cancellation for customer ${load.customerId}`);
+        }
+
+        await prisma.shipperCredit.update({ where: { id: credit.id }, data: updateData });
+      }
+    }
+  }
+
+  // 3. Void any carrier pay records
+  const carrierPays = await prisma.carrierPay.findMany({
+    where: { loadId, status: { notIn: ["PAID", "VOID"] } },
+  });
+
+  for (const cp of carrierPays) {
+    await prisma.carrierPay.update({
+      where: { id: cp.id },
+      data: {
+        status: "VOID",
+        notes: `${cp.notes ? cp.notes + "\n" : ""}VOIDED: Load ${load.status === "TONU" ? "TONU" : "cancelled"} — ${reason || "no reason provided"}`,
+      },
+    });
+
+    // Cancel any related approval queue entries
+    await prisma.approvalQueue.updateMany({
+      where: { referenceId: cp.id, status: "PENDING" },
+      data: { status: "CANCELLED" },
+    });
+
+    // Reverse factoring fund entries for this carrier pay
+    const fundEntries = await prisma.factoringFund.findMany({
+      where: { referenceId: cp.id, referenceType: "CarrierPay" },
+    });
+    if (fundEntries.length > 0) {
+      const latestFund = await prisma.factoringFund.findFirst({
+        orderBy: { createdAt: "desc" },
+        select: { runningBalance: true },
+      });
+      let runningBalance = latestFund?.runningBalance ?? 0;
+
+      for (const entry of fundEntries) {
+        // Reverse each entry
+        runningBalance -= entry.amount;
+        await prisma.factoringFund.create({
+          data: {
+            transactionType: "REVERSAL",
+            amount: -entry.amount,
+            runningBalance,
+            referenceType: "CarrierPay",
+            referenceId: cp.id,
+            description: `Reversal of ${entry.transactionType} — load ${load.status === "TONU" ? "TONU" : "cancelled"} (${entry.description})`,
+          },
+        });
+      }
+    }
+  }
+
+  // 4. Soft-delete invoices
+  await prisma.invoice.updateMany({
+    where: { loadId, deletedAt: null },
+    data: { deletedAt: new Date(), status: "VOID" },
+  });
+
+  // 5. Cancel check-call schedules
+  await prisma.checkCallSchedule.updateMany({
+    where: { loadId, status: { in: ["PENDING", "SENT"] } },
+    data: { status: "CANCELLED" },
+  });
+
+  console.log(`[Integration] Load ${load.referenceNumber || loadId} ${load.status === "TONU" ? "TONU" : "cancelled"} → credit reversed, AP voided, fund reversed, tenders cancelled`);
 }
 
 // ──────────────────────────────────────────────────

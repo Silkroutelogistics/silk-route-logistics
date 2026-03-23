@@ -290,6 +290,9 @@ enum FactoringTransactionType {
   CARRIER_PAYMENT_OUT
   SHIPPER_PAYMENT_IN
   QP_FEE_EARNED
+  FACTORING_RESERVE
+  RESERVE_RELEASE
+  REVERSAL
   ADJUSTMENT
   WITHDRAWAL
 }
@@ -312,6 +315,7 @@ enum ApprovalStatus {
   PENDING
   APPROVED
   REJECTED
+  CANCELLED
   ESCALATED
   EXPIRED
 }
@@ -470,6 +474,8 @@ enum ChameleonMatchType {
   EMAIL
   ADDRESS
   EIN
+  IP
+  DOT
   MULTI
 }
 
@@ -793,6 +799,19 @@ model CarrierProfile {
   overbookingRisk       OverbookingRisk       @default(NONE)
   overbookingLastCheck  DateTime?
   activeLoadCount       Int                   @default(0)
+
+  // Suspension tracking
+  suspensionReason      String?
+  suspendedAt           DateTime?
+
+  // Document expiry enforcement
+  coiExpiryDate         DateTime?               // Certificate of Insurance expiry
+  w9ExpiryDate          DateTime?               // W-9 annual expiry
+  authorityDocExpiryDate DateTime?              // Authority letter expiry
+
+  // Registration metadata (for chameleon enhancement)
+  registrationIpHash    String?                 // SHA-256 of registration IP
+  registrationUserAgent String?                 // Browser user-agent at registration
 
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
@@ -2009,6 +2028,8 @@ model CarrierFingerprint {
   emailHash   String?  // SHA-256 of email domain
   addressHash String?  // SHA-256 of normalized address
   einHash     String?  // SHA-256 of EIN/TIN
+  ipHash      String?  // SHA-256 of registration IP address
+  dotHash     String?  // SHA-256 of DOT number (catches re-registered carriers)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -2017,6 +2038,8 @@ model CarrierFingerprint {
   @@index([emailHash])
   @@index([addressHash])
   @@index([einHash])
+  @@index([ipHash])
+  @@index([dotHash])
   @@map("carrier_fingerprints")
 }
 

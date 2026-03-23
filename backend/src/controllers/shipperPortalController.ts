@@ -700,3 +700,145 @@ export async function createQuoteRequest(req: AuthRequest, res: Response) {
     res.status(500).json({ error: "Failed to submit quote request" });
   }
 }
+
+// ─── Shipper Dispute Filing ────────────────────────────────
+export async function fileShipperDispute(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { invoiceId, disputeType, disputedAmount, description } = req.body;
+
+    if (!invoiceId || !disputeType || disputedAmount === undefined || !description) {
+      return res.status(400).json({ error: "invoiceId, disputeType, disputedAmount, and description are required" });
+    }
+
+    // Validate dispute type
+    const validTypes = ["SHORT_PAY", "WRONG_AMOUNT", "MISSING_ACCESSORIAL", "UNAUTHORIZED_DEDUCTION", "DOCUMENTATION", "OTHER"];
+    if (!validTypes.includes(disputeType)) {
+      return res.status(400).json({ error: `Invalid disputeType. Must be one of: ${validTypes.join(", ")}` });
+    }
+
+    // Resolve shipper's loads to verify they own the invoice
+    const loadWhere = await resolveShipperLoadWhere(userId);
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, load: loadWhere, deletedAt: null },
+      include: {
+        load: { select: { id: true, referenceNumber: true, carrierId: true } },
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found or does not belong to your account" });
+    }
+
+    // Find the associated carrier pay (dispute is against carrier payment)
+    const carrierPay = await prisma.carrierPay.findFirst({
+      where: { loadId: invoice.loadId },
+    });
+
+    if (!carrierPay) {
+      return res.status(400).json({ error: "No carrier payment found for this invoice. Dispute cannot be filed." });
+    }
+
+    // Generate dispute number
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const existingCount = await prisma.paymentDispute.count({
+      where: { disputeNumber: { startsWith: `DSP-${todayStr}` } },
+    });
+    const disputeNumber = `DSP-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
+
+    const dispute = await prisma.paymentDispute.create({
+      data: {
+        disputeNumber,
+        carrierPaymentId: carrierPay.id,
+        loadId: invoice.loadId,
+        carrierId: invoice.load.carrierId,
+        disputeType,
+        disputedAmount,
+        description,
+        status: "OPEN",
+        filedById: userId,
+      },
+    });
+
+    // Mark carrier pay as disputed
+    await prisma.carrierPay.update({
+      where: { id: carrierPay.id },
+      data: { status: "DISPUTED" },
+    });
+
+    // Notify accounting team (find first ACCOUNTING or ADMIN user)
+    const accountingUsers = await prisma.user.findMany({
+      where: { role: { in: ["ACCOUNTING", "ADMIN"] }, isActive: true },
+      select: { id: true },
+      take: 5,
+    });
+
+    for (const acctUser of accountingUsers) {
+      await prisma.notification.create({
+        data: {
+          userId: acctUser.id,
+          type: "DISPUTE",
+          title: "Shipper Dispute Filed",
+          message: `Shipper filed dispute ${disputeNumber} for load ${invoice.load.referenceNumber} — $${disputedAmount} (${disputeType}).`,
+          actionUrl: "/accounting/disputes",
+        },
+      });
+    }
+
+    res.status(201).json({
+      id: dispute.id,
+      disputeNumber,
+      status: "OPEN",
+      message: "Dispute filed successfully. Our accounting team has been notified.",
+    });
+  } catch (err) {
+    console.error("[ShipperPortal] File dispute error:", err);
+    res.status(500).json({ error: "Failed to file dispute" });
+  }
+}
+
+// ─── Shipper: View Disputes ────────────────────────────────
+export async function getShipperDisputes(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const loadWhere = await resolveShipperLoadWhere(userId);
+
+    // Get shipper's load IDs first, then find disputes by loadId
+    const shipperLoads = await prisma.load.findMany({
+      where: loadWhere,
+      select: { id: true },
+    });
+    const loadIds = shipperLoads.map((l) => l.id);
+
+    const disputes = await prisma.paymentDispute.findMany({
+      where: {
+        loadId: { in: loadIds },
+      },
+      include: {
+        carrierPayment: { select: { paymentNumber: true, netAmount: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Enrich with load details
+    const loadMap = new Map<string, any>();
+    if (disputes.length > 0) {
+      const disputeLoadIds = [...new Set(disputes.filter((d) => d.loadId).map((d) => d.loadId!))];
+      const loads = await prisma.load.findMany({
+        where: { id: { in: disputeLoadIds } },
+        select: { id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true },
+      });
+      for (const l of loads) loadMap.set(l.id, l);
+    }
+
+    const enriched = disputes.map((d) => ({
+      ...d,
+      load: d.loadId ? loadMap.get(d.loadId) || null : null,
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    console.error("[ShipperPortal] Get disputes error:", err);
+    res.status(500).json({ error: "Failed to load disputes" });
+  }
+}

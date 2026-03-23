@@ -104,6 +104,61 @@ export async function complianceCheck(carrierId: string): Promise<{
     warnings.push("Authority document not uploaded");
   }
 
+  // HARD BLOCK: no signed carrier-broker agreement
+  const agreement = await prisma.carrierAgreement.findFirst({
+    where: { carrierId, status: "SIGNED" },
+    orderBy: { signedAt: "desc" },
+  });
+  if (!agreement) {
+    blocked_reasons.push("No signed carrier-broker agreement on file");
+  } else if (agreement.expiresAt && agreement.expiresAt < now) {
+    blocked_reasons.push("Carrier-broker agreement has expired");
+  }
+
+  // HARD BLOCK: OFAC potential match (auto-suspended carriers already caught above, but belt-and-suspenders)
+  if (carrier.ofacStatus === "POTENTIAL_MATCH") {
+    blocked_reasons.push("OFAC/SDN potential match — pending review");
+  }
+
+  // SOFT WARNING: probationary carrier (< 3 loads, < 90 days)
+  const completedLoads = carrier.cppTotalLoads || 0;
+  const daysSinceApproval = carrier.cppJoinedDate
+    ? Math.ceil((now.getTime() - new Date(carrier.cppJoinedDate).getTime()) / 86_400_000)
+    : 0;
+  if (completedLoads < 3 && daysSinceApproval < 90) {
+    warnings.push(`Probationary carrier: ${completedLoads}/3 loads, ${daysSinceApproval}/90 days — manual dispatch approval recommended`);
+  }
+
+  // SOFT WARNING: document expiry (COI, W-9, authority)
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86_400_000);
+  if (carrier.coiExpiryDate && new Date(carrier.coiExpiryDate) < now) {
+    blocked_reasons.push("Certificate of Insurance expired");
+  } else if (carrier.coiExpiryDate && new Date(carrier.coiExpiryDate) < thirtyDaysFromNow) {
+    warnings.push(`Certificate of Insurance expiring ${new Date(carrier.coiExpiryDate).toISOString().split("T")[0]}`);
+  }
+  if (carrier.w9ExpiryDate && new Date(carrier.w9ExpiryDate) < now) {
+    warnings.push("W-9 expired — new W-9 required");
+  }
+  if (carrier.authorityDocExpiryDate && new Date(carrier.authorityDocExpiryDate) < now) {
+    warnings.push("Authority document expired");
+  }
+
+  // SOFT WARNING: chameleon risk
+  if (carrier.chameleonRiskLevel === "HIGH") {
+    blocked_reasons.push("HIGH chameleon risk — suspected identity fraud");
+  } else if (carrier.chameleonRiskLevel === "MEDIUM") {
+    warnings.push("MEDIUM chameleon risk — identity overlap with other carriers");
+  }
+
+  // SOFT WARNING: low vetting score
+  if (carrier.lastVettingScore !== null && carrier.lastVettingScore !== undefined) {
+    if (carrier.lastVettingScore < 40) {
+      blocked_reasons.push(`Vetting score CRITICAL: ${carrier.lastVettingScore}/100`);
+    } else if (carrier.lastVettingScore < 60) {
+      warnings.push(`Vetting score HIGH risk: ${carrier.lastVettingScore}/100`);
+    }
+  }
+
   return {
     allowed: blocked_reasons.length === 0,
     blocked_reasons,
@@ -1142,4 +1197,403 @@ async function sendFmcsaAdminAlert(
   }
 
   console.log(`[FMCSA] Admin alert sent to ${admins.length} users for ${carrierName}`);
+}
+
+// ────────────────────────────────────────────────────────────
+// ENTERPRISE CRON: Insurance Expiry Auto-Suspension
+// Runs daily — suspends carriers with expired insurance (no grace period)
+// and sends warnings at 30, 14, 7 days before expiry.
+// ────────────────────────────────────────────────────────────
+
+export async function processInsuranceExpiryEnforcement() {
+  const now = new Date();
+  let suspended = 0;
+  let warned = 0;
+
+  // 1. Auto-suspend carriers with expired insurance (no grace period)
+  const expiredCarriers = await prisma.carrierProfile.findMany({
+    where: {
+      onboardingStatus: "APPROVED",
+      insuranceExpiry: { lt: now },
+      insuranceGracePeriodEnd: { lt: now }, // Grace period also expired or null
+    },
+    include: { user: { select: { id: true, email: true, firstName: true, company: true } } },
+  });
+
+  // Also include carriers with no grace period at all
+  const expiredNoGrace = await prisma.carrierProfile.findMany({
+    where: {
+      onboardingStatus: "APPROVED",
+      insuranceExpiry: { lt: now },
+      insuranceGracePeriodEnd: null,
+    },
+    include: { user: { select: { id: true, email: true, firstName: true, company: true } } },
+  });
+
+  const allExpired = [...expiredCarriers, ...expiredNoGrace];
+  const seenIds = new Set<string>();
+
+  for (const carrier of allExpired) {
+    if (seenIds.has(carrier.id)) continue;
+    seenIds.add(carrier.id);
+
+    await prisma.carrierProfile.update({
+      where: { id: carrier.id },
+      data: {
+        onboardingStatus: "SUSPENDED",
+        suspensionReason: `Auto-suspended: Insurance expired on ${carrier.insuranceExpiry?.toISOString().split("T")[0]}`,
+        suspendedAt: now,
+      },
+    });
+
+    await prisma.complianceAlert.create({
+      data: {
+        type: "INSURANCE_EXPIRED",
+        entityType: "CARRIER",
+        entityId: carrier.id,
+        entityName: carrier.companyName || carrier.user.company || "Unknown",
+        severity: "CRITICAL",
+        status: "ACTIVE",
+        expiryDate: new Date(now.getTime() + 90 * 86_400_000),
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: carrier.user.id,
+        type: "COMPLIANCE",
+        title: "Account Suspended — Insurance Expired",
+        message: "Your carrier account has been suspended because your insurance has expired. Please update your insurance certificate to restore access.",
+        actionUrl: "/carrier/dashboard/compliance",
+      },
+    });
+
+    suspended++;
+  }
+
+  // 2. Warn carriers with insurance expiring within 30 days (dedup: one per day)
+  const warningWindows = [30, 14, 7, 3, 1];
+  for (const daysLeft of warningWindows) {
+    const windowStart = new Date(now.getTime() + (daysLeft - 1) * 86_400_000);
+    const windowEnd = new Date(now.getTime() + daysLeft * 86_400_000);
+
+    const expiringCarriers = await prisma.carrierProfile.findMany({
+      where: {
+        onboardingStatus: "APPROVED",
+        insuranceExpiry: { gte: windowStart, lt: windowEnd },
+      },
+      include: { user: { select: { id: true, email: true, firstName: true } } },
+    });
+
+    for (const carrier of expiringCarriers) {
+      // Dedup: check if warning already sent today
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const alreadySent = await prisma.notification.findFirst({
+        where: {
+          userId: carrier.user.id,
+          type: "COMPLIANCE",
+          title: { contains: "Insurance Expiring" },
+          createdAt: { gte: todayStart },
+        },
+      });
+      if (alreadySent) continue;
+
+      await prisma.notification.create({
+        data: {
+          userId: carrier.user.id,
+          type: "COMPLIANCE",
+          title: `Insurance Expiring in ${daysLeft} Day${daysLeft !== 1 ? "s" : ""}`,
+          message: `Your insurance expires on ${carrier.insuranceExpiry?.toISOString().split("T")[0]}. Please renew and upload your updated Certificate of Insurance to avoid account suspension.`,
+          actionUrl: "/carrier/dashboard/compliance",
+        },
+      });
+
+      if (daysLeft <= 7) {
+        await sendEmail(
+          carrier.user.email,
+          `[SRL] Insurance Expiring in ${daysLeft} Day${daysLeft !== 1 ? "s" : ""} — Action Required`,
+          wrap(`
+            <div style="padding:20px">
+              <h2 style="color:#dc2626;margin:0 0 16px">Insurance Expiry Warning</h2>
+              <p style="color:#64748b">Hi ${carrier.user.firstName || "Carrier"},</p>
+              <p style="color:#64748b">Your insurance expires on <strong>${carrier.insuranceExpiry?.toISOString().split("T")[0]}</strong>. Your account will be <strong>automatically suspended</strong> if your insurance is not renewed before the expiry date.</p>
+              <p style="text-align:center;margin-top:16px">
+                <a href="https://silkroutelogistics.ai/carrier/dashboard/compliance" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Upload New Certificate</a>
+              </p>
+            </div>
+          `)
+        ).catch((e) => console.error(`[InsuranceExpiry] Email failed for ${carrier.user.email}:`, e.message));
+      }
+
+      warned++;
+    }
+  }
+
+  console.log(`[InsuranceExpiry] Enforcement complete: ${suspended} suspended, ${warned} warned`);
+  return { suspended, warned };
+}
+
+// ────────────────────────────────────────────────────────────
+// ENTERPRISE CRON: Monthly Full Re-Vetting (Compass)
+// Re-runs full 29-check vetting for all APPROVED carriers.
+// Auto-suspends CRITICAL risk carriers.
+// ────────────────────────────────────────────────────────────
+
+export async function monthlyCarrierReVetting() {
+  const { vetAndStoreReport } = await import("./carrierVettingService");
+
+  const carriers = await prisma.carrierProfile.findMany({
+    where: {
+      onboardingStatus: "APPROVED",
+      dotNumber: { not: null },
+    },
+    select: { id: true, dotNumber: true, mcNumber: true, companyName: true, userId: true },
+  });
+
+  let revetted = 0;
+  let critical = 0;
+  let suspended = 0;
+  let errors = 0;
+
+  for (const carrier of carriers) {
+    if (!carrier.dotNumber) continue;
+
+    try {
+      const report = await vetAndStoreReport(carrier.dotNumber, carrier.id, carrier.mcNumber || undefined, "CRON");
+      revetted++;
+
+      // Auto-suspend carriers that dropped to CRITICAL
+      if (report.riskLevel === "CRITICAL") {
+        critical++;
+
+        await prisma.carrierProfile.update({
+          where: { id: carrier.id },
+          data: {
+            onboardingStatus: "SUSPENDED",
+            suspensionReason: `Auto-suspended by monthly re-vetting: score ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
+            suspendedAt: new Date(),
+          },
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: carrier.userId,
+            type: "COMPLIANCE",
+            title: "Account Suspended — Compliance Review Failed",
+            message: `Your carrier account has been suspended following a routine compliance review (score: ${report.score}/100). Please contact support.`,
+            actionUrl: "/carrier/dashboard",
+          },
+        });
+
+        suspended++;
+      }
+
+      // Notify admins of HIGH risk carriers (not suspended, but flagged)
+      if (report.riskLevel === "HIGH") {
+        await prisma.complianceAlert.create({
+          data: {
+            type: "VETTING_DECLINE",
+            entityType: "CARRIER",
+            entityId: carrier.id,
+            entityName: carrier.companyName || "Unknown",
+            severity: "HIGH",
+            status: "ACTIVE",
+            expiryDate: new Date(Date.now() + 30 * 86_400_000),
+          },
+        });
+      }
+    } catch (e: any) {
+      errors++;
+      console.error(`[MonthlyReVet] Error for carrier ${carrier.id}:`, e.message);
+    }
+  }
+
+  console.log(`[MonthlyReVet] Complete: ${revetted}/${carriers.length} revetted, ${critical} CRITICAL, ${suspended} suspended, ${errors} errors`);
+  return { total: carriers.length, revetted, critical, suspended, errors };
+}
+
+// ────────────────────────────────────────────────────────────
+// ENTERPRISE CRON: FMCSA Authority Change Detection
+// Checks all APPROVED carriers' FMCSA status for changes.
+// Auto-suspends on revocation/OOS, alerts on conditional.
+// ────────────────────────────────────────────────────────────
+
+export async function detectFmcsaAuthorityChanges() {
+  const carriers = await prisma.carrierProfile.findMany({
+    where: {
+      onboardingStatus: "APPROVED",
+      dotNumber: { not: null },
+    },
+    select: {
+      id: true, dotNumber: true, companyName: true, userId: true,
+      fmcsaAuthorityStatus: true, safetyRating: true,
+    },
+  });
+
+  let checked = 0;
+  let changes = 0;
+  let suspensions = 0;
+  let errors = 0;
+
+  for (const carrier of carriers) {
+    if (!carrier.dotNumber) continue;
+
+    try {
+      const fmcsa = await verifyCarrierWithFMCSA(carrier.dotNumber);
+      checked++;
+
+      const previousStatus = carrier.fmcsaAuthorityStatus?.toUpperCase() || "UNKNOWN";
+      const currentStatus = fmcsa.operatingStatus?.toUpperCase() || "UNKNOWN";
+      const previousRating = carrier.safetyRating?.toUpperCase();
+      const currentRating = fmcsa.safetyRating?.toUpperCase();
+
+      // Detect authority status change
+      if (previousStatus !== currentStatus) {
+        changes++;
+
+        await prisma.carrierProfile.update({
+          where: { id: carrier.id },
+          data: {
+            fmcsaAuthorityStatus: fmcsa.operatingStatus,
+            safetyRating: fmcsa.safetyRating || carrier.safetyRating,
+            fmcsaLastChecked: new Date(),
+          },
+        });
+
+        // Create compliance alert
+        await prisma.complianceAlert.create({
+          data: {
+            type: "FMCSA_STATUS_CHANGE",
+            entityType: "CARRIER",
+            entityId: carrier.id,
+            entityName: carrier.companyName || "Unknown",
+            severity: ["REVOKED", "NOT AUTHORIZED", "OUT_OF_SERVICE", "OOS"].includes(currentStatus) ? "CRITICAL" : "HIGH",
+            status: "ACTIVE",
+            expiryDate: new Date(Date.now() + 30 * 86_400_000),
+          },
+        });
+
+        // Auto-suspend on revocation or OOS
+        if (["REVOKED", "NOT AUTHORIZED", "OUT_OF_SERVICE", "OOS"].includes(currentStatus)) {
+          await prisma.carrierProfile.update({
+            where: { id: carrier.id },
+            data: {
+              onboardingStatus: "SUSPENDED",
+              suspensionReason: `Auto-suspended: FMCSA authority changed from ${previousStatus} to ${currentStatus}`,
+              suspendedAt: new Date(),
+            },
+          });
+
+          await prisma.notification.create({
+            data: {
+              userId: carrier.userId,
+              type: "COMPLIANCE",
+              title: "Account Suspended — FMCSA Authority Change",
+              message: `Your carrier account has been suspended: FMCSA authority status changed to ${currentStatus}. Please contact support.`,
+              actionUrl: "/carrier/dashboard",
+            },
+          });
+
+          suspensions++;
+          console.log(`[FMCSAWatch] AUTO-SUSPENDED carrier ${carrier.id}: ${previousStatus} → ${currentStatus}`);
+        }
+      }
+
+      // Detect safety rating change
+      if (previousRating && currentRating && previousRating !== currentRating) {
+        await prisma.complianceAlert.create({
+          data: {
+            type: "FMCSA_RATING_CHANGE",
+            entityType: "CARRIER",
+            entityId: carrier.id,
+            entityName: carrier.companyName || "Unknown",
+            severity: currentRating === "UNSATISFACTORY" ? "CRITICAL" : "MEDIUM",
+            status: "ACTIVE",
+            expiryDate: new Date(Date.now() + 30 * 86_400_000),
+          },
+        });
+
+        // Auto-suspend on UNSATISFACTORY
+        if (currentRating === "UNSATISFACTORY") {
+          await prisma.carrierProfile.update({
+            where: { id: carrier.id },
+            data: {
+              onboardingStatus: "SUSPENDED",
+              suspensionReason: `Auto-suspended: FMCSA safety rating changed to UNSATISFACTORY`,
+              suspendedAt: new Date(),
+              safetyRating: "UNSATISFACTORY",
+            },
+          });
+          suspensions++;
+        }
+      }
+    } catch (e: any) {
+      errors++;
+      console.error(`[FMCSAWatch] Error checking carrier ${carrier.id}:`, e.message);
+    }
+  }
+
+  console.log(`[FMCSAWatch] Complete: ${checked} checked, ${changes} changes, ${suspensions} suspended, ${errors} errors`);
+  return { checked, changes, suspensions, errors };
+}
+
+// ────────────────────────────────────────────────────────────
+// ENTERPRISE CRON: Document Expiry Scanner
+// Sends reminders for expiring documents and creates alerts.
+// ────────────────────────────────────────────────────────────
+
+export async function processDocumentExpiryAlerts() {
+  const now = new Date();
+  const warningWindows = [30, 14, 7, 1]; // days before expiry
+  let alerts = 0;
+
+  const docFields = [
+    { field: "coiExpiryDate" as const, label: "Certificate of Insurance", severity: "CRITICAL" },
+    { field: "w9ExpiryDate" as const, label: "W-9 Form", severity: "HIGH" },
+    { field: "authorityDocExpiryDate" as const, label: "Authority Document", severity: "HIGH" },
+  ];
+
+  for (const docType of docFields) {
+    for (const daysLeft of warningWindows) {
+      const windowStart = new Date(now.getTime() + (daysLeft - 1) * 86_400_000);
+      const windowEnd = new Date(now.getTime() + daysLeft * 86_400_000);
+
+      const carriers = await prisma.carrierProfile.findMany({
+        where: {
+          onboardingStatus: "APPROVED",
+          [docType.field]: { gte: windowStart, lt: windowEnd },
+        },
+        include: { user: { select: { id: true, email: true, firstName: true } } },
+      });
+
+      for (const carrier of carriers) {
+        // Dedup
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const alreadySent = await prisma.notification.findFirst({
+          where: {
+            userId: carrier.user.id,
+            type: "COMPLIANCE",
+            title: { contains: docType.label },
+            createdAt: { gte: todayStart },
+          },
+        });
+        if (alreadySent) continue;
+
+        await prisma.notification.create({
+          data: {
+            userId: carrier.user.id,
+            type: "COMPLIANCE",
+            title: `${docType.label} Expiring in ${daysLeft} Day${daysLeft !== 1 ? "s" : ""}`,
+            message: `Your ${docType.label} expires soon. Please upload an updated document to maintain your active carrier status.`,
+            actionUrl: "/carrier/dashboard/compliance",
+          },
+        });
+
+        alerts++;
+      }
+    }
+  }
+
+  console.log(`[DocExpiry] ${alerts} document expiry alerts sent`);
+  return { alerts };
 }

@@ -6,7 +6,7 @@ import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../va
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
-import { onLoadDelivered, onLoadDispatched, enforceShipperCredit } from "../services/integrationService";
+import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
 
@@ -125,7 +125,40 @@ export async function createLoad(req: AuthRequest, res: Response) {
       posterId: req.user!.id,
     } as any,
   });
+
+  // Notify approved carriers with matching equipment that a new load is available
+  if (load.status === "POSTED" && load.equipmentType) {
+    notifyMatchingCarriers(load).catch((e) =>
+      console.error("[LoadCreate] Carrier notification error:", e.message)
+    );
+  }
+
   res.status(201).json(load);
+}
+
+/** Fire-and-forget: notify carriers whose equipment matches this new load */
+async function notifyMatchingCarriers(load: any) {
+  const carriers = await prisma.carrierProfile.findMany({
+    where: {
+      onboardingStatus: "APPROVED",
+      equipmentTypes: { hasSome: [load.equipmentType] },
+    },
+    select: { userId: true },
+    take: 50, // Cap to avoid notification storms
+  });
+
+  if (carriers.length === 0) return;
+
+  const route = `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`;
+  await prisma.notification.createMany({
+    data: carriers.map((c) => ({
+      userId: c.userId,
+      type: "LOAD_UPDATE" as const,
+      title: "New Load Available",
+      message: `New ${load.equipmentType} load: ${route}${load.rate ? ` — $${load.rate}` : ""}`,
+      actionUrl: "/carrier/dashboard/available-loads",
+    })),
+  });
 }
 
 export async function getLoads(req: AuthRequest, res: Response) {
@@ -304,6 +337,64 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // Shipper pickup notification on LOADED
   if (status === "LOADED") {
     sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
+  }
+
+  // TONU / CANCELLED cleanup: reverse credit, void AP, cancel tenders, reverse fund
+  if (status === "TONU" || status === "CANCELLED") {
+    const reason = req.body.reason || req.body.cancellationReason;
+    onLoadCancelledOrTONU(load.id, reason).catch((e) =>
+      console.error(`[Integration] onLoadCancelledOrTONU error:`, e.message)
+    );
+
+    // Notify the assigned carrier
+    if (load.carrierId) {
+      await prisma.notification.create({
+        data: {
+          userId: load.carrierId,
+          type: "LOAD_UPDATE",
+          title: status === "TONU" ? "Load TONU — Truck Order Not Used" : "Load Cancelled",
+          message: `Load ${load.referenceNumber} has been ${status === "TONU" ? "marked TONU" : "cancelled"}${reason ? `: ${reason}` : ""}. Please check your dashboard.`,
+          actionUrl: "/carrier/dashboard/my-loads",
+        },
+      });
+    }
+  }
+
+  // Notify carrier on DISPATCHED
+  if (status === "DISPATCHED" && load.carrierId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.carrierId,
+        type: "LOAD_UPDATE",
+        title: "Load Dispatched",
+        message: `Load ${load.referenceNumber} has been dispatched. Please confirm pickup.`,
+        actionUrl: "/carrier/dashboard/my-loads",
+      },
+    });
+  }
+
+  // Notify poster on AT_PICKUP and AT_DELIVERY
+  if (status === "AT_PICKUP" && load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD_UPDATE",
+        title: "Carrier At Pickup",
+        message: `Carrier has arrived at pickup for load ${load.referenceNumber}.`,
+        actionUrl: "/dashboard/tracking",
+      },
+    });
+  }
+  if (status === "AT_DELIVERY" && load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD_UPDATE",
+        title: "Carrier At Delivery",
+        message: `Carrier has arrived at delivery for load ${load.referenceNumber}.`,
+        actionUrl: "/dashboard/tracking",
+      },
+    });
   }
 
   // Shipper milestone tracking email
@@ -493,6 +584,33 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   }
 
   const load = await prisma.load.update({ where: { id: req.params.id }, data });
+
+  // Sync critical field changes to linked shipment (keep shipment in sync with load)
+  const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
+  if (linkedShipment) {
+    const shipmentSync: Record<string, unknown> = {};
+    if (data.originCity) shipmentSync.originCity = data.originCity;
+    if (data.originState) shipmentSync.originState = data.originState;
+    if (data.originZip) shipmentSync.originZip = data.originZip;
+    if (data.destCity) shipmentSync.destCity = data.destCity;
+    if (data.destState) shipmentSync.destState = data.destState;
+    if (data.destZip) shipmentSync.destZip = data.destZip;
+    if (data.weight) shipmentSync.weight = data.weight;
+    if (data.pieces) shipmentSync.pieces = data.pieces;
+    if (data.equipmentType) shipmentSync.equipmentType = data.equipmentType;
+    if (data.commodity) shipmentSync.commodity = data.commodity;
+    if (data.pickupDate) shipmentSync.pickupDate = data.pickupDate;
+    if (data.deliveryDate) shipmentSync.deliveryDate = data.deliveryDate;
+    if (data.specialInstructions) shipmentSync.specialInstructions = data.specialInstructions;
+    if (data.rate || data.carrierRate) shipmentSync.rate = data.carrierRate || data.rate;
+    if (data.distance) shipmentSync.distance = data.distance;
+    if (data.customerId) shipmentSync.customerId = data.customerId;
+
+    if (Object.keys(shipmentSync).length > 0) {
+      await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentSync });
+    }
+  }
+
   res.json(load);
 }
 
@@ -525,6 +643,11 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
     prisma.checkCall.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
     prisma.invoice.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
   ]);
+
+  // Full cleanup: reverse credit, void AP, reverse fund entries
+  onLoadCancelledOrTONU(load.id, reason).catch((e) =>
+    console.error(`[Integration] deleteLoad cleanup error:`, e.message)
+  );
 
   res.json({ success: true, message: "Load archived" });
 }

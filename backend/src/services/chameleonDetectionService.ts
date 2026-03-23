@@ -32,7 +32,7 @@ function normalizeAddress(address: string, zip: string): string {
 
 // ── Build Fingerprint ──
 
-export async function buildFingerprint(carrierId: string): Promise<void> {
+export async function buildFingerprint(carrierId: string, registrationIp?: string): Promise<void> {
   const carrier = await prisma.carrierProfile.findUnique({
     where: { id: carrierId },
     include: {
@@ -55,16 +55,20 @@ export async function buildFingerprint(carrierId: string): Promise<void> {
     ? sha256(carrier.identityVerification.w9TinLastFour)
     : null;
 
+  // Enhanced fingerprinting: IP address + DOT number cross-reference
+  const ipHash = registrationIp ? sha256(registrationIp) : (carrier as any).registrationIpHash || null;
+  const dotHash = carrier.dotNumber ? sha256(carrier.dotNumber) : null;
+
   await prisma.carrierFingerprint.upsert({
     where: { carrierId },
-    create: { carrierId, phoneHash, emailHash, addressHash, einHash },
-    update: { phoneHash, emailHash, addressHash, einHash },
+    create: { carrierId, phoneHash, emailHash, addressHash, einHash, ipHash, dotHash },
+    update: { phoneHash, emailHash, addressHash, einHash, ...(ipHash ? { ipHash } : {}), ...(dotHash ? { dotHash } : {}) },
   });
 }
 
 // ── Check Chameleon ──
 
-type MatchField = "PHONE" | "EMAIL" | "ADDRESS" | "EIN";
+type MatchField = "PHONE" | "EMAIL" | "ADDRESS" | "EIN" | "IP" | "DOT";
 
 interface ChameleonResult {
   matches: Array<{
@@ -87,12 +91,14 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
     return { matches: [], riskLevel: "NONE", totalMatches: 0 };
   }
 
-  // Build OR conditions for each hash
+  // Build OR conditions for each hash (including enhanced IP + DOT)
   const orConditions: any[] = [];
   if (fp.phoneHash) orConditions.push({ phoneHash: fp.phoneHash });
   if (fp.emailHash) orConditions.push({ emailHash: fp.emailHash });
   if (fp.addressHash) orConditions.push({ addressHash: fp.addressHash });
   if (fp.einHash) orConditions.push({ einHash: fp.einHash });
+  if ((fp as any).ipHash) orConditions.push({ ipHash: (fp as any).ipHash });
+  if ((fp as any).dotHash) orConditions.push({ dotHash: (fp as any).dotHash });
 
   if (orConditions.length === 0) {
     return { matches: [], riskLevel: "NONE", totalMatches: 0 };
@@ -126,6 +132,8 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
     if (fp.emailHash && mfp.emailHash === fp.emailHash) fields.push("EMAIL");
     if (fp.addressHash && mfp.addressHash === fp.addressHash) fields.push("ADDRESS");
     if (fp.einHash && mfp.einHash === fp.einHash) fields.push("EIN");
+    if ((fp as any).ipHash && (mfp as any).ipHash === (fp as any).ipHash) fields.push("IP");
+    if ((fp as any).dotHash && (mfp as any).dotHash === (fp as any).dotHash) fields.push("DOT");
 
     if (fields.length === 0) continue;
 

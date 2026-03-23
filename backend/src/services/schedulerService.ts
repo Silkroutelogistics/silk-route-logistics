@@ -16,6 +16,15 @@ import { runAlertScanner } from "./trackTraceAlertEngine";
 import { scanGeofences } from "./geofenceService";
 import { processSamsaraLocations } from "./samsaraService";
 import { processMotiveLocations } from "./motiveService";
+import { processExpiredTenders } from "../controllers/tenderController";
+import {
+  processInsuranceExpiryEnforcement,
+  monthlyCarrierReVetting,
+  detectFmcsaAuthorityChanges,
+  processDocumentExpiryAlerts,
+} from "./complianceMonitorService";
+import { weeklyOfacRescan } from "./ofacScreeningService";
+import { runFullChameleonScan } from "./chameleonDetectionService";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -489,6 +498,71 @@ export function startSchedulers() {
   cron.schedule("7,22,37,52 * * * *", async () => {
     console.log("[Scheduler] Running track & trace alert engine...");
     await withLock("tt-alert-engine", 10 * 60 * 1000, runAlertScanner);
+  });
+
+  // Tender expiration: every 30 minutes at :12 and :42
+  cron.schedule("12,42 * * * *", async () => {
+    console.log("[Scheduler] Running tender expiration check...");
+    await withLock("tender-expiry", 5 * 60 * 1000, async () => {
+      const result = await processExpiredTenders();
+      console.log(`[Scheduler] Tender expiry: ${result.expired} expired, ${result.loadsReverted} loads reverted`);
+    });
+  });
+
+  // ─── Enterprise Carrier Compliance Crons ───────────────────────
+
+  // Insurance expiry enforcement: daily at 6 AM ET (11:00 UTC)
+  cron.schedule("0 11 * * *", async () => {
+    console.log("[Scheduler] Running insurance expiry enforcement...");
+    await withLock("insurance-expiry-enforce", 15 * 60 * 1000, async () => {
+      const result = await processInsuranceExpiryEnforcement();
+      console.log(`[Scheduler] Insurance expiry: ${result.suspended} suspended, ${result.warned} warned`);
+    });
+  });
+
+  // Document expiry alerts: daily at 7 AM ET (12:00 UTC)
+  cron.schedule("0 12 * * *", async () => {
+    console.log("[Scheduler] Running document expiry alerts...");
+    await withLock("doc-expiry-alerts", 10 * 60 * 1000, async () => {
+      const result = await processDocumentExpiryAlerts();
+      console.log(`[Scheduler] Document expiry: ${result.alerts} alerts sent`);
+    });
+  });
+
+  // FMCSA authority change detection: daily at 4 AM ET (09:00 UTC)
+  cron.schedule("0 9 * * *", async () => {
+    console.log("[Scheduler] Running FMCSA authority change detection...");
+    await withLock("fmcsa-authority-watch", 30 * 60 * 1000, async () => {
+      const result = await detectFmcsaAuthorityChanges();
+      console.log(`[Scheduler] FMCSA watch: ${result.checked} checked, ${result.changes} changes, ${result.suspensions} suspended`);
+    });
+  });
+
+  // OFAC weekly rescan: Sunday 5 AM ET (10:00 UTC)
+  cron.schedule("0 10 * * 0", async () => {
+    console.log("[Scheduler] Running weekly OFAC rescan...");
+    await withLock("ofac-weekly-rescan", 60 * 60 * 1000, async () => {
+      const result = await weeklyOfacRescan();
+      console.log(`[Scheduler] OFAC rescan: ${result.total} screened, ${result.matches} matches, ${result.errors} errors`);
+    });
+  });
+
+  // Chameleon detection full scan: weekly Wednesday 3 AM ET (08:00 UTC)
+  cron.schedule("0 8 * * 3", async () => {
+    console.log("[Scheduler] Running full chameleon detection scan...");
+    await withLock("chameleon-full-scan", 30 * 60 * 1000, async () => {
+      const result = await runFullChameleonScan();
+      console.log(`[Scheduler] Chameleon scan: ${result.scanned} scanned, ${result.matchesFound} matches, ${result.errors} errors`);
+    });
+  });
+
+  // Monthly full re-vetting: 1st of month 2 AM ET (07:00 UTC)
+  cron.schedule("0 7 1 * *", async () => {
+    console.log("[Scheduler] Running monthly carrier re-vetting...");
+    await withLock("monthly-carrier-revet", 120 * 60 * 1000, async () => {
+      const result = await monthlyCarrierReVetting();
+      console.log(`[Scheduler] Monthly re-vet: ${result.revetted}/${result.total} revetted, ${result.critical} CRITICAL, ${result.suspended} suspended`);
+    });
   });
 
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);

@@ -969,6 +969,71 @@ export async function approvePayment(req: AuthRequest, res: Response) {
   }
 }
 
+/** APPROVED → PROCESSING: mark payment as being processed (e.g., ACH batch submitted) */
+export async function schedulePaymentProcessing(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { scheduledDate, paymentMethod, batchId } = req.body;
+
+    const existing = await prisma.carrierPay.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: "Payment not found" });
+      return;
+    }
+    if (!["APPROVED", "SCHEDULED"].includes(existing.status)) {
+      res.status(400).json({ error: `Can only process payments in APPROVED/SCHEDULED status, current: ${existing.status}` });
+      return;
+    }
+
+    const payment = await prisma.carrierPay.update({
+      where: { id },
+      data: {
+        status: "PROCESSING",
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+        paymentMethod: paymentMethod ?? existing.paymentMethod ?? "ACH",
+        notes: batchId
+          ? `${existing.notes ? existing.notes + "\n" : ""}Processing in batch ${batchId}`
+          : existing.notes,
+      },
+    });
+
+    res.json(payment);
+  } catch (error: any) {
+    console.error("schedulePaymentProcessing error:", error);
+    res.status(500).json({ error: "Failed to schedule payment processing", details: error.message });
+  }
+}
+
+/** Bulk APPROVED → PROCESSING: submit a batch of payments for processing */
+export async function bulkProcessPayments(req: AuthRequest, res: Response) {
+  try {
+    const { paymentIds, paymentMethod, batchId } = req.body;
+    if (!paymentIds?.length) {
+      res.status(400).json({ error: "paymentIds array is required" });
+      return;
+    }
+
+    const batchRef = batchId || `BATCH-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Date.now().toString(36)}`;
+
+    const result = await prisma.carrierPay.updateMany({
+      where: {
+        id: { in: paymentIds },
+        status: { in: ["APPROVED", "SCHEDULED"] },
+      },
+      data: {
+        status: "PROCESSING",
+        scheduledDate: new Date(),
+        paymentMethod: paymentMethod ?? "ACH",
+      },
+    });
+
+    res.json({ processing: result.count, requested: paymentIds.length, batchId: batchRef });
+  } catch (error: any) {
+    console.error("bulkProcessPayments error:", error);
+    res.status(500).json({ error: "Failed to bulk process payments", details: error.message });
+  }
+}
+
 export async function rejectPayment(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
@@ -1069,19 +1134,64 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
       orderBy: { createdAt: "desc" },
       select: { runningBalance: true },
     });
-    const currentBalance = latestFund?.runningBalance ?? 0;
+    let currentBalance = latestFund?.runningBalance ?? 0;
 
+    // 1. Record the carrier payment outflow
+    currentBalance -= payment.netAmount;
     await prisma.factoringFund.create({
       data: {
         transactionType: "CARRIER_PAYMENT_OUT",
         amount: -payment.netAmount,
-        runningBalance: currentBalance - payment.netAmount,
+        runningBalance: currentBalance,
         referenceType: "CarrierPay",
         referenceId: payment.id,
         description: `Carrier payment ${payment.paymentNumber} paid`,
         createdById: req.user!.id,
       },
     });
+
+    // 2. Deduct factoring reserve (2% of gross for non-quickpay, covering credit risk)
+    const isQuickPay = payment.quickPayFeeAmount > 0;
+    if (!isQuickPay && payment.grossAmount > 0) {
+      const FACTORING_RESERVE_PCT = 2;
+      const factoringReserve = Math.round(payment.grossAmount * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
+      currentBalance -= factoringReserve;
+      await prisma.factoringFund.create({
+        data: {
+          transactionType: "FACTORING_RESERVE",
+          amount: -factoringReserve,
+          runningBalance: currentBalance,
+          referenceType: "CarrierPay",
+          referenceId: payment.id,
+          description: `Factoring reserve (${FACTORING_RESERVE_PCT}% of $${payment.grossAmount}) on ${payment.paymentNumber} — held until shipper pays invoice`,
+          createdById: req.user!.id,
+        },
+      });
+    }
+
+    // 3. Trigger invoice-paid integration if the corresponding invoice is also paid
+    const relatedInvoice = await prisma.invoice.findFirst({
+      where: { loadId: payment.loadId, status: "PAID" },
+    });
+    if (relatedInvoice) {
+      // Release factoring reserve since shipper already paid
+      if (!isQuickPay && payment.grossAmount > 0) {
+        const FACTORING_RESERVE_PCT = 2;
+        const reserveRelease = Math.round(payment.grossAmount * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
+        currentBalance += reserveRelease;
+        await prisma.factoringFund.create({
+          data: {
+            transactionType: "RESERVE_RELEASE",
+            amount: reserveRelease,
+            runningBalance: currentBalance,
+            referenceType: "CarrierPay",
+            referenceId: payment.id,
+            description: `Factoring reserve released — shipper invoice already paid for ${payment.paymentNumber}`,
+            createdById: req.user!.id,
+          },
+        });
+      }
+    }
 
     res.json(payment);
   } catch (error: any) {

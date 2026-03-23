@@ -25,6 +25,14 @@ export async function autoGenerateInvoice(loadId: string) {
     return null;
   }
 
+  // Guard: skip auto-invoice for zero-rate loads (e.g., RFQ quotes awaiting pricing)
+  const rc = load.rateConfirmations[0];
+  const effectiveRate = load.rate || rc?.totalCharges || 0;
+  if (effectiveRate <= 0) {
+    console.warn(`[AutoInvoice] Skipping zero-rate load ${loadId} (rate=$${load.rate}, RC=${rc ? rc.totalCharges : "none"}) — no billable amount`);
+    return null;
+  }
+
   // Generate next invoice number
   const lastInvoice = await prisma.invoice.findFirst({
     orderBy: { createdAt: "desc" },
@@ -38,7 +46,7 @@ export async function autoGenerateInvoice(loadId: string) {
 
   // Build line items from load + rate confirmation
   const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number }[] = [];
-  const rc = load.rateConfirmations[0];
+  // rc already resolved above in zero-rate guard
 
   // Linehaul
   lineItems.push({

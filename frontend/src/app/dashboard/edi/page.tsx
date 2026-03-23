@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Zap, ChevronDown, ChevronUp, RefreshCw, Copy, Check } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface EDITransaction {
   id: string;
@@ -40,8 +41,38 @@ export default function EDIPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data } = useQuery({
+  const retryTransaction = useMutation({
+    mutationFn: (id: string) => api.post(`/edi/transactions/${id}/retry`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["edi-transactions"] });
+      toast("Transaction queued for retry", "success");
+    },
+    onError: () => toast("Failed to retry transaction", "error"),
+  });
+
+  const copyPayload = (t: EDITransaction) => {
+    try {
+      const formatted = JSON.stringify(JSON.parse(t.rawPayload), null, 2);
+      navigator.clipboard.writeText(formatted);
+      setCopiedId(t.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      navigator.clipboard.writeText(t.rawPayload);
+      setCopiedId(t.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  };
+
+  const safeParseJson = (raw: string): string => {
+    try { return JSON.stringify(JSON.parse(raw), null, 2); }
+    catch { return raw; }
+  };
+
+  const { data, isLoading } = useQuery({
     queryKey: ["edi-transactions", typeFilter, statusFilter, page],
     queryFn: () => api.get<{ transactions: EDITransaction[]; total: number; totalPages: number }>(
       `/edi/transactions?transactionSet=${typeFilter}&status=${statusFilter}&page=${page}&limit=20`
@@ -100,8 +131,24 @@ export default function EDIPage() {
                 {expanded === t.id && (
                   <tr key={`${t.id}-payload`}>
                     <td colSpan={6} className="px-6 py-4 bg-black/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-slate-500 font-medium">Payload</span>
+                        <div className="flex gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); copyPayload(t); }}
+                            className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded text-xs text-slate-400 hover:text-white transition">
+                            {copiedId === t.id ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                          </button>
+                          {t.status === "ERROR" && (
+                            <button onClick={(e) => { e.stopPropagation(); retryTransaction.mutate(t.id); }}
+                              disabled={retryTransaction.isPending}
+                              className="flex items-center gap-1 px-2 py-1 bg-gold/20 rounded text-xs text-gold hover:bg-gold/30 transition disabled:opacity-50">
+                              <RefreshCw className={`w-3 h-3 ${retryTransaction.isPending ? "animate-spin" : ""}`} /> Retry
+                            </button>
+                          )}
+                        </div>
+                      </div>
                       <pre className="text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono bg-black/30 p-4 rounded-lg">
-                        {JSON.stringify(JSON.parse(t.rawPayload), null, 2)}
+                        {safeParseJson(t.rawPayload)}
                       </pre>
                       {t.errorMessage && <p className="text-red-400 text-xs mt-2">Error: {t.errorMessage}</p>}
                     </td>
@@ -109,7 +156,10 @@ export default function EDIPage() {
                 )}
               </>
             ))}
-            {(!data?.transactions || data.transactions.length === 0) && (
+            {isLoading && (
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">Loading transactions...</td></tr>
+            )}
+            {!isLoading && (!data?.transactions || data.transactions.length === 0) && (
               <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">No EDI transactions found</td></tr>
             )}
           </tbody>

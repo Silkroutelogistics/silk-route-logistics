@@ -1,8 +1,15 @@
 import axios from "axios";
 import { Sentry } from "@/lib/sentry";
 
+const resolvedBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+
+// Warn loudly in production if falling back to localhost
+if (typeof window !== "undefined" && resolvedBaseURL.includes("localhost") && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+  console.error("[SRL] CRITICAL: API URL is localhost but app is running on", window.location.hostname, "— set NEXT_PUBLIC_API_URL environment variable");
+}
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api",
+  baseURL: resolvedBaseURL,
   headers: { "Content-Type": "application/json" },
   timeout: 30000, // 30s timeout — Render free tier cold starts can take ~15s
   withCredentials: true, // Send httpOnly cookies with every request

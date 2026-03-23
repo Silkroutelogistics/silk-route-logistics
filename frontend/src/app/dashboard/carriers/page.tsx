@@ -132,6 +132,7 @@ export default function CarrierPoolPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editForm, setEditForm] = useState({ safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "" });
+  const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
 
   const { data } = useQuery({
     queryKey: ["carrier-all"],
@@ -390,13 +391,13 @@ export default function CarrierPoolPage() {
                     <FileText className="w-3.5 h-3.5" /> Tender Load
                   </a>
                   {isAdmin && carrier.onboardingStatus !== "APPROVED" && (
-                    <button onClick={() => verifyCarrier.mutate({ id: carrier.id, status: "APPROVED" })}
+                    <button onClick={() => setConfirmAction({ id: carrier.id, status: "APPROVED", company: carrier.company })}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                     </button>
                   )}
                   {isAdmin && carrier.onboardingStatus !== "REJECTED" && (
-                    <button onClick={() => verifyCarrier.mutate({ id: carrier.id, status: "REJECTED" })}
+                    <button onClick={() => setConfirmAction({ id: carrier.id, status: "REJECTED", company: carrier.company })}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
                       <AlertCircle className="w-3.5 h-3.5" /> Reject
                     </button>
@@ -466,6 +467,42 @@ export default function CarrierPoolPage() {
                 disabled={updateCarrier.isPending}
                 className="flex-1 px-4 py-2 bg-gold text-black rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
                 {updateCarrier.isPending ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Approve/Reject Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0f172a] rounded-xl border border-white/10 w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {confirmAction.status === "APPROVED" ? "Approve Carrier" : "Reject Carrier"}
+            </h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Are you sure you want to <strong className={confirmAction.status === "APPROVED" ? "text-green-400" : "text-red-400"}>
+                {confirmAction.status === "APPROVED" ? "approve" : "reject"}
+              </strong> <strong className="text-white">{confirmAction.company}</strong>?
+              {confirmAction.status === "REJECTED" && " This carrier will be blocked from accepting loads."}
+              {confirmAction.status === "APPROVED" && " This carrier will be able to accept loads and appear on the load board."}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmAction(null)}
+                className="flex-1 px-4 py-2.5 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  verifyCarrier.mutate({ id: confirmAction.id, status: confirmAction.status });
+                  setConfirmAction(null);
+                }}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition ${
+                  confirmAction.status === "APPROVED"
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-red-600 text-white hover:bg-red-700"
+                }`}>
+                {confirmAction.status === "APPROVED" ? "Approve" : "Reject"}
               </button>
             </div>
           </div>

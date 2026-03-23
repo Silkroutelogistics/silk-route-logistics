@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema, batchInvoiceStatusSchema } from "../validators/invoice";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendEmail, wrap } from "../services/emailService";
+import { onInvoicePaid } from "../services/integrationService";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
@@ -368,6 +369,12 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
     },
     include: { load: true },
   });
+
+  // Trigger integration chain: credit factoring fund, release shipper credit, release factoring reserve
+  onInvoicePaid(invoice.id, paidAmount || invoice.amount).catch((e) =>
+    console.error("[Invoice] onInvoicePaid integration error:", e.message)
+  );
+
   res.json(updated);
 }
 

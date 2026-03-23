@@ -33,7 +33,7 @@ export default function ShipperLoginPage() {
   const [otp, setOtp] = useState("");
   const [otpStep, setOtpStep] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-  const { login, isLoading, error } = useAuthStore();
+  const { login, verifyOtp, tempToken } = useAuthStore();
   const [localError, setLocalError] = useState("");
   const [localLoading, setLocalLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -42,10 +42,6 @@ export default function ShipperLoginPage() {
 
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const insight = INSIGHTS[dayOfYear % INSIGHTS.length];
-
-  const BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:4000" : "https://api.silkroutelogistics.ai";
-  const fetchOpts: RequestInit = { credentials: "include" }; // Send/receive httpOnly cookies
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,27 +56,22 @@ export default function ShipperLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
-      const res = await fetch(`${BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        ...fetchOpts,
-      });
-      const data = await res.json();
-      if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
-      if (data.pendingOtp) {
-        setPendingEmail(email);
+      const result = await login(email, password);
+      if (result && typeof result === "object" && "pendingOtp" in result && result.pendingOtp) {
+        setPendingEmail(result.email || email);
         setOtpStep(true);
         setSuccessMsg("A verification code has been sent to your email.");
         setLocalLoading(false);
         return;
       }
-      // Cookie set by backend — redirect
-      if (data.user) {
-        window.location.href = "/shipper/dashboard";
-      }
-    } catch {
-      setLocalError("Unable to connect to server. Please try again.");
+      // Cookie set by backend — redirect to shipper dashboard
+      window.location.href = "/shipper/dashboard";
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
+      let message = axiosErr?.response?.data?.error || "Unable to connect to server. Please try again.";
+      if (axiosErr?.code === "ECONNABORTED") message = "Server is starting up — please try again.";
+      if (axiosErr?.code === "ERR_NETWORK") message = "Cannot reach server.";
+      setLocalError(message);
     }
     setLocalLoading(false);
   };
@@ -91,20 +82,17 @@ export default function ShipperLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
-      const res = await fetch(`${BASE}/api/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: pendingEmail, code: otp }),
-        ...fetchOpts,
-      });
-      const data = await res.json();
-      if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
-      // Cookie set by backend — redirect
-      if (data.user) {
-        window.location.href = "/shipper/dashboard";
+      const result = await verifyOtp(pendingEmail, otp);
+      if (result && typeof result === "object" && "passwordExpired" in result && result.passwordExpired) {
+        if (tempToken) sessionStorage.setItem("srl_temp_token", tempToken);
+        window.location.href = "/auth/force-password-change";
+        return;
       }
-    } catch {
-      setLocalError("Unable to connect to server. Please try again.");
+      // Cookie set by backend — redirect to shipper dashboard
+      window.location.href = "/shipper/dashboard";
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Verification failed. Please try again.";
+      setLocalError(message);
     }
     setLocalLoading(false);
   };

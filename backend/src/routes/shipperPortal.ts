@@ -8,6 +8,8 @@ import {
   getShipperTracking,
   getShipperDocuments,
   createQuoteRequest,
+  fileShipperDispute,
+  getShipperDisputes,
 } from "../controllers/shipperPortalController";
 
 const router = Router();
@@ -21,6 +23,8 @@ router.get("/invoices", getShipperInvoices as any);
 router.get("/analytics", getShipperAnalytics as any);
 router.get("/tracking", getShipperTracking as any);
 router.get("/documents", getShipperDocuments as any);
+router.get("/disputes", getShipperDisputes as any);
 router.post("/quotes", createQuoteRequest as any);
+router.post("/disputes", fileShipperDispute as any);
 
 export default router;

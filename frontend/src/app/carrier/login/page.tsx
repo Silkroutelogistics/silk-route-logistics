@@ -31,7 +31,10 @@ export default function CarrierLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const { login, isLoading, error, token, mustChangePassword } = useCarrierAuth();
+  const [otpCode, setOtpCode] = useState("");
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState("");
+  const { login, verifyOtp, isLoading, error, token, mustChangePassword, pendingOtp, pendingEmail } = useCarrierAuth();
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -43,6 +46,13 @@ export default function CarrierLoginPage() {
   }, [token, mustChangePassword, router]);
 
   useEffect(() => {
+    if (pendingOtp && pendingEmail) {
+      setOtpStep(true);
+      setOtpSuccess(`Verification code sent to ${pendingEmail}`);
+    }
+  }, [pendingOtp, pendingEmail]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
     }, 3000);
@@ -51,8 +61,23 @@ export default function CarrierLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ok = await login(email, password);
-    if (ok) router.push("/carrier/dashboard");
+    const result = await login(email, password);
+    if (result === "success") {
+      window.location.href = "/carrier/dashboard";
+    } else if (result === "password") {
+      router.push("/auth/force-password-change");
+    }
+    // "otp" case is handled by the useEffect watching pendingOtp
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await verifyOtp(pendingEmail || email, otpCode);
+    if (result === "success") {
+      window.location.href = "/carrier/dashboard";
+    } else if (result === "password") {
+      router.push("/auth/force-password-change");
+    }
   };
 
   return (
@@ -156,47 +181,80 @@ export default function CarrierLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Email Address</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="carrier@company.com" autoComplete="email"
-                className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
-                style={{ background: "#162236", border: "1px solid #243447" }}
-                onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
-                onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
-                required
-              />
+          {otpSuccess && !error && (
+            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed"
+              style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80" }}>
+              {otpSuccess}
             </div>
-            <div className="mb-4">
-              <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Password</label>
-              <div className="relative">
-                <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password" autoComplete="current-password"
+          )}
+
+          {!otpStep ? (
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Email Address</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="carrier@company.com" autoComplete="email"
                   className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
                   style={{ background: "#162236", border: "1px solid #243447" }}
                   onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
                   onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
                   required
                 />
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5e70] hover:text-[#8899aa] bg-transparent border-none cursor-pointer transition-colors text-sm">
-                  {showPw ? "Hide" : "Show"}
-                </button>
               </div>
-            </div>
-            <div className="flex items-center justify-between mb-6">
-              <label className="flex items-center gap-2 text-[13px] text-[#8899aa] cursor-pointer">
-                <input type="checkbox" className="accent-[#c8a951]" style={{ width: 15, height: 15 }} /> Remember me
-              </label>
-              <span className="text-[13px] text-[#c8a951] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
-            </div>
-            <button type="submit" disabled={isLoading}
-              className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
-              style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A", boxShadow: "0 4px 20px rgba(200,150,62,0.25)" }}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+              <div className="mb-4">
+                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Password</label>
+                <div className="relative">
+                  <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password" autoComplete="current-password"
+                    className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
+                    style={{ background: "#162236", border: "1px solid #243447" }}
+                    onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
+                    onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5e70] hover:text-[#8899aa] bg-transparent border-none cursor-pointer transition-colors text-sm">
+                    {showPw ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mb-6">
+                <label className="flex items-center gap-2 text-[13px] text-[#8899aa] cursor-pointer">
+                  <input type="checkbox" className="accent-[#c8a951]" style={{ width: 15, height: 15 }} /> Remember me
+                </label>
+                <span className="text-[13px] text-[#c8a951] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
+              </div>
+              <button type="submit" disabled={isLoading}
+                className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+                style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A", boxShadow: "0 4px 20px rgba(200,150,62,0.25)" }}>
+                {isLoading ? "Signing in..." : "Sign In"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleOtpSubmit}>
+              <div className="mb-4">
+                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Verification Code</label>
+                <input type="text" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  placeholder="Enter 8-digit code" autoComplete="one-time-code" autoFocus
+                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70] text-center tracking-[6px] text-lg font-mono"
+                  style={{ background: "#162236", border: "1px solid #243447" }}
+                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                  required
+                />
+                <p className="text-[11px] text-[#5d7a8e] mt-2 text-center">Check your email for the verification code</p>
+              </div>
+              <button type="submit" disabled={isLoading || otpCode.length < 6}
+                className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+                style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A", boxShadow: "0 4px 20px rgba(200,150,62,0.25)" }}>
+                {isLoading ? "Verifying..." : "Verify Code"}
+              </button>
+              <button type="button" onClick={() => { setOtpStep(false); setOtpCode(""); setOtpSuccess(""); }}
+                className="w-full mt-3 py-2.5 text-[13px] font-medium text-[#8899aa] bg-transparent border border-[#243447] rounded-lg cursor-pointer hover:border-[#c8a951] transition-all">
+                Back to Sign In
+              </button>
+            </form>
+          )}
 
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-[#1f3044]" />

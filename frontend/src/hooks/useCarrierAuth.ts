@@ -29,7 +29,10 @@ interface CarrierAuthState {
   isLoading: boolean;
   error: string | null;
   mustChangePassword: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  pendingOtp: boolean;
+  pendingEmail: string | null;
+  login: (email: string, password: string) => Promise<"otp" | "success" | "password" | false>;
+  verifyOtp: (email: string, code: string) => Promise<"success" | "password" | false>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   forceChangePassword: (newPassword: string) => Promise<boolean>;
   loadUser: () => Promise<void>;
@@ -42,31 +45,58 @@ export const useCarrierAuth = create<CarrierAuthState>((set) => ({
   isLoading: false,
   error: null,
   mustChangePassword: false,
+  pendingOtp: false,
+  pendingEmail: null,
 
   login: async (email, password) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, pendingOtp: false, pendingEmail: null });
     try {
       const { data } = await api.post("/carrier-auth/login", { email, password });
 
-      // Backend now returns pendingOtp (OTP required)
+      // Backend returns pendingOtp → need OTP verification step
       if (data.pendingOtp) {
-        set({ isLoading: false });
-        return true;
+        set({ isLoading: false, pendingOtp: true, pendingEmail: email });
+        return "otp";
       }
 
-      // Cookie set by backend
+      // Cookie set by backend — password change required
       if (data.mustChangePassword) {
         set({ mustChangePassword: true, isLoading: false });
-        return true;
+        return "password";
       }
 
-      set({ user: data.user ? { ...data.user, carrierProfile: data.carrier || null } : null, isLoading: false });
-      return true;
+      set({ user: data.user ? { ...data.user, carrierProfile: data.carrier || null } : null, isLoading: false, pendingOtp: false });
+      return "success";
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
       let message = axiosErr?.response?.data?.error || "Login failed";
       if (axiosErr?.code === "ECONNABORTED") message = "Server is starting up — please try again.";
       if (axiosErr?.code === "ERR_NETWORK") message = "Cannot reach server.";
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  verifyOtp: async (email, code) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await api.post("/carrier-auth/verify-otp", { email, code });
+
+      if (data.mustChangePassword) {
+        set({ mustChangePassword: true, isLoading: false, pendingOtp: false });
+        return "password";
+      }
+
+      set({
+        user: data.user ? { ...data.user, carrierProfile: data.carrier || null } : null,
+        isLoading: false,
+        pendingOtp: false,
+        pendingEmail: null,
+      });
+      return "success";
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
+      const message = axiosErr?.response?.data?.error || "OTP verification failed";
       set({ error: message, isLoading: false });
       return false;
     }
