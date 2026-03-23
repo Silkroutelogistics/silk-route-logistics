@@ -403,6 +403,7 @@ enum NotificationType {
   FRAUD_REPORT
   ELD_INVALID
   AGREEMENT_SIGNED
+  COMPLIANCE
 }
 
 enum ShipmentType {
