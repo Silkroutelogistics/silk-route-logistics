@@ -8,6 +8,9 @@ import {
   ArrowUpRight, ArrowDownRight, AlertTriangle, Zap, FileText,
   CheckCircle2, RotateCcw, Landmark, BarChart3,
 } from "lucide-react";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 interface DashboardData {
   totalRevenue: number;
@@ -25,6 +28,8 @@ interface DashboardData {
   openDisputes: number;
   recentInvoices: { id: string; invoiceNumber: string; amount: number; status: string; dueDate: string; shipper: string }[];
   recentPayments: { id: string; paymentNumber: string; amount: number; status: string; carrier: string; dueDate: string }[];
+  monthlyData: { month: string; revenue: number; expenses: number }[];
+  fundTrend: { date: string; balance: number }[];
 }
 
 const formatCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -55,6 +60,8 @@ export default function AccountingDashboard() {
         openDisputes: d.alerts?.openDisputes ?? 0,
         recentInvoices: d.recentInvoices ?? [],
         recentPayments: d.recentPayments ?? [],
+        monthlyData: d.monthlyData ?? [],
+        fundTrend: d.fundTrend ?? [],
       } as DashboardData;
     },
   });
@@ -141,6 +148,44 @@ export default function AccountingDashboard() {
           );
         })}
       </div>
+
+      {/* Charts Row */}
+      {data && (data.monthlyData?.length > 0 || data.fundTrend?.length > 0) && (
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          {/* Revenue vs Expenses Bar Chart */}
+          {data.monthlyData?.length > 0 && (
+            <div className="bg-white/5 border border-white/5 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-white mb-4">Revenue vs Expenses</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data.monthlyData}>
+                  <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", fontSize: 12 }}
+                    formatter={(v: number | undefined) => v !== undefined ? [`$${v.toLocaleString()}`, ""] : ["-", ""]} />
+                  <Bar dataKey="revenue" fill="#c8a951" radius={[4, 4, 0, 0]} name="Revenue" />
+                  <Bar dataKey="expenses" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Expenses" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Fund Balance Trend Line Chart */}
+          {data.fundTrend?.length > 0 && (
+            <div className="bg-white/5 border border-white/5 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-white mb-4">Fund Balance Trend</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={data.fundTrend}>
+                  <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", fontSize: 12 }}
+                    formatter={(v: number | undefined) => v !== undefined ? [`$${v.toLocaleString()}`, "Balance"] : ["-", ""]} />
+                  <Line type="monotone" dataKey="balance" stroke="#22d3ee" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Two-Column Tables */}
       <div className="grid grid-cols-2 gap-6">

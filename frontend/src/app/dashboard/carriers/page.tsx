@@ -60,6 +60,8 @@ const TIER_COLORS: Record<string, string> = {
   GOLD: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   SILVER: "bg-slate-400/20 text-slate-300 border-slate-400/30",
   BRONZE: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  GUEST: "bg-white/10 text-slate-400 border-white/20",
+  NONE: "bg-white/5 text-slate-500 border-white/10",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -167,8 +169,13 @@ export default function CarrierPoolPage() {
     return true;
   });
 
-  const tierCounts = { PLATINUM: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
+  const tierCounts = { PLATINUM: 0, GOLD: 0, SILVER: 0, BRONZE: 0, GUEST: 0 };
   carriers.forEach((c) => { if (c.tier in tierCounts) tierCounts[c.tier as keyof typeof tierCounts]++; });
+  const caravanMembers = carriers.filter((c) => c.tier && c.tier !== "NONE" && c.tier !== "GUEST").length;
+  const avgCppScore = carriers.filter((c) => c.safetyScore).length > 0
+    ? Math.round(carriers.filter((c) => c.safetyScore).reduce((s, c) => s + (c.safetyScore || 0), 0) / carriers.filter((c) => c.safetyScore).length)
+    : 0;
+  const complianceHealthy = carriers.filter((c) => c.onboardingStatus === "APPROVED" && (!c.insuranceExpiry || daysUntil(c.insuranceExpiry)! > 30)).length;
 
   const totalRevenue = carriers.reduce((s, c) => s + c.totalRevenue, 0);
   const totalLoads = carriers.reduce((s, c) => s + c.completedLoads, 0);
@@ -198,17 +205,19 @@ export default function CarrierPoolPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <StatCard icon={<Users className="w-5 h-5 text-gold" />} label="Total Carriers" value={carriers.length} />
+        <StatCard icon={<Award className="w-5 h-5 text-gold" />} label="Caravan Members" value={caravanMembers} sub={`${carriers.length - caravanMembers} guest/unrated`} />
         <StatCard icon={<DollarSign className="w-5 h-5 text-green-400" />} label="Total Revenue" value={`$${(totalRevenue / 1000).toFixed(0)}k`} sub={`${totalLoads} loads completed`} />
-        <StatCard icon={<Shield className="w-5 h-5 text-blue-400" />} label="Avg Safety Score" value={`${avgSafety}%`} />
+        <StatCard icon={<Shield className="w-5 h-5 text-blue-400" />} label="Avg CPP Score" value={`${avgCppScore}%`} />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} label="Compliance Health" value={complianceHealthy} sub={`of ${carriers.filter((c) => c.onboardingStatus === "APPROVED").length} approved`} />
         <StatCard icon={<ShieldAlert className="w-5 h-5 text-yellow-400" />} label="Insurance Expiring" value={expiringSoon} sub="Within 30 days" />
         <StatCard icon={<Clock className="w-5 h-5 text-purple-400" />} label="Pending Onboarding" value={pendingOnboard} />
       </div>
 
       {/* Tier Cards */}
-      <div className="grid sm:grid-cols-4 gap-4">
-        {(["PLATINUM", "GOLD", "SILVER", "BRONZE"] as const).map((tier) => (
+      <div className="grid sm:grid-cols-5 gap-4">
+        {(["PLATINUM", "GOLD", "SILVER", "BRONZE", "GUEST"] as const).map((tier) => (
           <button key={tier} onClick={() => setTierFilter(tierFilter === tier ? "" : tier)}
             className={`bg-white/5 rounded-xl border p-4 text-left transition ${tierFilter === tier ? "border-gold" : "border-white/10 hover:border-white/20"}`}>
             <div className="flex items-center justify-between mb-1">

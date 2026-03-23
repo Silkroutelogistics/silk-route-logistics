@@ -46,6 +46,7 @@ const NAV_SECTIONS = [
     title: "ANALYSIS",
     items: [
       { label: "Load P&L", href: "/accounting/pnl", icon: BarChart3 },
+      { label: "Analytics", href: "/accounting/analytics", icon: FileSpreadsheet },
     ],
   },
   {

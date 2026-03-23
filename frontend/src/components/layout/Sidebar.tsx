@@ -8,6 +8,7 @@ import {
   BarChart3, TrendingUp, MessageSquare, FolderOpen, CreditCard,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
+  AlertTriangle, Mail, Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -25,6 +26,8 @@ const employeeNav = [
   { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
   { href: "/dashboard/fleet", label: "Fleet", icon: Truck },
   { href: "/dashboard/drivers", label: "Drivers", icon: Users },
+  { href: "/dashboard/communications", label: "Communications", icon: Mail },
+  { href: "/dashboard/claims", label: "Claims", icon: AlertTriangle },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/finance", label: "Finance", icon: PieChart },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
@@ -53,10 +56,13 @@ const carrierNav = [
 const aeViewNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/crm", label: "CRM", icon: Users },
+  { href: "/dashboard/lead-hunter", label: "Lead Hunter", icon: Target },
   { href: "/dashboard/orders", label: "Order Builder", icon: ClipboardEdit },
   { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
   { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+  { href: "/dashboard/communications", label: "Communications", icon: Mail },
+  { href: "/dashboard/claims", label: "Claims", icon: AlertTriangle },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
   { href: "/dashboard/payables", label: "Payables", icon: CreditCard },
   { href: "/dashboard/settlements", label: "Settlements", icon: ClipboardList },
