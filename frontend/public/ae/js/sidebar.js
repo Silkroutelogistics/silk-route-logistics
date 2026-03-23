@@ -63,6 +63,15 @@
     localStorage.setItem(STORAGE_KEY, "0");
   }
 
+  // Inject version badge into sidebar footer
+  var footer = sidebar.querySelector(".sidebar-footer");
+  if (footer) {
+    var versionEl = document.createElement("div");
+    versionEl.className = "sidebar-version";
+    versionEl.textContent = "v1.0";
+    footer.appendChild(versionEl);
+  }
+
   // Also handle hamburger toggle for mobile
   window.toggleSidebar = function () {
     sidebar.classList.toggle("open");

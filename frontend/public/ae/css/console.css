@@ -262,6 +262,14 @@ a:hover {
   flex-shrink: 0;
 }
 
+.sidebar-version {
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-500, rgba(255,255,255,0.35));
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
 .sidebar-logout {
   display: flex;
   align-items: center;
