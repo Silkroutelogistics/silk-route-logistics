@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import {
   Shield, Clock, User, Search, ChevronLeft, ChevronRight,
   Activity, FileText, Truck, Package, Users, DollarSign, Zap,
-  Monitor, LogIn,
+  Monitor, LogIn, Download,
 } from "lucide-react";
 
 interface AuditLog {
@@ -85,6 +85,25 @@ export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const exportCSV = (logs: AuditLog[]) => {
+    const headers = ["Timestamp", "User", "Email", "Action", "Entity", "Entity ID", "Details", "IP Address"];
+    const rows = logs.map((l) => [
+      new Date(l.createdAt).toLocaleString(),
+      `${l.user.firstName} ${l.user.lastName}`,
+      l.user.email,
+      l.action,
+      l.entity,
+      l.entityId || "",
+      (l.details || "").replace(/,/g, ";"),
+      l.ipAddress || "",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   // Login activity state
   const [loginPage, setLoginPage] = useState(1);
   const [loginSearch, setLoginSearch] = useState("");
@@ -148,6 +167,12 @@ export default function AuditLogPage() {
           <h1 className="text-2xl font-bold text-white">Audit Log</h1>
           <p className="text-slate-400 text-sm mt-1">{logsData?.total || 0} total events tracked</p>
         </div>
+        {(logsData?.logs?.length ?? 0) > 0 && (
+          <button onClick={() => logsData?.logs && exportCSV(logsData.logs)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-slate-300 hover:bg-white/10 transition">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+        )}
       </div>
 
       {/* Tab Selector */}

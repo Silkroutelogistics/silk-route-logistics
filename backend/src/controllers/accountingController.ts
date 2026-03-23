@@ -2820,8 +2820,201 @@ export async function exportData(req: AuthRequest, res: Response) {
         break;
       }
 
+      case "load-pnl":
+      case "loads": {
+        data = await prisma.load.findMany({
+          where: {
+            status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
+            ...(hasDateFilter ? { deliveryDate: dateFilter } : {}),
+          },
+          select: {
+            referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true,
+            distance: true, customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true,
+            equipmentType: true, deliveryDate: true,
+          },
+          take: 5000,
+        });
+        data = data.map((l: any) => ({
+          referenceNumber: l.referenceNumber,
+          origin: `${l.originCity}, ${l.originState}`,
+          destination: `${l.destCity}, ${l.destState}`,
+          distance: l.distance,
+          customerRate: l.customerRate,
+          carrierRate: l.carrierRate,
+          grossMargin: l.grossMargin,
+          marginPercent: l.marginPercent,
+          equipmentType: l.equipmentType,
+          deliveryDate: l.deliveryDate?.toISOString().split("T")[0] || "",
+        }));
+        columns = ["referenceNumber", "origin", "destination", "distance", "customerRate", "carrierRate", "grossMargin", "marginPercent", "equipmentType", "deliveryDate"];
+        break;
+      }
+
+      case "lane-profitability": {
+        const laneData = await prisma.load.groupBy({
+          by: ["originState", "destState"],
+          where: { status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] } },
+          _sum: { customerRate: true, carrierRate: true, grossMargin: true },
+          _count: true,
+          _avg: { marginPercent: true },
+          orderBy: { _count: { id: "desc" } },
+          take: 200,
+        });
+        data = laneData.map((l: any) => ({
+          lane: `${l.originState} → ${l.destState}`,
+          loads: l._count,
+          revenue: l._sum.customerRate || 0,
+          cost: l._sum.carrierRate || 0,
+          margin: l._sum.grossMargin || 0,
+          avgMarginPercent: (l._avg.marginPercent || 0).toFixed(1),
+        }));
+        columns = ["lane", "loads", "revenue", "cost", "margin", "avgMarginPercent"];
+        break;
+      }
+
+      case "carrier-profitability": {
+        const carrierData = await prisma.load.groupBy({
+          by: ["carrierId"],
+          where: { status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] }, carrierId: { not: null } },
+          _sum: { customerRate: true, carrierRate: true, grossMargin: true },
+          _count: true,
+          _avg: { marginPercent: true },
+          orderBy: { _count: { id: "desc" } },
+          take: 200,
+        });
+        const carrierIds = carrierData.map((c: any) => c.carrierId).filter(Boolean);
+        const carrierNames = await prisma.user.findMany({ where: { id: { in: carrierIds } }, select: { id: true, company: true, firstName: true, lastName: true } });
+        const nameMap = new Map(carrierNames.map((c) => [c.id, c.company || `${c.firstName} ${c.lastName}`]));
+        data = carrierData.map((c: any) => ({
+          carrier: nameMap.get(c.carrierId) || c.carrierId,
+          loads: c._count,
+          revenue: c._sum.customerRate || 0,
+          cost: c._sum.carrierRate || 0,
+          margin: c._sum.grossMargin || 0,
+          avgMarginPercent: (c._avg.marginPercent || 0).toFixed(1),
+        }));
+        columns = ["carrier", "loads", "revenue", "cost", "margin", "avgMarginPercent"];
+        break;
+      }
+
+      case "shipper-profitability": {
+        const shipperData = await prisma.load.groupBy({
+          by: ["customerId"],
+          where: { status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] }, customerId: { not: null } },
+          _sum: { customerRate: true, carrierRate: true, grossMargin: true },
+          _count: true,
+          _avg: { marginPercent: true },
+          orderBy: { _count: { id: "desc" } },
+          take: 200,
+        });
+        const custIds = shipperData.map((s: any) => s.customerId).filter(Boolean);
+        const custNames = await prisma.customer.findMany({ where: { id: { in: custIds } }, select: { id: true, name: true } });
+        const custMap = new Map(custNames.map((c) => [c.id, c.name]));
+        data = shipperData.map((s: any) => ({
+          shipper: custMap.get(s.customerId) || s.customerId,
+          loads: s._count,
+          revenue: s._sum.customerRate || 0,
+          cost: s._sum.carrierRate || 0,
+          margin: s._sum.grossMargin || 0,
+          avgMarginPercent: (s._avg.marginPercent || 0).toFixed(1),
+        }));
+        columns = ["shipper", "loads", "revenue", "cost", "margin", "avgMarginPercent"];
+        break;
+      }
+
+      case "ar-aging": {
+        const now = new Date();
+        const d30 = new Date(now.getTime() - 30 * 86400000);
+        const d60 = new Date(now.getTime() - 60 * 86400000);
+        const d90 = new Date(now.getTime() - 90 * 86400000);
+        const unpaid = { status: { notIn: ["PAID", "REJECTED", "VOID", "DRAFT"] as any } };
+        const invoices = await prisma.invoice.findMany({
+          where: unpaid,
+          include: { user: { select: { company: true, firstName: true, lastName: true } } },
+          take: 5000,
+        });
+        data = invoices.map((inv: any) => {
+          const age = Math.floor((now.getTime() - new Date(inv.createdAt).getTime()) / 86400000);
+          return {
+            invoiceNumber: inv.invoiceNumber,
+            amount: inv.amount,
+            status: inv.status,
+            ageDays: age,
+            bucket: age <= 30 ? "0-30" : age <= 60 ? "31-60" : age <= 90 ? "61-90" : "90+",
+            customer: inv.user?.company || `${inv.user?.firstName} ${inv.user?.lastName}`,
+            createdAt: new Date(inv.createdAt).toISOString().split("T")[0],
+            dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split("T")[0] : "",
+          };
+        });
+        columns = ["invoiceNumber", "customer", "amount", "status", "ageDays", "bucket", "createdAt", "dueDate"];
+        break;
+      }
+
+      case "ap-aging": {
+        const apNow = new Date();
+        const apUnpaid = { status: { notIn: ["PAID", "VOID"] as any } };
+        const payments = await prisma.carrierPay.findMany({
+          where: apUnpaid,
+          include: { carrier: { select: { company: true, firstName: true, lastName: true } } },
+          take: 5000,
+        });
+        data = payments.map((p: any) => {
+          const age = Math.floor((apNow.getTime() - new Date(p.createdAt).getTime()) / 86400000);
+          return {
+            paymentNumber: p.paymentNumber,
+            carrier: p.carrier?.company || `${p.carrier?.firstName} ${p.carrier?.lastName}`,
+            grossAmount: p.grossAmount,
+            netAmount: p.netAmount,
+            status: p.status,
+            ageDays: age,
+            bucket: age <= 30 ? "0-30" : age <= 60 ? "31-60" : age <= 90 ? "61-90" : "90+",
+            dueDate: p.dueDate ? new Date(p.dueDate).toISOString().split("T")[0] : "",
+          };
+        });
+        columns = ["paymentNumber", "carrier", "grossAmount", "netAmount", "status", "ageDays", "bucket", "dueDate"];
+        break;
+      }
+
+      case "weekly-report":
+      case "monthly-report": {
+        const reportType = type === "weekly-report" ? "WEEKLY" : "MONTHLY";
+        const reports = await prisma.financialReport.findMany({
+          where: { reportType },
+          orderBy: { periodStart: "desc" },
+          take: 52,
+        });
+        data = reports.map((r: any) => ({
+          title: r.title,
+          periodStart: r.periodStart?.toISOString().split("T")[0] || "",
+          periodEnd: r.periodEnd?.toISOString().split("T")[0] || "",
+          status: r.status,
+          loads: (r.summary as any)?.loads?.count || 0,
+          revenue: (r.summary as any)?.loads?.revenue || 0,
+          cost: (r.summary as any)?.loads?.cost || 0,
+          margin: (r.summary as any)?.loads?.margin || 0,
+        }));
+        columns = ["title", "periodStart", "periodEnd", "status", "loads", "revenue", "cost", "margin"];
+        break;
+      }
+
+      case "fund-performance": {
+        const funds = await prisma.factoringFund.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 1000,
+        });
+        data = funds.map((f: any) => ({
+          date: new Date(f.createdAt).toISOString().split("T")[0],
+          transactionType: f.transactionType,
+          amount: f.amount,
+          runningBalance: f.runningBalance,
+          description: f.description,
+        }));
+        columns = ["date", "transactionType", "amount", "runningBalance", "description"];
+        break;
+      }
+
       default:
-        res.status(400).json({ error: `Unknown export type: ${type}. Use: invoices, payments, disputes, loads, credit` });
+        res.status(400).json({ error: `Unknown export type: ${type}` });
         return;
     }
 

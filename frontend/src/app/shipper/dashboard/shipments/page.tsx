@@ -16,6 +16,25 @@ export default function ShipperShipmentsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  const exportShipmentsCSV = (shipments: Shipment[]) => {
+    const headers = ["Reference", "Origin", "Destination", "Equipment", "Status", "Pickup Date", "Delivery Date", "Rate"];
+    const rows = shipments.map((s: any) => [
+      s.referenceNumber || "",
+      `${s.originCity || ""} ${s.originState || ""}`,
+      `${s.destCity || ""} ${s.destState || ""}`,
+      s.equipmentType || "",
+      s.status || "",
+      s.pickupDate ? new Date(s.pickupDate).toLocaleDateString() : "",
+      s.deliveryDate ? new Date(s.deliveryDate).toLocaleDateString() : "",
+      s.rate || "",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `shipments-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const query = new URLSearchParams();
   if (activeFilter !== "All") query.set("status", activeFilter);
   if (search) query.set("search", search);
@@ -36,7 +55,8 @@ export default function ShipperShipmentsPage() {
           <p className="text-[13px] text-gray-500">Manage and monitor all your truckload and LTL shipments</p>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+          <button onClick={() => data?.shipments && exportShipmentsCSV(data.shipments)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
             <Download size={14} /> Export CSV
           </button>
           <Link href="/shipper/dashboard/quote" className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">

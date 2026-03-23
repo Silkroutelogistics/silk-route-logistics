@@ -13,6 +13,27 @@ export default function ShipperInvoicesPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [page, setPage] = useState(1);
 
+  const exportInvoicesCSV = (invoices: any[]) => {
+    const headers = ["Invoice #", "Shipment", "Amount", "Issued", "Due", "Status"];
+    const rows = invoices.map((inv) => [inv.id, inv.shipment, `$${inv.amount}`, inv.issued, inv.due, inv.status]);
+    const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadInvoicePdf = async (invoiceId: string) => {
+    try {
+      const res = await api.get(`/pdf/invoice/${invoiceId}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a"); a.href = url; a.download = `invoice-${invoiceId}.pdf`; a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Unable to download invoice PDF.");
+    }
+  };
+
   const query = new URLSearchParams();
   if (activeFilter !== "All") query.set("status", activeFilter);
   query.set("page", String(page));
@@ -32,7 +53,8 @@ export default function ShipperInvoicesPage() {
           <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Freight Invoicing &amp; Payment Management</h1>
           <p className="text-[13px] text-gray-500">Track all freight invoices, carrier payments, and transportation billing history</p>
         </div>
-        <button className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+        <button onClick={() => invoices.length > 0 && exportInvoicesCSV(invoices)}
+          className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
           <Download size={14} /> Export Statement
         </button>
       </div>
@@ -104,7 +126,8 @@ export default function ShipperInvoicesPage() {
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.due}</td>
                   <td className="px-4 py-3"><ShipperBadge status={inv.status} /></td>
                   <td className="px-4 py-3">
-                    <button className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+                    <button onClick={() => downloadInvoicePdf(inv.id)}
+                      className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
                       <Download size={14} /> PDF
                     </button>
                   </td>

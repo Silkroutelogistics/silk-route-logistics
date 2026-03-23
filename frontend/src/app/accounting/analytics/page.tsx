@@ -70,11 +70,13 @@ export default function FinancialAnalyticsPage() {
 
   const handleExport = async (type: string) => {
     try {
-      const res = await api.post("/accounting/export", { type }, { responseType: "blob" });
+      const res = await api.post("/accounting/export", { type, format: "csv" }, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a"); a.href = url; a.download = `${type}-export.csv`; a.click();
+      const a = document.createElement("a"); a.href = url; a.download = `${type}-export-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
       window.URL.revokeObjectURL(url);
-    } catch { /* noop */ }
+    } catch {
+      alert("Export failed — please try again.");
+    }
   };
 
   const KpiCard = ({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) => (
