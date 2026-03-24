@@ -31,8 +31,8 @@ router.get("/", validateQuery(customerQuerySchema), getCustomers);
 router.get("/stats", getCustomerStats);
 router.get("/:id", getCustomerById);
 router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);
-router.delete("/:id", authorize("ADMIN", "CEO"), deleteCustomer);
-router.put("/:id/restore", authorize("ADMIN", "CEO"), restoreCustomer);
+router.delete("/:id", authorize("ADMIN", "CEO", "BROKER"), deleteCustomer);
+router.put("/:id/restore", authorize("ADMIN", "CEO", "BROKER"), restoreCustomer);
 
 // Customer contacts
 router.get("/:id/contacts", getCustomerContacts);

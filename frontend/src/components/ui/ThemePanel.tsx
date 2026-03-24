@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Settings, X, Sun, Moon, Check } from "lucide-react";
 import { useTheme, THEMES } from "@/hooks/useTheme";
 
@@ -17,7 +18,10 @@ export function ThemeGearButton() {
         <Settings className="w-4 h-4" /> Theme
       </button>
 
-      {open && <ThemePanel onClose={() => setOpen(false)} />}
+      {open && typeof document !== "undefined" && createPortal(
+        <ThemePanel onClose={() => setOpen(false)} />,
+        document.body
+      )}
     </>
   );
 }

@@ -139,6 +139,10 @@ export default function CRMPage() {
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
       setExpanded(null);
     },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || "Failed to delete customer";
+      alert(msg === "Insufficient permissions" ? "You don't have permission to delete customers." : msg);
+    },
   });
 
   return (
