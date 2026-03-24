@@ -39,44 +39,155 @@ html {
   animation: slide-in-right 0.25s ease-out;
 }
 
-/* Theme engine: override accent colors based on active theme */
+/* ═══════════════════════════════════════════════════
+   Theme Engine — Accent Colors per Theme
+   ═══════════════════════════════════════════════════ */
+
 :root {
   --theme-primary: #C8963E;
   --theme-sidebar: #0D1B2A;
   --theme-accent: #D4A64E;
-  --theme-gold: #C8963E;
 }
 
-/* Apply theme primary to gold accent classes */
+/* Theme accent overrides */
 [data-theme="midnight-express"] .text-gold { color: #818CF8 !important; }
 [data-theme="midnight-express"] .bg-gold { background-color: #818CF8 !important; }
 [data-theme="midnight-express"] .bg-gold\/10 { background-color: rgba(129,140,248,0.1) !important; }
 [data-theme="midnight-express"] .border-gold { border-color: #818CF8 !important; }
-[data-theme="midnight-express"] .bg-navy { background-color: #312E81 !important; }
 
 [data-theme="desert-route"] .text-gold { color: #C2703E !important; }
 [data-theme="desert-route"] .bg-gold { background-color: #C2703E !important; }
 [data-theme="desert-route"] .bg-gold\/10 { background-color: rgba(194,112,62,0.1) !important; }
 [data-theme="desert-route"] .border-gold { border-color: #C2703E !important; }
-[data-theme="desert-route"] .bg-navy { background-color: #78350F !important; }
 
 [data-theme="arctic-haul"] .text-gold { color: #0EA5E9 !important; }
 [data-theme="arctic-haul"] .bg-gold { background-color: #0EA5E9 !important; }
 [data-theme="arctic-haul"] .bg-gold\/10 { background-color: rgba(14,165,233,0.1) !important; }
 [data-theme="arctic-haul"] .border-gold { border-color: #0EA5E9 !important; }
-[data-theme="arctic-haul"] .bg-navy { background-color: #0C4A6E !important; }
 
 [data-theme="highway-green"] .text-gold { color: #16A34A !important; }
 [data-theme="highway-green"] .bg-gold { background-color: #16A34A !important; }
 [data-theme="highway-green"] .bg-gold\/10 { background-color: rgba(22,163,74,0.1) !important; }
 [data-theme="highway-green"] .border-gold { border-color: #16A34A !important; }
-[data-theme="highway-green"] .bg-navy { background-color: #14532D !important; }
 
 [data-theme="chrome-steel"] .text-gold { color: #A1A1AA !important; }
 [data-theme="chrome-steel"] .bg-gold { background-color: #71717A !important; }
 [data-theme="chrome-steel"] .bg-gold\/10 { background-color: rgba(113,113,122,0.1) !important; }
 [data-theme="chrome-steel"] .border-gold { border-color: #71717A !important; }
+
+/* ═══════════════════════════════════════════════════
+   Sidebar Colors per Theme (dark mode keeps themed sidebar)
+   ═══════════════════════════════════════════════════ */
+
+[data-theme="midnight-express"] .bg-navy { background-color: #312E81 !important; }
+[data-theme="desert-route"] .bg-navy { background-color: #78350F !important; }
+[data-theme="arctic-haul"] .bg-navy { background-color: #0C4A6E !important; }
+[data-theme="highway-green"] .bg-navy { background-color: #14532D !important; }
 [data-theme="chrome-steel"] .bg-navy { background-color: #27272A !important; }
+
+/* ═══════════════════════════════════════════════════
+   LIGHT MODE — Complete visual overhaul
+   Backgrounds, text, borders, cards all flip to light
+   ═══════════════════════════════════════════════════ */
+
+[data-mode="light"] main {
+  background: #f8fafc !important;
+}
+
+/* Cards: bg-white/5 → white card with subtle shadow */
+[data-mode="light"] .bg-white\/5 {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+[data-mode="light"] .bg-white\/\[0\.07\],
+[data-mode="light"] .bg-white\/10,
+[data-mode="light"] .hover\:bg-white\/5:hover,
+[data-mode="light"] .hover\:bg-white\/10:hover {
+  background: #f1f5f9 !important;
+}
+
+/* Borders: white/10 → gray-200 */
+[data-mode="light"] .border-white\/10,
+[data-mode="light"] .border-white\/5 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Text: white → dark navy */
+[data-mode="light"] .text-white {
+  color: #0f172a !important;
+}
+
+/* Secondary text: slate-400/500 → slate-600 */
+[data-mode="light"] .text-slate-400 {
+  color: #475569 !important;
+}
+[data-mode="light"] .text-slate-500 {
+  color: #64748b !important;
+}
+[data-mode="light"] .text-slate-300 {
+  color: #334155 !important;
+}
+
+/* Input backgrounds */
+[data-mode="light"] .bg-white\/5 input,
+[data-mode="light"] .bg-white\/5 select,
+[data-mode="light"] .bg-white\/5 textarea {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Table headers */
+[data-mode="light"] th {
+  color: #64748b !important;
+}
+
+/* Dividers */
+[data-mode="light"] .divide-white\/5 > * + * {
+  border-color: #e2e8f0 !important;
+}
+
+/* Black overlays for modals stay dark */
+[data-mode="light"] .bg-black\/60,
+[data-mode="light"] .bg-black\/40 {
+  background: rgba(0,0,0,0.4) !important;
+}
+
+/* Modal content goes light */
+[data-mode="light"] .bg-\[\\#0f172a\] {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Status badges keep their colors in light mode */
+[data-mode="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.12) !important; }
+[data-mode="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.12) !important; }
+[data-mode="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.12) !important; }
+[data-mode="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.12) !important; }
+[data-mode="light"] .bg-purple-500\/20 { background: rgba(168,85,247,0.12) !important; }
+
+/* Chart tooltips */
+[data-mode="light"] .recharts-default-tooltip {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Sidebar stays dark in light mode (professional look) — only main content goes light */
+[data-mode="light"] aside.bg-navy {
+  background: #0D1B2A !important;
+}
+[data-mode="light"] aside .text-white { color: #ffffff !important; }
+[data-mode="light"] aside .text-slate-400 { color: #94a3b8 !important; }
+[data-mode="light"] aside .text-slate-500 { color: #64748b !important; }
+[data-mode="light"] aside .border-white\/10 { border-color: rgba(255,255,255,0.1) !important; }
+[data-mode="light"] aside .bg-white\/5 { background: rgba(255,255,255,0.05) !important; box-shadow: none; }
+
+/* Theme panel stays dark regardless */
+[data-mode="light"] .srl-theme-panel,
+[data-mode="light"] [class*="bg-[#0f172a]"] {
+  color: #ffffff;
+}
 
 /* Google Places Autocomplete dropdown styling */
 .pac-container {

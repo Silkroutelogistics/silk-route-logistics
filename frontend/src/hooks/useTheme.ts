@@ -43,7 +43,7 @@ function applyToDOM(themeId: string, darkMode: boolean) {
 
 export const useTheme = create<ThemeState>((set, get) => ({
   themeId: "silk-route-classic",
-  darkMode: true, // default dark for SRL
+  darkMode: false, // default light — user preference
 
   setTheme: (id) => {
     set({ themeId: id });
@@ -69,7 +69,7 @@ export const useTheme = create<ThemeState>((set, get) => ({
   loadFromStorage: () => {
     if (typeof window === "undefined") return;
     const savedTheme = localStorage.getItem("srl_theme") || "silk-route-classic";
-    const savedMode = localStorage.getItem("srl_mode") || "dark";
+    const savedMode = localStorage.getItem("srl_mode") || "light";
     const darkMode = savedMode === "dark";
     set({ themeId: savedTheme, darkMode });
     applyToDOM(savedTheme, darkMode);
