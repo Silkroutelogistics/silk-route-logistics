@@ -43,15 +43,16 @@ const employeeNav = [
 ];
 
 const carrierNav = [
-  { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/loads", label: "Load Board", icon: Package },
-  { href: "/dashboard/scorecard", label: "Scorecard", icon: BarChart3 },
-  { href: "/dashboard/revenue", label: "Revenue", icon: TrendingUp },
-  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
-  { href: "/dashboard/factoring", label: "Factoring", icon: DollarSign },
-  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
-  { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/carrier/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/carrier/dashboard/available-loads", label: "Find Loads", icon: Package },
+  { href: "/carrier/dashboard/my-loads", label: "My Loads", icon: Truck },
+  { href: "/carrier/dashboard/scorecard", label: "Scorecard & Bonuses", icon: BarChart3 },
+  { href: "/carrier/dashboard/revenue", label: "Revenue", icon: TrendingUp },
+  { href: "/carrier/dashboard/payments", label: "Payments", icon: DollarSign },
+  { href: "/carrier/dashboard/compliance", label: "Compliance", icon: Shield },
+  { href: "/carrier/dashboard/documents", label: "Documents", icon: FolderOpen },
+  { href: "/carrier/dashboard/messaging", label: "Messages", icon: MessageSquare },
+  { href: "/carrier/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 // AE View — Account Executive / Broker workflow

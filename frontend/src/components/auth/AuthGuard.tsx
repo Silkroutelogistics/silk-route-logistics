@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
-import { isShipper } from "@/lib/roles";
+import { isShipper, isCarrier } from "@/lib/roles";
 import { Logo } from "@/components/ui/Logo";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -25,11 +25,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           router.replace("/shipper/dashboard");
           return;
         }
+        if (isCarrier(currentUser.role)) {
+          router.replace("/carrier/dashboard");
+          return;
+        }
         setChecking(false);
       });
     } else {
       if (isShipper(user.role)) {
         router.replace("/shipper/dashboard");
+        return;
+      }
+      if (isCarrier(user.role)) {
+        router.replace("/carrier/dashboard");
         return;
       }
       setChecking(false);
