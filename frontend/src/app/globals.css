@@ -90,6 +90,11 @@ html {
    Backgrounds, text, borders, cards all flip to light
    ═══════════════════════════════════════════════════ */
 
+/* Smooth transitions when switching modes */
+main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-500 {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
 [data-mode="light"] main {
   background: #f8fafc !important;
 }

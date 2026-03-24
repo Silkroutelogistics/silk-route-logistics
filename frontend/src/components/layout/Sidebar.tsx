@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeGearButton } from "@/components/ui/ThemePanel";
+import { CommandPaletteTrigger } from "@/components/ui/CommandPalette";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useViewMode } from "@/hooks/useViewMode";
 import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
@@ -239,6 +240,7 @@ export function Sidebar() {
             </div>
           </div>
         )}
+        <CommandPaletteTrigger />
         <ThemeGearButton />
         <button
           onClick={() => logout()}

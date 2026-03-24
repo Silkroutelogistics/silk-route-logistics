@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useToast } from "@/components/ui/Toast";
 import {
-  Shield, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
+  Shield, ShieldCheck, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
   Search, ChevronDown, ChevronUp, Plus, X, Scale, Package, Minus, Timer, Receipt,
 } from "lucide-react";
 
@@ -191,7 +191,13 @@ export default function ClaimsPage() {
             {isLoading ? (
               <tr><td colSpan={7} className="p-8 text-center text-slate-500">Loading claims...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="p-8 text-center text-slate-500">No claims found</td></tr>
+              <tr><td colSpan={7}>
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <ShieldCheck className="w-12 h-12 text-slate-300 mb-4" />
+                  <h3 className="text-lg font-semibold text-white mb-1">No claims filed</h3>
+                  <p className="text-sm text-slate-400 mb-4 max-w-sm">All loads delivered without issues</p>
+                </div>
+              </td></tr>
             ) : filtered.map(c => (
               <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] group">
                 <td className="p-3 text-slate-300">{new Date(c.createdAt).toLocaleDateString()}</td>

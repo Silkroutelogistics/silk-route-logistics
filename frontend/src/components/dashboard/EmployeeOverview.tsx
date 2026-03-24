@@ -67,10 +67,18 @@ export function EmployeeOverview() {
   return (
     <div className="p-6 space-y-6">
       <div className="bg-gradient-to-r from-gold/20 to-transparent rounded-2xl p-6 md:p-8 border border-gold/10">
-        <h1 className="text-2xl font-bold text-white mb-1">
-          Welcome back, {user?.firstName || "Team"}
-        </h1>
-        <p className="text-slate-400 text-sm">Operations Hub &mdash; Silk Route Logistics</p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-1">
+              {new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, {user?.firstName || "Team"}
+            </h1>
+            <p className="text-slate-400 text-sm">Operations Hub &mdash; Silk Route Logistics &middot; {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+          </div>
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-xs text-slate-500">
+            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-mono">&#8984;K</kbd>
+            <span>Quick actions</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

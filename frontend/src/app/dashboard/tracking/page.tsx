@@ -245,7 +245,13 @@ export default function TrackingPage() {
                   );
                 })}
                 {trackedLoads.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-500">No active loads being tracked</td></tr>
+                  <tr><td colSpan={8}>
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <MapPin className="w-12 h-12 text-slate-300 mb-4" />
+                      <h3 className="text-lg font-semibold text-white mb-1">No loads being tracked</h3>
+                      <p className="text-sm text-slate-400 mb-4 max-w-sm">Loads in transit will appear here automatically</p>
+                    </div>
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -499,6 +505,46 @@ function LoadRow({
       {isExpanded && (
         <tr className="border-b border-gold/20 bg-white/[0.01]">
           <td colSpan={8} className="px-4 py-4">
+            {/* ── Lifecycle Timeline ── */}
+            {(() => {
+              const TIMELINE_STEPS = ["POSTED", "BOOKED", "DISPATCHED", "AT_PICKUP", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"] as const;
+              const TIMELINE_LABELS: Record<string, string> = { POSTED: "Posted", BOOKED: "Booked", DISPATCHED: "Dispatched", AT_PICKUP: "Pickup", IN_TRANSIT: "Transit", AT_DELIVERY: "Delivery", DELIVERED: "Delivered" };
+              const mapped = load.status === "PICKED_UP" ? "IN_TRANSIT" : load.status;
+              // Find the furthest matching step
+              const activeIdx = (() => {
+                const pIdx = LOAD_PIPELINE.indexOf(mapped === "PICKED_UP" ? "LOADED" : mapped);
+                let best = -1;
+                for (let i = 0; i < TIMELINE_STEPS.length; i++) {
+                  const sIdx = LOAD_PIPELINE.indexOf(TIMELINE_STEPS[i]);
+                  if (sIdx <= pIdx) best = i;
+                }
+                return best;
+              })();
+              return (
+                <div className="mb-4 px-2">
+                  <div className="flex items-center w-full">
+                    {TIMELINE_STEPS.map((step, i) => {
+                      const done = i <= activeIdx;
+                      const isCurrent = i === activeIdx;
+                      return (
+                        <div key={step} className="flex items-center" style={{ flex: i < TIMELINE_STEPS.length - 1 ? 1 : 0 }}>
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3 h-3 rounded-full border-2 ${isCurrent ? "bg-gold border-gold" : done ? "bg-green-500 border-green-500" : "bg-transparent border-slate-600"}`} />
+                            <span className={`text-[10px] mt-1 whitespace-nowrap ${isCurrent ? "text-gold font-semibold" : done ? "text-green-400" : "text-slate-600"}`}>
+                              {TIMELINE_LABELS[step]}
+                            </span>
+                          </div>
+                          {i < TIMELINE_STEPS.length - 1 && (
+                            <div className={`flex-1 h-0.5 mx-1 ${i < activeIdx ? "bg-green-500" : "bg-slate-700"}`} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid lg:grid-cols-3 gap-4">
               {/* Status Pipeline */}
               <div className="bg-white/5 rounded-lg p-4">

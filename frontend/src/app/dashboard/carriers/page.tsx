@@ -423,9 +423,11 @@ export default function CarrierPoolPage() {
           </div>
         ))}
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-slate-500">
-            <Truck className="w-8 h-8 mx-auto mb-3 opacity-50" />
-            <p>No carriers found matching your criteria</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Truck className="w-12 h-12 text-slate-300 mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
+            <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
+            <a href="/onboarding" className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Invite Carriers</a>
           </div>
         )}
       </div>
