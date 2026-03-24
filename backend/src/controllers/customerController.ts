@@ -120,16 +120,119 @@ export async function updateCustomer(req: AuthRequest, res: Response) {
 }
 
 export async function deleteCustomer(req: AuthRequest, res: Response) {
-  const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+  const customer = await prisma.customer.findUnique({
+    where: { id: req.params.id },
+    include: { user: { select: { id: true, email: true } } },
+  });
   if (!customer || customer.deletedAt) {
     res.status(404).json({ error: "Customer not found" });
     return;
   }
+
+  const now = new Date();
+  const deletedBy = req.user!.email || req.user!.id;
+
+  // 1. Soft-delete the customer
   await prisma.customer.update({
     where: { id: customer.id },
-    data: { deletedAt: new Date(), deletedBy: req.user!.email || req.user!.id },
+    data: { deletedAt: now, deletedBy },
   });
-  res.json({ success: true, message: "Customer archived" });
+
+  // 2. Cancel active loads for this customer (POSTED, TENDERED, BOOKED, DISPATCHED)
+  const activeLoads = await prisma.load.findMany({
+    where: {
+      customerId: customer.id,
+      status: { in: ["POSTED", "TENDERED", "BOOKED", "DISPATCHED"] },
+      deletedAt: null,
+    },
+    select: { id: true, referenceNumber: true, carrierId: true },
+  });
+
+  for (const load of activeLoads) {
+    await prisma.load.update({
+      where: { id: load.id },
+      data: {
+        status: "CANCELLED",
+        deletedAt: now,
+        deletedBy,
+        cancellationReason: `Customer ${customer.name} deleted`,
+      },
+    });
+
+    // Notify assigned carrier if any
+    if (load.carrierId) {
+      await prisma.notification.create({
+        data: {
+          userId: load.carrierId,
+          type: "LOAD_UPDATE",
+          title: "Load Cancelled — Customer Removed",
+          message: `Load ${load.referenceNumber} has been cancelled because the customer account was removed.`,
+          actionUrl: "/carrier/dashboard/my-loads",
+        },
+      });
+    }
+  }
+
+  // 3. Void unpaid invoices for this customer's loads
+  await prisma.invoice.updateMany({
+    where: {
+      load: { customerId: customer.id },
+      status: { notIn: ["PAID", "VOID"] },
+      deletedAt: null,
+    },
+    data: { status: "VOID", deletedAt: now },
+  });
+
+  // 4. Release shipper credit utilization
+  const credit = await prisma.shipperCredit.findUnique({ where: { customerId: customer.id } });
+  if (credit) {
+    await prisma.shipperCredit.update({
+      where: { id: credit.id },
+      data: {
+        currentUtilized: 0,
+        autoBlocked: false,
+        blockedReason: null,
+        blockedAt: null,
+      },
+    });
+  }
+
+  // 5. Deactivate linked shipper user account (if exists)
+  if (customer.userId) {
+    await prisma.user.update({
+      where: { id: customer.userId },
+      data: { isActive: false },
+    });
+  }
+
+  // 6. Notify admins/brokers
+  const employees = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "BROKER"] }, isActive: true },
+    select: { id: true },
+    take: 10,
+  });
+  if (employees.length > 0) {
+    await prisma.notification.createMany({
+      data: employees.map((e) => ({
+        userId: e.id,
+        type: "GENERAL" as const,
+        title: "Customer Deleted",
+        message: `${customer.name} has been removed by ${deletedBy}. ${activeLoads.length} load(s) cancelled, invoices voided.`,
+        actionUrl: "/dashboard/crm",
+      })),
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Customer archived",
+    details: {
+      loadsCancelled: activeLoads.length,
+      invoicesVoided: true,
+      creditReleased: !!credit,
+      userDeactivated: !!customer.userId,
+    },
+  });
 }
 
 export async function restoreCustomer(req: AuthRequest, res: Response) {
@@ -138,11 +241,50 @@ export async function restoreCustomer(req: AuthRequest, res: Response) {
     res.status(404).json({ error: "Archived customer not found" });
     return;
   }
+
+  // 1. Restore customer
   await prisma.customer.update({
     where: { id: customer.id },
     data: { deletedAt: null, deletedBy: null },
   });
-  res.json({ success: true, message: "Customer restored" });
+
+  // 2. Reactivate linked shipper user account
+  if (customer.userId) {
+    await prisma.user.update({
+      where: { id: customer.userId },
+      data: { isActive: true },
+    });
+  }
+
+  // 3. Restore voided invoices back to SUBMITTED (cancelled loads stay cancelled — broker must re-create)
+  await prisma.invoice.updateMany({
+    where: {
+      load: { customerId: customer.id },
+      status: "VOID",
+      deletedAt: { not: null },
+    },
+    data: { status: "SUBMITTED", deletedAt: null },
+  });
+
+  // 4. Notify team
+  const employees = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "BROKER"] }, isActive: true },
+    select: { id: true },
+    take: 10,
+  });
+  if (employees.length > 0) {
+    await prisma.notification.createMany({
+      data: employees.map((e) => ({
+        userId: e.id,
+        type: "GENERAL" as const,
+        title: "Customer Restored",
+        message: `${customer.name} has been restored. Shipper access reactivated. Note: cancelled loads must be re-created manually.`,
+        actionUrl: "/dashboard/crm",
+      })),
+    });
+  }
+
+  res.json({ success: true, message: "Customer restored", userReactivated: !!customer.userId });
 }
 
 // ─── Customer Contacts ──────────────────────────────────
