@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Sentry } from "@/lib/sentry";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { useTheme } from "@/hooks/useTheme";
 import { ToastProvider } from "@/components/ui/Toast";
 
 function SentryUserSync() {
@@ -16,6 +17,12 @@ function SentryUserSync() {
       Sentry.setUser(null);
     }
   }, [user]);
+  return null;
+}
+
+function ThemeInit() {
+  const loadFromStorage = useTheme((s) => s.loadFromStorage);
+  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   return null;
 }
 
@@ -34,6 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ToastProvider>
         <Sentry.ErrorBoundary fallback={<p>Something went wrong.</p>}>
           <SentryUserSync />
+          <ThemeInit />
           {children}
         </Sentry.ErrorBoundary>
       </ToastProvider>

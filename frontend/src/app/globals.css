@@ -30,6 +30,54 @@ html {
   animation: slide-up 0.3s ease-out;
 }
 
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.25s ease-out;
+}
+
+/* Theme engine: override accent colors based on active theme */
+:root {
+  --theme-primary: #C8963E;
+  --theme-sidebar: #0D1B2A;
+  --theme-accent: #D4A64E;
+  --theme-gold: #C8963E;
+}
+
+/* Apply theme primary to gold accent classes */
+[data-theme="midnight-express"] .text-gold { color: #818CF8 !important; }
+[data-theme="midnight-express"] .bg-gold { background-color: #818CF8 !important; }
+[data-theme="midnight-express"] .bg-gold\/10 { background-color: rgba(129,140,248,0.1) !important; }
+[data-theme="midnight-express"] .border-gold { border-color: #818CF8 !important; }
+[data-theme="midnight-express"] .bg-navy { background-color: #312E81 !important; }
+
+[data-theme="desert-route"] .text-gold { color: #C2703E !important; }
+[data-theme="desert-route"] .bg-gold { background-color: #C2703E !important; }
+[data-theme="desert-route"] .bg-gold\/10 { background-color: rgba(194,112,62,0.1) !important; }
+[data-theme="desert-route"] .border-gold { border-color: #C2703E !important; }
+[data-theme="desert-route"] .bg-navy { background-color: #78350F !important; }
+
+[data-theme="arctic-haul"] .text-gold { color: #0EA5E9 !important; }
+[data-theme="arctic-haul"] .bg-gold { background-color: #0EA5E9 !important; }
+[data-theme="arctic-haul"] .bg-gold\/10 { background-color: rgba(14,165,233,0.1) !important; }
+[data-theme="arctic-haul"] .border-gold { border-color: #0EA5E9 !important; }
+[data-theme="arctic-haul"] .bg-navy { background-color: #0C4A6E !important; }
+
+[data-theme="highway-green"] .text-gold { color: #16A34A !important; }
+[data-theme="highway-green"] .bg-gold { background-color: #16A34A !important; }
+[data-theme="highway-green"] .bg-gold\/10 { background-color: rgba(22,163,74,0.1) !important; }
+[data-theme="highway-green"] .border-gold { border-color: #16A34A !important; }
+[data-theme="highway-green"] .bg-navy { background-color: #14532D !important; }
+
+[data-theme="chrome-steel"] .text-gold { color: #A1A1AA !important; }
+[data-theme="chrome-steel"] .bg-gold { background-color: #71717A !important; }
+[data-theme="chrome-steel"] .bg-gold\/10 { background-color: rgba(113,113,122,0.1) !important; }
+[data-theme="chrome-steel"] .border-gold { border-color: #71717A !important; }
+[data-theme="chrome-steel"] .bg-navy { background-color: #27272A !important; }
+
 /* Google Places Autocomplete dropdown styling */
 .pac-container {
   background: #ffffff;

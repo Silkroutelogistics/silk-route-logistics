@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
+import { ThemeGearButton } from "@/components/ui/ThemePanel";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useViewMode } from "@/hooks/useViewMode";
 import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
@@ -229,15 +230,16 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-white/10">
+      <div className="px-3 py-4 border-t border-white/10 space-y-1">
         {carrier && (
-          <div className="px-3 py-2 mb-3">
+          <div className="px-3 py-2">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-gold" />
               <span className="text-xs text-slate-500">Quick Pay Available</span>
             </div>
           </div>
         )}
+        <ThemeGearButton />
         <button
           onClick={() => logout()}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 w-full transition">
