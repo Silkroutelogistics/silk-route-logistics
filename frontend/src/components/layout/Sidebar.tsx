@@ -8,7 +8,7 @@ import {
   BarChart3, TrendingUp, MessageSquare, FolderOpen, CreditCard,
   MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
-  AlertTriangle, Mail, Target,
+  AlertTriangle, Mail, Target, Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -75,6 +75,7 @@ const aeViewNav = [
   { href: "/dashboard/ai-costs", label: "AI Costs", icon: Cpu },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
+  { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },

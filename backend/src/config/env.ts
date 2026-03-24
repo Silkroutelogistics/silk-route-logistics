@@ -37,6 +37,13 @@ const envSchema = z.object({
   MOTIVE_API_KEY: z.string().optional(),
   SAMSARA_WEBHOOK_SECRET: z.string().optional(),
   MOTIVE_WEBHOOK_SECRET: z.string().optional(),
+  // External Integration APIs
+  CARRIER_OK_API_KEY: z.string().optional(),
+  TRUCKSTOP_API_KEY: z.string().optional(),
+  CH_ROBINSON_API_KEY: z.string().optional(),
+  ECHO_API_KEY: z.string().optional(),
+  UBER_FREIGHT_API_KEY: z.string().optional(),
+  PROJECT44_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

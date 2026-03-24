@@ -59,6 +59,7 @@ import loadStopRoutes from "./loadStops";
 import loadAccessorialRoutes from "./loadAccessorials";
 import trackTraceBoardRoutes from "./trackTraceBoard";
 import trackTraceSSERoutes from "./trackTraceSSE";
+import externalIntegrations from "./externalIntegrations";
 
 const router = Router();
 
@@ -206,5 +207,6 @@ router.use("/load-stops", loadStopRoutes);
 router.use("/load-accessorials", loadAccessorialRoutes);
 router.use("/track-trace", trackTraceBoardRoutes);
 router.use("/track-trace", trackTraceSSERoutes);
+router.use("/integrations", externalIntegrations);
 
 export default router;
