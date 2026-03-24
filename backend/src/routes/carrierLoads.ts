@@ -113,6 +113,8 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
     where: { id: req.params.id },
     include: {
       poster: { select: { firstName: true, lastName: true, company: true, phone: true, email: true } },
+      carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { companyName: true, mcNumber: true, dotNumber: true } } } },
+      customer: { select: { name: true, contactName: true, email: true, phone: true } },
       documents: { where: { docType: { in: ["RATE_CON", "BOL", "POD"] } } },
     },
   });

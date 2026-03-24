@@ -7,6 +7,7 @@ import {
   Search, FileText, Send, Eye, Download, Filter, ChevronLeft, ChevronRight,
   Plus, Clock, DollarSign, AlertTriangle, CheckCircle2, X,
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface Invoice {
   id: string;
@@ -49,7 +50,9 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [confirmPayId, setConfirmPayId] = useState<{ id: string; invoiceNumber: string; amount: number } | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const qs = new URLSearchParams();
   if (search) qs.set("search", search);
@@ -64,17 +67,20 @@ export default function InvoicesPage() {
   const sendMutation = useMutation({
     mutationFn: (id: string) => api.post(`/accounting/invoices/${id}/send`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+    onError: () => toast("Operation failed", "error"),
   });
 
   const voidMutation = useMutation({
     mutationFn: (id: string) => api.post(`/accounting/invoices/${id}/void`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+    onError: () => toast("Operation failed", "error"),
   });
 
   const markPaidMutation = useMutation({
     mutationFn: ({ id, amount, method }: { id: string; amount: number; method: string }) =>
       api.put(`/accounting/invoices/${id}/mark-paid`, { paidAmount: amount, paymentMethod: method }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["invoices"] }); setConfirmPayId(null); toast("Invoice marked as paid", "success"); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   return (
@@ -158,6 +164,15 @@ export default function InvoicesPage() {
                             <Send className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        {inv.status !== "PAID" && inv.status !== "VOID" && (
+                          <button
+                            onClick={() => setConfirmPayId({ id: inv.id, invoiceNumber: inv.invoiceNumber, amount: inv.amount })}
+                            className="p-1.5 rounded-lg hover:bg-green-500/20 text-green-400 transition"
+                            title="Mark Paid"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 transition" title="Download PDF">
                           <Download className="w-3.5 h-3.5" />
                         </button>
@@ -188,6 +203,37 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+
+      {/* Mark Paid Confirmation Modal */}
+      {confirmPayId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmPayId(null)} />
+          <div className="relative bg-[#0f172a] border border-white/10 rounded-2xl w-[400px] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">Confirm Payment</h2>
+              <button onClick={() => setConfirmPayId(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <p className="text-sm text-slate-300 mb-4">
+              Mark invoice <span className="text-white font-medium">{confirmPayId.invoiceNumber}</span> as paid for <span className="text-[#C8963E] font-bold">{fmt(confirmPayId.amount)}</span>?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmPayId(null)}
+                className="flex-1 py-2 bg-white/5 text-slate-400 rounded-lg text-sm hover:bg-white/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => markPaidMutation.mutate({ id: confirmPayId.id, amount: confirmPayId.amount, method: "BANK_TRANSFER" })}
+                disabled={markPaidMutation.isPending}
+                className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition disabled:opacity-50"
+              >
+                {markPaidMutation.isPending ? "Processing..." : "Confirm Paid"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invoice Detail Slide-over */}
       {selectedInvoice && (
@@ -278,12 +324,20 @@ export default function InvoicesPage() {
                   </button>
                 )}
                 {selectedInvoice.status !== "PAID" && selectedInvoice.status !== "VOID" && (
-                  <button
-                    onClick={() => { voidMutation.mutate(selectedInvoice.id); setSelectedInvoice(null); }}
-                    className="px-4 py-2 bg-red-500/10 text-red-400 rounded-lg text-sm hover:bg-red-500/20 transition"
-                  >
-                    Void
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { setConfirmPayId({ id: selectedInvoice.id, invoiceNumber: selectedInvoice.invoiceNumber, amount: selectedInvoice.amount }); setSelectedInvoice(null); }}
+                      className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition flex items-center justify-center gap-2"
+                    >
+                      <DollarSign className="w-4 h-4" /> Mark Paid
+                    </button>
+                    <button
+                      onClick={() => { voidMutation.mutate(selectedInvoice.id); setSelectedInvoice(null); }}
+                      className="px-4 py-2 bg-red-500/10 text-red-400 rounded-lg text-sm hover:bg-red-500/20 transition"
+                    >
+                      Void
+                    </button>
+                  </>
                 )}
                 <button className="px-4 py-2 bg-white/5 text-slate-400 rounded-lg text-sm hover:bg-white/10 transition flex items-center gap-2">
                   <Download className="w-4 h-4" /> PDF

@@ -33,6 +33,12 @@ const updateProfileSchema = z.object({
 const preferencesSchema = z.object({
   preferredTheme: z.enum(["silk-route-classic", "midnight-express", "desert-route", "arctic-haul", "highway-green", "chrome-steel"]).optional(),
   darkMode: z.boolean().optional(),
+  notifications: z.object({
+    loads: z.boolean().optional(),
+    payments: z.boolean().optional(),
+    scorecard: z.boolean().optional(),
+    announcements: z.boolean().optional(),
+  }).optional(),
 });
 
 // Public routes

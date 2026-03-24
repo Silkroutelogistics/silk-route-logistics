@@ -1,17 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Download, AlertTriangle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ShipperCard, ShipperBadge } from "@/components/shipper";
 import type { InvoicesResponse } from "@/components/shipper/shipperData";
 
 const filterOptions = ["All", "Unpaid", "Processing", "Paid"];
 
+const DISPUTE_TYPES = ["SHORT_PAY", "WRONG_AMOUNT", "MISSING_ACCESSORIAL", "UNAUTHORIZED_DEDUCTION", "DOCUMENTATION", "OTHER"];
+
 export default function ShipperInvoicesPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+  const [disputeInvoice, setDisputeInvoice] = useState<{ id: string; invoiceNumber: string; amount: number } | null>(null);
+  const [disputeForm, setDisputeForm] = useState({ disputeType: "WRONG_AMOUNT", disputedAmount: "", description: "" });
+  const [disputeSuccess, setDisputeSuccess] = useState("");
+
+  const fileDispute = useMutation({
+    mutationFn: (data: { invoiceId: string; disputeType: string; disputedAmount: number; description: string }) =>
+      api.post("/shipper-portal/disputes", data),
+    onSuccess: (res) => {
+      setDisputeSuccess(res.data?.disputeNumber ? `Dispute ${res.data.disputeNumber} filed successfully. Our team has been notified.` : "Dispute filed successfully.");
+      setDisputeForm({ disputeType: "WRONG_AMOUNT", disputedAmount: "", description: "" });
+      queryClient.invalidateQueries({ queryKey: ["shipper-invoices"] });
+      setTimeout(() => { setDisputeInvoice(null); setDisputeSuccess(""); }, 3000);
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.error || "Failed to file dispute");
+    },
+  });
 
   const exportInvoicesCSV = (invoices: any[]) => {
     const headers = ["Invoice #", "Shipment", "Amount", "Issued", "Due", "Status"];
@@ -125,11 +145,17 @@ export default function ShipperInvoicesPage() {
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.issued}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.due}</td>
                   <td className="px-4 py-3"><ShipperBadge status={inv.status} /></td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 flex items-center gap-2">
                     <button onClick={() => downloadInvoicePdf(inv.id)}
                       className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
                       <Download size={14} /> PDF
                     </button>
+                    {inv.status !== "Paid" && (
+                      <button onClick={() => setDisputeInvoice({ id: inv.id, invoiceNumber: inv.id, amount: inv.amount })}
+                        className="inline-flex items-center gap-1 text-gray-400 text-[11px] font-semibold uppercase tracking-wider hover:text-red-500">
+                        <AlertTriangle size={12} /> Dispute
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -146,6 +172,67 @@ export default function ShipperInvoicesPage() {
           </div>
         )}
       </ShipperCard>
+
+      {/* File Dispute Modal */}
+      {disputeInvoice && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            {disputeSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="w-6 h-6 text-green-600" />
+                </div>
+                <p className="text-sm text-gray-700 font-medium">{disputeSuccess}</p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-[#0D1B2A] mb-1">File a Dispute</h3>
+                <p className="text-xs text-gray-500 mb-4">Invoice {disputeInvoice.invoiceNumber} — ${disputeInvoice.amount.toLocaleString()}</p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">Dispute Type</label>
+                    <select value={disputeForm.disputeType} onChange={(e) => setDisputeForm({ ...disputeForm, disputeType: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                      {DISPUTE_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">Disputed Amount ($)</label>
+                    <input type="number" value={disputeForm.disputedAmount}
+                      onChange={(e) => setDisputeForm({ ...disputeForm, disputedAmount: e.target.value })}
+                      placeholder={String(disputeInvoice.amount)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">Description</label>
+                    <textarea value={disputeForm.description}
+                      onChange={(e) => setDisputeForm({ ...disputeForm, description: e.target.value })}
+                      placeholder="Describe the issue with this invoice..."
+                      rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none" />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-5">
+                  <button onClick={() => setDisputeInvoice(null)}
+                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200">Cancel</button>
+                  <button
+                    onClick={() => fileDispute.mutate({
+                      invoiceId: disputeInvoice.id,
+                      disputeType: disputeForm.disputeType,
+                      disputedAmount: parseFloat(disputeForm.disputedAmount) || disputeInvoice.amount,
+                      description: disputeForm.description,
+                    })}
+                    disabled={!disputeForm.description.trim() || fileDispute.isPending}
+                    className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50">
+                    {fileDispute.isPending ? "Filing..." : "File Dispute"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

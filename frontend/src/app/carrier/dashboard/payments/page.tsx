@@ -37,6 +37,29 @@ export default function CarrierPaymentsPage() {
 
   const payments = data?.payments || [];
 
+  const exportCSV = () => {
+    if (!payments.length) return;
+    const headers = ["Payment #", "Load Ref", "Gross", "Discount", "Net", "Status", "Method", "Date"];
+    const rows = payments.map((pay: any) => [
+      pay.paymentNumber || pay.id.slice(-8),
+      pay.load?.referenceNumber || "",
+      pay.amount || 0,
+      pay.quickPayDiscount || 0,
+      pay.netAmount || pay.amount || 0,
+      pay.status,
+      pay.paymentMethod || "",
+      pay.paidAt ? new Date(pay.paidAt).toLocaleDateString() : new Date(pay.createdAt).toLocaleDateString(),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v: any) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `carrier-payments-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -44,7 +67,7 @@ export default function CarrierPaymentsPage() {
           <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Payments &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track your payment history, pending earnings, and QuickPay options</p>
         </div>
-        <button className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+        <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
           <Download size={14} /> Export
         </button>
       </div>

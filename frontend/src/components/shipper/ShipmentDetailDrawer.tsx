@@ -1,6 +1,9 @@
 "use client";
 
-import { X, FileText, Download, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { X, FileText, Download, MessageSquare, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
 import { ShipperBadge } from "./ShipperBadge";
 import type { Shipment } from "./shipperData";
 
@@ -11,10 +14,57 @@ export function ShipmentDetailDrawer({
   shipment: Shipment;
   onClose: () => void;
 }) {
+  const router = useRouter();
+  const [bolLoading, setBolLoading] = useState(false);
+  const [podLoading, setPodLoading] = useState(false);
+
   const progressBg =
     shipment.status === "At Risk"
       ? "bg-gradient-to-r from-emerald-500 to-red-500"
       : "bg-gradient-to-r from-emerald-500 to-blue-500";
+
+  const downloadPdf = async (
+    url: string,
+    filename: string,
+    setLoading: (v: boolean) => void
+  ) => {
+    setLoading(true);
+    try {
+      const response = await api.get(url, { responseType: "blob" });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewBol = () => {
+    downloadPdf(
+      `/pdf/bol-load/${shipment.loadId}`,
+      `BOL-${shipment.id}.pdf`,
+      setBolLoading
+    );
+  };
+
+  const handleDownloadPod = () => {
+    downloadPdf(
+      `/pdf/shipper-load-confirmation/${shipment.loadId}`,
+      `POD-${shipment.id}.pdf`,
+      setPodLoading
+    );
+  };
+
+  const handleMessageRep = () => {
+    router.push("/shipper/dashboard/messages");
+  };
 
   return (
     <div className="fixed top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] z-[200] overflow-y-auto p-6">
@@ -62,13 +112,24 @@ export function ShipmentDetailDrawer({
       ))}
 
       <div className="mt-6 flex gap-2 flex-wrap">
-        <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-wider rounded">
-          <FileText size={14} /> View BOL
+        <button
+          onClick={handleViewBol}
+          disabled={bolLoading}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-wider rounded disabled:opacity-50"
+        >
+          {bolLoading ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />} View BOL
         </button>
-        <button className="inline-flex items-center gap-1.5 px-4 py-2 border border-white/20 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#C9A84C] hover:border-[#C9A84C]">
-          <Download size={14} /> Download POD
+        <button
+          onClick={handleDownloadPod}
+          disabled={podLoading}
+          className="inline-flex items-center gap-1.5 px-4 py-2 border border-white/20 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#C9A84C] hover:border-[#C9A84C] disabled:opacity-50"
+        >
+          {podLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download POD
         </button>
-        <button className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#C9A84C]">
+        <button
+          onClick={handleMessageRep}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#C9A84C]"
+        >
           <MessageSquare size={14} /> Message Rep
         </button>
       </div>

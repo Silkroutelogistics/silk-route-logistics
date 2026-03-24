@@ -198,6 +198,8 @@ export async function scanCompliance(req: AuthRequest, res: Response) {
     scannedCarriers: carriers.length,
     totalIssuesFound: newAlerts.length,
     newAlertsCreated: created,
+    alertsCreated: created,
+    scanned: drivers.length + trucks.length + trailers.length + carriers.length,
   });
 }
 

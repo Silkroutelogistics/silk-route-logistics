@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { RotateCcw, Search, X, ChevronLeft, ChevronRight, Plus, MessageSquare, AlertTriangle } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface Dispute {
   id: string;
@@ -52,7 +53,9 @@ export default function DisputesPage() {
   const [selected, setSelected] = useState<Dispute | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newDispute, setNewDispute] = useState({ loadRef: "", type: "RATE_DISCREPANCY", amount: "", description: "" });
+  const [resolutionNotes, setResolutionNotes] = useState("");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const qs = new URLSearchParams();
   if (search) qs.set("search", search);
@@ -68,12 +71,14 @@ export default function DisputesPage() {
     mutationFn: (body: { loadReferenceNumber: string; type: string; amount: number; description: string }) =>
       api.post("/accounting/disputes", body),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["disputes"] }); setShowCreate(false); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   const resolveMutation = useMutation({
     mutationFn: ({ id, resolution }: { id: string; resolution: string }) =>
       api.post(`/accounting/disputes/${id}/resolve`, { resolution }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["disputes"] }); setSelected(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["disputes"] }); setSelected(null); setResolutionNotes(""); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   return (
@@ -228,15 +233,21 @@ export default function DisputesPage() {
               {selected.status === "OPEN" || selected.status === "UNDER_REVIEW" ? (
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">Resolution Notes</label>
-                  <textarea id="resolution-input" rows={3} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none resize-none mb-3" />
+                  <textarea
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Enter resolution notes..."
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none resize-none mb-3 placeholder:text-slate-500"
+                  />
                   <button
                     onClick={() => {
-                      const el = document.getElementById("resolution-input") as HTMLTextAreaElement;
-                      if (el?.value) resolveMutation.mutate({ id: selected.id, resolution: el.value });
+                      if (resolutionNotes.trim()) resolveMutation.mutate({ id: selected.id, resolution: resolutionNotes.trim() });
                     }}
-                    className="w-full py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition"
+                    disabled={!resolutionNotes.trim() || resolveMutation.isPending}
+                    className="w-full py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition disabled:opacity-50"
                   >
-                    Resolve Dispute
+                    {resolveMutation.isPending ? "Resolving..." : "Resolve Dispute"}
                   </button>
                 </div>
               ) : null}

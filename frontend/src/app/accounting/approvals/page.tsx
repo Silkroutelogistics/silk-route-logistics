@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface PendingApproval {
   id: string;
@@ -22,6 +23,7 @@ const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", c
 export default function ApprovalsPage() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading } = useQuery({
     queryKey: ["pending-approvals", page],
@@ -30,12 +32,14 @@ export default function ApprovalsPage() {
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.post(`/accounting/payments/${id}/approve`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-approvals"] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["pending-approvals"] }); queryClient.invalidateQueries({ queryKey: ["factoring-fund"] }); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   const rejectMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post(`/accounting/payments/${id}/reject`, { reason }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-approvals"] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["pending-approvals"] }); queryClient.invalidateQueries({ queryKey: ["factoring-fund"] }); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   return (

@@ -7,6 +7,7 @@ import {
   Search, ChevronLeft, ChevronRight, X,
   CheckCircle2,
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface CarrierPayment {
   id: string;
@@ -56,7 +57,10 @@ export default function CarrierPaymentsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<CarrierPayment | null>(null);
+  const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const qs = new URLSearchParams();
   if (search) qs.set("search", search);
@@ -70,7 +74,14 @@ export default function CarrierPaymentsPage() {
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.post(`/accounting/payments/${id}/approve`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["carrier-payments"] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["carrier-payments"] }); queryClient.invalidateQueries({ queryKey: ["factoring-fund"] }); },
+    onError: () => toast("Operation failed", "error"),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post(`/accounting/payments/${id}/reject`, { reason }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["carrier-payments"] }); setShowReject(false); setRejectReason(""); setSelected(null); toast("Payment rejected", "success"); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   return (
@@ -200,19 +211,49 @@ export default function CarrierPaymentsPage() {
                 <div className="flex justify-between pt-2 border-t border-white/10"><span className="text-sm text-white font-medium">Net Amount</span><span className="text-sm text-[#C8963E] font-bold">{fmt(selected.netAmount || selected.amount)}</span></div>
               </div>
 
-              <div className="flex gap-2">
-                {selected.status === "PENDING" && (
-                  <>
+              <div className="space-y-3">
+                {selected.status === "PENDING" && !showReject && (
+                  <div className="flex gap-2">
                     <button
                       onClick={() => { approveMutation.mutate(selected.id); setSelected(null); }}
                       className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition"
                     >
                       Approve Payment
                     </button>
-                    <button className="px-4 py-2 bg-red-500/10 text-red-400 rounded-lg text-sm hover:bg-red-500/20 transition">
+                    <button
+                      onClick={() => setShowReject(true)}
+                      className="px-4 py-2 bg-red-500/10 text-red-400 rounded-lg text-sm hover:bg-red-500/20 transition"
+                    >
                       Reject
                     </button>
-                  </>
+                  </div>
+                )}
+                {selected.status === "PENDING" && showReject && (
+                  <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 space-y-3">
+                    <label className="text-xs text-red-400 font-medium block">Rejection Reason</label>
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      rows={3}
+                      placeholder="Enter reason for rejection..."
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500/50 resize-none placeholder:text-slate-500"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setShowReject(false); setRejectReason(""); }}
+                        className="flex-1 py-2 bg-white/5 text-slate-400 rounded-lg text-sm hover:bg-white/10 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => rejectMutation.mutate({ id: selected.id, reason: rejectReason })}
+                        disabled={!rejectReason.trim() || rejectMutation.isPending}
+                        className="flex-1 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 transition disabled:opacity-50"
+                      >
+                        {rejectMutation.isPending ? "Rejecting..." : "Confirm Reject"}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

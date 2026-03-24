@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Zap, Search, Clock, DollarSign, ChevronLeft, ChevronRight, CheckCircle2, X } from "lucide-react";
+import { Zap, Search, Clock, DollarSign, ChevronLeft, ChevronRight, CheckCircle2, X, AlertTriangle } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 interface QuickPayRequest {
   id: string;
@@ -36,6 +37,7 @@ const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", c
 export default function QuickPayQueuePage() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading } = useQuery({
     queryKey: ["quick-pay-queue", page],
@@ -44,7 +46,8 @@ export default function QuickPayQueuePage() {
 
   const processMutation = useMutation({
     mutationFn: (id: string) => api.post(`/accounting/payments/${id}/approve`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quick-pay-queue"] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["quick-pay-queue"] }); queryClient.invalidateQueries({ queryKey: ["factoring-fund"] }); },
+    onError: () => toast("Operation failed", "error"),
   });
 
   return (
@@ -87,13 +90,14 @@ export default function QuickPayQueuePage() {
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Gross</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Fee</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Net</th>
+              <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">SLA</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Requested</th>
               <th className="text-right text-xs text-slate-500 font-medium px-5 py-3">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {isLoading ? (
-              [...Array(5)].map((_, i) => <tr key={i}><td colSpan={9} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
+              [...Array(5)].map((_, i) => <tr key={i}><td colSpan={10} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
             ) : data?.queue?.length ? (
               data.queue.map(req => {
                 const tierInfo = TIER_INFO[req.paymentTier] || TIER_INFO.FLASH;
@@ -108,6 +112,17 @@ export default function QuickPayQueuePage() {
                     <td className="px-5 py-3 text-sm text-white">{fmt(req.amount)}</td>
                     <td className="px-5 py-3 text-sm text-yellow-400">-{fmt(req.quickPayFeeAmount)}</td>
                     <td className="px-5 py-3 text-sm text-green-400 font-medium">{fmt(req.netAmount)}</td>
+                    <td className="px-5 py-3">
+                      {req.isOverdue ? (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium">
+                          <AlertTriangle className="w-3 h-3" /> OVERDUE
+                        </span>
+                      ) : (
+                        <span className={`text-xs font-medium ${req.hoursRemaining > 12 ? "text-green-400" : req.hoursRemaining >= 2 ? "text-yellow-400" : "text-red-400"}`}>
+                          {req.hoursRemaining.toFixed(1)}h left
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-xs text-slate-400">{new Date(req.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3 text-right">
                       <button
@@ -122,7 +137,7 @@ export default function QuickPayQueuePage() {
                 );
               })
             ) : (
-              <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-slate-500">No quick pay requests in queue</td></tr>
+              <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-slate-500">No quick pay requests in queue</td></tr>
             )}
           </tbody>
         </table>

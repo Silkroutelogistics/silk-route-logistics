@@ -17,6 +17,8 @@ export default function CarrierSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [contactPhone, setContactPhone] = useState(user?.phone || "");
   const [phoneSaved, setPhoneSaved] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [notifError, setNotifError] = useState("");
 
   const [notifications, setNotifications] = useState({
     loadUpdates: true,
@@ -52,12 +54,14 @@ export default function CarrierSettingsPage() {
 
   const phoneMutation = useMutation({
     mutationFn: () => api.put("/carrier-auth/profile", { phone: contactPhone }),
-    onSuccess: () => { setPhoneSaved(true); setTimeout(() => setPhoneSaved(false), 3000); },
+    onSuccess: () => { setPhoneError(""); setPhoneSaved(true); setTimeout(() => setPhoneSaved(false), 3000); },
+    onError: (error: any) => { setPhoneSaved(false); setPhoneError(error?.response?.data?.error || "Failed to save phone number"); setTimeout(() => setPhoneError(""), 5000); },
   });
 
   const notifMutation = useMutation({
     mutationFn: () => api.put("/carrier-auth/notifications", notifications),
-    onSuccess: () => { setNotifSaved(true); setTimeout(() => setNotifSaved(false), 3000); },
+    onSuccess: () => { setNotifError(""); setNotifSaved(true); setTimeout(() => setNotifSaved(false), 3000); },
+    onError: (error: any) => { setNotifSaved(false); setNotifError(error?.response?.data?.error || "Failed to save notification preferences"); setTimeout(() => setNotifError(""), 5000); },
   });
 
   const toggleNotif = (key: keyof typeof notifications) => {
@@ -148,6 +152,9 @@ export default function CarrierSettingsPage() {
                   <CheckCircle size={12} /> Saved
                 </div>
               )}
+              {phoneError && (
+                <div className="text-[11px] text-red-500 mt-1">{phoneError}</div>
+              )}
             </div>
           </div>
         </CarrierCard>
@@ -222,6 +229,9 @@ export default function CarrierSettingsPage() {
               {notifMutation.isPending ? "Saving..." : notifSaved ? <><CheckCircle size={12} /> Saved</> : "Save Preferences"}
             </button>
           </div>
+          {notifError && (
+            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">{notifError}</div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             {notifOptions.map((opt) => (
               <div

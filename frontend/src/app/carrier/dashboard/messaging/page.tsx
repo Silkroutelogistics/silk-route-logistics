@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Search, Plus, MessageSquare } from "lucide-react";
+import { Send, Search, Plus, MessageSquare, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { CarrierCard } from "@/components/carrier";
@@ -31,6 +31,7 @@ export default function CarrierMessagingPage() {
   const [newMessage, setNewMessage] = useState("");
   const [showNewMsg, setShowNewMsg] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [sendError, setSendError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: conversations } = useQuery({
@@ -55,9 +56,14 @@ export default function CarrierMessagingPage() {
   const sendMsg = useMutation({
     mutationFn: () => api.post("/messages", { receiverId: selectedUserId, content: newMessage }),
     onSuccess: () => {
+      setSendError("");
       setNewMessage("");
       queryClient.invalidateQueries({ queryKey: ["carrier-messages", selectedUserId] });
       queryClient.invalidateQueries({ queryKey: ["carrier-conversations"] });
+    },
+    onError: (error: any) => {
+      setSendError(error?.response?.data?.error || "Failed to send message. Please try again.");
+      setTimeout(() => setSendError(""), 5000);
     },
   });
 
@@ -195,6 +201,11 @@ export default function CarrierMessagingPage() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+              {sendError && (
+                <div className="mx-4 mt-1 px-3 py-2 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-xs text-red-600">
+                  <AlertCircle size={14} /> {sendError}
+                </div>
+              )}
               <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
                 <input
                   value={newMessage}

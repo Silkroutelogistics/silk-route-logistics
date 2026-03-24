@@ -1,7 +1,8 @@
 "use client";
 
-import { File, Check, FileText, Shield, Download, Search } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { File, Check, FileText, Shield, Download, Search, Loader2, Upload } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ShipperCard } from "@/components/shipper";
 import type { DocumentsResponse } from "@/components/shipper/shipperData";
@@ -20,10 +21,55 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function ShipperDocumentsPage() {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["shipper-documents"],
     queryFn: () => api.get<DocumentsResponse>("/shipper-portal/documents").then((r) => r.data),
   });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (files: FileList) => {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => formData.append("files", file));
+      return api.post("/documents", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipper-documents"] });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+  });
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      uploadMutation.mutate(e.target.files);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      uploadMutation.mutate(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragOver(false);
+  };
 
   const typeCounts = data?.typeCounts || [];
   const documents = data?.documents || [];
@@ -67,11 +113,44 @@ export default function ShipperDocumentsPage() {
       </div>
 
       {/* Upload area */}
-      <ShipperCard padding="p-8" className="mb-5 !border-2 !border-dashed !border-gray-300 text-center !bg-gray-50">
-        <Download size={32} className="text-gray-400 mx-auto" />
-        <div className="text-sm font-semibold text-gray-600 mt-3">Drag &amp; drop files here or click to upload</div>
-        <div className="text-xs text-gray-400 mt-1">Supports PDF, JPEG, PNG up to 25MB</div>
-      </ShipperCard>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <div
+        className={`p-8 rounded-md border-2 border-dashed text-center cursor-pointer transition-colors mb-5 ${
+          dragOver
+            ? "border-[#C9A84C] bg-[#C9A84C]/5"
+            : "border-gray-300 bg-gray-50"
+        }`}
+        onClick={handleUploadClick}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {uploadMutation.isPending ? (
+          <>
+            <Loader2 size={32} className="text-[#C9A84C] mx-auto animate-spin" />
+            <div className="text-sm font-semibold text-gray-600 mt-3">Uploading...</div>
+          </>
+        ) : (
+          <>
+            <Upload size={32} className="text-gray-400 mx-auto" />
+            <div className="text-sm font-semibold text-gray-600 mt-3">Drag &amp; drop files here or click to upload</div>
+            <div className="text-xs text-gray-400 mt-1">Supports PDF, JPEG, PNG up to 25MB</div>
+          </>
+        )}
+        {uploadMutation.isSuccess && (
+          <div className="text-xs text-emerald-500 mt-2">Upload complete!</div>
+        )}
+        {uploadMutation.isError && (
+          <div className="text-xs text-red-500 mt-2">Upload failed. Please try again.</div>
+        )}
+      </div>
 
       {/* Recent docs */}
       <ShipperCard padding="p-0">
