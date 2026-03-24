@@ -1,4 +1,22 @@
 /services /#services 301
 /get-quote /shippers 301
-/ae/* /ae/:splat 200
+
+# Redirect old static AE console to React dashboard
+/ae/dashboard/* /dashboard/overview 301
+/ae/loads* /dashboard/loads 301
+/ae/crm* /dashboard/crm 301
+/ae/create-load* /dashboard/orders 301
+/ae/tender* /dashboard/loads 301
+/ae/track-trace* /dashboard/tracking 301
+/ae/communications* /dashboard/communications 301
+/ae/claims* /dashboard/claims 301
+/ae/financials* /dashboard/lead-hunter 301
+/ae/analytics* /dashboard/ai-insights 301
+/ae/training* /dashboard/sops 301
+/ae/caravan* /dashboard/carriers 301
+/ae/messages* /dashboard/messages 301
+/ae/compliance/* /dashboard/compliance 301
+/ae/accounting/* /accounting 301
+/ae/* /dashboard/overview 301
+
 /carrier/* /carrier/:splat 200
