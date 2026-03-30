@@ -304,7 +304,7 @@ function Field({
   );
 }
 
-/* ── Google Places AddressAutocomplete ── */
+/* ── Google Places AddressAutocomplete (AutocompleteService pattern) ── */
 let mapsPromise: Promise<void> | null = null;
 function loadGoogleMaps(): Promise<void> {
   if (mapsPromise) return mapsPromise;
@@ -328,40 +328,107 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   value: string; onChange: (v: string) => void; onSelect: (a: ParsedAddr) => void;
   placeholder?: string; className?: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const acRef = useRef<any>(null); // eslint-disable-line
-
-  const handlePlace = useCallback(() => {
-    const place = acRef.current?.getPlace();
-    if (!place?.address_components) return;
-    const get = (type: string) => place.address_components?.find((c: any) => c.types.includes(type)); // eslint-disable-line
-    const num = get("street_number")?.long_name || "";
-    const route = get("route")?.long_name || "";
-    const street = [num, route].filter(Boolean).join(" ");
-    const unit = get("subpremise")?.long_name || "";
-    onSelect({
-      street: street || (inputRef.current?.value ?? ""),
-      city: (get("locality") || get("sublocality_level_1") || get("administrative_area_level_3"))?.long_name || "",
-      state: get("administrative_area_level_1")?.short_name || "",
-      zip: get("postal_code")?.long_name || "",
-      unit,
-    });
-  }, [onSelect]);
+  const [query, setQuery] = useState(value || "");
+  const [results, setResults] = useState<{ description: string; placeId: string }[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const autocompleteRef = useRef<any>(null); // eslint-disable-line
+  const placesRef = useRef<any>(null); // eslint-disable-line
 
   useEffect(() => {
     loadGoogleMaps().then(() => {
-      if (!inputRef.current || !(window as any).google?.maps?.places || acRef.current) return;
-      acRef.current = new (window as any).google.maps.places.Autocomplete(inputRef.current, { // eslint-disable-line
-        types: ["address"],
-        componentRestrictions: { country: ["us", "ca", "mx"] },
-      });
-      acRef.current.setFields(["address_components", "formatted_address"]);
-      acRef.current.addListener("place_changed", handlePlace);
+      if ((window as any).google?.maps?.places) {
+        autocompleteRef.current = new (window as any).google.maps.places.AutocompleteService();
+        placesRef.current = new (window as any).google.maps.places.PlacesService(document.createElement("div"));
+      }
     });
-  }, [handlePlace]);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => { if (!value) setQuery(""); }, [value]);
+
+  const search = useCallback((q: string) => {
+    if (q.length < 3 || !autocompleteRef.current) { setResults([]); return; }
+    setLoading(true);
+    autocompleteRef.current.getPlacePredictions(
+      { input: q, componentRestrictions: { country: ["us", "ca", "mx"] }, types: ["address"] },
+      (predictions: any[] | null, status: string) => { // eslint-disable-line
+        if (status === "OK" && predictions) {
+          setResults(predictions.slice(0, 5).map((p: any) => ({ description: p.description, placeId: p.place_id }))); // eslint-disable-line
+          setShowDropdown(true);
+        } else { setResults([]); }
+        setLoading(false);
+      }
+    );
+  }, []);
+
+  const handleChange = (val: string) => {
+    setQuery(val);
+    onChange(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(val), 300);
+  };
+
+  const handleSelect = (item: { description: string; placeId: string }) => {
+    setShowDropdown(false);
+    setQuery(item.description);
+    if (!placesRef.current) return;
+    placesRef.current.getDetails(
+      { placeId: item.placeId, fields: ["address_components", "formatted_address"] },
+      (place: any, status: string) => { // eslint-disable-line
+        if (status !== "OK" || !place?.address_components) return;
+        let streetNumber = "", route = "", city = "", state = "", zip = "", unit = "";
+        for (const c of place.address_components) {
+          const t: string[] = c.types;
+          if (t.includes("street_number")) streetNumber = c.long_name;
+          if (t.includes("route")) route = c.long_name;
+          if (t.includes("locality")) city = c.long_name;
+          if (t.includes("sublocality_level_1") && !city) city = c.long_name;
+          if (t.includes("administrative_area_level_1")) state = c.short_name;
+          if (t.includes("postal_code")) zip = c.short_name;
+          if (t.includes("subpremise")) unit = c.long_name;
+        }
+        const street = [streetNumber, route].filter(Boolean).join(" ");
+        onSelect({ street, city, state, zip, unit });
+        setQuery(place.formatted_address || item.description);
+      }
+    );
+  };
 
   return (
-    <input ref={inputRef} type="text" value={value} onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder} className={className} autoComplete="off" />
+    <div ref={wrapperRef} className="relative">
+      <div className="relative">
+        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-[#C9A84C]" />
+        <input
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={() => results.length > 0 && setShowDropdown(true)}
+          placeholder={placeholder}
+          className={className ? `pl-9 ${className}` : "w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors"}
+          autoComplete="off"
+        />
+        {loading && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin" />}
+      </div>
+      {showDropdown && results.length > 0 && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+          {results.map((r) => (
+            <button key={r.placeId} onClick={() => handleSelect(r)}
+              className="w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition truncate">
+              <MapPin className="w-3.5 h-3.5 inline mr-2 text-[#C9A84C]" />{r.description}
+            </button>
+          ))}
+          <div className="px-3 py-1 text-[9px] text-gray-400 text-right">Powered by Google</div>
+        </div>
+      )}
+    </div>
   );
 }
