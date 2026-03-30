@@ -66,6 +66,7 @@ export default function CRMPage() {
   const [contactForm, setContactForm] = useState({ name: "", title: "", email: "", phone: "", isPrimary: false });
   const [creditForm, setCreditForm] = useState({ creditStatus: "NOT_CHECKED", creditLimit: "" });
   const [showUnit, setShowUnit] = useState(false);
+  const [sameAsBilling, setSameAsBilling] = useState(true);
   const [form, setForm] = useState({
     name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "", unit: "",
     status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "",
@@ -96,12 +97,16 @@ export default function CRMPage() {
     mutationFn: () => api.post("/customers", {
       ...form,
       creditLimit: form.creditLimit ? parseFloat(form.creditLimit) : undefined,
+      billingAddress: sameAsBilling
+        ? [form.address, form.unit, form.city, form.state, form.zip].filter(Boolean).join(", ")
+        : form.billingAddress,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
       setShowCreate(false);
       setShowUnit(false);
+      setSameAsBilling(true);
       setForm({ name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "", unit: "", status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "", type: "SHIPPER", taxId: "", industryType: "", mcNumber: "", billingAddress: "" });
     },
   });
@@ -381,7 +386,18 @@ export default function CRMPage() {
               <FInput label="State" value={form.state} onChange={(v) => setForm((f) => ({ ...f, state: v }))} placeholder="e.g. MI" />
               <FInput label="Zip" value={form.zip} onChange={(v) => setForm((f) => ({ ...f, zip: v }))} />
             </div>
-            <FInput label="Billing Address (if different)" value={form.billingAddress} onChange={(v) => setForm((f) => ({ ...f, billingAddress: v }))} />
+            <label className="flex items-center gap-2 cursor-pointer mt-1">
+              <input type="checkbox" checked={sameAsBilling}
+                onChange={(e) => {
+                  setSameAsBilling(e.target.checked);
+                  if (e.target.checked) setForm((f) => ({ ...f, billingAddress: "" }));
+                }}
+                className="w-4 h-4 rounded bg-gray-50 border-gray-200 accent-amber-500" />
+              <span className="text-xs text-gray-600">Billing address same as above</span>
+            </label>
+            {!sameAsBilling && (
+              <FInput label="Billing Address" value={form.billingAddress} onChange={(v) => setForm((f) => ({ ...f, billingAddress: v }))} placeholder="Enter billing address" />
+            )}
 
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wider pt-2">Financial & Industry</p>
             <div className="grid grid-cols-3 gap-3">
