@@ -435,48 +435,48 @@ export default function CarrierPoolPage() {
       {/* Edit Carrier Modal */}
       {editingCarrier && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-2xl border border-white/10 p-6 w-full max-w-md space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-white">Edit Carrier — {editingCarrier.company}</h2>
-              <button onClick={() => setEditingCarrier(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-bold text-gray-900">Edit Carrier — {editingCarrier.company}</h2>
+              <button onClick={() => setEditingCarrier(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Tier</label>
+                <label className="text-xs text-gray-500 mb-1 block">Tier</label>
                 <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                   {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => (
-                    <option key={t} value={t} className="bg-navy">{t}</option>
+                    <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Safety Score (%)</label>
+                <label className="text-xs text-gray-500 mb-1 block">Safety Score (%)</label>
                 <input type="number" min="0" max="100" value={editForm.safetyScore}
                   onChange={(e) => setEditForm({ ...editForm, safetyScore: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Number of Trucks</label>
+                <label className="text-xs text-gray-500 mb-1 block">Number of Trucks</label>
                 <input type="number" min="1" value={editForm.numberOfTrucks}
                   onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Insurance Expiry</label>
+                <label className="text-xs text-gray-500 mb-1 block">Insurance Expiry</label>
                 <input type="date" value={editForm.insuranceExpiry}
                   onChange={(e) => setEditForm({ ...editForm, insuranceExpiry: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
             </div>
 
             <div className="flex gap-3 pt-2">
               <button onClick={() => setEditingCarrier(null)}
-                className="flex-1 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition">Cancel</button>
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition">Cancel</button>
               <button onClick={() => updateCarrier.mutate({ id: editingCarrier.id, data: editForm })}
                 disabled={updateCarrier.isPending}
-                className="flex-1 px-4 py-2 bg-gold text-black rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
+                className="flex-1 px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
                 {updateCarrier.isPending ? "Saving..." : "Save Changes"}
               </button>
             </div>
@@ -487,20 +487,20 @@ export default function CarrierPoolPage() {
       {/* Confirm Approve/Reject Modal */}
       {confirmAction && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0f172a] rounded-xl border border-white/10 w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-white mb-2">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
               {confirmAction.status === "APPROVED" ? "Approve Carrier" : "Reject Carrier"}
             </h3>
-            <p className="text-sm text-slate-400 mb-6">
-              Are you sure you want to <strong className={confirmAction.status === "APPROVED" ? "text-green-400" : "text-red-400"}>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to <strong className={confirmAction.status === "APPROVED" ? "text-green-600" : "text-red-600"}>
                 {confirmAction.status === "APPROVED" ? "approve" : "reject"}
-              </strong> <strong className="text-white">{confirmAction.company}</strong>?
+              </strong> <strong className="text-gray-900">{confirmAction.company}</strong>?
               {confirmAction.status === "REJECTED" && " This carrier will be blocked from accepting loads."}
               {confirmAction.status === "APPROVED" && " This carrier will be able to accept loads and appear on the load board."}
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmAction(null)}
-                className="flex-1 px-4 py-2.5 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition">
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition">
                 Cancel
               </button>
               <button

@@ -42,7 +42,7 @@ export function InvoiceLineItemsEditor({ items, onChange }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-[1fr_120px_60px_80px_80px_32px] gap-2 text-xs text-slate-400 font-medium px-1">
+      <div className="grid grid-cols-[1fr_120px_60px_80px_80px_32px] gap-2 text-xs text-gray-500 font-medium px-1">
         <span>Description</span>
         <span>Type</span>
         <span>Qty</span>
@@ -57,15 +57,15 @@ export function InvoiceLineItemsEditor({ items, onChange }: Props) {
             value={item.description}
             onChange={(e) => updateRow(idx, "description", e.target.value)}
             placeholder="Description"
-            className="px-2 py-1.5 bg-white/5 border border-white/10 rounded text-sm text-white placeholder-white/30 outline-none focus:border-gold/50"
+            className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-amber-500/50"
           />
           <select
             value={item.type}
             onChange={(e) => updateRow(idx, "type", e.target.value)}
-            className="px-2 py-1.5 bg-white/5 border border-white/10 rounded text-sm text-white outline-none focus:border-gold/50"
+            className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 outline-none focus:border-amber-500/50"
           >
             {LINE_ITEM_TYPES.map((t) => (
-              <option key={t} value={t} className="bg-navy">
+              <option key={t} value={t}>
                 {t.replace(/_/g, " ")}
               </option>
             ))}
@@ -76,7 +76,7 @@ export function InvoiceLineItemsEditor({ items, onChange }: Props) {
             step="1"
             value={item.quantity}
             onChange={(e) => updateRow(idx, "quantity", Number(e.target.value))}
-            className="px-2 py-1.5 bg-white/5 border border-white/10 rounded text-sm text-white outline-none focus:border-gold/50 text-center"
+            className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 outline-none focus:border-amber-500/50 text-center"
           />
           <input
             type="number"
@@ -85,7 +85,7 @@ export function InvoiceLineItemsEditor({ items, onChange }: Props) {
             value={item.rate || ""}
             onChange={(e) => updateRow(idx, "rate", Number(e.target.value))}
             placeholder="0.00"
-            className="px-2 py-1.5 bg-white/5 border border-white/10 rounded text-sm text-white placeholder-white/30 outline-none focus:border-gold/50 text-right"
+            className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-amber-500/50 text-right"
           />
           <span className="text-sm text-gold font-medium text-right pr-1">
             ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -109,9 +109,9 @@ export function InvoiceLineItemsEditor({ items, onChange }: Props) {
       </button>
 
       {items.length > 0 && (
-        <div className="flex justify-end pt-2 border-t border-white/10">
+        <div className="flex justify-end pt-2 border-t border-gray-200">
           <div className="text-right">
-            <span className="text-xs text-slate-400 mr-3">Total:</span>
+            <span className="text-xs text-gray-500 mr-3">Total:</span>
             <span className="text-lg font-bold text-gold">
               ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>

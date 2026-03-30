@@ -260,54 +260,54 @@ export default function TrackingPage() {
           {/* Check Call Form Modal */}
           {showCheckCallForm && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <PhoneCall className="w-5 h-5 text-gold" /> New Check Call
                   </h2>
-                  <button onClick={() => setShowCheckCallForm(null)} className="text-slate-400 hover:text-white">&times;</button>
+                  <button onClick={() => setShowCheckCallForm(null)} className="text-gray-400 hover:text-gray-600">&times;</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Status</label>
+                    <label className="block text-xs text-gray-500 mb-1">Status</label>
                     <select value={ccForm.status} onChange={(e) => setCcForm(f => ({ ...f, status: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                      {CHECK_CALL_STATUSES.map(s => <option key={s} value={s} className="bg-navy">{s.replace(/_/g, " ")}</option>)}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                      {CHECK_CALL_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Method</label>
+                    <label className="block text-xs text-gray-500 mb-1">Method</label>
                     <select value={ccForm.method} onChange={(e) => setCcForm(f => ({ ...f, method: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                      {CHECK_CALL_METHODS.map(m => <option key={m} value={m} className="bg-navy">{m.replace(/_/g, " ")}</option>)}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                      {CHECK_CALL_METHODS.map(m => <option key={m} value={m}>{m.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Location</label>
+                  <label className="block text-xs text-gray-500 mb-1">Location</label>
                   <input value={ccForm.location} onChange={(e) => setCcForm(f => ({ ...f, location: e.target.value }))}
-                    placeholder="e.g. I-94 rest area, mile marker 42" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    placeholder="e.g. I-94 rest area, mile marker 42" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">City</label>
+                    <label className="block text-xs text-gray-500 mb-1">City</label>
                     <input value={ccForm.city} onChange={(e) => setCcForm(f => ({ ...f, city: e.target.value }))}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">State</label>
+                    <label className="block text-xs text-gray-500 mb-1">State</label>
                     <input value={ccForm.state} onChange={(e) => setCcForm(f => ({ ...f, state: e.target.value }))} maxLength={2}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Notes</label>
+                  <label className="block text-xs text-gray-500 mb-1">Notes</label>
                   <textarea value={ccForm.notes} onChange={(e) => setCcForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-                    placeholder="Driver confirmed on schedule..." className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    placeholder="Driver confirmed on schedule..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
 
                 <button

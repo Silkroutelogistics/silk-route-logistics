@@ -209,34 +209,34 @@ export default function SOPsPage() {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Create SOP</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Create SOP</h2>
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
             <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Title"
-              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
             <div className="grid grid-cols-3 gap-3">
               <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white cursor-pointer focus:outline-none focus:border-gold/50">
-                <option value="operations" className="bg-[#0f172a]">Operations</option>
-                <option value="safety" className="bg-[#0f172a]">Safety</option>
-                <option value="compliance" className="bg-[#0f172a]">Compliance</option>
-                <option value="finance" className="bg-[#0f172a]">Finance</option>
-                <option value="hr" className="bg-[#0f172a]">HR</option>
-                <option value="sales" className="bg-[#0f172a]">Sales</option>
+                className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 cursor-pointer focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                <option value="operations">Operations</option>
+                <option value="safety">Safety</option>
+                <option value="compliance">Compliance</option>
+                <option value="finance">Finance</option>
+                <option value="hr">HR</option>
+                <option value="sales">Sales</option>
               </select>
               <input value={form.version} onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))} placeholder="Version"
-                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+                className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               <input value={form.author} onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))} placeholder="Author"
-                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+                className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
             </div>
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Description"
-              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 min-h-[80px] focus:outline-none focus:border-gold/50" />
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 min-h-[80px] focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
             <textarea value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} placeholder="Content..."
-              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 min-h-[120px] focus:outline-none focus:border-gold/50" />
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 min-h-[120px] focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
             <div>
-              <label className="flex items-center gap-2 px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-slate-400 hover:border-gold/50 cursor-pointer transition">
+              <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 hover:border-amber-500/50 cursor-pointer transition">
                 <Upload className="w-4 h-4" />
                 <span>{file ? file.name : "Attach file (PDF, DOCX, etc.)"}</span>
                 <input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.csv"

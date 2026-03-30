@@ -341,13 +341,13 @@ export default function DriversPage() {
       {/* Add Driver Modal */}
       {showAddDriver && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-4 my-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Add Driver</h2>
-              <button onClick={() => setShowAddDriver(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Add Driver</h2>
+              <button onClick={() => setShowAddDriver(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Personal Information</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Personal Information</p>
             <div className="grid grid-cols-2 gap-3">
               <Input label="First Name *" value={driverForm.firstName} onChange={(v) => setDriverForm((f) => ({ ...f, firstName: v }))} />
               <Input label="Last Name *" value={driverForm.lastName} onChange={(v) => setDriverForm((f) => ({ ...f, lastName: v }))} />
@@ -358,13 +358,13 @@ export default function DriversPage() {
             </div>
             <Input label="Current Location" value={driverForm.currentLocation} onChange={(v) => setDriverForm((f) => ({ ...f, currentLocation: v }))} placeholder="e.g. Kalamazoo, MI" />
 
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider pt-2">License & Compliance</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider pt-2">License & Compliance</p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">License Type</label>
+                <label className="block text-xs text-gray-500 mb-1">License Type</label>
                 <select value={driverForm.licenseType} onChange={(e) => setDriverForm((f) => ({ ...f, licenseType: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                  {["CDL-A", "CDL-B", "CDL-C"].map(t => <option key={t} value={t} className="bg-navy">{t}</option>)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  {["CDL-A", "CDL-B", "CDL-C"].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <Input label="License Number" value={driverForm.licenseNumber} onChange={(v) => setDriverForm((f) => ({ ...f, licenseNumber: v }))} />
@@ -379,25 +379,25 @@ export default function DriversPage() {
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={driverForm.twicCard} onChange={(e) => setDriverForm((f) => ({ ...f, twicCard: e.target.checked }))}
-                  className="w-4 h-4 rounded bg-white/5 border-white/10" />
-                <span className="text-sm text-slate-300">TWIC Card</span>
+                  className="w-4 h-4 rounded bg-gray-50 border-gray-200 accent-amber-500" />
+                <span className="text-sm text-gray-600">TWIC Card</span>
               </label>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-500">Endorsements:</span>
+                <span className="text-xs text-gray-500">Endorsements:</span>
                 {["H", "N", "T", "P", "X", "S"].map(e => (
                   <label key={e} className="flex items-center gap-1 cursor-pointer">
                     <input type="checkbox" checked={driverForm.endorsements.includes(e)}
                       onChange={(ev) => setDriverForm((f) => ({
                         ...f,
                         endorsements: ev.target.checked ? [...f.endorsements, e] : f.endorsements.filter(x => x !== e),
-                      }))} className="w-3 h-3 rounded bg-white/5 border-white/10" />
-                    <span className="text-xs text-slate-300">{e}</span>
+                      }))} className="w-3 h-3 rounded bg-gray-50 border-gray-200 accent-amber-500" />
+                    <span className="text-xs text-gray-600">{e}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider pt-2">Emergency Contact</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider pt-2">Emergency Contact</p>
             <div className="grid grid-cols-2 gap-3">
               <Input label="Name" value={driverForm.emergencyContactName} onChange={(v) => setDriverForm((f) => ({ ...f, emergencyContactName: v }))} />
               <Input label="Phone" value={driverForm.emergencyContactPhone} onChange={(v) => setDriverForm((f) => ({ ...f, emergencyContactPhone: v }))} />
@@ -414,32 +414,32 @@ export default function DriversPage() {
       {/* Assign Truck/Trailer Modal */}
       {assignModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Assign {assignModal.type === "truck" ? "Truck" : "Trailer"}
               </h2>
-              <button onClick={() => setAssignModal(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setAssignModal(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               <button onClick={() => {
                 if (assignModal.type === "truck") assignTruck.mutate({ driverId: assignModal.driverId, truckId: null });
                 else assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: null });
-              }} className="w-full text-left p-3 bg-white/5 rounded-lg border border-white/10 hover:border-white/20 text-sm text-slate-400">
+              }} className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 text-sm text-gray-500">
                 Unassign (None)
               </button>
               {assignModal.type === "truck" && trucksData?.trucks?.map((t) => (
                 <button key={t.id} onClick={() => assignTruck.mutate({ driverId: assignModal.driverId, truckId: t.id })}
-                  className="w-full text-left p-3 bg-white/5 rounded-lg border border-white/10 hover:border-gold/30 text-sm text-white">
+                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-gray-900">
                   <span className="font-medium">{t.unitNumber}</span>
-                  <span className="text-slate-400 ml-2">{t.year} {t.make} {t.model}</span>
+                  <span className="text-gray-500 ml-2">{t.year} {t.make} {t.model}</span>
                 </button>
               ))}
               {assignModal.type === "trailer" && trailersData?.trailers?.map((t) => (
                 <button key={t.id} onClick={() => assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: t.id })}
-                  className="w-full text-left p-3 bg-white/5 rounded-lg border border-white/10 hover:border-gold/30 text-sm text-white">
+                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-gray-900">
                   <span className="font-medium">{t.unitNumber}</span>
-                  <span className="text-slate-400 ml-2">{t.make} {t.model} ({t.type})</span>
+                  <span className="text-gray-500 ml-2">{t.make} {t.model} ({t.type})</span>
                 </button>
               ))}
             </div>
@@ -489,9 +489,9 @@ function Input({ label, value, onChange, placeholder, type }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || label.replace(" *", "")}
-        type={type || "text"} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+        type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
     </div>
   );
 }

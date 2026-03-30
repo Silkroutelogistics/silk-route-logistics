@@ -309,19 +309,19 @@ export default function FleetPage() {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Add {tab === "trucks" ? "Truck" : "Trailer"}</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Add {tab === "trucks" ? "Truck" : "Trailer"}</h2>
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <FormField label="Unit Number *" value={form.unitNumber || ""} onChange={v => setForm(f => ({ ...f, unitNumber: v }))} />
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Type</label>
+                <label className="block text-xs text-gray-500 mb-1">Type</label>
                 <select value={form.type || ""} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                   {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
-                    <option key={t} value={t} className="bg-navy">{t.replace(/_/g, " ")}</option>
+                    <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
                   ))}
                 </select>
               </div>
@@ -343,12 +343,12 @@ export default function FleetPage() {
                 </>
               )}
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Ownership</label>
+                <label className="block text-xs text-gray-500 mb-1">Ownership</label>
                 <select value={form.ownershipType || "COMPANY"} onChange={e => setForm(f => ({ ...f, ownershipType: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                  <option value="COMPANY" className="bg-navy">Company</option>
-                  <option value="LEASED" className="bg-navy">Leased</option>
-                  <option value="OWNER_OPERATOR" className="bg-navy">Owner Operator</option>
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  <option value="COMPANY">Company</option>
+                  <option value="LEASED">Leased</option>
+                  <option value="OWNER_OPERATOR">Owner Operator</option>
                 </select>
               </div>
             </div>
@@ -387,9 +387,9 @@ function DetailItem({ icon, label, value, warn }: { icon?: React.ReactNode; labe
 function FormField({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
     </div>
   );
 }

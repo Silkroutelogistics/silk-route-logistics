@@ -219,10 +219,10 @@ export function CreateLoadModal({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">Create Load — Step {step} of 4</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Create Load — Step {step} of 4</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>
 
         {/* Step indicators - completed steps clickable */}
@@ -233,9 +233,9 @@ export function CreateLoadModal({ open, onClose }: Props) {
               onClick={() => { if (i + 1 < step) setStep(i + 1); }}
               disabled={i + 1 > step}
               className={`flex-1 text-center text-xs py-1.5 rounded transition ${
-                step > i + 1 ? "bg-green-500/20 text-green-400 cursor-pointer hover:bg-green-500/30"
-                : step === i + 1 ? "bg-gold/20 text-gold"
-                : "bg-white/5 text-slate-500 cursor-not-allowed"
+                step > i + 1 ? "bg-green-50 text-green-600 cursor-pointer hover:bg-green-100"
+                : step === i + 1 ? "bg-amber-50 text-amber-600"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
               {step > i + 1 && <Check className="w-3 h-3 inline mr-1" />}{s}
@@ -246,7 +246,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
         <div className="px-6 py-4 space-y-4">
           {step === 1 && (
             <>
-              <h3 className="text-sm font-medium text-slate-300">Origin</h3>
+              <h3 className="text-sm font-medium text-gray-500">Origin</h3>
               <AddressAutocomplete
                 label="Search full address..."
                 value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
@@ -258,7 +258,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
                 <StateSelect label="State/Province" value={form.originState} onChange={(v) => update("originState", v)} required error={attempted[1] ? errors.originState : undefined} />
                 <Input label="Zip/Postal" value={form.originZip} onChange={(v) => update("originZip", v)} required error={attempted[1] ? errors.originZip : undefined} />
               </div>
-              <h3 className="text-sm font-medium text-slate-300 mt-4">Destination</h3>
+              <h3 className="text-sm font-medium text-gray-500 mt-4">Destination</h3>
               <AddressAutocomplete
                 label="Search full address..."
                 value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
@@ -287,7 +287,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
             <>
               {/* Shipment Type */}
               <div>
-                <label className="block text-xs text-slate-400 mb-2">Shipment Type</label>
+                <label className="block text-xs text-gray-500 mb-2">Shipment Type</label>
                 <div className="flex gap-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -297,7 +297,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
                       onChange={() => update("shipmentType", "DOMESTIC")}
                       className="accent-[#C8963E]"
                     />
-                    <span className="text-sm text-slate-300">Domestic</span>
+                    <span className="text-sm text-gray-600">Domestic</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -307,7 +307,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
                       onChange={() => update("shipmentType", "CROSS_BORDER")}
                       className="accent-[#C8963E]"
                     />
-                    <span className="text-sm text-slate-300">Cross Border (USA ↔ Canada)</span>
+                    <span className="text-sm text-gray-600">Cross Border (USA ↔ Canada)</span>
                   </label>
                 </div>
               </div>
@@ -401,25 +401,25 @@ export function CreateLoadModal({ open, onClose }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Customer Rate ($)" value={form.rate} onChange={(v) => update("rate", v)} type="number" required error={attempted[3] ? errors.rate : undefined} />
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Rate/Mile</label>
-                  <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm">${ratePerMile}</div>
+                  <label className="block text-xs text-gray-500 mb-1">Rate/Mile</label>
+                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm">${ratePerMile}</div>
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-2">Accessorials</label>
+                <label className="block text-xs text-gray-500 mb-2">Accessorials</label>
                 <div className="flex flex-wrap gap-2">
                   {ACCESSORIALS.map((a) => (
                     <button key={a} onClick={() => toggleAccessorial(a)}
-                      className={`px-3 py-1.5 text-xs rounded-full border transition ${form.accessorials.includes(a) ? "bg-gold/20 border-gold text-gold" : "border-white/10 text-slate-400 hover:border-white/30"}`}>
+                      className={`px-3 py-1.5 text-xs rounded-full border transition ${form.accessorials.includes(a) ? "bg-amber-50 border-amber-400 text-amber-600" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
                       {a}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Special Instructions</label>
+                <label className="block text-xs text-gray-500 mb-1">Special Instructions</label>
                 <textarea value={form.specialInstructions} onChange={(e) => update("specialInstructions", e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm min-h-[80px] focus:outline-none focus:border-gold/50" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 min-h-[80px] focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <Input label="Shipper Contact" value={form.contactName} onChange={(v) => update("contactName", v)} placeholder="Name" required error={attempted[3] ? errors.contactName : undefined} />
@@ -432,12 +432,12 @@ export function CreateLoadModal({ open, onClose }: Props) {
           {step === 4 && (
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-gold">Review Load Details</h3>
-              {errors.submit && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">{errors.submit}</div>}
+              {errors.submit && <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">{errors.submit}</div>}
 
               {/* Route Details */}
-              <div className="bg-white/5 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-medium text-slate-400 uppercase">Route Details</h4>
+                  <h4 className="text-xs font-medium text-gray-500 uppercase">Route Details</h4>
                   <button onClick={() => setStep(1)} className="text-xs text-gold hover:underline">Edit</button>
                 </div>
                 <Row label="Origin" value={`${[form.originAddress, form.originCity, form.originState, form.originZip].filter(Boolean).join(", ")}`} />
@@ -454,9 +454,9 @@ export function CreateLoadModal({ open, onClose }: Props) {
               </div>
 
               {/* Freight Details */}
-              <div className="bg-white/5 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-medium text-slate-400 uppercase">Freight Details</h4>
+                  <h4 className="text-xs font-medium text-gray-500 uppercase">Freight Details</h4>
                   <button onClick={() => setStep(2)} className="text-xs text-gold hover:underline">Edit</button>
                 </div>
                 <Row label="Equipment" value={form.equipmentType} />
@@ -468,9 +468,9 @@ export function CreateLoadModal({ open, onClose }: Props) {
               </div>
 
               {/* Pricing & Contact */}
-              <div className="bg-white/5 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-medium text-slate-400 uppercase">Pricing & Contact</h4>
+                  <h4 className="text-xs font-medium text-gray-500 uppercase">Pricing & Contact</h4>
                   <button onClick={() => setStep(3)} className="text-xs text-gold hover:underline">Edit</button>
                 </div>
                 <Row label="Rate" value={`$${parseFloat(form.rate || "0").toLocaleString()} (${ratePerMile}/mi)`} />
@@ -482,9 +482,9 @@ export function CreateLoadModal({ open, onClose }: Props) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
           {step > 1 ? (
-            <button onClick={() => setStep((s) => s - 1)} className="flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+            <button onClick={() => setStep((s) => s - 1)} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600">
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
           ) : <div />}
@@ -492,7 +492,7 @@ export function CreateLoadModal({ open, onClose }: Props) {
             {step === 4 ? (
               <>
                 <button onClick={() => mutation.mutate("DRAFT")} disabled={mutation.isPending}
-                  className="px-4 py-2 text-sm bg-white/10 text-white rounded-lg hover:bg-white/20 disabled:opacity-50">Save Draft</button>
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50">Save Draft</button>
                 <button onClick={() => mutation.mutate("POSTED")} disabled={mutation.isPending}
                   className="flex items-center gap-2 px-5 py-2 text-sm bg-gold text-navy font-medium rounded-lg hover:bg-gold/90 disabled:opacity-50">
                   <Check className="w-4 h-4" /> Post to Load Board
@@ -516,12 +516,12 @@ function Input({ label, value, onChange, type = "text", placeholder, required, e
 }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">
+      <label className="block text-xs text-gray-500 mb-1">
         {label}
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} min={min}
-        className={`w-full px-3 py-2 bg-white/5 border rounded-lg text-white text-sm focus:outline-none focus:border-gold/50 ${error ? "border-red-500/50" : "border-white/10"}`} />
+        className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 ${error ? "border-red-500/50" : "border-gray-200"}`} />
       {error && <p className="text-red-400 text-[10px] mt-0.5">{error}</p>}
     </div>
   );
@@ -532,14 +532,14 @@ function Select({ label, value, onChange, options, required, error }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">
+      <label className="block text-xs text-gray-500 mb-1">
         {label}
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className={`w-full px-3 py-2 bg-white/5 border rounded-lg text-white text-sm focus:outline-none focus:border-gold/50 ${error ? "border-red-500/50" : "border-white/10"}`}>
-        <option value="" className="bg-navy">Select...</option>
-        {options.filter(Boolean).map((o) => <option key={o} value={o} className="bg-navy">{o}</option>)}
+        className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 ${error ? "border-red-500/50" : "border-gray-200"}`}>
+        <option value="">Select...</option>
+        {options.filter(Boolean).map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
       {error && <p className="text-red-400 text-[10px] mt-0.5">{error}</p>}
     </div>
@@ -558,7 +558,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
       <div className={`w-9 h-5 rounded-full transition-colors duration-200 relative ${checked ? "bg-green-500" : "bg-slate-600"}`}>
         <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all duration-200 shadow-sm ${checked ? "left-[18px]" : "left-[3px]"}`} />
       </div>
-      <span className={`text-xs transition ${checked ? "text-white" : "text-slate-400 group-hover:text-slate-300"}`}>{label}</span>
+      <span className={`text-xs transition ${checked ? "text-gray-900" : "text-gray-500 group-hover:text-gray-700"}`}>{label}</span>
     </div>
   );
 }
@@ -568,18 +568,18 @@ function StateSelect({ label, value, onChange, required, error }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">
+      <label className="block text-xs text-gray-500 mb-1">
         {label}
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className={`w-full px-3 py-2 bg-white/5 border rounded-lg text-white text-sm focus:outline-none focus:border-gold/50 ${error ? "border-red-500/50" : "border-white/10"}`}>
-        <option value="" className="bg-navy">Select...</option>
+        className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 ${error ? "border-red-500/50" : "border-gray-200"}`}>
+        <option value="">Select...</option>
         <optgroup label="US States">
-          {US_STATES.map((s) => <option key={s} value={s} className="bg-navy">{s}</option>)}
+          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
         </optgroup>
         <optgroup label="Canadian Provinces">
-          {CA_PROVINCES.map((p) => <option key={p} value={p} className="bg-navy">{p}</option>)}
+          {CA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
         </optgroup>
       </select>
       {error && <p className="text-red-400 text-[10px] mt-0.5">{error}</p>}
@@ -709,19 +709,19 @@ function AddressAutocomplete({ label, value, onSelect }: {
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setShowDropdown(true)}
           placeholder={label}
-          className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50"
+          className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
         />
         {loading && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />}
       </div>
       {showDropdown && results.length > 0 && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
           {results.map((r) => (
             <button key={r.placeId} onClick={() => handleSelect(r)}
-              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition truncate">
+              className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition truncate">
               <MapPin className="w-3 h-3 inline mr-1.5 text-gold" />{r.description}
             </button>
           ))}
-          <div className="px-3 py-1 text-[9px] text-slate-600 text-right">Powered by Google</div>
+          <div className="px-3 py-1 text-[9px] text-gray-400 text-right">Powered by Google</div>
         </div>
       )}
     </div>
@@ -731,8 +731,8 @@ function AddressAutocomplete({ label, value, onSelect }: {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-400">{label}</span>
-      <span className="text-white text-right max-w-[60%]">{value}</span>
+      <span className="text-gray-500">{label}</span>
+      <span className="text-gray-900 text-right max-w-[60%]">{value}</span>
     </div>
   );
 }

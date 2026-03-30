@@ -520,28 +520,28 @@ export default function LoadsPage() {
         {/* Tender Modal */}
         {showTender && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Tender Load to Carrier</h2>
-                <button onClick={() => { setShowTender(false); setComplianceResult(null); }} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-semibold text-gray-900">Tender Load to Carrier</h2>
+                <button onClick={() => { setShowTender(false); setComplianceResult(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
-              <p className="text-sm text-slate-400">{load.referenceNumber} — {load.originCity}, {load.originState} → {load.destCity}, {load.destState}</p>
+              <p className="text-sm text-gray-600">{load.referenceNumber} — {load.originCity}, {load.originState} → {load.destCity}, {load.destState}</p>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Select Carrier</label>
+                <label className="block text-xs text-gray-500 mb-1">Select Carrier</label>
                 <select value={tenderCarrierId} onChange={(e) => { setTenderCarrierId(e.target.value); setComplianceResult(null); }}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                  <option value="" className="bg-navy">Choose a carrier...</option>
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  <option value="">Choose a carrier...</option>
                   {suggestedCarriers?.carriers?.filter((c) => c.complianceStatus !== "red").map((c) => (
-                    <option key={c.carrierId} value={c.carrierId} className="bg-navy">
+                    <option key={c.carrierId} value={c.carrierId}>
                       {c.company} ({c.tier}){c.complianceStatus === "amber" ? " - Expiring" : ""}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Offered Rate ($)</label>
+                <label className="block text-xs text-gray-500 mb-1">Offered Rate ($)</label>
                 <input type="number" value={tenderRate} onChange={(e) => setTenderRate(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
 
               {/* Compliance warnings/blocks */}
@@ -598,74 +598,74 @@ export default function LoadsPage() {
         {/* Advanced DAT Post Modal */}
         {showDatAdvanced && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2"><Globe className="w-5 h-5 text-gold" /> Advanced DAT Post</h2>
-                <button onClick={() => setShowDatAdvanced(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Globe className="w-5 h-5 text-gold" /> Advanced DAT Post</h2>
+                <button onClick={() => setShowDatAdvanced(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
-              <p className="text-sm text-slate-400">Override load details for the DAT posting. Leave blank to use load defaults.</p>
+              <p className="text-sm text-gray-600">Override load details for the DAT posting. Leave blank to use load defaults.</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Origin City</label>
+                  <label className="block text-xs text-gray-500 mb-1">Origin City</label>
                   <input value={datAdvForm.originCity} onChange={(e) => setDatAdvForm((f) => ({ ...f, originCity: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Origin State</label>
+                  <label className="block text-xs text-gray-500 mb-1">Origin State</label>
                   <input value={datAdvForm.originState} onChange={(e) => setDatAdvForm((f) => ({ ...f, originState: e.target.value }))} maxLength={2}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Dest City</label>
+                  <label className="block text-xs text-gray-500 mb-1">Dest City</label>
                   <input value={datAdvForm.destCity} onChange={(e) => setDatAdvForm((f) => ({ ...f, destCity: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Dest State</label>
+                  <label className="block text-xs text-gray-500 mb-1">Dest State</label>
                   <input value={datAdvForm.destState} onChange={(e) => setDatAdvForm((f) => ({ ...f, destState: e.target.value }))} maxLength={2}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Equipment Type</label>
+                  <label className="block text-xs text-gray-500 mb-1">Equipment Type</label>
                   <select value={datAdvForm.equipmentType} onChange={(e) => setDatAdvForm((f) => ({ ...f, equipmentType: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                    <option value="" className="bg-navy">Use default</option>
-                    {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => <option key={t} value={t} className="bg-navy">{t}</option>)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                    <option value="">Use default</option>
+                    {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Weight (lbs)</label>
+                  <label className="block text-xs text-gray-500 mb-1">Weight (lbs)</label>
                   <input type="number" value={datAdvForm.weight} onChange={(e) => setDatAdvForm((f) => ({ ...f, weight: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Rate ($)</label>
+                  <label className="block text-xs text-gray-500 mb-1">Rate ($)</label>
                   <input type="number" value={datAdvForm.rate} onChange={(e) => setDatAdvForm((f) => ({ ...f, rate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Load Type</label>
+                  <label className="block text-xs text-gray-500 mb-1">Load Type</label>
                   <select value={datAdvForm.loadType} onChange={(e) => setDatAdvForm((f) => ({ ...f, loadType: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-                    <option value="FULL" className="bg-navy">Full Truckload</option>
-                    <option value="PARTIAL" className="bg-navy">Partial</option>
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                    <option value="FULL">Full Truckload</option>
+                    <option value="PARTIAL">Partial</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Pickup Date</label>
+                  <label className="block text-xs text-gray-500 mb-1">Pickup Date</label>
                   <input type="date" value={datAdvForm.pickupDate} onChange={(e) => setDatAdvForm((f) => ({ ...f, pickupDate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Delivery Date</label>
+                  <label className="block text-xs text-gray-500 mb-1">Delivery Date</label>
                   <input type="date" value={datAdvForm.deliveryDate} onChange={(e) => setDatAdvForm((f) => ({ ...f, deliveryDate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Comments</label>
+                <label className="block text-xs text-gray-500 mb-1">Comments</label>
                 <textarea value={datAdvForm.comments} onChange={(e) => setDatAdvForm((f) => ({ ...f, comments: e.target.value }))} rows={2}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 resize-none" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 resize-none" />
               </div>
               {datPostAdvancedMutation.isError && <p className="text-xs text-red-400">Failed to post. Please try again.</p>}
               <button

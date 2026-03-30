@@ -87,30 +87,30 @@ export function CreateInvoiceModal({ onClose }: CreateInvoiceModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-navy rounded-xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">Create Invoice</h2>
-          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded transition">
-            <X className="w-5 h-5 text-white/60" />
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Create Invoice</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded transition">
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">{error}</div>}
+          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">{error}</div>}
 
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-1">Load ID</label>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Load ID</label>
             <input
               value={loadId}
               onChange={(e) => setLoadId(e.target.value)}
               placeholder="Enter the load ID"
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-gold/50 focus:border-gold/50 outline-none"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
             />
           </div>
 
           {!showLineItems && (
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Invoice Amount ($)</label>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Invoice Amount ($)</label>
               <input
                 type="number"
                 step="0.01"
@@ -118,30 +118,30 @@ export function CreateInvoiceModal({ onClose }: CreateInvoiceModalProps) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:ring-2 focus:ring-gold/50 focus:border-gold/50 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
               />
             </div>
           )}
 
           {/* Line Items Collapsible */}
-          <div className="border border-white/10 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setShowLineItems(!showLineItems)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 transition text-sm font-medium text-white/70"
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-500"
             >
               <span>Line Items {lineItems.length > 0 && `(${lineItems.length})`}</span>
               {showLineItems ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
             {showLineItems && (
-              <div className="p-4 border-t border-white/10">
+              <div className="p-4 border-t border-gray-200">
                 <InvoiceLineItemsEditor items={lineItems} onChange={setLineItems} />
               </div>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
+            <label className="block text-sm font-medium text-gray-500 mb-2">
               Supporting Documents (BOL, POD)
             </label>
             <FileUpload files={files} onChange={setFiles} maxFiles={5} />
@@ -151,7 +151,7 @@ export function CreateInvoiceModal({ onClose }: CreateInvoiceModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-white/10 rounded-lg text-white/70 hover:bg-white/5 transition"
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition"
             >
               Cancel
             </button>
