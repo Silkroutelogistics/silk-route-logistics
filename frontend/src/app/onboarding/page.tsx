@@ -36,7 +36,7 @@ interface FmcsaResult {
 interface CarrierFormData {
   firstName: string; lastName: string; email: string; password: string;
   company: string; phone: string; mcNumber: string; dotNumber: string;
-  address: string; city: string; state: string; zip: string;
+  address: string; city: string; state: string; zip: string; unit: string;
   numberOfTrucks: string;
   equipmentTypes: string[]; operatingRegions: string[];
   agreeTerms: boolean;
@@ -49,10 +49,11 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showUnit, setShowUnit] = useState(false);
   const [form, setForm] = useState<CarrierFormData>({
     firstName: "", lastName: "", email: "", password: "",
     company: "", phone: "", mcNumber: "", dotNumber: "",
-    address: "", city: "", state: "", zip: "",
+    address: "", city: "", state: "", zip: "", unit: "",
     numberOfTrucks: "",
     equipmentTypes: [], operatingRegions: [],
     agreeTerms: false,
@@ -412,10 +413,27 @@ export default function OnboardingPage() {
                     set("city", addr.city);
                     set("state", addr.state);
                     set("zip", addr.zip);
+                    if (addr.unit) { set("unit", addr.unit); setShowUnit(true); }
                   }}
                   placeholder="Start typing an address..."
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none"
                 />
+                {(showUnit || form.unit) ? (
+                  <div className="mt-2">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Unit / Suite #</label>
+                    <input
+                      value={form.unit}
+                      onChange={(e) => set("unit", e.target.value)}
+                      placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none placeholder:text-gray-400"
+                    />
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setShowUnit(true)}
+                    className="mt-1.5 text-xs text-amber-600 hover:text-amber-500 font-medium">
+                    + Add Unit / Suite #
+                  </button>
+                )}
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
@@ -695,7 +713,7 @@ export default function OnboardingPage() {
                   <p className="text-xs text-slate-500 uppercase mb-1">Company</p>
                   <p className="font-medium">{form.company}</p>
                   <p className="text-sm text-slate-600">
-                    {form.address && `${form.address}, `}{form.city && `${form.city}, `}{form.state} {form.zip}
+                    {form.address && `${form.address}, `}{form.unit && `${form.unit}, `}{form.city && `${form.city}, `}{form.state} {form.zip}
                   </p>
                   <p className="text-sm text-slate-600">
                     DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
@@ -772,7 +790,7 @@ function loadGoogleMaps(): Promise<void> {
   return mapsPromise;
 }
 
-interface ParsedAddr { street: string; city: string; state: string; zip: string; }
+interface ParsedAddr { street: string; city: string; state: string; zip: string; unit?: string; }
 
 function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: {
   value: string; onChange: (v: string) => void; onSelect: (a: ParsedAddr) => void;
@@ -788,11 +806,13 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     const num = get("street_number")?.long_name || "";
     const route = get("route")?.long_name || "";
     const street = [num, route].filter(Boolean).join(" ");
+    const unit = get("subpremise")?.long_name || "";
     onSelect({
       street: street || (inputRef.current?.value ?? ""),
       city: (get("locality") || get("sublocality_level_1") || get("administrative_area_level_3"))?.long_name || "",
       state: get("administrative_area_level_1")?.short_name || "",
       zip: get("postal_code")?.long_name || "",
+      unit,
     });
   }, [onSelect]);
 

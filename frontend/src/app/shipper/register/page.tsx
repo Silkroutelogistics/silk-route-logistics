@@ -10,6 +10,7 @@ const steps = ["Company Info", "Shipping Profile", "Preferences", "Review"];
 export default function ShipperRegisterPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [showUnit, setShowUnit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -140,11 +141,28 @@ export default function ShipperRegisterPage() {
                     onChange={(v) => upd("address", v)}
                     onSelect={(addr) => {
                       upd("address", [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "));
+                      if (addr.unit) { upd("unit", addr.unit); setShowUnit(true); }
                     }}
                     placeholder="Start typing an address..."
                     className="w-full py-2.5 pl-10 pr-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors"
                   />
                 </div>
+                {(showUnit || form.unit) ? (
+                  <div className="mt-2">
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-wide">Unit / Suite #</label>
+                    <input
+                      value={form.unit || ""}
+                      onChange={(e) => upd("unit", e.target.value)}
+                      placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                      className="w-full py-2.5 pl-3.5 pr-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors placeholder:text-gray-400"
+                    />
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setShowUnit(true)}
+                    className="mt-1.5 text-xs text-[#C9A84C] hover:text-[#A88535] font-semibold">
+                    + Add Unit / Suite #
+                  </button>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Primary Contact Name" required value={form.contact} onChange={(v) => upd("contact", v)} placeholder="Jane Doe" icon={<User size={16} />} />
@@ -304,7 +322,7 @@ function loadGoogleMaps(): Promise<void> {
   return mapsPromise;
 }
 
-interface ParsedAddr { street: string; city: string; state: string; zip: string; }
+interface ParsedAddr { street: string; city: string; state: string; zip: string; unit?: string; }
 
 function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: {
   value: string; onChange: (v: string) => void; onSelect: (a: ParsedAddr) => void;
@@ -320,11 +338,13 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     const num = get("street_number")?.long_name || "";
     const route = get("route")?.long_name || "";
     const street = [num, route].filter(Boolean).join(" ");
+    const unit = get("subpremise")?.long_name || "";
     onSelect({
       street: street || (inputRef.current?.value ?? ""),
       city: (get("locality") || get("sublocality_level_1") || get("administrative_area_level_3"))?.long_name || "",
       state: get("administrative_area_level_1")?.short_name || "",
       zip: get("postal_code")?.long_name || "",
+      unit,
     });
   }, [onSelect]);
 

@@ -18,8 +18,8 @@ const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "10
 
 const initialForm = {
   customerId: "",
-  originAddress: "", originCity: "", originState: "", originZip: "",
-  destAddress: "", destCity: "", destState: "", destZip: "",
+  originAddress: "", originCity: "", originState: "", originZip: "", originUnit: "",
+  destAddress: "", destCity: "", destState: "", destZip: "", destUnit: "",
   pickupDate: "", deliveryDate: "",
   distance: "",
   equipmentType: "Dry Van",
@@ -33,6 +33,8 @@ const initialForm = {
 
 export default function OrderBuilderPage() {
   const [form, setForm] = useState(initialForm);
+  const [showOriginUnit, setShowOriginUnit] = useState(false);
+  const [showDestUnit, setShowDestUnit] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -56,10 +58,12 @@ export default function OrderBuilderPage() {
         originCity: form.originCity,
         originState: form.originState,
         originZip: form.originZip,
+        originUnit: form.originUnit || undefined,
         destAddress: form.destAddress || undefined,
         destCity: form.destCity,
         destState: form.destState,
         destZip: form.destZip,
+        destUnit: form.destUnit || undefined,
         pickupDate: form.pickupDate,
         deliveryDate: form.deliveryDate,
         equipmentType: form.equipmentType,
@@ -196,9 +200,25 @@ export default function OrderBuilderPage() {
             <p className="text-xs text-slate-500 font-medium">ORIGIN</p>
             <AddressAutocomplete
               label="Search origin address..."
-              onSelect={(addr) => setForm((f) => ({ ...f, originAddress: addr.address, originCity: addr.city, originState: addr.state, originZip: addr.zip }))}
+              onSelect={(addr) => { setForm((f) => ({ ...f, originAddress: addr.address, originCity: addr.city, originState: addr.state, originZip: addr.zip, originUnit: addr.unit || f.originUnit })); if (addr.unit) setShowOriginUnit(true); }}
               value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
             />
+            {(showOriginUnit || form.originUnit) ? (
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Unit / Suite #</label>
+                <input
+                  value={form.originUnit}
+                  onChange={(e) => setForm((f) => ({ ...f, originUnit: e.target.value }))}
+                  placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+                />
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowOriginUnit(true)}
+                className="mt-1.5 text-xs text-gold hover:text-gold/80 font-medium">
+                + Add Unit / Suite #
+              </button>
+            )}
             <input value={form.originAddress} onChange={(e) => setForm((f) => ({ ...f, originAddress: e.target.value }))}
               placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             <input value={form.originCity} onChange={(e) => setForm((f) => ({ ...f, originCity: e.target.value }))}
@@ -216,9 +236,25 @@ export default function OrderBuilderPage() {
             <p className="text-xs text-slate-500 font-medium">DESTINATION</p>
             <AddressAutocomplete
               label="Search destination address..."
-              onSelect={(addr) => setForm((f) => ({ ...f, destAddress: addr.address, destCity: addr.city, destState: addr.state, destZip: addr.zip }))}
+              onSelect={(addr) => { setForm((f) => ({ ...f, destAddress: addr.address, destCity: addr.city, destState: addr.state, destZip: addr.zip, destUnit: addr.unit || f.destUnit })); if (addr.unit) setShowDestUnit(true); }}
               value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
             />
+            {(showDestUnit || form.destUnit) ? (
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Unit / Suite #</label>
+                <input
+                  value={form.destUnit}
+                  onChange={(e) => setForm((f) => ({ ...f, destUnit: e.target.value }))}
+                  placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+                />
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDestUnit(true)}
+                className="mt-1.5 text-xs text-gold hover:text-gold/80 font-medium">
+                + Add Unit / Suite #
+              </button>
+            )}
             <input value={form.destAddress} onChange={(e) => setForm((f) => ({ ...f, destAddress: e.target.value }))}
               placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             <input value={form.destCity} onChange={(e) => setForm((f) => ({ ...f, destCity: e.target.value }))}
@@ -387,7 +423,7 @@ function loadGoogleMaps(): Promise<void> {
 
 declare global { interface Window { google: any; } }
 
-interface AddrParts { address: string; city: string; state: string; zip: string; }
+interface AddrParts { address: string; city: string; state: string; zip: string; unit?: string; }
 
 function AddressAutocomplete({ label, value, onSelect }: {
   label: string; value: AddrParts; onSelect: (a: AddrParts) => void;
@@ -447,7 +483,7 @@ function AddressAutocomplete({ label, value, onSelect }: {
       { placeId: item.placeId, fields: ["address_components", "formatted_address"] },
       (place: any, status: string) => {
         if (status !== "OK" || !place?.address_components) return;
-        let streetNumber = "", route = "", city = "", state = "", zip = "";
+        let streetNumber = "", route = "", city = "", state = "", zip = "", unit = "";
         for (const c of place.address_components) {
           const t: string[] = c.types;
           if (t.includes("street_number")) streetNumber = c.long_name;
@@ -456,9 +492,10 @@ function AddressAutocomplete({ label, value, onSelect }: {
           if (t.includes("sublocality_level_1") && !city) city = c.long_name;
           if (t.includes("administrative_area_level_1")) state = c.short_name;
           if (t.includes("postal_code")) zip = c.short_name;
+          if (t.includes("subpremise")) unit = c.long_name;
         }
         const address = [streetNumber, route].filter(Boolean).join(" ");
-        onSelect({ address, city, state, zip });
+        onSelect({ address, city, state, zip, unit });
         setQuery(place.formatted_address || item.description);
       }
     );

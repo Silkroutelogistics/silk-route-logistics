@@ -65,8 +65,9 @@ export default function CRMPage() {
   const [showCreditModal, setShowCreditModal] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", title: "", email: "", phone: "", isPrimary: false });
   const [creditForm, setCreditForm] = useState({ creditStatus: "NOT_CHECKED", creditLimit: "" });
+  const [showUnit, setShowUnit] = useState(false);
   const [form, setForm] = useState({
-    name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "",
+    name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "", unit: "",
     status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "",
     type: "SHIPPER", taxId: "", industryType: "", mcNumber: "", billingAddress: "",
   });
@@ -100,7 +101,8 @@ export default function CRMPage() {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
       setShowCreate(false);
-      setForm({ name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "", status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "", type: "SHIPPER", taxId: "", industryType: "", mcNumber: "", billingAddress: "" });
+      setShowUnit(false);
+      setForm({ name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "", unit: "", status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "", type: "SHIPPER", taxId: "", industryType: "", mcNumber: "", billingAddress: "" });
     },
   });
 
@@ -350,10 +352,29 @@ export default function CRMPage() {
               <AddressAutocomplete
                 value={form.address}
                 onChange={(v) => setForm((f) => ({ ...f, address: v }))}
-                onSelect={(addr) => setForm((f) => ({ ...f, address: addr.street, city: addr.city, state: addr.state, zip: addr.zip }))}
+                onSelect={(addr) => {
+                  setForm((f) => ({ ...f, address: addr.street, city: addr.city, state: addr.state, zip: addr.zip, unit: addr.unit || f.unit }));
+                  if (addr.unit) setShowUnit(true);
+                }}
                 placeholder="Start typing an address..."
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50"
               />
+              {(showUnit || form.unit) ? (
+                <div className="mt-2">
+                  <label className="block text-xs text-gray-500 mb-1">Unit / Suite #</label>
+                  <input
+                    value={form.unit}
+                    onChange={(e) => setForm(f => ({ ...f, unit: e.target.value }))}
+                    placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                  />
+                </div>
+              ) : (
+                <button type="button" onClick={() => setShowUnit(true)}
+                  className="mt-1.5 text-xs text-amber-600 hover:text-amber-500 font-medium">
+                  + Add Unit / Suite #
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-3">
               <FInput label="City" value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} />
@@ -494,7 +515,7 @@ function loadGoogleMaps(): Promise<void> {
   return mapsPromise;
 }
 
-interface ParsedAddr { street: string; city: string; state: string; zip: string; }
+interface ParsedAddr { street: string; city: string; state: string; zip: string; unit?: string; }
 
 function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: {
   value: string; onChange: (v: string) => void; onSelect: (a: ParsedAddr) => void;
@@ -510,11 +531,13 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     const num = get("street_number")?.long_name || "";
     const route = get("route")?.long_name || "";
     const street = [num, route].filter(Boolean).join(" ");
+    const unit = get("subpremise")?.long_name || "";
     onSelect({
       street: street || (inputRef.current?.value ?? ""),
       city: (get("locality") || get("sublocality_level_1") || get("administrative_area_level_3"))?.long_name || "",
       state: get("administrative_area_level_1")?.short_name || "",
       zip: get("postal_code")?.long_name || "",
+      unit,
     });
   }, [onSelect]);
 

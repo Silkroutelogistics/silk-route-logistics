@@ -35,9 +35,11 @@ export function CreateLoadModal({ open, onClose }: Props) {
   const [attempted, setAttempted] = useState<Record<number, boolean>>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [showOriginUnit, setShowOriginUnit] = useState(false);
+  const [showDestUnit, setShowDestUnit] = useState(false);
   const [form, setForm] = useState({
-    originAddress: "", originCity: "", originState: "", originZip: "",
-    destAddress: "", destCity: "", destState: "", destZip: "",
+    originAddress: "", originCity: "", originState: "", originZip: "", originUnit: "",
+    destAddress: "", destCity: "", destState: "", destZip: "", destUnit: "",
     pickupDate: "", deliveryDate: "", distance: "",
     shipmentType: "DOMESTIC" as "DOMESTIC" | "CROSS_BORDER",
     borderCrossingPoint: "", customsBrokerName: "", customsBrokerPhone: "",
@@ -109,8 +111,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
   const mutation = useMutation({
     mutationFn: (status: string) => {
       const payload: Record<string, unknown> = {
-        originAddress: form.originAddress || undefined, originCity: form.originCity, originState: form.originState, originZip: form.originZip,
-        destAddress: form.destAddress || undefined, destCity: form.destCity, destState: form.destState, destZip: form.destZip,
+        originAddress: form.originAddress || undefined, originCity: form.originCity, originState: form.originState, originZip: form.originZip, originUnit: form.originUnit || undefined,
+        destAddress: form.destAddress || undefined, destCity: form.destCity, destState: form.destState, destZip: form.destZip, destUnit: form.destUnit || undefined,
         pickupDate: form.pickupDate, deliveryDate: form.deliveryDate,
         equipmentType: form.equipmentType, commodity: form.commodity || undefined,
         rate: parseFloat(form.rate),
@@ -250,8 +252,24 @@ export function CreateLoadModal({ open, onClose }: Props) {
               <AddressAutocomplete
                 label="Search full address..."
                 value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
-                onSelect={(addr) => { update("originAddress", addr.address); update("originCity", addr.city); update("originState", addr.state); update("originZip", addr.zip); }}
+                onSelect={(addr) => { update("originAddress", addr.address); update("originCity", addr.city); update("originState", addr.state); update("originZip", addr.zip); if (addr.unit) { update("originUnit", addr.unit); setShowOriginUnit(true); } }}
               />
+              {(showOriginUnit || form.originUnit) ? (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Unit / Suite #</label>
+                  <input
+                    value={form.originUnit}
+                    onChange={(e) => update("originUnit", e.target.value)}
+                    placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                  />
+                </div>
+              ) : (
+                <button type="button" onClick={() => setShowOriginUnit(true)}
+                  className="mt-1.5 text-xs text-amber-600 hover:text-amber-500 font-medium">
+                  + Add Unit / Suite #
+                </button>
+              )}
               <div className="grid grid-cols-4 gap-3">
                 <Input label="Address" value={form.originAddress} onChange={(v) => update("originAddress", v)} />
                 <Input label="City" value={form.originCity} onChange={(v) => update("originCity", v)} required error={attempted[1] ? errors.originCity : undefined} />
@@ -262,8 +280,24 @@ export function CreateLoadModal({ open, onClose }: Props) {
               <AddressAutocomplete
                 label="Search full address..."
                 value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
-                onSelect={(addr) => { update("destAddress", addr.address); update("destCity", addr.city); update("destState", addr.state); update("destZip", addr.zip); }}
+                onSelect={(addr) => { update("destAddress", addr.address); update("destCity", addr.city); update("destState", addr.state); update("destZip", addr.zip); if (addr.unit) { update("destUnit", addr.unit); setShowDestUnit(true); } }}
               />
+              {(showDestUnit || form.destUnit) ? (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Unit / Suite #</label>
+                  <input
+                    value={form.destUnit}
+                    onChange={(e) => update("destUnit", e.target.value)}
+                    placeholder="e.g. Suite 200, Unit 4B, Apt 12"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                  />
+                </div>
+              ) : (
+                <button type="button" onClick={() => setShowDestUnit(true)}
+                  className="mt-1.5 text-xs text-amber-600 hover:text-amber-500 font-medium">
+                  + Add Unit / Suite #
+                </button>
+              )}
               <div className="grid grid-cols-4 gap-3">
                 <Input label="Address" value={form.destAddress} onChange={(v) => update("destAddress", v)} />
                 <Input label="City" value={form.destCity} onChange={(v) => update("destCity", v)} required error={attempted[1] ? errors.destCity : undefined} />
@@ -440,8 +474,8 @@ export function CreateLoadModal({ open, onClose }: Props) {
                   <h4 className="text-xs font-medium text-gray-500 uppercase">Route Details</h4>
                   <button onClick={() => setStep(1)} className="text-xs text-gold hover:underline">Edit</button>
                 </div>
-                <Row label="Origin" value={`${[form.originAddress, form.originCity, form.originState, form.originZip].filter(Boolean).join(", ")}`} />
-                <Row label="Destination" value={`${[form.destAddress, form.destCity, form.destState, form.destZip].filter(Boolean).join(", ")}`} />
+                <Row label="Origin" value={`${[form.originAddress, form.originUnit, form.originCity, form.originState, form.originZip].filter(Boolean).join(", ")}`} />
+                <Row label="Destination" value={`${[form.destAddress, form.destUnit, form.destCity, form.destState, form.destZip].filter(Boolean).join(", ")}`} />
                 <Row label="Pickup" value={form.pickupDate} />
                 <Row label="Delivery" value={form.deliveryDate} />
                 <Row label="Distance" value={form.distance ? `${form.distance} mi` : "—"} />
@@ -587,7 +621,7 @@ function StateSelect({ label, value, onChange, required, error }: {
   );
 }
 
-interface AddressResult { address: string; city: string; state: string; zip: string; }
+interface AddressResult { address: string; city: string; state: string; zip: string; unit?: string; }
 
 // Load Google Maps script once
 let googleMapsLoaded = false;
@@ -683,7 +717,7 @@ function AddressAutocomplete({ label, value, onSelect }: {
       { placeId: item.placeId, fields: ["address_components", "formatted_address"] },
       (place: any, status: string) => {
         if (status !== "OK" || !place?.address_components) return;
-        let streetNumber = "", route = "", city = "", state = "", zip = "";
+        let streetNumber = "", route = "", city = "", state = "", zip = "", unit = "";
         for (const c of place.address_components) {
           const t: string[] = c.types;
           if (t.includes("street_number")) streetNumber = c.long_name;
@@ -692,9 +726,10 @@ function AddressAutocomplete({ label, value, onSelect }: {
           if (t.includes("sublocality_level_1") && !city) city = c.long_name;
           if (t.includes("administrative_area_level_1")) state = c.short_name;
           if (t.includes("postal_code")) zip = c.short_name;
+          if (t.includes("subpremise")) unit = c.long_name;
         }
         const address = [streetNumber, route].filter(Boolean).join(" ");
-        onSelect({ address, city, state, zip });
+        onSelect({ address, city, state, zip, unit });
         setQuery(place.formatted_address || item.description);
       }
     );
