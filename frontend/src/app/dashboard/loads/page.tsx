@@ -117,6 +117,19 @@ export default function LoadsPage() {
   });
 
   // DAT Load Board state
+  const [invoiceToast, setInvoiceToast] = useState<string | null>(null);
+
+  const generateInvoice = useMutation({
+    mutationFn: (loadId: string) => api.post(`/invoices/generate/${loadId}`).then((r) => r.data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+      const invoiceNum = data?.invoiceNumber || data?.referenceNumber || "Invoice";
+      setInvoiceToast(`Invoice ${invoiceNum} generated successfully`);
+      setTimeout(() => setInvoiceToast(null), 4000);
+    },
+  });
+
   const [showDatAdvanced, setShowDatAdvanced] = useState(false);
   const [datAdvForm, setDatAdvForm] = useState({ originCity: "", originState: "", destCity: "", destState: "", equipmentType: "", weight: "", rate: "", pickupDate: "", deliveryDate: "", loadType: "FULL", comments: "" });
 
@@ -208,6 +221,20 @@ export default function LoadsPage() {
               >
                 <ChevronRight className="w-4 h-4" /> {STATUS_ACTIONS[load.status]}
               </button>
+            )}
+            {canCreate && ["DELIVERED", "POD_RECEIVED"].includes(load.status) && !(load as any).invoiceId && (
+              <button
+                onClick={() => generateInvoice.mutate(load.id)}
+                disabled={generateInvoice.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg text-sm hover:bg-green-500 disabled:opacity-50"
+              >
+                <FileText className="w-4 h-4" /> {generateInvoice.isPending ? "Generating..." : "Generate Invoice"}
+              </button>
+            )}
+            {(load as any).invoiceId && (
+              <a href="/dashboard/invoices" className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm hover:bg-emerald-500/30 no-underline">
+                <FileText className="w-4 h-4" /> View Invoice
+              </a>
             )}
             {isCarrier(user?.role) && load.carrier?.firstName === user?.firstName && (
               <>
@@ -687,6 +714,12 @@ export default function LoadsPage() {
           onClose={() => setShowRateConf(false)}
           load={showRateConf ? load : null}
         />
+
+        {invoiceToast && (
+          <div className="fixed bottom-6 right-6 z-50 px-5 py-3 bg-green-600 text-white rounded-xl shadow-xl text-sm font-medium flex items-center gap-2 animate-in slide-in-from-bottom">
+            <FileText className="w-4 h-4" /> {invoiceToast}
+          </div>
+        )}
       </div>
     );
   }

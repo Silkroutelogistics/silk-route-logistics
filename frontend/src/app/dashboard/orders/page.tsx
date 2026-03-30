@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
@@ -32,6 +33,7 @@ const initialForm = {
 };
 
 export default function OrderBuilderPage() {
+  const searchParams = useSearchParams();
   const [form, setForm] = useState(initialForm);
   const [showOriginUnit, setShowOriginUnit] = useState(false);
   const [showDestUnit, setShowDestUnit] = useState(false);
@@ -40,12 +42,32 @@ export default function OrderBuilderPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [tempControlled, setTempControlled] = useState(false);
   const [success, setSuccess] = useState<{ id: string; ref: string; status: string } | null>(null);
+  const [prefilledFromUrl, setPrefilledFromUrl] = useState(false);
 
   const { data: customersData } = useQuery({
     queryKey: ["customers-search", customerSearch],
     queryFn: () => api.get<{ customers: Customer[] }>(`/customers?search=${customerSearch}&limit=10`).then((r) => r.data),
     enabled: customerSearch.length > 0,
   });
+
+  // Auto-select customer from URL params (e.g., from CRM "Create Load" button)
+  useEffect(() => {
+    if (prefilledFromUrl) return;
+    const urlCustomerId = searchParams.get("customerId");
+    const urlCustomerName = searchParams.get("customerName");
+    if (urlCustomerId && urlCustomerName) {
+      setCustomerSearch(urlCustomerName);
+      setForm((f) => ({ ...f, customerId: urlCustomerId }));
+      setSelectedCustomer({ id: urlCustomerId, name: urlCustomerName, contactName: null, email: null, phone: null, address: null, city: null, state: null, zip: null });
+      setPrefilledFromUrl(true);
+      // Also fetch the full customer to populate contact info
+      api.get<Customer>(`/customers/${urlCustomerId}`).then((res) => {
+        const c = res.data;
+        setSelectedCustomer(c);
+        setForm((f) => ({ ...f, customerId: c.id, contactName: c.contactName || f.contactName, contactPhone: c.phone || f.contactPhone }));
+      }).catch(() => {});
+    }
+  }, [searchParams, prefilledFromUrl]);
 
   const ratePerMile = form.rate && form.distance
     ? (parseFloat(form.rate) / parseFloat(form.distance)).toFixed(2)

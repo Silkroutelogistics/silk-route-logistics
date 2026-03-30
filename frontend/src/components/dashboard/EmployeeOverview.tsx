@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Truck, DollarSign, Users, FileText, ChevronRight, Bell, MapPin, PieChart, Activity, MessageSquare } from "lucide-react";
+import { Truck, DollarSign, Users, FileText, ChevronRight, Bell, MapPin, PieChart, Activity, MessageSquare, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
@@ -49,10 +49,34 @@ export function EmployeeOverview() {
   const partnerCarriers = customersData?.total ?? "—";
 
   const stats = [
-    { label: "Active Loads", value: activeLoads, icon: Truck, color: "text-blue-400 bg-blue-500/20" },
-    { label: "Total Revenue", value: totalRevenue, icon: DollarSign, color: "text-green-400 bg-green-500/20" },
-    { label: "Customers", value: partnerCarriers, icon: Users, color: "text-purple-400 bg-purple-500/20" },
-    { label: "Pending Invoices", value: pendingInvoices, icon: FileText, color: "text-amber-400 bg-amber-500/20" },
+    { label: "Active Loads", value: activeLoads, icon: Truck, color: "text-blue-400 bg-blue-500/20", href: "/dashboard/loads" },
+    { label: "Total Revenue", value: totalRevenue, icon: DollarSign, color: "text-green-400 bg-green-500/20", href: "/dashboard/finance" },
+    { label: "Customers", value: partnerCarriers, icon: Users, color: "text-purple-400 bg-purple-500/20", href: "/dashboard/crm" },
+    { label: "Pending Invoices", value: pendingInvoices, icon: FileText, color: "text-amber-400 bg-amber-500/20", href: "/dashboard/invoices" },
+  ];
+
+  // Needs Attention counts
+  const pendingTenders = loadsData?.loads?.filter((l: { status: string; createdAt: string }) =>
+    l.status === "POSTED" && new Date(l.createdAt).getTime() < Date.now() - 4 * 60 * 60 * 1000
+  ).length ?? 0;
+
+  const overdueInvoices = Array.isArray(invoices)
+    ? invoices.filter((i: { status: string; dueDate?: string }) =>
+        i.status !== "PAID" && i.dueDate && new Date(i.dueDate) < new Date()
+      ).length
+    : 0;
+
+  const expiringInsurance = 0; // derived from compliance stats if available
+
+  const unreadMessages = Array.isArray(notifications)
+    ? notifications.filter((n: { readAt: string | null }) => !n.readAt).length
+    : 0;
+
+  const attentionItems = [
+    { label: "Pending Tenders", count: pendingTenders, href: "/dashboard/loads", borderColor: "border-l-yellow-500", textColor: "text-yellow-400" },
+    { label: "Overdue Invoices", count: overdueInvoices, href: "/accounting/aging", borderColor: "border-l-red-500", textColor: "text-red-400" },
+    { label: "Expiring Insurance", count: expiringInsurance, href: "/dashboard/compliance", borderColor: "border-l-red-500", textColor: "text-red-400" },
+    { label: "Unread Messages", count: unreadMessages, href: "/dashboard/messages", borderColor: "border-l-blue-500", textColor: "text-blue-400" },
   ];
 
   const quickActions = [
@@ -85,7 +109,7 @@ export function EmployeeOverview() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="bg-white/5 rounded-xl border border-white/10 p-5">
+            <a key={s.label} href={s.href} className="bg-white/5 rounded-xl border border-white/10 p-5 hover:border-gold/30 transition block no-underline">
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>
                   <Icon className="w-5 h-5" />
@@ -93,9 +117,27 @@ export function EmployeeOverview() {
                 <span className="text-sm text-slate-400">{s.label}</span>
               </div>
               <p className="text-2xl font-bold text-white">{s.value}</p>
-            </div>
+            </a>
           );
         })}
+      </div>
+
+      {/* Needs Attention */}
+      <div>
+        <h2 className="text-sm font-semibold text-white mb-4">Needs Attention</h2>
+        <div className="grid grid-cols-4 gap-4">
+          {attentionItems.map((item) => (
+            <Link key={item.label} href={item.href}
+              className={`bg-white/5 border border-white/10 rounded-xl p-4 border-l-4 ${item.borderColor} hover:bg-white/[0.08] transition block no-underline`}>
+              <div className="flex items-center justify-between mb-2">
+                <AlertCircle className={`w-4 h-4 ${item.textColor}`} />
+                <span className={`text-xs ${item.textColor} hover:underline`}>View &rarr;</span>
+              </div>
+              <p className={`text-2xl font-bold ${item.textColor}`}>{item.count}</p>
+              <p className="text-xs text-slate-400 mt-1">{item.label}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

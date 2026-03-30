@@ -7,7 +7,7 @@ import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
   X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Pencil,
-  ShieldCheck, Loader2, ExternalLink,
+  ShieldCheck, Loader2, ExternalLink, Package,
 } from "lucide-react";
 
 interface CustomerContact {
@@ -377,6 +377,14 @@ export default function CRMPage() {
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-2">
+                    {c.status === "Active" && (
+                      <a
+                        href={`/dashboard/orders?customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 no-underline font-medium"
+                      >
+                        <Package className="w-3 h-3" /> Create Load
+                      </a>
+                    )}
                     <button onClick={() => {
                       setCreditForm({ creditStatus: c.creditStatus || "NOT_CHECKED", creditLimit: c.creditLimit?.toString() || "" });
                       setShowCreditModal(c.id);
