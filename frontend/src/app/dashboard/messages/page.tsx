@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Search, Plus, MessageSquare } from "lucide-react";
+import { Send, Search, Plus, MessageSquare, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
@@ -71,32 +71,33 @@ export default function MessagesPage() {
     setUserSearch("");
   };
 
+  const initials = (first: string, last: string) => `${first?.[0] || ""}${last?.[0] || ""}`.toUpperCase();
+
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4 p-6">
+    <div className="flex h-[calc(100vh-7rem)] gap-0 p-6">
       {/* Conversation List */}
-      <div className="w-80 bg-white/5 rounded-xl border border-white/10 flex flex-col">
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="font-semibold text-white">Messages</h2>
-          <button onClick={() => setShowNewMsg(true)} className="p-1.5 bg-gold/10 text-gold rounded-lg hover:bg-gold/20">
+      <div className="w-96 bg-[#0c1829] rounded-l-xl border border-[#1a2d47] flex flex-col">
+        <div className="p-4 border-b border-[#1a2d47] flex items-center justify-between">
+          <h2 className="font-semibold text-white text-base">Messages</h2>
+          <button onClick={() => setShowNewMsg(true)} className="p-2 bg-[#C9A84C] text-[#0c1829] rounded-lg hover:bg-[#d4b85e] transition">
             <Plus className="w-4 h-4" />
           </button>
         </div>
 
         {showNewMsg && (
-          <div className="p-3 border-b border-white/10">
+          <div className="p-3 border-b border-[#1a2d47]">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
               <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search users..."
-                className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                className="w-full pl-9 pr-3 py-2 bg-[#0f1f35] border border-[#1a2d47] rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50" />
             </div>
             {searchResults && searchResults.length > 0 && (
-              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+              <div className="mt-2 space-y-0.5 max-h-40 overflow-y-auto">
                 {searchResults.map((u) => (
                   <button key={u.id} onClick={() => selectConversation(u.id, `${u.firstName} ${u.lastName}`)}
-                    className="w-full text-left p-2 rounded-lg hover:bg-white/10 text-sm">
-                    <p className="text-white">{u.firstName} {u.lastName}</p>
-                    <p className="text-xs text-slate-500">{u.email}</p>
-                    <p className="text-xs text-slate-600">{u.company || u.role}</p>
+                    className="w-full text-left p-2.5 rounded-lg hover:bg-[#162a43] text-sm transition">
+                    <p className="text-white font-medium">{u.firstName} {u.lastName}</p>
+                    <p className="text-xs text-slate-400">{u.email}</p>
                   </button>
                 ))}
               </div>
@@ -104,73 +105,114 @@ export default function MessagesPage() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto">
           {conversations?.map((conv) => (
             <button key={conv.partner.id}
               onClick={() => selectConversation(conv.partner.id, `${conv.partner.firstName} ${conv.partner.lastName}`)}
-              className={`w-full text-left p-3 rounded-lg text-sm transition ${selectedUserId === conv.partner.id ? "bg-gold/10" : "hover:bg-white/5"}`}>
-              <div className="flex items-start justify-between">
+              className={`w-full text-left px-4 py-3.5 text-sm transition border-b border-[#1a2d47]/50 ${selectedUserId === conv.partner.id ? "bg-[#162a43]" : "hover:bg-[#0f1f35]"}`}>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#1a2d47] flex items-center justify-center text-xs font-bold text-[#C9A84C] shrink-0 mt-0.5">
+                  {initials(conv.partner.firstName, conv.partner.lastName)}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{conv.partner.firstName} {conv.partner.lastName}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-white font-medium truncate">{conv.partner.firstName} {conv.partner.lastName}</p>
+                    <p className="text-[10px] text-slate-500 shrink-0 ml-2">{new Date(conv.lastMessageAt).toLocaleDateString()}</p>
+                  </div>
                   <p className="text-xs text-slate-500 truncate">{conv.partner.company || conv.partner.role}</p>
                   {conv.partner.email && <p className="text-[10px] text-slate-600 truncate">{conv.partner.email}</p>}
-                  <p className="text-xs text-slate-400 truncate mt-1">{conv.lastMessage}</p>
-                </div>
-                <div className="text-right shrink-0 ml-2">
-                  <p className="text-[10px] text-slate-500">{new Date(conv.lastMessageAt).toLocaleDateString()}</p>
-                  {conv.unreadCount > 0 && (
-                    <span className="inline-block mt-1 px-1.5 py-0.5 bg-gold text-navy text-[10px] font-bold rounded-full">{conv.unreadCount}</span>
-                  )}
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-slate-400 truncate">{conv.lastMessage}</p>
+                    {conv.unreadCount > 0 && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-[#C9A84C] text-[#0c1829] text-[10px] font-bold rounded-full shrink-0">{conv.unreadCount}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </button>
           ))}
           {(!conversations || conversations.length === 0) && !showNewMsg && (
-            <div className="p-4 text-center">
-              <MessageSquare className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">No conversations yet</p>
+            <div className="p-8 text-center">
+              <MessageSquare className="w-10 h-10 text-[#1a2d47] mx-auto mb-3" />
+              <p className="text-sm text-slate-500">No conversations yet</p>
+              <p className="text-xs text-slate-600 mt-1">Click + to start a new message</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Message Thread */}
-      <div className="flex-1 bg-white/5 rounded-xl border border-white/10 flex flex-col">
+      <div className="flex-1 bg-[#0f1f35] rounded-r-xl border border-[#1a2d47] border-l-0 flex flex-col">
         {selectedUserId ? (
           <>
-            <div className="p-4 border-b border-white/10">
-              <p className="font-semibold text-white">{selectedUserName}</p>
+            {/* Thread Header */}
+            <div className="px-6 py-4 border-b border-[#1a2d47] flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#1a2d47] flex items-center justify-center text-sm font-bold text-[#C9A84C]">
+                {initials(selectedUserName.split(" ")[0], selectedUserName.split(" ")[1] || "")}
+              </div>
+              <div>
+                <p className="font-semibold text-white">{selectedUserName}</p>
+                <p className="text-xs text-slate-500">
+                  {conversations?.find((c) => c.partner.id === selectedUserId)?.partner.email || ""}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages?.map((msg) => (
-                <div key={msg.id} className={`max-w-[75%] ${msg.senderId === user?.id ? "ml-auto" : "mr-auto"}`}>
-                  <div className={`p-3 rounded-2xl text-sm ${msg.senderId === user?.id ? "bg-gold/20 text-white rounded-br-md" : "bg-white/10 text-slate-200 rounded-bl-md"}`}>
-                    {msg.content}
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {messages?.map((msg) => {
+                const isMe = msg.senderId === user?.id;
+                return (
+                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[70%] ${isMe ? "order-2" : "order-1"}`}>
+                      <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                        isMe
+                          ? "bg-[#C9A84C] text-[#0c1829] rounded-br-md"
+                          : "bg-[#162a43] text-slate-200 rounded-bl-md"
+                      }`}>
+                        {msg.content}
+                      </div>
+                      <p className={`text-[10px] text-slate-500 mt-1 px-1 ${isMe ? "text-right" : "text-left"}`}>
+                        {msg.sender.firstName} — {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1 px-1">
-                    {msg.sender.firstName} — {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </p>
+                );
+              })}
+              {(!messages || messages.length === 0) && (
+                <div className="flex-1 flex items-center justify-center py-16">
+                  <div className="text-center">
+                    <MessageSquare className="w-8 h-8 text-[#1a2d47] mx-auto mb-2" />
+                    <p className="text-sm text-slate-500">Start a conversation</p>
+                  </div>
                 </div>
-              ))}
-              {(!messages || messages.length === 0) && <p className="text-sm text-slate-500 text-center py-8">Start a conversation</p>}
+              )}
               <div ref={messagesEndRef} />
             </div>
-            <div className="p-4 border-t border-white/10">
-              <div className="flex gap-2">
+
+            {/* Message Input */}
+            <div className="px-6 py-4 border-t border-[#1a2d47]">
+              <div className="flex gap-3">
                 <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && newMessage.trim() && sendMsg.mutate()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                  className="flex-1 px-4 py-2.5 bg-[#0c1829] border border-[#1a2d47] rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50 focus:ring-1 focus:ring-[#C9A84C]/20" />
                 <button onClick={() => newMessage.trim() && sendMsg.mutate()} disabled={!newMessage.trim() || sendMsg.isPending}
-                  className="p-2 bg-gold text-navy rounded-lg hover:bg-gold/90 disabled:opacity-50 transition">
+                  className="px-4 py-2.5 bg-[#C9A84C] text-[#0c1829] rounded-xl hover:bg-[#d4b85e] disabled:opacity-50 transition font-medium">
                   <Send className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
-            Select a conversation or start a new one
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-[#1a2d47] flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-7 h-7 text-[#C9A84C]" />
+              </div>
+              <p className="text-white font-medium">Select a conversation</p>
+              <p className="text-sm text-slate-500 mt-1">or click + to start a new one</p>
+            </div>
           </div>
         )}
       </div>
