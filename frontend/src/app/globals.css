@@ -196,13 +196,13 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 
 /* Google Places Autocomplete dropdown styling */
 .pac-container {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-top: none;
-  border-radius: 0 0 0.5rem 0.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-top: none !important;
+  border-radius: 0 0 0.5rem 0.5rem !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
   font-family: var(--font-family-sans);
-  z-index: 9999;
+  z-index: 100000 !important;
   margin-top: -1px;
 }
 
