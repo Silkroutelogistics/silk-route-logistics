@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import * as carrierOkService from "../services/carrierOkService";
 import { brokerageGateway } from "../services/brokerageGatewayService";
 import { runDailyMonitor } from "../services/fmcsaBulkMonitorService";
+import { creditCheck } from "../services/secEdgarService";
 
 const router = Router();
 
@@ -160,6 +161,23 @@ router.get("/fmcsa/changes", async (req: AuthRequest, res: Response) => {
     res.json({ changes });
   } catch (err) {
     res.status(500).json({ error: "Failed to retrieve FMCSA changes" });
+  }
+});
+
+// GET /integrations/credit-check/:companyName — SEC EDGAR public company credit check
+router.get("/credit-check/:companyName", async (req: AuthRequest, res: Response) => {
+  try {
+    const { companyName } = req.params;
+    if (!companyName || companyName.trim().length < 2) {
+      res.status(400).json({ error: "Company name must be at least 2 characters" });
+      return;
+    }
+
+    const result = await creditCheck(decodeURIComponent(companyName.trim()));
+    res.json(result);
+  } catch (err) {
+    console.error("SEC EDGAR credit check failed:", err);
+    res.status(500).json({ error: "Credit check failed" });
   }
 });
 

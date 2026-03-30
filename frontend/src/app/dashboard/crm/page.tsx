@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
   X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Pencil,
+  ShieldCheck, Loader2, ExternalLink,
 } from "lucide-react";
 
 interface CustomerContact {
@@ -68,6 +69,8 @@ export default function CRMPage() {
   const [creditForm, setCreditForm] = useState({ creditStatus: "NOT_CHECKED", creditLimit: "" });
   const [createContacts, setCreateContacts] = useState<{ name: string; title: string; email: string; phone: string; isPrimary: boolean }[]>([]);
   const [createContactForm, setCreateContactForm] = useState({ name: "", title: "", email: "", phone: "" });
+  const [secCredit, setSecCredit] = useState<Record<string, any>>({});
+  const [secLoading, setSecLoading] = useState<string | null>(null);
   const [showUnit, setShowUnit] = useState(false);
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [form, setForm] = useState({
@@ -168,6 +171,18 @@ export default function CRMPage() {
       alert(msg === "Insufficient permissions" ? "You don't have permission to delete customers." : msg);
     },
   });
+
+  const handleSecCreditCheck = async (customerId: string, customerName: string) => {
+    setSecLoading(customerId);
+    try {
+      const res = await api.get(`/integrations/credit-check/${encodeURIComponent(customerName)}`);
+      setSecCredit((prev) => ({ ...prev, [customerId]: res.data }));
+    } catch {
+      setSecCredit((prev) => ({ ...prev, [customerId]: { error: true } }));
+    } finally {
+      setSecLoading(null);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -314,6 +329,51 @@ export default function CRMPage() {
                     )}
                   </div>
 
+                  {/* SEC EDGAR Credit Check Result */}
+                  {secCredit[c.id] && !secCredit[c.id].error && (
+                    <div className="bg-white/5 rounded-lg border border-white/10 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-white flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-gold" /> SEC EDGAR Credit Report
+                        </h3>
+                        {(() => {
+                          const r = secCredit[c.id].riskAssessment as string;
+                          const colors: Record<string, string> = { LOW: "bg-green-500/20 text-green-400", MEDIUM: "bg-yellow-500/20 text-yellow-400", HIGH: "bg-red-500/20 text-red-400", UNKNOWN: "bg-slate-500/20 text-slate-400" };
+                          return <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[r] || colors.UNKNOWN}`}>{r} RISK</span>;
+                        })()}
+                      </div>
+                      {secCredit[c.id].found ? (
+                        <>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="text-white font-medium">{secCredit[c.id].companyName}</span>
+                            {secCredit[c.id].ticker && <span className="text-gold font-mono text-xs bg-gold/10 px-1.5 py-0.5 rounded">{secCredit[c.id].ticker}</span>}
+                            {secCredit[c.id].sicDescription && <span className="text-slate-400 text-xs">{secCredit[c.id].sicDescription}</span>}
+                          </div>
+                          {secCredit[c.id].financials ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <SecMetric label="Revenue" value={secCredit[c.id].financials.revenue} />
+                              <SecMetric label="Net Income" value={secCredit[c.id].financials.netIncome} />
+                              <SecMetric label="Total Assets" value={secCredit[c.id].financials.totalAssets} />
+                              <SecMetric label="Debt/Equity" value={secCredit[c.id].financials.debtToEquityRatio} isCurrency={false} />
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400">No XBRL financial data available for this company.</p>
+                          )}
+                          {secCredit[c.id].latestAnnualFiling && (
+                            <p className="text-xs text-slate-500">Latest 10-K filed: {secCredit[c.id].latestAnnualFiling}</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs text-slate-400">No public filings found &mdash; company may be private.</p>
+                      )}
+                    </div>
+                  )}
+                  {secCredit[c.id]?.error && (
+                    <div className="bg-red-500/5 rounded-lg border border-red-500/10 p-3">
+                      <p className="text-xs text-red-400">SEC EDGAR lookup failed. Please try again later.</p>
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-2">
                     <button onClick={() => {
@@ -321,6 +381,14 @@ export default function CRMPage() {
                       setShowCreditModal(c.id);
                     }} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20">
                       <CreditCard className="w-3 h-3" /> Update Credit
+                    </button>
+                    <button
+                      onClick={() => handleSecCreditCheck(c.id, c.name)}
+                      disabled={secLoading === c.id}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs hover:bg-blue-500/20 disabled:opacity-50"
+                    >
+                      {secLoading === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                      {secLoading === c.id ? "Checking..." : "Check Credit (SEC)"}
                     </button>
                     <button onClick={() => { if (confirm("Delete this customer?")) deleteCustomer.mutate(c.id); }}
                       className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs hover:bg-red-500/20">
@@ -579,6 +647,32 @@ function FInput({ label, value, onChange, placeholder, type }: {
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || label.replace(" *", "")}
         type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+    </div>
+  );
+}
+
+function SecMetric({ label, value, isCurrency = true }: { label: string; value: number | null; isCurrency?: boolean }) {
+  if (value == null) return (
+    <div>
+      <span className="text-xs text-slate-500">{label}</span>
+      <p className="text-sm text-slate-500">&mdash;</p>
+    </div>
+  );
+  let display: string;
+  if (!isCurrency) {
+    display = value.toFixed(2);
+  } else if (Math.abs(value) >= 1e9) {
+    display = `$${(value / 1e9).toFixed(1)}B`;
+  } else if (Math.abs(value) >= 1e6) {
+    display = `$${(value / 1e6).toFixed(1)}M`;
+  } else {
+    display = `$${(value / 1e3).toFixed(0)}K`;
+  }
+  const isNegative = value < 0;
+  return (
+    <div>
+      <span className="text-xs text-slate-500">{label}</span>
+      <p className={`text-sm font-medium ${isNegative ? "text-red-400" : "text-white"}`}>{display}</p>
     </div>
   );
 }
