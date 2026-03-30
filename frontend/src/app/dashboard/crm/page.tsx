@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
-  X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2,
+  X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Pencil,
 } from "lucide-react";
 
 interface CustomerContact {
@@ -64,7 +64,10 @@ export default function CRMPage() {
   const [showContactModal, setShowContactModal] = useState<string | null>(null);
   const [showCreditModal, setShowCreditModal] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", title: "", email: "", phone: "", isPrimary: false });
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [creditForm, setCreditForm] = useState({ creditStatus: "NOT_CHECKED", creditLimit: "" });
+  const [createContacts, setCreateContacts] = useState<{ name: string; title: string; email: string; phone: string; isPrimary: boolean }[]>([]);
+  const [createContactForm, setCreateContactForm] = useState({ name: "", title: "", email: "", phone: "" });
   const [showUnit, setShowUnit] = useState(false);
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [form, setForm] = useState({
@@ -100,6 +103,7 @@ export default function CRMPage() {
       billingAddress: sameAsBilling
         ? [form.address, form.unit, form.city, form.state, form.zip].filter(Boolean).join(", ")
         : form.billingAddress,
+      contacts: createContacts.length > 0 ? createContacts : undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
@@ -107,6 +111,8 @@ export default function CRMPage() {
       setShowCreate(false);
       setShowUnit(false);
       setSameAsBilling(true);
+      setCreateContacts([]);
+      setCreateContactForm({ name: "", title: "", email: "", phone: "" });
       setForm({ name: "", contactName: "", email: "", phone: "", address: "", city: "", state: "", zip: "", unit: "", status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "", type: "SHIPPER", taxId: "", industryType: "", mcNumber: "", billingAddress: "" });
     },
   });
@@ -125,6 +131,17 @@ export default function CRMPage() {
       api.delete(`/customers/${customerId}/contacts/${contactId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer-contacts", expanded] });
+    },
+  });
+
+  const editContact = useMutation({
+    mutationFn: ({ customerId, contactId }: { customerId: string; contactId: string }) =>
+      api.patch(`/customers/${customerId}/contacts/${contactId}`, contactForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-contacts", expanded] });
+      setShowContactModal(null);
+      setEditingContactId(null);
+      setContactForm({ name: "", title: "", email: "", phone: "", isPrimary: false });
     },
   });
 
@@ -280,8 +297,15 @@ export default function CRMPage() {
                                 {ct.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {ct.phone}</span>}
                               </div>
                             </div>
-                            <button onClick={() => deleteContact.mutate({ customerId: c.id, contactId: ct.id })}
-                              className="text-slate-500 hover:text-red-400 p-1"><Trash2 className="w-3 h-3" /></button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button onClick={() => {
+                                setEditingContactId(ct.id);
+                                setContactForm({ name: ct.name, title: ct.title || "", email: ct.email || "", phone: ct.phone || "", isPrimary: ct.isPrimary });
+                                setShowContactModal(c.id);
+                              }} className="text-slate-500 hover:text-gold p-1"><Pencil className="w-3 h-3" /></button>
+                              <button onClick={() => deleteContact.mutate({ customerId: c.id, contactId: ct.id })}
+                                className="text-slate-500 hover:text-red-400 p-1"><Trash2 className="w-3 h-3" /></button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -416,6 +440,45 @@ export default function CRMPage() {
             <FInput label="Industry Type" value={form.industryType} onChange={(v) => setForm((f) => ({ ...f, industryType: v }))} placeholder="e.g. Manufacturing, Food & Beverage" />
             <FInput label="Notes" value={form.notes} onChange={(v) => setForm((f) => ({ ...f, notes: v }))} />
 
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider pt-2">Contacts</p>
+            {createContacts.length > 0 && (
+              <div className="space-y-2">
+                {createContacts.map((ct, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-3 text-sm text-gray-900 min-w-0">
+                      <span className="font-medium truncate">{ct.name}</span>
+                      {ct.title && <span className="text-gray-500 truncate">{ct.title}</span>}
+                      {ct.email && <span className="text-gray-500 truncate">{ct.email}</span>}
+                      {ct.phone && <span className="text-gray-500 truncate">{ct.phone}</span>}
+                      {ct.isPrimary && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">Primary</span>}
+                    </div>
+                    <button onClick={() => setCreateContacts((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-400 hover:text-red-500 shrink-0 ml-2"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <input value={createContactForm.name} onChange={(e) => setCreateContactForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Name *" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                <input value={createContactForm.title} onChange={(e) => setCreateContactForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="Title" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                <input value={createContactForm.email} onChange={(e) => setCreateContactForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="Email" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                <input value={createContactForm.phone} onChange={(e) => setCreateContactForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="Phone" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+              </div>
+              <button type="button" onClick={() => {
+                if (!createContactForm.name.trim()) return;
+                setCreateContacts((prev) => [...prev, { ...createContactForm, isPrimary: prev.length === 0 }]);
+                setCreateContactForm({ name: "", title: "", email: "", phone: "" });
+              }} disabled={!createContactForm.name.trim()}
+                className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-500 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                <Plus className="w-3 h-3" /> Add Contact
+              </button>
+            </div>
+
             <button onClick={() => createCustomer.mutate()} disabled={!form.name || createCustomer.isPending}
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
               Add Customer
@@ -424,13 +487,13 @@ export default function CRMPage() {
         </div>
       )}
 
-      {/* Add Contact Modal */}
+      {/* Add/Edit Contact Modal */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Add Contact</h2>
-              <button onClick={() => setShowContactModal(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">{editingContactId ? "Edit Contact" : "Add Contact"}</h2>
+              <button onClick={() => { setShowContactModal(null); setEditingContactId(null); setContactForm({ name: "", title: "", email: "", phone: "", isPrimary: false }); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <FInput label="Name *" value={contactForm.name} onChange={(v) => setContactForm((f) => ({ ...f, name: v }))} />
             <FInput label="Title" value={contactForm.title} onChange={(v) => setContactForm((f) => ({ ...f, title: v }))} placeholder="e.g. Shipping Manager" />
@@ -443,10 +506,17 @@ export default function CRMPage() {
                 className="w-4 h-4 rounded bg-gray-50 border-gray-200 accent-amber-500" />
               <span className="text-sm text-gray-700">Primary Contact</span>
             </label>
-            <button onClick={() => addContact.mutate(showContactModal)} disabled={!contactForm.name || addContact.isPending}
-              className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
-              Add Contact
-            </button>
+            {editingContactId ? (
+              <button onClick={() => editContact.mutate({ customerId: showContactModal, contactId: editingContactId })} disabled={!contactForm.name || editContact.isPending}
+                className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
+                Save Changes
+              </button>
+            ) : (
+              <button onClick={() => addContact.mutate(showContactModal)} disabled={!contactForm.name || addContact.isPending}
+                className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
+                Add Contact
+              </button>
+            )}
           </div>
         </div>
       )}
