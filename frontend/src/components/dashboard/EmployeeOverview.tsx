@@ -1,13 +1,30 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { Truck, DollarSign, Users, FileText, ChevronRight, Bell, MapPin, PieChart, Activity, MessageSquare, AlertCircle } from "lucide-react";
+import { Truck, DollarSign, Users, FileText, ChevronRight, Bell, MapPin, PieChart, Activity, MessageSquare, AlertCircle, CheckCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
 export function EmployeeOverview() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  const markRead = useMutation({
+    mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+    },
+  });
+
+  const markAllRead = useMutation({
+    mutationFn: () => api.patch("/notifications/read-all"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+    },
+  });
 
   const { data: loadsData } = useQuery({
     queryKey: ["loads-active"],
@@ -192,14 +209,26 @@ export function EmployeeOverview() {
           <div className="bg-white/5 rounded-xl border border-white/10 p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-sm text-white">Recent Activity</h3>
-              <Link href="/dashboard/audit" className="text-xs text-gold hover:text-gold/80">View all</Link>
+              <div className="flex items-center gap-3">
+                {notifications?.some((n: { readAt: string | null }) => !n.readAt) && (
+                  <button onClick={() => markAllRead.mutate()} className="text-xs text-slate-400 hover:text-gold flex items-center gap-1 transition">
+                    <CheckCheck className="w-3 h-3" /> Mark all read
+                  </button>
+                )}
+                <Link href="/dashboard/audit" className="text-xs text-gold hover:text-gold/80">View all</Link>
+              </div>
             </div>
             <div className="space-y-3">
-              {notifications?.slice(0, 4).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string }) => (
-                <Link key={n.id} href={n.actionUrl || "/dashboard/overview"} className="flex items-start gap-3 no-underline hover:bg-white/5 rounded-lg p-1 -m-1 transition">
-                  <Bell className={`w-4 h-4 mt-0.5 shrink-0 ${n.readAt ? "text-slate-600" : "text-gold"}`} />
-                  <div>
-                    <p className="text-sm font-medium text-white">{n.title}</p>
+              {notifications?.slice(0, 6).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt?: string }) => (
+                <Link key={n.id} href={n.actionUrl || "/dashboard/overview"}
+                  onClick={() => { if (!n.readAt) markRead.mutate(n.id); }}
+                  className={`flex items-start gap-3 no-underline rounded-lg p-2 -m-1 transition ${n.readAt ? "opacity-60 hover:opacity-80" : "hover:bg-white/5 bg-white/[0.03]"}`}>
+                  <div className="relative shrink-0 mt-0.5">
+                    <Bell className={`w-4 h-4 ${n.readAt ? "text-slate-600" : "text-gold"}`} />
+                    {!n.readAt && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gold rounded-full" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${n.readAt ? "text-slate-400" : "text-white"}`}>{n.title}</p>
                     <p className="text-xs text-slate-500 line-clamp-1">{n.message}</p>
                   </div>
                 </Link>
