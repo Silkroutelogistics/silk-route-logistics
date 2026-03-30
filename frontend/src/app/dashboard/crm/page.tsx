@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
-  X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Edit3,
+  X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2,
 } from "lucide-react";
 
 interface CustomerContact {
@@ -314,21 +314,21 @@ export default function CRMPage() {
       {/* Create Customer Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8">
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Add Customer</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Add Customer</h2>
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Company Info</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Company Info</p>
             <div className="grid grid-cols-2 gap-3">
               <FInput label="Company Name *" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} />
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Customer Type</label>
                 <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50">
                   {["SHIPPER", "BROKER", "MANUFACTURER", "DISTRIBUTOR", "RETAILER", "GOVERNMENT", "OTHER"].map(t =>
-                    <option key={t} value={t} className="bg-navy">{t}</option>
+                    <option key={t} value={t}>{t}</option>
                   )}
                 </select>
               </div>
@@ -344,15 +344,15 @@ export default function CRMPage() {
               )}
             </div>
 
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider pt-2">Address & Billing</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider pt-2">Address & Billing</p>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Address</label>
+              <label className="block text-xs text-gray-500 mb-1">Address</label>
               <AddressAutocomplete
                 value={form.address}
                 onChange={(v) => setForm((f) => ({ ...f, address: v }))}
                 onSelect={(addr) => setForm((f) => ({ ...f, address: addr.street, city: addr.city, state: addr.state, zip: addr.zip }))}
                 placeholder="Start typing an address..."
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50"
               />
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -362,15 +362,15 @@ export default function CRMPage() {
             </div>
             <FInput label="Billing Address (if different)" value={form.billingAddress} onChange={(v) => setForm((f) => ({ ...f, billingAddress: v }))} />
 
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider pt-2">Financial & Industry</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider pt-2">Financial & Industry</p>
             <div className="grid grid-cols-3 gap-3">
               <FInput label="Credit Limit ($)" value={form.creditLimit} onChange={(v) => setForm((f) => ({ ...f, creditLimit: v }))} type="number" />
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Payment Terms</label>
+                <label className="block text-xs text-gray-500 mb-1">Payment Terms</label>
                 <select value={form.paymentTerms} onChange={(e) => setForm((f) => ({ ...f, paymentTerms: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50">
                   {["Net 15", "Net 30", "Net 45", "Net 60", "COD", "Prepaid"].map(t =>
-                    <option key={t} value={t} className="bg-navy">{t}</option>
+                    <option key={t} value={t}>{t}</option>
                   )}
                 </select>
               </div>
@@ -390,10 +390,10 @@ export default function CRMPage() {
       {/* Add Contact Modal */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Add Contact</h2>
-              <button onClick={() => setShowContactModal(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Add Contact</h2>
+              <button onClick={() => setShowContactModal(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <FInput label="Name *" value={contactForm.name} onChange={(v) => setContactForm((f) => ({ ...f, name: v }))} />
             <FInput label="Title" value={contactForm.title} onChange={(v) => setContactForm((f) => ({ ...f, title: v }))} placeholder="e.g. Shipping Manager" />
@@ -403,8 +403,8 @@ export default function CRMPage() {
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={contactForm.isPrimary} onChange={(e) => setContactForm((f) => ({ ...f, isPrimary: e.target.checked }))}
-                className="w-4 h-4 rounded bg-white/5 border-white/10" />
-              <span className="text-sm text-slate-300">Primary Contact</span>
+                className="w-4 h-4 rounded bg-gray-50 border-gray-200 accent-amber-500" />
+              <span className="text-sm text-gray-700">Primary Contact</span>
             </label>
             <button onClick={() => addContact.mutate(showContactModal)} disabled={!contactForm.name || addContact.isPending}
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
@@ -417,17 +417,17 @@ export default function CRMPage() {
       {/* Update Credit Modal */}
       {showCreditModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-navy border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Update Credit Status</h2>
-              <button onClick={() => setShowCreditModal(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Update Credit Status</h2>
+              <button onClick={() => setShowCreditModal(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Credit Status</label>
+              <label className="block text-xs text-gray-500 mb-1">Credit Status</label>
               <select value={creditForm.creditStatus} onChange={(e) => setCreditForm((f) => ({ ...f, creditStatus: e.target.value }))}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50">
                 {["NOT_CHECKED", "PENDING_REVIEW", "APPROVED", "CONDITIONAL", "DENIED"].map(s =>
-                  <option key={s} value={s} className="bg-navy">{s.replace("_", " ")}</option>
+                  <option key={s} value={s}>{s.replace("_", " ")}</option>
                 )}
               </select>
             </div>
@@ -469,9 +469,9 @@ function FInput({ label, value, onChange, placeholder, type }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || label.replace(" *", "")}
-        type={type || "text"} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+        type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
     </div>
   );
 }
