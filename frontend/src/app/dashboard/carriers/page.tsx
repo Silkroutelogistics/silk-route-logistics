@@ -10,6 +10,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash,
 } from "lucide-react";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
 interface CarrierPerformance {
   overallScore: number;
@@ -432,16 +433,9 @@ export default function CarrierPoolPage() {
         )}
       </div>
 
-      {/* Edit Carrier Modal */}
-      {editingCarrier && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-gray-900">Edit Carrier — {editingCarrier.company}</h2>
-              <button onClick={() => setEditingCarrier(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-            </div>
-
-            <div className="space-y-3">
+      {/* Edit Carrier Drawer */}
+      <SlideDrawer open={!!editingCarrier} onClose={() => setEditingCarrier(null)} title={`Edit Carrier — ${editingCarrier?.company || ""}`} width="max-w-md">
+            <div className="space-y-4">
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Tier</label>
                 <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
@@ -469,20 +463,18 @@ export default function CarrierPoolPage() {
                   onChange={(e) => setEditForm({ ...editForm, insuranceExpiry: e.target.value })}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
-            </div>
 
             <div className="flex gap-3 pt-2">
               <button onClick={() => setEditingCarrier(null)}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition">Cancel</button>
-              <button onClick={() => updateCarrier.mutate({ id: editingCarrier.id, data: editForm })}
+              <button onClick={() => updateCarrier.mutate({ id: editingCarrier!.id, data: editForm })}
                 disabled={updateCarrier.isPending}
                 className="flex-1 px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
                 {updateCarrier.isPending ? "Saving..." : "Save Changes"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+            </div>
+      </SlideDrawer>
 
       {/* Confirm Approve/Reject Modal */}
       {confirmAction && (

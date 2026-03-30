@@ -9,6 +9,7 @@ import {
   Shield, ShieldCheck, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
   Search, ChevronDown, ChevronUp, Plus, X, Scale, Package, Minus, Timer, Receipt,
 } from "lucide-react";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
 interface Claim {
   id: string;
@@ -253,58 +254,50 @@ export default function ClaimsPage() {
         </div>
       )}
 
-      {/* New Claim Modal */}
-      {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e293b] border border-white/10 rounded-xl p-6 w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">File New Claim</h2>
-              <button onClick={() => setShowNewModal(false)}><X className="w-5 h-5 text-slate-400 hover:text-white" /></button>
-            </div>
+      {/* New Claim Drawer */}
+      <SlideDrawer open={showNewModal} onClose={() => setShowNewModal(false)} title="File New Claim" width="max-w-md">
+            <div className="space-y-4">
             <input placeholder="Load ID" value={newForm.loadId} onChange={e => setNewForm(p => ({ ...p, loadId: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900" />
             <select value={newForm.type} onChange={e => setNewForm(p => ({ ...p, type: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900">
               {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => <option key={t} value={t}>{formatType(t)}</option>)}
             </select>
             <input type="number" placeholder="Estimated Value ($)" value={newForm.estimatedValue}
               onChange={e => setNewForm(p => ({ ...p, estimatedValue: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900" />
             <textarea placeholder="Describe the claim..." rows={3} value={newForm.description}
               onChange={e => setNewForm(p => ({ ...p, description: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white resize-none" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 resize-none" />
             <button disabled={!newForm.loadId || !newForm.estimatedValue || createMutation.isPending}
               onClick={() => createMutation.mutate({ loadId: newForm.loadId, type: newForm.type, estimatedValue: Number(newForm.estimatedValue), description: newForm.description })}
               className="w-full py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
               {createMutation.isPending ? "Filing..." : "File Claim"}
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Resolve Modal */}
-      {resolveTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e293b] border border-white/10 rounded-xl p-6 w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Resolve Claim</h2>
-              <button onClick={() => setResolveTarget(null)}><X className="w-5 h-5 text-slate-400 hover:text-white" /></button>
             </div>
-            <p className="text-sm text-slate-400">Claim for load {resolveTarget.load?.referenceNumber || resolveTarget.loadId.slice(0, 8)} — Est. {fmt(resolveTarget.estimatedValue)}</p>
+      </SlideDrawer>
+
+      {/* Resolve Claim Drawer */}
+      <SlideDrawer open={!!resolveTarget} onClose={() => setResolveTarget(null)} title="Resolve Claim" width="max-w-md">
+            <div className="space-y-4">
+            {resolveTarget && (
+              <>
+            <p className="text-sm text-gray-500">Claim for load {resolveTarget.load?.referenceNumber || resolveTarget.loadId.slice(0, 8)} — Est. {fmt(resolveTarget.estimatedValue)}</p>
             <input type="number" placeholder="Resolution Amount ($)" value={resolveForm.resolutionAmount}
               onChange={e => setResolveForm(p => ({ ...p, resolutionAmount: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900" />
             <textarea placeholder="Resolution notes..." rows={3} value={resolveForm.resolutionNotes}
               onChange={e => setResolveForm(p => ({ ...p, resolutionNotes: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white resize-none" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 resize-none" />
             <button disabled={!resolveForm.resolutionAmount || updateMutation.isPending}
               onClick={() => updateMutation.mutate({ id: resolveTarget.id, body: { status: "RESOLVED", resolutionNotes: resolveForm.resolutionNotes, resolutionAmount: Number(resolveForm.resolutionAmount) } })}
               className="w-full py-2.5 bg-green-600 text-white font-medium rounded-lg text-sm hover:bg-green-500 disabled:opacity-50">
               {updateMutation.isPending ? "Saving..." : "Mark Resolved"}
             </button>
-          </div>
-        </div>
-      )}
+              </>
+            )}
+            </div>
+      </SlideDrawer>
     </div>
   );
 }

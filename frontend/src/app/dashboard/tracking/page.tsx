@@ -10,6 +10,7 @@ import {
   ChevronRight, ChevronDown, Radio, Activity, AlertTriangle, Signal,
   PhoneCall, MessageSquare, Plus, Send,
 } from "lucide-react";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
 /* ═══ Types ═══ */
 
@@ -257,17 +258,9 @@ export default function TrackingPage() {
             </table>
           </div>
 
-          {/* Check Call Form Modal */}
-          {showCheckCallForm && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <PhoneCall className="w-5 h-5 text-gold" /> New Check Call
-                  </h2>
-                  <button onClick={() => setShowCheckCallForm(null)} className="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
-
+          {/* Check Call Drawer */}
+          <SlideDrawer open={!!showCheckCallForm} onClose={() => setShowCheckCallForm(null)} title="New Check Call">
+                <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Status</label>
@@ -311,14 +304,13 @@ export default function TrackingPage() {
                 </div>
 
                 <button
-                  onClick={() => createCheckCall.mutate({ loadId: showCheckCallForm, ...ccForm })}
+                  onClick={() => { if (showCheckCallForm) createCheckCall.mutate({ loadId: showCheckCallForm, ...ccForm }); }}
                   disabled={createCheckCall.isPending}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
                   <Send className="w-4 h-4" /> Log Check Call
                 </button>
-              </div>
-            </div>
-          )}
+                </div>
+          </SlideDrawer>
         </>
       )}
 

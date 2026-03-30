@@ -8,6 +8,7 @@ import { isCarrier } from "@/lib/roles";
 import { Plus, Search, MapPin, Truck, Calendar, DollarSign, ArrowLeft, Download, Package, Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight, ClipboardCheck, Globe } from "lucide-react";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
 interface Load {
   id: string; referenceNumber: string; status: string;
@@ -517,14 +518,9 @@ export default function LoadsPage() {
           </div>
         </div>
 
-        {/* Tender Modal */}
-        {showTender && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Tender Load to Carrier</h2>
-                <button onClick={() => { setShowTender(false); setComplianceResult(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-              </div>
+        {/* Tender Drawer */}
+        <SlideDrawer open={showTender} onClose={() => { setShowTender(false); setComplianceResult(null); }} title="Tender Load to Carrier" width="max-w-md">
+              <div className="space-y-4">
               <p className="text-sm text-gray-600">{load.referenceNumber} — {load.originCity}, {load.originState} → {load.destCity}, {load.destState}</p>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Select Carrier</label>
@@ -591,18 +587,12 @@ export default function LoadsPage() {
               >
                 {checkingCompliance ? "Checking Compliance..." : complianceResult && complianceResult.allowed && complianceResult.warnings.length > 0 ? "Send Tender (with warnings)" : "Send Tender"}
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Advanced DAT Post Modal */}
-        {showDatAdvanced && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Globe className="w-5 h-5 text-gold" /> Advanced DAT Post</h2>
-                <button onClick={() => setShowDatAdvanced(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
+        </SlideDrawer>
+
+        {/* Advanced DAT Post Drawer */}
+        <SlideDrawer open={showDatAdvanced} onClose={() => setShowDatAdvanced(false)} title="Advanced DAT Post">
+              <div className="space-y-4">
               <p className="text-sm text-gray-600">Override load details for the DAT posting. Leave blank to use load defaults.</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -689,9 +679,8 @@ export default function LoadsPage() {
               >
                 {datPostAdvancedMutation.isPending ? "Posting to DAT..." : "Post to DAT"}
               </button>
-            </div>
-          </div>
-        )}
+              </div>
+        </SlideDrawer>
 
         <RateConfirmationModal
           open={showRateConf}

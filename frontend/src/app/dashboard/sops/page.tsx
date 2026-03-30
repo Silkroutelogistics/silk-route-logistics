@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Search, FileText, BookOpen, Plus, Download, Trash2, X, Upload, Clock, User } from "lucide-react";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
 interface SOP {
@@ -206,14 +207,9 @@ export default function SOPsPage() {
         </div>
       </div>
 
-      {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Create SOP</h2>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X className="w-5 h-5" /></button>
-            </div>
+      {/* Create SOP Drawer */}
+      <SlideDrawer open={showCreate} onClose={() => setShowCreate(false)} title="Create SOP">
+            <div className="space-y-4">
             <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Title"
               className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
             <div className="grid grid-cols-3 gap-3">
@@ -250,9 +246,8 @@ export default function SOPsPage() {
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50 cursor-pointer">
               {createSOP.isPending ? "Creating..." : "Create SOP"}
             </button>
-          </div>
-        </div>
-      )}
+            </div>
+      </SlideDrawer>
     </div>
   );
 }

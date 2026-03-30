@@ -8,6 +8,7 @@ import {
   Truck, Plus, Search, X, Wrench, CheckCircle2, AlertTriangle, XCircle,
   ChevronDown, ChevronUp, MapPin, Calendar, Fuel, Shield, Settings2,
 } from "lucide-react";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
 interface TruckData {
   id: string; unitNumber: string; type: string; year: number | null;
@@ -306,14 +307,9 @@ export default function FleetPage() {
         )}
       </div>
 
-      {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Add {tab === "trucks" ? "Truck" : "Trailer"}</h2>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-            </div>
+      {/* Create Drawer */}
+      <SlideDrawer open={showCreate} onClose={() => setShowCreate(false)} title={`Add ${tab === "trucks" ? "Truck" : "Trailer"}`}>
+            <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
               <FormField label="Unit Number *" value={form.unitNumber || ""} onChange={v => setForm(f => ({ ...f, unitNumber: v }))} />
               <div>
@@ -356,9 +352,8 @@ export default function FleetPage() {
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
               {(createTruck.isPending || createTrailer.isPending) ? "Creating..." : `Add ${tab === "trucks" ? "Truck" : "Trailer"}`}
             </button>
-          </div>
-        </div>
-      )}
+            </div>
+      </SlideDrawer>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   Search, User, Truck, Clock, AlertTriangle, CheckCircle2, Phone, MapPin,
   Shield, Package, Plus, X, ChevronDown, ChevronUp, Heart, Snowflake, Link2,
 } from "lucide-react";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
 interface Driver {
   id: string;
@@ -338,15 +339,9 @@ export default function DriversPage() {
         )}
       </div>
 
-      {/* Add Driver Modal */}
-      {showAddDriver && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-4 my-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Add Driver</h2>
-              <button onClick={() => setShowAddDriver(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-            </div>
-
+      {/* Add Driver Drawer */}
+      <SlideDrawer open={showAddDriver} onClose={() => setShowAddDriver(false)} title="Add Driver">
+            <div className="space-y-4">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Personal Information</p>
             <div className="grid grid-cols-2 gap-3">
               <Input label="First Name *" value={driverForm.firstName} onChange={(v) => setDriverForm((f) => ({ ...f, firstName: v }))} />
@@ -407,21 +402,14 @@ export default function DriversPage() {
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
               Add Driver
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Truck/Trailer Modal */}
-      {assignModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Assign {assignModal.type === "truck" ? "Truck" : "Trailer"}
-              </h2>
-              <button onClick={() => setAssignModal(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+      </SlideDrawer>
+
+      {/* Assign Truck/Trailer Drawer */}
+      <SlideDrawer open={!!assignModal} onClose={() => setAssignModal(null)} title={`Assign ${assignModal?.type === "truck" ? "Truck" : "Trailer"}`} width="max-w-md">
+            <div className="space-y-2">
+              {assignModal && (
+                <>
               <button onClick={() => {
                 if (assignModal.type === "truck") assignTruck.mutate({ driverId: assignModal.driverId, truckId: null });
                 else assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: null });
@@ -442,10 +430,10 @@ export default function DriversPage() {
                   <span className="text-gray-500 ml-2">{t.make} {t.model} ({t.type})</span>
                 </button>
               ))}
+                </>
+              )}
             </div>
-          </div>
-        </div>
-      )}
+      </SlideDrawer>
     </div>
   );
 }

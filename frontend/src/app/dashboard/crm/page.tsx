@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
   X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Pencil,
@@ -410,15 +411,9 @@ export default function CRMPage() {
         )}
       </div>
 
-      {/* Create Customer Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 space-y-4 my-8 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Add Customer</h2>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-            </div>
-
+      {/* Create Customer Drawer */}
+      <SlideDrawer open={showCreate} onClose={() => setShowCreate(false)} title="Add Customer">
+            <div className="space-y-4">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Company Info</p>
             <div className="grid grid-cols-2 gap-3">
               <FInput label="Company Name *" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} />
@@ -551,18 +546,12 @@ export default function CRMPage() {
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
               Add Customer
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Contact Modal */}
-      {showContactModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">{editingContactId ? "Edit Contact" : "Add Contact"}</h2>
-              <button onClick={() => { setShowContactModal(null); setEditingContactId(null); setContactForm({ name: "", title: "", email: "", phone: "", isPrimary: false }); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
+      </SlideDrawer>
+
+      {/* Add/Edit Contact Drawer */}
+      <SlideDrawer open={!!showContactModal} onClose={() => { setShowContactModal(null); setEditingContactId(null); setContactForm({ name: "", title: "", email: "", phone: "", isPrimary: false }); }} title={editingContactId ? "Edit Contact" : "Add Contact"} width="max-w-md">
+            <div className="space-y-4">
             <FInput label="Name *" value={contactForm.name} onChange={(v) => setContactForm((f) => ({ ...f, name: v }))} />
             <FInput label="Title" value={contactForm.title} onChange={(v) => setContactForm((f) => ({ ...f, title: v }))} placeholder="e.g. Shipping Manager" />
             <div className="grid grid-cols-2 gap-3">
@@ -575,28 +564,22 @@ export default function CRMPage() {
               <span className="text-sm text-gray-700">Primary Contact</span>
             </label>
             {editingContactId ? (
-              <button onClick={() => editContact.mutate({ customerId: showContactModal, contactId: editingContactId })} disabled={!contactForm.name || editContact.isPending}
+              <button onClick={() => editContact.mutate({ customerId: showContactModal!, contactId: editingContactId })} disabled={!contactForm.name || editContact.isPending}
                 className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
                 Save Changes
               </button>
             ) : (
-              <button onClick={() => addContact.mutate(showContactModal)} disabled={!contactForm.name || addContact.isPending}
+              <button onClick={() => addContact.mutate(showContactModal!)} disabled={!contactForm.name || addContact.isPending}
                 className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
                 Add Contact
               </button>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Update Credit Modal */}
-      {showCreditModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Update Credit Status</h2>
-              <button onClick={() => setShowCreditModal(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
+      </SlideDrawer>
+
+      {/* Update Credit Drawer */}
+      <SlideDrawer open={!!showCreditModal} onClose={() => setShowCreditModal(null)} title="Update Credit Status" width="max-w-md">
+            <div className="space-y-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Credit Status</label>
               <select value={creditForm.creditStatus} onChange={(e) => setCreditForm((f) => ({ ...f, creditStatus: e.target.value }))}
@@ -607,13 +590,12 @@ export default function CRMPage() {
               </select>
             </div>
             <FInput label="Credit Limit ($)" value={creditForm.creditLimit} onChange={(v) => setCreditForm((f) => ({ ...f, creditLimit: v }))} type="number" />
-            <button onClick={() => updateCredit.mutate(showCreditModal)} disabled={updateCredit.isPending}
+            <button onClick={() => updateCredit.mutate(showCreditModal!)} disabled={updateCredit.isPending}
               className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
               Update Credit
             </button>
-          </div>
-        </div>
-      )}
+            </div>
+      </SlideDrawer>
     </div>
   );
 }
