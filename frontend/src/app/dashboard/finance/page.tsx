@@ -7,9 +7,12 @@ import { cn } from "@/lib/utils";
 import {
   DollarSign, TrendingUp, CreditCard, CheckCircle2, Clock,
   ArrowDownRight, ArrowUpRight, Download, FileText, Truck,
-  PieChart as PieChartIcon, BarChart3,
+  PieChart as PieChartIcon, BarChart3, ShieldAlert,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { useAuthStore } from "@/hooks/useAuthStore";
+
+const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
@@ -55,8 +58,13 @@ const CHART_COLORS = ["#D4A843", "#94A3B8", "#22C55E", "#3B82F6", "#EF4444", "#A
 
 // ---- Main Component ----
 export default function FinancePage() {
+  const { user } = useAuthStore();
+  const canSeeMargin = MARGIN_ROLES.includes(user?.role || "");
   const [tab, setTab] = useState<Tab>("Overview");
   const [period, setPeriod] = useState("monthly");
+
+  // Filter out margin-sensitive tabs for non-authorized roles
+  const visibleTabs = canSeeMargin ? TABS : TABS.filter((t) => t !== "Margins" && t !== "P&L");
 
   return (
     <div className="p-6 space-y-6">
@@ -74,7 +82,7 @@ export default function FinancePage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-white/5 rounded-lg p-1 overflow-x-auto">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${tab === t ? "bg-gold/20 text-gold border border-gold/30" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
             {t}
@@ -82,18 +90,18 @@ export default function FinancePage() {
         ))}
       </div>
 
-      {tab === "Overview" && <OverviewTab period={period} />}
+      {tab === "Overview" && <OverviewTab period={period} canSeeMargin={canSeeMargin} />}
       {tab === "Receivables" && <ReceivablesTab />}
       {tab === "Payables" && <PayablesTab />}
-      {tab === "Margins" && <MarginsTab />}
-      {tab === "P&L" && <PLTab period={period} />}
+      {tab === "Margins" && canSeeMargin && <MarginsTab />}
+      {tab === "P&L" && canSeeMargin && <PLTab period={period} />}
       {tab === "Payments" && <PaymentsTab />}
     </div>
   );
 }
 
 // ---- Overview Tab ----
-function OverviewTab({ period }: { period: string }) {
+function OverviewTab({ period, canSeeMargin }: { period: string; canSeeMargin: boolean }) {
   const queryClient = useQueryClient();
 
   const { data: summary } = useQuery({
@@ -119,31 +127,31 @@ function OverviewTab({ period }: { period: string }) {
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className={`grid ${canSeeMargin ? "sm:grid-cols-4" : "sm:grid-cols-2"} gap-4`}>
         <StatCard icon={<DollarSign className="w-5 h-5" />} label="Total Revenue" value={`$${(totalRevenue / 1000).toFixed(0)}K`} color="text-green-400" />
-        <StatCard icon={<DollarSign className="w-5 h-5" />} label="Total Expenses" value={`$${(totalExpenses / 1000).toFixed(0)}K`} color="text-red-400" />
-        <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Net Profit" value={`$${(profit / 1000).toFixed(0)}K`} color="text-blue-400" />
+        {canSeeMargin && <StatCard icon={<DollarSign className="w-5 h-5" />} label="Total Expenses" value={`$${(totalExpenses / 1000).toFixed(0)}K`} color="text-red-400" />}
+        {canSeeMargin && <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Net Profit" value={`$${(profit / 1000).toFixed(0)}K`} color="text-blue-400" />}
         <StatCard icon={<CreditCard className="w-5 h-5" />} label="Accounts Receivable" value={`$${(totalAR / 1000).toFixed(1)}K`} color="text-amber-400" />
       </div>
 
       {/* Revenue Chart */}
       {summary?.monthlyData && summary.monthlyData.length > 0 && (
         <div className="bg-white/5 rounded-xl border border-white/10 p-6">
-          <h2 className="font-semibold text-white mb-4">Revenue vs Expenses</h2>
+          <h2 className="font-semibold text-white mb-4">{canSeeMargin ? "Revenue vs Expenses" : "Revenue Trend"}</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={summary.monthlyData}>
               <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 11 }} />
               <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff" }} formatter={(v: number | undefined) => v != null ? `$${v.toLocaleString()}` : ""} />
               <Bar dataKey="revenue" fill="#D4A843" radius={[4, 4, 0, 0]} name="Revenue" />
-              <Bar dataKey="expenses" fill="#94A3B8" radius={[4, 4, 0, 0]} name="Expenses" />
+              {canSeeMargin && <Bar dataKey="expenses" fill="#94A3B8" radius={[4, 4, 0, 0]} name="Expenses" />}
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {/* Mini Aging + Payables */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className={`grid ${canSeeMargin ? "sm:grid-cols-2" : "sm:grid-cols-1"} gap-4`}>
         {receivables?.aging && (
           <div className="bg-white/5 rounded-xl border border-white/10 p-5">
             <h3 className="font-semibold text-white mb-3 text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-gold" /> AR Aging</h3>
@@ -162,15 +170,17 @@ function OverviewTab({ period }: { period: string }) {
             </div>
           </div>
         )}
-        <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-          <h3 className="font-semibold text-white mb-3 text-sm flex items-center gap-2"><Truck className="w-4 h-4 text-gold" /> Carrier Payables</h3>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between"><span className="text-slate-400">Outstanding</span><span className="text-yellow-400 font-bold">${((payablesSummary?.totalOwed || 0) / 1000).toFixed(1)}K</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Scheduled</span><span className="text-blue-400">${((payablesSummary?.totalScheduled || 0) / 1000).toFixed(1)}K</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Paid</span><span className="text-green-400">${((payablesSummary?.totalPaid || 0) / 1000).toFixed(1)}K</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">QuickPay Savings</span><span className="text-gold">${((payablesSummary?.quickPaySavings || 0) / 1000).toFixed(1)}K</span></div>
+        {canSeeMargin && (
+          <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+            <h3 className="font-semibold text-white mb-3 text-sm flex items-center gap-2"><Truck className="w-4 h-4 text-gold" /> Carrier Payables</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between"><span className="text-slate-400">Outstanding</span><span className="text-yellow-400 font-bold">${((payablesSummary?.totalOwed || 0) / 1000).toFixed(1)}K</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Scheduled</span><span className="text-blue-400">${((payablesSummary?.totalScheduled || 0) / 1000).toFixed(1)}K</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Paid</span><span className="text-green-400">${((payablesSummary?.totalPaid || 0) / 1000).toFixed(1)}K</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">QuickPay Savings</span><span className="text-gold">${((payablesSummary?.quickPaySavings || 0) / 1000).toFixed(1)}K</span></div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Top Outstanding */}

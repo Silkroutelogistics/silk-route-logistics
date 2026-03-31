@@ -43,9 +43,12 @@ const TENDER_COLORS: Record<string, string> = {
   EXPIRED: "bg-slate-500/20 text-slate-400",
 };
 
+const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
+
 export default function LoadsPage() {
   const { user } = useAuthStore();
   const canCreate = !isCarrier(user?.role);
+  const canSeeMargin = MARGIN_ROLES.includes(user?.role || "");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   const [filters, setFilters] = useState({ originState: "", destState: "", equipmentType: "", status: "", search: "" });
@@ -351,8 +354,14 @@ export default function LoadsPage() {
                       </div>
                       <div className="text-right flex items-center gap-3">
                         <div>
-                          <p className="text-sm text-white">${t.offeredRate.toLocaleString()}</p>
-                          {t.counterRate && <p className="text-xs text-yellow-400">Counter: ${t.counterRate.toLocaleString()}</p>}
+                          {canSeeMargin ? (
+                            <>
+                              <p className="text-sm text-white">${t.offeredRate.toLocaleString()}</p>
+                              {t.counterRate && <p className="text-xs text-yellow-400">Counter: ${t.counterRate.toLocaleString()}</p>}
+                            </>
+                          ) : (
+                            <span className="text-sm text-slate-600">&mdash;</span>
+                          )}
                         </div>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${TENDER_COLORS[t.status] || ""}`}>{t.status}</span>
                       </div>
@@ -419,7 +428,11 @@ export default function LoadsPage() {
                             <p className="text-xs text-slate-400">{r.phone} | {r.email}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-gold font-medium">${r.offeredRate.toLocaleString()}</p>
+                            {canSeeMargin ? (
+                              <p className="text-sm text-gold font-medium">${r.offeredRate.toLocaleString()}</p>
+                            ) : (
+                              <span className="text-sm text-slate-600">&mdash;</span>
+                            )}
                             <p className="text-xs text-slate-400">{r.truckCount} truck{r.truckCount !== 1 ? "s" : ""} {r.driverAvailable ? "— driver ready" : ""}</p>
                           </div>
                         </div>
@@ -561,11 +574,17 @@ export default function LoadsPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Offered Rate ($)</label>
-                <input type="number" value={tenderRate} onChange={(e) => setTenderRate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
-              </div>
+              {canSeeMargin ? (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Offered Rate ($)</label>
+                  <input type="number" value={tenderRate} onChange={(e) => setTenderRate(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-100 rounded-lg">
+                  <p className="text-xs text-gray-500">Carrier rate is set by your broker or admin.</p>
+                </div>
+              )}
 
               {/* Compliance warnings/blocks */}
               {complianceResult && !complianceResult.allowed && (
