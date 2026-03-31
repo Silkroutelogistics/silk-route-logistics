@@ -207,6 +207,6 @@ router.use("/load-stops", loadStopRoutes);
 router.use("/load-accessorials", loadAccessorialRoutes);
 router.use("/track-trace", trackTraceBoardRoutes);
 router.use("/track-trace", trackTraceSSERoutes);
-router.use("/integrations", externalIntegrations);
+router.use("/external-integrations", externalIntegrations);
 
 export default router;

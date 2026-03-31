@@ -1182,7 +1182,7 @@ model CheckCall {
   contactedBy String?
   method      String?
   calledById  String?
-  calledBy    User?    @relation("CheckCallUser", fields: [calledById], references: [id])
+  calledBy    User?    @relation("CheckCallUser", fields: [calledById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   deletedAt   DateTime?
 
@@ -1231,7 +1231,7 @@ model Invoice {
   userId          String
   user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   createdById     String?
-  createdBy       User?         @relation("InvoiceCreator", fields: [createdById], references: [id])
+  createdBy       User?         @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   documents       Document[]
   lineItems       InvoiceLineItem[]
@@ -1380,7 +1380,7 @@ model PaymentDispute {
 model ShipperCredit {
   id                String          @id @default(cuid())
   customerId        String          @unique
-  customer          Customer        @relation(fields: [customerId], references: [id])
+  customer          Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   creditGrade       CreditGrade     @default(B)
   creditLimit       Float           @default(0)
@@ -1782,7 +1782,7 @@ model Shipment {
   actualDelivery  DateTime?
 
   customerId      String?
-  customer        Customer?  @relation(fields: [customerId], references: [id])
+  customer        Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
   driverId        String?
   driver          Driver?    @relation(fields: [driverId], references: [id])
   equipmentId     String?
@@ -2566,7 +2566,7 @@ model LaneIntelligence {
 model CustomerIntelligence {
   id                  String   @id @default(cuid())
   customerId          String   @unique @map("customer_id")
-  customer            Customer @relation("CustomerIntelligence", fields: [customerId], references: [id])
+  customer            Customer @relation("CustomerIntelligence", fields: [customerId], references: [id], onDelete: Cascade)
   lifetimeValue       Float    @default(0) @map("lifetime_value")
   avgLoadFrequency    Float    @default(0) @map("avg_load_frequency") // loads per month
   avgLoadValue        Float    @default(0) @map("avg_load_value")

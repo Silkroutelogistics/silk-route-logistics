@@ -41,11 +41,11 @@ export default function IntegrationsPage() {
 
   const { data: status, isLoading } = useQuery({
     queryKey: ["integration-status"],
-    queryFn: () => api.get("/integrations/status").then((r) => r.data),
+    queryFn: () => api.get("/external-integrations/status").then((r) => r.data),
   });
 
   const bulkMonitor = useMutation({
-    mutationFn: () => api.post("/integrations/fmcsa/bulk-monitor"),
+    mutationFn: () => api.post("/external-integrations/fmcsa/bulk-monitor"),
     onSuccess: (res) => {
       toast(`FMCSA monitor complete: ${res.data?.checked || 0} carriers checked, ${res.data?.changes || 0} changes found`, "success");
       queryClient.invalidateQueries({ queryKey: ["integration-status"] });
@@ -54,7 +54,7 @@ export default function IntegrationsPage() {
   });
 
   const carrierLookup = useMutation({
-    mutationFn: (dot: string) => api.get(`/integrations/carrier-lookup/${dot}`).then((r) => r.data),
+    mutationFn: (dot: string) => api.get(`/external-integrations/carrier-lookup/${dot}`).then((r) => r.data),
     onSuccess: (data) => setLookupResult(data),
     onError: () => toast("Carrier lookup failed", "error"),
   });

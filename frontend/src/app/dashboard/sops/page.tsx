@@ -82,7 +82,7 @@ export default function SOPsPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["sops"] }); setSelectedSOP(null); },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:4000";
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "https://api.silkroutelogistics.ai/api").replace("/api", "");
 
   return (
     <div className="p-6 space-y-6">

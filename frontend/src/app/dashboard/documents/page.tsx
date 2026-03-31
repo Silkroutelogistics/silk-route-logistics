@@ -101,7 +101,7 @@ export default function DocumentsPage() {
   const totalSize = allDocs.reduce((s, d) => s + d.fileSize, 0);
 
   const downloadDoc = (doc: Doc) => {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:4000";
+    const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "https://api.silkroutelogistics.ai/api").replace("/api", "");
     const a = document.createElement("a");
     a.href = `${backendUrl}${doc.fileUrl}`;
     a.download = doc.fileName;

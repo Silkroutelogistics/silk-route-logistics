@@ -23,6 +23,7 @@ interface Load {
   tenders?: { id: string; status: string; offeredRate: number; counterRate: number | null; createdAt: string; carrier: { user: { company: string | null; firstName: string; lastName: string } } }[];
   documents?: { id: string; fileName: string; fileUrl: string }[];
   datPostId?: string; datPostedAt?: string; datPostedFields?: any;
+  invoiceId?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -225,7 +226,7 @@ export default function LoadsPage() {
                 <ChevronRight className="w-4 h-4" /> {STATUS_ACTIONS[load.status]}
               </button>
             )}
-            {canCreate && ["DELIVERED", "POD_RECEIVED"].includes(load.status) && !(load as any).invoiceId && (
+            {canCreate && ["DELIVERED", "POD_RECEIVED"].includes(load.status) && !load.invoiceId && (
               <button
                 onClick={() => generateInvoice.mutate(load.id)}
                 disabled={generateInvoice.isPending}
@@ -234,7 +235,7 @@ export default function LoadsPage() {
                 <FileText className="w-4 h-4" /> {generateInvoice.isPending ? "Generating..." : "Generate Invoice"}
               </button>
             )}
-            {(load as any).invoiceId && (
+            {load.invoiceId && (
               <a href="/dashboard/invoices" className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm hover:bg-emerald-500/30 no-underline">
                 <FileText className="w-4 h-4" /> View Invoice
               </a>

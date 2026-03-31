@@ -176,7 +176,7 @@ export default function CRMPage() {
   const handleSecCreditCheck = async (customerId: string, customerName: string) => {
     setSecLoading(customerId);
     try {
-      const res = await api.get(`/integrations/credit-check/${encodeURIComponent(customerName)}`);
+      const res = await api.get(`/external-integrations/credit-check/${encodeURIComponent(customerName)}`);
       setSecCredit((prev) => ({ ...prev, [customerId]: res.data }));
     } catch {
       setSecCredit((prev) => ({ ...prev, [customerId]: { error: true } }));
