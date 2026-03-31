@@ -1059,13 +1059,13 @@ model Load {
   driverId        String?
   driver          Driver?    @relation(fields: [driverId], references: [id])
   customerId      String?
-  customer        Customer?  @relation(fields: [customerId], references: [id])
+  customer        Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
   posterId        String
-  poster          User       @relation("LoadPoster", fields: [posterId], references: [id])
+  poster          User       @relation("LoadPoster", fields: [posterId], references: [id], onDelete: Restrict)
   carrierId       String?
   carrier         User?      @relation("LoadCarrier", fields: [carrierId], references: [id])
 
@@ -1153,7 +1153,7 @@ model RateConfirmation {
   totalCharges    Float?
 
   createdById     String
-  createdBy       User     @relation("RateConfCreator", fields: [createdById], references: [id])
+  createdBy       User     @relation("RateConfCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1413,7 +1413,7 @@ model FactoringFund {
   referenceId       String?
   description       String
   createdById       String?
-  createdBy         User?           @relation("FactoringCreator", fields: [createdById], references: [id])
+  createdBy         User?           @relation("FactoringCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt         DateTime        @default(now())
 
   @@index([createdAt])

@@ -130,7 +130,7 @@ export default function OrderBuilderPage() {
     setShowCustomerDropdown(false);
   };
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.silkroutelogistics.ai/api";
 
   if (success) {
     return (
