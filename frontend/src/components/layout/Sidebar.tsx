@@ -18,7 +18,9 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { useViewMode } from "@/hooks/useViewMode";
 import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
 import { api } from "@/lib/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 const employeeNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
@@ -102,6 +104,8 @@ function getNav(role: string | undefined, viewMode: "ae" | "carrier") {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, logout } = useAuthStore();
   const { viewMode, setViewMode } = useViewMode();
   const carrier = isCarrier(user?.role);
@@ -124,6 +128,13 @@ export function Sidebar() {
     enabled: !!user,
   });
   const unreadCount = unreadData?.count || 0;
+
+  const handleBellClick = useCallback(() => {
+    api.post("/notifications/mark-all-read").then(() => {
+      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+    }).catch(() => {});
+    router.push("/dashboard/overview");
+  }, [queryClient, router]);
 
   const viewToggle = (admin || hasAccountingAccess) ? (
     <div className="px-5 py-3 border-b border-white/10 space-y-2">
@@ -204,10 +215,14 @@ export function Sidebar() {
               </p>
             </div>
             {unreadCount > 0 && (
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-gold/20 rounded-full">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleBellClick(); }}
+                className="flex items-center gap-1 px-2 py-0.5 bg-gold/20 rounded-full hover:bg-gold/30 transition cursor-pointer"
+                title="Mark all as read"
+              >
                 <Bell className="w-3 h-3 text-gold" />
                 <span className="text-[10px] font-bold text-gold">{unreadCount > 99 ? "99+" : unreadCount}</span>
-              </div>
+              </button>
             )}
           </div>
         </div>

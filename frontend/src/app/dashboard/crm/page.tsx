@@ -325,6 +325,19 @@ export default function CRMPage() {
                           </div>
                         ))}
                       </div>
+                    ) : c.contactName ? (
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-white font-medium">{c.contactName}</p>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-gold/20 text-gold">Primary</span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                            {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {c.email}</span>}
+                            {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {c.phone}</span>}
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-xs text-slate-500">No contacts added yet</p>
                     )}
@@ -380,7 +393,7 @@ export default function CRMPage() {
                     {c.status === "Active" && (
                       <a
                         href={`/dashboard/orders?customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 no-underline font-medium"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#C9A84C] text-[#0f172a] rounded-lg text-xs hover:bg-[#C9A84C]/90 no-underline font-medium"
                       >
                         <Package className="w-3 h-3" /> Create Load
                       </a>
@@ -388,13 +401,13 @@ export default function CRMPage() {
                     <button onClick={() => {
                       setCreditForm({ creditStatus: c.creditStatus || "NOT_CHECKED", creditLimit: c.creditLimit?.toString() || "" });
                       setShowCreditModal(c.id);
-                    }} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20">
+                    }} className="flex items-center gap-1 px-3 py-1.5 border border-[#C9A84C] text-[#C9A84C] rounded-lg text-xs hover:bg-[#C9A84C]/10">
                       <CreditCard className="w-3 h-3" /> Update Credit
                     </button>
                     <button
                       onClick={() => handleSecCreditCheck(c.id, c.name)}
                       disabled={secLoading === c.id}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs hover:bg-blue-500/20 disabled:opacity-50"
+                      className="flex items-center gap-1 px-3 py-1.5 border border-slate-600 text-slate-300 rounded-lg text-xs hover:bg-white/10 disabled:opacity-50"
                     >
                       {secLoading === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
                       {secLoading === c.id ? "Checking..." : "Check Credit (SEC)"}

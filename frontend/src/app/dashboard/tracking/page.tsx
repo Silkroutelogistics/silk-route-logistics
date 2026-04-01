@@ -203,11 +203,11 @@ export default function TrackingPage() {
                 className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             </div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-              <option value="" className="bg-navy">Active Loads</option>
-              {LOAD_PIPELINE.map(s => <option key={s} value={s} className="bg-navy">{STATUS_LABELS[s]}</option>)}
-              <option value="TONU" className="bg-navy">TONU</option>
-              <option value="CANCELLED" className="bg-navy">Cancelled</option>
+              className="px-3 py-2 bg-[#0f172a] border border-white/10 rounded-lg text-sm text-white relative z-10 [&>option]:bg-[#0f172a] [&>option]:text-white [&>option:checked]:bg-[#C9A84C]/20 [&>option:checked]:text-[#C9A84C]">
+              <option value="">Active Loads</option>
+              {LOAD_PIPELINE.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              <option value="TONU">TONU</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
 
