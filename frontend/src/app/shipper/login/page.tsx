@@ -116,20 +116,32 @@ export default function ShipperLoginPage() {
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden flex-col items-center justify-center"
         style={{ background: "linear-gradient(165deg, #0d1b2a 0%, #132a45 50%, #0f2440 100%)" }}>
 
+        {/* Radial gold glow */}
+        <div className="absolute pointer-events-none" style={{
+          top: "35%", left: "40%", width: "500px", height: "500px",
+          background: "radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%)",
+          transform: "translate(-50%, -50%)",
+          filter: "blur(60px)",
+        }} />
+
         {/* Animated gold route lines */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
           <path d="M50,300 C200,100 400,500 750,250"
-            fill="none" stroke="rgba(201,168,76,0.10)" strokeWidth="1.5"
+            fill="none" stroke="rgba(201,168,76,0.15)" strokeWidth="1.5"
             strokeDasharray="1200" strokeDashoffset="1200"
             className="animate-[drawRoute_4s_ease-in-out_forwards]" />
           <path d="M100,450 C300,200 500,400 700,150"
-            fill="none" stroke="rgba(201,168,76,0.08)" strokeWidth="1"
+            fill="none" stroke="rgba(201,168,76,0.12)" strokeWidth="1"
             strokeDasharray="1200" strokeDashoffset="1200"
             style={{ animation: "drawRoute 5s 1s ease-in-out forwards" }} />
           <path d="M0,200 C150,350 350,50 600,300 C700,400 780,200 800,250"
             fill="none" stroke="rgba(201,168,76,0.06)" strokeWidth="1"
             strokeDasharray="1400" strokeDashoffset="1400"
             style={{ animation: "drawRoute 6s 1.5s ease-in-out forwards" }} />
+          <circle r="3" fill="#C9A84C" opacity="0.6">
+            <animateMotion dur="8s" repeatCount="indefinite"
+              path="M50,300 C200,100 400,500 750,250" />
+          </circle>
         </svg>
 
         <div className="relative z-10 flex flex-col items-start w-full max-w-[480px] px-12">
@@ -141,7 +153,7 @@ export default function ShipperLoginPage() {
           {/* Feature pills */}
           <div className="flex flex-wrap gap-2 mb-10">
             {FEATURE_PILLS.map((f) => (
-              <div key={f.label} className="flex items-center gap-1.5 border border-[#C9A84C]/20 text-[#C9A84C]/80 bg-[#C9A84C]/[0.05] rounded-lg px-3 py-2 text-xs hover:-translate-y-0.5 transition-all cursor-default">
+              <div key={f.label} className="flex items-center gap-1.5 border border-[#C9A84C]/20 text-[#C9A84C]/80 bg-[#C9A84C]/[0.05] rounded-lg px-3 py-2 text-xs hover:bg-[#C9A84C]/[0.12] hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(201,168,76,0.1)] transition-all duration-200 cursor-default">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 {f.label}
               </div>
@@ -150,8 +162,9 @@ export default function ShipperLoginPage() {
 
           {/* Animated transitioning cards */}
           <div className="relative w-full h-[140px] mb-8">
+            <div className="absolute -right-3 -bottom-3 w-full h-full bg-white/[0.02] border border-white/[0.04] rounded-2xl" />
             {SLIDES.map((slide, i) => (
-              <div key={i} className="absolute inset-0 bg-white/[0.04] backdrop-blur border border-white/[0.08] rounded-2xl p-8 transition-opacity duration-[1200ms]"
+              <div key={i} className="absolute inset-0 bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-opacity duration-[1200ms]"
                 style={{ opacity: currentSlide === i ? 1 : 0 }}>
                 <div className="text-[#C9A84C] text-xs tracking-[3px] uppercase font-semibold">{slide.label}</div>
                 <p className="text-white/90 text-lg font-light leading-relaxed mt-2">{slide.text}</p>
@@ -163,26 +176,28 @@ export default function ShipperLoginPage() {
           <div className="flex items-center gap-2 mb-10">
             {SLIDES.map((_, i) => (
               <button key={i} onClick={() => setCurrentSlide(i)}
-                className={`h-1.5 rounded-full transition-all duration-500 border-none cursor-pointer ${currentSlide === i ? "w-6 bg-[#C9A84C]" : "w-1.5 bg-white/20"}`} />
+                className={`rounded-full transition-all duration-500 border-none cursor-pointer ${currentSlide === i ? "w-5 h-2 bg-[#C9A84C] shadow-[0_0_8px_rgba(201,168,76,0.4)]" : "w-2 h-2 bg-[#C9A84C]/25"}`} />
             ))}
           </div>
 
           {/* Daily insight */}
-          <div className="border-l-[3px] border-l-[#C9A84C] pl-4 max-w-[420px]">
+          <div className="relative pl-4 max-w-[420px]">
+            <div className="absolute -left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/20 rounded-full" />
             <div className="text-[#C9A84C] text-[10px] tracking-[2px] uppercase font-medium mb-1">{insight.cat}</div>
-            <p className="text-[#7a9bb8] text-[13px] italic leading-relaxed m-0">{insight.text}</p>
+            <p className="text-[#8aabbd] text-[13px] italic leading-relaxed m-0">{insight.text}</p>
             <p className="text-[#4d6878] text-[11px] mt-1.5 m-0">&mdash; {insight.src}</p>
           </div>
         </div>
 
         {/* Version footer */}
         <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-          <VersionFooter className="text-[#3a5a70]" />
+          <VersionFooter className="text-[9px] text-[#2a4a60]" />
         </div>
       </div>
 
       {/* RIGHT PANEL — Form (45%) */}
-      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto" style={{ backgroundColor: "#faf9f7" }}>
+      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto relative" style={{ backgroundColor: "#faf9f7" }}>
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/5 to-transparent pointer-events-none hidden lg:block" />
         <div className="w-full max-w-[400px] mx-auto px-8 py-12">
           {/* Mobile-only logo */}
           <div className="flex justify-center mb-10 lg:hidden">
@@ -235,7 +250,7 @@ export default function ShipperLoginPage() {
                 <span className="text-[13px] text-[#C9A84C] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all bg-[#1a2d47] text-white hover:bg-[#243a56] disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0f172a] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
@@ -249,7 +264,7 @@ export default function ShipperLoginPage() {
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all bg-[#1a2d47] text-white hover:bg-[#243a56] disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0f172a] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">
