@@ -124,20 +124,30 @@ export default function EmployeeLoginPage() {
         setTotpSetupStep(true);
         setOtpStep(false);
         setLocalLoading(false);
-        // Fetch QR code for setup
-        try {
-          const setupRes = await fetch(`${BASE}/api/auth/totp/force-setup`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ setupToken: data.setupToken }),
-            ...fetchOpts,
-          });
-          const setupData = await setupRes.json();
-          if (setupData.qrCodeDataURL) {
-            setTotpQrCode(setupData.qrCodeDataURL);
-            setTotpSecret(setupData.secret || "");
+        // Fetch QR code for setup (with retry)
+        const fetchQr = async (token: string) => {
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const setupRes = await fetch(`${BASE}/api/auth/totp/force-setup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ setupToken: token }),
+                credentials: "include",
+              });
+              if (!setupRes.ok) { console.error("[2FA Setup] HTTP", setupRes.status); continue; }
+              const setupData = await setupRes.json();
+              const qr = setupData.qrCodeDataURL || setupData.qrCode || setupData.qrCodeDataUrl || "";
+              if (qr) {
+                setTotpQrCode(qr);
+                setTotpSecret(setupData.secret || "");
+                return;
+              }
+              if (setupData.secret) { setTotpSecret(setupData.secret); return; }
+            } catch (err) { console.error("[2FA Setup] Fetch error:", err); }
           }
-        } catch { /* QR fetch failed — user can still enter secret manually */ }
+          setLocalError("Could not load QR code. Use the manual key below or refresh the page.");
+        };
+        fetchQr(data.setupToken);
         return;
       }
       if (data.pendingTotp) {
