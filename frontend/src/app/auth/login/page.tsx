@@ -204,7 +204,7 @@ export default function EmployeeLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
-      const res = await fetch(`${BASE}/api/auth/totp/verify`, {
+      const res = await fetch(`${BASE}/api/auth/totp/login-verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ totpToken: totpVerifyToken, code: totpCode }),
