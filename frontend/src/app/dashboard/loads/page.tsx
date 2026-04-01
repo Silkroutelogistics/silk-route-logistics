@@ -470,9 +470,9 @@ export default function LoadsPage() {
           onChange={(e) => { setFilters((f) => ({ ...f, equipmentType: e.target.value })); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white"
         >
-          <option value="" className="bg-[#0f172a]">All Equipment</option>
+          <option value="" className="bg-[#0f172a] text-white">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => (
-            <option key={t} value={t} className="bg-[#0f172a]">{t}</option>
+            <option key={t} value={t} className="bg-[#0f172a] text-white">{t}</option>
           ))}
         </select>
       </div>

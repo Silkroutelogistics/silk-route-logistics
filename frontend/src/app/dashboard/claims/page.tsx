@@ -155,16 +155,16 @@ export default function ClaimsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="bg-white/5 border border-white/10 text-sm text-white rounded-lg px-3 py-2">
-          <option value="">All Statuses</option>
+          <option value="" className="bg-[#0f172a] text-white">All Statuses</option>
           {["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED", "DENIED"].map(s => (
-            <option key={s} value={s}>{formatType(s)}</option>
+            <option key={s} value={s} className="bg-[#0f172a] text-white">{formatType(s)}</option>
           ))}
         </select>
         <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
           className="bg-white/5 border border-white/10 text-sm text-white rounded-lg px-3 py-2">
-          <option value="">All Types</option>
+          <option value="" className="bg-[#0f172a] text-white">All Types</option>
           {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => (
-            <option key={t} value={t}>{formatType(t)}</option>
+            <option key={t} value={t} className="bg-[#0f172a] text-white">{formatType(t)}</option>
           ))}
         </select>
         <div className="relative flex-1 max-w-xs">

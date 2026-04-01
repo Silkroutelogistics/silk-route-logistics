@@ -17,11 +17,32 @@ interface Customer {
 const EQUIPMENT_TYPES = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Tanker", "Lowboy", "Conestoga"];
 const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "100", "110", "125", "150", "175", "200", "250", "300", "400", "500"];
 
+const COMMODITY_CLASS_MAP: Record<string, string> = {
+  "auto parts": "85", "automotive": "85", "car parts": "85",
+  "electronics": "92.5", "computers": "92.5", "technology": "92.5",
+  "furniture": "125", "household": "125",
+  "food": "70", "beverage": "70", "groceries": "70", "produce": "70",
+  "paper": "55", "packaging": "55", "corrugated": "55", "cardboard": "55",
+  "chemicals": "60", "chemical": "60",
+  "machinery": "85", "equipment": "85", "industrial": "85",
+  "clothing": "77.5", "apparel": "77.5", "textiles": "77.5",
+  "building materials": "65", "lumber": "65", "construction": "65",
+  "pharmaceuticals": "92.5", "medical": "92.5", "healthcare": "92.5",
+  "plastic": "55", "plastics": "55", "resin": "55",
+  "metal": "65", "steel": "65", "aluminum": "65",
+  "glass": "85", "bottles": "85",
+  "tile": "60", "ceramic": "60", "stone": "60",
+  "frozen food": "100", "frozen": "100", "ice cream": "100",
+  "dry goods": "60",
+  "pet food": "70", "animal feed": "60",
+};
+
 const initialForm = {
   customerId: "",
   originAddress: "", originCity: "", originState: "", originZip: "", originUnit: "",
   destAddress: "", destCity: "", destState: "", destZip: "", destUnit: "",
   pickupDate: "", deliveryDate: "",
+  pickupTimeStart: "", pickupTimeEnd: "", deliveryTimeStart: "", deliveryTimeEnd: "",
   distance: "",
   equipmentType: "Dry Van",
   commodity: "", weight: "", pieces: "",
@@ -43,6 +64,45 @@ export default function OrderBuilderPage() {
   const [tempControlled, setTempControlled] = useState(false);
   const [success, setSuccess] = useState<{ id: string; ref: string; status: string } | null>(null);
   const [prefilledFromUrl, setPrefilledFromUrl] = useState(false);
+  const [distanceAutoFilled, setDistanceAutoFilled] = useState(false);
+  const [distanceManual, setDistanceManual] = useState(false);
+  const [suggestedClass, setSuggestedClass] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
+  const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // FIX 2: Auto-calculate distance when origin+dest zips are filled
+  useEffect(() => {
+    if (distanceManual) return;
+    if (form.originZip.length >= 5 && form.destZip.length >= 5 && form.originCity && form.originState && form.destCity && form.destState) {
+      if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current);
+      distanceTimerRef.current = setTimeout(() => {
+        api.get<{ miles: number }>(`/mileage/calculate?origin=${encodeURIComponent(form.originCity + "," + form.originState)}&destination=${encodeURIComponent(form.destCity + "," + form.destState)}`)
+          .then((res) => {
+            if (res.data?.miles && !distanceManual) {
+              setForm((f) => ({ ...f, distance: String(Math.round(res.data.miles)) }));
+              setDistanceAutoFilled(true);
+            }
+          })
+          .catch(() => {});
+      }, 500);
+    }
+    return () => { if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current); };
+  }, [form.originZip, form.destZip, form.originCity, form.originState, form.destCity, form.destState, distanceManual]);
+
+  // FIX 3: Auto-suggest freight class from commodity
+  useEffect(() => {
+    const commodity = form.commodity.trim().toLowerCase();
+    if (!commodity) { setSuggestedClass(""); return; }
+    const matched = COMMODITY_CLASS_MAP[commodity];
+    if (matched) {
+      setSuggestedClass(matched);
+      if (!form.freightClass) {
+        setForm((f) => ({ ...f, freightClass: matched }));
+      }
+    } else {
+      setSuggestedClass("");
+    }
+  }, [form.commodity]);
 
   const { data: customersData } = useQuery({
     queryKey: ["customers-search", customerSearch],
@@ -88,6 +148,10 @@ export default function OrderBuilderPage() {
         destUnit: form.destUnit || undefined,
         pickupDate: form.pickupDate,
         deliveryDate: form.deliveryDate,
+        pickupTimeStart: form.pickupTimeStart || undefined,
+        pickupTimeEnd: form.pickupTimeEnd || undefined,
+        deliveryTimeStart: form.deliveryTimeStart || undefined,
+        deliveryTimeEnd: form.deliveryTimeEnd || undefined,
         equipmentType: form.equipmentType,
         rate: parseFloat(form.rate),
         status,
@@ -122,6 +186,12 @@ export default function OrderBuilderPage() {
     && form.destCity && form.destState && form.destZip
     && form.pickupDate && form.deliveryDate
     && form.equipmentType && form.rate;
+
+  const requiredFields = ["originCity", "originState", "originZip", "destCity", "destState", "destZip", "pickupDate", "deliveryDate", "rate"] as const;
+  const firstErrorField = showErrors ? requiredFields.find((f) => !form[f]) : null;
+  const fieldError = (name: typeof requiredFields[number]) => showErrors && !form[name];
+  const errorBorder = (name: typeof requiredFields[number]) => fieldError(name) ? "border-red-500" : "border-white/10";
+  const isFirstError = (name: typeof requiredFields[number]) => firstErrorField === name;
 
   const selectCustomer = (c: Customer) => {
     setSelectedCustomer(c);
@@ -177,6 +247,12 @@ export default function OrderBuilderPage() {
         </h1>
         <p className="text-slate-400 text-sm mt-1">Create a new load order and post to the load board</p>
       </div>
+
+      {showErrors && !isValid && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 flex items-center gap-2 text-sm text-red-400">
+          <AlertTriangle className="w-4 h-4" /> Please fill in all required fields highlighted below
+        </div>
+      )}
 
       {/* Section 1: Customer */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
@@ -243,16 +319,37 @@ export default function OrderBuilderPage() {
             )}
             <input value={form.originAddress} onChange={(e) => setForm((f) => ({ ...f, originAddress: e.target.value }))}
               placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <input value={form.originCity} onChange={(e) => setForm((f) => ({ ...f, originCity: e.target.value }))}
-              placeholder="City" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <div className="grid grid-cols-2 gap-2">
-              <input value={form.originState} onChange={(e) => setForm((f) => ({ ...f, originState: e.target.value.toUpperCase().slice(0, 2) }))}
-                placeholder="State/Prov (e.g. MI, ON)" maxLength={2} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-              <input value={form.originZip} onChange={(e) => setForm((f) => ({ ...f, originZip: e.target.value }))}
-                placeholder="ZIP/Postal" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            <div {...(isFirstError("originCity") ? { "data-error": "true" } : {})}>
+              <input value={form.originCity} onChange={(e) => setForm((f) => ({ ...f, originCity: e.target.value }))}
+                placeholder="City *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("originCity")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+              {fieldError("originCity") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
             </div>
-            <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+            <div className="grid grid-cols-2 gap-2">
+              <div {...(isFirstError("originState") ? { "data-error": "true" } : {})}>
+                <input value={form.originState} onChange={(e) => setForm((f) => ({ ...f, originState: e.target.value.toUpperCase().slice(0, 2) }))}
+                  placeholder="State/Prov (e.g. MI, ON) *" maxLength={2} className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("originState")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+                {fieldError("originState") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
+              </div>
+              <div {...(isFirstError("originZip") ? { "data-error": "true" } : {})}>
+                <input value={form.originZip} onChange={(e) => setForm((f) => ({ ...f, originZip: e.target.value }))}
+                  placeholder="ZIP/Postal *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("originZip")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+                {fieldError("originZip") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
+              </div>
+            </div>
+            <div {...(isFirstError("pickupDate") ? { "data-error": "true" } : {})}>
+              <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))}
+                className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("pickupDate")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]`} />
+              {fieldError("pickupDate") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Pickup Window</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="time" value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
+                  placeholder="Start" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+                <input type="time" value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))}
+                  placeholder="End" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+              </div>
+            </div>
           </div>
           <div className="space-y-3">
             <p className="text-xs text-slate-500 font-medium">DESTINATION</p>
@@ -279,21 +376,45 @@ export default function OrderBuilderPage() {
             )}
             <input value={form.destAddress} onChange={(e) => setForm((f) => ({ ...f, destAddress: e.target.value }))}
               placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <input value={form.destCity} onChange={(e) => setForm((f) => ({ ...f, destCity: e.target.value }))}
-              placeholder="City" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <div className="grid grid-cols-2 gap-2">
-              <input value={form.destState} onChange={(e) => setForm((f) => ({ ...f, destState: e.target.value.toUpperCase().slice(0, 2) }))}
-                placeholder="State/Prov (e.g. IL, ON)" maxLength={2} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-              <input value={form.destZip} onChange={(e) => setForm((f) => ({ ...f, destZip: e.target.value }))}
-                placeholder="ZIP/Postal" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            <div {...(isFirstError("destCity") ? { "data-error": "true" } : {})}>
+              <input value={form.destCity} onChange={(e) => setForm((f) => ({ ...f, destCity: e.target.value }))}
+                placeholder="City *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("destCity")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+              {fieldError("destCity") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
             </div>
-            <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+            <div className="grid grid-cols-2 gap-2">
+              <div {...(isFirstError("destState") ? { "data-error": "true" } : {})}>
+                <input value={form.destState} onChange={(e) => setForm((f) => ({ ...f, destState: e.target.value.toUpperCase().slice(0, 2) }))}
+                  placeholder="State/Prov (e.g. IL, ON) *" maxLength={2} className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("destState")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+                {fieldError("destState") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
+              </div>
+              <div {...(isFirstError("destZip") ? { "data-error": "true" } : {})}>
+                <input value={form.destZip} onChange={(e) => setForm((f) => ({ ...f, destZip: e.target.value }))}
+                  placeholder="ZIP/Postal *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("destZip")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+                {fieldError("destZip") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
+              </div>
+            </div>
+            <div {...(isFirstError("deliveryDate") ? { "data-error": "true" } : {})}>
+              <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
+                className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("deliveryDate")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]`} />
+              {fieldError("deliveryDate") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Delivery Window</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="time" value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
+                  placeholder="Start" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+                <input type="time" value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))}
+                  placeholder="End" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+              </div>
+            </div>
           </div>
         </div>
-        <input value={form.distance} onChange={(e) => setForm((f) => ({ ...f, distance: e.target.value }))}
-          placeholder="Distance (miles)" type="number"
-          className="w-full md:w-48 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+        <div className="flex items-center gap-2">
+          <input value={form.distance} onChange={(e) => { setForm((f) => ({ ...f, distance: e.target.value })); setDistanceManual(true); setDistanceAutoFilled(false); }}
+            placeholder="Distance (miles)" type="number"
+            className="w-full md:w-48 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+          {distanceAutoFilled && <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-medium">Calculated</span>}
+        </div>
       </div>
 
       {/* Section 3: Freight */}
@@ -306,7 +427,7 @@ export default function OrderBuilderPage() {
             <label className="text-xs text-slate-500 mb-1 block">Equipment Type</label>
             <select value={form.equipmentType} onChange={(e) => { setForm((f) => ({ ...f, equipmentType: e.target.value })); if (e.target.value === "Reefer") setTempControlled(true); }}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              {EQUIPMENT_TYPES.map((t) => <option key={t} value={t} className="bg-navy">{t}</option>)}
+              {EQUIPMENT_TYPES.map((t) => <option key={t} value={t} className="bg-[#0f172a] text-white">{t}</option>)}
             </select>
           </div>
           <div>
@@ -318,9 +439,12 @@ export default function OrderBuilderPage() {
             <label className="text-xs text-slate-500 mb-1 block">Freight Class</label>
             <select value={form.freightClass} onChange={(e) => setForm((f) => ({ ...f, freightClass: e.target.value }))}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              <option value="" className="bg-navy">Select class</option>
-              {FREIGHT_CLASSES.map((c) => <option key={c} value={c} className="bg-navy">Class {c}</option>)}
+              <option value="" className="bg-[#0f172a] text-white">Select class</option>
+              {FREIGHT_CLASSES.map((c) => <option key={c} value={c} className="bg-[#0f172a] text-white">Class {c}</option>)}
             </select>
+            {suggestedClass && (
+              <p className="text-xs text-gold mt-1">Auto-suggested: Class {suggestedClass} based on commodity</p>
+            )}
           </div>
         </div>
         <div className="grid md:grid-cols-3 gap-3">
@@ -374,10 +498,11 @@ export default function OrderBuilderPage() {
           <DollarSign className="w-4 h-4" /> Rate & Pricing
         </h2>
         <div className="grid md:grid-cols-3 gap-3 items-end">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Rate ($)</label>
+          <div {...(isFirstError("rate") ? { "data-error": "true" } : {})}>
+            <label className="text-xs text-slate-500 mb-1 block">Rate ($) *</label>
             <input value={form.rate} onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))}
-              placeholder="e.g. 1800" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+              placeholder="e.g. 1800" type="number" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("rate")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
+            {fieldError("rate") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
           </div>
           <div className="bg-white/5 rounded-lg p-3 text-center">
             <p className="text-xs text-slate-500">Rate / Mile</p>
@@ -400,15 +525,35 @@ export default function OrderBuilderPage() {
       {/* Submit Buttons */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => createLoad.mutate("POSTED")}
-          disabled={!isValid || createLoad.isPending}
+          onClick={() => {
+            if (!isValid) {
+              setShowErrors(true);
+              setTimeout(() => {
+                const firstError = document.querySelector('[data-error="true"]');
+                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 50);
+              return;
+            }
+            createLoad.mutate("POSTED");
+          }}
+          disabled={createLoad.isPending}
           className="flex-1 px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold/90 disabled:opacity-50 transition cursor-pointer"
         >
           {createLoad.isPending ? "Creating..." : "Post to Load Board"}
         </button>
         <button
-          onClick={() => createLoad.mutate("DRAFT")}
-          disabled={!isValid || createLoad.isPending}
+          onClick={() => {
+            if (!isValid) {
+              setShowErrors(true);
+              setTimeout(() => {
+                const firstError = document.querySelector('[data-error="true"]');
+                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 50);
+              return;
+            }
+            createLoad.mutate("DRAFT");
+          }}
+          disabled={createLoad.isPending}
           className="px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 disabled:opacity-50 transition cursor-pointer"
         >
           Save Draft
