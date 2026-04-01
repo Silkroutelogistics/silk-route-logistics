@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { User, Lock, CheckCircle, Bell, Phone } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { User, Lock, CheckCircle, Bell, Phone, ShieldCheck, Copy } from "lucide-react";
+import { useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CarrierCard } from "@/components/carrier";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { api } from "@/lib/api";
@@ -29,6 +30,56 @@ export default function CarrierSettingsPage() {
     emailNotifications: true,
   });
   const [notifSaved, setNotifSaved] = useState(false);
+
+  // 2FA state
+  const queryClient = useQueryClient();
+  const [totpEnabled, setTotpEnabled] = useState(user?.totpEnabled || false);
+  const [totpSetupData, setTotpSetupData] = useState<{ qrCodeDataUrl: string; secret: string; backupCodes: string[] } | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpError, setTotpError] = useState("");
+  const [totpSuccess, setTotpSuccess] = useState("");
+  const [showDisable, setShowDisable] = useState(false);
+  const [disableCode, setDisableCode] = useState("");
+
+  useEffect(() => { setTotpEnabled(user?.totpEnabled || false); }, [user?.totpEnabled]);
+
+  const setupTotp = useMutation({
+    mutationFn: () => api.post("/auth/totp/setup"),
+    onSuccess: (res) => {
+      const d = res.data;
+      setTotpSetupData({
+        qrCodeDataUrl: d.qrCodeDataUrl || d.qrCodeDataURL || d.qrCode || "",
+        secret: d.secret || "",
+        backupCodes: d.backupCodes || [],
+      });
+      setTotpError("");
+    },
+    onError: (err: any) => setTotpError(err.response?.data?.error || "Failed to start 2FA setup"),
+  });
+
+  const verifyTotp = useMutation({
+    mutationFn: () => api.post("/auth/totp/verify", { code: totpCode }),
+    onSuccess: () => {
+      setTotpEnabled(true);
+      setTotpSuccess("Two-factor authentication has been enabled successfully.");
+      setTotpSetupData(null);
+      setTotpCode("");
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => setTotpError(err.response?.data?.error || "Invalid verification code"),
+  });
+
+  const disableTotp = useMutation({
+    mutationFn: () => api.post("/auth/totp/disable", { code: disableCode }),
+    onSuccess: () => {
+      setTotpEnabled(false);
+      setShowDisable(false);
+      setDisableCode("");
+      setTotpSuccess("Two-factor authentication has been disabled.");
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => setTotpError(err.response?.data?.error || "Invalid code. Could not disable 2FA."),
+  });
 
   const profile = user?.carrierProfile;
 
@@ -213,6 +264,118 @@ export default function CarrierSettingsPage() {
               {saving ? "Saving..." : "Update Password"}
             </button>
           </form>
+        </CarrierCard>
+
+        {/* Two-Factor Authentication */}
+        <CarrierCard padding="p-5" className="col-span-2">
+          <h3 className="text-sm font-bold text-[#0D1B2A] mb-4 flex items-center gap-2">
+            <ShieldCheck size={16} className="text-[#C9A84C]" /> Two-Factor Authentication
+          </h3>
+
+          {totpSuccess && (
+            <div className="mb-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-600 flex items-center gap-2">
+              <CheckCircle size={14} /> {totpSuccess}
+            </div>
+          )}
+          {totpError && (
+            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">{totpError}</div>
+          )}
+
+          {totpEnabled ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle size={16} className="text-emerald-500" />
+                <span className="text-xs font-semibold text-emerald-600">Two-factor authentication is enabled</span>
+              </div>
+              {showDisable ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">Enter your 6-digit authenticator code to disable 2FA.</p>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={disableCode}
+                    onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ""))}
+                    placeholder="000000"
+                    className="w-36 px-3 py-2 border border-gray-200 rounded text-sm text-center font-mono tracking-widest focus:border-[#C9A84C] focus:outline-none"
+                  />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => disableTotp.mutate()}
+                      disabled={disableTotp.isPending || disableCode.length !== 6}
+                      className="px-3 py-2 bg-red-50 text-red-600 border border-red-200 text-xs font-semibold rounded disabled:opacity-50"
+                    >
+                      {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
+                    </button>
+                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0D1B2A]">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setShowDisable(true); setTotpSuccess(""); setTotpError(""); }}
+                  className="px-3 py-2 bg-gray-100 text-[#0D1B2A] text-xs font-semibold rounded hover:bg-gray-200"
+                >
+                  Disable 2FA
+                </button>
+              )}
+            </div>
+          ) : totpSetupData ? (
+            <div className="space-y-4">
+              <p className="text-xs text-gray-500">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).</p>
+              <div className="flex justify-center">
+                <img src={totpSetupData.qrCodeDataUrl} alt="TOTP QR Code" width={180} height={180} className="rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Manual entry key</label>
+                <code className="block px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm text-[#C9A84C] font-mono break-all select-all">{totpSetupData.secret}</code>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">Backup codes (save these somewhere safe)</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                  {totpSetupData.backupCodes.map((code, i) => (
+                    <div key={i} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs font-mono text-gray-700 text-center">{code}</div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(totpSetupData.backupCodes.join("\n")); setTotpSuccess("Backup codes copied to clipboard."); }}
+                  className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-[#C9A84C]"
+                >
+                  <Copy size={12} /> Copy backup codes
+                </button>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Enter the 6-digit code from your app</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="w-36 px-3 py-2 border border-gray-200 rounded text-sm text-center font-mono tracking-widest focus:border-[#C9A84C] focus:outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => verifyTotp.mutate()}
+                  disabled={verifyTotp.isPending || totpCode.length !== 6}
+                  className="px-4 py-2 bg-[#0D1B2A] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                >
+                  {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
+                </button>
+                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0D1B2A]">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs text-gray-500 mb-3">Add an extra layer of security to your account by enabling two-factor authentication.</p>
+              <button
+                onClick={() => { setupTotp.mutate(); setTotpSuccess(""); setTotpError(""); }}
+                disabled={setupTotp.isPending}
+                className="px-4 py-2 bg-[#0D1B2A] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+              >
+                {setupTotp.isPending ? "Setting up..." : "Enable 2FA"}
+              </button>
+            </div>
+          )}
         </CarrierCard>
 
         {/* Notification Preferences */}

@@ -20,6 +20,7 @@ interface CarrierUser {
   role: string;
   company: string | null;
   phone: string | null;
+  totpEnabled?: boolean;
   carrierProfile: CarrierProfile | null;
 }
 

@@ -6,8 +6,9 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
 import { TierBadge } from "@/components/ui/TierBadge";
-import { Save, Lock, Bell, User, Shield } from "lucide-react";
+import { Save, Lock, Bell, User, Shield, CheckCircle, Copy, ShieldCheck } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -18,6 +19,58 @@ export default function SettingsPage() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [pwSaved, setPwSaved] = useState(false);
   const [pwError, setPwError] = useState("");
+
+  // 2FA state
+  const queryClient = useQueryClient();
+  const [totpEnabled, setTotpEnabled] = useState(user?.totpEnabled || false);
+  const [totpSetupData, setTotpSetupData] = useState<{ qrCodeDataUrl: string; secret: string; backupCodes: string[] } | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpError, setTotpError] = useState("");
+  const [totpSuccess, setTotpSuccess] = useState("");
+  const [showDisable, setShowDisable] = useState(false);
+  const [disableCode, setDisableCode] = useState("");
+
+  useEffect(() => { setTotpEnabled(user?.totpEnabled || false); }, [user?.totpEnabled]);
+
+  const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
+
+  const setupTotp = useMutation({
+    mutationFn: () => api.post("/auth/totp/setup"),
+    onSuccess: (res) => {
+      const d = res.data;
+      setTotpSetupData({
+        qrCodeDataUrl: d.qrCodeDataUrl || d.qrCodeDataURL || d.qrCode || "",
+        secret: d.secret || "",
+        backupCodes: d.backupCodes || [],
+      });
+      setTotpError("");
+    },
+    onError: (err: any) => setTotpError(err.response?.data?.error || "Failed to start 2FA setup"),
+  });
+
+  const verifyTotp = useMutation({
+    mutationFn: () => api.post("/auth/totp/verify", { code: totpCode }),
+    onSuccess: () => {
+      setTotpEnabled(true);
+      setTotpSuccess("Two-factor authentication has been enabled successfully.");
+      setTotpSetupData(null);
+      setTotpCode("");
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => setTotpError(err.response?.data?.error || "Invalid verification code"),
+  });
+
+  const disableTotp = useMutation({
+    mutationFn: () => api.post("/auth/totp/disable", { code: disableCode }),
+    onSuccess: () => {
+      setTotpEnabled(false);
+      setShowDisable(false);
+      setDisableCode("");
+      setTotpSuccess("Two-factor authentication has been disabled.");
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => setTotpError(err.response?.data?.error || "Invalid code. Could not disable 2FA."),
+  });
 
   const { data: carrierProfile } = useQuery({
     queryKey: ["carrier-onboarding"],
@@ -141,6 +194,121 @@ export default function SettingsPage() {
             {pwSaved && <span className="text-sm text-green-400">Password updated!</span>}
           </div>
         </div>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ShieldCheck className="w-5 h-5 text-gold" />
+          <h2 className="font-semibold text-white">Two-Factor Authentication</h2>
+        </div>
+
+        {totpSuccess && (
+          <div className="mb-4 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-sm text-green-400 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" /> {totpSuccess}
+          </div>
+        )}
+        {totpError && (
+          <div className="mb-4 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">{totpError}</div>
+        )}
+
+        {totpEnabled ? (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="text-sm text-green-400 font-medium">Two-factor authentication is enabled</span>
+            </div>
+            {isAdminOrCeo ? (
+              <p className="text-sm text-slate-400">2FA is mandatory for administrators and cannot be disabled.</p>
+            ) : showDisable ? (
+              <div className="space-y-3 max-w-md">
+                <p className="text-sm text-slate-400">Enter your 6-digit authenticator code to disable 2FA.</p>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={disableCode}
+                  onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="w-40 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white tracking-widest text-center font-mono focus:outline-none focus:border-gold/50"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => disableTotp.mutate()}
+                    disabled={disableTotp.isPending || disableCode.length !== 6}
+                    className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm hover:bg-red-500/30 disabled:opacity-50"
+                  >
+                    {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
+                  </button>
+                  <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-sm text-slate-400 hover:text-white">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setShowDisable(true); setTotpSuccess(""); setTotpError(""); }}
+                className="px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20"
+              >
+                Disable 2FA
+              </button>
+            )}
+          </div>
+        ) : totpSetupData ? (
+          <div className="space-y-4 max-w-md">
+            <p className="text-sm text-slate-400">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).</p>
+            <div className="flex justify-center">
+              <img src={totpSetupData.qrCodeDataUrl} alt="TOTP QR Code" width={180} height={180} className="rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Manual entry key</label>
+              <code className="block px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gold font-mono break-all select-all">{totpSetupData.secret}</code>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-2">Backup codes (save these somewhere safe)</label>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {totpSetupData.backupCodes.map((code, i) => (
+                  <div key={i} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded text-sm font-mono text-slate-300 text-center">{code}</div>
+                ))}
+              </div>
+              <button
+                onClick={() => { navigator.clipboard.writeText(totpSetupData.backupCodes.join("\n")); setTotpSuccess("Backup codes copied to clipboard."); }}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-gold"
+              >
+                <Copy className="w-3.5 h-3.5" /> Copy backup codes
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Enter the 6-digit code from your app</label>
+              <input
+                type="text"
+                maxLength={6}
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-40 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white tracking-widest text-center font-mono focus:outline-none focus:border-gold/50"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => verifyTotp.mutate()}
+                disabled={verifyTotp.isPending || totpCode.length !== 6}
+                className="flex items-center gap-2 px-4 py-2 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50"
+              >
+                <ShieldCheck className="w-4 h-4" /> {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
+              </button>
+              <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-sm text-slate-400 hover:text-white">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-slate-400 mb-3">Add an extra layer of security to your account by enabling two-factor authentication.</p>
+            <button
+              onClick={() => { setupTotp.mutate(); setTotpSuccess(""); setTotpError(""); }}
+              disabled={setupTotp.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50"
+            >
+              <ShieldCheck className="w-4 h-4" /> {setupTotp.isPending ? "Setting up..." : "Enable 2FA"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Notifications */}
