@@ -1,31 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Package, BarChart3, FileText, MapPin, Truck, Shield } from "lucide-react";
+import { Package, Shield } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/hooks/useAuthStore";
-
-const FEATURES = [
-  { icon: Package, label: "Freight Quotes" },
-  { icon: BarChart3, label: "Spend Analytics" },
-  { icon: FileText, label: "Invoice Management" },
-  { icon: MapPin, label: "Live Tracking" },
-];
-
-const INSIGHTS = [
-  { cat: "INDUSTRY FACT", text: "Shippers who consolidate freight through a single broker save an average of 12\u201318% on transportation costs annually.", src: "Logistics Management, 2024" },
-  { cat: "DID YOU KNOW", text: "Real-time shipment visibility reduces supply chain disruptions by up to 30% and improves on-time delivery by 15%.", src: "Gartner Supply Chain Research" },
-  { cat: "SHIPPER TIP", text: "Building consistent volume with fewer carriers leads to better rates, priority capacity, and more reliable service.", src: "DAT Freight & Analytics" },
-  { cat: "SRL PROMISE", text: "One point of contact. Total freight visibility. Competitive rates from day one. That\u2019s the Silk Route difference.", src: "Silk Route Logistics" },
-  { cat: "PERSPECTIVE", text: "Companies with digital freight management reduce administrative costs by 25% and cut billing errors by 60%.", src: "McKinsey & Company" },
-];
-
-const SLIDES = [
-  { label: "Ship with Confidence", text: "Competitive rates, total visibility,\none point of contact" },
-  { label: "Real-Time Tracking", text: "Know where your freight is\nat every mile of the journey" },
-  { label: "Smart Logistics", text: "AI-powered matching for\noptimal carrier selection" },
-];
 
 export default function ShipperLoginPage() {
   const [email, setEmail] = useState("");
@@ -37,18 +17,8 @@ export default function ShipperLoginPage() {
   const [localError, setLocalError] = useState("");
   const [localLoading, setLocalLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const router = useRouter();
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-  const insight = INSIGHTS[dayOfYear % INSIGHTS.length];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +34,6 @@ export default function ShipperLoginPage() {
         setLocalLoading(false);
         return;
       }
-      // Cookie set by backend — redirect to shipper dashboard
       window.location.href = "/shipper/dashboard";
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
@@ -88,7 +57,6 @@ export default function ShipperLoginPage() {
         window.location.href = "/auth/force-password-change";
         return;
       }
-      // Cookie set by backend — redirect to shipper dashboard
       window.location.href = "/shipper/dashboard";
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Verification failed. Please try again.";
@@ -97,110 +65,68 @@ export default function ShipperLoginPage() {
     setLocalLoading(false);
   };
 
+  const inputClass = "w-full px-4 py-3 text-sm rounded-lg bg-white text-gray-900 outline-none transition-all placeholder:text-gray-400 border border-gray-300 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20";
+
   return (
     <div className="flex min-h-screen" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
       {/* LEFT PANEL */}
       <div className="hidden lg:flex w-[55%] relative overflow-hidden items-center justify-center"
-        style={{ background: "linear-gradient(165deg, #1b3a5e 0%, #224870 40%, #285280 70%, #1e4060 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none">
-          {[{ w: 4, t: "15%", l: "20%", d: 0, dur: 22 }, { w: 3, t: "45%", l: "75%", d: 3, dur: 28 }, { w: 5, t: "70%", l: "35%", d: 7, dur: 25 }, { w: 3, t: "25%", l: "60%", d: 12, dur: 30 }, { w: 4, t: "80%", l: "80%", d: 5, dur: 26 }].map((p, i) => (
-            <div key={i} className="absolute rounded-full animate-pulse" style={{ width: p.w, height: p.w, top: p.t, left: p.l, background: "rgba(200,150,62,0.18)", animationDelay: `${p.d}s`, animationDuration: `${p.dur}s` }} />
-          ))}
-        </div>
-        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 25% 35%, rgba(200,150,62,0.14) 0%, transparent 45%), radial-gradient(ellipse at 70% 70%, rgba(200,150,62,0.10) 0%, transparent 45%), radial-gradient(ellipse at 50% 15%, rgba(120,180,240,0.07) 0%, transparent 40%)" }} />
+        style={{ background: "linear-gradient(165deg, #0a1628 0%, #0f2035 40%, #132a45 70%, #0d1b2a 100%)" }}>
+        {/* Geometric grid overlay */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: "linear-gradient(rgba(201,168,76,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.05) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }} />
+        {/* Floating gold squares */}
+        <div className="absolute w-[10px] h-[10px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "14%", left: "22%" }} />
+        <div className="absolute w-[8px] h-[8px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "38%", left: "78%" }} />
+        <div className="absolute w-[12px] h-[12px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "62%", left: "15%" }} />
+        <div className="absolute w-[9px] h-[9px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "75%", left: "68%" }} />
+        <div className="absolute w-[11px] h-[11px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "28%", left: "52%" }} />
 
-        <div className="relative z-10 px-[60px] max-w-[520px] w-full">
-          <Link href="/" className="block mb-8">
-            <img src="/logo-full-alt.png" alt="SRL" className="h-[52px] w-[52px] object-contain rounded-xl bg-white/[0.08] p-1.5 opacity-95" />
+        <div className="relative z-10 px-16 max-w-[520px] w-full flex flex-col items-start">
+          <Link href="/" className="block mb-10">
+            <Logo size="lg" />
           </Link>
-          <div className="text-[13px] font-semibold tracking-[4px] uppercase text-[#c8a951] mb-1">SILK ROUTE LOGISTICS</div>
-          <div className="text-[28px] font-bold text-white mb-1.5 tracking-tight">Shipper Portal</div>
-          <div className="text-sm text-[#7a9bb8] mb-10">Manage your freight, track shipments, and optimize spend</div>
+          <div className="text-[13px] font-semibold tracking-[4px] uppercase text-[#C9A84C] mb-2">SILK ROUTE LOGISTICS</div>
+          <h1 className="text-[32px] font-bold text-white mb-2 tracking-tight">Shipping Dashboard</h1>
+          <p className="text-[15px] text-[#7a9bb8] mb-10 leading-relaxed">Track shipments, manage invoices, and ship with confidence</p>
 
-          <div className="grid grid-cols-2 gap-2.5 mb-8">
-            {FEATURES.map((f) => (
-              <div key={f.label} className="flex items-center gap-2.5 px-4 py-3 rounded-lg border transition-all hover:-translate-y-px"
-                style={{ background: "rgba(200,150,62,0.07)", borderColor: "rgba(200,150,62,0.14)" }}>
-                <f.icon size={16} className="text-[#dbb960]" />
-                <span className="text-[12.5px] text-[#c8d4de] font-medium tracking-wide">{f.label}</span>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-2.5 mb-16">
+            <span className="px-4 py-2 rounded-full text-[12px] font-medium text-[#C9A84C] border border-[#C9A84C]/25 bg-[#C9A84C]/[0.07]">Live Tracking</span>
+            <span className="px-4 py-2 rounded-full text-[12px] font-medium text-[#C9A84C] border border-[#C9A84C]/25 bg-[#C9A84C]/[0.07]">Instant Quotes</span>
+            <span className="px-4 py-2 rounded-full text-[12px] font-medium text-[#C9A84C] border border-[#C9A84C]/25 bg-[#C9A84C]/[0.07]">Secure Portal</span>
           </div>
 
-          {/* Hero Slideshow */}
-          <div className="relative w-full h-[170px] rounded-2xl overflow-hidden mb-7"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.35), 0 0 60px rgba(200,150,62,0.06)", border: "1px solid rgba(200,150,62,0.15)" }}>
-            {SLIDES.map((slide, i) => (
-              <div key={i} className="absolute inset-0 flex items-center justify-center transition-opacity duration-[1200ms]"
-                style={{
-                  opacity: currentSlide === i ? 1 : 0,
-                  background: i === 0
-                    ? "linear-gradient(135deg, #1e4468 0%, #275580 30%, #2f6090 60%, #224c72 100%)"
-                    : i === 1
-                    ? "linear-gradient(160deg, #1b3e60 0%, #234e78 40%, #2a5888 70%, #1f4468 100%)"
-                    : "linear-gradient(145deg, #1c4060 0%, #254e78 35%, #2c5a8a 65%, #204668 100%)",
-                }}>
-                <div className="relative z-10 text-center px-8">
-                  <span className="text-[11px] tracking-[3px] uppercase text-[#dbb960] font-semibold">{slide.label}</span>
-                  <p className="text-[18px] text-[#f0f4f8] font-light mt-2 leading-relaxed whitespace-pre-line">{slide.text}</p>
-                </div>
-              </div>
-            ))}
+          {/* Industry quote */}
+          <div className="border-l-[3px] border-l-[#C9A84C] pl-5 max-w-[420px]">
+            <p className="text-[13px] text-[#5d7a8e] italic leading-relaxed">
+              &ldquo;Brokerages investing in technology see 40% faster load matching and 25% better carrier retention.&rdquo;
+            </p>
+            <p className="text-[11px] text-[#4d6878] mt-2">&mdash; FreightWaves Research, 2025</p>
           </div>
-          <div className="flex justify-center gap-2 mb-7">
-            {SLIDES.map((_, i) => (
-              <div key={i} className="h-1.5 rounded-full transition-all duration-400"
-                style={{
-                  width: currentSlide === i ? 20 : 6,
-                  background: currentSlide === i ? "#dbb960" : "rgba(200,150,62,0.25)",
-                }} />
-            ))}
-          </div>
-
-          <p className="text-[13.5px] text-[#7a9ab5] leading-[1.75] mb-10 max-w-[440px]">
-            Streamline your supply chain with real-time tracking, automated invoicing, and competitive freight rates from Kalamazoo, Michigan.
-          </p>
-
-          {/* Daily Insight */}
-          <div className="rounded-xl p-6 relative overflow-hidden border-l-[3px] border-l-[#dbb960]"
-            style={{ background: "linear-gradient(135deg, rgba(200,150,62,0.08) 0%, rgba(200,150,62,0.03) 100%)", backdropFilter: "blur(4px)" }}>
-            <div className="text-[9.5px] font-semibold tracking-[2.5px] uppercase text-[#dbb960] mb-2.5">{insight.cat}</div>
-            <div className="text-[14.5px] text-[#dce4ec] leading-relaxed italic max-w-[380px]">&ldquo;{insight.text}&rdquo;</div>
-            <div className="text-[11px] text-[#5d7a8e] mt-3">&mdash; {insight.src}</div>
-          </div>
-
-          {/* Silk Road Line */}
-          <svg className="mt-auto pt-10 opacity-20" width="100%" height="24" viewBox="0 0 500 24">
-            <path d="M0,12 Q60,4 120,12 Q180,20 240,12 Q300,4 360,12 Q420,20 480,12 L500,12" stroke="#c8a951" strokeWidth="1.5" fill="none" strokeDasharray="8,6"/>
-            <circle cx="0" cy="12" r="2.5" fill="#c8a951" opacity="0.6"/>
-            <circle cx="250" cy="12" r="2" fill="#c8a951" opacity="0.4"/>
-            <circle cx="500" cy="12" r="2.5" fill="#c8a951" opacity="0.6"/>
-          </svg>
-
-          <div className="text-[11px] text-[#4d6878] mt-4">&copy; 2026 Silk Route Logistics Inc. &bull; Kalamazoo, MI</div>
         </div>
       </div>
 
       {/* RIGHT PANEL */}
-      <div className="flex-1 flex items-center justify-center overflow-y-auto"
-        style={{ background: "linear-gradient(180deg, #101d2e 0%, #0c1825 100%)", borderLeft: "1px solid rgba(200,150,62,0.06)" }}>
-        <div className="w-full max-w-[380px] px-10 lg:px-0">
-          <div className="flex flex-col items-center mb-8">
-            <img src="/logo.png" alt="Silk Route Logistics" className="h-12 mb-3.5 rounded-lg" />
-            <h2 className="text-xl font-semibold text-[#c8a951]">Welcome Back</h2>
-            <p className="text-[13px] text-[#6a8090] mt-1">Sign in to your shipper account</p>
+      <div className="flex-1 flex items-center justify-center overflow-y-auto bg-white">
+        <div className="w-full max-w-sm mx-auto px-8 lg:px-0 py-12">
+          {/* Mobile-only logo */}
+          <div className="flex justify-center mb-6 lg:hidden">
+            <Logo size="lg" />
           </div>
+
+          <h2 className="text-xl font-bold text-gray-900 text-center">Shipper Sign In</h2>
+          <p className="text-sm text-gray-500 text-center mt-1 mb-8">Access your shipping dashboard</p>
 
           {/* Alerts */}
           {localError && (
-            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed"
-              style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#f87171" }}>
+            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed bg-red-50 border border-red-200 text-red-600">
               {localError}
             </div>
           )}
           {successMsg && !localError && (
-            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed"
-              style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80" }}>
+            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed bg-green-50 border border-green-200 text-green-600">
               {successMsg}
             </div>
           )}
@@ -208,57 +134,52 @@ export default function ShipperLoginPage() {
           {!otpStep ? (
             <form onSubmit={handleLogin}>
               <div className="mb-4">
-                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Email Address</label>
+                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Email Address</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com" autoComplete="email"
-                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
-                  style={{ background: "#162236", border: "1px solid #243447" }}
-                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                  className={inputClass}
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password" autoComplete="current-password"
-                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
-                  style={{ background: "#162236", border: "1px solid #243447" }}
-                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
-                />
+                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Password</label>
+                <div className="relative">
+                  <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password" autoComplete="current-password"
+                    className={inputClass}
+                  />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-transparent border-none cursor-pointer transition-colors text-sm">
+                    {showPw ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center justify-between mb-6">
-                <label className="flex items-center gap-2 text-[13px] text-[#8899aa] cursor-pointer">
-                  <input type="checkbox" className="accent-[#c8a951]" style={{ width: 15, height: 15 }} /> Remember me
+                <label className="flex items-center gap-2 text-[13px] text-gray-500 cursor-pointer">
+                  <input type="checkbox" className="accent-[#C9A84C]" style={{ width: 15, height: 15 }} /> Remember me
                 </label>
-                <span className="text-[13px] text-[#c8a951] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
+                <span className="text-[13px] text-[#C9A84C] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
-                style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A", boxShadow: "0 4px 20px rgba(200,150,62,0.25)" }}>
+                className="w-full py-3 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all bg-[#C9A84C] text-white hover:bg-[#b8933f] disabled:opacity-60 disabled:cursor-not-allowed">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
           ) : (
             <form onSubmit={handleOtp}>
               <div className="mb-4">
-                <label className="block text-[11.5px] font-medium text-[#8899aa] uppercase tracking-[1px] mb-1.5">Verification Code</label>
+                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Verification Code</label>
                 <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)}
                   placeholder="Enter 8-digit code" maxLength={8} autoComplete="one-time-code" inputMode="numeric" autoFocus
-                  className="w-full px-4 py-3 text-sm rounded-lg text-[#e8edf2] outline-none transition-all placeholder:text-[#4a5e70]"
-                  style={{ background: "#162236", border: "1px solid #243447" }}
-                  onFocus={(e) => { e.target.style.borderColor = "#c8a951"; e.target.style.boxShadow = "0 0 0 3px rgba(200,150,62,0.1)"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#243447"; e.target.style.boxShadow = "none"; }}
+                  className={inputClass}
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all hover:-translate-y-px disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #c8a951 0%, #b8963e 100%)", color: "#0D1B2A" }}>
+                className="w-full py-3 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all bg-[#C9A84C] text-white hover:bg-[#b8933f] disabled:opacity-60 disabled:cursor-not-allowed">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">
                 <button type="button" onClick={() => { setOtpStep(false); setOtp(""); setLocalError(""); setSuccessMsg(""); }}
-                  className="text-[13px] text-[#6a8090] underline hover:text-[#c8a951] transition-colors bg-transparent border-none cursor-pointer">
+                  className="text-[13px] text-gray-500 underline hover:text-[#C9A84C] transition-colors bg-transparent border-none cursor-pointer">
                   Back to sign in
                 </button>
               </div>
@@ -266,29 +187,28 @@ export default function ShipperLoginPage() {
           )}
 
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-[#1f3044]" />
-            <span className="text-[12px] text-[#4a5e70]">or</span>
-            <div className="flex-1 h-px bg-[#1f3044]" />
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-[12px] text-gray-400">or</span>
+            <div className="flex-1 h-px bg-gray-200" />
           </div>
 
           <Link href="/shipper/register"
-            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#c8a951] rounded-lg border transition-all hover:bg-[rgba(200,150,62,0.05)] no-underline"
-            style={{ borderColor: "rgba(200,150,62,0.25)" }}>
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#C9A84C] rounded-lg border border-[#C9A84C]/30 transition-all hover:bg-[#C9A84C]/5 no-underline">
             <Package size={16} /> Create Shipper Account
           </Link>
 
           <div className="flex items-center justify-center gap-4 mt-4">
-            <Link href="/carrier/login" className="text-xs text-[#6a8090] hover:text-[#c8a951] transition-colors no-underline">
+            <Link href="/carrier/login" className="text-xs text-gray-500 hover:text-[#C9A84C] transition-colors no-underline">
               Carrier Login
             </Link>
-            <span className="text-[#243447]">&middot;</span>
-            <Link href="/auth/login" className="text-xs text-[#6a8090] hover:text-[#c8a951] transition-colors no-underline">
+            <span className="text-gray-300">&middot;</span>
+            <Link href="/auth/login" className="text-xs text-gray-500 hover:text-[#C9A84C] transition-colors no-underline">
               Employee Login
             </Link>
           </div>
 
-          <div className="flex items-center justify-center gap-1.5 mt-7 text-[11px] text-[#3a5060]">
-            <Shield size={12} className="opacity-40" />
+          <div className="flex items-center justify-center gap-1.5 mt-8 text-xs text-gray-400">
+            <Shield size={12} className="opacity-50" />
             256-bit SSL encrypted &bull; Secure data handling
           </div>
         </div>

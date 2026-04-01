@@ -6,7 +6,8 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
 import { TierBadge } from "@/components/ui/TierBadge";
-import { Save, Lock, Bell, User, Shield, CheckCircle, Copy, ShieldCheck } from "lucide-react";
+import { Save, Lock, Bell, User, Shield, CheckCircle, Copy, ShieldCheck, Info } from "lucide-react";
+import { VersionFooter } from "@/components/ui/VersionFooter";
 import { useToast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -374,6 +375,14 @@ export default function SettingsPage() {
           )}
         </>
       )}
+      {/* System */}
+      <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Info className="w-5 h-5 text-gold" />
+          <h2 className="font-semibold text-white">System</h2>
+        </div>
+        <VersionFooter />
+      </div>
     </div>
   );
 }

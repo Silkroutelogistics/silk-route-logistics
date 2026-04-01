@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
+import { VersionFooter } from "@/components/ui/VersionFooter";
 import { ThemeGearButton } from "@/components/ui/ThemePanel";
 import { CommandPaletteTrigger } from "@/components/ui/CommandPalette";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -513,6 +514,8 @@ export function Sidebar() {
           <LogOut className="w-4 h-4" />
           {!collapsed && <span>Sign Out</span>}
         </button>
+
+        {!collapsed && <VersionFooter className="px-3 pt-2" />}
       </div>
     </>
   );

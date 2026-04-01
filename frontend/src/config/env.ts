@@ -40,3 +40,6 @@ function validateEnv(): ClientEnv {
 }
 
 export const clientEnv = validateEnv();
+
+export const APP_VERSION = "2.1";
+export const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
