@@ -4,6 +4,25 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Override Chrome autofill green/blue tint on login forms */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Dark-themed inputs (dashboard/sidebar) */
+.dark-autofill:-webkit-autofill,
+.dark-autofill:-webkit-autofill:hover,
+.dark-autofill:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc;
+}
+
 @theme {
   --color-navy: #0D1B2A;
   --color-navy-light: #1B2D45;
