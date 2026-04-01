@@ -236,11 +236,11 @@ export function Sidebar() {
   const unreadCount = unreadData?.count || 0;
 
   const handleBellClick = useCallback(() => {
-    api.post("/notifications/mark-all-read").then(() => {
+    api.patch("/notifications/read-all").then(() => {
       queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     }).catch(() => {});
-    router.push("/dashboard/overview");
-  }, [queryClient, router]);
+  }, [queryClient]);
 
   /* ── View toggle + console buttons ─────────────────────── */
 
@@ -478,18 +478,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed((p) => !p)}
-          className={cn(
-            "flex items-center gap-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 w-full transition cursor-pointer",
-            collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
-          )}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
-          {!collapsed && <span>Collapse</span>}
-        </button>
+        {/* Collapse toggle removed from here — now floating on sidebar edge */}
 
         {!collapsed ? (
           <>
@@ -549,13 +538,22 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-[#0c1829] border-r border-[#1a2d47] flex flex-col min-h-screen shrink-0 transition-all duration-200",
+          "bg-[#0c1829] border-r border-[#1a2d47] flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
           "fixed lg:sticky top-0 z-50 lg:z-auto",
           collapsed ? "w-[60px]" : "w-[220px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {sidebarContent}
+
+        {/* Floating collapse toggle on sidebar edge */}
+        <button
+          onClick={() => setCollapsed((p: boolean) => !p)}
+          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 items-center justify-center rounded-full bg-[#1a2d47] border border-[#2a3d57] text-slate-400 hover:text-white hover:bg-[#243a56] transition-all duration-200 shadow-lg cursor-pointer z-50"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronsRight className="w-3 h-3" /> : <ChevronsLeft className="w-3 h-3" />}
+        </button>
       </aside>
 
       {/* Spacer for mobile top bar */}
