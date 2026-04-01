@@ -1,11 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Package, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { VersionFooter } from "@/components/ui/VersionFooter";
 import { useAuthStore } from "@/hooks/useAuthStore";
+
+const FEATURE_PILLS = [
+  { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", label: "Live Tracking" },
+  { icon: "M13 10V3L4 14h7v7l9-11h-7z", label: "Instant Quotes" },
+  { icon: "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4", label: "Document Vault" },
+  { icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z", label: "Analytics" },
+];
+
+const SLIDES = [
+  { label: "REAL-TIME TRACKING", text: "Know exactly where your freight is, always" },
+  { label: "SMART QUOTING", text: "Get competitive rates in seconds, not hours" },
+  { label: "WHITE GLOVE SERVICE", text: "Dedicated account team for your success" },
+];
+
+const INSIGHTS = [
+  { cat: "INDUSTRY FACT", text: "The US trucking industry moves 72.6% of all freight by weight, generating $940 billion annually.", src: "American Trucking Associations, 2025" },
+  { cat: "MOTIVATION", text: "The Silk Road connected civilizations across 4,000 miles. We connect commerce across North America \u2014 one load at a time.", src: "Silk Route Logistics" },
+  { cat: "OPERATIONS TIP", text: "Brokerages using automated carrier vetting reduce fraud exposure by 60% and onboard 3x faster.", src: "Transport Topics" },
+  { cat: "DID YOU KNOW", text: "The average truck driver covers 100,000+ miles per year \u2014 that\u2019s circling the Earth four times.", src: "FMCSA" },
+  { cat: "SRL VISION", text: "Every load moved is a connection made. Trust, transparency, and technology \u2014 the three pillars of modern brokerage.", src: "Silk Route Logistics" },
+  { cat: "MARKET INSIGHT", text: "Digital freight brokerages now handle 8% of US truckload volume, up from 2% in 2020.", src: "FreightWaves Research" },
+  { cat: "CARRIER FACT", text: "Owner-operators earn 15-20% more revenue with brokers who offer QuickPay and transparent scorecards.", src: "OOIDA Survey, 2025" },
+  { cat: "SAFETY FIRST", text: "Carriers with CSA scores below the 75th percentile have 40% fewer roadside inspections.", src: "FMCSA Safety Analysis" },
+  { cat: "TECH TREND", text: "AI-powered rate prediction now matches human broker accuracy within 3% \u2014 at 1000x the speed.", src: "McKinsey Transport Report" },
+  { cat: "SUPPLY CHAIN", text: "The top 10 freight brokerages in North America collectively move $80 billion in freight annually.", src: "Armstrong & Associates" },
+  { cat: "MOTIVATION", text: "In logistics, consistency beats speed. The broker who shows up every day earns the freight.", src: "Industry Wisdom" },
+  { cat: "COMPLIANCE", text: "New FMCSA regulations require brokers to verify carrier insurance within 24 hours of booking.", src: "Federal Register, 2025" },
+];
 
 export default function ShipperLoginPage() {
   const [email, setEmail] = useState("");
@@ -18,7 +47,18 @@ export default function ShipperLoginPage() {
   const [localLoading, setLocalLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter();
+
+  // Slide rotation
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentSlide((s) => (s + 1) % SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Daily insight
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  const insight = INSIGHTS[dayOfYear % INSIGHTS.length];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,18 +112,87 @@ export default function ShipperLoginPage() {
     <div className="flex min-h-screen">
       <style>{`@keyframes drawRoute { to { stroke-dashoffset: 0 } }`}</style>
 
-      {/* LEFT PANEL — Form (40%) */}
-      <div className="w-full lg:w-[40%] flex items-center justify-center overflow-y-auto" style={{ backgroundColor: "#faf9f7" }}>
-        <div className="w-full max-w-[380px] mx-auto px-8 py-12">
+      {/* LEFT PANEL — Brand (55%), hidden on mobile */}
+      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden flex-col items-center justify-center"
+        style={{ background: "linear-gradient(165deg, #0d1b2a 0%, #132a45 50%, #0f2440 100%)" }}>
+
+        {/* Animated gold route lines */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
+          <path d="M50,300 C200,100 400,500 750,250"
+            fill="none" stroke="rgba(201,168,76,0.10)" strokeWidth="1.5"
+            strokeDasharray="1200" strokeDashoffset="1200"
+            className="animate-[drawRoute_4s_ease-in-out_forwards]" />
+          <path d="M100,450 C300,200 500,400 700,150"
+            fill="none" stroke="rgba(201,168,76,0.08)" strokeWidth="1"
+            strokeDasharray="1200" strokeDashoffset="1200"
+            style={{ animation: "drawRoute 5s 1s ease-in-out forwards" }} />
+          <path d="M0,200 C150,350 350,50 600,300 C700,400 780,200 800,250"
+            fill="none" stroke="rgba(201,168,76,0.06)" strokeWidth="1"
+            strokeDasharray="1400" strokeDashoffset="1400"
+            style={{ animation: "drawRoute 6s 1.5s ease-in-out forwards" }} />
+        </svg>
+
+        <div className="relative z-10 flex flex-col items-start w-full max-w-[480px] px-12">
           {/* Logo */}
-          <div className="flex justify-center mb-10">
+          <div className="mb-10">
+            <Logo size="lg" />
+          </div>
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap gap-2 mb-10">
+            {FEATURE_PILLS.map((f) => (
+              <div key={f.label} className="flex items-center gap-1.5 border border-[#C9A84C]/20 text-[#C9A84C]/80 bg-[#C9A84C]/[0.05] rounded-lg px-3 py-2 text-xs hover:-translate-y-0.5 transition-all cursor-default">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
+                {f.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Animated transitioning cards */}
+          <div className="relative w-full h-[140px] mb-8">
+            {SLIDES.map((slide, i) => (
+              <div key={i} className="absolute inset-0 bg-white/[0.04] backdrop-blur border border-white/[0.08] rounded-2xl p-8 transition-opacity duration-[1200ms]"
+                style={{ opacity: currentSlide === i ? 1 : 0 }}>
+                <div className="text-[#C9A84C] text-xs tracking-[3px] uppercase font-semibold">{slide.label}</div>
+                <p className="text-white/90 text-lg font-light leading-relaxed mt-2">{slide.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Dot indicators */}
+          <div className="flex items-center gap-2 mb-10">
+            {SLIDES.map((_, i) => (
+              <button key={i} onClick={() => setCurrentSlide(i)}
+                className={`h-1.5 rounded-full transition-all duration-500 border-none cursor-pointer ${currentSlide === i ? "w-6 bg-[#C9A84C]" : "w-1.5 bg-white/20"}`} />
+            ))}
+          </div>
+
+          {/* Daily insight */}
+          <div className="border-l-[3px] border-l-[#C9A84C] pl-4 max-w-[420px]">
+            <div className="text-[#C9A84C] text-[10px] tracking-[2px] uppercase font-medium mb-1">{insight.cat}</div>
+            <p className="text-[#7a9bb8] text-[13px] italic leading-relaxed m-0">{insight.text}</p>
+            <p className="text-[#4d6878] text-[11px] mt-1.5 m-0">&mdash; {insight.src}</p>
+          </div>
+        </div>
+
+        {/* Version footer */}
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+          <VersionFooter className="text-[#3a5a70]" />
+        </div>
+      </div>
+
+      {/* RIGHT PANEL — Form (45%) */}
+      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto" style={{ backgroundColor: "#faf9f7" }}>
+        <div className="w-full max-w-[400px] mx-auto px-8 py-12">
+          {/* Mobile-only logo */}
+          <div className="flex justify-center mb-10 lg:hidden">
             <Link href="/">
               <Logo size="lg" />
             </Link>
           </div>
 
-          <h2 className="text-2xl font-serif text-gray-900 text-center">Welcome back</h2>
-          <p className="text-sm text-gray-500 text-center mt-1.5 mb-8">Shipper Sign In</p>
+          <h2 className="font-serif text-2xl text-gray-900">Shipper Sign In</h2>
+          <p className="text-gray-500 text-sm mt-1.5 mb-8">Track shipments and manage your freight</p>
 
           {/* Alerts */}
           {localError && (
@@ -180,66 +289,11 @@ export default function ShipperLoginPage() {
 
           <div className="flex items-center justify-center gap-1.5 mt-8 text-xs text-gray-400">
             <Shield size={12} className="opacity-50" />
-            Protected by 256-bit encryption
+            256-bit SSL encrypted &middot; Secure data handling
           </div>
-        </div>
-      </div>
-
-      {/* RIGHT PANEL — Brand (60%), hidden on mobile */}
-      <div className="hidden lg:flex w-[60%] relative overflow-hidden items-center justify-center"
-        style={{ background: "linear-gradient(135deg, #0d1b2a 0%, #1a3050 50%, #0f2440 100%)" }}>
-
-        {/* Animated gold route lines */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
-          <path d="M50,300 C200,100 400,500 750,250"
-            fill="none" stroke="rgba(201,168,76,0.15)" strokeWidth="2"
-            strokeDasharray="1200" strokeDashoffset="1200"
-            className="animate-[drawRoute_4s_ease-in-out_forwards]" />
-          <path d="M100,450 C300,200 500,400 700,150"
-            fill="none" stroke="rgba(201,168,76,0.08)" strokeWidth="1.5"
-            strokeDasharray="1200" strokeDashoffset="1200"
-            style={{ animation: "drawRoute 5s 1s ease-in-out forwards" }} />
-          <path d="M0,200 C150,350 350,50 600,300 C700,400 780,200 800,250"
-            fill="none" stroke="rgba(201,168,76,0.06)" strokeWidth="1"
-            strokeDasharray="1400" strokeDashoffset="1400"
-            style={{ animation: "drawRoute 6s 1.5s ease-in-out forwards" }} />
-        </svg>
-
-        {/* Centered content */}
-        <div className="relative z-10 flex flex-col items-center text-center px-12 max-w-[540px]">
-          <div className="text-[#C9A84C] text-xs tracking-[6px] uppercase font-medium mb-6">
-            SILK ROUTE LOGISTICS
+          <div className="flex justify-center mt-2">
+            <VersionFooter />
           </div>
-          <h1 className="text-white text-4xl font-serif leading-tight mb-6">
-            Ship With Confidence
-          </h1>
-          <div className="w-10 h-0.5 bg-[#C9A84C] mb-6" />
-          <p className="text-[#6a8da8] text-base leading-relaxed max-w-md">
-            Real-time visibility, instant quotes, and a dedicated team.
-          </p>
-        </div>
-
-        {/* Bottom metric badges */}
-        <div className="absolute bottom-12 left-0 right-0 flex items-center justify-center gap-3 text-xs text-[#5a7a90]">
-          <span className="flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            29-Point Vetting
-          </span>
-          <span className="text-[#C9A84C]/40">&#9679;</span>
-          <span className="flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            AI-Powered Matching
-          </span>
-          <span className="text-[#C9A84C]/40">&#9679;</span>
-          <span className="flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            24hr QuickPay
-          </span>
-        </div>
-
-        {/* Version footer */}
-        <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] text-[#3a5a70]">
-          SRL v2.1 &middot; Kalamazoo, Michigan
         </div>
       </div>
     </div>
