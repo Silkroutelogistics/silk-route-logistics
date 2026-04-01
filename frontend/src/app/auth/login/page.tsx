@@ -186,68 +186,34 @@ export default function EmployeeLoginPage() {
     setLocalLoading(false);
   };
 
-  const inputClass = "w-full px-4 py-3 text-sm rounded-lg bg-white text-gray-900 outline-none transition-all placeholder:text-gray-400 border border-gray-300 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20";
+  const inputClass = "w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[#C9A84C] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.1)]";
+  const labelClass = "block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5";
 
   return (
-    <div className="flex min-h-screen" style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
-      {/* LEFT PANEL */}
-      <div className="hidden lg:flex w-[55%] relative overflow-hidden items-center justify-center"
-        style={{ background: "linear-gradient(165deg, #0a1628 0%, #0f2035 40%, #132a45 70%, #0d1b2a 100%)" }}>
-        {/* Geometric grid overlay */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: "linear-gradient(rgba(201,168,76,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.05) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }} />
-        {/* Floating gold squares */}
-        <div className="absolute w-[10px] h-[10px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "14%", left: "22%" }} />
-        <div className="absolute w-[8px] h-[8px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "38%", left: "78%" }} />
-        <div className="absolute w-[12px] h-[12px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "62%", left: "15%" }} />
-        <div className="absolute w-[9px] h-[9px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "75%", left: "68%" }} />
-        <div className="absolute w-[11px] h-[11px] rounded-sm bg-[#C9A84C]/20 border border-[#C9A84C]/30" style={{ top: "28%", left: "52%" }} />
+    <div className="flex min-h-screen">
+      <style>{`@keyframes drawRoute { to { stroke-dashoffset: 0 } }`}</style>
 
-        <div className="relative z-10 px-16 max-w-[520px] w-full flex flex-col items-start">
-          <Link href="/" className="block mb-10">
-            <Logo size="lg" />
-          </Link>
-          <div className="text-[13px] font-semibold tracking-[4px] uppercase text-[#C9A84C] mb-2">SILK ROUTE LOGISTICS</div>
-          <h1 className="text-[32px] font-bold text-white mb-2 tracking-tight">Operations Hub</h1>
-          <p className="text-[15px] text-[#7a9bb8] mb-10 leading-relaxed">Manage loads, carriers, and finances in one place</p>
-
-          <div className="flex flex-wrap gap-2.5 mb-16">
-            <span className="px-4 py-2 rounded-full text-[12px] font-medium text-[#C9A84C] border border-[#C9A84C]/25 bg-[#C9A84C]/[0.07]">Compass Compliance</span>
-            <span className="px-4 py-2 rounded-full text-[12px] font-medium text-[#C9A84C] border border-[#C9A84C]/25 bg-[#C9A84C]/[0.07]">AI-Powered Ops</span>
-            <span className="px-4 py-2 rounded-full text-[12px] font-medium text-[#C9A84C] border border-[#C9A84C]/25 bg-[#C9A84C]/[0.07]">Real-Time Tracking</span>
+      {/* LEFT PANEL — Form (40%) */}
+      <div className="w-full lg:w-[40%] flex items-center justify-center overflow-y-auto" style={{ backgroundColor: "#faf9f7" }}>
+        <div className="w-full max-w-[380px] mx-auto px-8 py-12">
+          {/* Logo */}
+          <div className="flex justify-center mb-10">
+            <Link href="/">
+              <Logo size="lg" />
+            </Link>
           </div>
 
-          {/* Industry quote */}
-          <div className="border-l-[3px] border-l-[#C9A84C] pl-5 max-w-[420px]">
-            <p className="text-[13px] text-[#5d7a8e] italic leading-relaxed">
-              &ldquo;Brokerages investing in technology see 40% faster load matching and 25% better carrier retention.&rdquo;
-            </p>
-            <p className="text-[11px] text-[#4d6878] mt-2">&mdash; FreightWaves Research, 2025</p>
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT PANEL */}
-      <div className="flex-1 flex items-center justify-center overflow-y-auto bg-white">
-        <div className="w-full max-w-sm mx-auto px-8 lg:px-0 py-12">
-          {/* Mobile-only logo */}
-          <div className="flex justify-center mb-6 lg:hidden">
-            <Logo size="lg" />
-          </div>
-
-          <h2 className="text-xl font-bold text-gray-900 text-center">Employee Sign In</h2>
-          <p className="text-sm text-gray-500 text-center mt-1 mb-8">Access the operations dashboard</p>
+          <h2 className="text-2xl font-serif text-gray-900 text-center">Welcome back</h2>
+          <p className="text-sm text-gray-500 text-center mt-1.5 mb-8">Sign in to your account</p>
 
           {/* Alerts */}
           {localError && (
-            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed bg-red-50 border border-red-200 text-red-600">
+            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-red-50 border border-red-200 text-red-600">
               {localError}
             </div>
           )}
           {successMsg && !localError && (
-            <div className="mb-5 px-4 py-3 rounded-lg text-[13px] text-center leading-relaxed bg-green-50 border border-green-200 text-green-600">
+            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-green-50 border border-green-200 text-green-600">
               {successMsg}
             </div>
           )}
@@ -264,19 +230,19 @@ export default function EmployeeLoginPage() {
                   </div>
                 )}
                 {totpSecret && (
-                  <div className="mb-4 p-3 rounded-lg text-center bg-gray-50 border border-gray-200">
+                  <div className="mb-4 p-3 rounded-xl text-center bg-white border border-gray-200">
                     <p className="text-[11px] text-gray-500 mb-1">Manual entry key:</p>
                     <p className="text-[13px] text-[#C9A84C] font-mono tracking-wider select-all">{totpSecret}</p>
                   </div>
                 )}
-                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Authenticator Code</label>
+                <label className={labelClass}>Authenticator Code</label>
                 <input type="text" value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="Enter 6-digit code" maxLength={6} inputMode="numeric" autoFocus
                   className={inputClass}
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all bg-[#C9A84C] text-white hover:bg-[#b8933f] disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all bg-[#1a2d47] text-white hover:bg-[#243a56] disabled:opacity-60 disabled:cursor-not-allowed">
                 {localLoading ? "Enabling 2FA..." : "Enable Two-Factor Authentication"}
               </button>
             </form>
@@ -286,14 +252,14 @@ export default function EmployeeLoginPage() {
                 <p className="text-[13px] text-gray-500 mb-4">
                   Enter the 6-digit code from your authenticator app.
                 </p>
-                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Authenticator Code</label>
+                <label className={labelClass}>Authenticator Code</label>
                 <input type="text" value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="Enter 6-digit code" maxLength={6} inputMode="numeric" autoFocus
                   className={inputClass}
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all bg-[#C9A84C] text-white hover:bg-[#b8933f] disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all bg-[#1a2d47] text-white hover:bg-[#243a56] disabled:opacity-60 disabled:cursor-not-allowed">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">
@@ -306,21 +272,21 @@ export default function EmployeeLoginPage() {
           ) : !otpStep ? (
             <form onSubmit={handleLogin}>
               <div className="mb-4">
-                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Email Address</label>
+                <label className={labelClass}>Email Address</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@silkroutelogistics.ai" autoComplete="email"
                   className={inputClass}
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Password</label>
+                <label className={labelClass}>Password</label>
                 <div className="relative">
                   <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password" autoComplete="current-password"
                     className={inputClass}
                   />
                   <button type="button" onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-transparent border-none cursor-pointer transition-colors text-sm">
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-transparent border-none cursor-pointer transition-colors text-sm">
                     {showPw ? "Hide" : "Show"}
                   </button>
                 </div>
@@ -332,21 +298,21 @@ export default function EmployeeLoginPage() {
                 <span className="text-[13px] text-[#C9A84C] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all bg-[#C9A84C] text-white hover:bg-[#b8933f] disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all bg-[#1a2d47] text-white hover:bg-[#243a56] disabled:opacity-60 disabled:cursor-not-allowed">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
           ) : (
             <form onSubmit={handleOtp}>
               <div className="mb-4">
-                <label className="block text-[11.5px] font-medium text-gray-500 uppercase tracking-[1px] mb-1.5">Verification Code</label>
+                <label className={labelClass}>Verification Code</label>
                 <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)}
                   placeholder="Enter 8-digit code" maxLength={8} autoComplete="one-time-code" inputMode="numeric" autoFocus
                   className={inputClass}
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3 text-[15px] font-semibold rounded-lg border-none cursor-pointer transition-all bg-[#C9A84C] text-white hover:bg-[#b8933f] disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all bg-[#1a2d47] text-white hover:bg-[#243a56] disabled:opacity-60 disabled:cursor-not-allowed">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">
@@ -358,20 +324,83 @@ export default function EmployeeLoginPage() {
             </form>
           )}
 
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <Link href="/carrier/login" className="text-xs text-gray-500 hover:text-[#C9A84C] transition-colors no-underline">
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          <div className="flex items-center justify-center gap-4">
+            <Link href="/carrier/login" className="text-xs font-medium text-[#C9A84C] hover:opacity-80 transition-opacity no-underline">
               Carrier Login
             </Link>
             <span className="text-gray-300">&middot;</span>
-            <Link href="/shipper/login" className="text-xs text-gray-500 hover:text-[#C9A84C] transition-colors no-underline">
+            <Link href="/shipper/login" className="text-xs font-medium text-[#C9A84C] hover:opacity-80 transition-opacity no-underline">
               Shipper Login
             </Link>
           </div>
 
           <div className="flex items-center justify-center gap-1.5 mt-8 text-xs text-gray-400">
             <Shield size={12} className="opacity-50" />
-            256-bit SSL encrypted &bull; Secure data handling
+            Protected by 256-bit encryption
           </div>
+        </div>
+      </div>
+
+      {/* RIGHT PANEL — Brand (60%), hidden on mobile */}
+      <div className="hidden lg:flex w-[60%] relative overflow-hidden items-center justify-center"
+        style={{ background: "linear-gradient(135deg, #0d1b2a 0%, #1a3050 50%, #0f2440 100%)" }}>
+
+        {/* Animated gold route lines */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
+          <path d="M50,300 C200,100 400,500 750,250"
+            fill="none" stroke="rgba(201,168,76,0.15)" strokeWidth="2"
+            strokeDasharray="1200" strokeDashoffset="1200"
+            className="animate-[drawRoute_4s_ease-in-out_forwards]" />
+          <path d="M100,450 C300,200 500,400 700,150"
+            fill="none" stroke="rgba(201,168,76,0.08)" strokeWidth="1.5"
+            strokeDasharray="1200" strokeDashoffset="1200"
+            style={{ animation: "drawRoute 5s 1s ease-in-out forwards" }} />
+          <path d="M0,200 C150,350 350,50 600,300 C700,400 780,200 800,250"
+            fill="none" stroke="rgba(201,168,76,0.06)" strokeWidth="1"
+            strokeDasharray="1400" strokeDashoffset="1400"
+            style={{ animation: "drawRoute 6s 1.5s ease-in-out forwards" }} />
+        </svg>
+
+        {/* Centered content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-12 max-w-[540px]">
+          <div className="text-[#C9A84C] text-xs tracking-[6px] uppercase font-medium mb-6">
+            SILK ROUTE LOGISTICS
+          </div>
+          <h1 className="text-white text-4xl font-serif leading-tight mb-6">
+            Where Every Load Finds Its Way
+          </h1>
+          <div className="w-10 h-0.5 bg-[#C9A84C] mb-6" />
+          <p className="text-[#6a8da8] text-base leading-relaxed max-w-md">
+            Connecting shippers and carriers across North America with intelligence, transparency, and speed.
+          </p>
+        </div>
+
+        {/* Bottom metric badges */}
+        <div className="absolute bottom-12 left-0 right-0 flex items-center justify-center gap-3 text-xs text-[#5a7a90]">
+          <span className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            29-Point Vetting
+          </span>
+          <span className="text-[#C9A84C]/40">&#9679;</span>
+          <span className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            AI-Powered Matching
+          </span>
+          <span className="text-[#C9A84C]/40">&#9679;</span>
+          <span className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            24hr QuickPay
+          </span>
+        </div>
+
+        {/* Version footer */}
+        <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] text-[#3a5a70]">
+          SRL v2.1 &middot; Kalamazoo, Michigan
         </div>
       </div>
     </div>
