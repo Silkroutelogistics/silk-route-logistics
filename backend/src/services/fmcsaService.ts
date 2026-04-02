@@ -75,7 +75,7 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
     operatingStatus: carrier.allowedToOperate === "Y" ? "AUTHORIZED" : "NOT AUTHORIZED",
     entityType: carrier.carrierOperation?.carrierOperationDesc || null,
     safetyRating: carrier.safetyRating || null,
-    insuranceOnFile: carrier.bipdInsuranceOnFile === "Y" || carrier.bipdInsuranceOnFile === "1" || carrier.bipdInsuranceOnFile === 1,
+    insuranceOnFile: !!(carrier.bipdInsuranceOnFile && carrier.bipdInsuranceOnFile !== "0" && carrier.bipdInsuranceOnFile !== "N"),
     outOfServiceDate: carrier.oosDate || null,
     totalDrivers: carrier.totalDrivers || null,
     totalPowerUnits: carrier.totalPowerUnits || null,
