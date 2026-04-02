@@ -1,8 +1,9 @@
 /**
- * Compass by SRL — Vetting Engine — 29-Check Composite Risk Scoring
+ * Compass by SRL — Vetting Engine — 30-Check Composite Risk Scoring
  * Covers FMCSA, identity, fraud, OFAC/SDN, biometrics, ELD, TIN match,
  * UCR, overbooking, fraud reports, agreements, historical performance,
- * fleet VIN verification (NHTSA), probationary period, and document expiry.
+ * fleet VIN verification (NHTSA), probationary period, document expiry,
+ * and SAM.gov federal exclusion screening.
  */
 
 import { prisma } from "../config/database";
@@ -12,6 +13,9 @@ import { validateEldProvider } from "./eldValidationService";
 import { checkOverbooking } from "./overbookingService";
 import { updateCarrierCsaScores } from "./csaBasicService";
 import { verifyAllCarrierVins } from "./vinVerificationService";
+import { checkExclusions } from "./samGovService";
+import { verifyTinWithIRS } from "./tinMatchService";
+import type { EnhancedTinResult } from "./tinMatchService";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -504,17 +508,58 @@ export async function vetCarrier(
     score -= 5;
   }
 
-  // ── 21. W-9 TIN Match ──
-  if (idv) {
+  // ── 21. W-9 TIN Match (Enhanced Validation) ──
+  let tinResult: EnhancedTinResult | null = null;
+  if (idv && idv.w9TinFull && idv.w9CompanyName) {
+    try {
+      tinResult = await verifyTinWithIRS(idv.w9TinFull, idv.w9CompanyName);
+    } catch (err) {
+      console.warn("[Vetting] Enhanced TIN check failed, falling back to stored status:", err);
+    }
+  }
+
+  if (tinResult) {
+    // Use live enhanced TIN validation result
+    const secNote = tinResult.secCrossRef ? " (SEC cross-ref confirmed)" : "";
+    const confNote = ` [confidence: ${tinResult.confidence}]`;
+
+    if (tinResult.status === "IRS_MATCHED") {
+      checks.push({ name: "W-9 TIN Match", result: "PASS", detail: `TIN verified with IRS${secNote}${confNote}`, deduction: 0 });
+    } else if (tinResult.status === "VALID_FORMAT") {
+      const deduction = tinResult.secCrossRef ? 0 : 3;
+      const detail = tinResult.secCrossRef
+        ? `Valid EIN format, SEC cross-ref confirmed${confNote}`
+        : `Valid EIN format, valid IRS prefix — IRS verification pending${confNote}`;
+      checks.push({ name: "W-9 TIN Match", result: tinResult.secCrossRef ? "PASS" : "WARNING", detail, deduction });
+      score -= deduction;
+    } else if (tinResult.status === "SUSPICIOUS") {
+      checks.push({ name: "W-9 TIN Match", result: "FAIL", detail: `Suspicious TIN pattern: ${tinResult.formatIssues.join("; ")}${confNote}`, deduction: 15 });
+      score -= 15;
+      flags.push("W-9 TIN flagged as suspicious");
+    } else if (tinResult.status === "IRS_MISMATCHED") {
+      checks.push({ name: "W-9 TIN Match", result: "FAIL", detail: `TIN does not match IRS records: ${tinResult.formatIssues.join("; ")}${confNote}`, deduction: 15 });
+      score -= 15;
+      flags.push("W-9 TIN mismatch with IRS records");
+    } else if (tinResult.status === "INVALID_FORMAT") {
+      checks.push({ name: "W-9 TIN Match", result: "FAIL", detail: `Invalid TIN format: ${tinResult.formatIssues.join("; ")}${confNote}`, deduction: 10 });
+      score -= 10;
+      flags.push("W-9 TIN has invalid format");
+    }
+  } else if (idv) {
+    // Fallback to stored DB status if enhanced check unavailable
     if (idv.w9TinMatchStatus === "MATCHED") {
       checks.push({ name: "W-9 TIN Match", result: "PASS", detail: `TIN verified with IRS ${idv.w9TinMatchVerifiedAt ? new Date(idv.w9TinMatchVerifiedAt).toLocaleDateString() : ""}`, deduction: 0 });
     } else if (idv.w9TinMatchStatus === "FORMAT_VALID") {
-      checks.push({ name: "W-9 TIN Match", result: "WARNING", detail: "TIN format valid — IRS verification unavailable (no API key)", deduction: 3 });
+      checks.push({ name: "W-9 TIN Match", result: "WARNING", detail: "TIN format valid — IRS verification unavailable", deduction: 3 });
       score -= 3;
     } else if (idv.w9TinMatchStatus === "MISMATCHED") {
       checks.push({ name: "W-9 TIN Match", result: "FAIL", detail: "TIN does not match IRS records", deduction: 15 });
       score -= 15;
       flags.push("W-9 TIN mismatch with IRS records");
+    } else if (idv.w9TinMatchStatus === "SUSPICIOUS") {
+      checks.push({ name: "W-9 TIN Match", result: "FAIL", detail: "TIN flagged as suspicious", deduction: 15 });
+      score -= 15;
+      flags.push("W-9 TIN flagged as suspicious");
     } else if (idv.w9TinMatchStatus === "IRS_ERROR") {
       checks.push({ name: "W-9 TIN Match", result: "WARNING", detail: "IRS verification service unavailable", deduction: 5 });
       score -= 5;
@@ -750,6 +795,39 @@ export async function vetCarrier(
   } else {
     checks.push({ name: "Document Expiry Enforcement", result: "WARNING", detail: "No carrier record", deduction: 3 });
     score -= 3;
+  }
+
+  // ── 30. SAM.gov Federal Exclusion Check ──
+  try {
+    const companyName = fmcsa.legalName || existingCarrier?.companyName;
+    if (companyName) {
+      const samResult = await checkExclusions(companyName, dotNumber);
+      if (samResult.excluded) {
+        checks.push({
+          name: "SAM.gov Exclusion",
+          result: "FAIL",
+          detail: `EXCLUDED — ${samResult.matches.length} active exclusion(s) found`,
+          deduction: 25,
+        });
+        score -= 25;
+        flags.push(`SAM.gov: federally excluded entity (${samResult.matches.length} match(es))`);
+      } else {
+        checks.push({
+          name: "SAM.gov Exclusion",
+          result: "PASS",
+          detail: samResult.totalResults > 0
+            ? `${samResult.totalResults} record(s) found, none active`
+            : "No exclusion records found",
+          deduction: 0,
+        });
+      }
+    } else {
+      checks.push({ name: "SAM.gov Exclusion", result: "WARNING", detail: "No company name available for exclusion check", deduction: 3 });
+      score -= 3;
+    }
+  } catch {
+    checks.push({ name: "SAM.gov Exclusion", result: "WARNING", detail: "SAM.gov check failed — manual review required", deduction: 5 });
+    score -= 5;
   }
 
   // ── Clamp Score & Calculate Results ──

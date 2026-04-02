@@ -531,6 +531,7 @@ enum TinMatchStatus {
   MISMATCHED
   IRS_ERROR
   FORMAT_VALID
+  SUSPICIOUS
 }
 
 enum FraudReportCategory {

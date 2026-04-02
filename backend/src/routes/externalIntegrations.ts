@@ -5,6 +5,8 @@ import * as carrierOkService from "../services/carrierOkService";
 import { brokerageGateway } from "../services/brokerageGatewayService";
 import { runDailyMonitor } from "../services/fmcsaBulkMonitorService";
 import { creditCheck } from "../services/secEdgarService";
+import * as fmcsaInsurance from "../services/fmcsaInsuranceService";
+import { checkExclusions } from "../services/samGovService";
 
 const router = Router();
 
@@ -178,6 +180,44 @@ router.get("/credit-check/:companyName", async (req: AuthRequest, res: Response)
   } catch (err) {
     console.error("SEC EDGAR credit check failed:", err);
     res.status(500).json({ error: "Credit check failed" });
+  }
+});
+
+// GET /integrations/insurance/:dotNumber — FMCSA insurance & compliance lookup
+router.get("/insurance/:dotNumber", async (req: AuthRequest, res: Response) => {
+  try {
+    const { dotNumber } = req.params;
+    if (!dotNumber || !/^\d+$/.test(dotNumber)) {
+      res.status(400).json({ error: "Valid DOT number required" });
+      return;
+    }
+
+    const [details, compliance] = await Promise.all([
+      fmcsaInsurance.getInsuranceDetails(dotNumber),
+      fmcsaInsurance.checkInsuranceCompliance(dotNumber),
+    ]);
+
+    res.json({ insurance: details, compliance });
+  } catch (err: any) {
+    console.error("FMCSA insurance lookup failed:", err);
+    res.status(500).json({ error: err.message || "FMCSA insurance lookup failed" });
+  }
+});
+
+// GET /integrations/sam-check/:companyName — SAM.gov federal exclusion check
+router.get("/sam-check/:companyName", async (req: AuthRequest, res: Response) => {
+  try {
+    const { companyName } = req.params;
+    if (!companyName || companyName.trim().length < 2) {
+      res.status(400).json({ error: "Company name must be at least 2 characters" });
+      return;
+    }
+
+    const result = await checkExclusions(decodeURIComponent(companyName.trim()));
+    res.json(result);
+  } catch (err) {
+    console.error("SAM.gov exclusion check failed:", err);
+    res.status(500).json({ error: "SAM.gov exclusion check failed" });
   }
 });
 
