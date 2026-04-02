@@ -268,12 +268,12 @@ export default function OrderBuilderPage() {
             className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50"
           />
           {showCustomerDropdown && customersData?.customers && customersData.customers.length > 0 && (
-            <div className="absolute z-10 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+            <div className="absolute z-10 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg max-h-48 overflow-y-auto shadow-xl">
               {customersData.customers.map((c) => (
                 <button key={c.id} onClick={() => selectCustomer(c)}
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-amber-50 text-gray-900 transition cursor-pointer border-b border-gray-100 last:border-0">
-                  <span className="font-medium text-gray-900">{c.name}</span>
-                  <span className="text-gray-500 ml-2">— {c.contactName || "No contact"}</span>
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-white/10 text-white transition cursor-pointer border-b border-white/5 last:border-0">
+                  <span className="font-medium text-white">{c.name}</span>
+                  <span className="text-slate-400 ml-2">— {c.contactName || "No contact"}</span>
                 </button>
               ))}
             </div>
