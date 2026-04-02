@@ -50,6 +50,24 @@ const integrationIcons: Record<string, typeof Globe> = {
   RESEND_API_KEY: Mail,
   GOOGLE_MAPS_API_KEY: MapPin,
   SENTRY_DSN: AlertTriangle,
+  FMCSA_INSURANCE: Shield,
+  OFAC_SDN: Shield,
+  NHTSA_VIN: Truck,
+  SEC_EDGAR: Database,
+  SAM_GOV: Shield,
+  OPENCORPORATES: Globe,
+  CROSS_REF: Activity,
+  FMCSA_BULK: Server,
+  CARRIER_OK_API_KEY: Globe,
+  TRUCKSTOP_API_KEY: Truck,
+  CH_ROBINSON_API_KEY: Globe,
+  ECHO_API_KEY: Globe,
+  UBER_FREIGHT_API_KEY: Package,
+  PROJECT44_API_KEY: MapPin,
+  SAMSARA_API_TOKEN: MapPin,
+  MOTIVE_API_KEY: MapPin,
+  NUMVERIFY_API_KEY: Activity,
+  IRS_TIN_MATCH_API_KEY: FileText,
 };
 
 const dbStatIcons: { key: keyof DbStats; label: string; icon: typeof Users }[] = [
@@ -106,9 +124,39 @@ export default function AdminSystemPage() {
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <Activity className="w-5 h-5 text-gold" />
           Integration Status
+          <span className="text-xs text-slate-500 font-normal ml-2">
+            {data?.integrations.filter((i) => i.configured).length || 0} / {data?.integrations.length || 0} active
+          </span>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {data?.integrations.map((integration) => {
+
+        {/* Free APIs */}
+        <p className="text-[10px] text-[#C9A84C] uppercase tracking-widest font-semibold mb-2">Free APIs (No Cost)</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
+          {data?.integrations.filter((i) => ["FMCSA_WEB_KEY","FMCSA_INSURANCE","OFAC_SDN","NHTSA_VIN","SEC_EDGAR","SAM_GOV","OPENCORPORATES","CROSS_REF","FMCSA_BULK","RESEND_API_KEY","GOOGLE_MAPS_API_KEY","SENTRY_DSN"].includes(i.key)).map((integration) => {
+            const Icon = integrationIcons[integration.key] || Globe;
+            return (
+              <div key={integration.key} className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-start gap-3">
+                <div className={`p-2 rounded-lg ${integration.configured ? "bg-emerald-500/10" : "bg-slate-500/10"}`}>
+                  <Icon className={`w-4 h-4 ${integration.configured ? "text-emerald-400" : "text-slate-500"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-medium text-white truncate">{integration.name}</h3>
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${integration.configured ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-500/20 text-slate-400"}`}>
+                      {integration.configured ? <><CheckCircle2 className="w-2.5 h-2.5" /> Connected</> : <><XCircle className="w-2.5 h-2.5" /> Not Configured</>}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5 truncate">{integration.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Paid APIs */}
+        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-2">Paid / Partner APIs (Requires API Key)</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {data?.integrations.filter((i) => !["FMCSA_WEB_KEY","FMCSA_INSURANCE","OFAC_SDN","NHTSA_VIN","SEC_EDGAR","SAM_GOV","OPENCORPORATES","CROSS_REF","FMCSA_BULK","RESEND_API_KEY","GOOGLE_MAPS_API_KEY","SENTRY_DSN"].includes(i.key)).map((integration) => {
             const Icon = integrationIcons[integration.key] || Globe;
             return (
               <div

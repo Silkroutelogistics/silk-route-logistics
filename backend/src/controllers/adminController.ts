@@ -209,6 +209,116 @@ export async function getSystemStatus(_req: AuthRequest, res: Response) {
         configured: !!process.env.SENTRY_DSN,
         description: "Error tracking and application performance monitoring",
       },
+      // Free API integrations (always available)
+      {
+        name: "FMCSA Insurance API",
+        key: "FMCSA_INSURANCE",
+        configured: !!process.env.FMCSA_WEB_KEY,
+        description: "Carrier insurance filing details — BIPD, cargo, bond status",
+      },
+      {
+        name: "OFAC/SDN Screening",
+        key: "OFAC_SDN",
+        configured: true,
+        description: "Treasury Dept sanctions list — no API key required",
+      },
+      {
+        name: "NHTSA VIN Decoder",
+        key: "NHTSA_VIN",
+        configured: true,
+        description: "Vehicle identification — make, model, year, GVWR. Free, no key required",
+      },
+      {
+        name: "SEC EDGAR Credit",
+        key: "SEC_EDGAR",
+        configured: true,
+        description: "Public company financial intelligence — revenue, assets, risk scoring. Free",
+      },
+      {
+        name: "SAM.gov Exclusions",
+        key: "SAM_GOV",
+        configured: true,
+        description: "Federal debarment and exclusion screening. Free",
+      },
+      {
+        name: "OpenCorporates",
+        key: "OPENCORPORATES",
+        configured: true,
+        description: "Business entity verification — 50 free lookups/day",
+      },
+      {
+        name: "Cross-Reference Validation",
+        key: "CROSS_REF",
+        configured: true,
+        description: "Multi-source identity cross-check — FMCSA vs application vs entity records",
+      },
+      {
+        name: "FMCSA Bulk Monitor",
+        key: "FMCSA_BULK",
+        configured: !!process.env.FMCSA_WEB_KEY,
+        description: "Daily carrier network snapshot — detect authority/insurance changes",
+      },
+      // Paid API integrations (require API keys)
+      {
+        name: "CarrierOk Intelligence",
+        key: "CARRIER_OK_API_KEY",
+        configured: !!process.env.CARRIER_OK_API_KEY,
+        description: "300+ field carrier profiles with A-F risk grades",
+      },
+      {
+        name: "Truckstop / RMIS",
+        key: "TRUCKSTOP_API_KEY",
+        configured: !!process.env.TRUCKSTOP_API_KEY,
+        description: "COI monitoring and insurance certificate tracking",
+      },
+      {
+        name: "CH Robinson",
+        key: "CH_ROBINSON_API_KEY",
+        configured: !!process.env.CH_ROBINSON_API_KEY,
+        description: "Navisphere load posting and capacity",
+      },
+      {
+        name: "Echo Global",
+        key: "ECHO_API_KEY",
+        configured: !!process.env.ECHO_API_KEY,
+        description: "Cross-brokerage capacity and pricing",
+      },
+      {
+        name: "Uber Freight",
+        key: "UBER_FREIGHT_API_KEY",
+        configured: !!process.env.UBER_FREIGHT_API_KEY,
+        description: "Load matching and instant quotes",
+      },
+      {
+        name: "project44",
+        key: "PROJECT44_API_KEY",
+        configured: !!process.env.PROJECT44_API_KEY,
+        description: "Multi-carrier real-time visibility",
+      },
+      {
+        name: "Samsara ELD",
+        key: "SAMSARA_API_TOKEN",
+        configured: !!process.env.SAMSARA_API_TOKEN,
+        description: "ELD location tracking and HOS data",
+      },
+      {
+        name: "Motive ELD",
+        key: "MOTIVE_API_KEY",
+        configured: !!process.env.MOTIVE_API_KEY,
+        description: "ELD tracking and fleet management",
+      },
+      {
+        name: "Numverify Phone",
+        key: "NUMVERIFY_API_KEY",
+        configured: !!process.env.NUMVERIFY_API_KEY,
+        description: "Phone number validation — VoIP/landline/mobile detection",
+      },
+      {
+        name: "IRS TIN Matching",
+        key: "IRS_TIN_MATCH_API_KEY",
+        configured: !!process.env.IRS_TIN_MATCH_API_KEY,
+        description: "W-9 TIN verification against IRS database",
+      },
     ];
 
     // Get cron jobs
