@@ -7,6 +7,7 @@ import { runDailyMonitor } from "../services/fmcsaBulkMonitorService";
 import { creditCheck } from "../services/secEdgarService";
 import * as fmcsaInsurance from "../services/fmcsaInsuranceService";
 import { checkExclusions } from "../services/samGovService";
+import { crossReferenceCarrier } from "../services/crossReferenceService";
 
 const router = Router();
 
@@ -218,6 +219,23 @@ router.get("/sam-check/:companyName", async (req: AuthRequest, res: Response) =>
   } catch (err) {
     console.error("SAM.gov exclusion check failed:", err);
     res.status(500).json({ error: "SAM.gov exclusion check failed" });
+  }
+});
+
+// GET /integrations/cross-ref/:carrierId — Cross-reference identity validation
+router.get("/cross-ref/:carrierId", async (req: AuthRequest, res: Response) => {
+  try {
+    const { carrierId } = req.params;
+    if (!carrierId || carrierId.trim().length < 2) {
+      res.status(400).json({ error: "Valid carrier ID required" });
+      return;
+    }
+
+    const result = await crossReferenceCarrier(carrierId.trim());
+    res.json(result);
+  } catch (err) {
+    console.error("Cross-reference identity validation failed:", err);
+    res.status(500).json({ error: "Cross-reference identity validation failed" });
   }
 });
 

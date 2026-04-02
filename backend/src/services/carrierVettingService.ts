@@ -1,9 +1,9 @@
 /**
- * Compass by SRL — Vetting Engine — 30-Check Composite Risk Scoring
+ * Compass by SRL — Vetting Engine — 31-Check Composite Risk Scoring
  * Covers FMCSA, identity, fraud, OFAC/SDN, biometrics, ELD, TIN match,
  * UCR, overbooking, fraud reports, agreements, historical performance,
  * fleet VIN verification (NHTSA), probationary period, document expiry,
- * and SAM.gov federal exclusion screening.
+ * SAM.gov federal exclusion screening, and cross-reference identity validation.
  */
 
 import { prisma } from "../config/database";
@@ -16,6 +16,7 @@ import { verifyAllCarrierVins } from "./vinVerificationService";
 import { checkExclusions } from "./samGovService";
 import { verifyTinWithIRS } from "./tinMatchService";
 import type { EnhancedTinResult } from "./tinMatchService";
+import { crossReferenceCarrier } from "./crossReferenceService";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -827,6 +828,64 @@ export async function vetCarrier(
     }
   } catch {
     checks.push({ name: "SAM.gov Exclusion", result: "WARNING", detail: "SAM.gov check failed — manual review required", deduction: 5 });
+    score -= 5;
+  }
+
+  // ── 31. Cross-Reference Identity Validation ──
+  if (existingCarrier) {
+    try {
+      const crossRef = await crossReferenceCarrier(existingCarrier.id);
+      if (crossRef.riskLevel === "CRITICAL") {
+        checks.push({
+          name: "Cross-Reference Identity Validation",
+          result: "FAIL",
+          detail: `Cross-ref score ${crossRef.score}/100 — ${crossRef.issues.slice(0, 3).join("; ")}`,
+          deduction: 25,
+        });
+        score -= 25;
+        flags.push(`Cross-reference CRITICAL: ${crossRef.issues[0] || "multiple identity mismatches"}`);
+      } else if (crossRef.riskLevel === "HIGH") {
+        checks.push({
+          name: "Cross-Reference Identity Validation",
+          result: "FAIL",
+          detail: `Cross-ref score ${crossRef.score}/100 — ${crossRef.issues.slice(0, 3).join("; ")}`,
+          deduction: 15,
+        });
+        score -= 15;
+        flags.push(`Cross-reference HIGH risk: ${crossRef.issues[0] || "identity inconsistencies detected"}`);
+      } else if (crossRef.riskLevel === "MEDIUM") {
+        checks.push({
+          name: "Cross-Reference Identity Validation",
+          result: "WARNING",
+          detail: `Cross-ref score ${crossRef.score}/100 — ${crossRef.issues.slice(0, 2).join("; ") || "minor discrepancies"}`,
+          deduction: 8,
+        });
+        score -= 8;
+      } else {
+        checks.push({
+          name: "Cross-Reference Identity Validation",
+          result: "PASS",
+          detail: `Cross-ref score ${crossRef.score}/100 — identity data consistent across sources`,
+          deduction: 0,
+        });
+      }
+    } catch (e) {
+      console.error("[Compass Vet] Cross-reference check error:", e);
+      checks.push({
+        name: "Cross-Reference Identity Validation",
+        result: "WARNING",
+        detail: "Cross-reference check failed — manual review required",
+        deduction: 5,
+      });
+      score -= 5;
+    }
+  } else {
+    checks.push({
+      name: "Cross-Reference Identity Validation",
+      result: "WARNING",
+      detail: "No carrier record — cannot cross-reference",
+      deduction: 5,
+    });
     score -= 5;
   }
 
