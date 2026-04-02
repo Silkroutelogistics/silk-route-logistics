@@ -275,17 +275,25 @@ export default function CarrierPoolPage() {
       checks.push({ name: "CSA BASIC Scores", result: data.results?.csa?.status === "completed" ? "PASS" : "WARNING", detail: data.results?.csa?.status === "completed" ? "Updated" : data.results?.csa?.error || "Skipped", deduction: 0 });
       checks.push({ name: "VIN Verification", result: data.results?.vin?.status === "completed" ? "PASS" : "WARNING", detail: data.results?.vin?.status === "completed" ? "Verified" : data.results?.vin?.error || "Not verified", deduction: 0 });
 
-      // Calculate composite score
+      // Use the REAL backend Compass score if available (from vetAndStoreReport 31-check engine)
+      // The backend stores this in results.fmcsa.data.score/grade
+      const backendScore = typeof fmcsa?.score === "number" ? fmcsa.score : null;
+      const backendGrade = fmcsa?.grade || null;
+
+      // Fallback: calculate from frontend check results if backend score unavailable
       const totalDeduction = checks.reduce((s, c) => s + c.deduction, 0);
-      const score = Math.max(0, Math.min(100, 100 + totalDeduction));
-      const grade = score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
+      const frontendScore = Math.max(0, Math.min(100, 100 + totalDeduction));
+
+      // Use backend score (real 31-check) if > 0, otherwise use frontend calculation
+      const score = (backendScore && backendScore > 0) ? backendScore : frontendScore;
+      const grade = backendGrade || (score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F");
       const riskLevel = score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL";
       const recommendation = score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT";
       const flags = checks.filter((c) => c.result === "FAIL").map((c) => c.name);
 
       const result: CompassResult = {
-        score: fmcsa?.score ?? score,
-        grade: fmcsa?.grade ?? grade,
+        score,
+        grade,
         riskLevel,
         recommendation,
         checks,
