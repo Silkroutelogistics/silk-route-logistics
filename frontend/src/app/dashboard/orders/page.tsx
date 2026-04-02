@@ -268,12 +268,14 @@ export default function OrderBuilderPage() {
             className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50"
           />
           {showCustomerDropdown && customersData?.customers && customersData.customers.length > 0 && (
-            <div className="absolute z-10 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+            <div className="absolute z-10 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
+              style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
               {customersData.customers.map((c) => (
                 <button key={c.id} onClick={() => selectCustomer(c)}
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-white/10 text-white transition cursor-pointer border-b border-white/5 last:border-0">
-                  <span className="font-medium text-white">{c.name}</span>
-                  <span className="text-slate-400 ml-2">— {c.contactName || "No contact"}</span>
+                  className="w-full text-left px-3 py-2.5 text-sm transition cursor-pointer hover:!bg-amber-50"
+                  style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
+                  <span className="font-semibold" style={{ color: "#0f172a" }}>{c.name}</span>
+                  <span style={{ color: "#64748b", marginLeft: "8px" }}>— {c.contactName || "No contact"}</span>
                 </button>
               ))}
             </div>
@@ -427,7 +429,7 @@ export default function OrderBuilderPage() {
             <label className="text-xs text-slate-500 mb-1 block">Equipment Type</label>
             <select value={form.equipmentType} onChange={(e) => { setForm((f) => ({ ...f, equipmentType: e.target.value })); if (e.target.value === "Reefer") setTempControlled(true); }}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              {EQUIPMENT_TYPES.map((t) => <option key={t} value={t} className="bg-[#0f172a] text-white">{t}</option>)}
+              {EQUIPMENT_TYPES.map((t) => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
             </select>
           </div>
           <div>
@@ -439,8 +441,8 @@ export default function OrderBuilderPage() {
             <label className="text-xs text-slate-500 mb-1 block">Freight Class</label>
             <select value={form.freightClass} onChange={(e) => setForm((f) => ({ ...f, freightClass: e.target.value }))}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              <option value="" className="bg-[#0f172a] text-white">Select class</option>
-              {FREIGHT_CLASSES.map((c) => <option key={c} value={c} className="bg-[#0f172a] text-white">Class {c}</option>)}
+              <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Select class</option>
+              {FREIGHT_CLASSES.map((c) => <option key={c} value={c} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Class {c}</option>)}
             </select>
             {suggestedClass && (
               <p className="text-xs text-gold mt-1">Auto-suggested: Class {suggestedClass} based on commodity</p>
@@ -682,14 +684,16 @@ function AddressAutocomplete({ label, value, onSelect }: {
         {loading && <Loader2 className="absolute right-3 top-2.5 w-4 h-4 text-gold animate-spin" />}
       </div>
       {open && results.length > 0 && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
+          style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
           {results.map((r) => (
             <button key={r.placeId} onClick={() => handleSelect(r)}
-              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition truncate">
-              <MapPin className="w-3 h-3 inline mr-1.5 text-gold" />{r.description}
+              className="w-full text-left px-3 py-2 text-sm transition truncate hover:!bg-amber-50"
+              style={{ color: "#334155", backgroundColor: "#fff" }}>
+              <MapPin className="w-3 h-3 inline mr-1.5 text-[#C9A84C]" />{r.description}
             </button>
           ))}
-          <div className="px-3 py-1 text-[9px] text-slate-600 text-right">Powered by Google</div>
+          <div className="px-3 py-1 text-[9px] text-right" style={{ color: "#94a3b8" }}>Powered by Google</div>
         </div>
       )}
     </div>
