@@ -1,6 +1,6 @@
 "use client";
 
-import { Shield, FileText, AlertTriangle, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Shield, FileText, AlertTriangle, CheckCircle, Clock, AlertCircle, Compass } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
@@ -14,6 +14,62 @@ const scoreLabels: Record<string, string> = {
   hazmat: "Hazmat",
   crashIndicator: "Crash Indicator",
 };
+
+interface CompassCheck {
+  name: string;
+  result: "PASS" | "FAIL" | "WARNING";
+  detail: string;
+  deduction: number;
+}
+
+interface VettingReport {
+  score: number;
+  grade: string;
+  riskLevel: string;
+  recommendation: string;
+  checks: CompassCheck[];
+  flags: string[];
+  trendDirection: string | null;
+  vettedAt: string;
+}
+
+function CompassScoreGauge({ score, size = 120 }: { score: number; size?: number }) {
+  const radius = (size - 12) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(100, Math.max(0, score)) / 100;
+  const strokeDashoffset = circumference * (1 - progress);
+  const color = score >= 80 ? "#22c55e" : score >= 60 ? "#eab308" : score >= 40 ? "#f97316" : "#ef4444";
+
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={8} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={8}
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+          style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-3xl font-bold text-[#0D1B2A]">{score}</span>
+      </div>
+    </div>
+  );
+}
+
+function CompassCategoryBar({ label, passed, total }: { label: string; passed: number; total: number }) {
+  const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
+  const color = pct >= 80 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+  return (
+    <div>
+      <div className="flex justify-between mb-1">
+        <span className="text-xs text-gray-600">{label}</span>
+        <span className="text-xs font-bold text-[#0D1B2A]">{passed}/{total} passed</span>
+      </div>
+      <div className="bg-gray-100 rounded h-2 overflow-hidden">
+        <div className={`h-full rounded ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export default function CarrierCompliancePage() {
   const { data: overview, isLoading } = useQuery({
@@ -29,6 +85,37 @@ export default function CarrierCompliancePage() {
   const { data: expirations } = useQuery({
     queryKey: ["carrier-expirations"],
     queryFn: () => api.get("/carrier-compliance/expiration-calendar").then((r) => r.data),
+  });
+
+  // Fetch the latest vetting report for this carrier
+  const { data: vettingReport } = useQuery<VettingReport | null>({
+    queryKey: ["carrier-vetting-report"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/carrier/vetting-report");
+        return res.data;
+      } catch {
+        // Fallback: use scorecard data
+        try {
+          const res = await api.get("/carrier/scorecard");
+          const sc = res.data;
+          if (sc?.overallScore != null) {
+            const score = Math.round(sc.overallScore);
+            return {
+              score,
+              grade: score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F",
+              riskLevel: score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL",
+              recommendation: score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT",
+              checks: [],
+              flags: [],
+              trendDirection: null,
+              vettedAt: sc.updatedAt || new Date().toISOString(),
+            } as VettingReport;
+          }
+        } catch { /* ignore */ }
+        return null;
+      }
+    },
   });
 
   const carrier = overview?.carrier;
@@ -47,6 +134,103 @@ export default function CarrierCompliancePage() {
           Manage insurance, FMCSA compliance, and safety documentation
         </p>
       </div>
+
+      {/* Compass Score Card */}
+      {vettingReport && (
+        <CarrierCard padding="p-6" className="mb-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Compass size={20} className="text-[#C9A84C]" />
+            <h2 className="text-sm font-bold text-[#0D1B2A]">Your Compass Score</h2>
+          </div>
+
+          <div className="flex items-start gap-8">
+            {/* Score Gauge */}
+            <div className="flex flex-col items-center">
+              <CompassScoreGauge score={vettingReport.score} />
+              <div className="flex items-center gap-3 mt-3">
+                <span className={`text-sm font-bold ${
+                  vettingReport.grade === "A" ? "text-green-600" :
+                  vettingReport.grade === "B" ? "text-blue-600" :
+                  vettingReport.grade === "C" ? "text-amber-600" :
+                  vettingReport.grade === "D" ? "text-orange-600" : "text-red-600"
+                }`}>Grade {vettingReport.grade}</span>
+                <span className="text-gray-300">|</span>
+                <span className={`text-sm font-semibold ${
+                  vettingReport.riskLevel === "LOW" ? "text-green-600" :
+                  vettingReport.riskLevel === "MEDIUM" ? "text-amber-600" :
+                  vettingReport.riskLevel === "HIGH" ? "text-orange-600" : "text-red-600"
+                }`}>{vettingReport.riskLevel} Risk</span>
+              </div>
+            </div>
+
+            {/* Check Results */}
+            <div className="flex-1">
+              {vettingReport.checks.length > 0 ? (
+                <>
+                  {/* Category breakdowns */}
+                  {(() => {
+                    const authorityChecks = vettingReport.checks.filter((c) =>
+                      ["Operating Authority", "FMCSA Grade", "CSA BASIC Scores", "ELD Validation"].includes(c.name)
+                    );
+                    const identityChecks = vettingReport.checks.filter((c) =>
+                      ["Identity Verification", "Chameleon Detection", "OFAC/SDN Screening", "TIN Verification"].includes(c.name)
+                    );
+                    const docChecks = vettingReport.checks.filter((c) =>
+                      ["VIN Verification"].includes(c.name)
+                    );
+                    return (
+                      <div className="space-y-3">
+                        <CompassCategoryBar label="Authority & Safety" passed={authorityChecks.filter((c) => c.result === "PASS").length} total={authorityChecks.length} />
+                        <CompassCategoryBar label="Identity & Fraud" passed={identityChecks.filter((c) => c.result === "PASS").length} total={identityChecks.length} />
+                        <CompassCategoryBar label="Documents & Compliance" passed={docChecks.filter((c) => c.result === "PASS").length} total={Math.max(1, docChecks.length)} />
+                      </div>
+                    );
+                  })()}
+
+                  {/* Individual check list */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-4">
+                    {vettingReport.checks.map((check, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs">
+                        {check.result === "PASS" ? (
+                          <CheckCircle size={13} className="text-emerald-500 shrink-0" />
+                        ) : check.result === "WARNING" ? (
+                          <AlertTriangle size={13} className="text-amber-500 shrink-0" />
+                        ) : (
+                          <AlertCircle size={13} className="text-red-500 shrink-0" />
+                        )}
+                        <span className={`${
+                          check.result === "PASS" ? "text-gray-600" :
+                          check.result === "WARNING" ? "text-amber-700" : "text-red-700"
+                        }`}>
+                          {check.name}
+                          {check.result === "WARNING" && (
+                            <span className="text-[10px] text-amber-500 ml-1">- Review recommended</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Shield size={24} className="text-gray-300 mb-2" />
+                  <p className="text-xs text-gray-400">Detailed check data will appear after your next Compass review.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tip + Last checked */}
+          <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              <span className="font-medium text-[#C9A84C]">Tip:</span> Keep your score above 80 for GOLD tier eligibility and priority load matching.
+            </p>
+            <p className="text-[11px] text-gray-400">
+              Last checked: {new Date(vettingReport.vettedAt).toLocaleDateString()}
+            </p>
+          </div>
+        </CarrierCard>
+      )}
 
       {/* Top row: Carrier info + Insurance + Documents */}
       <div className="grid grid-cols-3 gap-4 mb-6">

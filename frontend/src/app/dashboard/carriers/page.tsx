@@ -8,7 +8,7 @@ import {
   Search, Shield, Truck, MapPin, Star, CheckCircle2, Clock, AlertCircle, X,
   ChevronDown, ChevronUp, MessageSquare, FileText, Users, Phone, Mail, Building2,
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
-  BarChart3, Percent, Hash,
+  BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
@@ -54,7 +54,42 @@ interface Carrier {
   acceptanceRate: number;
   performance: CarrierPerformance | null;
   createdAt: string;
+  lastVettingScore?: number | null;
+  lastVettingGrade?: string | null;
 }
+
+interface CompassCheck {
+  name: string;
+  result: "PASS" | "FAIL" | "WARNING";
+  detail: string;
+  deduction: number;
+}
+
+interface CompassResult {
+  score: number;
+  grade: string;
+  riskLevel: string;
+  recommendation: string;
+  checks: CompassCheck[];
+  flags: string[];
+  trendDirection: string | null;
+  vettedAt: string;
+}
+
+const RISK_COLORS: Record<string, string> = {
+  LOW: "text-green-400",
+  MEDIUM: "text-yellow-400",
+  HIGH: "text-orange-400",
+  CRITICAL: "text-red-400",
+};
+
+const GRADE_COLORS: Record<string, string> = {
+  A: "text-green-400",
+  B: "text-blue-400",
+  C: "text-yellow-400",
+  D: "text-orange-400",
+  F: "text-red-400",
+};
 
 const TIER_COLORS: Record<string, string> = {
   PLATINUM: "bg-purple-500/20 text-purple-400 border-purple-500/30",
@@ -136,6 +171,9 @@ export default function CarrierPoolPage() {
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editForm, setEditForm] = useState({ safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "" });
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
+  const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
+  const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
+  const [compassLoading, setCompassLoading] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["carrier-all"],
@@ -194,6 +232,76 @@ export default function CarrierPoolPage() {
       numberOfTrucks: c.numberOfTrucks?.toString() || "",
       insuranceExpiry: c.insuranceExpiry ? new Date(c.insuranceExpiry).toISOString().split("T")[0] : "",
     });
+  }
+
+  async function runCompass(carrierId: string) {
+    setCompassLoading(carrierId);
+    try {
+      const res = await api.post(`/carriers/${carrierId}/full-vet`);
+      const data = res.data;
+      // The full-vet endpoint returns a consolidated results object; extract the vetting report
+      // from the FMCSA result or build a composite from all checks
+      const fmcsa = data.results?.fmcsa?.data;
+      const identity = data.results?.identity?.data;
+      const chameleon = data.results?.chameleon?.data;
+      const ofac = data.results?.ofac?.data;
+      const eld = data.results?.eld?.data;
+      const tin = data.results?.tin?.data;
+
+      // Build composite checks from the full-vet results
+      const checks: CompassCheck[] = [];
+      const addCheck = (name: string, key: string, resultObj: Record<string, unknown> | undefined) => {
+        if (!resultObj) {
+          const status = data.results?.[key]?.status;
+          checks.push({ name, result: status === "skipped" ? "WARNING" : "FAIL", detail: data.results?.[key]?.error || "Not available", deduction: -5 });
+        } else {
+          checks.push({ name, result: "PASS", detail: JSON.stringify(resultObj).slice(0, 80), deduction: 0 });
+        }
+      };
+
+      // Map results to checks
+      if (fmcsa) {
+        checks.push({ name: "Operating Authority", result: fmcsa.operatingStatus === "AUTHORIZED" ? "PASS" : "WARNING", detail: fmcsa.operatingStatus || "Unknown", deduction: fmcsa.operatingStatus === "AUTHORIZED" ? 0 : -10 });
+        checks.push({ name: "FMCSA Grade", result: "PASS", detail: `Grade ${fmcsa.grade}, Score ${fmcsa.score}`, deduction: 0 });
+      } else {
+        checks.push({ name: "Operating Authority", result: data.results?.fmcsa?.status === "skipped" ? "WARNING" : "FAIL", detail: data.results?.fmcsa?.error || "No DOT number", deduction: -10 });
+      }
+
+      checks.push({ name: "Identity Verification", result: identity ? "PASS" : "FAIL", detail: identity ? "Verified" : data.results?.identity?.error || "Failed", deduction: identity ? 0 : -10 });
+      checks.push({ name: "Chameleon Detection", result: chameleon ? (chameleon.riskLevel === "LOW" ? "PASS" : "WARNING") : "FAIL", detail: chameleon ? `Risk: ${chameleon.riskLevel}, Matches: ${chameleon.matches}` : "Check failed", deduction: chameleon && chameleon.riskLevel === "LOW" ? 0 : -5 });
+      checks.push({ name: "OFAC/SDN Screening", result: ofac ? "PASS" : "FAIL", detail: ofac ? "Clear" : data.results?.ofac?.error || "Failed", deduction: ofac ? 0 : -15 });
+      checks.push({ name: "ELD Validation", result: eld ? "PASS" : "WARNING", detail: eld ? "Validated" : data.results?.eld?.error || "Not validated", deduction: eld ? 0 : -5 });
+      checks.push({ name: "TIN Verification", result: tin ? "PASS" : "WARNING", detail: tin ? "Verified" : data.results?.tin?.error || "Not verified", deduction: tin ? 0 : -5 });
+      checks.push({ name: "CSA BASIC Scores", result: data.results?.csa?.status === "completed" ? "PASS" : "WARNING", detail: data.results?.csa?.status === "completed" ? "Updated" : data.results?.csa?.error || "Skipped", deduction: 0 });
+      checks.push({ name: "VIN Verification", result: data.results?.vin?.status === "completed" ? "PASS" : "WARNING", detail: data.results?.vin?.status === "completed" ? "Verified" : data.results?.vin?.error || "Not verified", deduction: 0 });
+
+      // Calculate composite score
+      const totalDeduction = checks.reduce((s, c) => s + c.deduction, 0);
+      const score = Math.max(0, Math.min(100, 100 + totalDeduction));
+      const grade = score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
+      const riskLevel = score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL";
+      const recommendation = score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT";
+      const flags = checks.filter((c) => c.result === "FAIL").map((c) => c.name);
+
+      const result: CompassResult = {
+        score: fmcsa?.score ?? score,
+        grade: fmcsa?.grade ?? grade,
+        riskLevel,
+        recommendation,
+        checks,
+        flags,
+        trendDirection: "STABLE",
+        vettedAt: new Date().toISOString(),
+      };
+
+      setCompassResult(result);
+      setCompassCarrierId(carrierId);
+      queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+    } catch (err) {
+      console.error("Compass vetting failed:", err);
+    } finally {
+      setCompassLoading(null);
+    }
   }
 
   return (
@@ -268,6 +376,16 @@ export default function CarrierPoolPage() {
                     <div className="flex items-center gap-3 flex-wrap">
                       <p className="font-semibold text-white">{carrier.company}</p>
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
+                      {carrier.lastVettingScore != null && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-1">
+                          <Compass className="w-3 h-3" /> {carrier.lastVettingScore}
+                        </span>
+                      )}
+                      {compassCarrierId === carrier.id && compassResult && !carrier.lastVettingScore && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-1">
+                          <Compass className="w-3 h-3" /> {compassResult.score}
+                        </span>
+                      )}
                       <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-slate-400"}`}>
                         {carrier.onboardingStatus.replace(/_/g, " ")}
                       </span>
@@ -400,6 +518,20 @@ export default function CarrierPoolPage() {
                   <a href="/dashboard/loads" className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
                     <FileText className="w-3.5 h-3.5" /> Tender Load
                   </a>
+                  {isAdmin && (
+                    <button
+                      onClick={() => runCompass(carrier.id)}
+                      disabled={compassLoading === carrier.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#C9A84C] text-[#C9A84C] rounded-lg text-xs hover:bg-[#C9A84C]/10 transition disabled:opacity-50"
+                    >
+                      {compassLoading === carrier.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Shield className="w-3.5 h-3.5" />
+                      )}
+                      {compassLoading === carrier.id ? "Running..." : "Run Compass"}
+                    </button>
+                  )}
                   {isAdmin && carrier.onboardingStatus !== "APPROVED" && (
                     <button onClick={() => setConfirmAction({ id: carrier.id, status: "APPROVED", company: carrier.company })}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
@@ -419,6 +551,94 @@ export default function CarrierPoolPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Compass Report Inline */}
+                {compassCarrierId === carrier.id && compassResult && (
+                  <div className="mt-4 p-4 bg-white/5 rounded-xl border border-[#C9A84C]/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Compass className="w-5 h-5 text-[#C9A84C]" />
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Compass Report</h3>
+                      </div>
+                      <button onClick={() => { setCompassResult(null); setCompassCarrierId(null); }} className="text-slate-400 hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Score Summary */}
+                    <div className="flex items-center gap-6 mb-4 pb-3 border-b border-white/10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Score:</span>
+                        <span className="text-xl font-bold text-[#C9A84C]">{compassResult.score}/100</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Grade:</span>
+                        <span className={`text-lg font-bold ${GRADE_COLORS[compassResult.grade] || "text-white"}`}>{compassResult.grade}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Risk:</span>
+                        <span className={`text-sm font-semibold ${RISK_COLORS[compassResult.riskLevel] || "text-white"}`}>{compassResult.riskLevel}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Recommendation:</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          compassResult.recommendation === "APPROVE" ? "bg-green-500/20 text-green-400" :
+                          compassResult.recommendation === "REVIEW" ? "bg-yellow-500/20 text-yellow-400" :
+                          "bg-red-500/20 text-red-400"
+                        }`}>{compassResult.recommendation}</span>
+                      </div>
+                    </div>
+
+                    {/* Checks Grid */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {compassResult.checks.map((check, i) => (
+                        <div key={i} className="flex items-start gap-1.5 text-xs">
+                          {check.result === "PASS" ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
+                          ) : check.result === "WARNING" ? (
+                            <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                          )}
+                          <div>
+                            <span className={`font-medium ${
+                              check.result === "PASS" ? "text-slate-300" :
+                              check.result === "WARNING" ? "text-yellow-400" : "text-red-400"
+                            }`}>{check.name}</span>
+                            {check.result !== "PASS" && (
+                              <p className="text-[10px] text-slate-500 mt-0.5">{check.detail}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Flags */}
+                    {compassResult.flags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {compassResult.flags.map((flag, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[10px] font-medium border border-red-500/20">
+                            {flag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Footer Actions */}
+                    <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                      <button
+                        onClick={() => runCompass(carrier.id)}
+                        disabled={compassLoading === carrier.id}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${compassLoading === carrier.id ? "animate-spin" : ""}`} /> Re-run
+                      </button>
+                      <span className="text-[10px] text-slate-600">
+                        Vetted: {new Date(compassResult.vettedAt).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
