@@ -45,7 +45,7 @@ export async function runFullVetting(req: AuthRequest, res: Response) {
   if (carrier.dotNumber) {
     try {
       const report = await vetAndStoreReport(carrier.dotNumber, carrierId, carrier.mcNumber || undefined);
-      results.fmcsa = { status: "completed", data: { grade: report.grade, score: report.score, operatingStatus: report.fmcsaData.operatingStatus } };
+      results.fmcsa = { status: "completed", data: { grade: report.grade, score: report.score, riskLevel: report.riskLevel, recommendation: report.recommendation, operatingStatus: report.fmcsaData.operatingStatus, checks: report.checks, flags: report.flags } };
     } catch (err) {
       results.fmcsa = { status: "error", error: err instanceof Error ? err.message : "FMCSA vetting failed" };
     }

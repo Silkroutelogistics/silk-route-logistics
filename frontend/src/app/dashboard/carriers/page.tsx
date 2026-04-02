@@ -284,19 +284,31 @@ export default function CarrierPoolPage() {
       const totalDeduction = checks.reduce((s, c) => s + c.deduction, 0);
       const frontendScore = Math.max(0, Math.min(100, 100 + totalDeduction));
 
-      // Use backend score (real 31-check) if > 0, otherwise use frontend calculation
+      // Use REAL backend 31-check data if available
+      const backendChecks: CompassCheck[] = (fmcsa?.checks || []).map((c: { name: string; result: string; detail: string; deduction: number }) => ({
+        name: c.name,
+        result: c.result === "PASS" ? "PASS" : c.result === "WARNING" ? "WARNING" : "FAIL",
+        detail: c.detail || "",
+        deduction: c.deduction || 0,
+      }));
+      const backendFlags: string[] = fmcsa?.flags || [];
+      const backendRisk = fmcsa?.riskLevel || null;
+      const backendRec = fmcsa?.recommendation || null;
+
+      // Use backend data if available, fall back to frontend-calculated
+      const finalChecks = backendChecks.length > 0 ? backendChecks : checks;
       const score = (backendScore && backendScore > 0) ? backendScore : frontendScore;
       const grade = backendGrade || (score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F");
-      const riskLevel = score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL";
-      const recommendation = score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT";
-      const flags = checks.filter((c) => c.result === "FAIL").map((c) => c.name);
+      const riskLevel = backendRisk || (score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL");
+      const recommendation = backendRec || (score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT");
+      const flags = backendFlags.length > 0 ? backendFlags : checks.filter((c) => c.result === "FAIL").map((c) => c.name);
 
       const result: CompassResult = {
         score,
         grade,
         riskLevel,
         recommendation,
-        checks,
+        checks: finalChecks,
         flags,
         trendDirection: "STABLE",
         vettedAt: new Date().toISOString(),
