@@ -91,6 +91,7 @@ export default function TrackingPage() {
   const [tab, setTab] = useState<Tab>("loads");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
   const [showCheckCallForm, setShowCheckCallForm] = useState<string | null>(null);
 
@@ -202,13 +203,36 @@ export default function TrackingPage() {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by load ref #, city, or carrier..."
                 className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             </div>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-[#0f172a] border border-white/10 rounded-lg text-sm text-white relative z-10 [&>option]:bg-[#0f172a] [&>option]:text-white [&>option:checked]:bg-[#C9A84C]/20 [&>option:checked]:text-[#C9A84C]">
-              <option value="">Active Loads</option>
-              {LOAD_PIPELINE.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-              <option value="TONU">TONU</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+            <div className="relative">
+              <button onClick={() => setShowStatusDropdown((p) => !p)}
+                className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white hover:bg-white/10 transition cursor-pointer min-w-[150px] justify-between">
+                <span>{statusFilter ? (STATUS_LABELS[statusFilter] || statusFilter) : "Active Loads"}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+              {showStatusDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[#0f172a] border border-white/10 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto py-1">
+                  <button onClick={() => { setStatusFilter(""); setShowStatusDropdown(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${!statusFilter ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-white hover:bg-white/5"}`}>
+                    Active Loads
+                  </button>
+                  {LOAD_PIPELINE.map(s => (
+                    <button key={s} onClick={() => { setStatusFilter(s); setShowStatusDropdown(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === s ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+                      {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                  <div className="border-t border-white/10 my-1" />
+                  <button onClick={() => { setStatusFilter("TONU"); setShowStatusDropdown(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === "TONU" ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-red-400 hover:bg-white/5"}`}>
+                    TONU
+                  </button>
+                  <button onClick={() => { setStatusFilter("CANCELLED"); setShowStatusDropdown(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === "CANCELLED" ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-red-400 hover:bg-white/5"}`}>
+                    Cancelled
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Load Table */}
