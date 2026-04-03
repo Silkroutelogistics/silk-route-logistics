@@ -9,6 +9,7 @@ import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneE
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
+import { notifyMatchedCarriers } from "../services/carrierOutreachService";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -126,40 +127,16 @@ export async function createLoad(req: AuthRequest, res: Response) {
     } as any,
   });
 
-  // Notify approved carriers with matching equipment that a new load is available
+  // AI Carrier Outreach: email + in-app notify top matched carriers
   if (load.status === "POSTED" && load.equipmentType) {
-    notifyMatchingCarriers(load).catch((e) =>
-      console.error("[LoadCreate] Carrier notification error:", e.message)
+    notifyMatchedCarriers(load.id).catch((e) =>
+      console.error("[CarrierOutreach]", e.message)
     );
   }
 
   res.status(201).json(load);
 }
 
-/** Fire-and-forget: notify carriers whose equipment matches this new load */
-async function notifyMatchingCarriers(load: any) {
-  const carriers = await prisma.carrierProfile.findMany({
-    where: {
-      onboardingStatus: "APPROVED",
-      equipmentTypes: { hasSome: [load.equipmentType] },
-    },
-    select: { userId: true },
-    take: 50, // Cap to avoid notification storms
-  });
-
-  if (carriers.length === 0) return;
-
-  const route = `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`;
-  await prisma.notification.createMany({
-    data: carriers.map((c) => ({
-      userId: c.userId,
-      type: "LOAD_UPDATE" as const,
-      title: "New Load Available",
-      message: `New ${load.equipmentType} load: ${route}${load.rate ? ` — $${load.rate}` : ""}`,
-      actionUrl: "/carrier/dashboard/available-loads",
-    })),
-  });
-}
 
 export async function getLoads(req: AuthRequest, res: Response) {
   const query = loadQuerySchema.parse(req.query);
@@ -307,6 +284,13 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     if (status === "PICKED_UP") shipmentUpdate.actualPickup = new Date();
     if (status === "DELIVERED") shipmentUpdate.actualDelivery = new Date();
     await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
+  }
+
+  // AI Carrier Outreach: when a load transitions to POSTED, notify matched carriers
+  if (status === "POSTED" && load.equipmentType) {
+    notifyMatchedCarriers(load.id).catch((e) =>
+      console.error("[CarrierOutreach]", e.message)
+    );
   }
 
   // Auto-generate invoice and notify when delivered

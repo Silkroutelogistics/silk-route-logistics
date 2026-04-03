@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { calculateTier, calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
 import { createCheckCallSchedule } from "./checkCallAutomation";
+import { notifyMatchedCarriers } from "./carrierOutreachService";
 
 /**
  * Cross-System Integration Service
@@ -49,6 +50,16 @@ export async function onCarrierApproved(carrierProfileId: string) {
   });
 
   console.log(`[Integration] Carrier ${profile.user?.company || profile.id} approved → GUEST tier + initial scorecard created`);
+}
+
+// ──────────────────────────────────────────────────
+// LOOP 1.5 — Load Lifecycle: on posted → AI carrier outreach
+// ──────────────────────────────────────────────────
+
+export async function onLoadPosted(loadId: string) {
+  const result = await notifyMatchedCarriers(loadId);
+  console.log(`[Integration] Load ${loadId} posted → ${result.notified} carrier(s) notified via outreach`);
+  return result;
 }
 
 // ──────────────────────────────────────────────────

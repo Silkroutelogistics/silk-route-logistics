@@ -44,6 +44,8 @@ const envSchema = z.object({
   ECHO_API_KEY: z.string().optional(),
   UBER_FREIGHT_API_KEY: z.string().optional(),
   PROJECT44_API_KEY: z.string().optional(),
+  // Inbound email webhook
+  INBOUND_EMAIL_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

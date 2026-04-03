@@ -8,6 +8,7 @@ import { handleResendWebhook } from "../services/emailSequenceService";
 import { processSamsaraWebhook } from "../services/samsaraService";
 import { processMotiveWebhook } from "../services/motiveService";
 import { parseCheckCallFromEmail } from "../services/emailCheckCallParser";
+import { processInboundEmail } from "../services/emailToLoadService";
 
 const router = Router();
 
@@ -320,6 +321,37 @@ router.post("/inbound-checkcall", async (req, res) => {
     }
   } catch (err: any) {
     console.error("[Webhook] Email check-call error:", err);
+    res.status(500).json({ error: "Webhook processing failed" });
+  }
+});
+
+// ─── Inbound Email → Load Parser ───
+router.post("/inbound-email-load", async (req, res) => {
+  try {
+    // Validate webhook secret
+    const secret = req.headers["x-webhook-secret"] as string;
+    if (!secret || secret !== env.INBOUND_EMAIL_SECRET) {
+      res.status(401).json({ error: "Invalid or missing webhook secret" });
+      return;
+    }
+
+    const { from, subject, body, html } = req.body;
+    if (!from) {
+      res.status(400).json({ error: "Missing from field" });
+      return;
+    }
+
+    const emailBody = body || html || "";
+    if (!emailBody) {
+      res.status(400).json({ error: "Missing body or html field" });
+      return;
+    }
+
+    const result = await processInboundEmail(from, subject || "(no subject)", emailBody);
+    console.log(`[Webhook] Email-to-Load processed: ${result.action}`);
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[Webhook] Email-to-Load error:", err);
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });

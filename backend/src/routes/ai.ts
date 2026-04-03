@@ -16,6 +16,7 @@ import { scanActiveShipments, assessLoadRisk, getRiskDashboard } from "../servic
 import { findBackhaulLoads, getDeadheadAnalytics } from "../services/deadheadOptimizerService";
 import { canInstantBook, isLoadInstantBookable, instantBook, getInstantBookAnalytics } from "../services/instantBookService";
 import { processQuoteEmail, getEmailQuoteAnalytics } from "../services/emailQuoteService";
+import { generateQuote, QuoteRequest } from "../services/autoQuoteService";
 import { getCostSummary, getTodaySpend, checkBudget } from "../services/aiRouter/costTracker";
 import { getGateStatus, isFeatureUnlocked } from "../ai/volumeGates";
 import { getCircuitBreakerStatus } from "../security/circuitBreaker";
@@ -507,6 +508,28 @@ router.get("/gates/feature/:featureName", authorize("ADMIN", "CEO", "BROKER", "O
     res.json({ feature: req.params.featureName, unlocked });
   } catch (err) {
     res.status(500).json({ error: "Feature check failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
+  }
+});
+
+// ─── Auto-Quote ────────────────────────────────────────────────────
+router.post("/auto-quote", authorize("ADMIN", "CEO", "BROKER", "SHIPPER") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const { originCity, originState, destCity, destState, equipmentType, weight, pickupDate, commodity, isHazmat, isTempControlled } = req.body;
+    if (!originCity || !originState || !destCity || !destState || !equipmentType) {
+      return res.status(400).json({ error: "originCity, originState, destCity, destState, and equipmentType are required" });
+    }
+    const quoteRequest: QuoteRequest = {
+      originCity, originState, destCity, destState, equipmentType,
+      weight: weight ? parseFloat(weight) : undefined,
+      pickupDate,
+      commodity,
+      isHazmat: !!isHazmat,
+      isTempControlled: !!isTempControlled,
+    };
+    const quote = await generateQuote(quoteRequest);
+    res.json(quote);
+  } catch (err) {
+    res.status(500).json({ error: "Auto-quote generation failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 
