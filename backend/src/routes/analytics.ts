@@ -1,6 +1,7 @@
-import { Router } from "express";
-import { authenticate, authorize } from "../middleware/auth";
+import { Router, Response } from "express";
+import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import * as ctrl from "../controllers/analyticsController";
+import { getTopLanes, getLaneDetail, getLaneHeatmap, getMarginAnalysis } from "../services/laneAnalyticsService";
 
 const router = Router();
 
@@ -16,8 +17,46 @@ router.get("/loads", ctrl.getLoads as any);
 // On-Time Performance
 router.get("/on-time", ctrl.getOnTime as any);
 
-// Lane Profitability
+// Lane Profitability (existing)
 router.get("/lanes", ctrl.getLanes as any);
+
+// ─── Lane Analytics (Advanced) ───────────────────────────────────────
+
+// Lane heatmap (must be before /:origin/:dest to avoid matching)
+router.get("/lane-heatmap", authorize("ADMIN", "CEO", "BROKER") as any, async (_req: AuthRequest, res: Response) => {
+  try {
+    const data = await getLaneHeatmap();
+    res.json(data);
+  } catch (err) {
+    console.error("[Analytics] Lane heatmap error:", err);
+    res.status(500).json({ error: "Failed to fetch lane heatmap data" });
+  }
+});
+
+// Margin analysis
+router.get("/margins", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const period = (req.query.period as string) || "30d";
+    const data = await getMarginAnalysis(period);
+    res.json(data);
+  } catch (err) {
+    console.error("[Analytics] Margin analysis error:", err);
+    res.status(500).json({ error: "Failed to fetch margin analysis" });
+  }
+});
+
+// Lane detail — specific origin/dest
+router.get("/lanes/:origin/:dest", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const { origin, dest } = req.params;
+    const period = (req.query.period as string) || "1y";
+    const data = await getLaneDetail(origin.toUpperCase(), dest.toUpperCase(), period);
+    res.json(data);
+  } catch (err) {
+    console.error("[Analytics] Lane detail error:", err);
+    res.status(500).json({ error: "Failed to fetch lane detail" });
+  }
+});
 
 // Carrier Scorecards — not available to CARRIER role (they use /earnings)
 router.get("/carriers", ctrl.getCarriers as any);

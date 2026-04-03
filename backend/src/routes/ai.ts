@@ -20,6 +20,7 @@ import { generateQuote, QuoteRequest } from "../services/autoQuoteService";
 import { getCostSummary, getTodaySpend, checkBudget } from "../services/aiRouter/costTracker";
 import { getGateStatus, isFeatureUnlocked } from "../ai/volumeGates";
 import { getCircuitBreakerStatus } from "../security/circuitBreaker";
+import { generateWeeklyContent, getContentCalendar } from "../services/contentEngineService";
 
 const router = Router();
 router.use(authenticate);
@@ -540,6 +541,25 @@ router.get("/circuit-breaker/status", authorize("ADMIN", "CEO") as any, async (_
     res.json(status);
   } catch (err) {
     res.status(500).json({ error: "Circuit breaker status failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
+  }
+});
+
+// ─── Marketing Content Engine ──────────────────────────────────────
+router.post("/generate-content", authorize("ADMIN", "CEO") as any, async (_req: AuthRequest, res: Response) => {
+  try {
+    const content = await generateWeeklyContent();
+    res.json(content);
+  } catch (err) {
+    res.status(500).json({ error: "Content generation failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
+  }
+});
+
+router.get("/content-calendar", authorize("ADMIN", "CEO") as any, async (_req: AuthRequest, res: Response) => {
+  try {
+    const calendar = await getContentCalendar();
+    res.json(calendar);
+  } catch (err) {
+    res.status(500).json({ error: "Content calendar failed", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });
   }
 });
 

@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import {
   DollarSign, TrendingUp, CreditCard, CheckCircle2, Clock,
   ArrowDownRight, ArrowUpRight, Download, FileText, Truck,
-  PieChart as PieChartIcon, BarChart3, ShieldAlert,
+  PieChart as PieChartIcon, BarChart3, ShieldAlert, Send, Bell,
+  Calendar, AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -51,7 +52,7 @@ interface PayablesSummary {
   totalOwed: number; totalPaid: number; totalScheduled: number; quickPaySavings: number;
 }
 
-const TABS = ["Overview", "Receivables", "Payables", "Margins", "P&L", "Payments"] as const;
+const TABS = ["Overview", "Receivables", "Payables", "Margins", "P&L", "Payments", "Collections"] as const;
 type Tab = (typeof TABS)[number];
 
 const CHART_COLORS = ["#D4A843", "#94A3B8", "#22C55E", "#3B82F6", "#EF4444", "#A855F7"];
@@ -96,6 +97,7 @@ export default function FinancePage() {
       {tab === "Margins" && canSeeMargin && <MarginsTab />}
       {tab === "P&L" && canSeeMargin && <PLTab period={period} />}
       {tab === "Payments" && <PaymentsTab />}
+      {tab === "Collections" && <CollectionsTab />}
     </div>
   );
 }
@@ -640,6 +642,145 @@ function PaymentsTab() {
         {items.length === 0 && (
           <div className="bg-white/5 rounded-xl border border-white/10 p-12 text-center text-slate-500">No payment history found</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ---- Collections Tab ----
+interface AgingSummaryItem {
+  bucket: string;
+  count: number;
+  total: number;
+}
+interface ReminderEvent {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  sentAt: string;
+  type: string;
+}
+interface ScheduledReminder {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  scheduledFor: string;
+  amount: number;
+}
+
+function CollectionsTab() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: aging } = useQuery({
+    queryKey: ["collections-aging"],
+    queryFn: () => api.get<{ buckets: AgingSummaryItem[] }>("/accounting/collections/aging").then((r) => r.data),
+  });
+
+  const { data: reminders } = useQuery({
+    queryKey: ["collections-reminders"],
+    queryFn: () => api.get<{ sent: ReminderEvent[]; scheduled: ScheduledReminder[] }>("/accounting/collections/reminders").then((r) => r.data),
+  });
+
+  const sendReminder = useMutation({
+    mutationFn: (invoiceId: string) => api.post(`/accounting/collections/remind/${invoiceId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collections-reminders"] });
+      toast("Reminder sent", "success");
+    },
+    onError: () => toast("Failed to send reminder", "error"),
+  });
+
+  const bucketColors: Record<string, { card: string; text: string }> = {
+    "Current": { card: "border-green-500/30", text: "text-green-400" },
+    "31-60": { card: "border-yellow-500/30", text: "text-yellow-400" },
+    "61-90": { card: "border-orange-500/30", text: "text-orange-400" },
+    "90+": { card: "border-red-500/30", text: "text-red-400" },
+  };
+
+  const buckets = aging?.buckets ?? [
+    { bucket: "Current", count: 0, total: 0 },
+    { bucket: "31-60", count: 0, total: 0 },
+    { bucket: "61-90", count: 0, total: 0 },
+    { bucket: "90+", count: 0, total: 0 },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Aging Summary */}
+      <div className="grid sm:grid-cols-4 gap-4">
+        {buckets.map((b) => {
+          const colors = bucketColors[b.bucket] ?? { card: "border-white/10", text: "text-white" };
+          return (
+            <div key={b.bucket} className={cn("bg-white/5 rounded-xl border p-5", colors.card)}>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className={cn("w-4 h-4", colors.text)} />
+                <span className="text-xs text-slate-400">{b.bucket} Days</span>
+              </div>
+              <p className={cn("text-2xl font-bold", colors.text)}>${(b.total / 1000).toFixed(1)}K</p>
+              <p className="text-xs text-slate-500 mt-1">{b.count} invoices</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Sent Reminders Timeline */}
+        <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <Bell className="w-4 h-4 text-gold" />
+            Sent Reminders
+          </h3>
+          {(reminders?.sent?.length ?? 0) > 0 ? (
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {reminders!.sent.map((r) => (
+                <div key={r.id} className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
+                  <div className="w-2 h-2 rounded-full bg-gold mt-1.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white">{r.invoiceNumber} — {r.customerName}</p>
+                    <p className="text-[10px] text-slate-500">{r.type} sent {new Date(r.sentAt).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No reminders sent yet</p>
+          )}
+        </div>
+
+        {/* Scheduled Reminders */}
+        <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gold" />
+            Scheduled Reminders
+          </h3>
+          {(reminders?.scheduled?.length ?? 0) > 0 ? (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {reminders!.scheduled.map((r) => (
+                <div key={r.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-xs text-white">{r.invoiceNumber} — {r.customerName}</p>
+                    <p className="text-[10px] text-slate-500">Scheduled: {new Date(r.scheduledFor).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-gold font-bold">${r.amount.toLocaleString()}</span>
+                    <button
+                      onClick={() => sendReminder.mutate(r.invoiceId)}
+                      disabled={sendReminder.isPending}
+                      className="flex items-center gap-1 text-xs text-gold hover:underline disabled:opacity-50"
+                    >
+                      <Send className="w-3 h-3" /> Send Now
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No scheduled reminders</p>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -680,6 +680,8 @@ model User {
 
   reportedDelays      LoadDelay[]          @relation("DelayReporter")
   fraudReports        FraudReport[]        @relation("FraudReporter")
+  contractRates       ContractRate[]       @relation("ContractRateCreator")
+  rfpBids             RfpBid[]             @relation("RfpCreator")
 
   @@index([email])
   @@index([role])
@@ -1593,6 +1595,9 @@ model Customer {
 
   // AI Learning
   aiIntelligence  CustomerIntelligence? @relation("CustomerIntelligence")
+
+  contractRates   ContractRate[] @relation("CustomerContractRates")
+  rfpBids         RfpBid[]       @relation("CustomerRfpBids")
 
   deletedAt   DateTime?
   deletedBy   String?
@@ -3392,4 +3397,79 @@ model CarrierAgreement {
   @@index([carrierId])
   @@index([status])
   @@map("carrier_agreements")
+}
+
+// ─── Contract Rate Management ────────────────────────────
+
+model ContractRate {
+  id              String   @id @default(cuid())
+  customerId      String
+  customer        Customer @relation("CustomerContractRates", fields: [customerId], references: [id], onDelete: Cascade)
+  originState     String
+  destState       String
+  equipmentType   String
+  rate            Float    // per mile
+  flatRate        Float?   // flat rate alternative
+  fuelSurcharge   Float    @default(0)
+  minWeight       Float?
+  maxWeight       Float?
+  effectiveDate   DateTime
+  expirationDate  DateTime
+  status          ContractRateStatus @default(ACTIVE)
+  volume          Int?     // expected monthly volume
+  notes           String?
+  createdById     String
+  createdBy       User     @relation("ContractRateCreator", fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  @@index([customerId])
+  @@index([originState, destState, equipmentType])
+  @@index([status])
+  @@map("contract_rates")
+}
+
+enum ContractRateStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+// ─── RFP / Bid Management ────────────────────────────────
+
+model RfpBid {
+  id              String   @id @default(cuid())
+  customerId      String
+  customer        Customer @relation("CustomerRfpBids", fields: [customerId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  status          RfpStatus @default(OPEN)
+  dueDate         DateTime
+  lanes           Json     // array of { originState, destState, equipmentType, estimatedVolume }
+  totalLanes      Int
+  respondedLanes  Int      @default(0)
+  responses       Json?    // array of { laneIndex, rate, notes }
+  awardedAt       DateTime?
+  awardedById     String?
+  notes           String?
+  createdById     String
+  createdBy       User     @relation("RfpCreator", fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  @@index([customerId])
+  @@index([status])
+  @@map("rfp_bids")
+}
+
+enum RfpStatus {
+  DRAFT
+  OPEN
+  IN_REVIEW
+  AWARDED
+  DECLINED
+  EXPIRED
 }

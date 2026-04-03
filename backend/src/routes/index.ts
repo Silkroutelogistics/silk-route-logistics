@@ -60,6 +60,8 @@ import loadAccessorialRoutes from "./loadAccessorials";
 import trackTraceBoardRoutes from "./trackTraceBoard";
 import trackTraceSSERoutes from "./trackTraceSSE";
 import externalIntegrations from "./externalIntegrations";
+import contractRateRoutes from "./contractRates";
+import rfpRoutes from "./rfp";
 
 const router = Router();
 
@@ -208,5 +210,7 @@ router.use("/load-accessorials", loadAccessorialRoutes);
 router.use("/track-trace", trackTraceBoardRoutes);
 router.use("/track-trace", trackTraceSSERoutes);
 router.use("/external-integrations", externalIntegrations);
+router.use("/contract-rates", contractRateRoutes);
+router.use("/rfps", rfpRoutes);
 
 export default router;

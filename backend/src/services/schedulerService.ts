@@ -7,6 +7,7 @@ import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
 import { processShipperTransitUpdates } from "./shipperNotificationService";
 import { processARReminders } from "../controllers/accountingController";
+import { processArReminders as processArCollections } from "./arCollectionsService";
 import { processAllCPPRecalculations } from "./integrationService";
 import { processQueue } from "./aiLearningLoop/feedbackCollector";
 import { runAnomalyScan } from "./aiLearningLoop/anomalyDetector";
@@ -364,6 +365,15 @@ export function startSchedulers() {
     await withLock("ar-reminders-daily", 10 * 60 * 1000, async () => {
       const result = await processARReminders();
       console.log(`[Scheduler] AR reminders: ${result.remindersSent} sent of ${result.processed} processed`);
+    });
+  });
+
+  // AR Collections: Daily enhanced reminders at 9 AM ET (14:00 UTC)
+  cron.schedule("0 14 * * *", async () => {
+    console.log("[Scheduler] Running AR collections daily reminders (9 AM ET)...");
+    await withLock("ar-daily-reminders", 15 * 60 * 1000, async () => {
+      const result = await processArCollections();
+      console.log(`[Scheduler] AR collections: ${result.remindersSent} reminders sent, ${result.processed} processed, ${result.errors} errors`);
     });
   });
 

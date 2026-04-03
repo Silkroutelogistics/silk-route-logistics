@@ -5,12 +5,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Brain, TrendingUp, AlertTriangle, Target, Zap, RefreshCw,
   ChevronRight, BarChart3, Shield, Activity, Clock,
+  FileText, Copy, Check, Sparkles, Calendar,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isAdmin } from "@/lib/roles";
 
-type Tab = "overview" | "rates" | "carriers" | "anomalies" | "recommendations" | "learning";
+type Tab = "overview" | "rates" | "carriers" | "anomalies" | "recommendations" | "learning" | "content";
 
 export default function AIInsightsPage() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -24,6 +25,7 @@ export default function AIInsightsPage() {
     { key: "anomalies", label: "Anomalies", icon: AlertTriangle },
     { key: "recommendations", label: "Match Engine", icon: Zap },
     ...(admin ? [{ key: "learning" as Tab, label: "Learning Cycles", icon: RefreshCw }] : []),
+    { key: "content" as Tab, label: "Content", icon: FileText },
   ];
 
   return (
@@ -67,6 +69,7 @@ export default function AIInsightsPage() {
       {tab === "anomalies" && <AnomaliesTab />}
       {tab === "recommendations" && <RecommendationsTab />}
       {tab === "learning" && admin && <LearningTab />}
+      {tab === "content" && <ContentTab />}
     </div>
   );
 }
@@ -508,6 +511,134 @@ function LearningTab() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Content Tab ──────────────────────────────────────────────────────── */
+
+interface ContentPiece {
+  id: string;
+  type: "LINKEDIN" | "BLOG" | "EMAIL";
+  title: string;
+  body: string;
+  scheduledDate: string;
+  status: "DRAFT" | "PUBLISHED";
+  weekNumber: number;
+}
+
+interface ContentCalendarData {
+  pieces: ContentPiece[];
+  weeks: { weekNumber: number; startDate: string; endDate: string }[];
+}
+
+function ContentTab() {
+  const queryClient = useQueryClient();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const { data: calendar, isLoading } = useQuery({
+    queryKey: ["content-calendar"],
+    queryFn: () => api.get<ContentCalendarData>("/ai/content-calendar").then((r) => r.data),
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => api.post("/ai/generate-content"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-calendar"] }),
+  });
+
+  async function copyToClipboard(id: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // fallback
+    }
+  }
+
+  const typeColors: Record<string, { bg: string; text: string; label: string }> = {
+    LINKEDIN: { bg: "bg-blue-500/20", text: "text-blue-400", label: "LinkedIn" },
+    BLOG: { bg: "bg-purple-500/20", text: "text-purple-400", label: "Blog" },
+    EMAIL: { bg: "bg-green-500/20", text: "text-green-400", label: "Email" },
+  };
+
+  const statusColors: Record<string, string> = {
+    DRAFT: "bg-yellow-500/20 text-yellow-400",
+    PUBLISHED: "bg-green-500/20 text-green-400",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Action Bar */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-semibold flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gold" />
+          Content Calendar
+        </h3>
+        <button
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50"
+        >
+          <Sparkles className={`w-4 h-4 ${generateMutation.isPending ? "animate-spin" : ""}`} />
+          {generateMutation.isPending ? "Generating..." : "Generate This Week's Content"}
+        </button>
+      </div>
+
+      {isLoading ? <LoadingState /> : (
+        <>
+          {/* 4-Week Calendar View */}
+          {calendar?.weeks?.map((week) => {
+            const weekPieces = (calendar.pieces ?? []).filter((p) => p.weekNumber === week.weekNumber);
+            return (
+              <div key={week.weekNumber} className="bg-white/5 rounded-xl border border-white/10 p-5">
+                <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <span className="text-gold">Week {week.weekNumber}</span>
+                  <span className="text-slate-500 text-xs font-normal">
+                    {new Date(week.startDate).toLocaleDateString()} — {new Date(week.endDate).toLocaleDateString()}
+                  </span>
+                </h4>
+                {weekPieces.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {weekPieces.map((piece) => {
+                      const typeInfo = typeColors[piece.type] ?? typeColors.BLOG;
+                      return (
+                        <div key={piece.id} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`text-xs px-2 py-0.5 rounded ${typeInfo.bg} ${typeInfo.text}`}>{typeInfo.label}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${statusColors[piece.status] ?? ""}`}>{piece.status}</span>
+                          </div>
+                          <h5 className="text-sm font-medium text-white mb-2">{piece.title}</h5>
+                          <p className="text-xs text-slate-400 line-clamp-3 mb-3">{piece.body}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-slate-500">{new Date(piece.scheduledDate).toLocaleDateString()}</span>
+                            <button
+                              onClick={() => copyToClipboard(piece.id, `${piece.title}\n\n${piece.body}`)}
+                              className="flex items-center gap-1 text-xs text-gold hover:underline"
+                            >
+                              {copiedId === piece.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                              {copiedId === piece.id ? "Copied" : "Copy"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No content scheduled for this week</p>
+                )}
+              </div>
+            );
+          })}
+
+          {(!calendar?.weeks || calendar.weeks.length === 0) && (
+            <div className="bg-white/5 rounded-xl border border-white/10 p-12 text-center">
+              <Sparkles className="w-10 h-10 text-gold/40 mx-auto mb-3" />
+              <p className="text-slate-400">No content generated yet. Click &ldquo;Generate This Week&rsquo;s Content&rdquo; to get started.</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

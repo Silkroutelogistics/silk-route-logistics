@@ -10,6 +10,7 @@ import {
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
+  ScrollText, Gavel, Route,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -119,6 +120,8 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
       { href: "/dashboard/payables", label: "Payables", icon: CreditCard },
       { href: "/dashboard/settlements", label: "Settlements", icon: Landmark },
+      { href: "/dashboard/contract-rates", label: "Contract Rates", icon: ScrollText },
+      { href: "/dashboard/rfp", label: "RFP Manager", icon: Gavel },
       { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
     ],
   },
@@ -129,6 +132,7 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/market", label: "Market Intel", icon: TrendingUp },
       { href: "/dashboard/ai-insights", label: "AI Insights", icon: Brain },
       { href: "/dashboard/lead-hunter", label: "Lead Hunter", icon: Target },
+      { href: "/dashboard/lane-analytics", label: "Lane Analytics", icon: Route },
     ],
   },
   {
