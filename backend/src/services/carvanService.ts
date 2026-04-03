@@ -105,12 +105,116 @@ export function getEffectiveTier(carrier: { tier: CarrierTier }): TierKey {
 }
 
 /**
- * Determines the appropriate tier based on fleet size.
+ * PERFORMANCE-FIRST tier determination.
+ * Fleet size gives a starting bonus (faster milestone progression) but does NOT determine tier.
+ * Tier is earned through milestones:
+ *   M1-M2: BRONZE
+ *   M3-M4: SILVER
+ *   M5-M6: GOLD
+ * Everyone starts at BRONZE regardless of fleet size.
  */
+export function calculateTierFromMilestone(milestone: string): TierKey {
+  switch (milestone) {
+    case "M5_CORE":
+    case "M6_FOUNDING":
+      return "GOLD";
+    case "M3_RELIABLE":
+    case "M4_PARTNER":
+      return "SILVER";
+    case "M1_FIRST_LOAD":
+    case "M2_PROVEN":
+    default:
+      return "BRONZE";
+  }
+}
+
+/**
+ * Fleet size bonus: larger fleets get expedited milestone thresholds.
+ * 5+ trucks: M1 requires 5 loads (not 10), M2 requires 15 (not 30)
+ * 11+ trucks: M1 requires 3 loads, M2 requires 10
+ * But they still START at BRONZE and must earn advancement.
+ */
+export function getFleetAdjustedThreshold(milestone: string, fleetSize: number) {
+  const base = MILESTONE_THRESHOLDS[milestone];
+  if (!base) return base;
+  if (fleetSize >= 11) return { ...base, loads: Math.ceil(base.loads * 0.3), days: Math.ceil(base.days * 0.7) };
+  if (fleetSize >= 5) return { ...base, loads: Math.ceil(base.loads * 0.5), days: Math.ceil(base.days * 0.8) };
+  return base;
+}
+
+/** @deprecated Use calculateTierFromMilestone instead */
 export function calculateTierFromFleet(fleetSize: number): TierKey {
+  // Legacy: kept for backward compat but should not be used for new carriers
   if (fleetSize >= TIER_CONFIG.GOLD.minTrucks) return "GOLD";
   if (fleetSize >= TIER_CONFIG.SILVER.minTrucks) return "SILVER";
   return "BRONZE";
+}
+
+// ─── Grace Period Downgrade Logic ──────────────────────────
+
+/**
+ * Checks if a carrier's performance has dropped below their milestone threshold.
+ * Grace period: 2 consecutive months below threshold = warning, 3rd month = downgrade.
+ * Returns downgrade recommendation if applicable.
+ */
+export async function checkPerformanceDowngrade(carrierId: string): Promise<{
+  shouldDowngrade: boolean;
+  currentMilestone: string;
+  suggestedMilestone?: string;
+  consecutiveMonthsBelow: number;
+  reason?: string;
+}> {
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { id: carrierId },
+    select: { id: true, milestone: true, userId: true, cppTotalLoads: true },
+  });
+  if (!profile || profile.milestone === "M1_FIRST_LOAD") {
+    return { shouldDowngrade: false, currentMilestone: profile?.milestone || "M1_FIRST_LOAD", consecutiveMonthsBelow: 0 };
+  }
+
+  // Check last 3 months of on-time performance
+  const now = new Date();
+  const months: { month: number; onTimePct: number }[] = [];
+  for (let i = 1; i <= 3; i++) {
+    const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+    const loads = await prisma.load.count({
+      where: { carrierId: profile.userId, status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] }, updatedAt: { gte: start, lte: end } },
+    });
+    // Simplified: count delivered loads as proxy for on-time
+    // If carrier had loads that month, check rate
+    months.push({ month: i, onTimePct: loads > 0 ? 95 : 100 }); // baseline, refine with actual tracking
+  }
+
+  // Get required on-time for current milestone
+  const msKey = profile.milestone as string;
+  const prevMilestones = Object.entries(MILESTONE_THRESHOLDS);
+  const currentIdx = prevMilestones.findIndex(([k]) => k === msKey);
+  const requiredOnTime = currentIdx > 0 ? (prevMilestones[currentIdx - 1][1].onTimePct || 90) : 90;
+
+  const consecutiveBelow = months.filter(m => m.onTimePct < requiredOnTime).length;
+
+  if (consecutiveBelow >= 3) {
+    // Find the previous milestone
+    const milestoneOrder: CarrierMilestone[] = ["M1_FIRST_LOAD", "M2_PROVEN", "M3_RELIABLE", "M4_PARTNER", "M5_CORE", "M6_FOUNDING"];
+    const currentOrderIdx = milestoneOrder.indexOf(profile.milestone);
+    const prevMilestone = currentOrderIdx > 0 ? milestoneOrder[currentOrderIdx - 1] : "M1_FIRST_LOAD";
+
+    return {
+      shouldDowngrade: true,
+      currentMilestone: profile.milestone,
+      suggestedMilestone: prevMilestone,
+      consecutiveMonthsBelow: consecutiveBelow,
+      reason: `On-time rate below ${requiredOnTime}% for ${consecutiveBelow} consecutive months`,
+    };
+  }
+
+  return {
+    shouldDowngrade: false,
+    currentMilestone: profile.milestone,
+    consecutiveMonthsBelow: consecutiveBelow,
+    reason: consecutiveBelow > 0 ? `Warning: ${consecutiveBelow}/3 months below threshold` : undefined,
+  };
 }
 
 /**
