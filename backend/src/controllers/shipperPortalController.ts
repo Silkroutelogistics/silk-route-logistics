@@ -1,8 +1,10 @@
 import { Response } from "express";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
 import { LoadStatus } from "@prisma/client";
 import { getVehicleLocation } from "../services/eldService";
+import { env } from "../config/env";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -841,4 +843,175 @@ export async function getShipperDisputes(req: AuthRequest, res: Response) {
     console.error("[ShipperPortal] Get disputes error:", err);
     res.status(500).json({ error: "Failed to load disputes" });
   }
+}
+
+// ─── Shipper Chat ─────────────────────────────────────────
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const geminiClient = env.GEMINI_API_KEY ? new GoogleGenerativeAI(env.GEMINI_API_KEY) : null;
+
+function isAIConfigured(): boolean {
+  return !!ANTHROPIC_API_KEY || !!geminiClient;
+}
+
+export async function shipperChat(req: AuthRequest, res: Response) {
+  const { message, history } = req.body;
+  if (!message || typeof message !== "string") {
+    res.status(400).json({ error: "Message is required" });
+    return;
+  }
+
+  if (!isAIConfigured()) {
+    res.json({
+      reply: "The SRL Assistant is currently being configured. Please try again later or contact your account representative for assistance.",
+      actions: [],
+    });
+    return;
+  }
+
+  try {
+    const userId = req.user!.id;
+    const where = await resolveShipperLoadWhere(userId);
+
+    // Gather shipper context in parallel
+    const activeStatuses: LoadStatus[] = ["IN_TRANSIT", "AT_PICKUP", "LOADED", "AT_DELIVERY", "DISPATCHED", "BOOKED"];
+    const [customer, activeLoads, recentLoads, loadIds] = await Promise.all([
+      prisma.customer.findUnique({ where: { userId } }),
+      prisma.load.findMany({
+        where: { ...where, status: { in: activeStatuses } },
+        select: { referenceNumber: true, status: true, originCity: true, originState: true, destCity: true, destState: true, equipmentType: true },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+      }),
+      prisma.load.findMany({
+        where,
+        select: { referenceNumber: true, status: true, originCity: true, destCity: true, pickupDate: true, customerRate: true, rate: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      getShipperLoadIds(userId),
+    ]);
+
+    // Invoice summary
+    let outstandingCount = 0;
+    let outstandingTotal = 0;
+    if (loadIds.length > 0) {
+      const unpaidInvoices = await prisma.invoice.findMany({
+        where: { loadId: { in: loadIds }, status: { in: ["SENT", "SUBMITTED", "OVERDUE", "DRAFT"] } },
+        select: { amount: true, totalAmount: true },
+      });
+      outstandingCount = unpaidInvoices.length;
+      outstandingTotal = unpaidInvoices.reduce((s, i) => s + (i.totalAmount || i.amount || 0), 0);
+    }
+
+    const companyName = customer?.name || "Shipper";
+    const creditStatus = customer?.creditStatus || "N/A";
+    const creditLimit = customer?.creditLimit ?? 0;
+
+    const activeList = activeLoads.map((l) =>
+      `${l.referenceNumber || "N/A"}: ${mapLoadStatus(l.status)} (${l.originCity}, ${l.originState} → ${l.destCity}, ${l.destState})`
+    ).join("\n  - ") || "None";
+
+    const recentList = recentLoads.map((l) =>
+      `${l.referenceNumber || "N/A"}: ${mapLoadStatus(l.status)} — ${l.originCity} → ${l.destCity}, ${formatDate(l.pickupDate)}, $${(l.customerRate || l.rate || 0).toLocaleString()}`
+    ).join("\n  - ") || "None";
+
+    const systemPrompt = `You are the Silk Route Logistics AI assistant for shippers. You're helping ${companyName}.
+
+Their current data:
+- Active shipments: ${activeLoads.length} (${activeList})
+- Outstanding invoices: ${outstandingCount} totaling $${Math.round(outstandingTotal).toLocaleString()}
+- Recent loads: ${recentList}
+- Credit status: ${creditStatus}, limit: $${Number(creditLimit).toLocaleString()}
+
+You can help with:
+- Tracking shipments ("Where is my load SRL-001?")
+- Quote requests ("What would it cost to ship from Dallas to Miami?")
+- Invoice questions ("When is my invoice due?")
+- Document requests ("Can I get my BOL?")
+- General freight questions
+
+For quotes, use these base rates:
+- Dry Van: $2.50/mile + fuel
+- Reefer: $3.10/mile + fuel
+- Flatbed: $3.25/mile + fuel
+
+Be helpful, concise, and professional. If you can't answer something, suggest they contact their account representative.
+You represent Silk Route Logistics, a carrier-first freight brokerage based in Kalamazoo, Michigan.`;
+
+    // Build messages array
+    const messages: { role: "user" | "assistant"; content: string }[] = [];
+    if (history && Array.isArray(history)) {
+      for (const msg of history.slice(-10)) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({ role: msg.role, content: msg.content });
+        }
+      }
+    }
+    messages.push({ role: "user", content: message });
+
+    let reply: string;
+
+    // Try Gemini first, fallback to Anthropic
+    if (geminiClient) {
+      try {
+        const model = geminiClient.getGenerativeModel({
+          model: "gemini-2.0-flash",
+          systemInstruction: systemPrompt,
+        });
+        const chatHistory = messages.slice(0, -1).map((m) => ({
+          role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+          parts: [{ text: m.content }],
+        }));
+        const chat = model.startChat({ history: chatHistory });
+        const result = await chat.sendMessage(messages[messages.length - 1].content);
+        reply = result.response.text();
+      } catch (geminiErr: any) {
+        console.error("[ShipperChat] Gemini failed, trying Anthropic:", geminiErr.message);
+        if (!ANTHROPIC_API_KEY) throw geminiErr;
+        reply = await callAnthropicForShipper(messages, systemPrompt);
+      }
+    } else if (ANTHROPIC_API_KEY) {
+      reply = await callAnthropicForShipper(messages, systemPrompt);
+    } else {
+      throw new Error("No AI provider configured");
+    }
+
+    res.json({ reply, actions: [] });
+  } catch (error: unknown) {
+    console.error("[ShipperChat] Error:", error);
+    res.status(500).json({
+      error: "Chat error",
+      reply: "I'm having a bit of trouble right now. Please try again in a moment, or contact your account representative for immediate help.",
+      actions: [],
+    });
+  }
+}
+
+async function callAnthropicForShipper(
+  messages: { role: "user" | "assistant"; content: string }[],
+  systemPrompt: string
+): Promise<string> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY!,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Anthropic API error ${response.status}: ${errorBody}`);
+  }
+
+  const data: any = await response.json();
+  return data.content?.[0]?.text || "I apologize, I couldn't generate a response.";
 }

@@ -10,6 +10,7 @@ import {
   createQuoteRequest,
   fileShipperDispute,
   getShipperDisputes,
+  shipperChat,
 } from "../controllers/shipperPortalController";
 import { generateQuote, QuoteRequest } from "../services/autoQuoteService";
 
@@ -27,6 +28,7 @@ router.get("/documents", getShipperDocuments as any);
 router.get("/disputes", getShipperDisputes as any);
 router.post("/quotes", createQuoteRequest as any);
 router.post("/disputes", fileShipperDispute as any);
+router.post("/chat", shipperChat as any);
 
 // ─── Instant Quote (Shipper-facing auto-quote) ──────────────────
 router.post("/instant-quote", async (req: any, res: any) => {

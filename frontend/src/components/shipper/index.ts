@@ -5,3 +5,4 @@ export { ShipmentDetailDrawer } from "./ShipmentDetailDrawer";
 export { QuoteForm } from "./QuoteForm";
 export { Sparkline } from "./Sparkline";
 export { SpendChart } from "./SpendChart";
+export { ShipperChatbot } from "./ShipperChatbot";

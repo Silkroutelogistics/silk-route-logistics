@@ -9,7 +9,7 @@ import { Search, Bell, X } from "lucide-react";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
-import { MarcoPolo } from "@/components/MarcoPolo";
+import { ShipperChatbot } from "@/components/shipper/ShipperChatbot";
 
 interface Notification {
   id: string;
@@ -130,8 +130,8 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
       </div>
 
-      {/* Marco Polo AI Assistant */}
-      <MarcoPolo isAuthenticated={true} token={token} darkMode={false} />
+      {/* Shipper AI Assistant */}
+      <ShipperChatbot />
 
       {/* Session timeout warning modal */}
       {showWarning && (
