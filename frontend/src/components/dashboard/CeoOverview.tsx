@@ -6,7 +6,7 @@ import {
   DollarSign, Users, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle2, Shield, Clock,
   ChevronRight, UserCheck, Package, BarChart3,
-  FileText, Loader2,
+  FileText, Loader2, Zap,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -388,7 +388,7 @@ export function CeoOverview() {
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 3: Needs Attention — 4 action cards
           ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Overdue Invoices */}
         <AttentionCard
           borderColor="border-red-500/40"
@@ -432,6 +432,9 @@ export function CeoOverview() {
           detail="Carrier onboarding"
           href="/dashboard/carriers"
         />
+
+        {/* Quick Pay Health */}
+        <QuickPayHealthCard />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -627,6 +630,66 @@ function AttentionCard({
           View <ChevronRight className="w-3 h-3" />
         </Link>
       )}
+    </div>
+  );
+}
+
+function QuickPayHealthCard() {
+  const { data: qpData } = useQuery({
+    queryKey: ["ceo-quickpay-health"],
+    queryFn: () => api.get("/accounting/quickpay-health").then(r => r.data).catch(() => null),
+  });
+
+  const totalCapital = qpData?.totalCapital ?? 70000;
+  const deployed = qpData?.deployed ?? 0;
+  const available = totalCapital - deployed;
+  const deployedPct = totalCapital > 0 ? Math.round((deployed / totalCapital) * 100) : 0;
+
+  let statusColor = "text-green-400";
+  let statusBg = "bg-green-500/20";
+  let statusLabel = "GREEN";
+  let warning: string | null = null;
+
+  if (available < 20000) {
+    statusColor = "text-red-400";
+    statusBg = "bg-red-500/20";
+    statusLabel = "RED";
+    warning = "All QP Paused";
+  } else if (available < 30000) {
+    statusColor = "text-yellow-400";
+    statusBg = "bg-yellow-500/20";
+    statusLabel = "YELLOW";
+    warning = "Bronze Paused";
+  }
+
+  return (
+    <div className={`${available < 20000 ? "bg-red-500/5 border-red-500/40" : available < 30000 ? "bg-yellow-500/5 border-yellow-500/40" : "bg-white/5 border-white/10"} border rounded-xl p-4 flex flex-col justify-between`}>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Zap className={`w-5 h-5 ${statusColor}`} />
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusBg} ${statusColor}`}>
+            {statusLabel}
+          </span>
+        </div>
+        <p className="text-sm text-white font-medium">Quick Pay Health</p>
+        <p className="text-xs text-slate-400 mt-1">
+          Available: <span className="font-semibold text-white">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(available)}</span>
+        </p>
+        <p className="text-xs text-slate-400 mt-0.5">
+          Deployed: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(deployed)} ({deployedPct}%)
+        </p>
+        {warning && (
+          <p className={`text-xs font-semibold mt-1.5 ${statusColor}`}>
+            {warning}
+          </p>
+        )}
+      </div>
+      <Link
+        href="/accounting/fund"
+        className="flex items-center gap-1 text-xs text-gold mt-3 hover:text-gold/80 transition"
+      >
+        Details <ChevronRight className="w-3 h-3" />
+      </Link>
     </div>
   );
 }

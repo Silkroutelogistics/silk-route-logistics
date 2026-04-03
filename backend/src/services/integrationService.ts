@@ -2,6 +2,7 @@ import { prisma } from "../config/database";
 import { calculateTier, calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
 import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
+import { checkMilestoneAdvancement, applyMilestoneRewards } from "./carvanService";
 
 /**
  * Cross-System Integration Service
@@ -129,7 +130,15 @@ export async function onLoadDelivered(loadId: string) {
     );
   }
 
-  console.log(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + CPP triggered`);
+  // Check carrier milestone advancement
+  if (load.carrier?.carrierProfile) {
+    const cpId = load.carrier.carrierProfile.id;
+    checkMilestoneAdvancement(cpId).then(result => {
+      if (result.advanced) applyMilestoneRewards(cpId, result.newMilestone!);
+    }).catch(e => console.error("[Milestone]", e.message));
+  }
+
+  console.log(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + CPP + milestone triggered`);
 }
 
 // ── Create Carrier Pay entry on delivery ──

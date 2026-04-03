@@ -59,12 +59,32 @@ enum InvoiceStatus {
 }
 
 enum CarrierTier {
-  PLATINUM
-  GOLD
-  SILVER
-  BRONZE
+  BRONZE    // 1-4 trucks
+  SILVER    // 5-10 trucks
+  GOLD      // 11-15+ trucks
+  // Legacy values (kept for DB compat, map to BRONZE in code)
   GUEST
+  PLATINUM
   NONE
+}
+
+enum CarrierMilestone {
+  M1_FIRST_LOAD
+  M2_PROVEN      // 30 days, 10+ loads, 95% on-time
+  M3_RELIABLE    // 90 days, 30+ loads, 96% on-time
+  M4_PARTNER     // 6 months, 75+ loads, 97% on-time
+  M5_CORE        // 12 months, 150+ loads, 98% on-time
+  M6_FOUNDING    // 24 months, 300+ loads, permanent
+}
+
+enum QuickPayStatus {
+  REQUESTED
+  VALIDATING
+  APPROVED
+  PROCESSING
+  PAID
+  DENIED
+  ON_HOLD
 }
 
 enum OnboardingStatus {
@@ -741,6 +761,15 @@ model CarrierProfile {
   cppTotalMiles       Float                   @default(0)
   cppJoinedDate       DateTime?
 
+  // Carvan Program
+  milestone            CarrierMilestone        @default(M1_FIRST_LOAD)
+  quickPayFeeRate      Float                   @default(0.03)
+  quickPayAutoLimit    Float                   @default(2000)
+  quickPayMonthlyLimit Float                   @default(15000)
+  paymentTermsDays     Int                     @default(21)
+  loyaltyEscalator     Float                   @default(0)
+  referralCount        Int                     @default(0)
+
   // FMCSA
   safetyRating          String?
   fmcsaBasicScores      Json?
@@ -853,6 +882,20 @@ model CarrierProfile {
   @@index([vettingGrade])
   @@index([chameleonRiskLevel])
   @@map("carrier_profiles")
+}
+
+model CashPosition {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now())
+  totalCapital    Float    @default(70000)
+  deployed        Float    @default(0)
+  available       Float    @default(70000)
+  pendingShipperAR Float   @default(0)
+  bronzePaused    Boolean  @default(false)
+  allQPPaused     Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  @@map("cash_positions")
 }
 
 model CarrierScorecard {

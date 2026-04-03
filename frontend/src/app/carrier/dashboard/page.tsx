@@ -1,15 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Truck, Shield, DollarSign, AlertCircle } from "lucide-react";
+import { Package, Truck, Shield, DollarSign, AlertCircle, Award, Zap, Clock, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
+// ─── Carvan Tier Mapping & Config ─────────────────────────────────────────────
+
+const CARVAN_TIER_MAP: Record<string, string> = {
+  GUEST: "BRONZE",
+  NONE: "BRONZE",
+  BRONZE: "BRONZE",
+  SILVER: "SILVER",
+  GOLD: "GOLD",
+  PLATINUM: "GOLD",
+};
+
+const TIER_COLORS: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  BRONZE: { bg: "bg-orange-500/10", text: "text-orange-700", border: "border-orange-300", badge: "bg-orange-100 text-orange-700 border-orange-300" },
+  SILVER: { bg: "bg-slate-500/10", text: "text-slate-600", border: "border-slate-300", badge: "bg-slate-100 text-slate-600 border-slate-300" },
+  GOLD: { bg: "bg-yellow-500/10", text: "text-yellow-700", border: "border-yellow-400", badge: "bg-yellow-100 text-yellow-700 border-yellow-400" },
+};
+
+const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpFee: string; safetyBonus: string; detentionRate: string }> = {
+  BRONZE: { paymentTerms: "Net-21", qpSpeed: "48-hour", qpFee: "3.5%", safetyBonus: "$0", detentionRate: "$50/hr" },
+  SILVER: { paymentTerms: "Net-14", qpSpeed: "24-hour", qpFee: "2.5%", safetyBonus: "$150/mo", detentionRate: "$65/hr" },
+  GOLD: { paymentTerms: "Net-7", qpSpeed: "Same-day", qpFee: "1.5%", safetyBonus: "$300/mo", detentionRate: "$75/hr" },
+};
+
+const MILESTONE_NAMES: Record<string, string> = {
+  M1: "New Partner",
+  M2: "Established",
+  M3: "Reliable",
+  M4: "Preferred",
+  M5: "Elite",
+  M6: "Legend",
+};
+
 export default function CarrierOverviewPage() {
   const { user } = useCarrierAuth();
   const profile = user?.carrierProfile;
+
+  const rawTier = profile?.tier || "NONE";
+  const carvanTier = CARVAN_TIER_MAP[rawTier] || "BRONZE";
+  const tierStyle = TIER_COLORS[carvanTier];
+  const benefits = TIER_BENEFITS[carvanTier];
 
   const { data: myLoads } = useQuery({
     queryKey: ["carrier-my-loads-dash"],
@@ -31,11 +68,29 @@ export default function CarrierOverviewPage() {
     queryFn: () => api.get("/carrier-compliance/overview").then((r) => r.data),
   });
 
+  const { data: scorecard } = useQuery({
+    queryKey: ["carrier-scorecard-dash"],
+    queryFn: () => api.get("/carrier/scorecard").then((r) => r.data).catch(() => null),
+  });
+
   const activeLoads = myLoads?.loads?.filter((l: any) => !["DELIVERED", "POD_RECEIVED", "COMPLETED", "CANCELLED"].includes(l.status)) || [];
   const recentLoads = myLoads?.loads || [];
   const availableLoads = available?.loads || [];
   const alerts = compliance?.alerts || [];
   const criticalAlerts = compliance?.alertsSummary?.critical || 0;
+
+  // Milestone data from scorecard or defaults
+  const currentMilestone = scorecard?.milestone || "M1";
+  const milestoneLoads = scorecard?.milestoneLoads || 0;
+  const milestoneTarget = scorecard?.milestoneTarget || 10;
+  const milestoneProgress = milestoneTarget > 0 ? Math.min((milestoneLoads / milestoneTarget) * 100, 100) : 0;
+  const nextMilestone = scorecard?.nextMilestone || "M2";
+
+  // Quick Pay data from payment summary or defaults
+  const qpBalance = paymentSummary?.quickPay?.availableBalance ?? 0;
+  const qpUsedThisMonth = paymentSummary?.quickPay?.usedThisMonth ?? 0;
+  const qpMonthlyLimit = paymentSummary?.quickPay?.monthlyLimit ?? 5000;
+  const qpUsagePercent = qpMonthlyLimit > 0 ? Math.min((qpUsedThisMonth / qpMonthlyLimit) * 100, 100) : 0;
 
   return (
     <div>
@@ -44,8 +99,99 @@ export default function CarrierOverviewPage() {
           Welcome back{user?.firstName ? `, ${user.firstName}` : ""}
         </h1>
         <p className="text-[13px] text-gray-500">
-          {profile?.companyName || user?.company || "Carrier Portal"} &middot; {profile?.tier || "—"} Tier &middot; MC-{profile?.mcNumber || "—"}
+          {profile?.companyName || user?.company || "Carrier Portal"} &middot; MC-{profile?.mcNumber || "\u2014"}
         </p>
+      </div>
+
+      {/* Carvan Tier Badge + Milestone */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Tier Badge */}
+        <CarrierCard padding="p-5" className={`!border-2 ${tierStyle.border}`}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`w-12 h-12 rounded-xl ${tierStyle.bg} flex items-center justify-center`}>
+              <Award size={24} className={tierStyle.text} />
+            </div>
+            <div>
+              <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Carvan Tier</div>
+              <span className={`inline-block mt-0.5 px-3 py-1 rounded-full text-sm font-bold border ${tierStyle.badge}`}>
+                {carvanTier}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className={`w-6 h-6 rounded-md ${tierStyle.bg} flex items-center justify-center`}>
+              <span className="text-[10px] font-bold text-gray-500">{currentMilestone}</span>
+            </div>
+            <span className="text-xs text-gray-500">{MILESTONE_NAMES[currentMilestone] || currentMilestone}</span>
+            <span className="text-[10px] text-gray-400 ml-auto">{milestoneLoads}/{milestoneTarget} loads to {nextMilestone}</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+            <div className="h-full bg-[#C9A84C] rounded-full transition-all duration-500" style={{ width: `${milestoneProgress}%` }} />
+          </div>
+          <Link href="/carrier/dashboard/scorecard" className="text-[11px] text-[#C9A84C] font-semibold mt-2.5 inline-flex items-center gap-1 hover:underline">
+            View Scorecard <ChevronRight size={12} />
+          </Link>
+        </CarrierCard>
+
+        {/* Quick Pay Status */}
+        <CarrierCard padding="p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <Zap size={20} className="text-emerald-500" />
+            </div>
+            <div>
+              <div className="text-[11px] text-gray-400 font-medium">Quick Pay</div>
+              <div className="text-[22px] font-bold text-[#0D1B2A]">${qpBalance.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Fee Rate</span>
+              <span className="font-semibold text-[#0D1B2A]">{benefits.qpFee}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Speed</span>
+              <span className="font-semibold text-[#0D1B2A]">{benefits.qpSpeed}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Monthly Usage</span>
+              <span className="font-semibold text-[#0D1B2A]">${qpUsedThisMonth.toLocaleString()} / ${qpMonthlyLimit.toLocaleString()}</span>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${qpUsagePercent > 80 ? "bg-red-500" : qpUsagePercent > 50 ? "bg-yellow-500" : "bg-emerald-500"}`} style={{ width: `${qpUsagePercent}%` }} />
+            </div>
+          </div>
+        </CarrierCard>
+
+        {/* Your Tier Benefits */}
+        <CarrierCard padding="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Award size={16} className="text-[#C9A84C]" />
+            <span className="text-[13px] font-bold text-[#0D1B2A]">Your Tier Benefits</span>
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Payment Terms</span>
+              <span className="font-semibold text-[#0D1B2A]">{benefits.paymentTerms}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Quick Pay Speed</span>
+              <span className="font-semibold text-[#0D1B2A]">{benefits.qpSpeed}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Quick Pay Fee</span>
+              <span className="font-semibold text-[#0D1B2A]">{benefits.qpFee}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Safety Bonus</span>
+              <span className="font-semibold text-emerald-600">{benefits.safetyBonus}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Detention Rate</span>
+              <span className="font-semibold text-[#0D1B2A]">{benefits.detentionRate}</span>
+            </div>
+          </div>
+        </CarrierCard>
       </div>
 
       {/* KPI Cards */}
@@ -172,7 +318,7 @@ export default function CarrierOverviewPage() {
                   <div className="text-[11px] text-gray-400">
                     {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                   </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{load.equipmentType} &middot; {load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "—"}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{load.equipmentType} &middot; {load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "\u2014"}</div>
                 </div>
                 <span className="text-xs font-bold text-[#C9A84C]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
               </div>

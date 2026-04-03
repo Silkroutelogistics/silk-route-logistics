@@ -343,6 +343,36 @@ export function shipperPODHtml(loadRef: string, podUrl: string) {
   `);
 }
 
+export async function sendRemittanceEmail(carrierEmail: string, data: {
+  carrierName: string;
+  loadRef: string;
+  lane: string;
+  grossAmount: number;
+  qpFeeRate: number;
+  qpFeeAmount: number;
+  netPayment: number;
+  paymentMethod: string;
+  estimatedArrival: string;
+}) {
+  const html = wrap(`
+    <h2 style="color:#0f172a">Payment Remittance</h2>
+    <p>Hi ${data.carrierName},</p>
+    <p>Payment processed for Load <strong>${data.loadRef}</strong> (${data.lane}):</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Gross Amount</td><td style="padding:8px;border:1px solid #e2e8f0">$${data.grossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Quick Pay Fee (${data.qpFeeRate}%)</td><td style="padding:8px;border:1px solid #e2e8f0;color:#dc2626">-$${data.qpFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr style="background:#f0fdf4"><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;font-size:16px">Net Payment</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;font-size:16px;color:#22c55e">$${data.netPayment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Payment Method</td><td style="padding:8px;border:1px solid #e2e8f0">${data.paymentMethod}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Estimated Arrival</td><td style="padding:8px;border:1px solid #e2e8f0">${data.estimatedArrival}</td></tr>
+    </table>
+    <p style="color:#64748b;font-size:14px">Thank you for hauling with Silk Route Logistics.</p>
+  `);
+
+  await sendEmail(carrierEmail, `Payment Remittance: Load ${data.loadRef} — $${data.netPayment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, html);
+}
+
 export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {
   const urgency = daysLeft <= 2 ? "#dc2626" : daysLeft <= 7 ? "#f59e0b" : "#3b82f6";
   const html = wrap(`
