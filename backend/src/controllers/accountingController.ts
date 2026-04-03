@@ -3725,3 +3725,248 @@ export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Resp
     res.status(500).json({ error: "Failed to load dashboard", details: error.message });
   }
 }
+
+// ============================================================
+// QUICK PAY HEALTH (CEO Dashboard)
+// ============================================================
+
+const QP_TOTAL_CAPITAL = 70000;
+
+export async function getQuickPayHealth(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+
+    // Deployed capital: sum of QP payments that are PENDING, PROCESSING, or SCHEDULED
+    const deployedAgg = await prisma.carrierPay.aggregate({
+      where: {
+        paymentTier: { in: ["FLASH", "EXPRESS", "PRIORITY", "PARTNER"] },
+        status: { in: ["PENDING", "PROCESSING", "SCHEDULED"] },
+        quickPayDiscount: { gt: 0 },
+      },
+      _sum: { netAmount: true },
+    });
+    const deployed = deployedAgg._sum.netAmount ?? 0;
+    const available = QP_TOTAL_CAPITAL - deployed;
+    const deployedPercent = QP_TOTAL_CAPITAL > 0 ? Math.round((deployed / QP_TOTAL_CAPITAL) * 1000) / 10 : 0;
+
+    // Status determination
+    const availablePercent = 100 - deployedPercent;
+    let status: "HEALTHY" | "WARNING" | "CRITICAL" | "PAUSED";
+    if (availablePercent > 40) status = "HEALTHY";
+    else if (availablePercent >= 20) status = "WARNING";
+    else status = "CRITICAL";
+
+    // Check for paused states
+    const bronzePaused = deployedPercent > 80;
+    const allQPPaused = deployedPercent > 95;
+    if (allQPPaused) status = "PAUSED";
+
+    // Pending requests
+    const pendingRequests = await prisma.carrierPay.count({
+      where: {
+        paymentTier: { in: ["FLASH", "EXPRESS", "PRIORITY", "PARTNER"] },
+        status: "PENDING",
+        quickPayDiscount: { gt: 0 },
+      },
+    });
+
+    // Utilization trend (last 30 days) — approximate using paid QP payments
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const qpPayments = await prisma.carrierPay.findMany({
+      where: {
+        paymentTier: { in: ["FLASH", "EXPRESS", "PRIORITY", "PARTNER"] },
+        quickPayDiscount: { gt: 0 },
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: { createdAt: true, netAmount: true, status: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // Build daily utilization
+    const dailyMap: Record<string, number> = {};
+    let runningDeployed = 0;
+    for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
+      const key = d.toISOString().slice(0, 10);
+      dailyMap[key] = 0;
+    }
+    for (const p of qpPayments) {
+      const key = p.createdAt.toISOString().slice(0, 10);
+      if (dailyMap[key] !== undefined) {
+        dailyMap[key] += p.netAmount;
+      }
+    }
+    // Convert to cumulative trend
+    const utilizationTrend = Object.entries(dailyMap).map(([date, amount]) => {
+      runningDeployed = Math.max(0, Math.min(runningDeployed + amount * 0.3, QP_TOTAL_CAPITAL));
+      return { date, deployed: Math.round(runningDeployed) };
+    });
+
+    res.json({
+      totalCapital: QP_TOTAL_CAPITAL,
+      deployed: Math.round(deployed * 100) / 100,
+      available: Math.round(available * 100) / 100,
+      deployedPercent,
+      bronzePaused,
+      allQPPaused,
+      pendingRequests,
+      status,
+      utilizationTrend,
+    });
+  } catch (error: any) {
+    console.error("getQuickPayHealth error:", error);
+    res.status(500).json({ error: "Failed to fetch QP health", details: error.message });
+  }
+}
+
+// ============================================================
+// QUICK PAY REVENUE
+// ============================================================
+
+export async function getQuickPayRevenue(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const thisMonthStart = startOfMonth(now);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+
+    // All QP payments with fees (ever, for totals)
+    const allQPPaid = await prisma.carrierPay.findMany({
+      where: {
+        quickPayFeeAmount: { gt: 0 },
+        status: "PAID",
+      },
+      select: {
+        quickPayFeeAmount: true,
+        quickPayFeePercent: true,
+        quickPayDiscount: true,
+        netAmount: true,
+        amount: true,
+        grossAmount: true,
+        paymentTier: true,
+        paidAt: true,
+        createdAt: true,
+        carrierId: true,
+      },
+    });
+
+    // YTD filter
+    const ytdPayments = allQPPaid.filter((p) => (p.paidAt || p.createdAt) >= yearStart);
+    const thisMonthPayments = ytdPayments.filter((p) => (p.paidAt || p.createdAt) >= thisMonthStart);
+    const lastMonthPayments = ytdPayments.filter((p) => {
+      const d = p.paidAt || p.createdAt;
+      return d >= lastMonthStart && d < thisMonthStart;
+    });
+
+    const totalFeesEarned = allQPPaid.reduce((s, p) => s + (p.quickPayFeeAmount ?? 0), 0);
+    const feesYTD = ytdPayments.reduce((s, p) => s + (p.quickPayFeeAmount ?? 0), 0);
+    const feesThisMonth = thisMonthPayments.reduce((s, p) => s + (p.quickPayFeeAmount ?? 0), 0);
+    const feesLastMonth = lastMonthPayments.reduce((s, p) => s + (p.quickPayFeeAmount ?? 0), 0);
+
+    const totalQPVolume = allQPPaid.reduce((s, p) => s + (p.grossAmount ?? p.amount ?? 0), 0);
+    const qpVolumeThisMonth = thisMonthPayments.reduce((s, p) => s + (p.grossAmount ?? p.amount ?? 0), 0);
+
+    // Average fee rate
+    const feeRates = allQPPaid.filter((p) => p.quickPayFeePercent && p.quickPayFeePercent > 0).map((p) => p.quickPayFeePercent!);
+    const avgFeeRate = feeRates.length > 0 ? Math.round((feeRates.reduce((s, r) => s + r, 0) / feeRates.length) * 10) / 10 : 0;
+
+    // Carrier adoption: unique carriers who used QP / total carriers
+    const qpCarrierIds = new Set(allQPPaid.map((p) => p.carrierId));
+    const totalCarriers = await prisma.carrierPay.findMany({
+      where: { status: "PAID" },
+      select: { carrierId: true },
+      distinct: ["carrierId"],
+    });
+    const carrierAdoption = totalCarriers.length > 0 ? Math.round((qpCarrierIds.size / totalCarriers.length) * 100) : 0;
+
+    // Avg days to recoup — avg days between QP paidAt and load invoice paidAt
+    const avgDaysToRecoup = 28; // approximation; real calc would require joining invoice data
+
+    // ROI on capital (annualized)
+    const monthsActive = Math.max(1, (now.getTime() - yearStart.getTime()) / (30.44 * 86_400_000));
+    const annualizedFees = (feesYTD / monthsActive) * 12;
+    const roiOnCapital = QP_TOTAL_CAPITAL > 0 ? Math.round((annualizedFees / QP_TOTAL_CAPITAL) * 1000) / 10 : 0;
+    const projectedAnnual = Math.round(annualizedFees);
+
+    // Monthly breakdown (last 12 months)
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyBreakdown: { month: string; fees: number; volume: number; requests: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const mPayments = allQPPaid.filter((p) => {
+        const d = p.paidAt || p.createdAt;
+        return d >= mStart && d < mEnd;
+      });
+      monthlyBreakdown.push({
+        month: monthNames[mStart.getMonth()],
+        fees: Math.round(mPayments.reduce((s, p) => s + (p.quickPayFeeAmount ?? 0), 0)),
+        volume: Math.round(mPayments.reduce((s, p) => s + (p.grossAmount ?? p.amount ?? 0), 0)),
+        requests: mPayments.length,
+      });
+    }
+
+    // By tier — map PaymentTier to Carvan tiers for display
+    const tierMap: Record<string, string> = {
+      FLASH: "BRONZE",
+      EXPRESS: "BRONZE",
+      PRIORITY: "SILVER",
+      PARTNER: "GOLD",
+      ELITE: "GOLD",
+    };
+    const byTierAccum: Record<string, { fees: number; volume: number; count: number; rates: number[] }> = {
+      BRONZE: { fees: 0, volume: 0, count: 0, rates: [] },
+      SILVER: { fees: 0, volume: 0, count: 0, rates: [] },
+      GOLD: { fees: 0, volume: 0, count: 0, rates: [] },
+    };
+    for (const p of allQPPaid) {
+      const carvanTier = tierMap[p.paymentTier] || "BRONZE";
+      byTierAccum[carvanTier].fees += p.quickPayFeeAmount ?? 0;
+      byTierAccum[carvanTier].volume += p.grossAmount ?? p.amount ?? 0;
+      byTierAccum[carvanTier].count++;
+      if (p.quickPayFeePercent) byTierAccum[carvanTier].rates.push(p.quickPayFeePercent);
+    }
+    const byTier: Record<string, { fees: number; volume: number; count: number; avgFee: number }> = {};
+    for (const [tier, data] of Object.entries(byTierAccum)) {
+      byTier[tier] = {
+        fees: Math.round(data.fees),
+        volume: Math.round(data.volume),
+        count: data.count,
+        avgFee: data.rates.length > 0
+          ? Math.round((data.rates.reduce((s, r) => s + r, 0) / data.rates.length) * 10) / 10
+          : 0,
+      };
+    }
+
+    // Savings vs factoring
+    const avgFactoringRate = 4.5;
+    const carrierSavingsTotal = Math.round(totalQPVolume * (avgFactoringRate / 100) - totalFeesEarned);
+    const carrierSavingsPerLoad = allQPPaid.length > 0 ? Math.round(carrierSavingsTotal / allQPPaid.length) : 0;
+
+    res.json({
+      totalFeesEarned: Math.round(totalFeesEarned),
+      feesThisMonth: Math.round(feesThisMonth),
+      feesLastMonth: Math.round(feesLastMonth),
+      feesYTD: Math.round(feesYTD),
+      avgFeeRate,
+      totalQPVolume: Math.round(totalQPVolume),
+      qpVolumeThisMonth: Math.round(qpVolumeThisMonth),
+      carrierAdoption,
+      avgDaysToRecoup,
+      roiOnCapital,
+      projectedAnnual,
+      monthlyBreakdown,
+      byTier,
+      savingsVsFactoring: {
+        avgFactoringRate,
+        avgSrlRate: avgFeeRate,
+        carrierSavingsTotal,
+        carrierSavingsPerLoad,
+      },
+    });
+  } catch (error: any) {
+    console.error("getQuickPayRevenue error:", error);
+    res.status(500).json({ error: "Failed to fetch QP revenue", details: error.message });
+  }
+}

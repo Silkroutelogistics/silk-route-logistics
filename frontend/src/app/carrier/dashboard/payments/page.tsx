@@ -1,17 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, Zap, Calendar, TrendingUp, Download } from "lucide-react";
+import { DollarSign, Zap, Calendar, TrendingUp, Download, X, CheckCircle, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
+import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
 const statusFilters = ["All", "PENDING", "APPROVED", "PROCESSING", "SCHEDULED", "PAID"];
+
+const CARVAN_TIER_MAP: Record<string, string> = {
+  GUEST: "BRONZE", NONE: "BRONZE", BRONZE: "BRONZE", SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "GOLD",
+};
+const QP_FEES: Record<string, number> = { BRONZE: 3.5, SILVER: 2.5, GOLD: 1.5 };
+const QP_SPEEDS: Record<string, string> = { BRONZE: "48-hour", SILVER: "24-hour", GOLD: "Same-day" };
+const QP_DAYS: Record<string, number> = { BRONZE: 2, SILVER: 1, GOLD: 0 };
+const FACTORING_RATE = 4.5;
 
 export default function CarrierPaymentsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [page, setPage] = useState(1);
+  const [qpModal, setQpModal] = useState<any | null>(null);
+  const [qpSuccess, setQpSuccess] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { user } = useCarrierAuth();
+  const rawTier = user?.carrierProfile?.tier || "NONE";
+  const carvanTier = CARVAN_TIER_MAP[rawTier] || "BRONZE";
+  const tierFeeRate = QP_FEES[carvanTier];
+  const tierSpeed = QP_SPEEDS[carvanTier];
+  const tierDays = QP_DAYS[carvanTier];
 
   const query = new URLSearchParams();
   if (activeFilter !== "All") query.set("status", activeFilter);
@@ -32,6 +49,10 @@ export default function CarrierPaymentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carrier-payments"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-pay-summary"] });
+      const loadRef = qpModal?.load?.referenceNumber || "this load";
+      setQpModal(null);
+      setQpSuccess(`Quick Pay requested! Estimated payment in ${tierDays === 0 ? "same day" : `${tierDays} day${tierDays > 1 ? "s" : ""}`}.`);
+      setTimeout(() => setQpSuccess(null), 5000);
     },
   });
 
@@ -176,7 +197,7 @@ export default function CarrierPaymentsPage() {
                     <td className="px-4 py-3">
                       {pay.status === "PENDING" || pay.status === "APPROVED" ? (
                         <button
-                          onClick={() => quickPayMutation.mutate(pay.id)}
+                          onClick={() => setQpModal(pay)}
                           disabled={quickPayMutation.isPending}
                           className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-500/10 text-violet-600 text-[11px] font-semibold rounded hover:bg-violet-500/20 disabled:opacity-50"
                         >
@@ -210,6 +231,100 @@ export default function CarrierPaymentsPage() {
           {(quickPayMutation.error as any)?.response?.data?.error || "QuickPay request failed"}
         </div>
       )}
+
+      {/* Success Toast */}
+      {qpSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg shadow-lg animate-in slide-in-from-bottom">
+          <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+          <span className="text-sm text-emerald-700 font-medium">{qpSuccess}</span>
+          <button onClick={() => setQpSuccess(null)} className="text-emerald-400 hover:text-emerald-600 ml-2">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Quick Pay Confirmation Modal */}
+      {qpModal && (() => {
+        const gross = qpModal.grossAmount || qpModal.amount || 0;
+        const fee = Math.round(gross * (tierFeeRate / 100) * 100) / 100;
+        const net = Math.round((gross - fee) * 100) / 100;
+        const factoringFee = Math.round(gross * (FACTORING_RATE / 100) * 100) / 100;
+        const savings = Math.round((factoringFee - fee) * 100) / 100;
+        const loadRef = qpModal.load?.referenceNumber || qpModal.paymentNumber || qpModal.id.slice(-8);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setQpModal(null)} />
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+              <button onClick={() => setQpModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <Zap size={20} className="text-violet-500" />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold text-[#0D1B2A]">Request Quick Pay</h3>
+                  <p className="text-[11px] text-gray-400">Load {loadRef}</p>
+                </div>
+              </div>
+
+              {/* Fee Breakdown */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Gross Amount</span>
+                  <span className="font-semibold text-[#0D1B2A]">${gross.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">QP Fee ({tierFeeRate}%)</span>
+                  <span className="font-semibold text-red-500">-${fee.toLocaleString()}</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                  <span className="font-semibold text-gray-700">Net Payment</span>
+                  <span className="font-bold text-emerald-600 text-lg">${net.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Speed */}
+              <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-violet-50 rounded-lg">
+                <Zap size={14} className="text-violet-500" />
+                <span className="text-xs text-violet-700">
+                  <strong>{tierSpeed}</strong> payment ({carvanTier} tier)
+                </span>
+              </div>
+
+              {/* Factoring Comparison */}
+              <div className="px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-lg mb-5">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="text-xs text-emerald-700">
+                    <p>With factoring you&apos;d pay ~<strong>${factoringFee.toLocaleString()}</strong> ({FACTORING_RATE}%).</p>
+                    <p className="font-semibold mt-0.5">SRL Quick Pay saves you ${savings.toLocaleString()} on this payment.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setQpModal(null)}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => quickPayMutation.mutate(qpModal.id)}
+                  disabled={quickPayMutation.isPending}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-violet-500 rounded-lg hover:bg-violet-600 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  <Zap size={14} />
+                  {quickPayMutation.isPending ? "Requesting..." : "Confirm Quick Pay"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

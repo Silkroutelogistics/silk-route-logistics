@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Package, Truck, Shield, DollarSign, AlertCircle, Award, Zap, Clock, ChevronRight } from "lucide-react";
+import { Package, Truck, Shield, DollarSign, AlertCircle, Award, Zap, Clock, ChevronRight, Calculator } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
@@ -85,6 +86,15 @@ export default function CarrierOverviewPage() {
   const milestoneTarget = scorecard?.milestoneTarget || 10;
   const milestoneProgress = milestoneTarget > 0 ? Math.min((milestoneLoads / milestoneTarget) * 100, 100) : 0;
   const nextMilestone = scorecard?.nextMilestone || "M2";
+
+  // QP Savings Calculator state
+  const [calcAmount, setCalcAmount] = useState(15000);
+  const tierFeePercent = parseFloat(benefits.qpFee) || 3.5;
+  const factoringRate = 4.5;
+  const calcFactoringCost = Math.round(calcAmount * (factoringRate / 100));
+  const calcQPCost = Math.round(calcAmount * (tierFeePercent / 100));
+  const calcMonthlySavings = calcFactoringCost - calcQPCost;
+  const calcAnnualSavings = calcMonthlySavings * 12;
 
   // Quick Pay data from payment summary or defaults
   const qpBalance = paymentSummary?.quickPay?.availableBalance ?? 0;
@@ -193,6 +203,40 @@ export default function CarrierOverviewPage() {
           </div>
         </CarrierCard>
       </div>
+
+      {/* QP Savings Calculator */}
+      <CarrierCard padding="p-5" className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Calculator size={16} className="text-emerald-500" />
+          <span className="text-[13px] font-bold text-[#0D1B2A]">Quick Pay Savings Calculator</span>
+        </div>
+        <div className="mb-3">
+          <label className="text-[11px] text-gray-400 font-medium block mb-1">Average Monthly Invoice Amount</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+            <input
+              type="number"
+              value={calcAmount}
+              onChange={(e) => setCalcAmount(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-[#0D1B2A] font-semibold focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]"
+            />
+          </div>
+        </div>
+        <div className="space-y-2 text-xs">
+          <div className="flex justify-between items-center px-3 py-2 bg-red-50 rounded-lg">
+            <span className="text-red-600">With factoring ({factoringRate}%)</span>
+            <span className="font-bold text-red-600">-${calcFactoringCost.toLocaleString()}/mo</span>
+          </div>
+          <div className="flex justify-between items-center px-3 py-2 bg-violet-50 rounded-lg">
+            <span className="text-violet-600">With SRL Quick Pay ({tierFeePercent}%)</span>
+            <span className="font-bold text-violet-600">-${calcQPCost.toLocaleString()}/mo</span>
+          </div>
+          <div className="flex justify-between items-center px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <span className="font-semibold text-emerald-700">You save</span>
+            <span className="font-bold text-emerald-600">${calcMonthlySavings.toLocaleString()}/mo (${calcAnnualSavings.toLocaleString()}/yr)</span>
+          </div>
+        </div>
+      </CarrierCard>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">

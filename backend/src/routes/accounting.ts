@@ -54,6 +54,8 @@ import {
   getAPAging,
   getCPPTierSchedule,
   getAccountingDashboardEnhanced,
+  getQuickPayHealth,
+  getQuickPayRevenue,
 } from "../controllers/accountingController";
 
 const router = Router();
@@ -130,6 +132,10 @@ router.post("/reports/generate", authorize("ADMIN", "CEO", "ACCOUNTING"), genera
 router.delete("/reports/:id", authorize("ADMIN", "CEO"), deleteFinancialReport);
 router.get("/reports/weekly", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getWeeklyReport);
 router.get("/reports/monthly", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getMonthlyReport);
+
+// --- Quick Pay Revenue ---
+router.get("/quickpay-health", authorize("ADMIN", "CEO", "ACCOUNTING"), getQuickPayHealth);
+router.get("/quickpay-revenue", authorize("ADMIN", "CEO", "ACCOUNTING"), getQuickPayRevenue);
 
 // --- Export ---
 router.post("/export", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), exportData);

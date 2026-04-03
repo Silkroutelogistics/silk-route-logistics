@@ -40,6 +40,7 @@ const NAV_SECTIONS = [
     title: "FACTORING FUND",
     items: [
       { label: "Fund Balance", href: "/accounting/fund", icon: Landmark },
+      { label: "Quick Pay Revenue", href: "/accounting/quickpay-revenue", icon: Zap },
     ],
   },
   {
