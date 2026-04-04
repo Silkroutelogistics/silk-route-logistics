@@ -103,7 +103,7 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
               {notifOpen && (
                 <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(13,27,42,0.15)] border border-gray-200 z-[100]">
                   <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100">
-                    <span className="text-[13px] font-bold text-[#0D1B2A]">Notifications</span>
+                    <span className="text-[13px] font-bold text-[#1a1a2e]">Notifications</span>
                     <button onClick={() => setNotifOpen(false)}><X size={14} className="text-gray-400" /></button>
                   </div>
                   {notifications.length === 0 ? (
@@ -120,7 +120,7 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
               )}
             </div>
             {/* Avatar */}
-            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#0D1B2A] to-[#1B2D45] flex items-center justify-center text-xs font-bold text-[#C9A84C] border-2 border-[#C9A84C]/30 cursor-pointer">
+            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1a1a2e] to-[#1B2D45] flex items-center justify-center text-xs font-bold text-[#C9A84C] border-2 border-[#C9A84C]/30 cursor-pointer">
               {initials}
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
               Your session is about to expire due to inactivity. You will be logged out in <strong className="text-[#ca8a04]">{countdown}</strong>.
             </p>
             <div className="flex gap-3 justify-center">
-              <button onClick={extendSession} className="px-6 py-2.5 text-sm font-semibold bg-gradient-to-br from-[#c8a951] to-[#b8963e] text-[#0D1B2A] rounded-lg hover:shadow-[0_4px_20px_rgba(200,150,62,0.25)] transition-all">
+              <button onClick={extendSession} className="px-6 py-2.5 text-sm font-semibold bg-gradient-to-br from-[#c8a951] to-[#b8963e] text-[#1a1a2e] rounded-lg hover:shadow-[0_4px_20px_rgba(200,150,62,0.25)] transition-all">
                 Extend Session
               </button>
               <button onClick={forceLogout} className="px-6 py-2.5 text-sm font-medium bg-transparent text-[#6a8090] border border-[#243447] rounded-lg hover:bg-[rgba(200,150,62,0.05)] transition-all">

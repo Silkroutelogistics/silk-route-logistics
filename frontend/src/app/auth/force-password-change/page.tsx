@@ -55,7 +55,7 @@ export default function ForcePasswordChangePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f172a] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#1a1a2e] px-4">
       <div className="w-full max-w-md bg-white/5 backdrop-blur border border-white/10 rounded-2xl shadow-2xl p-8">
         <div className="flex flex-col items-center mb-6">
           <Link href="/" className="flex items-center gap-2 mb-4">
@@ -103,7 +103,7 @@ export default function ForcePasswordChangePage() {
           <button
             type="submit"
             disabled={isLoading || !newPassword || !confirmPassword}
-            className="w-full py-2.5 bg-[#d4a574] text-[#0f172a] font-semibold rounded-lg hover:bg-[#d4a574]/90 disabled:opacity-50 transition"
+            className="w-full py-2.5 bg-[#d4a574] text-[#1a1a2e] font-semibold rounded-lg hover:bg-[#d4a574]/90 disabled:opacity-50 transition"
           >
             {isLoading ? "Updating..." : "Set New Password"}
           </button>

@@ -161,7 +161,7 @@ export default function FundBalancePage() {
       {showDeposit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowDeposit(false)} />
-          <div className="relative bg-[#0f172a] border border-white/10 rounded-2xl w-[400px] p-6">
+          <div className="relative bg-[#1a1a2e] border border-white/10 rounded-2xl w-[400px] p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-white">Add Fund Deposit</h2>
               <button onClick={() => setShowDeposit(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>

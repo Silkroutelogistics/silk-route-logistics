@@ -85,7 +85,7 @@ export default function CarrierPaymentsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Payments &amp; Earnings</h1>
+          <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Payments &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track your payment history, pending earnings, and QuickPay options</p>
         </div>
         <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
@@ -100,7 +100,7 @@ export default function CarrierPaymentsPage() {
             <TrendingUp size={16} className="text-emerald-500" />
             <span className="text-[11px] text-gray-400">YTD Earnings</span>
           </div>
-          <div className="text-[28px] font-bold text-[#0D1B2A]">
+          <div className="text-[28px] font-bold text-[#1a1a2e]">
             ${(summary?.ytdEarnings?.amount || 0).toLocaleString()}
           </div>
           <div className="text-[11px] text-gray-400 mt-1">{summary?.ytdEarnings?.count || 0} loads</div>
@@ -130,7 +130,7 @@ export default function CarrierPaymentsPage() {
             <Zap size={16} className="text-violet-500" />
             <span className="text-[11px] text-gray-400">QuickPay Used</span>
           </div>
-          <div className="text-[28px] font-bold text-[#0D1B2A]">
+          <div className="text-[28px] font-bold text-[#1a1a2e]">
             {summary?.quickPayUsed?.count || 0}
           </div>
           <div className="text-[11px] text-gray-400 mt-1">
@@ -147,7 +147,7 @@ export default function CarrierPaymentsPage() {
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
               className={`px-3 py-1.5 rounded-full text-[11px] font-medium ${
-                f === activeFilter ? "bg-[#0D1B2A] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                f === activeFilter ? "bg-[#1a1a2e] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >{f}</button>
           ))}
@@ -179,12 +179,12 @@ export default function CarrierPaymentsPage() {
               ) : (
                 payments.map((pay: any) => (
                   <tr key={pay.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-[11px] font-semibold text-[#0D1B2A]">{pay.paymentNumber || pay.id.slice(-8)}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] font-semibold text-[#1a1a2e]">{pay.paymentNumber || pay.id.slice(-8)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-gray-600">{pay.load?.referenceNumber || "—"}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">
                       {pay.load ? `${pay.load.originCity}, ${pay.load.originState} → ${pay.load.destCity}, ${pay.load.destState}` : "—"}
                     </td>
-                    <td className="px-4 py-3 font-bold text-[#0D1B2A]">
+                    <td className="px-4 py-3 font-bold text-[#1a1a2e]">
                       ${(pay.netAmount || pay.amount || 0).toLocaleString()}
                       {pay.quickPayDiscount > 0 && (
                         <span className="text-[10px] text-gray-400 ml-1">(-${pay.quickPayDiscount})</span>
@@ -265,7 +265,7 @@ export default function CarrierPaymentsPage() {
                   <Zap size={20} className="text-violet-500" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-bold text-[#0D1B2A]">Request Quick Pay</h3>
+                  <h3 className="text-[15px] font-bold text-[#1a1a2e]">Request Quick Pay</h3>
                   <p className="text-[11px] text-gray-400">Load {loadRef}</p>
                 </div>
               </div>
@@ -274,7 +274,7 @@ export default function CarrierPaymentsPage() {
               <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Gross Amount</span>
-                  <span className="font-semibold text-[#0D1B2A]">${gross.toLocaleString()}</span>
+                  <span className="font-semibold text-[#1a1a2e]">${gross.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">QP Fee ({tierFeeRate}%)</span>

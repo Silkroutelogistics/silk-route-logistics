@@ -69,14 +69,14 @@ export function ShipmentDetailDrawer({
   return (
     <div className="fixed top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] z-[200] overflow-y-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="font-serif text-xl text-[#0D1B2A]">Shipment Details</h2>
+        <h2 className="font-serif text-xl text-[#1a1a2e]">Shipment Details</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           <X size={20} />
         </button>
       </div>
 
       <div className="flex justify-between items-center mb-5">
-        <span className="font-mono text-sm font-bold text-[#0D1B2A]">{shipment.id}</span>
+        <span className="font-mono text-sm font-bold text-[#1a1a2e]">{shipment.id}</span>
         <ShipperBadge status={shipment.status} size="md" />
       </div>
 
@@ -107,7 +107,7 @@ export function ShipmentDetailDrawer({
       ].map(([k, v]) => (
         <div key={k} className="flex justify-between py-2.5 border-b border-gray-100">
           <span className="text-[13px] text-gray-500">{k}</span>
-          <span className={`text-[13px] font-semibold ${v === "Delayed" ? "text-red-500" : "text-[#0D1B2A]"}`}>{v}</span>
+          <span className={`text-[13px] font-semibold ${v === "Delayed" ? "text-red-500" : "text-[#1a1a2e]"}`}>{v}</span>
         </div>
       ))}
 
@@ -115,7 +115,7 @@ export function ShipmentDetailDrawer({
         <button
           onClick={handleViewBol}
           disabled={bolLoading}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-wider rounded disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[11px] font-semibold uppercase tracking-wider rounded disabled:opacity-50"
         >
           {bolLoading ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />} View BOL
         </button>

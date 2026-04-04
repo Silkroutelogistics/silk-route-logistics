@@ -62,7 +62,7 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={handleCancel} />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 w-80 h-full bg-[#0f172a] border-l border-white/10 shadow-2xl z-[9999] flex flex-col animate-slide-in-right">
+      <div className="fixed top-0 right-0 w-80 h-full bg-[#1a1a2e] border-l border-white/10 shadow-2xl z-[9999] flex flex-col animate-slide-in-right">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <h3 className="text-base font-semibold text-white">Theme Settings</h3>
@@ -127,7 +127,7 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleApply}
             className="w-full py-3 rounded-lg font-semibold text-sm transition"
-            style={{ background: `var(--theme-primary, #C8963E)`, color: "#0D1B2A" }}
+            style={{ background: `var(--theme-primary, #C8963E)`, color: "#1a1a2e" }}
           >
             Apply Theme
           </button>

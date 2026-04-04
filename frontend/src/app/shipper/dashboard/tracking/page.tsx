@@ -35,7 +35,7 @@ export default function ShipperTrackingPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0D1B2A]">Live Freight Tracking</h1>
+          <h1 className="font-serif text-2xl text-[#1a1a2e]">Live Freight Tracking</h1>
           <p className="text-xs text-gray-500 mt-1">Real-time shipment visibility &amp; status updates</p>
         </div>
         <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs text-emerald-600">
@@ -50,28 +50,28 @@ export default function ShipperTrackingPage() {
             <Package className="w-4 h-4 text-[#C9A84C]" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">Active</span>
           </div>
-          <p className="text-xl font-bold text-[#0D1B2A]">{isLoading ? "—" : active.length}</p>
+          <p className="text-xl font-bold text-[#1a1a2e]">{isLoading ? "—" : active.length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
             <Truck className="w-4 h-4 text-blue-500" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">In Transit</span>
           </div>
-          <p className="text-xl font-bold text-[#0D1B2A]">{isLoading ? "—" : active.filter(s => s.status === "IN_TRANSIT").length}</p>
+          <p className="text-xl font-bold text-[#1a1a2e]">{isLoading ? "—" : active.filter(s => s.status === "IN_TRANSIT").length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">On Schedule</span>
           </div>
-          <p className="text-xl font-bold text-[#0D1B2A]">{isLoading ? "—" : active.filter(s => s.riskLevel === "GREEN").length}</p>
+          <p className="text-xl font-bold text-[#1a1a2e]">{isLoading ? "—" : active.filter(s => s.riskLevel === "GREEN").length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
             <Bell className="w-4 h-4 text-amber-500" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">At Risk</span>
           </div>
-          <p className="text-xl font-bold text-[#0D1B2A]">{isLoading ? "—" : atRisk.length}</p>
+          <p className="text-xl font-bold text-[#1a1a2e]">{isLoading ? "—" : atRisk.length}</p>
         </ShipperCard>
       </div>
 
@@ -115,7 +115,7 @@ export default function ShipperTrackingPage() {
               <ShipperCard padding="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="font-mono text-sm font-bold text-[#0D1B2A]">{selected.id}</span>
+                    <span className="font-mono text-sm font-bold text-[#1a1a2e]">{selected.id}</span>
                     <div className="flex items-center gap-2 mt-1">
                       <ShipperBadge status={selected.status} />
                       {selected.riskLevel === "RED" && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] rounded font-medium">DELAYED</span>}
@@ -126,7 +126,7 @@ export default function ShipperTrackingPage() {
                     <div className="flex items-center gap-1 text-xs text-gray-500">
                       <Clock className="w-3 h-3" /> ETA
                     </div>
-                    <p className="text-sm font-semibold text-[#0D1B2A]">{selected.eta || "—"}</p>
+                    <p className="text-sm font-semibold text-[#1a1a2e]">{selected.eta || "—"}</p>
                   </div>
                 </div>
 
@@ -134,7 +134,7 @@ export default function ShipperTrackingPage() {
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
                   <div className="flex-1">
                     <div className="text-[10px] text-gray-400 uppercase">Origin</div>
-                    <div className="text-sm font-medium text-[#0D1B2A] flex items-center gap-1">
+                    <div className="text-sm font-medium text-[#1a1a2e] flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-emerald-500 shrink-0" /> {selected.origin}
                     </div>
                   </div>
@@ -145,7 +145,7 @@ export default function ShipperTrackingPage() {
                   </div>
                   <div className="flex-1 text-right">
                     <div className="text-[10px] text-gray-400 uppercase">Destination</div>
-                    <div className="text-sm font-medium text-[#0D1B2A] flex items-center justify-end gap-1">
+                    <div className="text-sm font-medium text-[#1a1a2e] flex items-center justify-end gap-1">
                       {selected.dest} <MapPin className="w-3 h-3 text-red-400 shrink-0" />
                     </div>
                   </div>
@@ -165,7 +165,7 @@ export default function ShipperTrackingPage() {
                           }`}>
                             {done && !active ? "✓" : i + 1}
                           </div>
-                          <span className={`text-[10px] mt-1 ${done ? "text-[#0D1B2A] font-medium" : "text-gray-400"}`}>{step}</span>
+                          <span className={`text-[10px] mt-1 ${done ? "text-[#1a1a2e] font-medium" : "text-gray-400"}`}>{step}</span>
                         </div>
                         {i < STATUS_STEPS.length - 1 && (
                           <div className={`flex-1 h-0.5 mx-1 mt-[-12px] ${i < currentStep ? "bg-emerald-400" : "bg-gray-200"}`} />
@@ -197,7 +197,7 @@ export default function ShipperTrackingPage() {
                 <ShipperCard padding="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Truck className="w-4 h-4 text-[#C9A84C]" />
-                    <span className="text-xs font-bold text-[#0D1B2A]">Last Known Position</span>
+                    <span className="text-xs font-bold text-[#1a1a2e]">Last Known Position</span>
                     <span className="ml-auto text-[10px] text-gray-400">via ELD</span>
                   </div>
                   <div className="text-sm text-gray-700">{selected.eldPosition.address}</div>
@@ -211,7 +211,7 @@ export default function ShipperTrackingPage() {
               {/* Check Call History */}
               {selected.checkCalls && selected.checkCalls.length > 0 && (
                 <ShipperCard padding="p-4">
-                  <div className="text-xs font-bold text-[#0D1B2A] mb-3">Recent Updates</div>
+                  <div className="text-xs font-bold text-[#1a1a2e] mb-3">Recent Updates</div>
                   <div className="space-y-2">
                     {selected.checkCalls.slice(0, 5).map((cc, i) => (
                       <div key={i} className="flex items-start gap-3 text-xs">
@@ -233,7 +233,7 @@ export default function ShipperTrackingPage() {
         {/* Shipment List Sidebar */}
         <div className="space-y-3">
           <ShipperCard padding="p-4">
-            <div className="text-xs font-bold text-[#0D1B2A] mb-3">
+            <div className="text-xs font-bold text-[#1a1a2e] mb-3">
               Active Shipments ({isLoading ? "..." : active.length})
             </div>
             {isLoading ? (
@@ -256,7 +256,7 @@ export default function ShipperTrackingPage() {
                   }`}
                 >
                   <div className="flex justify-between mb-1.5">
-                    <span className="font-mono text-[11px] font-semibold text-[#0D1B2A]">{s.id}</span>
+                    <span className="font-mono text-[11px] font-semibold text-[#1a1a2e]">{s.id}</span>
                     <ShipperBadge status={s.status} />
                   </div>
                   <div className="text-xs text-gray-600 mb-2">{s.origin} &rarr; {s.dest}</div>

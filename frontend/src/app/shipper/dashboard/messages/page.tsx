@@ -124,7 +124,7 @@ export default function ShipperMessagesPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0D1B2A] mb-6">Messages</h1>
+      <h1 className="font-serif text-2xl text-[#1a1a2e] mb-6">Messages</h1>
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
         {/* Contact list */}
         <ShipperCard padding="p-0">
@@ -147,7 +147,7 @@ export default function ShipperMessagesPage() {
                     onClick={() => selectSearchUser(u)}
                     className="px-3 py-2 hover:bg-gray-50 cursor-pointer"
                   >
-                    <div className="text-[13px] font-medium text-[#0D1B2A]">{u.name}</div>
+                    <div className="text-[13px] font-medium text-[#1a1a2e]">{u.name}</div>
                     <div className="text-[11px] text-gray-400">{u.email}</div>
                   </div>
                 ))}
@@ -172,7 +172,7 @@ export default function ShipperMessagesPage() {
                 }`}
               >
                 <div className="flex justify-between mb-1">
-                  <span className={`text-[13px] ${c.unreadCount > 0 ? "font-bold" : "font-medium"} text-[#0D1B2A]`}>
+                  <span className={`text-[13px] ${c.unreadCount > 0 ? "font-bold" : "font-medium"} text-[#1a1a2e]`}>
                     {c.partnerName}
                   </span>
                   <span className="text-[10px] text-gray-400">{formatTime(c.lastMessageAt)}</span>
@@ -190,11 +190,11 @@ export default function ShipperMessagesPage() {
           {selectedUserId ? (
             <>
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0D1B2A] to-[#1B2D45] flex items-center justify-center text-[13px] font-bold text-[#C9A84C]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1a1a2e] to-[#1B2D45] flex items-center justify-center text-[13px] font-bold text-[#C9A84C]">
                   {getInitials(selectedUserName)}
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-[#0D1B2A]">{selectedUserName}</div>
+                  <div className="text-sm font-semibold text-[#1a1a2e]">{selectedUserName}</div>
                 </div>
               </div>
               <div className="flex-1 p-5 min-h-[300px] max-h-[500px] overflow-y-auto">
@@ -210,7 +210,7 @@ export default function ShipperMessagesPage() {
                   messages.map((m) => (
                     <div key={m.id} className={`flex ${m.senderId !== selectedUserId ? "justify-end" : "justify-start"} mb-4`}>
                       <div className={`max-w-[70%] px-3.5 py-2.5 rounded-xl text-[13px] leading-relaxed ${
-                        m.senderId !== selectedUserId ? "bg-[#0D1B2A] text-white" : "bg-gray-100 text-gray-700"
+                        m.senderId !== selectedUserId ? "bg-[#1a1a2e] text-white" : "bg-gray-100 text-gray-700"
                       }`}>
                         {m.content}
                         <div className="text-[10px] text-gray-400 mt-1 text-right">{formatMessageTime(m.createdAt)}</div>
@@ -232,7 +232,7 @@ export default function ShipperMessagesPage() {
                 <button
                   onClick={handleSend}
                   disabled={sendMutation.isPending || !messageText.trim()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-[2px] rounded disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[11px] font-semibold uppercase tracking-[2px] rounded disabled:opacity-50"
                 >
                   {sendMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />} Send
                 </button>

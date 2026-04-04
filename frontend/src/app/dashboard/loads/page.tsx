@@ -461,9 +461,9 @@ export default function LoadsPage() {
           onChange={(e) => { setFilters((f) => ({ ...f, equipmentType: e.target.value })); setPage(1); }}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white"
         >
-          <option value="" className="bg-[#0f172a] text-white">All Equipment</option>
+          <option value="" className="bg-[#1a1a2e] text-white">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => (
-            <option key={t} value={t} className="bg-[#0f172a] text-white">{t}</option>
+            <option key={t} value={t} className="bg-[#1a1a2e] text-white">{t}</option>
           ))}
         </select>
       </div>
@@ -555,7 +555,7 @@ export default function LoadsPage() {
         {selectedLoadId && load && (
           <div className="w-[55%] shrink-0 ml-4 bg-white/[0.03] border border-white/10 rounded-xl flex overflow-hidden sticky top-0 h-[calc(100vh-4rem)]">
             {/* Vertical icon strip */}
-            <div className="w-12 shrink-0 bg-[#111d30] border-r border-[#1a2d47] flex flex-col items-center py-2 gap-1">
+            <div className="w-12 shrink-0 bg-[#1e1e36] border-r border-[#2d2d44] flex flex-col items-center py-2 gap-1">
               {PANEL_TABS.map((t) => (
                 <button
                   key={t.key}
@@ -563,7 +563,7 @@ export default function LoadsPage() {
                   title={t.label}
                   className={`w-9 h-9 flex items-center justify-center rounded-lg transition ${
                     panelTab === t.key
-                      ? "bg-[#C9A84C] text-[#0f172a]"
+                      ? "bg-[#C9A84C] text-[#1a1a2e]"
                       : "text-slate-400 hover:text-white hover:bg-white/10"
                   }`}
                 >
@@ -575,7 +575,7 @@ export default function LoadsPage() {
             {/* Panel content */}
             <div className="flex-1 overflow-y-auto">
               {/* Panel header */}
-              <div className="sticky top-0 bg-[#0f172a]/95 backdrop-blur border-b border-white/10 p-4 z-10">
+              <div className="sticky top-0 bg-[#1a1a2e]/95 backdrop-blur border-b border-white/10 p-4 z-10">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">

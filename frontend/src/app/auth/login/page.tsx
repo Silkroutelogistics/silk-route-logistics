@@ -235,7 +235,7 @@ export default function EmployeeLoginPage() {
 
       {/* LEFT PANEL — Brand (55%), hidden on mobile */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden flex-col items-center justify-center"
-        style={{ background: "linear-gradient(165deg, #0d1b2a 0%, #132a45 50%, #0f2440 100%)" }}>
+        style={{ background: "linear-gradient(165deg, #1a1a2e 0%, #1e1e36 50%, #1e1e36 100%)" }}>
 
         {/* Radial gold glow */}
         <div className="absolute pointer-events-none" style={{
@@ -366,7 +366,7 @@ export default function EmployeeLoginPage() {
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0f172a] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#1a1a2e] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Enabling 2FA..." : "Enable Two-Factor Authentication"}
               </button>
             </form>
@@ -383,7 +383,7 @@ export default function EmployeeLoginPage() {
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0f172a] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#1a1a2e] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">
@@ -422,7 +422,7 @@ export default function EmployeeLoginPage() {
                 <span className="text-[13px] text-[#C9A84C] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0f172a] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#1a1a2e] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
@@ -436,7 +436,7 @@ export default function EmployeeLoginPage() {
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0f172a] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#1a1a2e] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">

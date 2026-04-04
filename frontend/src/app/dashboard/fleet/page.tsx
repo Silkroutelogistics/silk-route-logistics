@@ -185,16 +185,16 @@ export default function FleetPage() {
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a] text-white">All Statuses</option>
-          <option value="ACTIVE" className="bg-[#0f172a] text-white">Active</option>
-          <option value="IN_SHOP" className="bg-[#0f172a] text-white">In Shop</option>
-          <option value="OUT_OF_SERVICE" className="bg-[#0f172a] text-white">Out of Service</option>
+          <option value="" className="bg-[#1a1a2e] text-white">All Statuses</option>
+          <option value="ACTIVE" className="bg-[#1a1a2e] text-white">Active</option>
+          <option value="IN_SHOP" className="bg-[#1a1a2e] text-white">In Shop</option>
+          <option value="OUT_OF_SERVICE" className="bg-[#1a1a2e] text-white">Out of Service</option>
         </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a] text-white">All Types</option>
+          <option value="" className="bg-[#1a1a2e] text-white">All Types</option>
           {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
-            <option key={t} value={t} className="bg-[#0f172a] text-white">{t.replace(/_/g, " ")}</option>
+            <option key={t} value={t} className="bg-[#1a1a2e] text-white">{t.replace(/_/g, " ")}</option>
           ))}
         </select>
       </div>

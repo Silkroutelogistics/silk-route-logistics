@@ -502,16 +502,16 @@ export default function CarrierPoolPage() {
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a] text-white">All Statuses</option>
+          <option value="" className="bg-[#1a1a2e] text-white">All Statuses</option>
           {["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((s) => (
-            <option key={s} value={s} className="bg-[#0f172a] text-white">{s.replace(/_/g, " ")}</option>
+            <option key={s} value={s} className="bg-[#1a1a2e] text-white">{s.replace(/_/g, " ")}</option>
           ))}
         </select>
         <select value={equipFilter} onChange={(e) => setEquipFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#0f172a] text-white">All Equipment</option>
+          <option value="" className="bg-[#1a1a2e] text-white">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"].map((t) => (
-            <option key={t} value={t} className="bg-[#0f172a] text-white">{t}</option>
+            <option key={t} value={t} className="bg-[#1a1a2e] text-white">{t}</option>
           ))}
         </select>
       </div>
@@ -578,9 +578,9 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-[60%] border-l border-[#1a2d47] bg-[#0c1829] rounded-r-xl flex sticky top-0 h-[calc(100vh-12rem)] ml-3 animate-slide-in-right">
+          <div className="w-[60%] border-l border-[#2d2d44] bg-[#16162a] rounded-r-xl flex sticky top-0 h-[calc(100vh-12rem)] ml-3 animate-slide-in-right">
             {/* Vertical Tab Bar */}
-            <div className="w-[44px] shrink-0 border-r border-[#1a2d47] flex flex-col py-2">
+            <div className="w-[44px] shrink-0 border-r border-[#2d2d44] flex flex-col py-2">
               {([
                 { key: "profile", icon: User, label: "Profile" },
                 { key: "insurance", icon: Shield, label: "Insurance" },
@@ -601,7 +601,7 @@ export default function CarrierPoolPage() {
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto">
               {/* Panel Header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1a2d47] shrink-0">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-[#2d2d44] shrink-0">
                 <h2 className="text-sm font-bold text-white truncate">{selectedCarrier.company}</h2>
                 <button onClick={closePanel} className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition">
                   <X className="w-4 h-4" />

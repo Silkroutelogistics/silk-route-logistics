@@ -653,9 +653,9 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
         </div>
 
         {/* ─── MAIN CONTENT ─── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#0f172a]">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#1a1a2e]">
           {/* Top Bar */}
-          <div className="flex items-center justify-between px-8 py-4 border-b border-white/10 bg-[#0f172a]">
+          <div className="flex items-center justify-between px-8 py-4 border-b border-white/10 bg-[#1a1a2e]">
             <div className="flex items-center gap-3">
               {(() => {
                 const Icon = SECTIONS[sectionIdx].icon;
@@ -712,7 +712,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
               <button
                 onClick={handleSendTender}
                 disabled={saving}
-                className="px-6 py-2.5 text-sm text-[#0f172a] bg-[#C8963E] hover:bg-[#C8963E]/90 rounded-lg transition font-semibold disabled:opacity-40 flex items-center gap-2 shadow-lg shadow-[#C8963E]/20"
+                className="px-6 py-2.5 text-sm text-[#1a1a2e] bg-[#C8963E] hover:bg-[#C8963E]/90 rounded-lg transition font-semibold disabled:opacity-40 flex items-center gap-2 shadow-lg shadow-[#C8963E]/20"
               >
                 {saving && sendMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 <Send className="w-4 h-4" />
@@ -791,12 +791,12 @@ function SelectField({
           className={`${inputCls} appearance-none pr-8`}
         >
           {placeholder && (
-            <option value="" className="bg-[#0f172a]">
+            <option value="" className="bg-[#1a1a2e]">
               {placeholder}
             </option>
           )}
           {options.map((o) => (
-            <option key={o.value} value={o.value} className="bg-[#0f172a]">
+            <option key={o.value} value={o.value} className="bg-[#1a1a2e]">
               {o.label}
             </option>
           ))}

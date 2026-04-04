@@ -172,11 +172,11 @@ export default function RfpPage() {
         />
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
-          <option value="ALL" className="bg-[#0f172a]">All Statuses</option>
-          <option value="OPEN" className="bg-[#0f172a]">Open</option>
-          <option value="IN_REVIEW" className="bg-[#0f172a]">In Review</option>
-          <option value="AWARDED" className="bg-[#0f172a]">Awarded</option>
-          <option value="EXPIRED" className="bg-[#0f172a]">Expired</option>
+          <option value="ALL" className="bg-[#1a1a2e]">All Statuses</option>
+          <option value="OPEN" className="bg-[#1a1a2e]">Open</option>
+          <option value="IN_REVIEW" className="bg-[#1a1a2e]">In Review</option>
+          <option value="AWARDED" className="bg-[#1a1a2e]">Awarded</option>
+          <option value="EXPIRED" className="bg-[#1a1a2e]">Expired</option>
         </select>
       </div>
 
@@ -230,7 +230,7 @@ export default function RfpPage() {
               <input value={form.customerSearch} onChange={(e) => setForm({ ...form, customerSearch: e.target.value })}
                 placeholder="Search customer..." className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-gold/50 focus:outline-none" />
               {customers?.customers?.length > 0 && form.customerSearch.length >= 2 && !form.customerId && (
-                <div className="mt-1 bg-[#1a2d47] rounded-lg border border-white/10 max-h-32 overflow-y-auto">
+                <div className="mt-1 bg-[#2d2d44] rounded-lg border border-white/10 max-h-32 overflow-y-auto">
                   {customers.customers.map((c: { id: string; companyName: string }) => (
                     <button key={c.id} onClick={() => setForm({ ...form, customerId: c.id, customerSearch: c.companyName })}
                       className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10">{c.companyName}</button>
@@ -267,7 +267,7 @@ export default function RfpPage() {
                       placeholder="FL" maxLength={2} className="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white w-14 focus:border-gold/50 focus:outline-none" />
                     <select value={lane.equipmentType} onChange={(e) => updateLane(idx, "equipmentType", e.target.value)}
                       className="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white flex-1 focus:border-gold/50 focus:outline-none">
-                      {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0f172a]">{e.replace(/_/g, " ")}</option>)}
+                      {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#1a1a2e]">{e.replace(/_/g, " ")}</option>)}
                     </select>
                     <input value={lane.estimatedMonthlyVolume || ""} onChange={(e) => updateLane(idx, "estimatedMonthlyVolume", e.target.value)}
                       placeholder="Vol" className="bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white w-16 focus:border-gold/50 focus:outline-none" />
@@ -409,7 +409,7 @@ function KpiCard({ icon: Icon, label, value, color }: { icon: typeof FileText; l
 function Modal({ onClose, title, children }: { onClose: () => void; title: string; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#0f172a] rounded-xl border border-white/10 w-full max-w-xl max-h-[85vh] overflow-y-auto p-6">
+      <div className="bg-[#1a1a2e] rounded-xl border border-white/10 w-full max-w-xl max-h-[85vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>

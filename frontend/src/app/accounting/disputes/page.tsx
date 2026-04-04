@@ -167,7 +167,7 @@ export default function DisputesPage() {
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreate(false)} />
-          <div className="relative bg-[#0f172a] border border-white/10 rounded-2xl w-[480px] p-6">
+          <div className="relative bg-[#1a1a2e] border border-white/10 rounded-2xl w-[480px] p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-white">New Dispute</h2>
               <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -207,8 +207,8 @@ export default function DisputesPage() {
       {selected && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSelected(null)} />
-          <div className="relative w-[480px] bg-[#0f172a] border-l border-white/10 overflow-y-auto">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#0f172a] z-10">
+          <div className="relative w-[480px] bg-[#1a1a2e] border-l border-white/10 overflow-y-auto">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#1a1a2e] z-10">
               <h2 className="text-lg font-bold text-white">{selected.disputeNumber}</h2>
               <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>

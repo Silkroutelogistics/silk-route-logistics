@@ -23,14 +23,14 @@ export default function ShipperDashboardError({
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-[#0D1B2A] mb-2">Something went wrong</h2>
+        <h2 className="text-lg font-semibold text-[#1a1a2e] mb-2">Something went wrong</h2>
         <p className="text-sm text-gray-500 mb-6 leading-relaxed">
           We encountered an unexpected error. This has been logged and our team will look into it.
         </p>
         <div className="flex gap-3 justify-center">
           <button
             onClick={reset}
-            className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] rounded-lg shadow-sm hover:shadow-md transition-all"
+            className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] rounded-lg shadow-sm hover:shadow-md transition-all"
           >
             Try Again
           </button>

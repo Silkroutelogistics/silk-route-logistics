@@ -60,9 +60,9 @@ export default function ShipperRegisterPage() {
   if (success) {
     return (
       <div className="bg-[#F8F5ED] min-h-screen">
-        <nav className="bg-[#0D1B2A] px-6 h-14 flex items-center justify-between">
+        <nav className="bg-[#1a1a2e] px-6 h-14 flex items-center justify-between">
           <Link href="/shipper" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0D1B2A]">SR</div>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#1a1a2e]">SR</div>
             <span className="font-serif text-sm text-white tracking-[1px]">SILK ROUTE LOGISTICS</span>
           </Link>
         </nav>
@@ -71,13 +71,13 @@ export default function ShipperRegisterPage() {
             <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-            <h2 className="font-serif text-2xl text-[#0D1B2A] mb-2">Account Created Successfully</h2>
+            <h2 className="font-serif text-2xl text-[#1a1a2e] mb-2">Account Created Successfully</h2>
             <p className="text-[13px] text-gray-500 mb-6 leading-relaxed max-w-md mx-auto">
               Your shipper account has been created. You can now log in to access your portal, request quotes, and track your shipments.
             </p>
             <button
               onClick={() => router.push("/shipper/login")}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all"
             >
               <ArrowRight size={16} /> Continue to Login
             </button>
@@ -90,9 +90,9 @@ export default function ShipperRegisterPage() {
   return (
     <div className="bg-[#F8F5ED] min-h-screen">
       {/* Nav */}
-      <nav className="bg-[#0D1B2A] px-6 h-14 flex items-center justify-between">
+      <nav className="bg-[#1a1a2e] px-6 h-14 flex items-center justify-between">
         <Link href="/shipper" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0D1B2A]">SR</div>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#1a1a2e]">SR</div>
           <span className="font-serif text-sm text-white tracking-[1px]">SILK ROUTE LOGISTICS</span>
         </Link>
         <Link href="/shipper/login" className="text-gray-300 text-[11px] font-semibold uppercase tracking-[1.5px] hover:text-[#C9A84C] transition-colors">
@@ -111,7 +111,7 @@ export default function ShipperRegisterPage() {
                 }`}>
                   {step > i + 1 ? <Check size={16} /> : i + 1}
                 </div>
-                <span className={`text-[10px] ${step === i + 1 ? "text-[#0D1B2A] font-semibold" : "text-gray-400"}`}>{s}</span>
+                <span className={`text-[10px] ${step === i + 1 ? "text-[#1a1a2e] font-semibold" : "text-gray-400"}`}>{s}</span>
               </div>
               {i < 3 && <div className={`w-12 h-0.5 mx-2 mb-5 transition-all ${step > i + 1 ? "bg-emerald-500" : "bg-gray-200"}`} />}
             </div>
@@ -122,7 +122,7 @@ export default function ShipperRegisterPage() {
         <div className="bg-white rounded-md border border-gray-200 p-9">
           {step === 1 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0D1B2A] mb-1">Company Information</h2>
+              <h2 className="font-serif text-2xl text-[#1a1a2e] mb-1">Company Information</h2>
               <p className="text-[13px] text-gray-500 mb-7">Tell us about your business so we can tailor your experience.</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Company Name" required value={form.company} onChange={(v) => upd("company", v)} placeholder="Acme Manufacturing" />
@@ -175,7 +175,7 @@ export default function ShipperRegisterPage() {
 
           {step === 2 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0D1B2A] mb-1">Shipping Profile</h2>
+              <h2 className="font-serif text-2xl text-[#1a1a2e] mb-1">Shipping Profile</h2>
               <p className="text-[13px] text-gray-500 mb-7">Help us understand your freight needs to optimize your experience.</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Avg. Monthly Shipments" required value={form.volume} onChange={(v) => upd("volume", v)} options={["1-10", "11-50", "51-100", "101-500", "500+"]} />
@@ -194,7 +194,7 @@ export default function ShipperRegisterPage() {
 
           {step === 3 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0D1B2A] mb-1">Preferences &amp; Security</h2>
+              <h2 className="font-serif text-2xl text-[#1a1a2e] mb-1">Preferences &amp; Security</h2>
               <p className="text-[13px] text-gray-500 mb-7">Set up your portal access and notification preferences.</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Portal Username" required value={form.username} onChange={(v) => upd("username", v)} placeholder="jane.doe" icon={<User size={16} />} />
@@ -215,7 +215,7 @@ export default function ShipperRegisterPage() {
 
           {step === 4 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0D1B2A] mb-1">Review &amp; Submit</h2>
+              <h2 className="font-serif text-2xl text-[#1a1a2e] mb-1">Review &amp; Submit</h2>
               <p className="text-[13px] text-gray-500 mb-7">Please confirm your details before creating your account.</p>
               {[
                 ["Company", form.company],
@@ -230,7 +230,7 @@ export default function ShipperRegisterPage() {
               ].map(([k, v], i) => (
                 <div key={i} className={`flex justify-between py-2.5 ${i < 8 ? "border-b border-gray-100" : ""}`}>
                   <span className="text-[13px] text-gray-500">{k}</span>
-                  <span className="text-[13px] font-semibold text-[#0D1B2A]">{v || "—"}</span>
+                  <span className="text-[13px] font-semibold text-[#1a1a2e]">{v || "—"}</span>
                 </div>
               ))}
               <div className="mt-6 p-4 bg-[#C9A84C]/[0.08] rounded-lg border border-[#C9A84C]/20">
@@ -257,11 +257,11 @@ export default function ShipperRegisterPage() {
               </button>
             ) : <div />}
             {step < 4 ? (
-              <button onClick={() => setStep(step + 1)} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all">
+              <button onClick={() => setStep(step + 1)} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all">
                 <ArrowRight size={16} /> Continue
               </button>
             ) : (
-              <button onClick={handleSubmit} disabled={submitting} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+              <button onClick={handleSubmit} disabled={submitting} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {submitting ? (
                   <><Loader2 size={16} className="animate-spin" /> Creating Account...</>
                 ) : (

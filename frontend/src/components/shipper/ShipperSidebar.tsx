@@ -40,7 +40,7 @@ export function ShipperSidebar() {
     <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-[#C9A84C]/15 min-h-[56px] px-5 py-4">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0D1B2A] flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#1a1a2e] flex-shrink-0">
           SR
         </div>
         <div>
@@ -87,9 +87,9 @@ export function ShipperSidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0D1B2A] border-b border-[#C9A84C]/15 px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#1a1a2e] border-b border-[#C9A84C]/15 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[11px] font-extrabold text-[#0D1B2A]">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[11px] font-extrabold text-[#1a1a2e]">
             SR
           </div>
           <span className="font-serif text-[12px] font-bold text-white">SILK ROUTE</span>
@@ -112,7 +112,7 @@ export function ShipperSidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`w-[220px] bg-[#0D1B2A] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
+        className={`w-[220px] bg-[#1a1a2e] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >

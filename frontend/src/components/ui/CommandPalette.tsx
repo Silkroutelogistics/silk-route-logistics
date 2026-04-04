@@ -149,7 +149,7 @@ export default function CommandPalette() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-xl rounded-xl border border-white/10 bg-[#0f172a] shadow-2xl overflow-hidden"
+        className="w-full max-w-xl rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}

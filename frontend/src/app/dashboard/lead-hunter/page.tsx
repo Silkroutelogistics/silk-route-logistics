@@ -164,10 +164,10 @@ export default function LeadHunterPage() {
             </div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:outline-none">
-              <option value="" className="bg-[#0f172a] text-white">All Statuses</option>
-              <option value="Prospect" className="bg-[#0f172a] text-white">Prospect</option>
-              <option value="Active" className="bg-[#0f172a] text-white">Active</option>
-              <option value="Inactive" className="bg-[#0f172a] text-white">Inactive</option>
+              <option value="" className="bg-[#1a1a2e] text-white">All Statuses</option>
+              <option value="Prospect" className="bg-[#1a1a2e] text-white">Prospect</option>
+              <option value="Active" className="bg-[#1a1a2e] text-white">Active</option>
+              <option value="Inactive" className="bg-[#1a1a2e] text-white">Inactive</option>
             </select>
             <button onClick={() => setShowModal(true)}
               className="flex items-center gap-2 px-4 py-2.5 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 font-medium text-sm">
@@ -280,8 +280,8 @@ export default function LeadHunterPage() {
         <div className="space-y-4">
           <select value={laneRegion} onChange={(e) => setLaneRegion(e.target.value)}
             className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:outline-none">
-            <option value="" className="bg-[#0f172a] text-white">All Regions</option>
-            {(regions ?? []).map((r) => <option key={r.region} value={r.region} className="bg-[#0f172a] text-white">{r.region.replace(/_/g, " ")}</option>)}
+            <option value="" className="bg-[#1a1a2e] text-white">All Regions</option>
+            {(regions ?? []).map((r) => <option key={r.region} value={r.region} className="bg-[#1a1a2e] text-white">{r.region.replace(/_/g, " ")}</option>)}
           </select>
           <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
@@ -342,8 +342,8 @@ export default function LeadHunterPage() {
                 <label className="text-slate-400 text-xs font-medium mb-1 block">Industry</label>
                 <select value={form.industryType} onChange={(e) => setForm({ ...form, industryType: e.target.value })}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none text-sm">
-                  <option value="" className="bg-[#0f172a] text-white">Select...</option>
-                  {INDUSTRIES.map((ind) => <option key={ind} value={ind} className="bg-[#0f172a] text-white">{ind}</option>)}
+                  <option value="" className="bg-[#1a1a2e] text-white">Select...</option>
+                  {INDUSTRIES.map((ind) => <option key={ind} value={ind} className="bg-[#1a1a2e] text-white">{ind}</option>)}
                 </select>
               </div>
               <div className="sm:col-span-2">

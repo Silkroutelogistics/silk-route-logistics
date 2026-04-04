@@ -350,7 +350,7 @@ function ReceivablesTab() {
       {/* Confirm Mark Paid Modal */}
       {confirmPayId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0f172a] rounded-xl border border-white/10 w-full max-w-md p-6">
+          <div className="bg-[#1a1a2e] rounded-xl border border-white/10 w-full max-w-md p-6">
             <h3 className="text-lg font-semibold text-white mb-2">Confirm Payment</h3>
             <p className="text-sm text-slate-400 mb-6">
               Mark invoice <strong className="text-white">{confirmPayId.invoiceNumber}</strong> as paid for{" "}

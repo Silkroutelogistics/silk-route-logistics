@@ -18,7 +18,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (user?.role !== "ADMIN") {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0f172a]">
+      <div className="flex items-center justify-center min-h-screen bg-[#1a1a2e]">
         <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center max-w-md">
           <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-white mb-2">Access Denied</h1>
@@ -37,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0f172a]">
+    <div className="flex min-h-screen bg-[#1a1a2e]">
       {/* Admin Sidebar */}
       <aside className="w-56 bg-white/5 border-r border-white/10 flex flex-col shrink-0">
         <div className="px-5 py-5 border-b border-white/10">

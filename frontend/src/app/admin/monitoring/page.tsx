@@ -88,7 +88,7 @@ export default function MonitoringPage() {
 
   if (user?.role !== "ADMIN") {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
         <div className="text-center">
           <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="text-white text-lg font-medium">Admin Access Required</p>
@@ -100,7 +100,7 @@ export default function MonitoringPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#0f172a] p-8 transition-all duration-500 ${mounted ? "opacity-100" : "opacity-0"}`}>
+    <div className={`min-h-screen bg-[#1a1a2e] p-8 transition-all duration-500 ${mounted ? "opacity-100" : "opacity-0"}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

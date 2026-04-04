@@ -34,10 +34,10 @@ export default function ShipperLandingPage() {
   return (
     <div className="bg-[#F8F5ED] min-h-screen">
       {/* Nav */}
-      <nav className="sticky top-0 z-[100] bg-[#0D1B2A]/92 backdrop-blur-xl border-b border-[#C9A84C]/15">
+      <nav className="sticky top-0 z-[100] bg-[#1a1a2e]/92 backdrop-blur-xl border-b border-[#C9A84C]/15">
         <div className="max-w-[1280px] mx-auto px-8 flex items-center justify-between h-[76px]">
           <Link href="/shipper" className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-lg font-extrabold text-[#0D1B2A] shadow-[0_2px_12px_rgba(201,168,76,0.3)]">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-lg font-extrabold text-[#1a1a2e] shadow-[0_2px_12px_rgba(201,168,76,0.3)]">
               SR
             </div>
             <div>
@@ -49,7 +49,7 @@ export default function ShipperLandingPage() {
             <Link href="/shipper/login" className="px-4 py-2 text-gray-300 text-[11px] font-semibold uppercase tracking-[1.5px] rounded hover:text-[#C9A84C] transition-colors">
               Log In
             </Link>
-            <Link href="/shipper/register" className="px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all">
+            <Link href="/shipper/register" className="px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all">
               Get Started
             </Link>
           </div>
@@ -57,9 +57,9 @@ export default function ShipperLandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="bg-[#0D1B2A] min-h-screen flex items-center px-8 relative overflow-hidden">
+      <section className="bg-[#1a1a2e] min-h-screen flex items-center px-8 relative overflow-hidden">
         <div className="absolute -top-[40%] -right-[20%] w-[80%] h-[150%] bg-[radial-gradient(ellipse,rgba(201,168,76,0.06)_0%,transparent_60%)] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-[#0D1B2A] to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-[#1a1a2e] to-transparent pointer-events-none" />
         <div className="max-w-[1280px] mx-auto relative z-10 w-full">
           <div className="max-w-[680px]">
             <div className="text-[11px] font-bold text-[#C9A84C] tracking-[3px] uppercase mb-6">
@@ -72,7 +72,7 @@ export default function ShipperLandingPage() {
               Your complete freight brokerage platform with real-time shipment tracking, instant freight quotes, transportation spend analytics, and supply chain document management. Midwest&apos;s trusted logistics partner for shippers who demand transparency.
             </p>
             <div className="flex gap-3 flex-wrap">
-              <Link href="/shipper/register" className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all">
+              <Link href="/shipper/register" className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all">
                 <ArrowRight size={16} /> Create Shipper Account
               </Link>
               <Link href="/shipper/login" className="px-9 py-4 border border-white/20 text-white text-[13px] font-semibold uppercase tracking-[2px] rounded hover:text-[#C9A84C] hover:border-[#C9A84C] transition-all">
@@ -104,7 +104,7 @@ export default function ShipperLandingPage() {
       <section className="py-[100px] px-8 max-w-[1280px] mx-auto">
         <div className="text-center mb-14">
           <div className="text-[11px] font-bold text-[#C9A84C] tracking-[3px] uppercase mb-4">Platform Features</div>
-          <h2 className="font-serif text-[32px] text-[#0D1B2A] mb-3">Complete Freight Management for Shippers</h2>
+          <h2 className="font-serif text-[32px] text-[#1a1a2e] mb-3">Complete Freight Management for Shippers</h2>
           <p className="text-[15px] text-gray-500 max-w-[520px] mx-auto">
             Industry-leading freight management tools modeled after top brokerages like CH Robinson, J.B. Hunt, and Uber Freight — built for your supply chain.
           </p>
@@ -115,14 +115,14 @@ export default function ShipperLandingPage() {
             return (
               <div key={i} className="bg-white rounded-md border border-gray-200 p-7 hover:border-[#C9A84C]/30 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-md bg-[#0D1B2A] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-md bg-[#1a1a2e] flex items-center justify-center">
                     <Icon size={20} className="text-[#C9A84C]" />
                   </div>
                   <span className={`text-[10px] font-bold tracking-wide px-2.5 py-0.5 rounded-xl ${
                     f.tag === "Phase 1" ? "text-emerald-500 bg-emerald-500/10" : "text-blue-500 bg-blue-500/10"
                   }`}>{f.tag}</span>
                 </div>
-                <h3 className="text-base font-bold text-[#0D1B2A] mb-2">{f.title}</h3>
+                <h3 className="text-base font-bold text-[#1a1a2e] mb-2">{f.title}</h3>
                 <p className="text-[13px] text-gray-500 leading-relaxed">{f.desc}</p>
               </div>
             );
@@ -131,7 +131,7 @@ export default function ShipperLandingPage() {
       </section>
 
       {/* Comparison */}
-      <section className="bg-[#0D1B2A] py-[100px] px-8">
+      <section className="bg-[#1a1a2e] py-[100px] px-8">
         <div className="max-w-[1280px] mx-auto text-center">
           <h2 className="font-serif text-[26px] text-white mb-2">How Our Freight Brokerage Platform Stacks Up</h2>
           <p className="text-[13px] text-gray-400 mb-10">Feature comparison vs. traditional freight brokers and 3PLs</p>
@@ -163,7 +163,7 @@ export default function ShipperLandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-[100px] px-8 text-center bg-gradient-to-br from-[#0D1B2A] to-[#060F1A] relative overflow-hidden">
+      <section className="py-[100px] px-8 text-center bg-gradient-to-br from-[#1a1a2e] to-[#060F1A] relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_20%_50%,rgba(201,168,76,0.06)_0%,transparent_50%),radial-gradient(ellipse_at_80%_50%,rgba(201,168,76,0.04)_0%,transparent_50%)]" />
         <div className="relative z-10">
           <div className="text-[11px] font-bold text-[#C9A84C] tracking-[3px] uppercase mb-4">Get Started</div>
@@ -171,14 +171,14 @@ export default function ShipperLandingPage() {
           <p className="text-[15px] text-white/60 mb-8 max-w-[460px] mx-auto">
             Create your free shipper account and get your first freight quote in under 5 minutes. No platform fees, no contracts.
           </p>
-          <Link href="/shipper/register" className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all">
+          <Link href="/shipper/register" className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all">
             <ArrowRight size={16} /> Get Started — Free Shipper Account
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0D1B2A] px-8 py-10 border-t border-[#C9A84C]/15">
+      <footer className="bg-[#1a1a2e] px-8 py-10 border-t border-[#C9A84C]/15">
         <div className="max-w-[1280px] mx-auto flex justify-between items-center flex-wrap gap-4">
           <div className="text-xs text-white/45">© 2026 Silk Route Logistics Inc. · Kalamazoo, MI · MC# 01794414 · Licensed &amp; Bonded (BMC-84)</div>
           <div className="text-xs text-white/45">

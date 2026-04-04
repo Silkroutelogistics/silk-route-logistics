@@ -55,7 +55,7 @@ export default function AvailableLoadsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Available Loads</h1>
+        <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Available Loads</h1>
         <p className="text-[13px] text-gray-500">
           Loads matching your equipment and operating regions &middot; {data?.total || 0} available
         </p>
@@ -86,7 +86,7 @@ export default function AvailableLoadsPage() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="font-mono text-xs font-bold text-[#0D1B2A]">{load.referenceNumber}</span>
+                      <span className="font-mono text-xs font-bold text-[#1a1a2e]">{load.referenceNumber}</span>
                       <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{load.equipmentType}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-gray-700">
@@ -126,7 +126,7 @@ export default function AvailableLoadsPage() {
         <div>
           {selectedId && detail ? (
             <CarrierCard padding="p-5" className="sticky top-6">
-              <h3 className="text-sm font-bold text-[#0D1B2A] mb-4">Load Details</h3>
+              <h3 className="text-sm font-bold text-[#1a1a2e] mb-4">Load Details</h3>
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Reference</span>

@@ -70,7 +70,7 @@ export default function ShipperInvoicesPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Freight Invoicing &amp; Payment Management</h1>
+          <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Freight Invoicing &amp; Payment Management</h1>
           <p className="text-[13px] text-gray-500">Track all freight invoices, carrier payments, and transportation billing history</p>
         </div>
         <button onClick={() => invoices.length > 0 && exportInvoicesCSV(invoices)}
@@ -89,13 +89,13 @@ export default function ShipperInvoicesPage() {
         </ShipperCard>
         <ShipperCard padding="p-5">
           <div className="text-[11px] text-gray-400 mb-1.5">YTD Total Billed</div>
-          <div className="text-[28px] font-bold text-[#0D1B2A]">
+          <div className="text-[28px] font-bold text-[#1a1a2e]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `$${(billing?.ytdBilled || 0).toLocaleString()}`}
           </div>
         </ShipperCard>
         <ShipperCard padding="p-5">
           <div className="text-[11px] text-gray-400 mb-1.5">Avg Payment Cycle</div>
-          <div className="text-[28px] font-bold text-[#0D1B2A]">
+          <div className="text-[28px] font-bold text-[#1a1a2e]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `${billing?.avgPaymentCycleDays || 0} days`}
           </div>
           <div className="text-[11px] text-gray-400 mt-1">Net 30 terms</div>
@@ -104,14 +104,14 @@ export default function ShipperInvoicesPage() {
 
       <ShipperCard padding="p-0">
         <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="text-[15px] font-bold text-[#0D1B2A]">Invoice History</h3>
+          <h3 className="text-[15px] font-bold text-[#1a1a2e]">Invoice History</h3>
           <div className="flex gap-1.5">
             {filterOptions.map((f) => (
               <button
                 key={f}
                 onClick={() => { setActiveFilter(f); setPage(1); }}
                 className={`px-3 py-1 rounded-full text-[11px] font-medium ${
-                  f === activeFilter ? "bg-[#0D1B2A] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  f === activeFilter ? "bg-[#1a1a2e] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >{f}</button>
             ))}
@@ -139,9 +139,9 @@ export default function ShipperInvoicesPage() {
             ) : (
               invoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-gray-100">
-                  <td className="px-4 py-3 font-semibold text-[#0D1B2A] font-mono text-[11px]">{inv.id}</td>
+                  <td className="px-4 py-3 font-semibold text-[#1a1a2e] font-mono text-[11px]">{inv.id}</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-gray-600">{inv.shipment}</td>
-                  <td className="px-4 py-3 font-bold text-[#0D1B2A]">${inv.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 font-bold text-[#1a1a2e]">${inv.amount.toLocaleString()}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.issued}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.due}</td>
                   <td className="px-4 py-3"><ShipperBadge status={inv.status} /></td>
@@ -186,7 +186,7 @@ export default function ShipperInvoicesPage() {
               </div>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-[#0D1B2A] mb-1">File a Dispute</h3>
+                <h3 className="text-lg font-semibold text-[#1a1a2e] mb-1">File a Dispute</h3>
                 <p className="text-xs text-gray-500 mb-4">Invoice {disputeInvoice.invoiceNumber} — ${disputeInvoice.amount.toLocaleString()}</p>
 
                 <div className="space-y-3">

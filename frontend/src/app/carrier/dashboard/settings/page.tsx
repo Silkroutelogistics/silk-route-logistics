@@ -130,39 +130,39 @@ export default function CarrierSettingsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Account Settings</h1>
+      <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Account Settings</h1>
       <p className="text-[13px] text-gray-500 mb-6">Manage your carrier account, notifications, and security settings</p>
 
       <div className="grid grid-cols-2 gap-4">
         {/* Profile Info */}
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0D1B2A] mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4 flex items-center gap-2">
             <User size={16} className="text-[#C9A84C]" /> Profile Information
           </h3>
           <div className="space-y-3 text-xs">
             <div>
               <label className="text-gray-400 block mb-1">Name</label>
-              <div className="text-[#0D1B2A] font-medium">{user?.firstName} {user?.lastName}</div>
+              <div className="text-[#1a1a2e] font-medium">{user?.firstName} {user?.lastName}</div>
             </div>
             <div>
               <label className="text-gray-400 block mb-1">Email</label>
-              <div className="text-[#0D1B2A] font-medium">{user?.email}</div>
+              <div className="text-[#1a1a2e] font-medium">{user?.email}</div>
             </div>
             <div>
               <label className="text-gray-400 block mb-1">Company</label>
-              <div className="text-[#0D1B2A] font-medium">{profile?.companyName || user?.company || "—"}</div>
+              <div className="text-[#1a1a2e] font-medium">{profile?.companyName || user?.company || "—"}</div>
             </div>
             <div>
               <label className="text-gray-400 block mb-1">MC Number</label>
-              <div className="text-[#0D1B2A] font-medium">{profile?.mcNumber || "—"}</div>
+              <div className="text-[#1a1a2e] font-medium">{profile?.mcNumber || "—"}</div>
             </div>
             <div>
               <label className="text-gray-400 block mb-1">DOT Number</label>
-              <div className="text-[#0D1B2A] font-medium">{profile?.dotNumber || "—"}</div>
+              <div className="text-[#1a1a2e] font-medium">{profile?.dotNumber || "—"}</div>
             </div>
             <div>
               <label className="text-gray-400 block mb-1">Tier</label>
-              <div className="text-[#0D1B2A] font-medium">{profile?.tier || "—"}</div>
+              <div className="text-[#1a1a2e] font-medium">{profile?.tier || "—"}</div>
             </div>
             <div>
               <label className="text-gray-400 block mb-1">Equipment Types</label>
@@ -193,7 +193,7 @@ export default function CarrierSettingsPage() {
                 <button
                   onClick={() => phoneMutation.mutate()}
                   disabled={phoneMutation.isPending}
-                  className="px-3 py-2 bg-[#0D1B2A] text-white text-[11px] font-semibold rounded disabled:opacity-50"
+                  className="px-3 py-2 bg-[#1a1a2e] text-white text-[11px] font-semibold rounded disabled:opacity-50"
                 >
                   {phoneMutation.isPending ? "..." : "Save"}
                 </button>
@@ -212,7 +212,7 @@ export default function CarrierSettingsPage() {
 
         {/* Change Password */}
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0D1B2A] mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4 flex items-center gap-2">
             <Lock size={16} className="text-amber-500" /> Change Password
           </h3>
           <form onSubmit={handleChangePassword} className="space-y-3">
@@ -259,7 +259,7 @@ export default function CarrierSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-[#0D1B2A] text-white text-xs font-semibold rounded-md disabled:opacity-60"
+              className="px-4 py-2 bg-[#1a1a2e] text-white text-xs font-semibold rounded-md disabled:opacity-60"
             >
               {saving ? "Saving..." : "Update Password"}
             </button>
@@ -268,7 +268,7 @@ export default function CarrierSettingsPage() {
 
         {/* Two-Factor Authentication */}
         <CarrierCard padding="p-5" className="col-span-2">
-          <h3 className="text-sm font-bold text-[#0D1B2A] mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4 flex items-center gap-2">
             <ShieldCheck size={16} className="text-[#C9A84C]" /> Two-Factor Authentication
           </h3>
 
@@ -306,13 +306,13 @@ export default function CarrierSettingsPage() {
                     >
                       {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
                     </button>
-                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0D1B2A]">Cancel</button>
+                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#1a1a2e]">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <button
                   onClick={() => { setShowDisable(true); setTotpSuccess(""); setTotpError(""); }}
-                  className="px-3 py-2 bg-gray-100 text-[#0D1B2A] text-xs font-semibold rounded hover:bg-gray-200"
+                  className="px-3 py-2 bg-gray-100 text-[#1a1a2e] text-xs font-semibold rounded hover:bg-gray-200"
                 >
                   Disable 2FA
                 </button>
@@ -357,11 +357,11 @@ export default function CarrierSettingsPage() {
                 <button
                   onClick={() => verifyTotp.mutate()}
                   disabled={verifyTotp.isPending || totpCode.length !== 6}
-                  className="px-4 py-2 bg-[#0D1B2A] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-[#1a1a2e] text-white text-xs font-semibold rounded-md disabled:opacity-50"
                 >
                   {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
                 </button>
-                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0D1B2A]">Cancel</button>
+                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#1a1a2e]">Cancel</button>
               </div>
             </div>
           ) : (
@@ -370,7 +370,7 @@ export default function CarrierSettingsPage() {
               <button
                 onClick={() => { setupTotp.mutate(); setTotpSuccess(""); setTotpError(""); }}
                 disabled={setupTotp.isPending}
-                className="px-4 py-2 bg-[#0D1B2A] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                className="px-4 py-2 bg-[#1a1a2e] text-white text-xs font-semibold rounded-md disabled:opacity-50"
               >
                 {setupTotp.isPending ? "Setting up..." : "Enable 2FA"}
               </button>
@@ -381,13 +381,13 @@ export default function CarrierSettingsPage() {
         {/* Notification Preferences */}
         <CarrierCard padding="p-5" className="col-span-2">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-[#0D1B2A] flex items-center gap-2">
+            <h3 className="text-sm font-bold text-[#1a1a2e] flex items-center gap-2">
               <Bell size={16} className="text-[#C9A84C]" /> Notification Preferences
             </h3>
             <button
               onClick={() => notifMutation.mutate()}
               disabled={notifMutation.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0D1B2A] text-white text-[11px] font-semibold rounded disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1a1a2e] text-white text-[11px] font-semibold rounded disabled:opacity-50"
             >
               {notifMutation.isPending ? "Saving..." : notifSaved ? <><CheckCircle size={12} /> Saved</> : "Save Preferences"}
             </button>
@@ -403,7 +403,7 @@ export default function CarrierSettingsPage() {
                 className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-[#C9A84C]/30 cursor-pointer transition-colors"
               >
                 <div>
-                  <div className="text-xs font-semibold text-[#0D1B2A]">{opt.label}</div>
+                  <div className="text-xs font-semibold text-[#1a1a2e]">{opt.label}</div>
                   <div className="text-[11px] text-gray-400">{opt.desc}</div>
                 </div>
                 <div className={`w-9 h-5 rounded-full flex items-center transition-colors ${notifications[opt.key] ? "bg-[#C9A84C] justify-end" : "bg-gray-200 justify-start"}`}>

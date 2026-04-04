@@ -149,7 +149,7 @@ export default function LaneAnalyticsPage() {
       {selectedLane && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setSelectedLane(null)} />
-          <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#0f172a] border-l border-white/10 z-50 overflow-y-auto">
+          <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#1a1a2e] border-l border-white/10 z-50 overflow-y-auto">
             <div className="p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">

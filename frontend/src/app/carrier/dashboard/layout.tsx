@@ -110,7 +110,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
               {notifOpen && (
                 <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(13,27,42,0.15)] border border-gray-200 z-[100]">
                   <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100">
-                    <span className="text-[13px] font-bold text-[#0D1B2A]">Notifications</span>
+                    <span className="text-[13px] font-bold text-[#1a1a2e]">Notifications</span>
                     <button onClick={() => setNotifOpen(false)}><X size={14} className="text-gray-400" /></button>
                   </div>
                   {notifications.length === 0 ? (
@@ -127,7 +127,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
               )}
             </div>
             {/* Avatar + Logout */}
-            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-xs font-bold text-[#0D1B2A] border-2 border-[#C9A84C]/30 cursor-pointer">
+            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-xs font-bold text-[#1a1a2e] border-2 border-[#C9A84C]/30 cursor-pointer">
               {initials}
             </div>
             <button onClick={logout} className="text-gray-400 hover:text-red-500" title="Logout">
@@ -163,7 +163,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
               <button onClick={logout} className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
                 Logout
               </button>
-              <button onClick={extendSession} className="flex-1 px-4 py-2 text-sm bg-[#C9A84C] text-[#0D1B2A] rounded-lg font-semibold hover:bg-[#B8973F]">
+              <button onClick={extendSession} className="flex-1 px-4 py-2 text-sm bg-[#C9A84C] text-[#1a1a2e] rounded-lg font-semibold hover:bg-[#B8973F]">
                 Stay Logged In
               </button>
             </div>

@@ -393,7 +393,7 @@ export default function CRMPage() {
                     {c.status === "Active" && (
                       <a
                         href={`/dashboard/orders?customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-[#C9A84C] text-[#0f172a] rounded-lg text-xs hover:bg-[#C9A84C]/90 no-underline font-medium"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#C9A84C] text-[#1a1a2e] rounded-lg text-xs hover:bg-[#C9A84C]/90 no-underline font-medium"
                       >
                         <Package className="w-3 h-3" /> Create Load
                       </a>

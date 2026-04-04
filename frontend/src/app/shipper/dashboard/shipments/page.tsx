@@ -51,7 +51,7 @@ export default function ShipperShipmentsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0D1B2A] mb-1">Freight Shipments</h1>
+          <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Freight Shipments</h1>
           <p className="text-[13px] text-gray-500">Manage and monitor all your truckload and LTL shipments</p>
         </div>
         <div className="flex gap-2">
@@ -59,7 +59,7 @@ export default function ShipperShipmentsPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
             <Download size={14} /> Export CSV
           </button>
-          <Link href="/shipper/dashboard/quote" className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0D1B2A] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">
+          <Link href="/shipper/dashboard/quote" className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">
             <Plus size={14} /> New Shipment
           </Link>
         </div>
@@ -73,7 +73,7 @@ export default function ShipperShipmentsPage() {
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium ${
-                f === activeFilter ? "bg-[#0D1B2A] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                f === activeFilter ? "bg-[#1a1a2e] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >{f}</button>
           ))}
@@ -115,7 +115,7 @@ export default function ShipperShipmentsPage() {
               ) : (
                 shipments.map((s) => (
                   <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => setSelected(s)}>
-                    <td className="px-3.5 py-3 font-semibold text-[#0D1B2A] font-mono text-[11px]">{s.id}</td>
+                    <td className="px-3.5 py-3 font-semibold text-[#1a1a2e] font-mono text-[11px]">{s.id}</td>
                     <td className="px-3.5 py-3">
                       <div className="text-xs text-gray-700">{s.origin}</div>
                       <div className="text-[11px] text-gray-400">&rarr; {s.dest}</div>
@@ -124,7 +124,7 @@ export default function ShipperShipmentsPage() {
                     <td className="px-3.5 py-3 text-gray-600 text-xs">{s.carrier}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.equipment}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.weight}</td>
-                    <td className="px-3.5 py-3 font-semibold text-[#0D1B2A]">${s.rate.toLocaleString()}</td>
+                    <td className="px-3.5 py-3 font-semibold text-[#1a1a2e]">${s.rate.toLocaleString()}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.pickDate}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.delDate}</td>
                     <td className="px-3.5 py-3 min-w-[100px]">
