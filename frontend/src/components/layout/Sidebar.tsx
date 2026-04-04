@@ -470,7 +470,7 @@ export function Sidebar() {
                   )}
                 </button>
                 {showNotifDropdown && (
-                  <div className="absolute left-0 top-full mt-2 w-72 bg-[#16162a] border border-[#2d2d44] rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-white/[0.03] border border-[#2d2d44] rounded-xl shadow-2xl z-50 overflow-hidden">
                     <div className="px-3 py-2 border-b border-[#2d2d44] flex items-center justify-between">
                       <span className="text-xs font-semibold text-white">Notifications</span>
                       {unreadCount > 0 && (
@@ -565,7 +565,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#16162a] border-b border-[#2d2d44] px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/[0.03] border-b border-[#2d2d44] px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
           <span className="text-sm font-semibold text-white">Silk Route</span>
@@ -589,7 +589,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-[#16162a] border-r border-[#2d2d44] flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
+          "bg-white/[0.03] border-r border-[#2d2d44] flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
           "fixed lg:sticky top-0 z-50 lg:z-auto",
           collapsed ? "w-[60px]" : "w-[220px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"

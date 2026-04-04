@@ -76,7 +76,7 @@ export default function MessagesPage() {
   return (
     <div className="flex h-[calc(100vh-7rem)] gap-0 p-6">
       {/* Conversation List */}
-      <div className="w-96 bg-[#16162a] rounded-l-xl border border-[#2d2d44] flex flex-col">
+      <div className="w-96 bg-white/[0.03] rounded-l-xl border border-[#2d2d44] flex flex-col">
         <div className="p-4 border-b border-[#2d2d44] flex items-center justify-between">
           <h2 className="font-semibold text-white text-base">Messages</h2>
           <button onClick={() => setShowNewMsg(true)} className="p-2 bg-[#C9A84C] text-[#16162a] rounded-lg hover:bg-[#d4b85e] transition">
@@ -196,7 +196,7 @@ export default function MessagesPage() {
                 <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && newMessage.trim() && sendMsg.mutate()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 bg-[#16162a] border border-[#2d2d44] rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50 focus:ring-1 focus:ring-[#C9A84C]/20" />
+                  className="flex-1 px-4 py-2.5 bg-white/[0.03] border border-[#2d2d44] rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50 focus:ring-1 focus:ring-[#C9A84C]/20" />
                 <button onClick={() => newMessage.trim() && sendMsg.mutate()} disabled={!newMessage.trim() || sendMsg.isPending}
                   className="px-4 py-2.5 bg-[#C9A84C] text-[#16162a] rounded-xl hover:bg-[#d4b85e] disabled:opacity-50 transition font-medium">
                   <Send className="w-4 h-4" />

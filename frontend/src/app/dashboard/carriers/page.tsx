@@ -578,9 +578,9 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-[60%] border-l border-[#2d2d44] bg-[#16162a] rounded-r-xl flex sticky top-0 h-[calc(100vh-12rem)] ml-3 animate-slide-in-right">
+          <div className="w-[60%] border-l border-white/10 bg-white/[0.03] rounded-r-xl flex sticky top-0 h-[calc(100vh-12rem)] ml-3 animate-slide-in-right">
             {/* Vertical Tab Bar */}
-            <div className="w-[44px] shrink-0 border-r border-[#2d2d44] flex flex-col py-2">
+            <div className="w-[44px] shrink-0 border-r border-white/10 bg-white/[0.02] flex flex-col py-2">
               {([
                 { key: "profile", icon: User, label: "Profile" },
                 { key: "insurance", icon: Shield, label: "Insurance" },
