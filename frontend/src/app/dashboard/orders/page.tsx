@@ -14,6 +14,12 @@ interface Customer {
   phone: string | null; address: string | null; city: string | null; state: string | null; zip: string | null;
 }
 
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2).toString().padStart(2, "0");
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+});
+
 const EQUIPMENT_TYPES = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Tanker", "Lowboy", "Conestoga"];
 const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "100", "110", "125", "150", "175", "200", "250", "300", "400", "500"];
 
@@ -46,6 +52,7 @@ const initialForm = {
   distance: "",
   equipmentType: "Dry Van",
   commodity: "", weight: "", pieces: "",
+  pallets: "", palletLength: "", palletWidth: "", palletHeight: "", weightPerPallet: "",
   freightClass: "", length: "", width: "", height: "",
   hazmat: false, tempMin: "", tempMax: "", customsRequired: false,
   rate: "", accessorials: [] as string[],
@@ -70,24 +77,40 @@ export default function OrderBuilderPage() {
   const [showErrors, setShowErrors] = useState(false);
   const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // FIX 2: Auto-calculate distance when origin+dest zips are filled
+  // FIX 2: Auto-calculate distance when origin+dest are filled (zip or city+state)
   useEffect(() => {
     if (distanceManual) return;
-    if (form.originZip.length >= 5 && form.destZip.length >= 5 && form.originCity && form.originState && form.destCity && form.destState) {
-      if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current);
-      distanceTimerRef.current = setTimeout(() => {
-        api.get<{ miles: number }>(`/mileage/calculate?origin=${encodeURIComponent(form.originCity + "," + form.originState)}&destination=${encodeURIComponent(form.destCity + "," + form.destState)}`)
-          .then((res) => {
-            if (res.data?.miles && !distanceManual) {
-              setForm((f) => ({ ...f, distance: String(Math.round(res.data.miles)) }));
-              setDistanceAutoFilled(true);
-            }
-          })
-          .catch(() => {});
-      }, 500);
-    }
+    const hasOrigin = (form.originZip.length >= 5) || (form.originCity && form.originState);
+    const hasDest = (form.destZip.length >= 5) || (form.destCity && form.destState);
+    if (!hasOrigin || !hasDest) return;
+
+    if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current);
+    distanceTimerRef.current = setTimeout(() => {
+      const origin = encodeURIComponent(form.originCity + "," + form.originState);
+      const dest = encodeURIComponent(form.destCity + "," + form.destState);
+      // Try mileage API first, fallback to loads/distance endpoint
+      api.get<{ miles: number }>(`/mileage/calculate?origin=${origin}&destination=${dest}`)
+        .then((res) => {
+          if (res.data?.miles && !distanceManual) {
+            setForm((f) => ({ ...f, distance: String(Math.round(res.data.miles)) }));
+            setDistanceAutoFilled(true);
+          }
+        })
+        .catch(() => {
+          // Fallback: try loads/distance endpoint
+          api.get<{ distance?: number; miles?: number }>(`/loads/distance?originZip=${form.originZip}&destZip=${form.destZip}`)
+            .then((res) => {
+              const miles = res.data?.miles || res.data?.distance;
+              if (miles && !distanceManual) {
+                setForm((f) => ({ ...f, distance: String(Math.round(miles)) }));
+                setDistanceAutoFilled(true);
+              }
+            })
+            .catch(() => {});
+        });
+    }, 500);
     return () => { if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current); };
-  }, [form.originZip, form.destZip, form.originCity, form.originState, form.destCity, form.destState, distanceManual]);
+  }, [form.originZip, form.destZip, form.originCity, form.originState, form.destCity, form.destState, form.originAddress, form.destAddress, distanceManual]);
 
   // FIX 3: Auto-suggest freight class from commodity
   useEffect(() => {
@@ -103,6 +126,17 @@ export default function OrderBuilderPage() {
       setSuggestedClass("");
     }
   }, [form.commodity]);
+
+  // Auto-calculate weight from pallets and weight per pallet
+  useEffect(() => {
+    if (form.pallets && form.weightPerPallet) {
+      const total = parseInt(form.pallets) * parseFloat(form.weightPerPallet);
+      if (!isNaN(total)) setForm(f => ({ ...f, weight: String(Math.round(total)) }));
+    }
+    if (form.pallets && !form.pieces) {
+      setForm(f => ({ ...f, pieces: form.pallets }));
+    }
+  }, [form.pallets, form.weightPerPallet]);
 
   const { data: customersData } = useQuery({
     queryKey: ["customers-search", customerSearch],
@@ -346,10 +380,16 @@ export default function OrderBuilderPage() {
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Pickup Window</label>
               <div className="grid grid-cols-2 gap-2">
-                <input type="time" value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
-                  placeholder="Start" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
-                <input type="time" value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))}
-                  placeholder="End" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+                <select value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
+                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
+                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Start</option>
+                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
+                </select>
+                <select value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))}
+                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
+                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>End</option>
+                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -403,10 +443,16 @@ export default function OrderBuilderPage() {
             <div>
               <label className="text-xs text-slate-500 mb-1 block">Delivery Window</label>
               <div className="grid grid-cols-2 gap-2">
-                <input type="time" value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
-                  placeholder="Start" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
-                <input type="time" value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))}
-                  placeholder="End" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]" />
+                <select value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
+                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
+                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Start</option>
+                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
+                </select>
+                <select value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))}
+                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
+                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>End</option>
+                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -424,6 +470,7 @@ export default function OrderBuilderPage() {
         <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
           <Package className="w-4 h-4" /> Freight Details
         </h2>
+        {/* Row 1: Equipment Type | Commodity | Freight Class */}
         <div className="grid md:grid-cols-3 gap-3">
           <div>
             <label className="text-xs text-slate-500 mb-1 block">Equipment Type</label>
@@ -449,19 +496,59 @@ export default function OrderBuilderPage() {
             )}
           </div>
         </div>
+
+        {/* Row 2: Number of Pallets | Pallet Dimensions L x W x H | Weight per Pallet */}
         <div className="grid md:grid-cols-3 gap-3">
-          <input value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
-            placeholder="Weight (lbs)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          <input value={form.pieces} onChange={(e) => setForm((f) => ({ ...f, pieces: e.target.value }))}
-            placeholder="Pieces" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Number of Pallets</label>
+            <input value={form.pallets} onChange={(e) => setForm((f) => ({ ...f, pallets: e.target.value }))}
+              placeholder="e.g. 26" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Pallet Size (L x W x H) in</label>
+            <div className="flex items-center gap-1">
+              <input value={form.palletLength} onChange={(e) => setForm((f) => ({ ...f, palletLength: e.target.value }))}
+                placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+              <span className="text-slate-500 text-sm shrink-0">&times;</span>
+              <input value={form.palletWidth} onChange={(e) => setForm((f) => ({ ...f, palletWidth: e.target.value }))}
+                placeholder="40" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+              <span className="text-slate-500 text-sm shrink-0">&times;</span>
+              <input value={form.palletHeight} onChange={(e) => setForm((f) => ({ ...f, palletHeight: e.target.value }))}
+                placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Weight / Pallet (lbs)</label>
+            <input value={form.weightPerPallet} onChange={(e) => setForm((f) => ({ ...f, weightPerPallet: e.target.value }))}
+              placeholder="e.g. 1500" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+          </div>
         </div>
+
+        {/* Row 3: Total Weight (auto-calculated) | Total Pieces */}
+        <div className="grid md:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block flex items-center gap-2">
+              Total Weight (lbs)
+              {form.pallets && form.weightPerPallet && <span className="text-[10px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded font-medium">Calculated</span>}
+            </label>
+            <input value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
+              placeholder="Weight (lbs)" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Pieces</label>
+            <input value={form.pieces} onChange={(e) => setForm((f) => ({ ...f, pieces: e.target.value }))}
+              placeholder="Pieces" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+          </div>
+        </div>
+
+        {/* Row 4: Truck Dimensions */}
         <div className="grid md:grid-cols-3 gap-3">
           <input value={form.length} onChange={(e) => setForm((f) => ({ ...f, length: e.target.value }))}
-            placeholder="Length (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            placeholder="Truck Length (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
           <input value={form.width} onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))}
-            placeholder="Width (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            placeholder="Truck Width (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
           <input value={form.height} onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))}
-            placeholder="Height (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            placeholder="Truck Height (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
 
         {/* Toggles */}
