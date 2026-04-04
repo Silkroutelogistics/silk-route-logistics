@@ -150,7 +150,7 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
       include: {
         customer: true,
         carrier: {
-          select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true } } },
+          select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } },
         },
       },
     });

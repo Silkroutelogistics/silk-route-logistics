@@ -58,6 +58,8 @@ export async function createLoad(req: AuthRequest, res: Response) {
     destZip: raw.destinationZip || raw.destZip,
     destContactName: deliveryContact.name || undefined,
     destContactPhone: deliveryContact.phone || undefined,
+    shipperFacility: raw.shipperName || raw.shipperFacility || undefined,
+    consigneeFacility: raw.consigneeName || raw.consigneeFacility || undefined,
 
     // Schedule
     pickupDate: raw.pickupDate,
@@ -475,6 +477,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   const {
     originCity, originState, originZip, originAddress, originCompany,
     destCity, destState, destZip, destAddress, destCompany,
+    shipperFacility, consigneeFacility,
     weight, pieces, pallets, equipmentType, commodity, freightClass,
     rate, customerRate, carrierRate, distance,
     pickupDate, deliveryDate, pickupTimeStart, pickupTimeEnd,
@@ -496,6 +499,8 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (destZip !== undefined) data.destZip = destZip;
   if (destAddress !== undefined) data.destAddress = destAddress;
   if (destCompany !== undefined) data.destCompany = destCompany;
+  if (shipperFacility !== undefined) data.shipperFacility = shipperFacility;
+  if (consigneeFacility !== undefined) data.consigneeFacility = consigneeFacility;
   if (weight !== undefined) data.weight = weight;
   if (pieces !== undefined) data.pieces = pieces;
   if (pallets !== undefined) data.pallets = pallets;

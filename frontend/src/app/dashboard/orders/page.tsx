@@ -45,8 +45,44 @@ const COMMODITY_CLASS_MAP: Record<string, string> = {
   "pet food": "70", "animal feed": "60",
 };
 
+interface AddressBookEntry {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  updatedAt: number;
+}
+
+const ADDRESS_BOOK_KEY = "srl-address-book";
+const MAX_ADDRESS_ENTRIES = 50;
+
+function getAddressBook(): AddressBookEntry[] {
+  try {
+    const raw = localStorage.getItem(ADDRESS_BOOK_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveToAddressBook(entry: Omit<AddressBookEntry, "updatedAt">) {
+  if (!entry.name?.trim() || !entry.city?.trim()) return;
+  const book = getAddressBook();
+  const existing = book.findIndex((e) => e.name.toLowerCase() === entry.name.toLowerCase());
+  const record: AddressBookEntry = { ...entry, updatedAt: Date.now() };
+  if (existing >= 0) {
+    book[existing] = record;
+  } else {
+    book.unshift(record);
+  }
+  // Keep max entries, most recent first
+  book.sort((a, b) => b.updatedAt - a.updatedAt);
+  localStorage.setItem(ADDRESS_BOOK_KEY, JSON.stringify(book.slice(0, MAX_ADDRESS_ENTRIES)));
+}
+
 const initialForm = {
   customerId: "",
+  shipperName: "", consigneeName: "",
   originAddress: "", originCity: "", originState: "", originZip: "", originUnit: "",
   destAddress: "", destCity: "", destState: "", destZip: "", destUnit: "",
   pickupDate: "", deliveryDate: "",
@@ -78,6 +114,10 @@ export default function OrderBuilderPage() {
   const [suggestedClass, setSuggestedClass] = useState("");
   const [palletRows, setPalletRows] = useState([{ qty: "", l: "48", w: "40", h: "48", weight: "" }]);
   const [showErrors, setShowErrors] = useState(false);
+  const [showShipperBook, setShowShipperBook] = useState(false);
+  const [showConsigneeBook, setShowConsigneeBook] = useState(false);
+  const shipperBookRef = useRef<HTMLDivElement>(null);
+  const consigneeBookRef = useRef<HTMLDivElement>(null);
   const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // FIX 2: Auto-calculate distance when origin+dest are filled (zip or city+state)
@@ -296,10 +336,33 @@ export default function OrderBuilderPage() {
       if (form.contactName) payload.contactName = form.contactName;
       if (form.contactPhone) payload.contactPhone = form.contactPhone;
       if (form.notes) payload.notes = form.notes;
+      if (form.shipperName) payload.shipperName = form.shipperName;
+      if (form.consigneeName) payload.consigneeName = form.consigneeName;
 
       return api.post("/loads", payload).then((r) => r.data);
     },
     onSuccess: (data, status) => {
+      // Auto-save origin + destination to address book
+      if (form.shipperName || form.originCity) {
+        saveToAddressBook({
+          name: form.shipperName || `${form.originCity}, ${form.originState}`,
+          address: form.originAddress,
+          city: form.originCity,
+          state: form.originState,
+          zip: form.originZip,
+          phone: form.contactPhone || "",
+        });
+      }
+      if (form.consigneeName || form.destCity) {
+        saveToAddressBook({
+          name: form.consigneeName || `${form.destCity}, ${form.destState}`,
+          address: form.destAddress,
+          city: form.destCity,
+          state: form.destState,
+          zip: form.destZip,
+          phone: "",
+        });
+      }
       setSuccess({ id: data.id, ref: data.referenceNumber, status });
     },
   });
@@ -420,6 +483,41 @@ export default function OrderBuilderPage() {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-3">
             <p className="text-xs text-slate-500 font-medium">ORIGIN</p>
+            {/* Shipper / Pickup Facility Name with Address Book */}
+            <div className="relative" ref={shipperBookRef}>
+              <label className="text-xs text-slate-500 mb-1 block">Shipper / Pickup Facility Name</label>
+              <input
+                value={form.shipperName}
+                onChange={(e) => { setForm((f) => ({ ...f, shipperName: e.target.value })); setShowShipperBook(true); }}
+                onFocus={() => setShowShipperBook(true)}
+                onBlur={() => setTimeout(() => setShowShipperBook(false), 200)}
+                placeholder='e.g. "Graphic Packaging - Kalamazoo Plant"'
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+              />
+              {showShipperBook && (() => {
+                const q = form.shipperName.toLowerCase();
+                const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
+                if (matches.length === 0) return null;
+                return (
+                  <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
+                    style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
+                    <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved Locations</div>
+                    {matches.map((entry, i) => (
+                      <button key={i} onClick={() => {
+                        setForm((f) => ({ ...f, shipperName: entry.name, originAddress: entry.address, originCity: entry.city, originState: entry.state, originZip: entry.zip }));
+                        if (entry.phone) setForm((f) => ({ ...f, contactPhone: entry.phone }));
+                        setShowShipperBook(false);
+                      }}
+                        className="w-full text-left px-3 py-2 text-sm transition cursor-pointer hover:!bg-amber-50"
+                        style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
+                        <span className="font-semibold" style={{ color: "#0f172a" }}>{entry.name}</span>
+                        <span style={{ color: "#64748b", marginLeft: "8px", fontSize: "12px" }}>{entry.city}, {entry.state} {entry.zip}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
             <AddressAutocomplete
               label="Search origin address..."
               onSelect={(addr) => { setForm((f) => ({ ...f, originAddress: addr.address, originCity: addr.city, originState: addr.state, originZip: addr.zip, originUnit: addr.unit || f.originUnit })); if (addr.unit) setShowOriginUnit(true); }}
@@ -483,6 +581,40 @@ export default function OrderBuilderPage() {
           </div>
           <div className="space-y-3">
             <p className="text-xs text-slate-500 font-medium">DESTINATION</p>
+            {/* Consignee / Delivery Facility Name with Address Book */}
+            <div className="relative" ref={consigneeBookRef}>
+              <label className="text-xs text-slate-500 mb-1 block">Consignee / Delivery Facility Name</label>
+              <input
+                value={form.consigneeName}
+                onChange={(e) => { setForm((f) => ({ ...f, consigneeName: e.target.value })); setShowConsigneeBook(true); }}
+                onFocus={() => setShowConsigneeBook(true)}
+                onBlur={() => setTimeout(() => setShowConsigneeBook(false), 200)}
+                placeholder='e.g. "Walmart DC #6078"'
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+              />
+              {showConsigneeBook && (() => {
+                const q = form.consigneeName.toLowerCase();
+                const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
+                if (matches.length === 0) return null;
+                return (
+                  <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
+                    style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
+                    <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved Locations</div>
+                    {matches.map((entry, i) => (
+                      <button key={i} onClick={() => {
+                        setForm((f) => ({ ...f, consigneeName: entry.name, destAddress: entry.address, destCity: entry.city, destState: entry.state, destZip: entry.zip }));
+                        setShowConsigneeBook(false);
+                      }}
+                        className="w-full text-left px-3 py-2 text-sm transition cursor-pointer hover:!bg-amber-50"
+                        style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
+                        <span className="font-semibold" style={{ color: "#0f172a" }}>{entry.name}</span>
+                        <span style={{ color: "#64748b", marginLeft: "8px", fontSize: "12px" }}>{entry.city}, {entry.state} {entry.zip}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
             <AddressAutocomplete
               label="Search destination address..."
               onSelect={(addr) => { setForm((f) => ({ ...f, destAddress: addr.address, destCity: addr.city, destState: addr.state, destZip: addr.zip, destUnit: addr.unit || f.destUnit })); if (addr.unit) setShowDestUnit(true); }}

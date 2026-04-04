@@ -991,6 +991,8 @@ model Load {
   destZip         String
   destContactName  String?
   destContactPhone String?
+  shipperFacility  String?
+  consigneeFacility String?
   distance        Float?
 
   // Schedule
