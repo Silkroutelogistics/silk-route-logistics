@@ -97,7 +97,7 @@ export default function CarrierLoginPage() {
 
       {/* LEFT PANEL — Brand (55%), hidden on mobile */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden flex-col items-center justify-center"
-        style={{ background: "linear-gradient(165deg, #0F1117 0%, #161921 50%, #161921 100%)" }}>
+        style={{ background: "linear-gradient(165deg, #1A1714 0%, #2C261F 50%, #1A1714 100%)" }}>
 
         {/* Radial gold glow */}
         <div className="absolute pointer-events-none" style={{
