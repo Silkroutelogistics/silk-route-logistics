@@ -124,68 +124,95 @@ export default function ShipperLoginPage() {
           filter: "blur(60px)",
         }} />
 
-        {/* Animated gold route lines */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
-          <path d="M50,300 C200,100 400,500 750,250"
-            fill="none" stroke="rgba(201,168,76,0.15)" strokeWidth="1.5"
-            strokeDasharray="1200" strokeDashoffset="1200"
-            className="animate-[drawRoute_4s_ease-in-out_forwards]" />
-          <path d="M100,450 C300,200 500,400 700,150"
-            fill="none" stroke="rgba(201,168,76,0.12)" strokeWidth="1"
-            strokeDasharray="1200" strokeDashoffset="1200"
-            style={{ animation: "drawRoute 5s 1s ease-in-out forwards" }} />
-          <path d="M0,200 C150,350 350,50 600,300 C700,400 780,200 800,250"
-            fill="none" stroke="rgba(201,168,76,0.06)" strokeWidth="1"
-            strokeDasharray="1400" strokeDashoffset="1400"
-            style={{ animation: "drawRoute 6s 1.5s ease-in-out forwards" }} />
-          <circle r="3" fill="#C9A84C" opacity="0.6">
-            <animateMotion dur="8s" repeatCount="indefinite"
-              path="M50,300 C200,100 400,500 750,250" />
+        {/* US Map with animated dots */}
+        <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+          {/* Simplified US outline */}
+          <path d="M120,180 L180,140 L240,130 L300,120 L350,115 L400,110 L460,120 L520,130 L580,110 L640,120 L700,130 L720,160 L710,200 L700,240 L690,280 L680,320 L650,340 L600,350 L550,360 L500,370 L450,360 L400,350 L350,340 L300,330 L250,320 L200,300 L160,270 L140,230 Z"
+            fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+          {/* City dots */}
+          {[
+            [280,200,"Chicago"],[350,250,"Indianapolis"],[420,280,"Nashville"],
+            [500,300,"Atlanta"],[600,250,"Charlotte"],[650,200,"Norfolk"],
+            [550,180,"Columbus"],[200,220,"Kalamazoo"],[480,150,"Detroit"],
+            [380,320,"Memphis"],[300,300,"St Louis"],[520,350,"Jacksonville"],
+            [180,160,"Minneapolis"],[620,320,"Miami"],[450,100,"Buffalo"],
+            [680,150,"New York"],[350,180,"Milwaukee"],[240,280,"Kansas City"],
+            [150,300,"Dallas"],[100,350,"Houston"],[250,350,"New Orleans"],
+          ].map(([x,y,name],i) => (
+            <g key={i}>
+              <circle cx={Number(x)} cy={Number(y)} r="3" fill="rgba(255,255,255,0.5)" />
+              <circle cx={Number(x)} cy={Number(y)} r="5" fill="none" stroke="rgba(201,168,76,0.3)" strokeWidth="1">
+                <animate attributeName="r" values="3;8;3" dur={`${3+i%3}s`} repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.5;0;0.5" dur={`${3+i%3}s`} repeatCount="indefinite" />
+              </circle>
+            </g>
+          ))}
+          {/* Animated route lines between cities */}
+          <line x1="200" y1="220" x2="280" y2="200" stroke="rgba(201,168,76,0.3)" strokeWidth="1" strokeDasharray="4,4">
+            <animate attributeName="stroke-dashoffset" values="0;-8" dur="1s" repeatCount="indefinite" />
+          </line>
+          <line x1="280" y1="200" x2="350" y2="250" stroke="rgba(201,168,76,0.3)" strokeWidth="1" strokeDasharray="4,4">
+            <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.2s" repeatCount="indefinite" />
+          </line>
+          <line x1="350" y1="250" x2="500" y2="300" stroke="rgba(201,168,76,0.3)" strokeWidth="1" strokeDasharray="4,4">
+            <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.5s" repeatCount="indefinite" />
+          </line>
+          <line x1="500" y1="300" x2="600" y2="250" stroke="rgba(201,168,76,0.25)" strokeWidth="1" strokeDasharray="4,4">
+            <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.3s" repeatCount="indefinite" />
+          </line>
+          {/* Moving truck dot */}
+          <circle r="4" fill="#C9A84C" opacity="0.8">
+            <animateMotion dur="12s" repeatCount="indefinite"
+              path="M200,220 L280,200 L350,250 L420,280 L500,300 L600,250 L650,200" />
+          </circle>
+          <circle r="4" fill="#C9A84C" opacity="0.6">
+            <animateMotion dur="15s" repeatCount="indefinite" begin="3s"
+              path="M150,300 L240,280 L300,300 L380,320 L450,360 L520,350" />
           </circle>
         </svg>
 
         <div className="relative z-10 flex flex-col items-start w-full max-w-[480px] px-12">
           {/* Logo */}
-          <div className="mb-10">
+          <div className="mb-8">
             <Logo size="lg" />
           </div>
 
           {/* Feature pills */}
-          <div className="flex flex-wrap gap-2 mb-10">
+          <div className="flex flex-wrap gap-2 mb-8">
             {FEATURE_PILLS.map((f) => (
-              <div key={f.label} className="flex items-center gap-1.5 border border-[#C9A84C]/20 text-[#C9A84C]/80 bg-[#C9A84C]/[0.05] rounded-lg px-3 py-2 text-xs hover:bg-[#C9A84C]/[0.12] hover:-translate-y-0.5 hover:shadow-[0_0_15px_rgba(201,168,76,0.1)] transition-all duration-200 cursor-default">
+              <div key={f.label} className="flex items-center gap-1.5 border border-white/20 text-white/80 bg-white/10 rounded-lg px-3 py-2 text-xs hover:bg-white/15 transition-all duration-200 cursor-default">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 {f.label}
               </div>
             ))}
           </div>
 
-          {/* Animated transitioning cards */}
-          <div className="relative w-full h-[140px] mb-8">
-            <div className="absolute -right-3 -bottom-3 w-full h-full bg-black/20 border border-white/[0.06] rounded-2xl" />
+          {/* Animated transitioning cards — WHITE */}
+          <div className="relative w-full h-[140px] mb-6">
+            <div className="absolute -right-2 -bottom-2 w-full h-full bg-white/10 rounded-2xl" />
             {SLIDES.map((slide, i) => (
-              <div key={i} className="absolute inset-0 bg-black/30 backdrop-blur-xl border border-[#C9A84C]/20 rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-opacity duration-[1200ms]"
-                style={{ opacity: currentSlide === i ? 1 : 0 }}>
+              <div key={i} className="absolute inset-0 bg-white rounded-2xl p-8 transition-opacity duration-[1200ms]"
+                style={{ opacity: currentSlide === i ? 1 : 0, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
                 <div className="text-[#C9A84C] text-xs tracking-[3px] uppercase font-semibold">{slide.label}</div>
-                <p className="text-white text-lg font-light leading-relaxed mt-2">{slide.text}</p>
+                <p className="text-[#1A1714] text-lg font-light leading-relaxed mt-2">{slide.text}</p>
               </div>
             ))}
           </div>
 
           {/* Dot indicators */}
-          <div className="flex items-center gap-2 mb-10">
+          <div className="flex items-center gap-2 mb-8">
             {SLIDES.map((_, i) => (
               <button key={i} onClick={() => setCurrentSlide(i)}
-                className={`rounded-full transition-all duration-500 border-none cursor-pointer ${currentSlide === i ? "w-5 h-2 bg-[#C9A84C] shadow-[0_0_8px_rgba(201,168,76,0.4)]" : "w-2 h-2 bg-[#C9A84C]/25"}`} />
+                className={`rounded-full transition-all duration-500 border-none cursor-pointer ${currentSlide === i ? "w-5 h-2 bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" : "w-2 h-2 bg-white/30"}`} />
             ))}
           </div>
 
-          {/* Daily insight */}
-          <div className="relative pl-4 max-w-[420px]">
-            <div className="absolute -left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/20 rounded-full" />
-            <div className="text-[#C9A84C] text-[10px] tracking-[2px] uppercase font-medium mb-1">{insight.cat}</div>
-            <p className="text-[#8aabbd] text-[13px] italic leading-relaxed m-0">{insight.text}</p>
-            <p className="text-[#4d6878] text-[11px] mt-1.5 m-0">&mdash; {insight.src}</p>
+          {/* Daily insight — LARGER, WHITE */}
+          <div className="relative pl-5 max-w-[440px]">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/20 rounded-full" />
+            <div className="text-[#C9A84C] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
+            <p className="text-white text-[16px] italic leading-relaxed m-0 font-light">{insight.text}</p>
+            <p className="text-white/50 text-[12px] mt-2 m-0">&mdash; {insight.src}</p>
           </div>
         </div>
 
