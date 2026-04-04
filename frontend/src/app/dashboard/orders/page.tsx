@@ -647,26 +647,25 @@ export default function OrderBuilderPage() {
                   <button type="button" onClick={() => setPalletRows((p) => [...p, { qty: "", l: "48", w: "40", h: "48", weight: "" }])}
                     className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer">+ Add Type</button>
                 </div>
+                <div className="grid grid-cols-[50px_1fr_1fr_1fr_70px_20px] gap-1 text-[9px] text-slate-500 uppercase px-0.5">
+                  <span>Qty</span><span>L (in)</span><span>W (in)</span><span>H (in)</span><span>Wt/plt</span><span></span>
+                </div>
                 {palletRows.map((row, idx) => (
-                  <div key={idx} className="flex items-center gap-1">
+                  <div key={idx} className="grid grid-cols-[50px_1fr_1fr_1fr_70px_20px] gap-1 items-center">
                     <input value={row.qty} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], qty: e.target.value }; setPalletRows(r); }}
-                      placeholder="Qty" type="number" className={`w-10 ${inp} text-center`} />
-                    <span className="text-slate-600 text-[9px]">plt</span>
+                      placeholder="Qty" inputMode="numeric" className={`${inp} text-center !px-1`} />
                     <input value={row.l} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], l: e.target.value }; setPalletRows(r); }}
-                      placeholder="L" type="number" className={`w-9 ${inp} text-center`} />
-                    <span className="text-slate-600 text-[9px]">x</span>
+                      placeholder="L" inputMode="numeric" className={`${inp} text-center !px-1`} />
                     <input value={row.w} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], w: e.target.value }; setPalletRows(r); }}
-                      placeholder="W" type="number" className={`w-9 ${inp} text-center`} />
-                    <span className="text-slate-600 text-[9px]">x</span>
+                      placeholder="W" inputMode="numeric" className={`${inp} text-center !px-1`} />
                     <input value={row.h} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], h: e.target.value }; setPalletRows(r); }}
-                      placeholder="H" type="number" className={`w-9 ${inp} text-center`} />
-                    <span className="text-slate-600 text-[9px]">in</span>
+                      placeholder="H" inputMode="numeric" className={`${inp} text-center !px-1`} />
                     <input value={row.weight} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], weight: e.target.value }; setPalletRows(r); }}
-                      placeholder="lbs" type="number" className={`w-14 ${inp} text-center`} />
-                    {palletRows.length > 1 && (
+                      placeholder="lbs" inputMode="numeric" className={`${inp} text-center !px-1`} />
+                    {palletRows.length > 1 ? (
                       <button type="button" onClick={() => setPalletRows((p) => p.filter((_, i) => i !== idx))}
-                        className="text-red-400 hover:text-red-300 text-[10px] cursor-pointer">x</button>
-                    )}
+                        className="text-red-400 hover:text-red-300 text-xs cursor-pointer text-center">✕</button>
+                    ) : <div />}
                   </div>
                 ))}
               </div>

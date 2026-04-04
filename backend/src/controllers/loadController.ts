@@ -6,6 +6,7 @@ import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../va
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
+import { sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
@@ -142,6 +143,9 @@ export async function createLoad(req: AuthRequest, res: Response) {
     // Financial (TMW)
     codAmount: raw.codAmount || undefined,
     paymentTermsLoad: raw.paymentTermsLoad || undefined,
+
+    // Shipper contact email for load notifications
+    contactEmail: raw.contactEmail || undefined,
   };
 
   // Remove undefined values
@@ -426,6 +430,20 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // Shipper milestone tracking email
   sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
 
+  // Contact email load milestone notifications
+  if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
+    sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+  if (status === "IN_TRANSIT") {
+    sendInTransitUpdate(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+  if (status === "AT_DELIVERY") {
+    sendArrivedAtDelivery(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+  if (status === "DELIVERED") {
+    sendDeliveredWithPOD(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+
   res.json(load);
 }
 
@@ -494,6 +512,20 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   // Shipper milestone tracking email
   sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
 
+  // Contact email load milestone notifications
+  if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
+    sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+  if (status === "IN_TRANSIT") {
+    sendInTransitUpdate(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+  if (status === "AT_DELIVERY") {
+    sendArrivedAtDelivery(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+  if (status === "DELIVERED") {
+    sendDeliveredWithPOD(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
+
   res.json(updated);
 }
 
@@ -531,10 +563,11 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     nmfcCode, declaredValue, loadingType, turnable,
     driverName, driverPhone, truckNumber, trailerNumber,
     dockAssignment, driverInstructions,
-    codAmount, paymentTermsLoad,
+    codAmount, paymentTermsLoad, contactEmail,
   } = req.body;
 
   const data: Record<string, unknown> = {};
+  if (contactEmail !== undefined) data.contactEmail = contactEmail;
   if (originCity !== undefined) data.originCity = originCity;
   if (originState !== undefined) data.originState = originState;
   if (originZip !== undefined) data.originZip = originZip;

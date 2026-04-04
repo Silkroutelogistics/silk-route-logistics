@@ -7,6 +7,7 @@ import { validateBody } from "../middleware/validate";
 import { upload } from "../config/upload";
 import { uploadFile } from "../services/storageService";
 import { nextShipmentNumber } from "../controllers/shipmentController";
+import { sendPODToContact } from "../services/shipperLoadNotifyService";
 
 const router = Router();
 
@@ -414,6 +415,9 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
         },
       });
     }
+
+    // Notify shipper contact email about POD
+    sendPODToContact(load.id).catch((e) => console.error("[ShipperNotify] POD", e.message));
   }
 
   res.json(doc);

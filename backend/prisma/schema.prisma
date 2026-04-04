@@ -1154,6 +1154,7 @@ model Load {
   height          Float?
   contactName     String?
   contactPhone    String?
+  contactEmail    String?
 
   // Asset assignment
   truckId         String?

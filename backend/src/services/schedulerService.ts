@@ -18,6 +18,7 @@ import { scanGeofences } from "./geofenceService";
 import { processSamsaraLocations } from "./samsaraService";
 import { processMotiveLocations } from "./motiveService";
 import { processExpiredTenders } from "../controllers/tenderController";
+import { dailyETAUpdates } from "./shipperLoadNotifyService";
 import {
   processInsuranceExpiryEnforcement,
   monthlyCarrierReVetting,
@@ -573,6 +574,12 @@ export function startSchedulers() {
       const result = await monthlyCarrierReVetting();
       console.log(`[Scheduler] Monthly re-vet: ${result.revetted}/${result.total} revetted, ${result.critical} CRITICAL, ${result.suspended} suspended`);
     });
+  });
+
+  // Shipper contact email ETA updates: daily noon EST = 17:00 UTC
+  cron.schedule("0 17 * * *", async () => {
+    console.log("[Scheduler] Running shipper contact ETA updates (noon EST)...");
+    await withLock("shipper-eta-updates", 15 * 60 * 1000, dailyETAUpdates);
   });
 
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);
