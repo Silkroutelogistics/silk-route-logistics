@@ -26,8 +26,10 @@ const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "10
 const COMMODITY_CLASS_MAP: Record<string, string> = {
   "auto parts": "85", "automotive": "85", "car parts": "85",
   "electronics": "92.5", "computers": "92.5", "technology": "92.5",
-  "furniture": "125", "household": "125",
+  "furniture": "125", "household": "125", "home goods": "125",
   "food": "70", "beverage": "70", "groceries": "70", "produce": "70",
+  "retail": "70", "retail goods": "70", "general merchandise": "70", "consumer goods": "77.5",
+  "health": "92.5", "beauty": "92.5", "cosmetics": "92.5", "supplements": "92.5",
   "paper": "55", "packaging": "55", "corrugated": "55", "cardboard": "55",
   "chemicals": "60", "chemical": "60",
   "machinery": "85", "equipment": "85", "industrial": "85",
@@ -126,6 +128,48 @@ export default function OrderBuilderPage() {
       setSuggestedClass("");
     }
   }, [form.commodity]);
+
+  // Auto-suggest freight class from weight + pallet dimensions (density-based)
+  useEffect(() => {
+    if (suggestedClass) return; // commodity-based suggestion takes priority
+    if (form.weight && form.palletLength && form.palletWidth && form.palletHeight && form.pallets) {
+      const totalWeight = parseFloat(form.weight);
+      const L = parseFloat(form.palletLength);
+      const W = parseFloat(form.palletWidth);
+      const H = parseFloat(form.palletHeight);
+      const pallets = parseInt(form.pallets);
+      if (totalWeight > 0 && L > 0 && W > 0 && H > 0 && pallets > 0) {
+        // Density = weight / cubic feet. Convert inches to feet for volume.
+        const cubicFeetPerPallet = (L / 12) * (W / 12) * (H / 12);
+        const totalCubicFeet = cubicFeetPerPallet * pallets;
+        const density = totalWeight / totalCubicFeet; // lbs per cubic foot
+        // NMFC density-based class ranges
+        let densityClass = "";
+        if (density >= 50) densityClass = "50";
+        else if (density >= 35) densityClass = "55";
+        else if (density >= 30) densityClass = "60";
+        else if (density >= 22.5) densityClass = "65";
+        else if (density >= 15) densityClass = "70";
+        else if (density >= 13.5) densityClass = "77.5";
+        else if (density >= 12) densityClass = "85";
+        else if (density >= 10.5) densityClass = "92.5";
+        else if (density >= 9) densityClass = "100";
+        else if (density >= 8) densityClass = "110";
+        else if (density >= 7) densityClass = "125";
+        else if (density >= 6) densityClass = "150";
+        else if (density >= 5) densityClass = "175";
+        else if (density >= 4) densityClass = "200";
+        else if (density >= 3) densityClass = "250";
+        else if (density >= 2) densityClass = "300";
+        else if (density >= 1) densityClass = "400";
+        else densityClass = "500";
+        if (densityClass && !form.freightClass) {
+          setSuggestedClass(densityClass);
+          setForm((f) => ({ ...f, freightClass: densityClass }));
+        }
+      }
+    }
+  }, [form.weight, form.palletLength, form.palletWidth, form.palletHeight, form.pallets, suggestedClass]);
 
   // Auto-calculate weight from pallets and weight per pallet
   useEffect(() => {
