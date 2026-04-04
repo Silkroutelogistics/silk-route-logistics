@@ -7,7 +7,7 @@
 // v2.3   — Carvan 3-tier program, QP safety, milestones, performance-first tiers
 // v2.3.b — QP Revenue Dashboard, small carrier pain points addressed
 
-export const SRL_VERSION = "2.3.b";
+export const SRL_VERSION = "2.3.c";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

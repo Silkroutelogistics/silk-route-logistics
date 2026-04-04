@@ -47,6 +47,7 @@ interface FMCSACarrierResult {
   phyState: string | null;
   phyZipcode: string | null;
   phone: string | null;
+  mcs150Outdated: boolean | null;
   errors: string[];
 }
 
@@ -59,7 +60,7 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
       dotNumber, operatingStatus: null, entityType: null, safetyRating: null,
       insuranceOnFile: false, outOfServiceDate: null, totalDrivers: null,
       totalPowerUnits: null, phyStreet: null, phyCity: null, phyState: null,
-      phyZipcode: null, phone: null,
+      phyZipcode: null, phone: null, mcs150Outdated: null,
       errors: ["Carrier not found in FMCSA database"],
     };
   }
@@ -84,6 +85,7 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
     phyState: carrier.phyState || null,
     phyZipcode: carrier.phyZipcode || null,
     phone: carrier.telephone || null,
+    mcs150Outdated: carrier.mcs150Outdated === "Y" ? true : carrier.mcs150Outdated === "N" ? false : null,
     errors: [],
   };
 }
@@ -124,7 +126,7 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
       dotNumber: "", operatingStatus: "VERIFICATION_FAILED", entityType: null,
       safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
       totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
-      phyState: null, phyZipcode: null, phone: null,
+      phyState: null, phyZipcode: null, phone: null, mcs150Outdated: null,
       errors: ["No FMCSA_WEB_KEY configured"],
     };
   }
@@ -137,7 +139,7 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
       dotNumber: "", operatingStatus: null, entityType: null,
       safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
       totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
-      phyState: null, phyZipcode: null, phone: null,
+      phyState: null, phyZipcode: null, phone: null, mcs150Outdated: null,
       errors: ["Invalid MC number"],
     };
   }
@@ -172,7 +174,7 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
     dotNumber: "", operatingStatus: null, entityType: null,
     safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
     totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
-    phyState: null, phyZipcode: null, phone: null,
+    phyState: null, phyZipcode: null, phone: null, mcs150Outdated: null,
     errors: ["Carrier not found for this MC number"],
   };
 }
@@ -258,6 +260,7 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     phyState: null,
     phyZipcode: null,
     phone: null,
+    mcs150Outdated: null,
     errors: ["FMCSA API unavailable - verification failed (fail-safe)", ...debugErrors],
   };
 }

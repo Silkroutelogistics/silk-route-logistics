@@ -8,7 +8,7 @@ import {
   Search, Shield, Truck, MapPin, Star, CheckCircle2, Clock, AlertCircle, X,
   ChevronDown, ChevronUp, MessageSquare, FileText, Users, Phone, Mail, Building2,
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
-  BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle,
+  BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
 } from "lucide-react";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
@@ -321,6 +321,20 @@ export default function CarrierPoolPage() {
       console.error("Compass vetting failed:", err);
     } finally {
       setCompassLoading(null);
+    }
+  }
+
+  async function downloadCompassPdf(carrierId: string) {
+    try {
+      const res = await api.get(`/carriers/${carrierId}/compass-report`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Compass-Report-${carrierId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Compass PDF download failed:", err);
     }
   }
 
@@ -652,6 +666,12 @@ export default function CarrierPoolPage() {
                         className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition"
                       >
                         <RefreshCw className={`w-3 h-3 ${compassLoading === carrier.id ? "animate-spin" : ""}`} /> Re-run
+                      </button>
+                      <button
+                        onClick={() => downloadCompassPdf(carrier.id)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition"
+                      >
+                        <Download className="w-3 h-3" /> Download Report
                       </button>
                       <span className="text-[10px] text-slate-600">
                         Vetted: {new Date(compassResult.vettedAt).toLocaleString()}

@@ -846,6 +846,15 @@ model CarrierProfile {
   registrationIpHash    String?                 // SHA-256 of registration IP
   registrationUserAgent String?                 // Browser user-agent at registration
 
+  // IRP / IFTA / BOC-3 / MCS-150
+  irpStatus             String?                 // VERIFIED, EXPIRED, NOT_VERIFIED
+  irpExpiryDate         DateTime?
+  iftaStatus            String?                 // VERIFIED, EXPIRED, NOT_VERIFIED
+  iftaExpiryDate        DateTime?
+  boc3Filed             Boolean                 @default(false)
+  mcs150Outdated        Boolean?
+  mcs150LastUpdate      DateTime?
+
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 

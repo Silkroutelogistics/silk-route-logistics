@@ -21,6 +21,8 @@ import { auditLog } from "../middleware/audit";
 import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { z } from "zod";
+import { vetAndStoreReport, type CarrierVettingReport } from "../services/carrierVettingService";
+import { generateCompassReport } from "../services/compassPdfService";
 
 const router = Router();
 
@@ -70,6 +72,76 @@ router.get("/", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), v
 router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
 router.get("/:id/score", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierScore);
 router.get("/:id/vetting-report", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getVettingReport);
+
+// Compass PDF report download
+router.get("/:id/compass-report", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  try {
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: req.params.id },
+      include: { user: true },
+    });
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    // Get latest vetting report or run fresh
+    let reportData: CarrierVettingReport;
+    const latestReport = await prisma.vettingReport.findFirst({
+      where: { carrierId: carrier.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (latestReport) {
+      reportData = {
+        dotNumber: carrier.dotNumber || "",
+        mcNumber: carrier.mcNumber || null,
+        legalName: carrier.companyName || null,
+        score: latestReport.score,
+        grade: latestReport.grade as any,
+        riskLevel: latestReport.riskLevel as any,
+        recommendation: latestReport.recommendation as any,
+        checks: (latestReport.checksJson as any[]) || [],
+        fmcsaData: (latestReport.fmcsaSnapshot as any) || {
+          operatingStatus: null, entityType: null, safetyRating: null,
+          insuranceOnFile: false, outOfServiceDate: null, totalDrivers: null, totalPowerUnits: null,
+        },
+        identityData: (latestReport.identityData as any) || null,
+        flags: (latestReport.flagsJson as string[]) || [],
+        previousScore: latestReport.previousScore,
+        scoreDelta: latestReport.scoreDelta,
+        trendDirection: latestReport.trendDirection,
+        vettedAt: latestReport.createdAt.toISOString(),
+      };
+    } else {
+      // No existing report — run a fresh vet
+      if (!carrier.dotNumber) {
+        res.status(400).json({ error: "Carrier has no DOT number — cannot generate Compass report" });
+        return;
+      }
+      reportData = await vetAndStoreReport(carrier.dotNumber, carrier.id, carrier.mcNumber || undefined, "PDF_DOWNLOAD");
+    }
+
+    const carrierInfo = {
+      companyName: carrier.companyName || "Unknown Carrier",
+      dotNumber: carrier.dotNumber || "N/A",
+      mcNumber: carrier.mcNumber || "N/A",
+      contactName: carrier.contactName || `${carrier.user?.firstName || ""} ${carrier.user?.lastName || ""}`.trim() || "N/A",
+      tier: carrier.tier || "NONE",
+      milestone: carrier.milestone || "M1_FIRST_LOAD",
+    };
+
+    const pdfDoc = generateCompassReport(reportData, carrierInfo);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Compass-Report-${carrier.id}.pdf"`);
+    pdfDoc.pipe(res);
+  } catch (err) {
+    console.error("[Compass PDF] Error generating report:", err);
+    res.status(500).json({ error: "Failed to generate Compass PDF report" });
+  }
+});
+
 router.put("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
 
 // Full vetting — runs all checks in one call

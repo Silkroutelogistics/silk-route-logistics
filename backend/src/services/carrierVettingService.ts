@@ -1,9 +1,10 @@
 /**
- * Compass by SRL — Vetting Engine — 31-Check Composite Risk Scoring
+ * Compass by SRL — Vetting Engine — 35-Check Composite Risk Scoring
  * Covers FMCSA, identity, fraud, OFAC/SDN, biometrics, ELD, TIN match,
  * UCR, overbooking, fraud reports, agreements, historical performance,
  * fleet VIN verification (NHTSA), probationary period, document expiry,
- * SAM.gov federal exclusion screening, and cross-reference identity validation.
+ * SAM.gov federal exclusion screening, cross-reference identity validation,
+ * IRP registration, IFTA compliance, BOC-3 process agent, and MCS-150 update.
  */
 
 import { prisma } from "../config/database";
@@ -887,6 +888,89 @@ export async function vetCarrier(
       deduction: 5,
     });
     score -= 5;
+  }
+
+  // ── 32. IRP (International Registration Plan) ──
+  if (existingCarrier) {
+    const irpStatus = (existingCarrier as any).irpStatus as string | null;
+    if (irpStatus === "VERIFIED") {
+      checks.push({ name: "IRP Registration", result: "PASS", detail: "IRP apportioned registration verified", deduction: 0 });
+    } else if (irpStatus === "EXPIRED") {
+      checks.push({ name: "IRP Registration", result: "WARNING", detail: "IRP registration expired — carrier must renew", deduction: 8 });
+      score -= 8;
+      flags.push("IRP registration expired");
+    } else {
+      checks.push({ name: "IRP Registration", result: "WARNING", detail: "IRP status not confirmed — request documentation", deduction: 5 });
+      score -= 5;
+    }
+  } else {
+    checks.push({ name: "IRP Registration", result: "WARNING", detail: "No carrier record — cannot verify IRP", deduction: 5 });
+    score -= 5;
+  }
+
+  // ── 33. IFTA (International Fuel Tax Agreement) ──
+  if (existingCarrier) {
+    const iftaStatus = (existingCarrier as any).iftaStatus as string | null;
+    if (iftaStatus === "VERIFIED") {
+      checks.push({ name: "IFTA Compliance", result: "PASS", detail: "IFTA fuel tax compliance verified", deduction: 0 });
+    } else if (iftaStatus === "EXPIRED") {
+      checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "IFTA registration expired — carrier must renew", deduction: 8 });
+      score -= 8;
+      flags.push("IFTA registration expired");
+    } else {
+      checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "IFTA status not confirmed — request documentation", deduction: 5 });
+      score -= 5;
+    }
+    // Also check truck-level IFTA expiry
+    const trucks = await prisma.truck.findMany({
+      where: { iftaExpiry: { lt: new Date() }, ifta: true },
+      select: { id: true, unitNumber: true, iftaExpiry: true },
+    });
+    if (trucks.length > 0) {
+      checks.push({ name: "IFTA Truck Expiry", result: "FAIL", detail: `${trucks.length} truck(s) with expired IFTA: ${trucks.slice(0, 3).map(t => t.unitNumber).join(", ")}`, deduction: 10 });
+      score -= 10;
+      flags.push(`${trucks.length} truck(s) with expired IFTA credentials`);
+    }
+  } else {
+    checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "No carrier record — cannot verify IFTA", deduction: 5 });
+    score -= 5;
+  }
+
+  // ── 34. BOC-3 Process Agent ──
+  {
+    const boc3Filed = existingCarrier ? (existingCarrier as any).boc3Filed as boolean : false;
+    if (boc3Filed) {
+      checks.push({ name: "BOC-3 Process Agent", result: "PASS", detail: "BOC-3 designation on file", deduction: 0 });
+    } else if (fmcsa.operatingStatus === "AUTHORIZED") {
+      // Active authority implies BOC-3 was filed (prerequisite)
+      checks.push({ name: "BOC-3 Process Agent", result: "PASS", detail: "Authority AUTHORIZED — BOC-3 assumed on file with FMCSA", deduction: 0 });
+    } else {
+      checks.push({ name: "BOC-3 Process Agent", result: "WARNING", detail: "BOC-3 may not be on file — authority not active", deduction: 5 });
+      score -= 5;
+      flags.push("BOC-3 process agent status uncertain");
+    }
+  }
+
+  // ── 35. MCS-150 Biennial Update ──
+  {
+    const mcs150Outdated = (fmcsa as any).mcs150Outdated;
+    const carrierMcs150 = existingCarrier ? (existingCarrier as any).mcs150Outdated as boolean | null : null;
+    if (mcs150Outdated === true || mcs150Outdated === "Y") {
+      checks.push({ name: "MCS-150 Biennial Update", result: "FAIL", detail: "MCS-150 is outdated — carrier must file update with FMCSA", deduction: 10 });
+      score -= 10;
+      flags.push("MCS-150 form is outdated — FMCSA compliance risk");
+    } else if (mcs150Outdated === false || mcs150Outdated === "N") {
+      checks.push({ name: "MCS-150 Biennial Update", result: "PASS", detail: "MCS-150 is current", deduction: 0 });
+    } else if (carrierMcs150 === true) {
+      checks.push({ name: "MCS-150 Biennial Update", result: "FAIL", detail: "MCS-150 is outdated — carrier must file update with FMCSA", deduction: 10 });
+      score -= 10;
+      flags.push("MCS-150 form is outdated — FMCSA compliance risk");
+    } else if (carrierMcs150 === false) {
+      checks.push({ name: "MCS-150 Biennial Update", result: "PASS", detail: "MCS-150 is current (carrier-reported)", deduction: 0 });
+    } else {
+      checks.push({ name: "MCS-150 Biennial Update", result: "WARNING", detail: "MCS-150 status not available — manual verification recommended", deduction: 3 });
+      score -= 3;
+    }
   }
 
   // ── Clamp Score & Calculate Results ──
