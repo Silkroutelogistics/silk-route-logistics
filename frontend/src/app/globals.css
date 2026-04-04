@@ -23,6 +23,61 @@ input:-webkit-autofill:focus {
   caret-color: #f8fafc;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL FIX: Native <select> dropdown styling for dark pages
+   Chrome/Edge/Safari ignore className on <option> elements.
+   This forces all selects on dark-themed pages to use dark navy
+   backgrounds with white text. Applied globally to prevent the
+   recurring white-dropdown-on-dark-page color mismatch.
+   ═══════════════════════════════════════════════════════════ */
+
+/* All selects inside dashboard, accounting, admin pages get dark options */
+[class*="bg-[#0f172a]"] select option,
+[class*="bg-navy"] select option,
+.dark-select-options option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* Force dark bg on select options within any page that has dark bg */
+select option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Selected/checked option uses gold */
+select option:checked,
+select option:hover {
+  background-color: #1e293b;
+  color: #C9A84C;
+}
+
+/* Light-themed selects inside white modals/drawers override back to white */
+.light-select option,
+[class*="bg-white"] select option,
+[class*="bg-gray-50"] select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.light-select option:checked,
+[class*="bg-white"] select option:checked {
+  background-color: #fef9ee !important;
+  color: #92400e !important;
+}
+
+/* Firefox-specific select styling */
+@-moz-document url-prefix() {
+  select {
+    background-color: inherit;
+    color: inherit;
+  }
+  select option {
+    background-color: #0f172a;
+    color: #f1f5f9;
+  }
+}
+
 @theme {
   --color-navy: #0D1B2A;
   --color-navy-light: #1B2D45;
