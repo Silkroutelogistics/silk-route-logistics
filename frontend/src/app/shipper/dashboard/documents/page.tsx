@@ -76,7 +76,7 @@ export default function ShipperDocumentsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Freight Document Vault</h1>
+      <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Freight Document Vault</h1>
       <p className="text-[13px] text-gray-500 mb-6">All your BOLs, proof of delivery, rate confirmations, and freight claims in one secure location</p>
 
       <div className="grid grid-cols-4 gap-3 mb-6">
@@ -102,7 +102,7 @@ export default function ShipperDocumentsPage() {
                     <Icon size={20} className={color} />
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-[#1a1a2e]">{d.count}</div>
+                    <div className="text-xl font-bold text-[#0F1117]">{d.count}</div>
                     <div className="text-[11px] text-gray-400">{typeLabels[d.type] || d.type}</div>
                   </div>
                 </div>
@@ -155,7 +155,7 @@ export default function ShipperDocumentsPage() {
       {/* Recent docs */}
       <ShipperCard padding="p-0">
         <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-[15px] font-bold text-[#1a1a2e]">Recent Documents</h3>
+          <h3 className="text-[15px] font-bold text-[#0F1117]">Recent Documents</h3>
         </div>
         {isLoading ? (
           [...Array(4)].map((_, i) => (
@@ -177,7 +177,7 @@ export default function ShipperDocumentsPage() {
                   <File size={18} className="text-red-500" />
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#1a1a2e]">{doc.name}</div>
+                  <div className="text-[13px] font-semibold text-[#0F1117]">{doc.name}</div>
                   <div className="text-[11px] text-gray-400">
                     {typeLabels[doc.type] || doc.type} &middot; {doc.shipment} &middot; {doc.size > 1024 * 1024 ? `${(doc.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(doc.size / 1024)} KB`}
                   </div>

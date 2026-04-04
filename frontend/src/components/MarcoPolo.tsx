@@ -70,11 +70,11 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
     : ["What services does SRL offer?", "How do I become a carrier?", "Tell me about your tier system"];
 
   // Theme classes
-  const bg = darkMode ? "bg-[#1a1a2e]" : "bg-white";
+  const bg = darkMode ? "bg-[#0F1117]" : "bg-white";
   const border = darkMode ? "border-white/10" : "border-gray-200";
-  const headerBg = darkMode ? "bg-[#1e293b]" : "bg-[#1a1a2e]";
+  const headerBg = darkMode ? "bg-[#1e293b]" : "bg-[#0F1117]";
   const inputBg = darkMode ? "bg-white/5 border-white/10 text-white placeholder-slate-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400";
-  const userBubble = "bg-[#d4a574] text-[#1a1a2e]";
+  const userBubble = "bg-[#d4a574] text-[#0F1117]";
   const botBubble = darkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900";
   const textMuted = darkMode ? "text-slate-400" : "text-gray-500";
 
@@ -84,11 +84,11 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#d4a574] text-[#1a1a2e] shadow-lg shadow-[#d4a574]/20 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer group"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#d4a574] text-[#0F1117] shadow-lg shadow-[#d4a574]/20 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer group"
           title="Chat with Marco Polo"
         >
           <Ship className="w-7 h-7" />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1a1a2e]" />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0F1117]" />
         </button>
       )}
 
@@ -168,7 +168,7 @@ export function MarcoPolo({ isAuthenticated = false, apiBase, token, darkMode = 
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || loading}
-                className="w-9 h-9 rounded-xl bg-[#d4a574] text-[#1a1a2e] flex items-center justify-center hover:bg-[#d4a574]/90 disabled:opacity-40 transition shrink-0"
+                className="w-9 h-9 rounded-xl bg-[#d4a574] text-[#0F1117] flex items-center justify-center hover:bg-[#d4a574]/90 disabled:opacity-40 transition shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>

@@ -137,7 +137,7 @@ export default function InvoicesPage() {
               data.invoices.map((inv) => {
                 const isOverdue = inv.status !== "PAID" && inv.status !== "VOID" && new Date(inv.dueDate) < new Date();
                 return (
-                  <tr key={inv.id} className="hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelectedInvoice(inv)}>
+                  <tr key={inv.id} className="hover:bg-[#0F1117] cursor-pointer" onClick={() => setSelectedInvoice(inv)}>
                     <td className="px-5 py-3 text-sm text-white font-medium">{inv.invoiceNumber}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{inv.load.referenceNumber}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{inv.load.customer?.name || inv.user?.company || `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() || "—"}</td>
@@ -208,7 +208,7 @@ export default function InvoicesPage() {
       {confirmPayId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmPayId(null)} />
-          <div className="relative bg-[#1a1a2e] border border-white/10 rounded-2xl w-[400px] p-6">
+          <div className="relative bg-[#0F1117] border border-white/10 rounded-2xl w-[400px] p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-white">Confirm Payment</h2>
               <button onClick={() => setConfirmPayId(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -239,8 +239,8 @@ export default function InvoicesPage() {
       {selectedInvoice && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedInvoice(null)} />
-          <div className="relative w-[480px] bg-[#1a1a2e] border-l border-white/10 overflow-y-auto">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#1a1a2e] z-10">
+          <div className="relative w-[480px] bg-[#0F1117] border-l border-white/10 overflow-y-auto">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-[#0F1117] z-10">
               <h2 className="text-lg font-bold text-white">{selectedInvoice.invoiceNumber}</h2>
               <button onClick={() => setSelectedInvoice(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>

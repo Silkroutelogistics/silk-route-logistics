@@ -155,16 +155,16 @@ export default function ClaimsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="bg-white/5 border border-white/10 text-sm text-white rounded-lg px-3 py-2">
-          <option value="" className="bg-[#1a1a2e] text-white">All Statuses</option>
+          <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
           {["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED", "DENIED"].map(s => (
-            <option key={s} value={s} className="bg-[#1a1a2e] text-white">{formatType(s)}</option>
+            <option key={s} value={s} className="bg-[#0F1117] text-white">{formatType(s)}</option>
           ))}
         </select>
         <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
           className="bg-white/5 border border-white/10 text-sm text-white rounded-lg px-3 py-2">
-          <option value="" className="bg-[#1a1a2e] text-white">All Types</option>
+          <option value="" className="bg-[#0F1117] text-white">All Types</option>
           {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => (
-            <option key={t} value={t} className="bg-[#1a1a2e] text-white">{formatType(t)}</option>
+            <option key={t} value={t} className="bg-[#0F1117] text-white">{formatType(t)}</option>
           ))}
         </select>
         <div className="relative flex-1 max-w-xs">
@@ -200,7 +200,7 @@ export default function ClaimsPage() {
                 </div>
               </td></tr>
             ) : filtered.map(c => (
-              <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] group">
+              <tr key={c.id} className="border-b border-white/5 hover:bg-[#0F1117] group">
                 <td className="p-3 text-slate-300">{new Date(c.createdAt).toLocaleDateString()}</td>
                 <td className="p-3 text-gold font-mono text-xs">{c.load?.referenceNumber || c.loadId.slice(0, 8)}</td>
                 <td className="p-3"><span className="flex items-center gap-1.5 text-slate-300">{TYPE_ICONS[c.type]}{formatType(c.type)}</span></td>
@@ -229,7 +229,7 @@ export default function ClaimsPage() {
             ))}
             {/* Expanded detail row rendered separately */}
             {filtered.map(c => expanded === c.id && (
-              <tr key={`${c.id}-detail`} className="bg-white/[0.02]">
+              <tr key={`${c.id}-detail`} className="bg-[#0F1117]">
                 <td colSpan={7} className="p-4 space-y-2 text-sm">
                   <p className="text-slate-400"><span className="text-slate-500">Description:</span> {c.description}</p>
                   {c.resolutionNotes && <p className="text-slate-400"><span className="text-slate-500">Resolution:</span> {c.resolutionNotes}</p>}

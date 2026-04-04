@@ -136,10 +136,10 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-auto">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-[850px] max-h-[95vh] overflow-auto">
         {/* Action Bar */}
-        <div className="sticky top-0 bg-[#1a1a2e] px-6 py-3 flex items-center justify-between rounded-t-xl z-10 no-print">
+        <div className="sticky top-0 bg-[#0F1117] px-6 py-3 flex items-center justify-between rounded-t-xl z-10 no-print">
           <span className="text-white font-semibold text-sm">Bill of Lading — {bolNum}</span>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#C9A84C] text-[#1a1a2e] text-xs font-bold rounded-md hover:bg-[#D4B85E]">
+            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#C9A84C] text-[#0F1117] text-xs font-bold rounded-md hover:bg-[#D4B85E]">
               <Printer size={14} /> Print / Save PDF
             </button>
             {onClose && (
@@ -341,45 +341,45 @@ const printStyles = `
   .bol-page { max-width: 7.5in; margin: 0 auto; }
 
   /* Header */
-  .bol-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a1a2e; padding-bottom: 10px; margin-bottom: 14px; }
+  .bol-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0F1117; padding-bottom: 10px; margin-bottom: 14px; }
   .bol-logo-block { display: flex; align-items: center; gap: 10px; }
   .bol-logo { height: 52px; width: auto; }
-  .bol-company-name { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; color: #1a1a2e; letter-spacing: 0.5px; }
+  .bol-company-name { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; color: #0F1117; letter-spacing: 0.5px; }
   .bol-company-detail { font-size: 9px; color: #6b7280; margin-top: 1px; }
   .bol-company-info { margin-top: 2px; }
 
   .bol-title-block { text-align: right; }
-  .bol-title { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #1a1a2e; line-height: 1.1; }
+  .bol-title { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #0F1117; line-height: 1.1; }
   .bol-title-sub { font-size: 8px; color: #C9A84C; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
   .bol-ref-table { font-size: 10px; margin-left: auto; border-collapse: collapse; }
   .bol-ref-label { text-align: right; color: #6b7280; padding-right: 6px; padding-top: 1px; }
-  .bol-ref-value { font-weight: 600; color: #1a1a2e; padding-top: 1px; }
+  .bol-ref-value { font-weight: 600; color: #0F1117; padding-top: 1px; }
 
   /* Parties */
   .bol-parties { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
   .bol-party-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 8px 10px; }
   .bol-party-label { font-size: 8px; font-weight: 700; color: #C9A84C; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
-  .bol-party-name { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 2px; }
+  .bol-party-name { font-size: 12px; font-weight: 700; color: #0F1117; margin-bottom: 2px; }
   .bol-party-detail { font-size: 10px; color: #4b5563; line-height: 1.5; }
-  .bol-party-schedule { font-size: 10px; color: #1a1a2e; margin-top: 4px; background: #f9fafb; padding: 3px 5px; border-radius: 2px; }
+  .bol-party-schedule { font-size: 10px; color: #0F1117; margin-top: 4px; background: #f9fafb; padding: 3px 5px; border-radius: 2px; }
 
   /* Freight Table */
   .bol-section-label { font-size: 8px; font-weight: 700; color: #C9A84C; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; margin-top: 4px; }
   .bol-freight-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  .bol-freight-table th { background: #1a1a2e; color: white; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 5px 8px; text-align: left; }
+  .bol-freight-table th { background: #0F1117; color: white; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 5px 8px; text-align: left; }
   .bol-freight-table td { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 11px; }
   .bol-freight-table tr:nth-child(even) td { background: #f9fafb; }
 
   /* Conditions */
   .bol-conditions { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; padding: 6px 8px; background: #f9fafb; border-radius: 3px; border: 1px solid #e5e7eb; }
   .bol-cond-item { font-size: 10px; color: #374151; }
-  .bol-cond-label { font-weight: 700; color: #1a1a2e; }
+  .bol-cond-label { font-weight: 700; color: #0F1117; }
   .bol-hazmat { color: #dc2626; font-weight: 600; }
 
   /* Instructions */
   .bol-instructions { font-size: 10px; color: #374151; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 14px; line-height: 1.6; }
   .bol-instructions div { margin-bottom: 4px; }
-  .bol-instructions strong { color: #1a1a2e; }
+  .bol-instructions strong { color: #0F1117; }
 
   /* Signatures */
   .bol-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
@@ -389,7 +389,7 @@ const printStyles = `
   .bol-sig-fields { display: flex; justify-content: space-between; font-size: 8px; color: #9ca3af; margin-bottom: 14px; }
 
   /* Footer */
-  .bol-footer { border-top: 2px solid #1a1a2e; padding-top: 8px; margin-top: 8px; }
+  .bol-footer { border-top: 2px solid #0F1117; padding-top: 8px; margin-top: 8px; }
   .bol-footer-note { font-size: 8px; color: #6b7280; line-height: 1.5; margin-bottom: 4px; }
   .bol-footer-brand { font-size: 8px; color: #C9A84C; font-weight: 600; text-align: right; }
 

@@ -190,7 +190,7 @@ export function CarrierFleetOverview() {
               carriers.slice(0, 10).map(c => {
                 const tierColor = TIER_COLORS[c.tier || "BRONZE"] || TIER_COLORS.BRONZE;
                 return (
-                  <tr key={c.carrierId} className="hover:bg-white/[0.02]">
+                  <tr key={c.carrierId} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{c.company || "Unknown"}</td>
                     <td className="px-5 py-3">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tierColor.bg} ${tierColor.text}`}>

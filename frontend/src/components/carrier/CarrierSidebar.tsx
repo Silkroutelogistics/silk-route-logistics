@@ -31,7 +31,7 @@ export function CarrierSidebar() {
     <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-white/5">
-        <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[#1a1a2e] text-[11px] font-black tracking-tight">
+        <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[#0F1117] text-[11px] font-black tracking-tight">
           SR
         </div>
         <div>
@@ -74,9 +74,9 @@ export function CarrierSidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#1a1a2e] border-b border-white/5 px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0F1117] border-b border-white/5 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[#1a1a2e] text-[10px] font-black tracking-tight">
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[#0F1117] text-[10px] font-black tracking-tight">
             SR
           </div>
           <span className="text-[11px] font-bold text-white tracking-[2px]">SILK ROUTE</span>
@@ -99,7 +99,7 @@ export function CarrierSidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`w-[220px] bg-[#1a1a2e] border-r border-white/5 flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
+        className={`w-[220px] bg-[#080C18] border-r border-[#2A2F42] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >

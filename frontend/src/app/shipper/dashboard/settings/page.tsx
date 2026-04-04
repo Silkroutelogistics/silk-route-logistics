@@ -144,7 +144,7 @@ export default function ShipperSettingsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#1a1a2e] mb-6">Account Settings</h1>
+      <h1 className="font-serif text-2xl text-[#0F1117] mb-6">Account Settings</h1>
       <div className="grid grid-cols-[200px_1fr] gap-6">
         {/* Settings nav */}
         <div>
@@ -162,7 +162,7 @@ export default function ShipperSettingsPage() {
         {/* Form */}
         {activeTab === 0 && (
           <ShipperCard padding="p-7">
-            <h2 className="text-lg font-bold text-[#1a1a2e] mb-1">Company Profile</h2>
+            <h2 className="text-lg font-bold text-[#0F1117] mb-1">Company Profile</h2>
             <p className="text-[13px] text-gray-500 mb-6">Manage your company details and preferences</p>
 
             {saveMutation.isSuccess && (
@@ -189,7 +189,7 @@ export default function ShipperSettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={saveMutation.isPending || !isDirty}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-50"
               >
                 {saveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save Changes
               </button>
@@ -206,12 +206,12 @@ export default function ShipperSettingsPage() {
 
         {activeTab === 5 && (
           <ShipperCard padding="p-7">
-            <h2 className="text-lg font-bold text-[#1a1a2e] mb-1">Security</h2>
+            <h2 className="text-lg font-bold text-[#0F1117] mb-1">Security</h2>
             <p className="text-[13px] text-gray-500 mb-6">Manage your password and two-factor authentication</p>
 
             {/* Change Password */}
             <div className="mb-8 pb-6 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-[#1a1a2e] mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
                 <Lock size={16} className="text-[#C9A84C]" /> Change Password
               </h3>
               <div className="space-y-3 max-w-md">
@@ -239,7 +239,7 @@ export default function ShipperSettingsPage() {
                     changePasswordMutation.mutate();
                   }}
                   disabled={changePasswordMutation.isPending || !pwCurrent || !pwNew}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a1a2e] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-50"
                 >
                   {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
                 </button>
@@ -248,7 +248,7 @@ export default function ShipperSettingsPage() {
 
             {/* Two-Factor Authentication */}
             <div>
-              <h3 className="text-sm font-bold text-[#1a1a2e] mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
                 <ShieldCheck size={16} className="text-[#C9A84C]" /> Two-Factor Authentication
               </h3>
 
@@ -286,13 +286,13 @@ export default function ShipperSettingsPage() {
                         >
                           {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
                         </button>
-                        <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#1a1a2e]">Cancel</button>
+                        <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0F1117]">Cancel</button>
                       </div>
                     </div>
                   ) : (
                     <button
                       onClick={() => { setShowDisable(true); setTotpSuccess(""); setTotpError(""); }}
-                      className="px-4 py-2.5 bg-gray-100 text-[#1a1a2e] text-xs font-semibold rounded-md hover:bg-gray-200"
+                      className="px-4 py-2.5 bg-gray-100 text-[#0F1117] text-xs font-semibold rounded-md hover:bg-gray-200"
                     >
                       Disable 2FA
                     </button>
@@ -337,11 +337,11 @@ export default function ShipperSettingsPage() {
                     <button
                       onClick={() => verifyTotp.mutate()}
                       disabled={verifyTotp.isPending || totpCode.length !== 6}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-xs font-semibold uppercase tracking-[1.5px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-50"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-xs font-semibold uppercase tracking-[1.5px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-50"
                     >
                       <ShieldCheck size={14} /> {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
                     </button>
-                    <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#1a1a2e]">Cancel</button>
+                    <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0F1117]">Cancel</button>
                   </div>
                 </div>
               ) : (
@@ -350,7 +350,7 @@ export default function ShipperSettingsPage() {
                   <button
                     onClick={() => { setupTotp.mutate(); setTotpSuccess(""); setTotpError(""); }}
                     disabled={setupTotp.isPending}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-xs font-semibold uppercase tracking-[1.5px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-xs font-semibold uppercase tracking-[1.5px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-50"
                   >
                     <ShieldCheck size={14} /> {setupTotp.isPending ? "Setting up..." : "Enable 2FA"}
                   </button>
@@ -362,7 +362,7 @@ export default function ShipperSettingsPage() {
 
         {activeTab !== 0 && activeTab !== 5 && (
           <ShipperCard padding="p-7">
-            <h2 className="text-lg font-bold text-[#1a1a2e] mb-1">{settingsNav[activeTab]}</h2>
+            <h2 className="text-lg font-bold text-[#0F1117] mb-1">{settingsNav[activeTab]}</h2>
             <p className="text-[13px] text-gray-500">This section is coming soon.</p>
           </ShipperCard>
         )}

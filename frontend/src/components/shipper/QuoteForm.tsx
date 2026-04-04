@@ -125,7 +125,7 @@ function AddressInput({ label, value, onSelect, required }: {
           <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
             {results.map((r) => (
               <button key={r.placeId} type="button" onClick={() => handleSelect(r)}
-                className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-[#C9A84C]/8 hover:text-[#1a1a2e] transition-colors border-b border-gray-100 last:border-0">
+                className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-[#C9A84C]/8 hover:text-[#0F1117] transition-colors border-b border-gray-100 last:border-0">
                 <MapPin size={12} className="inline mr-2 text-gray-400" />{r.description}
               </button>
             ))}
@@ -212,7 +212,7 @@ export function QuoteForm() {
         <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
           <Check size={32} className="text-emerald-600" />
         </div>
-        <h3 className="text-lg font-bold text-[#1a1a2e] mb-2">Quote Request Submitted!</h3>
+        <h3 className="text-lg font-bold text-[#0F1117] mb-2">Quote Request Submitted!</h3>
         <p className="text-sm text-gray-500 max-w-md mx-auto">
           Your freight quote request has been received. Our team will review your shipment details
           and provide competitive rates within minutes.
@@ -223,7 +223,7 @@ export function QuoteForm() {
 
   return (
     <div>
-      <h3 className="text-base font-bold text-[#1a1a2e] mb-5">Shipment Details</h3>
+      <h3 className="text-base font-bold text-[#0F1117] mb-5">Shipment Details</h3>
 
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
@@ -246,7 +246,7 @@ export function QuoteForm() {
         <button
           onClick={handleSubmit}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           {submitting ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
           {submitting ? "Submitting..." : "Get Instant Quote"}

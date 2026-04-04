@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════
+   SRL DESIGN SYSTEM v2.5 — Navy-Tinted with Gold
+   Based on Stripe/Linear/Radix dark mode research.
+   EVERY color in the app MUST reference these tokens.
+   ═══════════════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds — 5 depth levels */
+  --srl-bg-deepest:    #080C18;  /* Sidebar, modal overlays */
+  --srl-bg-base:       #0F1117;  /* Page background */
+  --srl-bg-surface:    #161921;  /* Cards, panels, sections */
+  --srl-bg-elevated:   #1C1F2B;  /* Hover, dropdowns, popovers */
+  --srl-bg-overlay:    #232735;  /* Active/selected, tooltips */
+
+  /* Borders — 3 levels */
+  --srl-border-subtle: #1E2231;  /* Card edges, section dividers */
+  --srl-border:        #2A2F42;  /* Input borders, stronger dividers */
+  --srl-border-strong: #3A3F54;  /* Focus rings, active borders */
+
+  /* Text — 3 levels */
+  --srl-text:          #EDEEF2;  /* Primary headings, content */
+  --srl-text-secondary:#9BA1B0;  /* Descriptions, secondary */
+  --srl-text-muted:    #5D6379;  /* Placeholders, hints, timestamps */
+
+  /* Gold accent — 4 levels */
+  --srl-gold:          #C9A84C;  /* Buttons, links, active indicators */
+  --srl-gold-hover:    #D4B85E;  /* Hover state */
+  --srl-gold-muted:    rgba(201,168,76,0.15);  /* Badge backgrounds, subtle highlights */
+  --srl-gold-text:     #E8D48B;  /* Gold text on dark bg (better contrast) */
+
+  /* Semantic — 4 colors */
+  --srl-success:       #34D399;
+  --srl-warning:       #FBBF24;
+  --srl-danger:        #F87171;
+  --srl-info:          #60A5FA;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -18,7 +55,7 @@ input:-webkit-autofill:focus {
 .dark-autofill:-webkit-autofill,
 .dark-autofill:-webkit-autofill:hover,
 .dark-autofill:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 30px #1a1a2e inset !important;
+  -webkit-box-shadow: 0 0 0 30px #0F1117 inset !important;
   -webkit-text-fill-color: #f8fafc !important;
   caret-color: #f8fafc;
 }
@@ -32,24 +69,24 @@ input:-webkit-autofill:focus {
    ═══════════════════════════════════════════════════════════ */
 
 /* All selects inside dashboard, accounting, admin pages get dark options */
-[class*="bg-[#1a1a2e]"] select option,
+[class*="bg-[#0F1117]"] select option,
 [class*="bg-navy"] select option,
 .dark-select-options option {
-  background-color: #1a1a2e !important;
+  background-color: var(--srl-bg-base) !important;
   color: #f8fafc !important;
 }
 
 /* Force dark bg on select options within any page that has dark bg */
 select option {
-  background-color: #1a1a2e;
-  color: #f1f5f9;
+  background-color: var(--srl-bg-base);
+  color: var(--srl-text);
 }
 
 /* Selected/checked option uses gold */
 select option:checked,
 select option:hover {
-  background-color: #1e293b;
-  color: #C9A84C;
+  background-color: var(--srl-bg-elevated);
+  color: var(--srl-gold);
 }
 
 /* Light-themed selects inside white modals/drawers override back to white */
@@ -73,18 +110,18 @@ select option:hover {
     color: inherit;
   }
   select option {
-    background-color: #1a1a2e;
-    color: #f1f5f9;
+    background-color: var(--srl-bg-base);
+    color: var(--srl-text);
   }
 }
 
 @theme {
-  --color-navy: #1a1a2e;
-  --color-navy-light: #252540;
-  --color-charcoal: #1E1E2F;
-  --color-charcoal-light: #3A3A4D;
-  --color-gold: #C9A84C;
-  --color-gold-light: #D4B85E;
+  --color-navy: var(--srl-bg-base);
+  --color-navy-light: var(--srl-bg-elevated);
+  --color-charcoal: var(--srl-bg-surface);
+  --color-charcoal-light: var(--srl-border-strong);
+  --color-gold: var(--srl-gold);
+  --color-gold-light: var(--srl-gold-hover);
   --color-warm-gray: #F7F6F3;
   --color-warm-gray-dark: #EEECEA;
   --color-platinum: #E5E7EB;
@@ -117,11 +154,7 @@ select option:hover {
    Theme Engine — Accent Colors per Theme
    ═══════════════════════════════════════════════════ */
 
-:root {
-  --theme-primary: #C8963E;
-  --theme-sidebar: #0D1B2A;
-  --theme-accent: #D4A64E;
-}
+/* Theme engine accent overrides (extend the design system tokens above) */
 
 /* Theme accent overrides */
 [data-theme="midnight-express"] .text-gold { color: #818CF8 !important; }
@@ -193,7 +226,7 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 
 /* Text: white → dark navy */
 [data-mode="light"] .text-white {
-  color: #1a1a2e !important;
+  color: var(--srl-bg-base) !important;
 }
 
 /* Secondary text: slate-400/500 → slate-600 */
@@ -212,7 +245,7 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 [data-mode="light"] .bg-white\/5 select,
 [data-mode="light"] .bg-white\/5 textarea {
   background: #f8fafc !important;
-  color: #1a1a2e !important;
+  color: #0F1117 !important;
   border-color: #e2e8f0 !important;
 }
 
@@ -233,9 +266,9 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 }
 
 /* Modal content goes light */
-[data-mode="light"] .bg-\[\\#1a1a2e\] {
+[data-mode="light"] .bg-\[\\#0F1117\] {
   background: #ffffff !important;
-  color: #1a1a2e !important;
+  color: #0F1117 !important;
 }
 
 /* Status badges keep their colors in light mode */
@@ -249,12 +282,12 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 [data-mode="light"] .recharts-default-tooltip {
   background: #ffffff !important;
   border-color: #e2e8f0 !important;
-  color: #1a1a2e !important;
+  color: #0F1117 !important;
 }
 
 /* Sidebar stays dark in light mode (professional look) — only main content goes light */
 [data-mode="light"] aside.bg-navy {
-  background: #0D1B2A !important;
+  background: var(--srl-bg-deepest) !important;
 }
 [data-mode="light"] aside .text-white { color: #ffffff !important; }
 [data-mode="light"] aside .text-slate-400 { color: #94a3b8 !important; }
@@ -264,7 +297,7 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 
 /* Theme panel stays dark regardless */
 [data-mode="light"] .srl-theme-panel,
-[data-mode="light"] [class*="bg-[#1a1a2e]"] {
+[data-mode="light"] [class*="bg-[#0F1117]"] {
   color: #ffffff;
 }
 
@@ -305,7 +338,7 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 .pac-container .pac-item .pac-item-query {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #1a1a2e;
+  color: #0F1117;
   padding-right: 4px;
 }
 

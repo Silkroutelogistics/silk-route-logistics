@@ -8,7 +8,7 @@
 // v2.4   — TMW-level upgrade: Dispatch Board, multi-stop, audit trail, geofence
 // v2.4.e — Clickable CEO dashboard, shipper email notifications, pallet fix
 
-export const SRL_VERSION = "2.5";
+export const SRL_VERSION = "3.0";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

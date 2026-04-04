@@ -261,7 +261,7 @@ export default function DispatchBoardPage() {
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[#1a1a2e]/90 backdrop-blur-sm">
+                <thead className="sticky top-0 bg-[#0F1117]/90 backdrop-blur-sm">
                   <tr className="text-[10px] text-slate-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2 font-medium">Ref#</th>
                     <th className="text-left px-4 py-2 font-medium">Route</th>
@@ -362,7 +362,7 @@ export default function DispatchBoardPage() {
             )}
           </div>
         ) : (
-          <div className="shrink-0 h-1 bg-gradient-to-r from-[#C9A84C]/20 via-[#2d2d44] to-[#2d2d44]" />
+          <div className="shrink-0 h-1 bg-gradient-to-r from-[#C9A84C]/20 via-[#2A2F42] to-[#2A2F42]" />
         )}
 
         {/* BOTTOM HALF: Available Carriers */}
@@ -386,11 +386,11 @@ export default function DispatchBoardPage() {
                 onChange={(e) => setEquipFilter(e.target.value)}
                 className="px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 cursor-pointer"
               >
-                <option value="" style={{ backgroundColor: "#1a1a2e", color: "#f8fafc" }}>All Equipment</option>
-                <option value="Dry Van" style={{ backgroundColor: "#1a1a2e", color: "#f8fafc" }}>Dry Van</option>
-                <option value="Reefer" style={{ backgroundColor: "#1a1a2e", color: "#f8fafc" }}>Reefer</option>
-                <option value="Flatbed" style={{ backgroundColor: "#1a1a2e", color: "#f8fafc" }}>Flatbed</option>
-                <option value="Step Deck" style={{ backgroundColor: "#1a1a2e", color: "#f8fafc" }}>Step Deck</option>
+                <option value="" style={{ backgroundColor: "#0F1117", color: "#f8fafc" }}>All Equipment</option>
+                <option value="Dry Van" style={{ backgroundColor: "#0F1117", color: "#f8fafc" }}>Dry Van</option>
+                <option value="Reefer" style={{ backgroundColor: "#0F1117", color: "#f8fafc" }}>Reefer</option>
+                <option value="Flatbed" style={{ backgroundColor: "#0F1117", color: "#f8fafc" }}>Flatbed</option>
+                <option value="Step Deck" style={{ backgroundColor: "#0F1117", color: "#f8fafc" }}>Step Deck</option>
               </select>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-500" />
@@ -415,7 +415,7 @@ export default function DispatchBoardPage() {
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[#1a1a2e]/90 backdrop-blur-sm">
+                <thead className="sticky top-0 bg-[#0F1117]/90 backdrop-blur-sm">
                   <tr className="text-[10px] text-slate-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2 font-medium">Carrier</th>
                     <th className="text-left px-4 py-2 font-medium">MC#</th>

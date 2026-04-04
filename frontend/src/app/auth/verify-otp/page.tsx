@@ -145,7 +145,7 @@ export default function VerifyOtpPage() {
   if (!email) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1a1a2e] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0F1117] px-4">
       <div className="w-full max-w-md bg-white/5 backdrop-blur border border-white/10 rounded-2xl shadow-2xl p-8">
         <div className="flex flex-col items-center mb-6">
           <Link href="/" className="flex items-center gap-2 mb-4">
@@ -196,7 +196,7 @@ export default function VerifyOtpPage() {
           <button
             type="submit"
             disabled={isLoading || digits.some((d) => !d)}
-            className="w-full py-2.5 bg-[#d4a574] text-[#1a1a2e] font-semibold rounded-lg hover:bg-[#d4a574]/90 disabled:opacity-50 transition"
+            className="w-full py-2.5 bg-[#d4a574] text-[#0F1117] font-semibold rounded-lg hover:bg-[#d4a574]/90 disabled:opacity-50 transition"
           >
             {isLoading ? "Verifying..." : "Verify Code"}
           </button>

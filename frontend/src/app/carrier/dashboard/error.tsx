@@ -27,7 +27,7 @@ export default function CarrierDashboardError({
         <div className="flex gap-3 justify-center">
           <button
             onClick={reset}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#C8963E] text-[#1a1a2e] font-semibold rounded-lg hover:bg-[#C8963E]/90 transition"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#C8963E] text-[#0F1117] font-semibold rounded-lg hover:bg-[#C8963E]/90 transition"
           >
             <RefreshCw className="w-4 h-4" /> Try Again
           </button>

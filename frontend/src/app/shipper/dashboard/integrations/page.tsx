@@ -13,7 +13,7 @@ const ediCodes = [
 export default function ShipperIntegrationsPage() {
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">API &amp; EDI Integration</h1>
+      <h1 className="font-serif text-2xl text-[#0F1117] mb-1">API &amp; EDI Integration</h1>
       <p className="text-[13px] text-gray-500 mb-6">Connect your TMS or ERP to automate freight shipment management</p>
 
       <div className="grid grid-cols-2 gap-5">
@@ -24,11 +24,11 @@ export default function ShipperIntegrationsPage() {
               <Code size={22} className="text-blue-500" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#1a1a2e]">REST API</h3>
+              <h3 className="text-base font-bold text-[#0F1117]">REST API</h3>
               <div className="text-xs text-gray-400">v2.0 · JSON over HTTPS</div>
             </div>
           </div>
-          <div className="font-mono text-xs bg-[#1a1a2e] text-gray-300 p-4 rounded-lg mb-4 leading-relaxed">
+          <div className="font-mono text-xs bg-[#0F1117] text-gray-300 p-4 rounded-lg mb-4 leading-relaxed">
             <span className="text-[#C9A84C]">GET</span> /api/v2/shipments<br/>
             <span className="text-[#C9A84C]">POST</span> /api/v2/quotes<br/>
             <span className="text-[#C9A84C]">GET</span> /api/v2/tracking/{"{"}
@@ -50,13 +50,13 @@ export default function ShipperIntegrationsPage() {
               <RefreshCw size={22} className="text-violet-500" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#1a1a2e]">EDI Integration</h3>
+              <h3 className="text-base font-bold text-[#0F1117]">EDI Integration</h3>
               <div className="text-xs text-gray-400">ANSI X12 Standards</div>
             </div>
           </div>
           {ediCodes.map((e, i) => (
             <div key={i} className={`flex justify-between py-2.5 ${i < ediCodes.length - 1 ? "border-b border-gray-100" : ""}`}>
-              <span className="font-mono text-xs font-semibold text-[#1a1a2e]">{e.code}</span>
+              <span className="font-mono text-xs font-semibold text-[#0F1117]">{e.code}</span>
               <span className="text-xs text-gray-500">{e.desc}</span>
             </div>
           ))}
@@ -68,7 +68,7 @@ export default function ShipperIntegrationsPage() {
 
       {/* API Credentials */}
       <ShipperCard padding="p-5" className="mt-5">
-        <h3 className="text-sm font-bold text-[#1a1a2e] mb-1">Your API Credentials</h3>
+        <h3 className="text-sm font-bold text-[#0F1117] mb-1">Your API Credentials</h3>
         <p className="text-xs text-gray-400 mb-4">Use these to authenticate your freight management integration</p>
         <div className="grid grid-cols-2 gap-4">
           <div>

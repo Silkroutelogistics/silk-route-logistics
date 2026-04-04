@@ -169,7 +169,7 @@ export default function AdminUsersPage() {
                 </tr>
               ) : (
                 data.users.map((user) => (
-                  <tr key={user.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <tr key={user.id} className="border-b border-white/5 hover:bg-[#0F1117]">
                     <td className="px-4 py-3 text-white font-medium">
                       {user.firstName} {user.lastName}
                     </td>

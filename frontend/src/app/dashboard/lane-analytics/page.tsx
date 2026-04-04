@@ -149,7 +149,7 @@ export default function LaneAnalyticsPage() {
       {selectedLane && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setSelectedLane(null)} />
-          <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#1a1a2e] border-l border-white/10 z-50 overflow-y-auto">
+          <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#0F1117] border-l border-white/10 z-50 overflow-y-auto">
             <div className="p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">
@@ -261,7 +261,7 @@ function TopLanesTab({ lanes, onSelect }: { lanes: LaneSummary[]; onSelect: (o: 
         </thead>
         <tbody>
           {lanes.map((lane, i) => (
-            <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition"
+            <tr key={i} className="border-b border-white/5 hover:bg-[#0F1117] cursor-pointer transition"
               onClick={() => onSelect(lane.originState, lane.destState)}>
               <td className="px-4 py-3 text-white font-mono text-xs">{lane.originState} → {lane.destState}</td>
               <td className="px-4 py-3 text-right text-slate-300 text-xs">{lane.volume}</td>

@@ -193,12 +193,12 @@ export default function ContractRatesPage() {
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
-          {STATUSES.map((s) => <option key={s} value={s} className="bg-[#1a1a2e]">{s === "ALL" ? "All Statuses" : s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s} className="bg-[#0F1117]">{s === "ALL" ? "All Statuses" : s}</option>)}
         </select>
         <select value={filterEquipment} onChange={(e) => setFilterEquipment(e.target.value)}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
-          <option value="ALL" className="bg-[#1a1a2e]">All Equipment</option>
-          {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#1a1a2e]">{e.replace(/_/g, " ")}</option>)}
+          <option value="ALL" className="bg-[#0F1117]">All Equipment</option>
+          {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0F1117]">{e.replace(/_/g, " ")}</option>)}
         </select>
       </div>
 
@@ -247,7 +247,7 @@ export default function ContractRatesPage() {
       {drawerOpen && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={closeDrawer} />
-          <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#1a1a2e] border-l border-white/10 z-50 overflow-y-auto">
+          <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#0F1117] border-l border-white/10 z-50 overflow-y-auto">
             <div className="p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">{editId ? "Edit Rate" : "New Contract Rate"}</h2>
@@ -264,7 +264,7 @@ export default function ContractRatesPage() {
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-gold/50 focus:outline-none"
                 />
                 {customers?.customers?.length > 0 && form.customerSearch.length >= 2 && !form.customerId && (
-                  <div className="mt-1 bg-[#2d2d44] rounded-lg border border-white/10 max-h-40 overflow-y-auto">
+                  <div className="mt-1 bg-[#2A2F42] rounded-lg border border-white/10 max-h-40 overflow-y-auto">
                     {customers.customers.map((c: { id: string; companyName: string }) => (
                       <button key={c.id} onClick={() => setForm({ ...form, customerId: c.id, customerSearch: c.companyName })}
                         className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 transition">
@@ -284,7 +284,7 @@ export default function ContractRatesPage() {
                 <label className="block text-xs text-slate-400 mb-1">Equipment Type</label>
                 <select value={form.equipmentType} onChange={(e) => setForm({ ...form, equipmentType: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
-                  {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#1a1a2e]">{e.replace(/_/g, " ")}</option>)}
+                  {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0F1117]">{e.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
 
@@ -336,7 +336,7 @@ function RateRow({ rate, expanded, onToggle, statusColor, onEdit, onSuspend, onD
 }) {
   return (
     <>
-      <tr className="border-b border-white/5 hover:bg-white/[0.02] transition">
+      <tr className="border-b border-white/5 hover:bg-[#0F1117] transition">
         <td className="pl-3">
           <button onClick={onToggle} className="text-slate-500 hover:text-white">
             {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -361,7 +361,7 @@ function RateRow({ rate, expanded, onToggle, statusColor, onEdit, onSuspend, onD
         </td>
       </tr>
       {expanded && (
-        <tr className="bg-white/[0.02]">
+        <tr className="bg-[#0F1117]">
           <td colSpan={10} className="px-8 py-4">
             <div className="grid sm:grid-cols-4 gap-4 text-xs">
               <div><span className="text-slate-500">Volume Commitment</span><p className="text-white mt-0.5">{rate.volumeCommitment ?? "—"} loads/month</p></div>

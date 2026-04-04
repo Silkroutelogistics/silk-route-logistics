@@ -50,7 +50,7 @@ function CompassScoreGauge({ score, size = 120 }: { score: number; size?: number
           style={{ transition: "stroke-dashoffset 0.5s ease" }} />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-3xl font-bold text-[#1a1a2e]">{score}</span>
+        <span className="text-3xl font-bold text-[#0F1117]">{score}</span>
       </div>
     </div>
   );
@@ -63,7 +63,7 @@ function CompassCategoryBar({ label, passed, total }: { label: string; passed: n
     <div>
       <div className="flex justify-between mb-1">
         <span className="text-xs text-gray-600">{label}</span>
-        <span className="text-xs font-bold text-[#1a1a2e]">{passed}/{total} passed</span>
+        <span className="text-xs font-bold text-[#0F1117]">{passed}/{total} passed</span>
       </div>
       <div className="bg-gray-100 rounded h-2 overflow-hidden">
         <div className={`h-full rounded ${color}`} style={{ width: `${pct}%` }} />
@@ -182,7 +182,7 @@ export default function CarrierCompliancePage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Compliance &amp; Safety</h1>
+        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Compliance &amp; Safety</h1>
         <p className="text-[13px] text-gray-500">
           Manage insurance, FMCSA compliance, and safety documentation
         </p>
@@ -193,7 +193,7 @@ export default function CarrierCompliancePage() {
         <CarrierCard padding="p-6" className="mb-6">
           <div className="flex items-center gap-2 mb-5">
             <Compass size={20} className="text-[#C9A84C]" />
-            <h2 className="text-sm font-bold text-[#1a1a2e]">Your Compass Score</h2>
+            <h2 className="text-sm font-bold text-[#0F1117]">Your Compass Score</h2>
           </div>
 
           <div className="flex items-start gap-8">
@@ -294,7 +294,7 @@ export default function CarrierCompliancePage() {
               <Shield size={20} className="text-violet-500" />
             </div>
             <div>
-              <div className="text-sm font-bold text-[#1a1a2e]">{carrier?.company || "—"}</div>
+              <div className="text-sm font-bold text-[#0F1117]">{carrier?.company || "—"}</div>
               <div className="text-[11px] text-gray-400">MC-{carrier?.mcNumber || "—"} &middot; DOT-{carrier?.dotNumber || "—"}</div>
             </div>
           </div>
@@ -312,7 +312,7 @@ export default function CarrierCompliancePage() {
 
         {/* Insurance */}
         <CarrierCard padding="p-5">
-          <h4 className="text-xs font-bold text-[#1a1a2e] mb-3">Insurance Status</h4>
+          <h4 className="text-xs font-bold text-[#0F1117] mb-3">Insurance Status</h4>
           {isLoading ? (
             <div className="h-20 bg-gray-100 rounded animate-pulse" />
           ) : (
@@ -339,7 +339,7 @@ export default function CarrierCompliancePage() {
 
         {/* Documents Status */}
         <CarrierCard padding="p-5">
-          <h4 className="text-xs font-bold text-[#1a1a2e] mb-3">Required Documents</h4>
+          <h4 className="text-xs font-bold text-[#0F1117] mb-3">Required Documents</h4>
           <div className="space-y-3">
             {[
               { label: "W-9 Form", done: docs?.w9 },
@@ -362,7 +362,7 @@ export default function CarrierCompliancePage() {
       {/* Insurance Details Card */}
       <CarrierCard padding="p-5" className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-[#1a1a2e]">Insurance Details</h3>
+          <h3 className="text-sm font-bold text-[#0F1117]">Insurance Details</h3>
           {!editingInsurance ? (
             <button onClick={startEditInsurance} className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition">
               <Edit3 size={13} /> Edit
@@ -391,12 +391,12 @@ export default function CarrierCompliancePage() {
             ].map((line) => (
               <div key={line.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-[#1a1a2e] w-28">{line.label}</span>
+                  <span className="text-xs font-semibold text-[#0F1117] w-28">{line.label}</span>
                   <span className="text-xs text-gray-600">{line.provider || "Not set"}</span>
                   {line.policy && <span className="text-xs text-gray-400">| {line.policy}</span>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-medium text-[#1a1a2e]">{line.amount ? `$${Number(line.amount).toLocaleString()}` : "—"}</span>
+                  <span className="text-xs font-medium text-[#0F1117]">{line.amount ? `$${Number(line.amount).toLocaleString()}` : "—"}</span>
                   {line.expiry ? (
                     <span className={`text-xs ${insuranceExpiryColor(line.expiry)}`}>
                       {new Date(line.expiry).toLocaleDateString()} {insuranceDaysLabel(line.expiry)}
@@ -430,7 +430,7 @@ export default function CarrierCompliancePage() {
               { label: "Workers' Comp", prefix: "workersComp" },
             ].map((line) => (
               <div key={line.label}>
-                <p className="text-xs font-semibold text-[#1a1a2e] mb-1.5">{line.label}</p>
+                <p className="text-xs font-semibold text-[#0F1117] mb-1.5">{line.label}</p>
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     placeholder="Provider"
@@ -460,7 +460,7 @@ export default function CarrierCompliancePage() {
       {/* CSA/BASIC Scores */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4">FMCSA BASIC Scores</h3>
+          <h3 className="text-sm font-bold text-[#0F1117] mb-4">FMCSA BASIC Scores</h3>
           {Object.keys(basicScores).length === 0 ? (
             <div className="py-6 text-center text-xs text-gray-400">No BASIC scores available</div>
           ) : (
@@ -485,7 +485,7 @@ export default function CarrierCompliancePage() {
         </CarrierCard>
 
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4">SRL Performance Metrics</h3>
+          <h3 className="text-sm font-bold text-[#0F1117] mb-4">SRL Performance Metrics</h3>
           {srlMetrics ? (
             <div className="space-y-3">
               {[
@@ -519,7 +519,7 @@ export default function CarrierCompliancePage() {
       {/* Expiration Calendar + Alerts */}
       <div className="grid grid-cols-2 gap-4">
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4">Upcoming Expirations</h3>
+          <h3 className="text-sm font-bold text-[#0F1117] mb-4">Upcoming Expirations</h3>
           {expItems.length === 0 ? (
             <div className="py-6 text-center text-xs text-gray-400">No upcoming expirations</div>
           ) : (
@@ -541,7 +541,7 @@ export default function CarrierCompliancePage() {
         </CarrierCard>
 
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#1a1a2e] mb-4">Compliance Alerts</h3>
+          <h3 className="text-sm font-bold text-[#0F1117] mb-4">Compliance Alerts</h3>
           {alerts.length === 0 ? (
             <div className="py-6 text-center text-xs text-emerald-500 flex flex-col items-center gap-2">
               <CheckCircle size={24} />

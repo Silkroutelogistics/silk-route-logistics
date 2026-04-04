@@ -88,7 +88,7 @@ export default function MonitoringPage() {
 
   if (user?.role !== "ADMIN") {
     return (
-      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0F1117] flex items-center justify-center">
         <div className="text-center">
           <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="text-white text-lg font-medium">Admin Access Required</p>
@@ -100,7 +100,7 @@ export default function MonitoringPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#1a1a2e] p-8 transition-all duration-500 ${mounted ? "opacity-100" : "opacity-0"}`}>
+    <div className={`min-h-screen bg-[#0F1117] p-8 transition-all duration-500 ${mounted ? "opacity-100" : "opacity-0"}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -235,7 +235,7 @@ export default function MonitoringPage() {
             <tbody className="divide-y divide-white/5">
               {logsData?.logs?.length ? (
                 logsData.logs.map(log => (
-                  <tr key={log.id} className="hover:bg-white/[0.02]">
+                  <tr key={log.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${SEVERITY_COLORS[log.severity] || SEVERITY_COLORS.INFO}`}>{log.severity}</span>
@@ -278,7 +278,7 @@ export default function MonitoringPage() {
             <tbody className="divide-y divide-white/5">
               {auditData?.entries?.length ? (
                 auditData.entries.map(entry => (
-                  <tr key={entry.id} className="hover:bg-white/[0.02]">
+                  <tr key={entry.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">{new Date(entry.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
                       <p className="text-sm text-white">{entry.user.firstName} {entry.user.lastName}</p>

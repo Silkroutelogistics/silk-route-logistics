@@ -83,7 +83,7 @@ export default function CarrierMessagingPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Messages</h1>
+        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Messages</h1>
         <p className="text-[13px] text-gray-500">
           Communicate with your dispatcher and SRL operations team
           {totalUnread > 0 && <span className="ml-2 text-[#C9A84C] font-semibold">{totalUnread} unread</span>}
@@ -94,7 +94,7 @@ export default function CarrierMessagingPage() {
         {/* Conversation List */}
         <CarrierCard padding="p-0" className="flex flex-col overflow-hidden">
           <div className="p-3.5 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-[13px] font-bold text-[#1a1a2e]">Conversations</span>
+            <span className="text-[13px] font-bold text-[#0F1117]">Conversations</span>
             <button
               onClick={() => setShowNewMsg(!showNewMsg)}
               className="w-7 h-7 rounded-md bg-[#C9A84C]/10 text-[#C9A84C] flex items-center justify-center hover:bg-[#C9A84C]/20"
@@ -122,7 +122,7 @@ export default function CarrierMessagingPage() {
                       onClick={() => selectConversation(u.id, `${u.firstName} ${u.lastName}`)}
                       className="w-full text-left p-2 rounded-md hover:bg-gray-50 text-xs"
                     >
-                      <div className="font-semibold text-[#1a1a2e]">{u.firstName} {u.lastName}</div>
+                      <div className="font-semibold text-[#0F1117]">{u.firstName} {u.lastName}</div>
                       <div className="text-gray-400">{u.email}</div>
                       <div className="text-gray-400">{u.company || u.role}</div>
                     </button>
@@ -143,7 +143,7 @@ export default function CarrierMessagingPage() {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
-                    <div className={`text-[13px] text-[#1a1a2e] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
+                    <div className={`text-[13px] text-[#0F1117] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
                       {conv.partner.firstName} {conv.partner.lastName}
                     </div>
                     <div className="text-[11px] text-gray-400 truncate">{conv.partner.company || conv.partner.role}</div>
@@ -174,17 +174,17 @@ export default function CarrierMessagingPage() {
           {selectedUserId ? (
             <>
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1a1a2e] to-[#1B2D45] flex items-center justify-center text-[11px] font-bold text-[#C9A84C]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[11px] font-bold text-[#C9A84C]">
                   {selectedUserName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                 </div>
-                <span className="text-sm font-semibold text-[#1a1a2e]">{selectedUserName}</span>
+                <span className="text-sm font-semibold text-[#0F1117]">{selectedUserName}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-3">
                 {messages?.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[70%] px-3.5 py-2.5 rounded-xl text-[13px] leading-relaxed ${
                       msg.senderId === user?.id
-                        ? "bg-[#1a1a2e] text-white rounded-br-md"
+                        ? "bg-[#0F1117] text-white rounded-br-md"
                         : "bg-gray-100 text-gray-700 rounded-bl-md"
                     }`}>
                       {msg.content}

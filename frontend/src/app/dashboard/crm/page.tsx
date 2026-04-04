@@ -228,7 +228,7 @@ export default function CRMPage() {
           const isExp = expanded === c.id;
           return (
             <div key={c.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-              <button onClick={() => setExpanded(isExp ? null : c.id)} className="w-full text-left p-5 hover:bg-white/[0.02] transition">
+              <button onClick={() => setExpanded(isExp ? null : c.id)} className="w-full text-left p-5 hover:bg-[#0F1117] transition">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
@@ -270,7 +270,7 @@ export default function CRMPage() {
               </button>
 
               {isExp && (
-                <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-4">
+                <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
                   {/* Customer Details */}
                   <div className="grid sm:grid-cols-4 gap-4 text-sm">
                     <InfoRow label="Primary Contact" value={c.contactName || "—"} />
@@ -393,7 +393,7 @@ export default function CRMPage() {
                     {c.status === "Active" && (
                       <a
                         href={`/dashboard/orders?customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-[#C9A84C] text-[#1a1a2e] rounded-lg text-xs hover:bg-[#C9A84C]/90 no-underline font-medium"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#C9A84C] text-[#0F1117] rounded-lg text-xs hover:bg-[#C9A84C]/90 no-underline font-medium"
                       >
                         <Package className="w-3 h-3" /> Create Load
                       </a>

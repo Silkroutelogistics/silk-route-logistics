@@ -124,7 +124,7 @@ export default function SOPsPage() {
             const catLower = sop.category?.toLowerCase();
             return (
               <button key={sop.id} onClick={() => setSelectedSOP(sop)}
-                className={`w-full text-left bg-white/[0.03] rounded-xl border p-5 transition-all cursor-pointer hover:bg-white/[0.06] ${
+                className={`w-full text-left bg-[#161921] rounded-xl border p-5 transition-all cursor-pointer hover:bg-white/[0.06] ${
                   selectedSOP?.id === sop.id ? "border-gold/60 bg-gold/[0.03]" : "border-white/10 hover:border-white/20"
                 }`}>
                 <div className="flex items-start gap-3">
@@ -158,7 +158,7 @@ export default function SOPsPage() {
 
         <div>
           {selectedSOP ? (
-            <div className="bg-white/[0.03] rounded-xl border border-white/10 p-5 space-y-4 sticky top-6">
+            <div className="bg-[#161921] rounded-xl border border-white/10 p-5 space-y-4 sticky top-6">
               <div className="flex items-start gap-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${CATEGORY_ICONS[selectedSOP.category?.toLowerCase()] || "bg-gold/10"}`}>
                   <FileText className="w-5 h-5 text-gold" />
@@ -173,7 +173,7 @@ export default function SOPsPage() {
               </div>
               {selectedSOP.description && <p className="text-sm text-slate-300 leading-relaxed">{selectedSOP.description}</p>}
               {selectedSOP.content && (
-                <div className="bg-white/[0.03] rounded-lg p-4 text-sm text-slate-300 max-h-[400px] overflow-y-auto leading-relaxed whitespace-pre-wrap font-mono text-xs border border-white/5">
+                <div className="bg-[#161921] rounded-lg p-4 text-sm text-slate-300 max-h-[400px] overflow-y-auto leading-relaxed whitespace-pre-wrap font-mono text-xs border border-white/5">
                   {selectedSOP.content}
                 </div>
               )}
@@ -198,7 +198,7 @@ export default function SOPsPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white/[0.03] rounded-xl border border-white/10 p-12 text-center">
+            <div className="bg-[#161921] rounded-xl border border-white/10 p-12 text-center">
               <BookOpen className="w-10 h-10 text-slate-700 mx-auto mb-3" />
               <p className="text-sm text-slate-500">Select a document to preview</p>
               <p className="text-xs text-slate-600 mt-1">Click any SOP from the list</p>

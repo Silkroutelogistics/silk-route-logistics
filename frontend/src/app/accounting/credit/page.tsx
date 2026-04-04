@@ -95,7 +95,7 @@ export default function CreditLimitsPage() {
                 const utilization = credit.utilizationPercent ?? (credit.creditLimit > 0 ? (credit.currentUtilized / credit.creditLimit) * 100 : 0);
                 const isEditing = editing === credit.id;
                 return (
-                  <tr key={credit.id} className="hover:bg-white/[0.02]">
+                  <tr key={credit.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3">
                       <p className="text-sm text-white font-medium">{credit.customer.name || credit.customer.contactName || "—"}</p>
                       <p className="text-[10px] text-slate-500">{credit.customer.email || ""}</p>

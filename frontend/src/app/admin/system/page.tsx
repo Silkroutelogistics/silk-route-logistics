@@ -219,7 +219,7 @@ export default function AdminSystemPage() {
                   </tr>
                 ) : (
                   data.cronJobs.map((job) => (
-                    <tr key={job.jobName} className="border-b border-white/5 hover:bg-white/[0.02]">
+                    <tr key={job.jobName} className="border-b border-white/5 hover:bg-[#0F1117]">
                       <td className="px-4 py-3 text-white font-medium">{job.jobName}</td>
                       <td className="px-4 py-3 text-slate-300 font-mono text-xs">{job.schedule}</td>
                       <td className="px-4 py-3 text-slate-400 text-xs">{formatDate(job.lastRun)}</td>

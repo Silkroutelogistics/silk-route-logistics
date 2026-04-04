@@ -91,7 +91,7 @@ export function ShipperChatbot() {
       {open && (
         <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-3rem)] flex flex-col rounded-2xl shadow-2xl border border-gray-200 overflow-hidden bg-white">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-[#0F1117] flex-shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center">
                 <MessageCircle size={16} className="text-[#C9A84C]" />

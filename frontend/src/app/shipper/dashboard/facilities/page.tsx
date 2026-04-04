@@ -20,10 +20,10 @@ export default function ShipperFacilitiesPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Shipping Facilities Management</h1>
+          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Shipping Facilities Management</h1>
           <p className="text-[13px] text-gray-500">Manage your pickup, delivery, and warehouse locations</p>
         </div>
-        <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#1a1a2e] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">
+        <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">
           <Plus size={14} /> Add Facility
         </button>
       </div>
@@ -34,7 +34,7 @@ export default function ShipperFacilitiesPage() {
           return (
             <ShipperCard key={i} hover padding="p-5">
               <div className="flex justify-between mb-3">
-                <h3 className="text-[15px] font-bold text-[#1a1a2e]">{f.name}</h3>
+                <h3 className="text-[15px] font-bold text-[#0F1117]">{f.name}</h3>
                 <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-xl ${tc.bg} ${tc.text}`}>{f.type}</span>
               </div>
               {[

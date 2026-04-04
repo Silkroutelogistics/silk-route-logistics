@@ -127,7 +127,7 @@ export default function LoadPnLPage() {
               data.loads.map(load => {
                 const isProfit = load.grossMargin >= 0;
                 return (
-                  <tr key={load.id} className="hover:bg-white/[0.02]">
+                  <tr key={load.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{load.referenceNumber}</td>
                     <td className="px-5 py-3 text-xs text-slate-400">{load.originCity}, {load.originState} → {load.destCity}, {load.destState}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{load.customer}</td>

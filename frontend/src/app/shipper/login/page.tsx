@@ -114,7 +114,7 @@ export default function ShipperLoginPage() {
 
       {/* LEFT PANEL — Brand (55%), hidden on mobile */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden flex-col items-center justify-center"
-        style={{ background: "linear-gradient(165deg, #1a1a2e 0%, #1e1e36 50%, #1e1e36 100%)" }}>
+        style={{ background: "linear-gradient(165deg, #0F1117 0%, #161921 50%, #161921 100%)" }}>
 
         {/* Radial gold glow */}
         <div className="absolute pointer-events-none" style={{
@@ -162,7 +162,7 @@ export default function ShipperLoginPage() {
 
           {/* Animated transitioning cards */}
           <div className="relative w-full h-[140px] mb-8">
-            <div className="absolute -right-3 -bottom-3 w-full h-full bg-white/[0.02] border border-white/[0.04] rounded-2xl" />
+            <div className="absolute -right-3 -bottom-3 w-full h-full bg-[#0F1117] border border-white/[0.04] rounded-2xl" />
             {SLIDES.map((slide, i) => (
               <div key={i} className="absolute inset-0 bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-opacity duration-[1200ms]"
                 style={{ opacity: currentSlide === i ? 1 : 0 }}>
@@ -250,7 +250,7 @@ export default function ShipperLoginPage() {
                 <span className="text-[13px] text-[#C9A84C] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#1a1a2e] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
@@ -264,7 +264,7 @@ export default function ShipperLoginPage() {
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#1a1a2e] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">

@@ -206,7 +206,7 @@ export default function PayablesPage() {
               </div>
 
               {expanded === pay.id && (
-                <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-4">
+                <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
                   <div className="grid sm:grid-cols-3 gap-4 text-xs">
                     <div className="bg-white/5 rounded-lg p-3 space-y-1">
                       <p className="text-slate-500 font-semibold uppercase tracking-wider mb-2">Payment Details</p>

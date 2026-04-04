@@ -222,7 +222,7 @@ export function EmployeeOverview() {
               {notifications?.slice(0, 6).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt?: string }) => (
                 <Link key={n.id} href={n.actionUrl || "/dashboard/overview"}
                   onClick={() => { if (!n.readAt) markRead.mutate(n.id); }}
-                  className={`flex items-start gap-3 no-underline rounded-lg p-2 -m-1 transition ${n.readAt ? "opacity-60 hover:opacity-80" : "hover:bg-white/5 bg-white/[0.03]"}`}>
+                  className={`flex items-start gap-3 no-underline rounded-lg p-2 -m-1 transition ${n.readAt ? "opacity-60 hover:opacity-80" : "hover:bg-white/5 bg-[#161921]"}`}>
                   <div className="relative shrink-0 mt-0.5">
                     <Bell className={`w-4 h-4 ${n.readAt ? "text-slate-600" : "text-gold"}`} />
                     {!n.readAt && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gold rounded-full" />}

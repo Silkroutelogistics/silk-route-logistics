@@ -653,9 +653,9 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
         </div>
 
         {/* ─── MAIN CONTENT ─── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#1a1a2e]">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#0F1117]">
           {/* Top Bar */}
-          <div className="flex items-center justify-between px-8 py-4 border-b border-white/10 bg-[#1a1a2e]">
+          <div className="flex items-center justify-between px-8 py-4 border-b border-white/10 bg-[#0F1117]">
             <div className="flex items-center gap-3">
               {(() => {
                 const Icon = SECTIONS[sectionIdx].icon;
@@ -712,7 +712,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
               <button
                 onClick={handleSendTender}
                 disabled={saving}
-                className="px-6 py-2.5 text-sm text-[#1a1a2e] bg-[#C8963E] hover:bg-[#C8963E]/90 rounded-lg transition font-semibold disabled:opacity-40 flex items-center gap-2 shadow-lg shadow-[#C8963E]/20"
+                className="px-6 py-2.5 text-sm text-[#0F1117] bg-[#C8963E] hover:bg-[#C8963E]/90 rounded-lg transition font-semibold disabled:opacity-40 flex items-center gap-2 shadow-lg shadow-[#C8963E]/20"
               >
                 {saving && sendMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 <Send className="w-4 h-4" />
@@ -733,7 +733,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
 const inputCls =
   "w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#C8963E]/50 focus:ring-1 focus:ring-[#C8963E]/20 transition";
 const labelCls = "block text-xs font-medium text-slate-400 mb-1.5";
-const sectionCardCls = "bg-white/[0.03] border border-white/[0.06] rounded-xl p-5";
+const sectionCardCls = "bg-[#161921] border border-white/[0.06] rounded-xl p-5";
 const sectionTitleCls = "text-sm font-semibold text-[#C8963E] mb-4 flex items-center gap-2";
 
 function Field({
@@ -791,12 +791,12 @@ function SelectField({
           className={`${inputCls} appearance-none pr-8`}
         >
           {placeholder && (
-            <option value="" className="bg-[#1a1a2e]">
+            <option value="" className="bg-[#0F1117]">
               {placeholder}
             </option>
           )}
           {options.map((o) => (
-            <option key={o.value} value={o.value} className="bg-[#1a1a2e]">
+            <option key={o.value} value={o.value} className="bg-[#0F1117]">
               {o.label}
             </option>
           ))}
@@ -1319,7 +1319,7 @@ function SectionStops({ form, set }: { form: FormState; set: <K extends keyof Fo
                 <div className="absolute -left-[11px] top-0 w-5 h-5 rounded-full bg-[#C8963E]/20 text-[#C8963E] flex items-center justify-center text-[10px] font-bold">
                   {idx + 1}
                 </div>
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4">
+                <div className="bg-[#161921] border border-white/[0.06] rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <SelectField
@@ -1833,7 +1833,7 @@ function SectionPayment({
               className={`relative p-4 rounded-xl border text-left transition cursor-pointer ${
                 form.paymentTier === key
                   ? "bg-[#C8963E]/10 border-[#C8963E]/40"
-                  : "bg-white/[0.02] border-white/10 hover:border-white/20"
+                  : "bg-[#0F1117] border-white/10 hover:border-white/20"
               }`}
             >
               {form.paymentTier === key && (
@@ -1892,7 +1892,7 @@ function SectionPayment({
           {form.documentChecklist.map((doc) => (
             <label
               key={doc.key}
-              className="flex items-center gap-3 p-3 bg-white/[0.02] hover:bg-white/[0.04] rounded-lg cursor-pointer transition group"
+              className="flex items-center gap-3 p-3 bg-[#0F1117] hover:bg-white/[0.04] rounded-lg cursor-pointer transition group"
             >
               <input
                 type="checkbox"

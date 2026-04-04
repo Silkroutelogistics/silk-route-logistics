@@ -57,7 +57,7 @@ export default function CarrierRevenuePage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">Revenue &amp; Earnings</h1>
+          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Revenue &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track revenue performance across your loads</p>
         </div>
         <div className="flex bg-gray-100 rounded-lg p-0.5">
@@ -66,7 +66,7 @@ export default function CarrierRevenuePage() {
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-4 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-all ${
-                p === period ? "bg-white text-[#1a1a2e] shadow-sm" : "text-gray-500 hover:text-gray-700"
+                p === period ? "bg-white text-[#0F1117] shadow-sm" : "text-gray-500 hover:text-gray-700"
               }`}
             >{p === "ytd" ? "YTD" : p.charAt(0).toUpperCase() + p.slice(1)}</button>
           ))}
@@ -86,14 +86,14 @@ export default function CarrierRevenuePage() {
               <kpi.icon size={16} className={kpi.color} />
               <span className="text-[11px] text-gray-400 uppercase tracking-wide">{kpi.label}</span>
             </div>
-            <div className="text-[28px] font-bold text-[#1a1a2e]">{kpi.value}</div>
+            <div className="text-[28px] font-bold text-[#0F1117]">{kpi.value}</div>
           </CarrierCard>
         ))}
       </div>
 
       {/* Revenue Chart */}
       <CarrierCard className="mb-6" padding="p-5">
-        <h2 className="text-sm font-semibold text-[#1a1a2e] mb-4">Revenue Over Time</h2>
+        <h2 className="text-sm font-semibold text-[#0F1117] mb-4">Revenue Over Time</h2>
         {chartData.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-12">No revenue data for this period</p>
         ) : (
@@ -114,7 +114,7 @@ export default function CarrierRevenuePage() {
         <div className="col-span-2">
           <CarrierCard padding="p-0">
             <div className="px-4 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-[#1a1a2e]">Revenue Breakdown</h2>
+              <h2 className="text-sm font-semibold text-[#0F1117]">Revenue Breakdown</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
@@ -130,11 +130,11 @@ export default function CarrierRevenuePage() {
                     <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">No invoices found</td></tr>
                   ) : invoices.slice(0, 15).map((inv: any, i: number) => (
                     <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-mono text-[11px] font-semibold text-[#1a1a2e]">{inv.load?.referenceNumber || "—"}</td>
+                      <td className="px-4 py-2.5 font-mono text-[11px] font-semibold text-[#0F1117]">{inv.load?.referenceNumber || "—"}</td>
                       <td className="px-4 py-2.5 text-xs text-gray-600">
                         {inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}
                       </td>
-                      <td className="px-4 py-2.5 font-bold text-[#1a1a2e]">${(inv.amount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2.5 font-bold text-[#0F1117]">${(inv.amount || 0).toLocaleString()}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           inv.status === "PAID" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
@@ -155,14 +155,14 @@ export default function CarrierRevenuePage() {
           <CarrierCard padding="p-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin size={14} className="text-[#C9A84C]" />
-              <h2 className="text-sm font-semibold text-[#1a1a2e]">Top Lanes</h2>
+              <h2 className="text-sm font-semibold text-[#0F1117]">Top Lanes</h2>
             </div>
             {topLanes.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-4">No lane data yet</p>
             ) : topLanes.map((lane, i) => (
               <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                 <div>
-                  <div className="text-[12px] font-semibold text-[#1a1a2e]">{lane.lane}</div>
+                  <div className="text-[12px] font-semibold text-[#0F1117]">{lane.lane}</div>
                   <div className="text-[10px] text-gray-400">{lane.count} loads</div>
                 </div>
                 <div className="text-[13px] font-bold text-[#C9A84C]">{fmt(lane.revenue)}</div>
@@ -174,7 +174,7 @@ export default function CarrierRevenuePage() {
           <CarrierCard padding="p-4">
             <div className="flex items-center gap-2 mb-3">
               <CreditCard size={14} className="text-[#C9A84C]" />
-              <h2 className="text-sm font-semibold text-[#1a1a2e]">Payment Summary</h2>
+              <h2 className="text-sm font-semibold text-[#0F1117]">Payment Summary</h2>
             </div>
             {[
               { label: "Pending Pay", value: fmt(paySum?.totalPending?.amount), color: "text-amber-500" },

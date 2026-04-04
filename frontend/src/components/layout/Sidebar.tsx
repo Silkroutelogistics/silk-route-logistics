@@ -267,7 +267,7 @@ export function Sidebar() {
   /* ── View toggle + console buttons ─────────────────────── */
 
   const viewToggle = (admin || hasAccountingAccess) ? (
-    <div className={cn("border-b border-[#2d2d44] space-y-2", collapsed ? "px-1.5 py-2" : "px-5 py-3")}>
+    <div className={cn("border-b border-[#2A2F42] space-y-2", collapsed ? "px-1.5 py-2" : "px-5 py-3")}>
       {admin && !collapsed && (
         <div className="flex items-center bg-white/5 rounded-lg p-1">
           <button
@@ -398,7 +398,7 @@ export function Sidebar() {
                 {group.label}
               </button>
             )}
-            {collapsed && <div className="mt-2 mb-1 border-t border-[#2d2d44]" />}
+            {collapsed && <div className="mt-2 mb-1 border-t border-[#2A2F42]" />}
             {(collapsed || !isCollapsed) && (
               <div className="space-y-0.5">
                 {group.items.map(renderNavLink)}
@@ -423,7 +423,7 @@ export function Sidebar() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className={cn("border-b border-[#2d2d44]", collapsed ? "px-2 py-4" : "px-5 py-5")}>
+      <div className={cn("border-b border-[#2A2F42]", collapsed ? "px-2 py-4" : "px-5 py-5")}>
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
           {!collapsed && (
@@ -437,7 +437,7 @@ export function Sidebar() {
 
       {/* User info */}
       {user && (
-        <div className={cn("border-b border-[#2d2d44]", collapsed ? "px-1.5 py-2" : "px-5 py-3")}>
+        <div className={cn("border-b border-[#2A2F42]", collapsed ? "px-1.5 py-2" : "px-5 py-3")}>
           {!collapsed ? (
             <div className="flex items-center justify-between">
               <div className="min-w-0">
@@ -470,8 +470,8 @@ export function Sidebar() {
                   )}
                 </button>
                 {showNotifDropdown && (
-                  <div className="fixed left-[185px] top-[55px] w-80 bg-[#1a1a2e] border border-[#2d2d44] rounded-xl shadow-2xl z-[100] overflow-hidden">
-                    <div className="px-3 py-2 border-b border-[#2d2d44] flex items-center justify-between">
+                  <div className="fixed left-[185px] top-[55px] w-80 bg-[#161921] border border-[#2A2F42] rounded-xl shadow-2xl z-[100] overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#2A2F42] flex items-center justify-between">
                       <span className="text-xs font-semibold text-white">Notifications</span>
                       {unreadCount > 0 && (
                         <button onClick={handleMarkAllRead} className="text-[10px] text-gold hover:text-gold/80 cursor-pointer">Mark all read</button>
@@ -480,7 +480,7 @@ export function Sidebar() {
                     <div className="max-h-72 overflow-y-auto">
                       {Array.isArray(recentNotifs) && recentNotifs.length > 0 ? recentNotifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
                         <button key={n.id} onClick={() => { handleMarkOneRead(n.id); if (n.actionUrl) router.push(n.actionUrl); setShowNotifDropdown(false); }}
-                          className={`w-full text-left px-3 py-2.5 border-b border-[#2d2d44]/50 hover:bg-white/5 transition cursor-pointer ${!n.readAt ? "bg-gold/[0.03]" : ""}`}>
+                          className={`w-full text-left px-3 py-2.5 border-b border-[#2A2F42]/50 hover:bg-white/5 transition cursor-pointer ${!n.readAt ? "bg-gold/[0.03]" : ""}`}>
                           <p className={`text-xs font-medium ${!n.readAt ? "text-white" : "text-slate-400"}`}>{n.title}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
                           <p className="text-[9px] text-slate-600 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
@@ -519,7 +519,7 @@ export function Sidebar() {
       {useGrouped ? renderGroupedNav() : renderFlatNav()}
 
       {/* Bottom section */}
-      <div className={cn("border-t border-[#2d2d44] space-y-1", collapsed ? "px-1.5 py-3" : "px-3 py-4")}>
+      <div className={cn("border-t border-[#2A2F42] space-y-1", collapsed ? "px-1.5 py-3" : "px-3 py-4")}>
         {carrier && !collapsed && (
           <div className="px-3 py-2">
             <div className="flex items-center gap-2">
@@ -565,7 +565,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/[0.03] border-b border-[#2d2d44] px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#161921] border-b border-[#2A2F42] px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
           <span className="text-sm font-semibold text-white">Silk Route</span>
@@ -589,7 +589,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-white/[0.03] border-r border-[#2d2d44] flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
+          "bg-[#080C18] border-r border-[#2A2F42] flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
           "fixed lg:sticky top-0 z-50 lg:z-auto",
           collapsed ? "w-[60px]" : "w-[220px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -600,7 +600,7 @@ export function Sidebar() {
         {/* Floating collapse toggle on sidebar edge */}
         <button
           onClick={() => setCollapsed((p: boolean) => !p)}
-          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 items-center justify-center rounded-full bg-[#2d2d44] border border-[#2a3d57] text-slate-400 hover:text-white hover:bg-[#243a56] transition-all duration-200 shadow-lg cursor-pointer z-50"
+          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 items-center justify-center rounded-full bg-[#2A2F42] border border-[#2a3d57] text-slate-400 hover:text-white hover:bg-[#243a56] transition-all duration-200 shadow-lg cursor-pointer z-50"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronsRight className="w-3 h-3" /> : <ChevronsLeft className="w-3 h-3" />}

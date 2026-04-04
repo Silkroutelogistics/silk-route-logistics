@@ -210,7 +210,7 @@ export default function TrackingPage() {
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
               {showStatusDropdown && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a2e] border border-white/10 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto py-1">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[#0F1117] border border-white/10 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto py-1">
                   <button onClick={() => { setStatusFilter(""); setShowStatusDropdown(false); }}
                     className={`w-full text-left px-3 py-2 text-sm transition ${!statusFilter ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-white hover:bg-white/5"}`}>
                     Active Loads
@@ -464,7 +464,7 @@ function LoadRow({
   return (
     <>
       {/* Main Row */}
-      <tr className={`border-b cursor-pointer transition ${isExpanded ? "border-gold/30 bg-white/[0.02]" : "border-white/5 hover:bg-white/[0.02]"}`}
+      <tr className={`border-b cursor-pointer transition ${isExpanded ? "border-gold/30 bg-[#0F1117]" : "border-white/5 hover:bg-[#0F1117]"}`}
         onClick={onToggle}>
         <td className="px-4 py-3">
           {isExpanded ? <ChevronDown className="w-4 h-4 text-gold" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}

@@ -185,7 +185,7 @@ export default function SettlementsPage() {
                 </button>
 
                 {isExpanded && detail && (
-                  <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-4">
+                  <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
                     {/* Loads Table */}
                     {detail.carrierPays && detail.carrierPays.length > 0 && (
                       <div>

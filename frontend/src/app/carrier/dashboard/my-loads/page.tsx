@@ -66,7 +66,7 @@ export default function MyLoadsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#1a1a2e] mb-1">My Loads</h1>
+        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">My Loads</h1>
         <p className="text-[13px] text-gray-500">Manage your assigned loads and update shipment status</p>
       </div>
 
@@ -78,7 +78,7 @@ export default function MyLoadsPage() {
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
               className={`px-3 py-1.5 rounded-full text-[11px] font-medium ${
-                f === activeFilter ? "bg-[#1a1a2e] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                f === activeFilter ? "bg-[#0F1117] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >{f === "All" ? "All" : f.replace(/_/g, " ")}</button>
           ))}
@@ -108,7 +108,7 @@ export default function MyLoadsPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-xs font-bold text-[#1a1a2e]">{load.referenceNumber}</span>
+                      <span className="font-mono text-xs font-bold text-[#0F1117]">{load.referenceNumber}</span>
                       <CarrierBadge status={load.status} />
                     </div>
                     <div className="text-xs text-gray-600">
@@ -118,7 +118,7 @@ export default function MyLoadsPage() {
                       {load.equipmentType} &middot; Pick: {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-[#1a1a2e]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
+                  <span className="text-sm font-bold text-[#0F1117]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
                 </div>
               </CarrierCard>
             ))
@@ -139,7 +139,7 @@ export default function MyLoadsPage() {
               {/* Load info */}
               <CarrierCard padding="p-5">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-sm font-bold text-[#1a1a2e]">{detail.referenceNumber}</h3>
+                  <h3 className="text-sm font-bold text-[#0F1117]">{detail.referenceNumber}</h3>
                   <CarrierBadge status={detail.status} size="md" />
                 </div>
                 <div className="space-y-2 text-xs">
@@ -183,7 +183,7 @@ export default function MyLoadsPage() {
               {/* Status Update */}
               {nextStatuses.length > 0 && (
                 <CarrierCard padding="p-4">
-                  <h4 className="text-xs font-bold text-[#1a1a2e] mb-3 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-[#0F1117] mb-3 flex items-center gap-1.5">
                     <CheckCircle size={14} className="text-[#C9A84C]" /> Update Status
                   </h4>
                   <div className="flex gap-2">
@@ -207,7 +207,7 @@ export default function MyLoadsPage() {
               {/* Check Call */}
               {!["DELIVERED", "POD_RECEIVED", "COMPLETED", "CANCELLED"].includes(detail.status) && (
                 <CarrierCard padding="p-4">
-                  <h4 className="text-xs font-bold text-[#1a1a2e] mb-3 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-[#0F1117] mb-3 flex items-center gap-1.5">
                     <Clock size={14} className="text-amber-500" /> Submit Check Call
                   </h4>
                   <div className="grid grid-cols-2 gap-2 mb-2">
@@ -234,7 +234,7 @@ export default function MyLoadsPage() {
                   <button
                     onClick={() => checkCallMutation.mutate({ loadId: selectedId, data: checkCallForm })}
                     disabled={checkCallMutation.isPending}
-                    className="px-4 py-2 bg-[#1a1a2e] text-white text-xs font-semibold rounded-md disabled:opacity-60"
+                    className="px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-60"
                   >
                     {checkCallMutation.isPending ? "Submitting..." : "Submit Check Call"}
                   </button>

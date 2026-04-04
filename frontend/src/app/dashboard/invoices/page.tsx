@@ -341,7 +341,7 @@ export default function InvoicesPage() {
                 </div>
 
                 {expanded === inv.id && (
-                  <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-4">
+                  <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
                     {/* Line Items Table */}
                     {inv.lineItems && inv.lineItems.length > 0 && (
                       <div>

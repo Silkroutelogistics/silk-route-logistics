@@ -185,7 +185,7 @@ export default function AgingReportPage() {
               [...Array(3)].map((_, i) => <tr key={i}><td colSpan={6} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
             ) : data?.details?.filter(d => d.daysOverdue > 0).length ? (
               data.details.filter(d => d.daysOverdue > 0).map(inv => (
-                <tr key={inv.id} className="hover:bg-white/[0.02]">
+                <tr key={inv.id} className="hover:bg-[#0F1117]">
                   <td className="px-5 py-3 text-sm text-white font-medium">{inv.invoiceNumber}</td>
                   <td className="px-5 py-3 text-sm text-slate-300">{inv.customer}</td>
                   <td className="px-5 py-3 text-sm text-white">{fmt(inv.amount)}</td>

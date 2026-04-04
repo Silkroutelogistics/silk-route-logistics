@@ -526,7 +526,7 @@ export default function OrderBuilderPage() {
   const lbl = "text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-0.5 block";
   const secHdr = "text-xs text-[#C9A84C] font-semibold uppercase tracking-wider";
   const sel = `${inp} cursor-pointer`;
-  const optStyle = { backgroundColor: "#1a1a2e", color: "#f8fafc" } as const;
+  const optStyle = { backgroundColor: "#0F1117", color: "#f8fafc" } as const;
 
   return (
     <div className="p-3 h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto">
@@ -550,7 +550,7 @@ export default function OrderBuilderPage() {
               createLoad.mutate("POSTED");
             }}
             disabled={createLoad.isPending}
-            className="bg-[#C9A84C] text-[#1a1a2e] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#C9A84C]/90 disabled:opacity-50 transition cursor-pointer"
+            className="bg-[#C9A84C] text-[#0F1117] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#C9A84C]/90 disabled:opacity-50 transition cursor-pointer"
           >
             {createLoad.isPending ? "Creating..." : "Post to Load Board"}
           </button>
@@ -568,7 +568,7 @@ export default function OrderBuilderPage() {
       </div>
 
       {/* ─── MAIN FORM: single card, 3-column grid ─── */}
-      <div className="bg-white/[0.03] border border-white/10 rounded-xl flex-1 min-h-0 overflow-y-auto">
+      <div className="bg-[#161921] border border-white/10 rounded-xl flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-[25%_45%_30%] h-full min-h-0">
 
           {/* ════════ LEFT COLUMN: Customer + Freight ════════ */}
@@ -591,7 +591,7 @@ export default function OrderBuilderPage() {
                       <button key={c.id} onClick={() => selectCustomer(c)}
                         className="w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer hover:!bg-amber-50"
                         style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                        <span className="font-semibold" style={{ color: "#1a1a2e" }}>{c.name}</span>
+                        <span className="font-semibold" style={{ color: "#0F1117" }}>{c.name}</span>
                         <span style={{ color: "#64748b", marginLeft: "6px" }}>- {c.contactName || "No contact"}</span>
                       </button>
                     ))}
@@ -770,7 +770,7 @@ export default function OrderBuilderPage() {
                           }}
                             className="w-full text-left px-2 py-1.5 text-[11px] transition cursor-pointer hover:!bg-amber-50"
                             style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                            <span className="font-semibold" style={{ color: "#1a1a2e" }}>{entry.name}</span>
+                            <span className="font-semibold" style={{ color: "#0F1117" }}>{entry.name}</span>
                             <span style={{ color: "#64748b", marginLeft: "4px", fontSize: "10px" }}>{entry.city}, {entry.state}</span>
                           </button>
                         ))}
@@ -852,7 +852,7 @@ export default function OrderBuilderPage() {
                           }}
                             className="w-full text-left px-2 py-1.5 text-[11px] transition cursor-pointer hover:!bg-amber-50"
                             style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                            <span className="font-semibold" style={{ color: "#1a1a2e" }}>{entry.name}</span>
+                            <span className="font-semibold" style={{ color: "#0F1117" }}>{entry.name}</span>
                             <span style={{ color: "#64748b", marginLeft: "4px", fontSize: "10px" }}>{entry.city}, {entry.state}</span>
                           </button>
                         ))}

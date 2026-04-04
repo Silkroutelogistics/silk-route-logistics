@@ -185,16 +185,16 @@ export default function FleetPage() {
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#1a1a2e] text-white">All Statuses</option>
-          <option value="ACTIVE" className="bg-[#1a1a2e] text-white">Active</option>
-          <option value="IN_SHOP" className="bg-[#1a1a2e] text-white">In Shop</option>
-          <option value="OUT_OF_SERVICE" className="bg-[#1a1a2e] text-white">Out of Service</option>
+          <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
+          <option value="ACTIVE" className="bg-[#0F1117] text-white">Active</option>
+          <option value="IN_SHOP" className="bg-[#0F1117] text-white">In Shop</option>
+          <option value="OUT_OF_SERVICE" className="bg-[#0F1117] text-white">Out of Service</option>
         </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
-          <option value="" className="bg-[#1a1a2e] text-white">All Types</option>
+          <option value="" className="bg-[#0F1117] text-white">All Types</option>
           {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
-            <option key={t} value={t} className="bg-[#1a1a2e] text-white">{t.replace(/_/g, " ")}</option>
+            <option key={t} value={t} className="bg-[#0F1117] text-white">{t.replace(/_/g, " ")}</option>
           ))}
         </select>
       </div>
@@ -204,7 +204,7 @@ export default function FleetPage() {
         {tab === "trucks" && truckData?.trucks?.map((truck) => (
           <div key={truck.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
             <button onClick={() => setExpanded(expanded === truck.id ? null : truck.id)}
-              className="w-full text-left p-5 hover:bg-white/[0.03] transition">
+              className="w-full text-left p-5 hover:bg-[#161921] transition">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -237,7 +237,7 @@ export default function FleetPage() {
               </div>
             </button>
             {expanded === truck.id && (
-              <div className="border-t border-white/10 p-5 bg-white/[0.02]">
+              <div className="border-t border-white/10 p-5 bg-[#0F1117]">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <DetailItem icon={<Shield className="w-3.5 h-3.5" />} label="VIN" value={truck.vin || "—"} />
                   <DetailItem icon={<MapPin className="w-3.5 h-3.5" />} label="Plate" value={truck.licensePlate ? `${truck.licensePlate} (${truck.licensePlateState})` : "—"} />
@@ -256,7 +256,7 @@ export default function FleetPage() {
         {tab === "trailers" && trailerData?.trailers?.map((trailer) => (
           <div key={trailer.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
             <button onClick={() => setExpanded(expanded === trailer.id ? null : trailer.id)}
-              className="w-full text-left p-5 hover:bg-white/[0.03] transition">
+              className="w-full text-left p-5 hover:bg-[#161921] transition">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${trailer.reeferUnit ? "bg-cyan-500/10" : "bg-orange-500/10"}`}>
@@ -285,7 +285,7 @@ export default function FleetPage() {
               </div>
             </button>
             {expanded === trailer.id && (
-              <div className="border-t border-white/10 p-5 bg-white/[0.02]">
+              <div className="border-t border-white/10 p-5 bg-[#0F1117]">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <DetailItem label="Registration" value={trailer.registrationExpiry ? new Date(trailer.registrationExpiry).toLocaleDateString() : "—"} warn={isExpiringSoon(trailer.registrationExpiry)} />
                   <DetailItem label="Next Inspection" value={trailer.nextInspectionDate ? new Date(trailer.nextInspectionDate).toLocaleDateString() : "—"} warn={isExpiringSoon(trailer.nextInspectionDate)} />

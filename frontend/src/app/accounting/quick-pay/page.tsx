@@ -102,7 +102,7 @@ export default function QuickPayQueuePage() {
               data.queue.map(req => {
                 const tierInfo = TIER_INFO[req.paymentTier] || TIER_INFO.FLASH;
                 return (
-                  <tr key={req.id} className="hover:bg-white/[0.02]">
+                  <tr key={req.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{req.paymentNumber}</td>
                     <td className="px-5 py-3 text-sm text-slate-300">{req.load.referenceNumber}</td>
                     <td className="px-5 py-3">

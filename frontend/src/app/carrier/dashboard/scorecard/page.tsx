@@ -117,7 +117,7 @@ export default function ScorecardPage() {
       <div className="mb-6 flex items-center gap-3">
         <Trophy className="w-6 h-6 text-[#C9A84C]" />
         <div>
-          <h1 className="font-serif text-2xl text-[#1a1a2e]">Performance Scorecard</h1>
+          <h1 className="font-serif text-2xl text-[#0F1117]">Performance Scorecard</h1>
           <p className="text-[13px] text-gray-500">Track your metrics, tier status, milestones, and bonus earnings</p>
         </div>
         <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[currentTier] || TIER_COLORS.BRONZE}`}>
@@ -144,7 +144,7 @@ export default function ScorecardPage() {
         <CarrierCard>
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-[#C9A84C]" />
-            <h2 className="font-semibold text-[#1a1a2e] text-sm">Tier Progress</h2>
+            <h2 className="font-semibold text-[#0F1117] text-sm">Tier Progress</h2>
           </div>
           <div className="relative h-3 bg-gray-100 rounded-full mb-2 overflow-hidden">
             {TIERS.map((t) => (
@@ -158,7 +158,7 @@ export default function ScorecardPage() {
             {TIERS.map((t) => <span key={t}>{t} ({TIER_THRESHOLDS[t]})</span>)}
           </div>
           {nextTier && nextTier !== currentTier ? (
-            <p className="text-sm text-gray-600">{pointsToNextTier} points to <span className="font-semibold text-[#1a1a2e]">{nextTier}</span></p>
+            <p className="text-sm text-gray-600">{pointsToNextTier} points to <span className="font-semibold text-[#0F1117]">{nextTier}</span></p>
           ) : (
             <p className="text-sm text-green-600 font-medium">Maximum tier achieved!</p>
           )}
@@ -166,7 +166,7 @@ export default function ScorecardPage() {
           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-2">
             <Star className="w-4 h-4 text-[#C9A84C]" />
             <p className="text-sm text-gray-600">
-              Your score: <span className="font-semibold text-[#1a1a2e]">{currentScore}</span> &mdash; <span className="font-semibold text-[#C9A84C]">{benchmarkLabel(currentScore)}</span> of SRL carriers
+              Your score: <span className="font-semibold text-[#0F1117]">{currentScore}</span> &mdash; <span className="font-semibold text-[#C9A84C]">{benchmarkLabel(currentScore)}</span> of SRL carriers
             </p>
           </div>
         </CarrierCard>
@@ -176,7 +176,7 @@ export default function ScorecardPage() {
       <CarrierCard className="mb-4">
         <div className="flex items-center gap-2 mb-4">
           <Target className="w-5 h-5 text-[#C9A84C]" />
-          <h2 className="font-semibold text-[#1a1a2e] text-sm">Milestones</h2>
+          <h2 className="font-semibold text-[#0F1117] text-sm">Milestones</h2>
           <span className={`ml-auto px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${TIER_COLORS[currentTier] || TIER_COLORS.BRONZE}`}>
             {currentMilestone.id}: {currentMilestone.name}
           </span>
@@ -189,7 +189,7 @@ export default function ScorecardPage() {
               <span className="text-sm font-bold text-[#C9A84C]">{currentMilestone.id}</span>
             </div>
             <div>
-              <div className="text-sm font-bold text-[#1a1a2e]">{currentMilestone.name}</div>
+              <div className="text-sm font-bold text-[#0F1117]">{currentMilestone.name}</div>
               <div className="text-xs text-gray-500">{currentMilestone.description}</div>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function ScorecardPage() {
         {nextMilestoneObj && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-[#1a1a2e]">Progress to {nextMilestoneObj.id}: {nextMilestoneObj.name}</span>
+              <span className="text-xs font-semibold text-[#0F1117]">Progress to {nextMilestoneObj.id}: {nextMilestoneObj.name}</span>
               <span className="text-[11px] text-gray-400">{milestoneLoads}/{nextMilestoneObj.loadsRequired} loads</span>
             </div>
             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -276,7 +276,7 @@ export default function ScorecardPage() {
                   }`}>
                     {m.id}
                   </div>
-                  <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#1a1a2e]" : "text-gray-400"}`}>
+                  <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#0F1117]" : "text-gray-400"}`}>
                     {m.name}
                   </span>
                 </div>
@@ -294,7 +294,7 @@ export default function ScorecardPage() {
           return (
             <CarrierCard key={key} padding="p-4">
               <p className="text-[11px] text-gray-500 mb-1 truncate">{label}</p>
-              <p className="text-xl font-bold text-[#1a1a2e]">{typeof val === "number" ? val.toFixed(1) : val}%</p>
+              <p className="text-xl font-bold text-[#0F1117]">{typeof val === "number" ? val.toFixed(1) : val}%</p>
               <div className="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${barColor(val, isInverted)}`}
                   style={{ width: `${Math.min(isInverted ? 100 - val * 5 : val, 100)}%` }} />
@@ -309,7 +309,7 @@ export default function ScorecardPage() {
         <CarrierCard className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Award className="w-4 h-4 text-[#C9A84C]" />
-            <h2 className="font-semibold text-[#1a1a2e] text-sm">Score History</h2>
+            <h2 className="font-semibold text-[#0F1117] text-sm">Score History</h2>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -329,7 +329,7 @@ export default function ScorecardPage() {
       {/* Bonus Tracker */}
       {bonuses && bonuses.length > 0 && (
         <CarrierCard>
-          <h2 className="font-semibold text-[#1a1a2e] text-sm mb-3">Bonus Tracker</h2>
+          <h2 className="font-semibold text-[#0F1117] text-sm mb-3">Bonus Tracker</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -345,8 +345,8 @@ export default function ScorecardPage() {
                 {bonuses.map((b: { period: string; type: string; amount: number; status: string; description: string }, i: number) => (
                   <tr key={i} className="border-b border-gray-50">
                     <td className="py-2 text-gray-600">{b.period}</td>
-                    <td className="py-2 text-[#1a1a2e] font-medium">{b.type}</td>
-                    <td className="py-2 text-right font-semibold text-[#1a1a2e]">${b.amount.toLocaleString()}</td>
+                    <td className="py-2 text-[#0F1117] font-medium">{b.type}</td>
+                    <td className="py-2 text-right font-semibold text-[#0F1117]">${b.amount.toLocaleString()}</td>
                     <td className="py-2 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
                         b.status === "PAID" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
@@ -356,7 +356,7 @@ export default function ScorecardPage() {
                   </tr>
                 ))}
                 <tr className="font-semibold">
-                  <td className="py-2 text-[#1a1a2e]" colSpan={2}>Total</td>
+                  <td className="py-2 text-[#0F1117]" colSpan={2}>Total</td>
                   <td className="py-2 text-right text-[#C9A84C]">${totalBonus.toLocaleString()}</td>
                   <td colSpan={2} />
                 </tr>

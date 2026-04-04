@@ -143,10 +143,10 @@ export function InvoiceTemplate({ data, onClose }: InvoiceTemplateProps) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-auto">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-[850px] max-h-[95vh] overflow-auto">
         {/* Action Bar */}
-        <div className="sticky top-0 bg-[#1a1a2e] px-6 py-3 flex items-center justify-between rounded-t-xl z-10 no-print">
+        <div className="sticky top-0 bg-[#0F1117] px-6 py-3 flex items-center justify-between rounded-t-xl z-10 no-print">
           <span className="text-white font-semibold text-sm">Invoice — {data.invoiceNumber}</span>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#C9A84C] text-[#1a1a2e] text-xs font-bold rounded-md hover:bg-[#D4B85E]">
+            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#C9A84C] text-[#0F1117] text-xs font-bold rounded-md hover:bg-[#D4B85E]">
               <Printer size={14} /> Print / Save PDF
             </button>
             {onClose && (
@@ -377,18 +377,18 @@ const printStyles = `
   .inv-page { max-width: 7.5in; margin: 0 auto; }
 
   /* Header */
-  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a1a2e; padding-bottom: 10px; margin-bottom: 16px; }
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0F1117; padding-bottom: 10px; margin-bottom: 16px; }
   .inv-logo-block { display: flex; align-items: center; gap: 10px; }
   .inv-logo { height: 52px; width: auto; }
-  .inv-company-name { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; color: #1a1a2e; letter-spacing: 0.5px; }
+  .inv-company-name { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; font-weight: 700; color: #0F1117; letter-spacing: 0.5px; }
   .inv-company-detail { font-size: 9px; color: #6b7280; margin-top: 1px; }
   .inv-company-info { margin-top: 2px; }
 
   .inv-title-block { text-align: right; }
-  .inv-title { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1.1; margin-bottom: 6px; }
+  .inv-title { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #0F1117; line-height: 1.1; margin-bottom: 6px; }
   .inv-ref-table { font-size: 10px; margin-left: auto; border-collapse: collapse; }
   .inv-ref-label { text-align: right; color: #6b7280; padding-right: 6px; padding-top: 2px; }
-  .inv-ref-value { font-weight: 600; color: #1a1a2e; padding-top: 2px; }
+  .inv-ref-value { font-weight: 600; color: #0F1117; padding-top: 2px; }
   .inv-due { color: #C9A84C; font-weight: 700; }
   .inv-status { font-size: 9px; padding: 1px 6px; background: #f3f4f6; border-radius: 3px; }
 
@@ -396,7 +396,7 @@ const printStyles = `
   .inv-addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
   .inv-addr-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 10px 12px; }
   .inv-addr-label { font-size: 8px; font-weight: 700; color: #C9A84C; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
-  .inv-addr-name { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 2px; }
+  .inv-addr-name { font-size: 12px; font-weight: 700; color: #0F1117; margin-bottom: 2px; }
   .inv-addr-detail { font-size: 10px; color: #4b5563; line-height: 1.5; }
 
   /* Shipment Details */
@@ -404,11 +404,11 @@ const printStyles = `
   .inv-shipment-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 16px; background: #f9fafb; padding: 8px; border-radius: 4px; border: 1px solid #e5e7eb; }
   .inv-ship-item { display: flex; flex-direction: column; }
   .inv-ship-label { font-size: 8px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
-  .inv-ship-value { font-size: 10px; font-weight: 600; color: #1a1a2e; }
+  .inv-ship-value { font-size: 10px; font-weight: 600; color: #0F1117; }
 
   /* Charges Table */
   .inv-charges-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  .inv-charges-table th { background: #1a1a2e; color: white; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 5px 8px; text-align: left; }
+  .inv-charges-table th { background: #0F1117; color: white; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 5px 8px; text-align: left; }
   .inv-charges-table td { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 11px; }
   .inv-charges-table tr:nth-child(even) td { background: #f9fafb; }
   .inv-amount { font-weight: 600; }
@@ -419,7 +419,7 @@ const printStyles = `
   .inv-total-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 11px; }
   .inv-total-row span:first-child { color: #6b7280; }
   .inv-total-row span:last-child { font-weight: 600; }
-  .inv-total-grand { background: #1a1a2e; color: white !important; border-radius: 3px; padding: 6px 8px; margin-top: 4px; font-size: 13px; }
+  .inv-total-grand { background: #0F1117; color: white !important; border-radius: 3px; padding: 6px 8px; margin-top: 4px; font-size: 13px; }
   .inv-total-grand span:first-child { color: white; font-weight: 700; }
   .inv-total-grand span:last-child { color: #C9A84C; font-weight: 700; font-size: 14px; }
 
@@ -434,7 +434,7 @@ const printStyles = `
   .inv-terms div { margin-bottom: 2px; }
 
   /* Footer */
-  .inv-footer { border-top: 2px solid #1a1a2e; padding-top: 8px; margin-top: 8px; text-align: center; }
+  .inv-footer { border-top: 2px solid #0F1117; padding-top: 8px; margin-top: 8px; text-align: center; }
   .inv-footer-brand { font-size: 9px; color: #C9A84C; font-weight: 600; }
   .inv-footer-note { font-size: 10px; color: #6b7280; margin-top: 2px; font-style: italic; }
 

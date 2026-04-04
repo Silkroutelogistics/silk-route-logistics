@@ -282,7 +282,7 @@ export default function DriversPage() {
 
               {/* Expanded Detail */}
               {isExpanded && (
-                <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-4">
+                <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
                   <div className="grid sm:grid-cols-3 gap-4 text-sm">
                     <InfoRow label="License #" value={d.licenseNumber || "—"} />
                     <InfoRow label="License State" value={d.licenseState || "—"} />
