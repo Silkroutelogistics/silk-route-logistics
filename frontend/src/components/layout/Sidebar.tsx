@@ -470,9 +470,9 @@ export function Sidebar() {
                   )}
                 </button>
                 {showNotifDropdown && (
-                  <div className="fixed left-[185px] top-[55px] w-80 bg-[#161921] border border-[#2A2F42] rounded-xl shadow-2xl z-[100] overflow-hidden">
-                    <div className="px-3 py-2 border-b border-[#2A2F42] flex items-center justify-between">
-                      <span className="text-xs font-semibold text-white">Notifications</span>
+                  <div className="fixed right-6 top-4 w-80 rounded-xl shadow-2xl z-[100] overflow-hidden" style={{ background: 'var(--srl-bg-surface)', border: '1px solid var(--srl-border)' }}>
+                    <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid var(--srl-border)' }}>
+                      <span className="text-xs font-semibold" style={{ color: 'var(--srl-text)' }}>Notifications</span>
                       {unreadCount > 0 && (
                         <button onClick={handleMarkAllRead} className="text-[10px] text-gold hover:text-gold/80 cursor-pointer">Mark all read</button>
                       )}
@@ -480,7 +480,8 @@ export function Sidebar() {
                     <div className="max-h-72 overflow-y-auto">
                       {Array.isArray(recentNotifs) && recentNotifs.length > 0 ? recentNotifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
                         <button key={n.id} onClick={() => { handleMarkOneRead(n.id); if (n.actionUrl) router.push(n.actionUrl); setShowNotifDropdown(false); }}
-                          className={`w-full text-left px-3 py-2.5 border-b border-[#2A2F42]/50 hover:bg-white/5 transition cursor-pointer ${!n.readAt ? "bg-gold/[0.03]" : ""}`}>
+                          className="w-full text-left px-3 py-2.5 transition cursor-pointer"
+                          style={{ borderBottom: '1px solid var(--srl-border-subtle)', background: !n.readAt ? 'var(--srl-gold-muted)' : 'transparent' }}>
                           <p className={`text-xs font-medium ${!n.readAt ? "text-white" : "text-slate-400"}`}>{n.title}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
                           <p className="text-[9px] text-slate-600 mt-1">{new Date(n.createdAt).toLocaleString()}</p>

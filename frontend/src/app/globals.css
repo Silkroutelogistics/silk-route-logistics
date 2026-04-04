@@ -121,9 +121,22 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
   background: var(--srl-bg-surface) !important;
 }
 [data-mode="light"] .bg-white\/\[0\.07\],
+[data-mode="light"] .bg-white\/\[0\.08\],
 [data-mode="light"] .hover\:bg-white\/5:hover,
-[data-mode="light"] .hover\:bg-white\/10:hover {
+[data-mode="light"] .hover\:bg-white\/10:hover,
+[data-mode="light"] .hover\:bg-white\/20:hover,
+[data-mode="light"] .hover\:bg-white\/\[0\.07\]:hover,
+[data-mode="light"] .hover\:bg-white\/\[0\.08\]:hover {
   background: var(--srl-bg-elevated) !important;
+}
+/* Catch any remaining white-overlay hovers in light mode */
+[data-mode="light"] [class*="hover:bg-white"]:hover {
+  background: var(--srl-bg-elevated) !important;
+}
+/* Gold hover backgrounds stay gold in light mode */
+[data-mode="light"] .hover\:bg-gold\/10:hover,
+[data-mode="light"] .hover\:bg-gold\/20:hover {
+  background: var(--srl-gold-muted) !important;
 }
 
 /* Borders */
