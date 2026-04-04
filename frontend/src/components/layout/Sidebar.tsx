@@ -470,7 +470,7 @@ export function Sidebar() {
                   )}
                 </button>
                 {showNotifDropdown && (
-                  <div className="absolute left-0 top-full mt-2 w-72 bg-white/[0.03] border border-[#2d2d44] rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="fixed left-[185px] top-[55px] w-80 bg-[#1a1a2e] border border-[#2d2d44] rounded-xl shadow-2xl z-[100] overflow-hidden">
                     <div className="px-3 py-2 border-b border-[#2d2d44] flex items-center justify-between">
                       <span className="text-xs font-semibold text-white">Notifications</span>
                       {unreadCount > 0 && (
