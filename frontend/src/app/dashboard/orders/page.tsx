@@ -120,7 +120,7 @@ const initialForm = {
   freightClass: "", length: "", width: "", height: "",
   hazmat: false, tempMin: "", tempMax: "", customsRequired: false,
   rate: "", accessorials: [] as string[],
-  specialInstructions: "", contactName: "", contactPhone: "",
+  specialInstructions: "", contactName: "", contactPhone: "", contactEmail: "",
   notes: "",
   // Reference & Handling fields
   poNumbers: [] as string[],
@@ -355,7 +355,7 @@ export default function OrderBuilderPage() {
       api.get<Customer>(`/customers/${urlCustomerId}`).then((res) => {
         const c = res.data;
         setSelectedCustomer(c);
-        setForm((f) => ({ ...f, customerId: c.id, contactName: c.contactName || f.contactName, contactPhone: c.phone || f.contactPhone }));
+        setForm((f) => ({ ...f, customerId: c.id, contactName: c.contactName || f.contactName, contactPhone: c.phone || f.contactPhone, contactEmail: c.email || f.contactEmail }));
       }).catch(() => {});
     }
   }, [searchParams, prefilledFromUrl]);
@@ -476,7 +476,7 @@ export default function OrderBuilderPage() {
   const selectCustomer = (c: Customer) => {
     setSelectedCustomer(c);
     setCustomerSearch(c.name);
-    setForm((f) => ({ ...f, customerId: c.id, contactName: c.contactName || "", contactPhone: c.phone || "" }));
+    setForm((f) => ({ ...f, customerId: c.id, contactName: c.contactName || "", contactPhone: c.phone || "", contactEmail: c.email || "" }));
     setShowCustomerDropdown(false);
   };
 
@@ -520,10 +520,10 @@ export default function OrderBuilderPage() {
   }
 
   /* ── Shared compact input classes ── */
-  const inp = "px-2.5 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-gold/50";
+  const inp = "px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50";
   const inpErr = (name: typeof requiredFields[number]) => `px-2.5 py-1.5 bg-white/5 border ${errorBorder(name)} rounded text-xs text-white focus:outline-none focus:border-gold/50`;
-  const lbl = "text-[10px] text-slate-500 uppercase tracking-wider";
-  const secHdr = "text-[11px] text-[#C9A84C] font-semibold uppercase tracking-wider";
+  const lbl = "text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-0.5 block";
+  const secHdr = "text-xs text-[#C9A84C] font-semibold uppercase tracking-wider";
   const sel = `${inp} cursor-pointer`;
   const optStyle = { backgroundColor: "#0f172a", color: "#f8fafc" } as const;
 
@@ -688,19 +688,14 @@ export default function OrderBuilderPage() {
                 </div>
               </div>
 
-              {/* Truck dims */}
+              {/* Driver mode */}
               <div>
-                <span className={lbl}>Truck L x W x H (ft)</span>
-                <div className="flex items-center gap-1">
-                  <input value={form.length} onChange={(e) => setForm((f) => ({ ...f, length: e.target.value }))}
-                    placeholder="L" type="number" className={`flex-1 ${inp} text-center`} />
-                  <span className="text-slate-600 text-[9px]">x</span>
-                  <input value={form.width} onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))}
-                    placeholder="W" type="number" className={`flex-1 ${inp} text-center`} />
-                  <span className="text-slate-600 text-[9px]">x</span>
-                  <input value={form.height} onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))}
-                    placeholder="H" type="number" className={`flex-1 ${inp} text-center`} />
-                </div>
+                <span className={lbl}>Driver Mode</span>
+                <select value={form.length || "SOLO"} onChange={(e) => setForm((f) => ({ ...f, length: e.target.value }))}
+                  className={`w-full ${inp} cursor-pointer`}>
+                  <option value="SOLO">Solo Driver</option>
+                  <option value="TEAM">Team Drivers</option>
+                </select>
               </div>
 
               {/* Toggles */}
@@ -1082,7 +1077,7 @@ export default function OrderBuilderPage() {
 
             <p className={secHdr}>Contact</p>
             <div>
-              <span className={lbl}>Name</span>
+              <span className={lbl}>Name {selectedCustomer?.contactName && <span className="text-green-400 text-[8px] ml-1">Auto-filled</span>}</span>
               <input value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
                 placeholder="Contact name" className={`w-full ${inp}`} />
             </div>
@@ -1090,6 +1085,11 @@ export default function OrderBuilderPage() {
               <span className={lbl}>Phone</span>
               <input value={form.contactPhone} onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
                 placeholder="Contact phone" className={`w-full ${inp}`} />
+            </div>
+            <div>
+              <span className={lbl}>Email</span>
+              <input value={form.contactEmail} onChange={(e) => setForm((f) => ({ ...f, contactEmail: e.target.value }))}
+                placeholder="Contact email" type="email" className={`w-full ${inp}`} />
             </div>
 
             <div className="border-b border-white/5" />
