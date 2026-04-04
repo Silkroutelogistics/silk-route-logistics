@@ -519,748 +519,596 @@ export default function OrderBuilderPage() {
     );
   }
 
+  /* ── Shared compact input classes ── */
+  const inp = "px-2.5 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-gold/50";
+  const inpErr = (name: typeof requiredFields[number]) => `px-2.5 py-1.5 bg-white/5 border ${errorBorder(name)} rounded text-xs text-white focus:outline-none focus:border-gold/50`;
+  const lbl = "text-[10px] text-slate-500 uppercase tracking-wider";
+  const secHdr = "text-[11px] text-[#C9A84C] font-semibold uppercase tracking-wider";
+  const sel = `${inp} cursor-pointer`;
+  const optStyle = { backgroundColor: "#0f172a", color: "#f8fafc" } as const;
+
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <ClipboardEdit className="w-6 h-6 text-gold" /> Order Builder
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">Create a new load order and post to the load board</p>
-      </div>
-
-      {showErrors && !isValid && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 flex items-center gap-2 text-sm text-red-400">
-          <AlertTriangle className="w-4 h-4" /> Please fill in all required fields highlighted below
-        </div>
-      )}
-
-      {/* Section 1: Customer */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
-          <Search className="w-4 h-4" /> Customer
-        </h2>
-        <div className="relative">
-          <input
-            value={customerSearch}
-            onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
-            onFocus={() => setShowCustomerDropdown(true)}
-            placeholder="Search customers..."
-            className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50"
-          />
-          {showCustomerDropdown && customersData?.customers && customersData.customers.length > 0 && (
-            <div className="absolute z-10 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
-              style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-              {customersData.customers.map((c) => (
-                <button key={c.id} onClick={() => selectCustomer(c)}
-                  className="w-full text-left px-3 py-2.5 text-sm transition cursor-pointer hover:!bg-amber-50"
-                  style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                  <span className="font-semibold" style={{ color: "#0f172a" }}>{c.name}</span>
-                  <span style={{ color: "#64748b", marginLeft: "8px" }}>— {c.contactName || "No contact"}</span>
-                </button>
-              ))}
-            </div>
+    <div className="p-3 h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto">
+      {/* ─── HEADER BAR ─── */}
+      <div className="flex items-center justify-between mb-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <ClipboardEdit className="w-5 h-5 text-gold" />
+          <h1 className="text-base font-bold text-white">Order Builder</h1>
+          <span className="text-xs text-slate-500 ml-1">Create a new load</span>
+          {showErrors && !isValid && (
+            <span className="ml-3 flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-0.5">
+              <AlertTriangle className="w-3 h-3" /> Fill required fields
+            </span>
           )}
-        </div>
-        {selectedCustomer && (
-          <div className="text-xs text-slate-400 bg-white/5 rounded-lg p-3">
-            <span className="text-white font-medium">{selectedCustomer.name}</span>
-            {selectedCustomer.city && <span className="ml-2">{selectedCustomer.city}, {selectedCustomer.state}</span>}
-            {selectedCustomer.phone && <span className="ml-2">| {selectedCustomer.phone}</span>}
-          </div>
-        )}
-      </div>
-
-      {/* Section 2: Route */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
-          <MapPin className="w-4 h-4" /> Route
-        </h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500 font-medium">ORIGIN</p>
-            {/* Shipper / Pickup Facility Name with Address Book */}
-            <div className="relative" ref={shipperBookRef}>
-              <label className="text-xs text-slate-500 mb-1 block">Shipper / Pickup Facility Name</label>
-              <input
-                value={form.shipperName}
-                onChange={(e) => { setForm((f) => ({ ...f, shipperName: e.target.value })); setShowShipperBook(true); }}
-                onFocus={() => setShowShipperBook(true)}
-                onBlur={() => setTimeout(() => setShowShipperBook(false), 200)}
-                placeholder='e.g. "Graphic Packaging - Kalamazoo Plant"'
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-              />
-              {showShipperBook && (() => {
-                const q = form.shipperName.toLowerCase();
-                const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
-                if (matches.length === 0) return null;
-                return (
-                  <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
-                    style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-                    <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved Locations</div>
-                    {matches.map((entry, i) => (
-                      <button key={i} onClick={() => {
-                        setForm((f) => ({ ...f, shipperName: entry.name, originAddress: entry.address, originCity: entry.city, originState: entry.state, originZip: entry.zip }));
-                        if (entry.phone) setForm((f) => ({ ...f, contactPhone: entry.phone }));
-                        setShowShipperBook(false);
-                      }}
-                        className="w-full text-left px-3 py-2 text-sm transition cursor-pointer hover:!bg-amber-50"
-                        style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                        <span className="font-semibold" style={{ color: "#0f172a" }}>{entry.name}</span>
-                        <span style={{ color: "#64748b", marginLeft: "8px", fontSize: "12px" }}>{entry.city}, {entry.state} {entry.zip}</span>
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-            <AddressAutocomplete
-              label="Search origin address..."
-              onSelect={(addr) => { setForm((f) => ({ ...f, originAddress: addr.address, originCity: addr.city, originState: addr.state, originZip: addr.zip, originUnit: addr.unit || f.originUnit })); if (addr.unit) setShowOriginUnit(true); }}
-              value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
-            />
-            {(showOriginUnit || form.originUnit) ? (
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Unit / Suite #</label>
-                <input
-                  value={form.originUnit}
-                  onChange={(e) => setForm((f) => ({ ...f, originUnit: e.target.value }))}
-                  placeholder="e.g. Suite 200, Unit 4B, Apt 12"
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-                />
-              </div>
-            ) : (
-              <button type="button" onClick={() => setShowOriginUnit(true)}
-                className="mt-1.5 text-xs text-gold hover:text-gold/80 font-medium">
-                + Add Unit / Suite #
-              </button>
-            )}
-            <input value={form.originAddress} onChange={(e) => setForm((f) => ({ ...f, originAddress: e.target.value }))}
-              placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <div {...(isFirstError("originCity") ? { "data-error": "true" } : {})}>
-              <input value={form.originCity} onChange={(e) => setForm((f) => ({ ...f, originCity: e.target.value }))}
-                placeholder="City *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("originCity")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-              {fieldError("originCity") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div {...(isFirstError("originState") ? { "data-error": "true" } : {})}>
-                <input value={form.originState} onChange={(e) => setForm((f) => ({ ...f, originState: e.target.value.toUpperCase().slice(0, 2) }))}
-                  placeholder="State/Prov (e.g. MI, ON) *" maxLength={2} className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("originState")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-                {fieldError("originState") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-              </div>
-              <div {...(isFirstError("originZip") ? { "data-error": "true" } : {})}>
-                <input value={form.originZip} onChange={(e) => setForm((f) => ({ ...f, originZip: e.target.value }))}
-                  placeholder="ZIP/Postal *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("originZip")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-                {fieldError("originZip") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-              </div>
-            </div>
-            <div {...(isFirstError("pickupDate") ? { "data-error": "true" } : {})}>
-              <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))}
-                className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("pickupDate")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]`} />
-              {fieldError("pickupDate") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">Pickup Window</label>
-              <div className="grid grid-cols-2 gap-2">
-                <select value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
-                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Start</option>
-                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
-                </select>
-                <select value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))}
-                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>End</option>
-                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500 font-medium">DESTINATION</p>
-            {/* Consignee / Delivery Facility Name with Address Book */}
-            <div className="relative" ref={consigneeBookRef}>
-              <label className="text-xs text-slate-500 mb-1 block">Consignee / Delivery Facility Name</label>
-              <input
-                value={form.consigneeName}
-                onChange={(e) => { setForm((f) => ({ ...f, consigneeName: e.target.value })); setShowConsigneeBook(true); }}
-                onFocus={() => setShowConsigneeBook(true)}
-                onBlur={() => setTimeout(() => setShowConsigneeBook(false), 200)}
-                placeholder='e.g. "Walmart DC #6078"'
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-              />
-              {showConsigneeBook && (() => {
-                const q = form.consigneeName.toLowerCase();
-                const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
-                if (matches.length === 0) return null;
-                return (
-                  <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
-                    style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-                    <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved Locations</div>
-                    {matches.map((entry, i) => (
-                      <button key={i} onClick={() => {
-                        setForm((f) => ({ ...f, consigneeName: entry.name, destAddress: entry.address, destCity: entry.city, destState: entry.state, destZip: entry.zip }));
-                        setShowConsigneeBook(false);
-                      }}
-                        className="w-full text-left px-3 py-2 text-sm transition cursor-pointer hover:!bg-amber-50"
-                        style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                        <span className="font-semibold" style={{ color: "#0f172a" }}>{entry.name}</span>
-                        <span style={{ color: "#64748b", marginLeft: "8px", fontSize: "12px" }}>{entry.city}, {entry.state} {entry.zip}</span>
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-            <AddressAutocomplete
-              label="Search destination address..."
-              onSelect={(addr) => { setForm((f) => ({ ...f, destAddress: addr.address, destCity: addr.city, destState: addr.state, destZip: addr.zip, destUnit: addr.unit || f.destUnit })); if (addr.unit) setShowDestUnit(true); }}
-              value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
-            />
-            {(showDestUnit || form.destUnit) ? (
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Unit / Suite #</label>
-                <input
-                  value={form.destUnit}
-                  onChange={(e) => setForm((f) => ({ ...f, destUnit: e.target.value }))}
-                  placeholder="e.g. Suite 200, Unit 4B, Apt 12"
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-                />
-              </div>
-            ) : (
-              <button type="button" onClick={() => setShowDestUnit(true)}
-                className="mt-1.5 text-xs text-gold hover:text-gold/80 font-medium">
-                + Add Unit / Suite #
-              </button>
-            )}
-            <input value={form.destAddress} onChange={(e) => setForm((f) => ({ ...f, destAddress: e.target.value }))}
-              placeholder="Street Address" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <div {...(isFirstError("destCity") ? { "data-error": "true" } : {})}>
-              <input value={form.destCity} onChange={(e) => setForm((f) => ({ ...f, destCity: e.target.value }))}
-                placeholder="City *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("destCity")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-              {fieldError("destCity") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div {...(isFirstError("destState") ? { "data-error": "true" } : {})}>
-                <input value={form.destState} onChange={(e) => setForm((f) => ({ ...f, destState: e.target.value.toUpperCase().slice(0, 2) }))}
-                  placeholder="State/Prov (e.g. IL, ON) *" maxLength={2} className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("destState")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-                {fieldError("destState") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-              </div>
-              <div {...(isFirstError("destZip") ? { "data-error": "true" } : {})}>
-                <input value={form.destZip} onChange={(e) => setForm((f) => ({ ...f, destZip: e.target.value }))}
-                  placeholder="ZIP/Postal *" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("destZip")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-                {fieldError("destZip") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-              </div>
-            </div>
-            <div {...(isFirstError("deliveryDate") ? { "data-error": "true" } : {})}>
-              <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
-                className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("deliveryDate")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]`} />
-              {fieldError("deliveryDate") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">Delivery Window</label>
-              <div className="grid grid-cols-2 gap-2">
-                <select value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
-                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Start</option>
-                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
-                </select>
-                <select value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))}
-                  className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-                  <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>End</option>
-                  {TIME_OPTIONS.map(t => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
+          {createLoad.isError && <span className="ml-2 text-[10px] text-red-400">Failed to create order</span>}
         </div>
         <div className="flex items-center gap-2">
-          <input value={form.distance} onChange={(e) => { setForm((f) => ({ ...f, distance: e.target.value })); setDistanceManual(true); setDistanceAutoFilled(false); }}
-            placeholder="Distance (miles)" type="number"
-            className="w-full md:w-48 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          {distanceAutoFilled && <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded font-medium">Calculated</span>}
-        </div>
-      </div>
-
-      {/* Section: Stops */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
-            <MapPin className="w-4 h-4" /> Stops
-          </h2>
           <button
-            type="button"
-            onClick={() => setStops((prev) => [...prev, makeStop(prev.length === 0 ? "Pickup" : "Delivery")])}
-            className="flex items-center gap-1 text-xs text-gold hover:text-gold/80 font-medium cursor-pointer"
+            onClick={() => {
+              if (!isValid) { setShowErrors(true); setTimeout(() => { const el = document.querySelector('[data-error="true"]'); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 50); return; }
+              createLoad.mutate("POSTED");
+            }}
+            disabled={createLoad.isPending}
+            className="bg-[#C9A84C] text-[#0f172a] px-4 py-2 rounded-lg text-xs font-semibold hover:bg-[#C9A84C]/90 disabled:opacity-50 transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> Add Stop
+            {createLoad.isPending ? "Creating..." : "Post to Load Board"}
+          </button>
+          <button
+            onClick={() => {
+              if (!isValid) { setShowErrors(true); setTimeout(() => { const el = document.querySelector('[data-error="true"]'); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 50); return; }
+              createLoad.mutate("DRAFT");
+            }}
+            disabled={createLoad.isPending}
+            className="bg-white/10 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-white/20 disabled:opacity-50 transition cursor-pointer"
+          >
+            Save Draft
           </button>
         </div>
-
-        {/* Header row */}
-        <div className="grid grid-cols-[32px_80px_1fr_1fr_120px_100px_32px_32px] gap-2 text-[10px] text-slate-500 uppercase tracking-wider px-1">
-          <span>#</span>
-          <span>Type</span>
-          <span>Facility</span>
-          <span>City, ST, ZIP</span>
-          <span>Appt Date</span>
-          <span>Appt Time</span>
-          <span></span>
-          <span></span>
-        </div>
-
-        {stops.map((stop, idx) => (
-          <div key={stop.id} className="grid grid-cols-[32px_80px_1fr_1fr_120px_100px_32px_32px] gap-2 items-center">
-            <span className="text-xs text-slate-500 font-mono text-center">{idx + 1}</span>
-            <select
-              value={stop.type}
-              onChange={(e) => {
-                const updated = [...stops];
-                updated[idx] = { ...updated[idx], type: e.target.value as "Pickup" | "Delivery" };
-                setStops(updated);
-              }}
-              className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 cursor-pointer"
-            >
-              <option value="Pickup" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Pickup</option>
-              <option value="Delivery" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Delivery</option>
-            </select>
-            <div className="relative">
-              <input
-                value={stop.facilityName}
-                onChange={(e) => {
-                  const updated = [...stops];
-                  updated[idx] = { ...updated[idx], facilityName: e.target.value };
-                  setStops(updated);
-                }}
-                placeholder="Facility name"
-                className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-                onFocus={() => {
-                  // Show address book suggestions when focused
-                }}
-                list={`stop-book-${idx}`}
-              />
-              <datalist id={`stop-book-${idx}`}>
-                {getAddressBook().slice(0, 10).map((e, i) => (
-                  <option key={i} value={e.name}>{e.city}, {e.state} {e.zip}</option>
-                ))}
-              </datalist>
-            </div>
-            <div className="flex gap-1">
-              <input
-                value={stop.city}
-                onChange={(e) => {
-                  const updated = [...stops];
-                  updated[idx] = { ...updated[idx], city: e.target.value };
-                  setStops(updated);
-                }}
-                placeholder="City"
-                className="flex-1 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-              />
-              <input
-                value={stop.state}
-                onChange={(e) => {
-                  const updated = [...stops];
-                  updated[idx] = { ...updated[idx], state: e.target.value.toUpperCase().slice(0, 2) };
-                  setStops(updated);
-                }}
-                placeholder="ST"
-                maxLength={2}
-                className="w-12 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50 text-center"
-              />
-              <input
-                value={stop.zip}
-                onChange={(e) => {
-                  const updated = [...stops];
-                  updated[idx] = { ...updated[idx], zip: e.target.value };
-                  setStops(updated);
-                }}
-                placeholder="ZIP"
-                className="w-16 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-              />
-            </div>
-            <input
-              type="date"
-              value={stop.appointmentDate}
-              onChange={(e) => {
-                const updated = [...stops];
-                updated[idx] = { ...updated[idx], appointmentDate: e.target.value };
-                setStops(updated);
-              }}
-              className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]"
-            />
-            <select
-              value={stop.appointmentTime}
-              onChange={(e) => {
-                const updated = [...stops];
-                updated[idx] = { ...updated[idx], appointmentTime: e.target.value };
-                setStops(updated);
-              }}
-              className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 cursor-pointer"
-            >
-              <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Time</option>
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>
-              ))}
-            </select>
-            <div className="flex flex-col gap-0.5">
-              {idx > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = [...stops];
-                    [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
-                    setStops(updated);
-                  }}
-                  className="text-slate-500 hover:text-white transition cursor-pointer"
-                  title="Move up"
-                >
-                  <ArrowUp className="w-3 h-3" />
-                </button>
-              )}
-              {idx < stops.length - 1 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = [...stops];
-                    [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
-                    setStops(updated);
-                  }}
-                  className="text-slate-500 hover:text-white transition cursor-pointer"
-                  title="Move down"
-                >
-                  <ArrowDown className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-            <div>
-              {stops.length > 2 && (
-                <button
-                  type="button"
-                  onClick={() => setStops((prev) => prev.filter((_, i) => i !== idx))}
-                  className="text-red-400 hover:text-red-300 transition cursor-pointer"
-                  title="Remove stop"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-
-        <button
-          type="button"
-          onClick={() => setStops((prev) => [...prev, makeStop("Delivery")])}
-          className="w-full py-2 border border-dashed border-white/10 rounded-lg text-xs text-slate-400 hover:text-gold hover:border-gold/30 transition cursor-pointer"
-        >
-          + Add Stop
-        </button>
       </div>
 
-      {/* Section 3: Freight */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
-          <Package className="w-4 h-4" /> Freight Details
-        </h2>
-        {/* Row 1: Equipment Type | Commodity | Freight Class */}
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Equipment Type</label>
-            <select value={form.equipmentType} onChange={(e) => { setForm((f) => ({ ...f, equipmentType: e.target.value })); if (e.target.value === "Reefer") setTempControlled(true); }}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              {EQUIPMENT_TYPES.map((t) => <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Commodity</label>
-            <input value={form.commodity} onChange={(e) => setForm((f) => ({ ...f, commodity: e.target.value }))}
-              placeholder="e.g. Auto Parts" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Freight Class</label>
-            <select value={form.freightClass} onChange={(e) => setForm((f) => ({ ...f, freightClass: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Select class</option>
-              {FREIGHT_CLASSES.map((c) => <option key={c} value={c} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Class {c}</option>)}
-            </select>
-            {suggestedClass && (
-              <p className="text-xs text-gold mt-1">Auto-suggested: Class {suggestedClass} based on commodity</p>
-            )}
-          </div>
-        </div>
+      {/* ─── MAIN FORM: single card, 3-column grid ─── */}
+      <div className="bg-white/[0.03] border border-white/10 rounded-xl flex-1 min-h-0 overflow-y-auto">
+        <div className="grid grid-cols-[25%_45%_30%] h-full min-h-0">
 
-        {/* Pallet Rows — multiple rows with + button */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs text-slate-500 font-medium">PALLET DETAILS</label>
-            <button type="button" onClick={() => setPalletRows((p) => [...p, { qty: "", l: "48", w: "40", h: "48", weight: "" }])}
-              className="text-xs text-gold hover:text-gold/80 font-medium flex items-center gap-1 cursor-pointer">
-              + Add Pallet Type
-            </button>
-          </div>
-          <div className="grid grid-cols-[1fr_1.5fr_1fr_auto] gap-2 text-[10px] text-slate-500 px-1">
-            <span>Qty</span><span>Size (L × W × H) in</span><span>Weight/Pallet (lbs)</span><span></span>
-          </div>
-          {palletRows.map((row, idx) => (
-            <div key={idx} className="grid grid-cols-[1fr_1.5fr_1fr_auto] gap-2 items-center">
-              <input value={row.qty} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], qty: e.target.value }; setPalletRows(r); }}
-                placeholder="26" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-              <div className="flex items-center gap-1">
-                <input value={row.l} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], l: e.target.value }; setPalletRows(r); }}
-                  placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
-                <span className="text-slate-500 text-xs shrink-0">×</span>
-                <input value={row.w} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], w: e.target.value }; setPalletRows(r); }}
-                  placeholder="40" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
-                <span className="text-slate-500 text-xs shrink-0">×</span>
-                <input value={row.h} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], h: e.target.value }; setPalletRows(r); }}
-                  placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+          {/* ════════ LEFT COLUMN: Customer + Freight ════════ */}
+          <div className="border-r border-white/5 p-3 space-y-3 overflow-y-auto">
+            {/* CUSTOMER */}
+            <div className="space-y-1.5">
+              <p className={secHdr}>Customer</p>
+              <div className="relative">
+                <input
+                  value={customerSearch}
+                  onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  placeholder="Search customers..."
+                  className={`w-full ${inp}`}
+                />
+                {showCustomerDropdown && customersData?.customers && customersData.customers.length > 0 && (
+                  <div className="absolute z-10 top-full mt-1 w-full rounded-lg max-h-48 overflow-y-auto"
+                    style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
+                    {customersData.customers.map((c) => (
+                      <button key={c.id} onClick={() => selectCustomer(c)}
+                        className="w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer hover:!bg-amber-50"
+                        style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
+                        <span className="font-semibold" style={{ color: "#0f172a" }}>{c.name}</span>
+                        <span style={{ color: "#64748b", marginLeft: "6px" }}>- {c.contactName || "No contact"}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <input value={row.weight} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], weight: e.target.value }; setPalletRows(r); }}
-                placeholder="1500" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-              {palletRows.length > 1 && (
-                <button type="button" onClick={() => setPalletRows((p) => p.filter((_, i) => i !== idx))}
-                  className="text-red-400 hover:text-red-300 text-xs cursor-pointer px-1">✕</button>
+              {selectedCustomer && (
+                <div className="text-[10px] text-slate-400 bg-white/5 rounded px-2 py-1">
+                  <span className="text-white font-medium">{selectedCustomer.name}</span>
+                  {selectedCustomer.city && <span className="ml-1">{selectedCustomer.city}, {selectedCustomer.state}</span>}
+                  {selectedCustomer.phone && <span className="ml-1">| {selectedCustomer.phone}</span>}
+                </div>
               )}
-              {palletRows.length <= 1 && <div />}
             </div>
-          ))}
-        </div>
 
-        {/* Total Weight + Pieces (auto-calculated from all pallet rows) */}
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block flex items-center gap-2">
-              Total Weight (lbs)
-              {palletRows.some(r => r.qty && r.weight) && <span className="text-[10px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded font-medium">Calculated</span>}
-            </label>
-            <input value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
-              placeholder="Weight (lbs)" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            <div className="border-b border-white/5" />
+
+            {/* FREIGHT */}
+            <div className="space-y-1.5">
+              <p className={secHdr}>Freight</p>
+              <div>
+                <span className={lbl}>Equip</span>
+                <select value={form.equipmentType} onChange={(e) => { setForm((f) => ({ ...f, equipmentType: e.target.value })); if (e.target.value === "Reefer") setTempControlled(true); }}
+                  className={`w-full ${sel}`}>
+                  {EQUIPMENT_TYPES.map((t) => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className={lbl}>Commodity</span>
+                <input value={form.commodity} onChange={(e) => setForm((f) => ({ ...f, commodity: e.target.value }))}
+                  placeholder="e.g. Auto Parts" className={`w-full ${inp}`} />
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <span className={lbl}>Class</span>
+                  <select value={form.freightClass} onChange={(e) => setForm((f) => ({ ...f, freightClass: e.target.value }))}
+                    className={`w-full ${sel}`}>
+                    <option value="" style={optStyle}>--</option>
+                    {FREIGHT_CLASSES.map((c) => <option key={c} value={c} style={optStyle}>{c}</option>)}
+                  </select>
+                  {suggestedClass && <span className="text-[9px] text-gold">Auto: {suggestedClass}</span>}
+                </div>
+                <div>
+                  <span className={lbl}>NMFC</span>
+                  <input value={form.nmfcCode} onChange={(e) => setForm((f) => ({ ...f, nmfcCode: e.target.value }))}
+                    placeholder="70-3" className={`w-full ${inp}`} />
+                </div>
+              </div>
+
+              {/* Pallet rows compact */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className={lbl}>Pallets</span>
+                  <button type="button" onClick={() => setPalletRows((p) => [...p, { qty: "", l: "48", w: "40", h: "48", weight: "" }])}
+                    className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer">+ Add Type</button>
+                </div>
+                {palletRows.map((row, idx) => (
+                  <div key={idx} className="flex items-center gap-1">
+                    <input value={row.qty} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], qty: e.target.value }; setPalletRows(r); }}
+                      placeholder="Qty" type="number" className={`w-10 ${inp} text-center`} />
+                    <span className="text-slate-600 text-[9px]">plt</span>
+                    <input value={row.l} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], l: e.target.value }; setPalletRows(r); }}
+                      placeholder="L" type="number" className={`w-9 ${inp} text-center`} />
+                    <span className="text-slate-600 text-[9px]">x</span>
+                    <input value={row.w} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], w: e.target.value }; setPalletRows(r); }}
+                      placeholder="W" type="number" className={`w-9 ${inp} text-center`} />
+                    <span className="text-slate-600 text-[9px]">x</span>
+                    <input value={row.h} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], h: e.target.value }; setPalletRows(r); }}
+                      placeholder="H" type="number" className={`w-9 ${inp} text-center`} />
+                    <span className="text-slate-600 text-[9px]">in</span>
+                    <input value={row.weight} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], weight: e.target.value }; setPalletRows(r); }}
+                      placeholder="lbs" type="number" className={`w-14 ${inp} text-center`} />
+                    {palletRows.length > 1 && (
+                      <button type="button" onClick={() => setPalletRows((p) => p.filter((_, i) => i !== idx))}
+                        className="text-red-400 hover:text-red-300 text-[10px] cursor-pointer">x</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals row */}
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <span className={`${lbl} flex items-center gap-1`}>
+                    Wt (lbs)
+                    {palletRows.some(r => r.qty && r.weight) && <span className="text-[8px] text-green-400 bg-green-400/10 px-1 rounded">Calc</span>}
+                  </span>
+                  <input value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
+                    placeholder="Total" type="number" className={`w-full ${inp}`} />
+                </div>
+                <div>
+                  <span className={lbl}>Pieces</span>
+                  <input value={form.pieces} onChange={(e) => setForm((f) => ({ ...f, pieces: e.target.value }))}
+                    placeholder="Pcs" type="number" className={`w-full ${inp}`} />
+                </div>
+              </div>
+
+              {/* Truck dims */}
+              <div>
+                <span className={lbl}>Truck L x W x H (ft)</span>
+                <div className="flex items-center gap-1">
+                  <input value={form.length} onChange={(e) => setForm((f) => ({ ...f, length: e.target.value }))}
+                    placeholder="L" type="number" className={`flex-1 ${inp} text-center`} />
+                  <span className="text-slate-600 text-[9px]">x</span>
+                  <input value={form.width} onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))}
+                    placeholder="W" type="number" className={`flex-1 ${inp} text-center`} />
+                  <span className="text-slate-600 text-[9px]">x</span>
+                  <input value={form.height} onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))}
+                    placeholder="H" type="number" className={`flex-1 ${inp} text-center`} />
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                  <input type="checkbox" checked={form.hazmat} onChange={(e) => setForm((f) => ({ ...f, hazmat: e.target.checked }))}
+                    className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                  Hazmat
+                </label>
+                <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                  <input type="checkbox" checked={tempControlled || form.equipmentType === "Reefer"}
+                    onChange={(e) => { setTempControlled(e.target.checked); if (!e.target.checked) setForm((f) => ({ ...f, tempMin: "", tempMax: "" })); }}
+                    className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                  Temp
+                </label>
+                <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                  <input type="checkbox" checked={form.customsRequired} onChange={(e) => setForm((f) => ({ ...f, customsRequired: e.target.checked }))}
+                    className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                  Customs
+                </label>
+              </div>
+
+              {(tempControlled || form.equipmentType === "Reefer" || form.tempMin || form.tempMax) && (
+                <div className="grid grid-cols-2 gap-1.5">
+                  <input value={form.tempMin} onChange={(e) => setForm((f) => ({ ...f, tempMin: e.target.value }))}
+                    placeholder="Min °F" type="number" className={`w-full ${inp}`} />
+                  <input value={form.tempMax} onChange={(e) => setForm((f) => ({ ...f, tempMax: e.target.value }))}
+                    placeholder="Max °F" type="number" className={`w-full ${inp}`} />
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Total Pieces / Pallets</label>
-            <input value={form.pieces} onChange={(e) => setForm((f) => ({ ...f, pieces: e.target.value }))}
-              placeholder="Pieces" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          </div>
-        </div>
 
-        {/* Row 4: Truck Dimensions */}
-        <div className="grid md:grid-cols-3 gap-3">
-          <input value={form.length} onChange={(e) => setForm((f) => ({ ...f, length: e.target.value }))}
-            placeholder="Truck Length (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          <input value={form.width} onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))}
-            placeholder="Truck Width (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          <input value={form.height} onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))}
-            placeholder="Truck Height (ft)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-        </div>
+          {/* ════════ CENTER COLUMN: Route + Reference & Handling + Stops ════════ */}
+          <div className="border-r border-white/5 p-3 space-y-3 overflow-y-auto">
+            {/* ROUTE — side by side origin/dest */}
+            <p className={secHdr}>Route</p>
+            <div className="grid grid-cols-2 gap-3">
+              {/* ORIGIN */}
+              <div className="space-y-1.5">
+                <span className={lbl}>Origin</span>
+                {/* Shipper name with address book */}
+                <div className="relative" ref={shipperBookRef}>
+                  <input
+                    value={form.shipperName}
+                    onChange={(e) => { setForm((f) => ({ ...f, shipperName: e.target.value })); setShowShipperBook(true); }}
+                    onFocus={() => setShowShipperBook(true)}
+                    onBlur={() => setTimeout(() => setShowShipperBook(false), 200)}
+                    placeholder="Shipper name"
+                    className={`w-full ${inp} placeholder:text-slate-600`}
+                  />
+                  {showShipperBook && (() => {
+                    const q = form.shipperName.toLowerCase();
+                    const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
+                    if (matches.length === 0) return null;
+                    return (
+                      <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-40 overflow-y-auto"
+                        style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
+                        <div className="px-2 py-1 text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
+                        {matches.map((entry, i) => (
+                          <button key={i} onClick={() => {
+                            setForm((f) => ({ ...f, shipperName: entry.name, originAddress: entry.address, originCity: entry.city, originState: entry.state, originZip: entry.zip }));
+                            if (entry.phone) setForm((f) => ({ ...f, contactPhone: entry.phone }));
+                            setShowShipperBook(false);
+                          }}
+                            className="w-full text-left px-2 py-1.5 text-[11px] transition cursor-pointer hover:!bg-amber-50"
+                            style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
+                            <span className="font-semibold" style={{ color: "#0f172a" }}>{entry.name}</span>
+                            <span style={{ color: "#64748b", marginLeft: "4px", fontSize: "10px" }}>{entry.city}, {entry.state}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <AddressAutocomplete
+                  label="Search address..."
+                  onSelect={(addr) => { setForm((f) => ({ ...f, originAddress: addr.address, originCity: addr.city, originState: addr.state, originZip: addr.zip, originUnit: addr.unit || f.originUnit })); if (addr.unit) setShowOriginUnit(true); }}
+                  value={{ address: form.originAddress, city: form.originCity, state: form.originState, zip: form.originZip }}
+                />
+                {(showOriginUnit || form.originUnit) && (
+                  <input value={form.originUnit} onChange={(e) => setForm((f) => ({ ...f, originUnit: e.target.value }))}
+                    placeholder="Unit / Suite #" className={`w-full ${inp}`} />
+                )}
+                {!showOriginUnit && !form.originUnit && (
+                  <button type="button" onClick={() => setShowOriginUnit(true)} className="text-[9px] text-gold hover:text-gold/80 font-medium">+ Unit</button>
+                )}
+                <input value={form.originAddress} onChange={(e) => setForm((f) => ({ ...f, originAddress: e.target.value }))}
+                  placeholder="Street" className={`w-full ${inp}`} />
+                <div className="flex gap-1" {...(isFirstError("originCity") ? { "data-error": "true" } : {})}>
+                  <input value={form.originCity} onChange={(e) => setForm((f) => ({ ...f, originCity: e.target.value }))}
+                    placeholder="City*" className={`flex-1 ${inpErr("originCity")}`} />
+                  <input value={form.originState} onChange={(e) => setForm((f) => ({ ...f, originState: e.target.value.toUpperCase().slice(0, 2) }))}
+                    placeholder="ST*" maxLength={2} className={`w-10 ${inpErr("originState")} text-center`}
+                    {...(isFirstError("originState") ? { "data-error": "true" } : {})} />
+                  <input value={form.originZip} onChange={(e) => setForm((f) => ({ ...f, originZip: e.target.value }))}
+                    placeholder="ZIP*" className={`w-16 ${inpErr("originZip")}`}
+                    {...(isFirstError("originZip") ? { "data-error": "true" } : {})} />
+                </div>
+                <div className="flex gap-1 items-center" {...(isFirstError("pickupDate") ? { "data-error": "true" } : {})}>
+                  <span className="text-[9px] text-slate-500 shrink-0">PU:</span>
+                  <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))}
+                    className={`flex-1 ${inpErr("pickupDate")} [color-scheme:dark]`} />
+                </div>
+                <div className="flex gap-1 items-center">
+                  <select value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
+                    className={`flex-1 ${sel}`}>
+                    <option value="" style={optStyle}>Start</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                  </select>
+                  <span className="text-[9px] text-slate-500">to</span>
+                  <select value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))}
+                    className={`flex-1 ${sel}`}>
+                    <option value="" style={optStyle}>End</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
 
-        {/* Toggles */}
-        <div className="flex flex-wrap gap-4 pt-2">
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-            <input type="checkbox" checked={form.hazmat} onChange={(e) => setForm((f) => ({ ...f, hazmat: e.target.checked }))}
-              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
-            <AlertTriangle className="w-4 h-4 text-yellow-500" /> Hazmat
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-            <input type="checkbox" checked={tempControlled || form.equipmentType === "Reefer"}
-              onChange={(e) => { setTempControlled(e.target.checked); if (!e.target.checked) setForm((f) => ({ ...f, tempMin: "", tempMax: "" })); }}
-              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
-            <Thermometer className="w-4 h-4 text-blue-400" /> Temp-Controlled
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-            <input type="checkbox" checked={form.customsRequired} onChange={(e) => setForm((f) => ({ ...f, customsRequired: e.target.checked }))}
-              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
-            <Globe className="w-4 h-4 text-green-400" /> Customs Required
-          </label>
-        </div>
+              {/* DESTINATION */}
+              <div className="space-y-1.5">
+                <span className={lbl}>Destination</span>
+                <div className="relative" ref={consigneeBookRef}>
+                  <input
+                    value={form.consigneeName}
+                    onChange={(e) => { setForm((f) => ({ ...f, consigneeName: e.target.value })); setShowConsigneeBook(true); }}
+                    onFocus={() => setShowConsigneeBook(true)}
+                    onBlur={() => setTimeout(() => setShowConsigneeBook(false), 200)}
+                    placeholder="Consignee name"
+                    className={`w-full ${inp} placeholder:text-slate-600`}
+                  />
+                  {showConsigneeBook && (() => {
+                    const q = form.consigneeName.toLowerCase();
+                    const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
+                    if (matches.length === 0) return null;
+                    return (
+                      <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-40 overflow-y-auto"
+                        style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
+                        <div className="px-2 py-1 text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
+                        {matches.map((entry, i) => (
+                          <button key={i} onClick={() => {
+                            setForm((f) => ({ ...f, consigneeName: entry.name, destAddress: entry.address, destCity: entry.city, destState: entry.state, destZip: entry.zip }));
+                            setShowConsigneeBook(false);
+                          }}
+                            className="w-full text-left px-2 py-1.5 text-[11px] transition cursor-pointer hover:!bg-amber-50"
+                            style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
+                            <span className="font-semibold" style={{ color: "#0f172a" }}>{entry.name}</span>
+                            <span style={{ color: "#64748b", marginLeft: "4px", fontSize: "10px" }}>{entry.city}, {entry.state}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <AddressAutocomplete
+                  label="Search address..."
+                  onSelect={(addr) => { setForm((f) => ({ ...f, destAddress: addr.address, destCity: addr.city, destState: addr.state, destZip: addr.zip, destUnit: addr.unit || f.destUnit })); if (addr.unit) setShowDestUnit(true); }}
+                  value={{ address: form.destAddress, city: form.destCity, state: form.destState, zip: form.destZip }}
+                />
+                {(showDestUnit || form.destUnit) && (
+                  <input value={form.destUnit} onChange={(e) => setForm((f) => ({ ...f, destUnit: e.target.value }))}
+                    placeholder="Unit / Suite #" className={`w-full ${inp}`} />
+                )}
+                {!showDestUnit && !form.destUnit && (
+                  <button type="button" onClick={() => setShowDestUnit(true)} className="text-[9px] text-gold hover:text-gold/80 font-medium">+ Unit</button>
+                )}
+                <input value={form.destAddress} onChange={(e) => setForm((f) => ({ ...f, destAddress: e.target.value }))}
+                  placeholder="Street" className={`w-full ${inp}`} />
+                <div className="flex gap-1" {...(isFirstError("destCity") ? { "data-error": "true" } : {})}>
+                  <input value={form.destCity} onChange={(e) => setForm((f) => ({ ...f, destCity: e.target.value }))}
+                    placeholder="City*" className={`flex-1 ${inpErr("destCity")}`} />
+                  <input value={form.destState} onChange={(e) => setForm((f) => ({ ...f, destState: e.target.value.toUpperCase().slice(0, 2) }))}
+                    placeholder="ST*" maxLength={2} className={`w-10 ${inpErr("destState")} text-center`}
+                    {...(isFirstError("destState") ? { "data-error": "true" } : {})} />
+                  <input value={form.destZip} onChange={(e) => setForm((f) => ({ ...f, destZip: e.target.value }))}
+                    placeholder="ZIP*" className={`w-16 ${inpErr("destZip")}`}
+                    {...(isFirstError("destZip") ? { "data-error": "true" } : {})} />
+                </div>
+                <div className="flex gap-1 items-center" {...(isFirstError("deliveryDate") ? { "data-error": "true" } : {})}>
+                  <span className="text-[9px] text-slate-500 shrink-0">DEL:</span>
+                  <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
+                    className={`flex-1 ${inpErr("deliveryDate")} [color-scheme:dark]`} />
+                </div>
+                <div className="flex gap-1 items-center">
+                  <select value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
+                    className={`flex-1 ${sel}`}>
+                    <option value="" style={optStyle}>Start</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                  </select>
+                  <span className="text-[9px] text-slate-500">to</span>
+                  <select value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))}
+                    className={`flex-1 ${sel}`}>
+                    <option value="" style={optStyle}>End</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
 
-        {(tempControlled || form.equipmentType === "Reefer" || form.tempMin || form.tempMax) && (
-          <div className="grid grid-cols-2 gap-3">
-            <input value={form.tempMin} onChange={(e) => setForm((f) => ({ ...f, tempMin: e.target.value }))}
-              placeholder="Min Temp (°F)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-            <input value={form.tempMax} onChange={(e) => setForm((f) => ({ ...f, tempMax: e.target.value }))}
-              placeholder="Max Temp (°F)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          </div>
-        )}
-      </div>
+            {/* Distance */}
+            <div className="flex items-center gap-2">
+              <span className={`${lbl} shrink-0`}>Distance:</span>
+              <input value={form.distance} onChange={(e) => { setForm((f) => ({ ...f, distance: e.target.value })); setDistanceManual(true); setDistanceAutoFilled(false); }}
+                placeholder="mi" type="number" className={`w-20 ${inp}`} />
+              {distanceAutoFilled && <span className="text-[9px] text-green-400">Calc</span>}
+            </div>
 
-      {/* Section: Reference & Handling */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
-          <Hash className="w-4 h-4" /> Reference &amp; Handling
-        </h2>
+            <div className="border-b border-white/5" />
 
-        {/* Row 1: PO Numbers, BOL, Appointment # */}
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">PO Number(s)</label>
-            <div className="flex flex-wrap gap-1.5 mb-1.5">
-              {form.poNumbers.map((po, i) => (
-                <span key={i} className="flex items-center gap-1 px-2 py-0.5 bg-gold/10 text-gold text-xs rounded-full">
-                  {po}
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, poNumbers: f.poNumbers.filter((_, j) => j !== i) }))}
-                    className="hover:text-red-400 cursor-pointer">
-                    <X className="w-3 h-3" />
+            {/* REFERENCE & HANDLING */}
+            <p className={secHdr}>Reference &amp; Handling</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {/* PO Numbers */}
+              <div>
+                <span className={lbl}>PO#</span>
+                {form.poNumbers.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {form.poNumbers.map((po, i) => (
+                      <span key={i} className="flex items-center gap-0.5 px-1.5 py-0 bg-gold/10 text-gold text-[10px] rounded-full">
+                        {po}
+                        <button type="button" onClick={() => setForm((f) => ({ ...f, poNumbers: f.poNumbers.filter((_, j) => j !== i) }))}
+                          className="hover:text-red-400 cursor-pointer"><X className="w-2.5 h-2.5" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-0.5">
+                  <input value={poInput} onChange={(e) => setPoInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && poInput.trim()) { e.preventDefault(); setForm((f) => ({ ...f, poNumbers: [...f.poNumbers, poInput.trim()] })); setPoInput(""); } }}
+                    placeholder="PO-001" className={`flex-1 min-w-0 ${inp}`} />
+                  <button type="button" onClick={() => { if (poInput.trim()) { setForm((f) => ({ ...f, poNumbers: [...f.poNumbers, poInput.trim()] })); setPoInput(""); } }}
+                    className="px-1.5 py-1 bg-gold/20 text-gold rounded hover:bg-gold/30 transition cursor-pointer" title="Add PO">
+                    <Plus className="w-3 h-3" />
                   </button>
-                </span>
-              ))}
+                </div>
+              </div>
+              <div>
+                <span className={lbl}>BOL</span>
+                <input value={form.bolNumber} onChange={(e) => setForm((f) => ({ ...f, bolNumber: e.target.value }))}
+                  placeholder="BOL-XXX" className={`w-full ${inp}`} />
+              </div>
+              <div>
+                <span className={lbl}>Appt #</span>
+                <input value={form.appointmentNumber} onChange={(e) => setForm((f) => ({ ...f, appointmentNumber: e.target.value }))}
+                  placeholder="APT-XXX" className={`w-full ${inp}`} />
+              </div>
             </div>
-            <div className="flex gap-1">
-              <input
-                value={poInput}
-                onChange={(e) => setPoInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && poInput.trim()) {
-                    e.preventDefault();
-                    setForm((f) => ({ ...f, poNumbers: [...f.poNumbers, poInput.trim()] }));
-                    setPoInput("");
-                  }
-                }}
-                placeholder="PO-001"
-                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (poInput.trim()) {
-                    setForm((f) => ({ ...f, poNumbers: [...f.poNumbers, poInput.trim()] }));
-                    setPoInput("");
-                  }
-                }}
-                className="px-2.5 py-2 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 transition cursor-pointer"
-                title="Add PO"
-              >
-                <Plus className="w-4 h-4" />
+
+            <div className="grid grid-cols-4 gap-1.5 items-end">
+              <div>
+                <span className={lbl}>Load</span>
+                <select value={form.loadingType} onChange={(e) => setForm((f) => ({ ...f, loadingType: e.target.value }))}
+                  className={`w-full ${sel}`}>
+                  <option value="LIVE" style={optStyle}>Live</option>
+                  <option value="DROP" style={optStyle}>Drop</option>
+                  <option value="DROP_HOOK" style={optStyle}>Drop&Hook</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer py-1.5">
+                <input type="checkbox" checked={form.stackable} onChange={(e) => setForm((f) => ({ ...f, stackable: e.target.checked }))}
+                  className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                Stack
+              </label>
+              <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer py-1.5">
+                <input type="checkbox" checked={form.turnable} onChange={(e) => setForm((f) => ({ ...f, turnable: e.target.checked }))}
+                  className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                Turn
+              </label>
+              <div>
+                <span className={lbl}>Value $</span>
+                <input value={form.declaredValue} onChange={(e) => setForm((f) => ({ ...f, declaredValue: e.target.value }))}
+                  placeholder="50000" type="number" className={`w-full ${inp}`} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5">
+              <div>
+                <span className={lbl}>Dock</span>
+                <input value={form.dockAssignment} onChange={(e) => setForm((f) => ({ ...f, dockAssignment: e.target.value }))}
+                  placeholder="Dock 12" className={`w-full ${inp}`} />
+              </div>
+              <div>
+                <span className={lbl}>Driver Instr.</span>
+                <input value={form.driverInstructions} onChange={(e) => setForm((f) => ({ ...f, driverInstructions: e.target.value }))}
+                  placeholder="Call 30min before" className={`w-full ${inp}`} />
+              </div>
+            </div>
+
+            <div className="border-b border-white/5" />
+
+            {/* STOPS */}
+            <div className="flex items-center justify-between">
+              <p className={secHdr}>Stops</p>
+              <button type="button" onClick={() => setStops((prev) => [...prev, makeStop(prev.length === 0 ? "Pickup" : "Delivery")])}
+                className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer flex items-center gap-0.5">
+                <Plus className="w-3 h-3" /> Add
               </button>
             </div>
+            {/* Stop header */}
+            <div className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 text-[9px] text-slate-500 uppercase tracking-wider">
+              <span>#</span><span>Type</span><span>Facility</span><span>City,ST,ZIP</span><span>Date</span><span>Time</span><span></span><span></span>
+            </div>
+            {stops.map((stop, idx) => (
+              <div key={stop.id} className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 items-center">
+                <span className="text-[10px] text-slate-500 font-mono text-center">{idx + 1}</span>
+                <select value={stop.type} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], type: e.target.value as "Pickup" | "Delivery" }; setStops(u); }}
+                  className={`${sel} px-1`}>
+                  <option value="Pickup" style={optStyle}>PU</option>
+                  <option value="Delivery" style={optStyle}>DL</option>
+                </select>
+                <div className="relative">
+                  <input value={stop.facilityName} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], facilityName: e.target.value }; setStops(u); }}
+                    placeholder="Facility" className={`w-full ${inp}`} list={`stop-book-${idx}`} onFocus={() => {}} />
+                  <datalist id={`stop-book-${idx}`}>
+                    {getAddressBook().slice(0, 10).map((e, i) => (
+                      <option key={i} value={e.name}>{e.city}, {e.state} {e.zip}</option>
+                    ))}
+                  </datalist>
+                </div>
+                <div className="flex gap-0.5">
+                  <input value={stop.city} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], city: e.target.value }; setStops(u); }}
+                    placeholder="City" className={`flex-1 min-w-0 ${inp}`} />
+                  <input value={stop.state} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], state: e.target.value.toUpperCase().slice(0, 2) }; setStops(u); }}
+                    placeholder="ST" maxLength={2} className={`w-8 ${inp} text-center`} />
+                  <input value={stop.zip} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], zip: e.target.value }; setStops(u); }}
+                    placeholder="ZIP" className={`w-12 ${inp}`} />
+                </div>
+                <input type="date" value={stop.appointmentDate} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentDate: e.target.value }; setStops(u); }}
+                  className={`${inp} [color-scheme:dark]`} />
+                <select value={stop.appointmentTime} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentTime: e.target.value }; setStops(u); }}
+                  className={`${sel}`}>
+                  <option value="" style={optStyle}>--</option>
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                </select>
+                <div className="flex flex-col">
+                  {idx > 0 && (
+                    <button type="button" onClick={() => { const u = [...stops]; [u[idx - 1], u[idx]] = [u[idx], u[idx - 1]]; setStops(u); }}
+                      className="text-slate-500 hover:text-white transition cursor-pointer" title="Move up">
+                      <ArrowUp className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                  {idx < stops.length - 1 && (
+                    <button type="button" onClick={() => { const u = [...stops]; [u[idx], u[idx + 1]] = [u[idx + 1], u[idx]]; setStops(u); }}
+                      className="text-slate-500 hover:text-white transition cursor-pointer" title="Move down">
+                      <ArrowDown className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </div>
+                <div>
+                  {stops.length > 2 && (
+                    <button type="button" onClick={() => setStops((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-red-400 hover:text-red-300 transition cursor-pointer" title="Remove">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={() => setStops((prev) => [...prev, makeStop("Delivery")])}
+              className="w-full py-1 border border-dashed border-white/10 rounded text-[10px] text-slate-400 hover:text-gold hover:border-gold/30 transition cursor-pointer">
+              + Add Stop
+            </button>
           </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">BOL Number</label>
-            <input value={form.bolNumber} onChange={(e) => setForm((f) => ({ ...f, bolNumber: e.target.value }))}
-              placeholder="BOL-XXX" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Appointment #</label>
-            <input value={form.appointmentNumber} onChange={(e) => setForm((f) => ({ ...f, appointmentNumber: e.target.value }))}
-              placeholder="APT-XXX" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
-          </div>
-        </div>
 
-        {/* Row 2: Loading Type, Stackable, Turnable, Declared Value */}
-        <div className="grid md:grid-cols-4 gap-3 items-end">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Loading Type</label>
-            <select value={form.loadingType} onChange={(e) => setForm((f) => ({ ...f, loadingType: e.target.value }))}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
-              <option value="LIVE" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Live</option>
-              <option value="DROP" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Drop</option>
-              <option value="DROP_HOOK" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Drop & Hook</option>
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer py-2">
-            <input type="checkbox" checked={form.stackable} onChange={(e) => setForm((f) => ({ ...f, stackable: e.target.checked }))}
-              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
-            Stackable
-          </label>
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer py-2">
-            <input type="checkbox" checked={form.turnable} onChange={(e) => setForm((f) => ({ ...f, turnable: e.target.checked }))}
-              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
-            Turnable
-          </label>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Declared Value ($)</label>
-            <input value={form.declaredValue} onChange={(e) => setForm((f) => ({ ...f, declaredValue: e.target.value }))}
-              placeholder="e.g. 50000" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
-          </div>
-        </div>
+          {/* ════════ RIGHT COLUMN: Rate + Contact + Instructions ════════ */}
+          <div className="p-3 space-y-3 overflow-y-auto">
+            <p className={secHdr}>Rate &amp; Pricing</p>
+            <div {...(isFirstError("rate") ? { "data-error": "true" } : {})}>
+              <span className={lbl}>Rate ($)*</span>
+              <input value={form.rate} onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))}
+                placeholder="1800" type="number" className={`w-full ${inpErr("rate")}`} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500">$/mi:</span>
+              <span className="text-sm font-bold text-gold">${ratePerMile}</span>
+            </div>
 
-        {/* Row 3: NMFC Code, Dock Assignment, Driver Instructions */}
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">NMFC Code</label>
-            <input value={form.nmfcCode} onChange={(e) => setForm((f) => ({ ...f, nmfcCode: e.target.value }))}
-              placeholder="e.g. 70-3" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+            <div className="border-b border-white/5" />
+
+            <p className={secHdr}>Contact</p>
+            <div>
+              <span className={lbl}>Name</span>
+              <input value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
+                placeholder="Contact name" className={`w-full ${inp}`} />
+            </div>
+            <div>
+              <span className={lbl}>Phone</span>
+              <input value={form.contactPhone} onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
+                placeholder="Contact phone" className={`w-full ${inp}`} />
+            </div>
+
+            <div className="border-b border-white/5" />
+
+            <p className={secHdr}>Instructions</p>
+            <textarea value={form.specialInstructions} onChange={(e) => setForm((f) => ({ ...f, specialInstructions: e.target.value }))}
+              placeholder="Special instructions..." rows={4}
+              className={`w-full ${inp} resize-none`} />
+
+            <div>
+              <span className={lbl}>Notes</span>
+              <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Internal notes..." rows={3}
+                className={`w-full ${inp} resize-none`} />
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Dock Assignment</label>
-            <input value={form.dockAssignment} onChange={(e) => setForm((f) => ({ ...f, dockAssignment: e.target.value }))}
-              placeholder="e.g. Dock 12" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Driver Instructions</label>
-            <input value={form.driverInstructions} onChange={(e) => setForm((f) => ({ ...f, driverInstructions: e.target.value }))}
-              placeholder="e.g. Call 30 min before arrival" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
-          </div>
+
         </div>
       </div>
-
-      {/* Section 4: Rate & Pricing */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
-          <DollarSign className="w-4 h-4" /> Rate & Pricing
-        </h2>
-        <div className="grid md:grid-cols-3 gap-3 items-end">
-          <div {...(isFirstError("rate") ? { "data-error": "true" } : {})}>
-            <label className="text-xs text-slate-500 mb-1 block">Rate ($) *</label>
-            <input value={form.rate} onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))}
-              placeholder="e.g. 1800" type="number" className={`w-full px-3 py-2 bg-white/5 border ${errorBorder("rate")} rounded-lg text-sm text-white focus:outline-none focus:border-gold/50`} />
-            {fieldError("rate") && <p className="text-xs text-red-400 mt-0.5">Required</p>}
-          </div>
-          <div className="bg-white/5 rounded-lg p-3 text-center">
-            <p className="text-xs text-slate-500">Rate / Mile</p>
-            <p className="text-lg font-bold text-gold">${ratePerMile}</p>
-          </div>
-        </div>
-
-        <textarea value={form.specialInstructions} onChange={(e) => setForm((f) => ({ ...f, specialInstructions: e.target.value }))}
-          placeholder="Special instructions..." rows={3}
-          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-
-        <div className="grid md:grid-cols-2 gap-3">
-          <input value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
-            placeholder="Contact name" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          <input value={form.contactPhone} onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
-            placeholder="Contact phone" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-        </div>
-      </div>
-
-      {/* Submit Buttons */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => {
-            if (!isValid) {
-              setShowErrors(true);
-              setTimeout(() => {
-                const firstError = document.querySelector('[data-error="true"]');
-                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 50);
-              return;
-            }
-            createLoad.mutate("POSTED");
-          }}
-          disabled={createLoad.isPending}
-          className="flex-1 px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold/90 disabled:opacity-50 transition cursor-pointer"
-        >
-          {createLoad.isPending ? "Creating..." : "Post to Load Board"}
-        </button>
-        <button
-          onClick={() => {
-            if (!isValid) {
-              setShowErrors(true);
-              setTimeout(() => {
-                const firstError = document.querySelector('[data-error="true"]');
-                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 50);
-              return;
-            }
-            createLoad.mutate("DRAFT");
-          }}
-          disabled={createLoad.isPending}
-          className="px-6 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 disabled:opacity-50 transition cursor-pointer"
-        >
-          Save Draft
-        </button>
-      </div>
-
-      {createLoad.isError && (
-        <p className="text-red-400 text-sm">Failed to create order. Please check all required fields.</p>
-      )}
     </div>
   );
 }
