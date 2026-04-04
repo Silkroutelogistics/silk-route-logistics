@@ -300,6 +300,7 @@ export function CeoOverview() {
           label="Revenue MTD"
           value={fmtCompact.format(revenueMTD)}
           trend={revenueMTD > 0 ? { direction: "up", label: "active" } : undefined}
+          href="/dashboard/finance"
         />
 
         {/* 2. Gross Margin % */}
@@ -309,6 +310,7 @@ export function CeoOverview() {
           label="Gross Margin %"
           value={`${avgMarginPercent.toFixed(1)}%`}
           valueColor={marginColor}
+          href="/dashboard/lane-analytics"
         />
 
         {/* 3. Load Count MTD */}
@@ -321,6 +323,7 @@ export function CeoOverview() {
             direction: loadCountChange >= 0 ? "up" : "down",
             label: `${loadCountChange >= 0 ? "+" : ""}${loadCountChange}% vs last mo`,
           } : undefined}
+          href="/dashboard/loads"
         />
 
         {/* 4. Active Customers */}
@@ -329,6 +332,7 @@ export function CeoOverview() {
           iconBg="text-gold bg-gold/20"
           label="Active Customers"
           value={String(customers?.activeCustomers ?? customers?.total ?? 0)}
+          href="/dashboard/crm"
         />
 
         {/* 5. Active Carriers */}
@@ -337,6 +341,7 @@ export function CeoOverview() {
           iconBg="text-purple-400 bg-purple-500/20"
           label="Active Carriers"
           value={String(activeCarrierCount)}
+          href="/dashboard/carriers"
         />
 
         {/* 6. Cash Balance */}
@@ -346,6 +351,7 @@ export function CeoOverview() {
           label="Cash Balance"
           value={fmtCompact.format(cashBalance)}
           valueColor={cashBalance < 10000 ? "text-red-400" : undefined}
+          href="/accounting/fund"
         />
       </div>
 
@@ -539,6 +545,7 @@ function KpiCard({
   value,
   valueColor,
   trend,
+  href,
 }: {
   icon: React.ReactNode;
   iconBg: string;
@@ -546,9 +553,10 @@ function KpiCard({
   value: string;
   valueColor?: string;
   trend?: { direction: "up" | "down"; label: string };
+  href?: string;
 }) {
-  return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+  const content = (
+    <>
       <div className="flex items-center justify-between mb-2">
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconBg}`}>
           {icon}
@@ -562,8 +570,16 @@ function KpiCard({
       </div>
       <p className={`text-2xl font-bold ${valueColor || "text-white"}`}>{value}</p>
       <p className="text-xs text-slate-400 mt-0.5">{label}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/[0.08] hover:border-gold/20 transition-all cursor-pointer block">
+        {content}
+      </Link>
+    );
+  }
+  return <div className="bg-white/5 border border-white/10 rounded-xl p-4">{content}</div>;
 }
 
 function TeamMetricRow({
@@ -606,7 +622,8 @@ function AttentionCard({
 }) {
   const isEmpty = count === 0;
   return (
-    <div className={`${isEmpty ? "bg-white/5 border-white/10" : `${bgColor} ${borderColor}`} border rounded-xl p-4 flex flex-col justify-between`}>
+    <Link href={href}
+      className={`${isEmpty ? "bg-white/5 border-white/10 hover:bg-white/[0.07]" : `${bgColor} ${borderColor} hover:brightness-110`} border rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all block`}>
       <div>
         <div className="flex items-center justify-between mb-2">
           {isEmpty ? <CheckCircle2 className="w-5 h-5 text-green-400" /> : icon}
@@ -623,14 +640,11 @@ function AttentionCard({
         )}
       </div>
       {!isEmpty && (
-        <Link
-          href={href}
-          className="flex items-center gap-1 text-xs text-gold mt-3 hover:text-gold/80 transition"
-        >
+        <span className="flex items-center gap-1 text-xs text-gold mt-3">
           View <ChevronRight className="w-3 h-3" />
-        </Link>
+        </span>
       )}
-    </div>
+    </Link>
   );
 }
 
