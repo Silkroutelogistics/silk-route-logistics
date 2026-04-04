@@ -62,26 +62,26 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={handleCancel} />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 w-80 h-full bg-[#0F1117] border-l border-white/10 shadow-2xl z-[9999] flex flex-col animate-slide-in-right">
+      <div className="fixed top-0 right-0 w-80 h-full border-l shadow-2xl z-[9999] flex flex-col animate-slide-in-right" style={{ background: 'var(--srl-bg-surface)', borderColor: 'var(--srl-border)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <h3 className="text-base font-semibold text-white">Theme Settings</h3>
-          <button onClick={handleCancel} className="p-1 text-slate-400 hover:text-white rounded transition">
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--srl-border)' }}>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--srl-text)' }}>Theme Settings</h3>
+          <button onClick={handleCancel} className="p-1 rounded transition" style={{ color: 'var(--srl-text-muted)' }}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Dark mode toggle */}
-        <div className="px-5 py-4 border-b border-white/10">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Appearance</p>
+        <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--srl-border)' }}>
+          <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--srl-text-muted)' }}>Appearance</p>
           <button
             onClick={handleDarkToggle}
-            className="flex items-center justify-between w-full px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 transition"
+            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition" style={{ background: 'var(--srl-bg-elevated)' }}
           >
-            <span className="text-sm text-white font-medium">Dark Mode</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--srl-text)' }}>Dark Mode</span>
             <div className="flex items-center gap-2">
               {previewDark ? <Moon className="w-4 h-4 text-gold" /> : <Sun className="w-4 h-4 text-yellow-400" />}
-              <div className={`w-10 h-5 rounded-full transition relative ${previewDark ? "bg-gold" : "bg-white/20"}`}>
+              <div className={`w-10 h-5 rounded-full transition relative ${previewDark ? "bg-gold" : ""}`} style={!previewDark ? { background: 'var(--srl-border-strong)' } : {}}>
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${previewDark ? "left-5" : "left-0.5"}`} />
               </div>
             </div>
@@ -90,7 +90,7 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
 
         {/* Theme grid */}
         <div className="px-5 py-4 flex-1 overflow-y-auto">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Theme</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--srl-text-muted)' }}>Theme</p>
           <div className="grid grid-cols-2 gap-3">
             {THEMES.map((t) => {
               const active = t.id === previewTheme;
@@ -99,8 +99,9 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
                   key={t.id}
                   onClick={() => handleThemeClick(t.id)}
                   className={`relative rounded-xl border-2 p-3 text-center transition hover:-translate-y-0.5 ${
-                    active ? "border-gold shadow-lg shadow-gold/10" : "border-white/10 hover:border-white/30"
+                    active ? "border-gold shadow-lg shadow-gold/10" : "hover:border-gold/30"
                   }`}
+                  style={{ borderColor: active ? undefined : 'var(--srl-border)' }}
                 >
                   {/* Color swatch */}
                   <div className="flex gap-1 h-6 rounded-lg overflow-hidden mb-2">
@@ -108,7 +109,7 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
                     <span className="flex-1" style={{ background: t.primary }} />
                     <span className="flex-1" style={{ background: t.accent }} />
                   </div>
-                  <p className="text-[11px] font-semibold text-white">{t.name}</p>
+                  <p className="text-[11px] font-semibold" style={{ color: 'var(--srl-text)' }}>{t.name}</p>
 
                   {/* Active check */}
                   {active && (
@@ -123,7 +124,7 @@ function ThemePanel({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Apply button */}
-        <div className="px-5 py-4 border-t border-white/10">
+        <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--srl-border)' }}>
           <button
             onClick={handleApply}
             className="w-full py-3 rounded-lg font-semibold text-sm transition"

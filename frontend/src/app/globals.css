@@ -1,47 +1,297 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   SRL DESIGN SYSTEM v2.5 — Navy-Tinted with Gold
-   Based on Stripe/Linear/Radix dark mode research.
-   EVERY color in the app MUST reference these tokens.
+   SRL DESIGN SYSTEM v3.0 — Light Mode Default
+   Warm Stone + Gold accent
+   data-mode="light" (default) / data-mode="dark"
+   data-theme="silk-route-classic" etc for accent colors
    ═══════════════════════════════════════════════════ */
 
-:root {
-  /* Backgrounds — 5 depth levels */
-  --srl-bg-deepest:    #080C18;  /* Sidebar, modal overlays */
-  --srl-bg-base:       #0F1117;  /* Page background */
-  --srl-bg-surface:    #161921;  /* Cards, panels, sections */
-  --srl-bg-elevated:   #1C1F2B;  /* Hover, dropdowns, popovers */
-  --srl-bg-overlay:    #232735;  /* Active/selected, tooltips */
+/* LIGHT MODE (Default) */
+:root, [data-mode="light"] {
+  --srl-bg-deepest:    #EBE8E2;
+  --srl-bg-base:       #F5F3EF;
+  --srl-bg-surface:    #FFFFFF;
+  --srl-bg-elevated:   #FAFAF8;
+  --srl-bg-overlay:    #F0EDE7;
 
-  /* Borders — 3 levels */
-  --srl-border-subtle: #1E2231;  /* Card edges, section dividers */
-  --srl-border:        #2A2F42;  /* Input borders, stronger dividers */
-  --srl-border-strong: #3A3F54;  /* Focus rings, active borders */
+  --srl-border-subtle: #EEEBE6;
+  --srl-border:        #E2DFD8;
+  --srl-border-strong: #C9C4BB;
 
-  /* Text — 3 levels */
-  --srl-text:          #EDEEF2;  /* Primary headings, content */
-  --srl-text-secondary:#9BA1B0;  /* Descriptions, secondary */
-  --srl-text-muted:    #5D6379;  /* Placeholders, hints, timestamps */
+  --srl-text:          #1A1714;
+  --srl-text-secondary:#5C5549;
+  --srl-text-muted:    #8C8478;
 
-  /* Gold accent — 4 levels */
-  --srl-gold:          #C9A84C;  /* Buttons, links, active indicators */
-  --srl-gold-hover:    #D4B85E;  /* Hover state */
-  --srl-gold-muted:    rgba(201,168,76,0.15);  /* Badge backgrounds, subtle highlights */
-  --srl-gold-text:     #E8D48B;  /* Gold text on dark bg (better contrast) */
+  --srl-gold:          #C9A84C;
+  --srl-gold-hover:    #B8982F;
+  --srl-gold-muted:    #F5EDD6;
+  --srl-gold-text:     #8B7428;
 
-  /* Semantic — 4 colors */
+  --srl-success:       #2D7A4F;
+  --srl-warning:       #B8860B;
+  --srl-danger:        #C93B3B;
+  --srl-info:          #2B6CB0;
+
+  --srl-shadow-sm:     0 1px 3px rgba(26,23,20,0.06), 0 1px 2px rgba(26,23,20,0.04);
+  --srl-shadow-md:     0 4px 6px rgba(26,23,20,0.06), 0 2px 4px rgba(26,23,20,0.04);
+
+  color-scheme: light;
+}
+
+/* DARK MODE */
+[data-mode="dark"] {
+  --srl-bg-deepest:    #080C18;
+  --srl-bg-base:       #0F1117;
+  --srl-bg-surface:    #161921;
+  --srl-bg-elevated:   #1C1F2B;
+  --srl-bg-overlay:    #232735;
+
+  --srl-border-subtle: #1E2231;
+  --srl-border:        #2A2F42;
+  --srl-border-strong: #3A3F54;
+
+  --srl-text:          #EDEEF2;
+  --srl-text-secondary:#9BA1B0;
+  --srl-text-muted:    #5D6379;
+
+  --srl-gold:          #C9A84C;
+  --srl-gold-hover:    #D4B85E;
+  --srl-gold-muted:    rgba(201,168,76,0.15);
+  --srl-gold-text:     #E8D48B;
+
   --srl-success:       #34D399;
   --srl-warning:       #FBBF24;
   --srl-danger:        #F87171;
   --srl-info:          #60A5FA;
+
+  --srl-shadow-sm:     none;
+  --srl-shadow-md:     none;
+
+  color-scheme: dark;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-/* Override Chrome autofill green/blue tint on login forms */
+/* ═══════════════════════════════════════════════════
+   Card & Input base styles
+   ═══════════════════════════════════════════════════ */
+
+.srl-card {
+  background: var(--srl-bg-surface);
+  border: 1px solid var(--srl-border-subtle);
+  border-radius: 0.75rem;
+  box-shadow: var(--srl-shadow-sm);
+}
+
+.srl-input {
+  background: var(--srl-bg-surface);
+  border: 1px solid var(--srl-border);
+  color: var(--srl-text);
+}
+.srl-input:focus {
+  border-color: var(--srl-gold);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+}
+
+/* ═══════════════════════════════════════════════════
+   Smooth transitions when switching modes
+   ═══════════════════════════════════════════════════ */
+
+main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-500 {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════════════
+   LIGHT MODE — Global overrides for Tailwind classes
+   Makes existing dark-mode classes theme-aware
+   ═══════════════════════════════════════════════════ */
+
+/* Cards: bg-white/5 → white card with subtle shadow */
+[data-mode="light"] .bg-white\/5 {
+  background: var(--srl-bg-surface) !important;
+  box-shadow: var(--srl-shadow-sm);
+}
+[data-mode="light"] .bg-white\/10 {
+  background: var(--srl-bg-surface) !important;
+}
+[data-mode="light"] .bg-white\/\[0\.03\] {
+  background: var(--srl-bg-surface) !important;
+}
+[data-mode="light"] .bg-white\/\[0\.07\],
+[data-mode="light"] .hover\:bg-white\/5:hover,
+[data-mode="light"] .hover\:bg-white\/10:hover {
+  background: var(--srl-bg-elevated) !important;
+}
+
+/* Borders */
+[data-mode="light"] .border-white\/10,
+[data-mode="light"] .border-white\/5 {
+  border-color: var(--srl-border) !important;
+}
+
+/* Text */
+[data-mode="light"] .text-white {
+  color: var(--srl-text) !important;
+}
+[data-mode="light"] .text-slate-400 {
+  color: var(--srl-text-secondary) !important;
+}
+[data-mode="light"] .text-slate-500 {
+  color: var(--srl-text-muted) !important;
+}
+[data-mode="light"] .text-slate-300 {
+  color: #334155 !important;
+}
+[data-mode="light"] .text-gold,
+[data-mode="light"] .text-\[\#C9A84C\] {
+  color: var(--srl-gold-text) !important;
+}
+[data-mode="light"] .bg-gold,
+[data-mode="light"] .bg-\[\#C9A84C\] {
+  background: var(--srl-gold) !important;
+  color: #FFFFFF !important;
+}
+
+/* Page background */
+[data-mode="light"] .bg-navy {
+  background: var(--srl-bg-base) !important;
+}
+[data-mode="light"] .bg-\[\#0F1117\] {
+  background: var(--srl-bg-base) !important;
+}
+[data-mode="light"] .bg-\[\#161921\] {
+  background: var(--srl-bg-surface) !important;
+  box-shadow: var(--srl-shadow-sm);
+}
+[data-mode="light"] .bg-\[\#080C18\] {
+  background: var(--srl-bg-deepest) !important;
+}
+
+/* Sidebar stays themed in light mode — warm stone sidebar */
+[data-mode="light"] aside {
+  background: var(--srl-bg-deepest) !important;
+  border-color: var(--srl-border) !important;
+}
+[data-mode="light"] aside .text-white {
+  color: var(--srl-text) !important;
+}
+[data-mode="light"] aside .text-slate-400 {
+  color: var(--srl-text-secondary) !important;
+}
+[data-mode="light"] aside .text-slate-500 {
+  color: var(--srl-text-muted) !important;
+}
+[data-mode="light"] aside .border-white\/10,
+[data-mode="light"] aside .border-\[\#2A2F42\] {
+  border-color: var(--srl-border) !important;
+}
+[data-mode="light"] aside .bg-white\/5 {
+  background: var(--srl-bg-overlay) !important;
+  box-shadow: none;
+}
+[data-mode="light"] aside .bg-white\/10,
+[data-mode="light"] aside .hover\:bg-white\/20:hover {
+  background: var(--srl-bg-overlay) !important;
+}
+[data-mode="light"] aside .bg-\[\#080C18\] {
+  background: var(--srl-bg-deepest) !important;
+}
+[data-mode="light"] aside .bg-\[\#161921\] {
+  background: var(--srl-bg-overlay) !important;
+  box-shadow: none;
+}
+[data-mode="light"] aside .border-\[\#2A2F42\] {
+  border-color: var(--srl-border) !important;
+}
+
+/* Mobile header bar */
+[data-mode="light"] .bg-\[\#161921\].border-b {
+  background: var(--srl-bg-deepest) !important;
+  border-color: var(--srl-border) !important;
+}
+
+/* Notification dropdown */
+[data-mode="light"] aside .bg-\[\#161921\].border {
+  background: var(--srl-bg-surface) !important;
+  border-color: var(--srl-border) !important;
+}
+
+/* Input backgrounds in light mode */
+[data-mode="light"] input,
+[data-mode="light"] select,
+[data-mode="light"] textarea {
+  background: var(--srl-bg-surface) !important;
+  color: var(--srl-text) !important;
+  border-color: var(--srl-border) !important;
+}
+[data-mode="light"] input:focus,
+[data-mode="light"] select:focus,
+[data-mode="light"] textarea:focus {
+  border-color: var(--srl-gold) !important;
+}
+
+/* Select options in light mode */
+[data-mode="light"] select option {
+  background: #FFFFFF !important;
+  color: var(--srl-text) !important;
+}
+[data-mode="light"] select option:checked,
+[data-mode="light"] select option:hover {
+  background: var(--srl-bg-elevated) !important;
+  color: var(--srl-gold-text) !important;
+}
+
+/* Table headers */
+[data-mode="light"] th {
+  color: var(--srl-text-muted) !important;
+}
+
+/* Dividers */
+[data-mode="light"] .divide-white\/5 > * + * {
+  border-color: var(--srl-border-subtle) !important;
+}
+
+/* Modal overlays stay dark */
+[data-mode="light"] .bg-black\/60,
+[data-mode="light"] .bg-black\/40 {
+  background: rgba(0,0,0,0.4) !important;
+}
+
+/* Status badges keep visible in light mode */
+[data-mode="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.12) !important; }
+[data-mode="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.12) !important; }
+[data-mode="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.12) !important; }
+[data-mode="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.12) !important; }
+[data-mode="light"] .bg-purple-500\/20 { background: rgba(168,85,247,0.12) !important; }
+
+/* Chart tooltips */
+[data-mode="light"] .recharts-default-tooltip {
+  background: #ffffff !important;
+  border-color: var(--srl-border) !important;
+  color: var(--srl-text) !important;
+}
+
+/* Collapse toggle button on sidebar edge */
+[data-mode="light"] .bg-\[\#2A2F42\] {
+  background: var(--srl-border-strong) !important;
+  border-color: var(--srl-border) !important;
+}
+[data-mode="light"] .hover\:bg-\[\#243a56\]:hover {
+  background: var(--srl-border) !important;
+}
+
+/* Theme panel stays dark regardless */
+[data-mode="light"] .srl-theme-panel {
+  color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════
+   Override Chrome autofill for light & dark
+   ═══════════════════════════════════════════════════ */
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
@@ -51,7 +301,7 @@ input:-webkit-autofill:focus {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Dark-themed inputs (dashboard/sidebar) */
+/* Dark-themed inputs (dashboard/sidebar in dark mode) */
 .dark-autofill:-webkit-autofill,
 .dark-autofill:-webkit-autofill:hover,
 .dark-autofill:-webkit-autofill:focus {
@@ -60,47 +310,18 @@ input:-webkit-autofill:focus {
   caret-color: #f8fafc;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   GLOBAL FIX: Native <select> dropdown styling for dark pages
-   Chrome/Edge/Safari ignore className on <option> elements.
-   This forces all selects on dark-themed pages to use dark navy
-   backgrounds with white text. Applied globally to prevent the
-   recurring white-dropdown-on-dark-page color mismatch.
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   Dark-mode select styling (only applies in dark)
+   ═══════════════════════════════════════════════════ */
 
-/* All selects inside dashboard, accounting, admin pages get dark options */
-[class*="bg-[#0F1117]"] select option,
-[class*="bg-navy"] select option,
-.dark-select-options option {
-  background-color: var(--srl-bg-base) !important;
-  color: #f8fafc !important;
+[data-mode="dark"] select option {
+  background-color: #0F1117 !important;
+  color: #EDEEF2 !important;
 }
-
-/* Force dark bg on select options within any page that has dark bg */
-select option {
-  background-color: var(--srl-bg-base);
-  color: var(--srl-text);
-}
-
-/* Selected/checked option uses gold */
-select option:checked,
-select option:hover {
-  background-color: var(--srl-bg-elevated);
-  color: var(--srl-gold);
-}
-
-/* Light-themed selects inside white modals/drawers override back to white */
-.light-select option,
-[class*="bg-white"] select option,
-[class*="bg-gray-50"] select option {
-  background-color: #ffffff !important;
-  color: #1e293b !important;
-}
-
-.light-select option:checked,
-[class*="bg-white"] select option:checked {
-  background-color: #fef9ee !important;
-  color: #92400e !important;
+[data-mode="dark"] select option:checked,
+[data-mode="dark"] select option:hover {
+  background-color: #1C1F2B !important;
+  color: #C9A84C !important;
 }
 
 /* Firefox-specific select styling */
@@ -109,11 +330,11 @@ select option:hover {
     background-color: inherit;
     color: inherit;
   }
-  select option {
-    background-color: var(--srl-bg-base);
-    color: var(--srl-text);
-  }
 }
+
+/* ═══════════════════════════════════════════════════
+   Tailwind @theme — map tokens to Tailwind colors
+   ═══════════════════════════════════════════════════ */
 
 @theme {
   --color-navy: var(--srl-bg-base);
@@ -131,6 +352,10 @@ select option:hover {
   --font-family-serif: var(--font-playfair), ui-serif, Georgia, serif;
   --font-family-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* ═══════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════ */
 
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(1rem); }
@@ -153,8 +378,6 @@ select option:hover {
 /* ═══════════════════════════════════════════════════
    Theme Engine — Accent Colors per Theme
    ═══════════════════════════════════════════════════ */
-
-/* Theme engine accent overrides (extend the design system tokens above) */
 
 /* Theme accent overrides */
 [data-theme="midnight-express"] .text-gold { color: #818CF8 !important; }
@@ -183,123 +406,14 @@ select option:hover {
 [data-theme="chrome-steel"] .border-gold { border-color: #71717A !important; }
 
 /* ═══════════════════════════════════════════════════
-   Sidebar Colors per Theme (dark mode keeps themed sidebar)
+   Sidebar Colors per Theme (dark mode themed sidebar)
    ═══════════════════════════════════════════════════ */
 
-[data-theme="midnight-express"] .bg-navy { background-color: #312E81 !important; }
-[data-theme="desert-route"] .bg-navy { background-color: #78350F !important; }
-[data-theme="arctic-haul"] .bg-navy { background-color: #0C4A6E !important; }
-[data-theme="highway-green"] .bg-navy { background-color: #14532D !important; }
-[data-theme="chrome-steel"] .bg-navy { background-color: #27272A !important; }
-
-/* ═══════════════════════════════════════════════════
-   LIGHT MODE — Complete visual overhaul
-   Backgrounds, text, borders, cards all flip to light
-   ═══════════════════════════════════════════════════ */
-
-/* Smooth transitions when switching modes */
-main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-500 {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-[data-mode="light"] main {
-  background: #f8fafc !important;
-}
-
-/* Cards: bg-white/5 → white card with subtle shadow */
-[data-mode="light"] .bg-white\/5 {
-  background: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-}
-[data-mode="light"] .bg-white\/\[0\.07\],
-[data-mode="light"] .bg-white\/10,
-[data-mode="light"] .hover\:bg-white\/5:hover,
-[data-mode="light"] .hover\:bg-white\/10:hover {
-  background: #f1f5f9 !important;
-}
-
-/* Borders: white/10 → gray-200 */
-[data-mode="light"] .border-white\/10,
-[data-mode="light"] .border-white\/5 {
-  border-color: #e2e8f0 !important;
-}
-
-/* Text: white → dark navy */
-[data-mode="light"] .text-white {
-  color: var(--srl-bg-base) !important;
-}
-
-/* Secondary text: slate-400/500 → slate-600 */
-[data-mode="light"] .text-slate-400 {
-  color: #475569 !important;
-}
-[data-mode="light"] .text-slate-500 {
-  color: #64748b !important;
-}
-[data-mode="light"] .text-slate-300 {
-  color: #334155 !important;
-}
-
-/* Input backgrounds */
-[data-mode="light"] .bg-white\/5 input,
-[data-mode="light"] .bg-white\/5 select,
-[data-mode="light"] .bg-white\/5 textarea {
-  background: #f8fafc !important;
-  color: #0F1117 !important;
-  border-color: #e2e8f0 !important;
-}
-
-/* Table headers */
-[data-mode="light"] th {
-  color: #64748b !important;
-}
-
-/* Dividers */
-[data-mode="light"] .divide-white\/5 > * + * {
-  border-color: #e2e8f0 !important;
-}
-
-/* Black overlays for modals stay dark */
-[data-mode="light"] .bg-black\/60,
-[data-mode="light"] .bg-black\/40 {
-  background: rgba(0,0,0,0.4) !important;
-}
-
-/* Modal content goes light */
-[data-mode="light"] .bg-\[\\#0F1117\] {
-  background: #ffffff !important;
-  color: #0F1117 !important;
-}
-
-/* Status badges keep their colors in light mode */
-[data-mode="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.12) !important; }
-[data-mode="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.12) !important; }
-[data-mode="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.12) !important; }
-[data-mode="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.12) !important; }
-[data-mode="light"] .bg-purple-500\/20 { background: rgba(168,85,247,0.12) !important; }
-
-/* Chart tooltips */
-[data-mode="light"] .recharts-default-tooltip {
-  background: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  color: #0F1117 !important;
-}
-
-/* Sidebar stays dark in light mode (professional look) — only main content goes light */
-[data-mode="light"] aside.bg-navy {
-  background: var(--srl-bg-deepest) !important;
-}
-[data-mode="light"] aside .text-white { color: #ffffff !important; }
-[data-mode="light"] aside .text-slate-400 { color: #94a3b8 !important; }
-[data-mode="light"] aside .text-slate-500 { color: #64748b !important; }
-[data-mode="light"] aside .border-white\/10 { border-color: rgba(255,255,255,0.1) !important; }
-[data-mode="light"] aside .bg-white\/5 { background: rgba(255,255,255,0.05) !important; box-shadow: none; }
-
-/* Theme panel stays dark regardless */
-[data-mode="light"] .srl-theme-panel,
-[data-mode="light"] [class*="bg-[#0F1117]"] {
-  color: #ffffff;
-}
+[data-mode="dark"][data-theme="midnight-express"] .bg-navy { background-color: #312E81 !important; }
+[data-mode="dark"][data-theme="desert-route"] .bg-navy { background-color: #78350F !important; }
+[data-mode="dark"][data-theme="arctic-haul"] .bg-navy { background-color: #0C4A6E !important; }
+[data-mode="dark"][data-theme="highway-green"] .bg-navy { background-color: #14532D !important; }
+[data-mode="dark"][data-theme="chrome-steel"] .bg-navy { background-color: #27272A !important; }
 
 /* Google Places Autocomplete dropdown styling */
 .pac-container {
