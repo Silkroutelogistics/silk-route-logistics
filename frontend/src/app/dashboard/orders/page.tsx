@@ -172,10 +172,11 @@ export default function OrderBuilderPage() {
       const origin = encodeURIComponent(form.originCity + "," + form.originState);
       const dest = encodeURIComponent(form.destCity + "," + form.destState);
       // Try mileage API first, fallback to loads/distance endpoint
-      api.get<{ miles: number }>(`/mileage/calculate?origin=${origin}&destination=${dest}`)
+      api.get<{ practical_miles?: number; miles?: number; distance?: number }>(`/mileage/calculate?origin=${origin}&destination=${dest}`)
         .then((res) => {
-          if (res.data?.miles && !distanceManual) {
-            setForm((f) => ({ ...f, distance: String(Math.round(res.data.miles)) }));
+          const miles = res.data?.practical_miles || res.data?.miles || res.data?.distance;
+          if (miles && !distanceManual) {
+            setForm((f) => ({ ...f, distance: String(Math.round(miles)) }));
             setDistanceAutoFilled(true);
           }
         })
