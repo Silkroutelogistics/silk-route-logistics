@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import {
   ClipboardEdit, Search, MapPin, Package, DollarSign, CheckCircle,
   Download, ExternalLink, ChevronDown, AlertTriangle, Thermometer, Globe, Loader2,
+  Plus, X, ArrowUp, ArrowDown, Hash, FileText,
 } from "lucide-react";
 
 interface Customer {
@@ -80,6 +81,31 @@ function saveToAddressBook(entry: Omit<AddressBookEntry, "updatedAt">) {
   localStorage.setItem(ADDRESS_BOOK_KEY, JSON.stringify(book.slice(0, MAX_ADDRESS_ENTRIES)));
 }
 
+interface Stop {
+  id: string;
+  type: "Pickup" | "Delivery";
+  facilityName: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  appointmentDate: string;
+  appointmentTime: string;
+}
+
+let stopIdCounter = 0;
+const makeStop = (type: "Pickup" | "Delivery"): Stop => ({
+  id: `stop-${++stopIdCounter}`,
+  type,
+  facilityName: "",
+  address: "",
+  city: "",
+  state: "",
+  zip: "",
+  appointmentDate: "",
+  appointmentTime: "",
+});
+
 const initialForm = {
   customerId: "",
   shipperName: "", consigneeName: "",
@@ -96,6 +122,17 @@ const initialForm = {
   rate: "", accessorials: [] as string[],
   specialInstructions: "", contactName: "", contactPhone: "",
   notes: "",
+  // Reference & Handling fields
+  poNumbers: [] as string[],
+  bolNumber: "",
+  appointmentNumber: "",
+  nmfcCode: "",
+  declaredValue: "",
+  loadingType: "LIVE",
+  stackable: false,
+  turnable: false,
+  dockAssignment: "",
+  driverInstructions: "",
 };
 
 export default function OrderBuilderPage() {
@@ -116,6 +153,8 @@ export default function OrderBuilderPage() {
   const [showErrors, setShowErrors] = useState(false);
   const [showShipperBook, setShowShipperBook] = useState(false);
   const [showConsigneeBook, setShowConsigneeBook] = useState(false);
+  const [poInput, setPoInput] = useState("");
+  const [stops, setStops] = useState<Stop[]>([makeStop("Pickup"), makeStop("Delivery")]);
   const shipperBookRef = useRef<HTMLDivElement>(null);
   const consigneeBookRef = useRef<HTMLDivElement>(null);
   const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,6 +305,36 @@ export default function OrderBuilderPage() {
     }
   }, [form.pallets, form.weightPerPallet]);
 
+  // Sync stops → origin/destination fields
+  useEffect(() => {
+    const pickups = stops.filter((s) => s.type === "Pickup");
+    const deliveries = stops.filter((s) => s.type === "Delivery");
+    const firstPickup = pickups[0];
+    const lastDelivery = deliveries[deliveries.length - 1];
+    if (firstPickup && firstPickup.city) {
+      setForm((f) => ({
+        ...f,
+        originAddress: firstPickup.address || f.originAddress,
+        originCity: firstPickup.city || f.originCity,
+        originState: firstPickup.state || f.originState,
+        originZip: firstPickup.zip || f.originZip,
+        shipperName: firstPickup.facilityName || f.shipperName,
+        pickupDate: firstPickup.appointmentDate || f.pickupDate,
+      }));
+    }
+    if (lastDelivery && lastDelivery.city) {
+      setForm((f) => ({
+        ...f,
+        destAddress: lastDelivery.address || f.destAddress,
+        destCity: lastDelivery.city || f.destCity,
+        destState: lastDelivery.state || f.destState,
+        destZip: lastDelivery.zip || f.destZip,
+        consigneeName: lastDelivery.facilityName || f.consigneeName,
+        deliveryDate: lastDelivery.appointmentDate || f.deliveryDate,
+      }));
+    }
+  }, [stops]);
+
   const { data: customersData } = useQuery({
     queryKey: ["customers-search", customerSearch],
     queryFn: () => api.get<{ customers: Customer[] }>(`/customers?search=${customerSearch}&limit=10`).then((r) => r.data),
@@ -338,6 +407,32 @@ export default function OrderBuilderPage() {
       if (form.notes) payload.notes = form.notes;
       if (form.shipperName) payload.shipperName = form.shipperName;
       if (form.consigneeName) payload.consigneeName = form.consigneeName;
+      // Reference & Handling fields
+      if (form.poNumbers.length > 0) payload.poNumbers = form.poNumbers;
+      if (form.bolNumber) payload.bolNumber = form.bolNumber;
+      if (form.appointmentNumber) payload.appointmentNumber = form.appointmentNumber;
+      if (form.nmfcCode) payload.nmfcCode = form.nmfcCode;
+      if (form.declaredValue) payload.declaredValue = parseFloat(form.declaredValue);
+      if (form.loadingType !== "LIVE") payload.loadingType = form.loadingType;
+      else payload.loadingType = form.loadingType;
+      if (form.stackable) payload.stackable = true;
+      if (form.turnable) payload.turnable = true;
+      if (form.dockAssignment) payload.dockAssignment = form.dockAssignment;
+      if (form.driverInstructions) payload.driverInstructions = form.driverInstructions;
+      // Multi-stop
+      if (stops.length > 0) {
+        payload.stops = stops.map((s, i) => ({
+          sequence: i + 1,
+          type: s.type.toUpperCase(),
+          facilityName: s.facilityName || undefined,
+          address: s.address || undefined,
+          city: s.city || undefined,
+          state: s.state || undefined,
+          zip: s.zip || undefined,
+          appointmentDate: s.appointmentDate || undefined,
+          appointmentTime: s.appointmentTime || undefined,
+        }));
+      }
 
       return api.post("/loads", payload).then((r) => r.data);
     },
@@ -415,7 +510,7 @@ export default function OrderBuilderPage() {
               <ExternalLink className="w-4 h-4" /> View on Load Board
             </a>
           </div>
-          <button onClick={() => { setSuccess(null); setForm(initialForm); setSelectedCustomer(null); setCustomerSearch(""); }}
+          <button onClick={() => { setSuccess(null); setForm(initialForm); setSelectedCustomer(null); setCustomerSearch(""); setStops([makeStop("Pickup"), makeStop("Delivery")]); setPoInput(""); }}
             className="text-sm text-slate-400 hover:text-white mt-2">
             Create Another Order
           </button>
@@ -685,6 +780,180 @@ export default function OrderBuilderPage() {
         </div>
       </div>
 
+      {/* Section: Stops */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
+            <MapPin className="w-4 h-4" /> Stops
+          </h2>
+          <button
+            type="button"
+            onClick={() => setStops((prev) => [...prev, makeStop(prev.length === 0 ? "Pickup" : "Delivery")])}
+            className="flex items-center gap-1 text-xs text-gold hover:text-gold/80 font-medium cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Stop
+          </button>
+        </div>
+
+        {/* Header row */}
+        <div className="grid grid-cols-[32px_80px_1fr_1fr_120px_100px_32px_32px] gap-2 text-[10px] text-slate-500 uppercase tracking-wider px-1">
+          <span>#</span>
+          <span>Type</span>
+          <span>Facility</span>
+          <span>City, ST, ZIP</span>
+          <span>Appt Date</span>
+          <span>Appt Time</span>
+          <span></span>
+          <span></span>
+        </div>
+
+        {stops.map((stop, idx) => (
+          <div key={stop.id} className="grid grid-cols-[32px_80px_1fr_1fr_120px_100px_32px_32px] gap-2 items-center">
+            <span className="text-xs text-slate-500 font-mono text-center">{idx + 1}</span>
+            <select
+              value={stop.type}
+              onChange={(e) => {
+                const updated = [...stops];
+                updated[idx] = { ...updated[idx], type: e.target.value as "Pickup" | "Delivery" };
+                setStops(updated);
+              }}
+              className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 cursor-pointer"
+            >
+              <option value="Pickup" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Pickup</option>
+              <option value="Delivery" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Delivery</option>
+            </select>
+            <div className="relative">
+              <input
+                value={stop.facilityName}
+                onChange={(e) => {
+                  const updated = [...stops];
+                  updated[idx] = { ...updated[idx], facilityName: e.target.value };
+                  setStops(updated);
+                }}
+                placeholder="Facility name"
+                className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+                onFocus={() => {
+                  // Show address book suggestions when focused
+                }}
+                list={`stop-book-${idx}`}
+              />
+              <datalist id={`stop-book-${idx}`}>
+                {getAddressBook().slice(0, 10).map((e, i) => (
+                  <option key={i} value={e.name}>{e.city}, {e.state} {e.zip}</option>
+                ))}
+              </datalist>
+            </div>
+            <div className="flex gap-1">
+              <input
+                value={stop.city}
+                onChange={(e) => {
+                  const updated = [...stops];
+                  updated[idx] = { ...updated[idx], city: e.target.value };
+                  setStops(updated);
+                }}
+                placeholder="City"
+                className="flex-1 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+              />
+              <input
+                value={stop.state}
+                onChange={(e) => {
+                  const updated = [...stops];
+                  updated[idx] = { ...updated[idx], state: e.target.value.toUpperCase().slice(0, 2) };
+                  setStops(updated);
+                }}
+                placeholder="ST"
+                maxLength={2}
+                className="w-12 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50 text-center"
+              />
+              <input
+                value={stop.zip}
+                onChange={(e) => {
+                  const updated = [...stops];
+                  updated[idx] = { ...updated[idx], zip: e.target.value };
+                  setStops(updated);
+                }}
+                placeholder="ZIP"
+                className="w-16 px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+              />
+            </div>
+            <input
+              type="date"
+              value={stop.appointmentDate}
+              onChange={(e) => {
+                const updated = [...stops];
+                updated[idx] = { ...updated[idx], appointmentDate: e.target.value };
+                setStops(updated);
+              }}
+              className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 [color-scheme:dark]"
+            />
+            <select
+              value={stop.appointmentTime}
+              onChange={(e) => {
+                const updated = [...stops];
+                updated[idx] = { ...updated[idx], appointmentTime: e.target.value };
+                setStops(updated);
+              }}
+              className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-gold/50 cursor-pointer"
+            >
+              <option value="" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Time</option>
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t} style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>{t}</option>
+              ))}
+            </select>
+            <div className="flex flex-col gap-0.5">
+              {idx > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = [...stops];
+                    [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+                    setStops(updated);
+                  }}
+                  className="text-slate-500 hover:text-white transition cursor-pointer"
+                  title="Move up"
+                >
+                  <ArrowUp className="w-3 h-3" />
+                </button>
+              )}
+              {idx < stops.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = [...stops];
+                    [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+                    setStops(updated);
+                  }}
+                  className="text-slate-500 hover:text-white transition cursor-pointer"
+                  title="Move down"
+                >
+                  <ArrowDown className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <div>
+              {stops.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => setStops((prev) => prev.filter((_, i) => i !== idx))}
+                  className="text-red-400 hover:text-red-300 transition cursor-pointer"
+                  title="Remove stop"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => setStops((prev) => [...prev, makeStop("Delivery")])}
+          className="w-full py-2 border border-dashed border-white/10 rounded-lg text-xs text-slate-400 hover:text-gold hover:border-gold/30 transition cursor-pointer"
+        >
+          + Add Stop
+        </button>
+      </div>
+
       {/* Section 3: Freight */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
@@ -809,6 +1078,116 @@ export default function OrderBuilderPage() {
               placeholder="Max Temp (°F)" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
           </div>
         )}
+      </div>
+
+      {/* Section: Reference & Handling */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-gold uppercase tracking-wider flex items-center gap-2">
+          <Hash className="w-4 h-4" /> Reference &amp; Handling
+        </h2>
+
+        {/* Row 1: PO Numbers, BOL, Appointment # */}
+        <div className="grid md:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">PO Number(s)</label>
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
+              {form.poNumbers.map((po, i) => (
+                <span key={i} className="flex items-center gap-1 px-2 py-0.5 bg-gold/10 text-gold text-xs rounded-full">
+                  {po}
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, poNumbers: f.poNumbers.filter((_, j) => j !== i) }))}
+                    className="hover:text-red-400 cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              <input
+                value={poInput}
+                onChange={(e) => setPoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && poInput.trim()) {
+                    e.preventDefault();
+                    setForm((f) => ({ ...f, poNumbers: [...f.poNumbers, poInput.trim()] }));
+                    setPoInput("");
+                  }
+                }}
+                placeholder="PO-001"
+                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (poInput.trim()) {
+                    setForm((f) => ({ ...f, poNumbers: [...f.poNumbers, poInput.trim()] }));
+                    setPoInput("");
+                  }
+                }}
+                className="px-2.5 py-2 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 transition cursor-pointer"
+                title="Add PO"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">BOL Number</label>
+            <input value={form.bolNumber} onChange={(e) => setForm((f) => ({ ...f, bolNumber: e.target.value }))}
+              placeholder="BOL-XXX" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Appointment #</label>
+            <input value={form.appointmentNumber} onChange={(e) => setForm((f) => ({ ...f, appointmentNumber: e.target.value }))}
+              placeholder="APT-XXX" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+          </div>
+        </div>
+
+        {/* Row 2: Loading Type, Stackable, Turnable, Declared Value */}
+        <div className="grid md:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Loading Type</label>
+            <select value={form.loadingType} onChange={(e) => setForm((f) => ({ ...f, loadingType: e.target.value }))}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 cursor-pointer">
+              <option value="LIVE" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Live</option>
+              <option value="DROP" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Drop</option>
+              <option value="DROP_HOOK" style={{ backgroundColor: "#0f172a", color: "#f8fafc" }}>Drop & Hook</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer py-2">
+            <input type="checkbox" checked={form.stackable} onChange={(e) => setForm((f) => ({ ...f, stackable: e.target.checked }))}
+              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
+            Stackable
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer py-2">
+            <input type="checkbox" checked={form.turnable} onChange={(e) => setForm((f) => ({ ...f, turnable: e.target.checked }))}
+              className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold" />
+            Turnable
+          </label>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Declared Value ($)</label>
+            <input value={form.declaredValue} onChange={(e) => setForm((f) => ({ ...f, declaredValue: e.target.value }))}
+              placeholder="e.g. 50000" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+          </div>
+        </div>
+
+        {/* Row 3: NMFC Code, Dock Assignment, Driver Instructions */}
+        <div className="grid md:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">NMFC Code</label>
+            <input value={form.nmfcCode} onChange={(e) => setForm((f) => ({ ...f, nmfcCode: e.target.value }))}
+              placeholder="e.g. 70-3" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Dock Assignment</label>
+            <input value={form.dockAssignment} onChange={(e) => setForm((f) => ({ ...f, dockAssignment: e.target.value }))}
+              placeholder="e.g. Dock 12" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Driver Instructions</label>
+            <input value={form.driverInstructions} onChange={(e) => setForm((f) => ({ ...f, driverInstructions: e.target.value }))}
+              placeholder="e.g. Call 30 min before arrival" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
+          </div>
+        </div>
       </div>
 
       {/* Section 4: Rate & Pricing */}

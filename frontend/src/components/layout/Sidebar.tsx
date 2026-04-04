@@ -10,7 +10,7 @@ import {
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
-  ScrollText, Gavel, Route,
+  ScrollText, Gavel, Route, Crosshair,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -101,6 +101,7 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/crm", label: "CRM", icon: Users },
       { href: "/dashboard/orders", label: "Order Builder", icon: ClipboardEdit },
       { href: "/dashboard/loads", label: "Load Board", icon: Package },
+      { href: "/dashboard/dispatch", label: "Dispatch Board", icon: Crosshair },
       { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
     ],
   },

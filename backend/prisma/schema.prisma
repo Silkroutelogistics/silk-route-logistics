@@ -1118,6 +1118,28 @@ model Load {
 
   notes           String?
 
+  // TMW-level reference fields
+  poNumbers         String[]  @default([])
+  bolNumber         String?
+  sealNumber        String?
+  appointmentNumber String?
+  additionalRefs    Json?
+
+  // Freight classification (TMW)
+  nmfcCode          String?
+  declaredValue     Float?
+
+  // Loading details (TMW)
+  turnable          Boolean   @default(false)
+
+  // Dock/Facility
+  dockAssignment    String?
+  driverInstructions String?
+
+  // Financial (TMW)
+  codAmount         Float?
+  paymentTermsLoad  String?
+
   // Shipper Tracking
   trackingToken   String?    @unique @default(uuid())
 
@@ -3264,6 +3286,10 @@ model LoadStop {
   weight          Float?
   pieces          Int?
   onTime          Boolean?  @map("on_time")
+  contactName     String?   @map("contact_name")
+  contactPhone    String?   @map("contact_phone")
+  dwellMinutes    Int?      @map("dwell_minutes")
+  isPayable       Boolean   @default(true) @map("is_payable")
   notes           String?
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")

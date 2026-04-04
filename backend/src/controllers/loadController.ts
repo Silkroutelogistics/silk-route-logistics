@@ -10,6 +10,7 @@ import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelle
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
 import { notifyMatchedCarriers } from "../services/carrierOutreachService";
+import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getLoadAuditHistory } from "../services/loadAuditService";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -112,6 +113,35 @@ export async function createLoad(req: AuthRequest, res: Response) {
     specialInstructions: raw.specialInstructions || undefined,
     pickupInstructions: raw.pickupNotes || undefined,
     deliveryInstructions: raw.deliveryNotes || undefined,
+
+    // TMW-level reference fields
+    poNumbers: raw.poNumbers || undefined,
+    bolNumber: raw.bolNumber || undefined,
+    sealNumber: raw.sealNumber || undefined,
+    appointmentNumber: raw.appointmentNumber || undefined,
+    additionalRefs: raw.additionalRefs || undefined,
+
+    // Freight classification (TMW)
+    nmfcCode: raw.nmfcCode || undefined,
+    declaredValue: raw.declaredValue || undefined,
+
+    // Loading details (TMW)
+    loadingType: raw.loadingType || undefined,
+    turnable: raw.turnable ?? undefined,
+
+    // Dock/Facility
+    dockAssignment: raw.dockAssignment || undefined,
+    driverInstructions: raw.driverInstructions || undefined,
+
+    // Driver/Equipment
+    driverName: raw.driverName || undefined,
+    driverPhone: raw.driverPhone || undefined,
+    truckNumber: raw.truckNumber || undefined,
+    trailerNumber: raw.trailerNumber || undefined,
+
+    // Financial (TMW)
+    codAmount: raw.codAmount || undefined,
+    paymentTermsLoad: raw.paymentTermsLoad || undefined,
   };
 
   // Remove undefined values
@@ -128,6 +158,11 @@ export async function createLoad(req: AuthRequest, res: Response) {
       posterId: req.user!.id,
     } as any,
   });
+
+  // Field-level audit: log creation with all initial values
+  logLoadCreation(load.id, req.user!.id, data).catch((e) =>
+    console.error("[LoadAudit] create log error:", e.message)
+  );
 
   // AI Carrier Outreach: email + in-app notify top matched carriers
   if (load.status === "POSTED" && load.equipmentType) {
@@ -278,6 +313,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     where: { id: req.params.id },
     data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },
   });
+
+  // Field-level audit: log status transition
+  logStatusChange(load.id, req.user!.id, existing.status, status).catch((e) =>
+    console.error("[LoadAudit] status change log error:", e.message)
+  );
 
   // Sync linked shipment status
   const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
@@ -486,6 +526,12 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     temperatureControlled, tempMin, tempMax,
     specialInstructions, notes, contactName, contactPhone,
     customerId, carrierId,
+    // TMW-level fields
+    poNumbers, bolNumber, sealNumber, appointmentNumber, additionalRefs,
+    nmfcCode, declaredValue, loadingType, turnable,
+    driverName, driverPhone, truckNumber, trailerNumber,
+    dockAssignment, driverInstructions,
+    codAmount, paymentTermsLoad,
   } = req.body;
 
   const data: Record<string, unknown> = {};
@@ -527,6 +573,26 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (notes !== undefined) data.notes = notes;
   if (contactName !== undefined) data.contactName = contactName;
   if (contactPhone !== undefined) data.contactPhone = contactPhone;
+
+  // TMW-level fields
+  if (poNumbers !== undefined) data.poNumbers = poNumbers;
+  if (bolNumber !== undefined) data.bolNumber = bolNumber;
+  if (sealNumber !== undefined) data.sealNumber = sealNumber;
+  if (appointmentNumber !== undefined) data.appointmentNumber = appointmentNumber;
+  if (additionalRefs !== undefined) data.additionalRefs = additionalRefs;
+  if (nmfcCode !== undefined) data.nmfcCode = nmfcCode;
+  if (declaredValue !== undefined) data.declaredValue = declaredValue;
+  if (loadingType !== undefined) data.loadingType = loadingType;
+  if (turnable !== undefined) data.turnable = turnable;
+  if (driverName !== undefined) data.driverName = driverName;
+  if (driverPhone !== undefined) data.driverPhone = driverPhone;
+  if (truckNumber !== undefined) data.truckNumber = truckNumber;
+  if (trailerNumber !== undefined) data.trailerNumber = trailerNumber;
+  if (dockAssignment !== undefined) data.dockAssignment = dockAssignment;
+  if (driverInstructions !== undefined) data.driverInstructions = driverInstructions;
+  if (codAmount !== undefined) data.codAmount = codAmount;
+  if (paymentTermsLoad !== undefined) data.paymentTermsLoad = paymentTermsLoad;
+
   if (customerId !== undefined) {
     // Prevent changing customer on invoiced/completed loads (breaks credit tracking)
     if (["INVOICED", "COMPLETED", "POD_RECEIVED"].includes(existing.status) && customerId !== existing.customerId) {
@@ -570,6 +636,14 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     if (finalCustRate > 0) data.revenuePerMile = Math.round((finalCustRate / finalDist) * 100) / 100;
     if (finalCarrRate && finalCarrRate > 0) data.costPerMile = Math.round((finalCarrRate / finalDist) * 100) / 100;
     if (data.revenuePerMile && data.costPerMile) data.marginPerMile = Math.round(((data.revenuePerMile as number) - (data.costPerMile as number)) * 100) / 100;
+  }
+
+  // Field-level audit: diff old vs new and log changes
+  const fieldChanges = diffLoadChanges(existing as Record<string, any>, data);
+  if (fieldChanges.length > 0) {
+    logLoadChanges(existing.id, req.user!.id, fieldChanges, "UPDATE").catch((e) =>
+      console.error("[LoadAudit] update diff log error:", e.message)
+    );
   }
 
   const load = await prisma.load.update({ where: { id: req.params.id }, data });
@@ -679,4 +753,18 @@ export async function getDistance(req: AuthRequest, res: Response) {
     durationMinutes: Math.round(result.drive_time_hours * 60),
     mileage: result,
   });
+}
+
+export async function getLoadAudit(req: AuthRequest, res: Response) {
+  const loadId = req.params.id;
+
+  // Verify load exists
+  const load = await prisma.load.findUnique({ where: { id: loadId } });
+  if (!load) {
+    res.status(404).json({ error: "Load not found" });
+    return;
+  }
+
+  const history = await getLoadAuditHistory(loadId);
+  res.json({ loadId, history });
 }

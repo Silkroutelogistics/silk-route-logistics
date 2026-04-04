@@ -139,6 +139,85 @@ export async function checkGeofence(
   return events;
 }
 
+// ─── TMW-level Geofence Architecture ───────────────────────────
+
+export interface GeofenceZone {
+  loadId: string;
+  stopId: string;
+  latitude: number;
+  longitude: number;
+  radiusMiles: number; // default 0.5
+  stopType: "PICKUP" | "DELIVERY";
+  triggered: boolean;
+}
+
+/**
+ * Check if a GPS position is within any active geofence zone.
+ */
+export function checkGeofenceZone(lat: number, lng: number, zones: GeofenceZone[]): GeofenceZone | null {
+  for (const zone of zones) {
+    const distance = haversineDistance(lat, lng, zone.latitude, zone.longitude);
+    if (distance <= zone.radiusMiles && !zone.triggered) {
+      return zone;
+    }
+  }
+  return null;
+}
+
+/**
+ * Create geofence zones for a load's stops (called when load is dispatched).
+ * Would geocode stop addresses to lat/lng using Google Maps.
+ * For now, returns zones from stops that already have coordinates.
+ * Full activation when ELD API keys are connected.
+ */
+export async function createGeofenceZones(loadId: string): Promise<GeofenceZone[]> {
+  const stops = await prisma.loadStop.findMany({
+    where: { loadId, latitude: { not: null }, longitude: { not: null } },
+    orderBy: { stopNumber: "asc" },
+  });
+
+  return stops.map((stop) => ({
+    loadId,
+    stopId: stop.id,
+    latitude: Number(stop.latitude),
+    longitude: Number(stop.longitude),
+    radiusMiles: GEOFENCE_RADIUS_MILES,
+    stopType: stop.stopType as "PICKUP" | "DELIVERY",
+    triggered: !!stop.actualArrival,
+  }));
+}
+
+/**
+ * Process incoming GPS update (from ELD webhook).
+ * Finds active loads for the carrier, checks against geofence zones,
+ * and auto-triggers status updates + check-calls + broker notifications.
+ * This is the Maverick-equivalent auto-actualization pipeline.
+ * Full activation when ELD API keys are connected.
+ */
+export async function processGpsUpdate(carrierId: string, lat: number, lng: number): Promise<void> {
+  // Find active loads for this carrier
+  const activeLoads = await prisma.load.findMany({
+    where: {
+      carrierId,
+      status: { in: ["DISPATCHED", "IN_TRANSIT", "LOADED", "BOOKED", "CONFIRMED"] },
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+
+  for (const load of activeLoads) {
+    // Check against geofence zones for each load
+    const zones = await createGeofenceZones(load.id);
+    const triggered = checkGeofenceZone(lat, lng, zones);
+
+    if (triggered) {
+      // Delegate to existing checkGeofence which handles status updates,
+      // tracking events, and SSE broadcasts
+      await checkGeofence(load.id, lat, lng, "ELD");
+    }
+  }
+}
+
 /**
  * Scan all in-transit loads for geofence proximity.
  * Called by cron every 5 minutes.

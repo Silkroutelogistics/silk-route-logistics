@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, carrierUpdateStatus, getDistance } from "../controllers/loadController";
+import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, carrierUpdateStatus, getDistance, getLoadAudit } from "../controllers/loadController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -21,6 +21,9 @@ router.patch("/:id/status", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPE
 router.patch("/:id/carrier-status", authorize("CARRIER"), validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), carrierUpdateStatus);
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
+
+// Field-level audit trail
+router.get("/:id/audit", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getLoadAudit);
 
 // Compass by SRL: load-level compliance check
 import { runLoadComplianceCheck } from "../controllers/carrierVettingController";

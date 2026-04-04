@@ -42,6 +42,7 @@ router.post(
         stopType, facilityName, address, city, state, zip,
         latitude, longitude, appointmentDate, appointmentTime,
         appointmentRef, hookType, commodity, weight, pieces, notes,
+        contactName, contactPhone, dwellMinutes, isPayable,
       } = req.body;
 
       // Determine the next stop number
@@ -70,6 +71,10 @@ router.post(
           commodity: commodity || null,
           weight: weight || null,
           pieces: pieces || null,
+          contactName: contactName || null,
+          contactPhone: contactPhone || null,
+          dwellMinutes: dwellMinutes || null,
+          isPayable: isPayable ?? true,
           notes: notes || null,
         },
       });
@@ -105,6 +110,7 @@ router.put(
         appointmentRef, actualArrival, actualDeparture,
         hookType, trailerNumber, sealNumber, commodity,
         weight, pieces, onTime, notes, detentionMinutes,
+        contactName, contactPhone, dwellMinutes, isPayable,
       } = req.body;
 
       const updateData: any = {};
@@ -130,6 +136,10 @@ router.put(
       if (onTime !== undefined) updateData.onTime = onTime;
       if (notes !== undefined) updateData.notes = notes;
       if (detentionMinutes !== undefined) updateData.detentionMinutes = detentionMinutes;
+      if (contactName !== undefined) updateData.contactName = contactName;
+      if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
+      if (dwellMinutes !== undefined) updateData.dwellMinutes = dwellMinutes;
+      if (isPayable !== undefined) updateData.isPayable = isPayable;
 
       const stop = await prisma.loadStop.update({
         where: { id: stopId },
@@ -181,6 +191,110 @@ router.delete(
       res.json({ success: true, deleted: deletedStop.id });
     } catch (err) {
       res.status(500).json({ error: "Failed to delete stop" });
+    }
+  }
+);
+
+// PUT /api/load-stops/:loadId/reorder — Reorder stops
+router.put(
+  "/:loadId/reorder",
+  authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO") as any,
+  auditLog("UPDATE", "LoadStop"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { loadId } = req.params;
+      const { order } = req.body; // Array of { stopId: string, sequence: number }
+
+      if (!Array.isArray(order) || order.length === 0) {
+        res.status(400).json({ error: "order must be a non-empty array of { stopId, sequence }" });
+        return;
+      }
+
+      // Validate all stops belong to this load
+      const existingStops = await prisma.loadStop.findMany({ where: { loadId } });
+      const existingIds = new Set(existingStops.map((s) => s.id));
+      for (const item of order) {
+        if (!existingIds.has(item.stopId)) {
+          res.status(400).json({ error: `Stop ${item.stopId} does not belong to load ${loadId}` });
+          return;
+        }
+      }
+
+      // Update all stop numbers in a transaction
+      await prisma.$transaction(
+        order.map((item: { stopId: string; sequence: number }) =>
+          prisma.loadStop.update({
+            where: { id: item.stopId },
+            data: { stopNumber: item.sequence },
+          })
+        )
+      );
+
+      const stops = await prisma.loadStop.findMany({
+        where: { loadId },
+        orderBy: { stopNumber: "asc" },
+      });
+
+      res.json({ stops });
+    } catch (err) {
+      console.error("Reorder stops error:", err);
+      res.status(500).json({ error: "Failed to reorder stops" });
+    }
+  }
+);
+
+// PATCH /api/load-stops/stop/:stopId — Update stop by stopId only
+router.patch(
+  "/stop/:stopId",
+  authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "CARRIER") as any,
+  auditLog("UPDATE", "LoadStop"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { stopId } = req.params;
+      const {
+        facilityName, address, city, state, zip,
+        latitude, longitude, appointmentDate, appointmentTime,
+        appointmentRef, actualArrival, actualDeparture,
+        hookType, trailerNumber, sealNumber, commodity,
+        weight, pieces, onTime, notes, detentionMinutes,
+        contactName, contactPhone, dwellMinutes, isPayable,
+      } = req.body;
+
+      const updateData: any = {};
+      if (facilityName !== undefined) updateData.facilityName = facilityName;
+      if (address !== undefined) updateData.address = address;
+      if (city !== undefined) updateData.city = city;
+      if (state !== undefined) updateData.state = state;
+      if (zip !== undefined) updateData.zip = zip;
+      if (latitude !== undefined) updateData.latitude = latitude;
+      if (longitude !== undefined) updateData.longitude = longitude;
+      if (appointmentDate !== undefined) updateData.appointmentDate = appointmentDate ? new Date(appointmentDate) : null;
+      if (appointmentTime !== undefined) updateData.appointmentTime = appointmentTime;
+      if (appointmentRef !== undefined) updateData.appointmentRef = appointmentRef;
+      if (actualArrival !== undefined) updateData.actualArrival = actualArrival ? new Date(actualArrival) : null;
+      if (actualDeparture !== undefined) updateData.actualDeparture = actualDeparture ? new Date(actualDeparture) : null;
+      if (hookType !== undefined) updateData.hookType = hookType;
+      if (trailerNumber !== undefined) updateData.trailerNumber = trailerNumber;
+      if (sealNumber !== undefined) updateData.sealNumber = sealNumber;
+      if (commodity !== undefined) updateData.commodity = commodity;
+      if (weight !== undefined) updateData.weight = weight;
+      if (pieces !== undefined) updateData.pieces = pieces;
+      if (onTime !== undefined) updateData.onTime = onTime;
+      if (notes !== undefined) updateData.notes = notes;
+      if (detentionMinutes !== undefined) updateData.detentionMinutes = detentionMinutes;
+      if (contactName !== undefined) updateData.contactName = contactName;
+      if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
+      if (dwellMinutes !== undefined) updateData.dwellMinutes = dwellMinutes;
+      if (isPayable !== undefined) updateData.isPayable = isPayable;
+
+      const stop = await prisma.loadStop.update({
+        where: { id: stopId },
+        data: updateData,
+      });
+
+      res.json({ stop });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update stop" });
     }
   }
 );
