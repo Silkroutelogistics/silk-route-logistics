@@ -180,7 +180,7 @@ export default function OrderBuilderPage() {
           }
         })
         .catch(() => {
-          // Fallback: try loads/distance endpoint
+          // Fallback 1: try loads/distance endpoint
           api.get<{ distance?: number; miles?: number }>(`/loads/distance?originZip=${form.originZip}&destZip=${form.destZip}`)
             .then((res) => {
               const miles = res.data?.miles || res.data?.distance;
@@ -189,7 +189,27 @@ export default function OrderBuilderPage() {
                 setDistanceAutoFilled(true);
               }
             })
-            .catch(() => {});
+            .catch(() => {
+              // Fallback 2: estimate from zip code prefixes (rough state-to-state)
+              const zipToCoord: Record<string, [number, number]> = {
+                "0": [42.4, -71.1], "1": [41.8, -72.7], "2": [39.3, -76.6], "3": [33.7, -84.4],
+                "4": [39.1, -84.5], "5": [44.9, -93.3], "6": [41.9, -87.6], "7": [32.8, -96.8],
+                "8": [34.0, -118.2], "9": [47.6, -122.3],
+              };
+              const oZip = form.originZip?.[0]; const dZip = form.destZip?.[0];
+              if (oZip && dZip && zipToCoord[oZip] && zipToCoord[dZip]) {
+                const [lat1, lon1] = zipToCoord[oZip]; const [lat2, lon2] = zipToCoord[dZip];
+                const R = 3959;
+                const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+                const straight = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const driving = Math.round(straight * 1.3); // road factor
+                if (driving > 10 && !distanceManual) {
+                  setForm((f) => ({ ...f, distance: String(driving) }));
+                  setDistanceAutoFilled(true);
+                }
+              }
+            });
         });
     }, 500);
     return () => { if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current); };
@@ -806,9 +826,9 @@ export default function OrderBuilderPage() {
                   const input = e.currentTarget.querySelector('input');
                   if (input) (input as any).showPicker?.();
                 }} {...(isFirstError("pickupDate") ? { "data-error": "true" } : {})}>
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-medium">PU:</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-medium" style={{ color: 'var(--srl-text-muted)' }}>PU<span className="text-red-400">*</span>:</span>
                   <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))}
-                    className={`w-full pl-8 ${inpErr("pickupDate")} [color-scheme:dark] cursor-pointer`} />
+                    className={`w-full pl-9 ${inpErr("pickupDate")} cursor-pointer`} />
                 </div>
                 <div className="flex gap-1 items-center">
                   <select value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
@@ -888,9 +908,9 @@ export default function OrderBuilderPage() {
                   const input = e.currentTarget.querySelector('input');
                   if (input) (input as any).showPicker?.();
                 }} {...(isFirstError("deliveryDate") ? { "data-error": "true" } : {})}>
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-medium">DEL:</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-medium" style={{ color: 'var(--srl-text-muted)' }}>DEL<span className="text-red-400">*</span>:</span>
                   <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
-                    className={`w-full pl-9 ${inpErr("deliveryDate")} [color-scheme:dark] cursor-pointer`} />
+                    className={`w-full pl-10 ${inpErr("deliveryDate")} cursor-pointer`} />
                 </div>
                 <div className="flex gap-1 items-center">
                   <select value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
@@ -1049,7 +1069,7 @@ export default function OrderBuilderPage() {
                         placeholder="ZIP" className={`w-12 ${inp}`} />
                     </div>
                     <input type="date" value={stop.appointmentDate} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentDate: e.target.value }; setStops(u); }}
-                      className={`${inp} [color-scheme:dark]`} />
+                      className={`${inp}`} />
                     <select value={stop.appointmentTime} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentTime: e.target.value }; setStops(u); }}
                       className={`${sel}`}>
                       <option value="" style={optStyle}>--</option>
