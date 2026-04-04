@@ -459,11 +459,15 @@ export function Sidebar() {
               <div className="relative">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowNotifDropdown((p) => !p); }}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-full hover:bg-white/20 transition cursor-pointer"
+                  className="relative w-9 h-9 flex items-center justify-center bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer shrink-0"
                   title="Notifications"
                 >
-                  <Bell className={`w-3 h-3 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
-                  {unreadCount > 0 && <span className="text-[10px] font-bold text-gold">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                  <Bell className={`w-4.5 h-4.5 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center px-1">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </button>
                 {showNotifDropdown && (
                   <div className="absolute left-0 top-full mt-2 w-72 bg-[#0c1829] border border-[#1a2d47] rounded-xl shadow-2xl z-50 overflow-hidden">
@@ -493,11 +497,15 @@ export function Sidebar() {
             <div className="flex flex-col items-center gap-1 relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowNotifDropdown((p) => !p); }}
-                className="flex items-center justify-center w-full py-1 bg-white/10 rounded hover:bg-white/20 transition cursor-pointer relative"
+                className="relative w-9 h-9 flex items-center justify-center bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer"
                 title="Notifications"
               >
-                <Bell className={`w-3.5 h-3.5 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
-                {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-gold rounded-full text-[7px] text-navy font-bold flex items-center justify-center">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+                <Bell className={`w-4 h-4 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center px-0.5">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
             </div>
           )}
