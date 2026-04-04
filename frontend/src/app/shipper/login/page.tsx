@@ -162,12 +162,12 @@ export default function ShipperLoginPage() {
 
           {/* Animated transitioning cards */}
           <div className="relative w-full h-[140px] mb-8">
-            <div className="absolute -right-3 -bottom-3 w-full h-full bg-[#0F1117] border border-white/[0.04] rounded-2xl" />
+            <div className="absolute -right-3 -bottom-3 w-full h-full bg-black/20 border border-white/[0.06] rounded-2xl" />
             {SLIDES.map((slide, i) => (
-              <div key={i} className="absolute inset-0 bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-opacity duration-[1200ms]"
+              <div key={i} className="absolute inset-0 bg-black/30 backdrop-blur-xl border border-[#C9A84C]/20 rounded-2xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-opacity duration-[1200ms]"
                 style={{ opacity: currentSlide === i ? 1 : 0 }}>
                 <div className="text-[#C9A84C] text-xs tracking-[3px] uppercase font-semibold">{slide.label}</div>
-                <p className="text-white/90 text-lg font-light leading-relaxed mt-2">{slide.text}</p>
+                <p className="text-white text-lg font-light leading-relaxed mt-2">{slide.text}</p>
               </div>
             ))}
           </div>
