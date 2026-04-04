@@ -751,6 +751,24 @@ model CarrierProfile {
   autoLiabilityAmount    Float?
   generalLiabilityAmount Float?
 
+  // Extended Insurance Details
+  autoLiabilityProvider    String?
+  autoLiabilityPolicy      String?
+  autoLiabilityExpiry      DateTime?
+  cargoInsuranceProvider   String?
+  cargoInsurancePolicy     String?
+  cargoInsuranceExpiry     DateTime?
+  generalLiabilityProvider String?
+  generalLiabilityPolicy   String?
+  generalLiabilityExpiry   DateTime?
+  workersCompProvider      String?
+  workersCompAmount        Float?
+  workersCompPolicy        String?
+  workersCompExpiry        DateTime?
+  additionalInsuredSRL     Boolean   @default(false)
+  waiverOfSubrogation      Boolean   @default(false)
+  thirtyDayCancellationNotice Boolean @default(false)
+
   // Payment preferences
   paymentPreference     PaymentTier?
   eldProvider           String?

@@ -11,6 +11,26 @@ export const carrierRegisterSchema = z.object({
   dotNumber: z.string().min(5, "DOT number is required (minimum 5 digits)").regex(/^\d+$/, "DOT number must be numeric"),
   equipmentTypes: z.array(z.string()).min(1),
   operatingRegions: z.array(z.string()).min(1),
+  // Extended insurance fields (optional at registration)
+  autoLiabilityProvider: z.string().optional(),
+  autoLiabilityAmount: z.number().optional(),
+  autoLiabilityPolicy: z.string().optional(),
+  autoLiabilityExpiry: z.string().optional(),
+  cargoInsuranceProvider: z.string().optional(),
+  cargoInsuranceAmount: z.number().optional(),
+  cargoInsurancePolicy: z.string().optional(),
+  cargoInsuranceExpiry: z.string().optional(),
+  generalLiabilityProvider: z.string().optional(),
+  generalLiabilityAmount: z.number().optional(),
+  generalLiabilityPolicy: z.string().optional(),
+  generalLiabilityExpiry: z.string().optional(),
+  workersCompProvider: z.string().optional(),
+  workersCompAmount: z.number().optional(),
+  workersCompPolicy: z.string().optional(),
+  workersCompExpiry: z.string().optional(),
+  additionalInsuredSRL: z.boolean().optional(),
+  waiverOfSubrogation: z.boolean().optional(),
+  thirtyDayCancellationNotice: z.boolean().optional(),
 });
 
 export const verifyCarrierSchema = z.object({

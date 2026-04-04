@@ -90,6 +90,23 @@ router.get("/overview", async (req: AuthRequest, res: Response) => {
       cargoAmount: profile.cargoInsuranceAmount,
       autoLiability: profile.autoLiabilityAmount,
       generalLiability: profile.generalLiabilityAmount,
+      // Extended insurance details
+      autoLiabilityProvider: profile.autoLiabilityProvider,
+      autoLiabilityPolicy: profile.autoLiabilityPolicy,
+      autoLiabilityExpiry: profile.autoLiabilityExpiry,
+      cargoInsuranceProvider: profile.cargoInsuranceProvider,
+      cargoInsurancePolicy: profile.cargoInsurancePolicy,
+      cargoInsuranceExpiry: profile.cargoInsuranceExpiry,
+      generalLiabilityProvider: profile.generalLiabilityProvider,
+      generalLiabilityPolicy: profile.generalLiabilityPolicy,
+      generalLiabilityExpiry: profile.generalLiabilityExpiry,
+      workersCompProvider: profile.workersCompProvider,
+      workersCompAmount: profile.workersCompAmount,
+      workersCompPolicy: profile.workersCompPolicy,
+      workersCompExpiry: profile.workersCompExpiry,
+      additionalInsuredSRL: profile.additionalInsuredSRL,
+      waiverOfSubrogation: profile.waiverOfSubrogation,
+      thirtyDayCancellationNotice: profile.thirtyDayCancellationNotice,
     },
     documents: docStatus,
     fmcsa: fmcsaStatus,
@@ -211,6 +228,56 @@ router.get("/expiration-calendar", async (req: AuthRequest, res: Response) => {
   }
 
   res.json({ expirations });
+});
+
+// PATCH /api/carrier-compliance/insurance — Carrier updates their own insurance details
+router.patch("/insurance", async (req: AuthRequest, res: Response) => {
+  const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+
+  const {
+    autoLiabilityProvider, autoLiabilityAmount, autoLiabilityPolicy, autoLiabilityExpiry,
+    cargoInsuranceProvider, cargoInsuranceAmount, cargoInsurancePolicy, cargoInsuranceExpiry,
+    generalLiabilityProvider, generalLiabilityAmount, generalLiabilityPolicy, generalLiabilityExpiry,
+    workersCompProvider, workersCompAmount, workersCompPolicy, workersCompExpiry,
+    additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
+  } = req.body;
+
+  const data: Record<string, unknown> = {};
+  if (autoLiabilityProvider !== undefined) data.autoLiabilityProvider = autoLiabilityProvider;
+  if (autoLiabilityAmount !== undefined) data.autoLiabilityAmount = autoLiabilityAmount ? parseFloat(autoLiabilityAmount) : null;
+  if (autoLiabilityPolicy !== undefined) data.autoLiabilityPolicy = autoLiabilityPolicy;
+  if (autoLiabilityExpiry !== undefined) data.autoLiabilityExpiry = autoLiabilityExpiry ? new Date(autoLiabilityExpiry) : null;
+  if (cargoInsuranceProvider !== undefined) data.cargoInsuranceProvider = cargoInsuranceProvider;
+  if (cargoInsuranceAmount !== undefined) data.cargoInsuranceAmount = cargoInsuranceAmount ? parseFloat(cargoInsuranceAmount) : null;
+  if (cargoInsurancePolicy !== undefined) data.cargoInsurancePolicy = cargoInsurancePolicy;
+  if (cargoInsuranceExpiry !== undefined) data.cargoInsuranceExpiry = cargoInsuranceExpiry ? new Date(cargoInsuranceExpiry) : null;
+  if (generalLiabilityProvider !== undefined) data.generalLiabilityProvider = generalLiabilityProvider;
+  if (generalLiabilityAmount !== undefined) data.generalLiabilityAmount = generalLiabilityAmount ? parseFloat(generalLiabilityAmount) : null;
+  if (generalLiabilityPolicy !== undefined) data.generalLiabilityPolicy = generalLiabilityPolicy;
+  if (generalLiabilityExpiry !== undefined) data.generalLiabilityExpiry = generalLiabilityExpiry ? new Date(generalLiabilityExpiry) : null;
+  if (workersCompProvider !== undefined) data.workersCompProvider = workersCompProvider;
+  if (workersCompAmount !== undefined) data.workersCompAmount = workersCompAmount ? parseFloat(workersCompAmount) : null;
+  if (workersCompPolicy !== undefined) data.workersCompPolicy = workersCompPolicy;
+  if (workersCompExpiry !== undefined) data.workersCompExpiry = workersCompExpiry ? new Date(workersCompExpiry) : null;
+  if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
+  if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";
+  if (thirtyDayCancellationNotice !== undefined) data.thirtyDayCancellationNotice = thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true";
+
+  if (Object.keys(data).length === 0) {
+    res.status(400).json({ error: "No insurance fields to update" });
+    return;
+  }
+
+  const updated = await prisma.carrierProfile.update({
+    where: { id: profile.id },
+    data,
+  });
+
+  res.json({ message: "Insurance details updated", updated });
 });
 
 export default router;

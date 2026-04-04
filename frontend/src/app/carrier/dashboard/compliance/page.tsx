@@ -1,7 +1,8 @@
 "use client";
 
-import { Shield, FileText, AlertTriangle, CheckCircle, Clock, AlertCircle, Compass } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Shield, FileText, AlertTriangle, CheckCircle, Clock, AlertCircle, Compass, Edit3, Save, X } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 
@@ -71,7 +72,59 @@ function CompassCategoryBar({ label, passed, total }: { label: string; passed: n
   );
 }
 
+function insuranceExpiryColor(dateStr: string | null | undefined): string {
+  if (!dateStr) return "text-gray-400";
+  const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return "text-red-600 font-bold";
+  if (days <= 30) return "text-red-500";
+  if (days <= 60) return "text-amber-500";
+  return "text-emerald-500";
+}
+
+function insuranceDaysLabel(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return `(expired ${Math.abs(days)}d ago)`;
+  return `(${days}d remaining)`;
+}
+
 export default function CarrierCompliancePage() {
+  const queryClient = useQueryClient();
+  const [editingInsurance, setEditingInsurance] = useState(false);
+  const [insForm, setInsForm] = useState({
+    autoLiabilityProvider: "", autoLiabilityPolicy: "", autoLiabilityExpiry: "",
+    cargoInsuranceProvider: "", cargoInsurancePolicy: "", cargoInsuranceExpiry: "",
+    generalLiabilityProvider: "", generalLiabilityPolicy: "", generalLiabilityExpiry: "",
+    workersCompProvider: "", workersCompPolicy: "", workersCompExpiry: "",
+  });
+
+  const updateInsurance = useMutation({
+    mutationFn: (body: Record<string, string>) => api.patch("/carrier-compliance/insurance", body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-compliance-overview"] });
+      setEditingInsurance(false);
+    },
+  });
+
+  function startEditInsurance() {
+    const ins = insurance;
+    setInsForm({
+      autoLiabilityProvider: ins?.autoLiabilityProvider || "",
+      autoLiabilityPolicy: ins?.autoLiabilityPolicy || "",
+      autoLiabilityExpiry: ins?.autoLiabilityExpiry ? new Date(ins.autoLiabilityExpiry).toISOString().split("T")[0] : "",
+      cargoInsuranceProvider: ins?.cargoInsuranceProvider || "",
+      cargoInsurancePolicy: ins?.cargoInsurancePolicy || "",
+      cargoInsuranceExpiry: ins?.cargoInsuranceExpiry ? new Date(ins.cargoInsuranceExpiry).toISOString().split("T")[0] : "",
+      generalLiabilityProvider: ins?.generalLiabilityProvider || "",
+      generalLiabilityPolicy: ins?.generalLiabilityPolicy || "",
+      generalLiabilityExpiry: ins?.generalLiabilityExpiry ? new Date(ins.generalLiabilityExpiry).toISOString().split("T")[0] : "",
+      workersCompProvider: ins?.workersCompProvider || "",
+      workersCompPolicy: ins?.workersCompPolicy || "",
+      workersCompExpiry: ins?.workersCompExpiry ? new Date(ins.workersCompExpiry).toISOString().split("T")[0] : "",
+    });
+    setEditingInsurance(true);
+  }
+
   const { data: overview, isLoading } = useQuery({
     queryKey: ["carrier-compliance-overview"],
     queryFn: () => api.get("/carrier-compliance/overview").then((r) => r.data),
@@ -305,6 +358,104 @@ export default function CarrierCompliancePage() {
           </div>
         </CarrierCard>
       </div>
+
+      {/* Insurance Details Card */}
+      <CarrierCard padding="p-5" className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-[#0D1B2A]">Insurance Details</h3>
+          {!editingInsurance ? (
+            <button onClick={startEditInsurance} className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition">
+              <Edit3 size={13} /> Edit
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setEditingInsurance(false)} className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-lg transition">
+                <X size={13} /> Cancel
+              </button>
+              <button onClick={() => updateInsurance.mutate(insForm)} disabled={updateInsurance.isPending}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-white bg-[#C9A84C] hover:bg-[#C9A84C]/90 rounded-lg transition disabled:opacity-50">
+                <Save size={13} /> {updateInsurance.isPending ? "Saving..." : "Save"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {!editingInsurance ? (
+          <div className="space-y-3">
+            {/* Read-only display */}
+            {[
+              { label: "Auto Liability", provider: insurance?.autoLiabilityProvider, policy: insurance?.autoLiabilityPolicy, amount: insurance?.autoLiability, expiry: insurance?.autoLiabilityExpiry },
+              { label: "Motor Cargo", provider: insurance?.cargoInsuranceProvider, policy: insurance?.cargoInsurancePolicy, amount: insurance?.cargoAmount, expiry: insurance?.cargoInsuranceExpiry },
+              { label: "General Liability", provider: insurance?.generalLiabilityProvider, policy: insurance?.generalLiabilityPolicy, amount: insurance?.generalLiability, expiry: insurance?.generalLiabilityExpiry },
+              { label: "Workers' Comp", provider: insurance?.workersCompProvider, policy: insurance?.workersCompPolicy, amount: insurance?.workersCompAmount, expiry: insurance?.workersCompExpiry },
+            ].map((line) => (
+              <div key={line.label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold text-[#0D1B2A] w-28">{line.label}</span>
+                  <span className="text-xs text-gray-600">{line.provider || "Not set"}</span>
+                  {line.policy && <span className="text-xs text-gray-400">| {line.policy}</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium text-[#0D1B2A]">{line.amount ? `$${Number(line.amount).toLocaleString()}` : "—"}</span>
+                  {line.expiry ? (
+                    <span className={`text-xs ${insuranceExpiryColor(line.expiry)}`}>
+                      {new Date(line.expiry).toLocaleDateString()} {insuranceDaysLabel(line.expiry)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">No expiry set</span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {/* Endorsements */}
+            <div className="flex items-center gap-4 pt-2">
+              <span className={`text-xs flex items-center gap-1 ${insurance?.additionalInsuredSRL ? "text-emerald-600" : "text-gray-400"}`}>
+                {insurance?.additionalInsuredSRL ? <CheckCircle size={13} /> : <AlertCircle size={13} />} Additional Insured
+              </span>
+              <span className={`text-xs flex items-center gap-1 ${insurance?.waiverOfSubrogation ? "text-emerald-600" : "text-gray-400"}`}>
+                {insurance?.waiverOfSubrogation ? <CheckCircle size={13} /> : <AlertCircle size={13} />} Waiver of Subrogation
+              </span>
+              <span className={`text-xs flex items-center gap-1 ${insurance?.thirtyDayCancellationNotice ? "text-emerald-600" : "text-gray-400"}`}>
+                {insurance?.thirtyDayCancellationNotice ? <CheckCircle size={13} /> : <AlertCircle size={13} />} 30-Day Notice
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Editable form */}
+            {[
+              { label: "Auto Liability", prefix: "autoLiability" },
+              { label: "Motor Cargo", prefix: "cargoInsurance" },
+              { label: "General Liability", prefix: "generalLiability" },
+              { label: "Workers' Comp", prefix: "workersComp" },
+            ].map((line) => (
+              <div key={line.label}>
+                <p className="text-xs font-semibold text-[#0D1B2A] mb-1.5">{line.label}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    placeholder="Provider"
+                    value={(insForm as Record<string, string>)[`${line.prefix}Provider`] || ""}
+                    onChange={(e) => setInsForm((p) => ({ ...p, [`${line.prefix}Provider`]: e.target.value }))}
+                    className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]/50 outline-none"
+                  />
+                  <input
+                    placeholder="Policy #"
+                    value={(insForm as Record<string, string>)[`${line.prefix}Policy`] || ""}
+                    onChange={(e) => setInsForm((p) => ({ ...p, [`${line.prefix}Policy`]: e.target.value }))}
+                    className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]/50 outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={(insForm as Record<string, string>)[`${line.prefix}Expiry`] || ""}
+                    onChange={(e) => setInsForm((p) => ({ ...p, [`${line.prefix}Expiry`]: e.target.value }))}
+                    className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]/50 outline-none"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CarrierCard>
 
       {/* CSA/BASIC Scores */}
       <div className="grid grid-cols-2 gap-4 mb-6">

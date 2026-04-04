@@ -56,6 +56,26 @@ interface Carrier {
   createdAt: string;
   lastVettingScore?: number | null;
   lastVettingGrade?: string | null;
+  // Extended insurance
+  autoLiabilityProvider?: string | null;
+  autoLiabilityAmount?: number | null;
+  autoLiabilityPolicy?: string | null;
+  autoLiabilityExpiry?: string | null;
+  cargoInsuranceProvider?: string | null;
+  cargoInsuranceAmount?: number | null;
+  cargoInsurancePolicy?: string | null;
+  cargoInsuranceExpiry?: string | null;
+  generalLiabilityProvider?: string | null;
+  generalLiabilityAmount?: number | null;
+  generalLiabilityPolicy?: string | null;
+  generalLiabilityExpiry?: string | null;
+  workersCompProvider?: string | null;
+  workersCompAmount?: number | null;
+  workersCompPolicy?: string | null;
+  workersCompExpiry?: string | null;
+  additionalInsuredSRL?: boolean;
+  waiverOfSubrogation?: boolean;
+  thirtyDayCancellationNotice?: boolean;
 }
 
 interface CompassCheck {
@@ -146,9 +166,23 @@ function PerformanceBar({ label, value, color }: { label: string; value: number;
   );
 }
 
-function daysUntil(dateStr: string | null): number | null {
+function daysUntil(dateStr: string | null | undefined): number | null {
   if (!dateStr) return null;
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+function expiryColor(dateStr: string | null | undefined): string {
+  const days = daysUntil(dateStr);
+  if (days === null) return "text-slate-500";
+  if (days < 0) return "text-red-400";
+  if (days <= 30) return "text-red-400";
+  if (days <= 60) return "text-yellow-400";
+  return "text-green-400";
+}
+
+function formatExpiry(dateStr: string | null | undefined): string {
+  if (!dateStr) return "N/A";
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
 }
 
 function insuranceBadge(expiry: string | null) {
@@ -169,7 +203,14 @@ export default function CarrierPoolPage() {
   const [equipFilter, setEquipFilter] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
-  const [editForm, setEditForm] = useState({ safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "" });
+  const [editForm, setEditForm] = useState({
+    safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "",
+    autoLiabilityProvider: "", autoLiabilityAmount: "", autoLiabilityPolicy: "", autoLiabilityExpiry: "",
+    cargoInsuranceProvider: "", cargoInsuranceAmount: "", cargoInsurancePolicy: "", cargoInsuranceExpiry: "",
+    generalLiabilityProvider: "", generalLiabilityAmount: "", generalLiabilityPolicy: "", generalLiabilityExpiry: "",
+    workersCompProvider: "", workersCompAmount: "", workersCompPolicy: "", workersCompExpiry: "",
+    additionalInsuredSRL: false, waiverOfSubrogation: false, thirtyDayCancellationNotice: false,
+  });
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
   const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
@@ -231,6 +272,25 @@ export default function CarrierPoolPage() {
       tier: c.tier,
       numberOfTrucks: c.numberOfTrucks?.toString() || "",
       insuranceExpiry: c.insuranceExpiry ? new Date(c.insuranceExpiry).toISOString().split("T")[0] : "",
+      autoLiabilityProvider: c.autoLiabilityProvider || "",
+      autoLiabilityAmount: c.autoLiabilityAmount?.toString() || "",
+      autoLiabilityPolicy: c.autoLiabilityPolicy || "",
+      autoLiabilityExpiry: c.autoLiabilityExpiry ? new Date(c.autoLiabilityExpiry).toISOString().split("T")[0] : "",
+      cargoInsuranceProvider: c.cargoInsuranceProvider || "",
+      cargoInsuranceAmount: c.cargoInsuranceAmount?.toString() || "",
+      cargoInsurancePolicy: c.cargoInsurancePolicy || "",
+      cargoInsuranceExpiry: c.cargoInsuranceExpiry ? new Date(c.cargoInsuranceExpiry).toISOString().split("T")[0] : "",
+      generalLiabilityProvider: c.generalLiabilityProvider || "",
+      generalLiabilityAmount: c.generalLiabilityAmount?.toString() || "",
+      generalLiabilityPolicy: c.generalLiabilityPolicy || "",
+      generalLiabilityExpiry: c.generalLiabilityExpiry ? new Date(c.generalLiabilityExpiry).toISOString().split("T")[0] : "",
+      workersCompProvider: c.workersCompProvider || "",
+      workersCompAmount: c.workersCompAmount?.toString() || "",
+      workersCompPolicy: c.workersCompPolicy || "",
+      workersCompExpiry: c.workersCompExpiry ? new Date(c.workersCompExpiry).toISOString().split("T")[0] : "",
+      additionalInsuredSRL: c.additionalInsuredSRL ?? false,
+      waiverOfSubrogation: c.waiverOfSubrogation ?? false,
+      thirtyDayCancellationNotice: c.thirtyDayCancellationNotice ?? false,
     });
   }
 
@@ -544,6 +604,74 @@ export default function CarrierPoolPage() {
                   </div>
                 </div>
 
+                {/* Insurance Details Row */}
+                {(carrier.autoLiabilityProvider || carrier.cargoInsuranceProvider || carrier.generalLiabilityProvider || carrier.workersCompProvider) && (
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Insurance Details</h3>
+                    <div className="space-y-2 text-xs">
+                      {carrier.autoLiabilityProvider && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 w-24 shrink-0">Auto Liability:</span>
+                          <span className="text-white">{carrier.autoLiabilityProvider}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-slate-300">{carrier.autoLiabilityPolicy || "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-white font-medium">${carrier.autoLiabilityAmount ? Number(carrier.autoLiabilityAmount).toLocaleString() : "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className={`font-medium ${expiryColor(carrier.autoLiabilityExpiry)}`}>Exp: {formatExpiry(carrier.autoLiabilityExpiry)}</span>
+                        </div>
+                      )}
+                      {carrier.cargoInsuranceProvider && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 w-24 shrink-0">Cargo:</span>
+                          <span className="text-white">{carrier.cargoInsuranceProvider}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-slate-300">{carrier.cargoInsurancePolicy || "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-white font-medium">${carrier.cargoInsuranceAmount ? Number(carrier.cargoInsuranceAmount).toLocaleString() : "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className={`font-medium ${expiryColor(carrier.cargoInsuranceExpiry)}`}>Exp: {formatExpiry(carrier.cargoInsuranceExpiry)}</span>
+                        </div>
+                      )}
+                      {carrier.generalLiabilityProvider && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 w-24 shrink-0">General Liab:</span>
+                          <span className="text-white">{carrier.generalLiabilityProvider}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-slate-300">{carrier.generalLiabilityPolicy || "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-white font-medium">${carrier.generalLiabilityAmount ? Number(carrier.generalLiabilityAmount).toLocaleString() : "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className={`font-medium ${expiryColor(carrier.generalLiabilityExpiry)}`}>Exp: {formatExpiry(carrier.generalLiabilityExpiry)}</span>
+                        </div>
+                      )}
+                      {carrier.workersCompProvider && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 w-24 shrink-0">Workers Comp:</span>
+                          <span className="text-white">{carrier.workersCompProvider}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-slate-300">{carrier.workersCompPolicy || "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className="text-white font-medium">${carrier.workersCompAmount ? Number(carrier.workersCompAmount).toLocaleString() : "—"}</span>
+                          <span className="text-slate-500">|</span>
+                          <span className={`font-medium ${expiryColor(carrier.workersCompExpiry)}`}>Exp: {formatExpiry(carrier.workersCompExpiry)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-3 pt-2 border-t border-white/10">
+                      <span className={`text-xs flex items-center gap-1 ${carrier.additionalInsuredSRL ? "text-green-400" : "text-slate-600"}`}>
+                        {carrier.additionalInsuredSRL ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Additional Insured
+                      </span>
+                      <span className={`text-xs flex items-center gap-1 ${carrier.waiverOfSubrogation ? "text-green-400" : "text-slate-600"}`}>
+                        {carrier.waiverOfSubrogation ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Waiver of Subrogation
+                      </span>
+                      <span className={`text-xs flex items-center gap-1 ${carrier.thirtyDayCancellationNotice ? "text-green-400" : "text-slate-600"}`}>
+                        {carrier.thirtyDayCancellationNotice ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} 30-Day Notice
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
                   <a href="/dashboard/messages" className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
@@ -694,8 +822,8 @@ export default function CarrierPoolPage() {
       </div>
 
       {/* Edit Carrier Drawer */}
-      <SlideDrawer open={!!editingCarrier} onClose={() => setEditingCarrier(null)} title={`Edit Carrier — ${editingCarrier?.company || ""}`} width="max-w-md">
-            <div className="space-y-4">
+      <SlideDrawer open={!!editingCarrier} onClose={() => setEditingCarrier(null)} title={`Edit Carrier — ${editingCarrier?.company || ""}`} width="max-w-lg">
+            <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Tier</label>
                 <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
@@ -724,10 +852,86 @@ export default function CarrierPoolPage() {
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
 
+              {/* Insurance Details Section */}
+              <div className="pt-3 border-t border-gray-200">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3">Insurance Details</h4>
+
+                {/* Auto Liability */}
+                <p className="text-xs font-semibold text-gray-600 mb-1">Auto Liability</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <input placeholder="Provider" value={editForm.autoLiabilityProvider} onChange={(e) => setEditForm({ ...editForm, autoLiabilityProvider: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input placeholder="Policy #" value={editForm.autoLiabilityPolicy} onChange={(e) => setEditForm({ ...editForm, autoLiabilityPolicy: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="number" placeholder="Amount $" value={editForm.autoLiabilityAmount} onChange={(e) => setEditForm({ ...editForm, autoLiabilityAmount: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="date" value={editForm.autoLiabilityExpiry} onChange={(e) => setEditForm({ ...editForm, autoLiabilityExpiry: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                </div>
+
+                {/* Cargo Insurance */}
+                <p className="text-xs font-semibold text-gray-600 mb-1">Motor Cargo Insurance</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <input placeholder="Provider" value={editForm.cargoInsuranceProvider} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceProvider: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input placeholder="Policy #" value={editForm.cargoInsurancePolicy} onChange={(e) => setEditForm({ ...editForm, cargoInsurancePolicy: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="number" placeholder="Amount $" value={editForm.cargoInsuranceAmount} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceAmount: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="date" value={editForm.cargoInsuranceExpiry} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceExpiry: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                </div>
+
+                {/* General Liability */}
+                <p className="text-xs font-semibold text-gray-600 mb-1">General Liability</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <input placeholder="Provider" value={editForm.generalLiabilityProvider} onChange={(e) => setEditForm({ ...editForm, generalLiabilityProvider: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input placeholder="Policy #" value={editForm.generalLiabilityPolicy} onChange={(e) => setEditForm({ ...editForm, generalLiabilityPolicy: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="number" placeholder="Amount $" value={editForm.generalLiabilityAmount} onChange={(e) => setEditForm({ ...editForm, generalLiabilityAmount: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="date" value={editForm.generalLiabilityExpiry} onChange={(e) => setEditForm({ ...editForm, generalLiabilityExpiry: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                </div>
+
+                {/* Workers Comp */}
+                <p className="text-xs font-semibold text-gray-600 mb-1">Workers&#39; Compensation</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <input placeholder="Provider" value={editForm.workersCompProvider} onChange={(e) => setEditForm({ ...editForm, workersCompProvider: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input placeholder="Policy #" value={editForm.workersCompPolicy} onChange={(e) => setEditForm({ ...editForm, workersCompPolicy: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="number" placeholder="Amount $" value={editForm.workersCompAmount} onChange={(e) => setEditForm({ ...editForm, workersCompAmount: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  <input type="date" value={editForm.workersCompExpiry} onChange={(e) => setEditForm({ ...editForm, workersCompExpiry: e.target.value })}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                </div>
+
+                {/* Checkboxes */}
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={editForm.additionalInsuredSRL} onChange={(e) => setEditForm({ ...editForm, additionalInsuredSRL: e.target.checked })}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
+                    <span className="text-xs text-gray-700">SRL listed as Additional Insured</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={editForm.waiverOfSubrogation} onChange={(e) => setEditForm({ ...editForm, waiverOfSubrogation: e.target.checked })}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
+                    <span className="text-xs text-gray-700">Waiver of Subrogation</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={editForm.thirtyDayCancellationNotice} onChange={(e) => setEditForm({ ...editForm, thirtyDayCancellationNotice: e.target.checked })}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
+                    <span className="text-xs text-gray-700">30-day cancellation notice</span>
+                  </label>
+                </div>
+              </div>
+
             <div className="flex gap-3 pt-2">
               <button onClick={() => setEditingCarrier(null)}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition">Cancel</button>
-              <button onClick={() => updateCarrier.mutate({ id: editingCarrier!.id, data: editForm })}
+              <button onClick={() => updateCarrier.mutate({ id: editingCarrier!.id, data: editForm as any })}
                 disabled={updateCarrier.isPending}
                 className="flex-1 px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
                 {updateCarrier.isPending ? "Saving..." : "Save Changes"}

@@ -33,6 +33,13 @@ interface FmcsaResult {
   errors: string[];
 }
 
+interface InsuranceLineData {
+  provider: string;
+  policy: string;
+  amount: string;
+  expiry: string;
+}
+
 interface CarrierFormData {
   firstName: string; lastName: string; email: string; password: string;
   company: string; phone: string; mcNumber: string; dotNumber: string;
@@ -40,6 +47,14 @@ interface CarrierFormData {
   numberOfTrucks: string;
   equipmentTypes: string[]; operatingRegions: string[];
   agreeTerms: boolean;
+  // Extended insurance fields
+  autoLiability: InsuranceLineData;
+  cargoInsurance: InsuranceLineData;
+  generalLiability: InsuranceLineData;
+  workersComp: InsuranceLineData;
+  additionalInsuredSRL: boolean;
+  waiverOfSubrogation: boolean;
+  thirtyDayCancellationNotice: boolean;
 }
 
 export default function OnboardingPage() {
@@ -50,6 +65,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showUnit, setShowUnit] = useState(false);
+  const emptyInsLine: InsuranceLineData = { provider: "", policy: "", amount: "", expiry: "" };
   const [form, setForm] = useState<CarrierFormData>({
     firstName: "", lastName: "", email: "", password: "",
     company: "", phone: "", mcNumber: "", dotNumber: "",
@@ -57,6 +73,13 @@ export default function OnboardingPage() {
     numberOfTrucks: "",
     equipmentTypes: [], operatingRegions: [],
     agreeTerms: false,
+    autoLiability: { ...emptyInsLine },
+    cargoInsurance: { ...emptyInsLine },
+    generalLiability: { ...emptyInsLine },
+    workersComp: { ...emptyInsLine },
+    additionalInsuredSRL: false,
+    waiverOfSubrogation: false,
+    thirtyDayCancellationNotice: false,
   });
 
   const [fmcsaResult, setFmcsaResult] = useState<FmcsaResult | null>(null);
@@ -144,11 +167,34 @@ export default function OnboardingPage() {
         return;
       }
 
-      const { agreeTerms: _, address: _a, city: _c, state: _s, zip: _z, numberOfTrucks: _n, ...regData } = form;
+      const { agreeTerms: _, address: _a, city: _c, state: _s, zip: _z, numberOfTrucks: _n,
+        autoLiability, cargoInsurance, generalLiability, workersComp,
+        additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
+        ...regData } = form;
+      const insurancePayload: Record<string, unknown> = {};
+      if (autoLiability.provider) insurancePayload.autoLiabilityProvider = autoLiability.provider;
+      if (autoLiability.amount) insurancePayload.autoLiabilityAmount = parseFloat(autoLiability.amount);
+      if (autoLiability.policy) insurancePayload.autoLiabilityPolicy = autoLiability.policy;
+      if (autoLiability.expiry) insurancePayload.autoLiabilityExpiry = autoLiability.expiry;
+      if (cargoInsurance.provider) insurancePayload.cargoInsuranceProvider = cargoInsurance.provider;
+      if (cargoInsurance.amount) insurancePayload.cargoInsuranceAmount = parseFloat(cargoInsurance.amount);
+      if (cargoInsurance.policy) insurancePayload.cargoInsurancePolicy = cargoInsurance.policy;
+      if (cargoInsurance.expiry) insurancePayload.cargoInsuranceExpiry = cargoInsurance.expiry;
+      if (generalLiability.provider) insurancePayload.generalLiabilityProvider = generalLiability.provider;
+      if (generalLiability.amount) insurancePayload.generalLiabilityAmount = parseFloat(generalLiability.amount);
+      if (generalLiability.policy) insurancePayload.generalLiabilityPolicy = generalLiability.policy;
+      if (generalLiability.expiry) insurancePayload.generalLiabilityExpiry = generalLiability.expiry;
+      if (workersComp.provider) insurancePayload.workersCompProvider = workersComp.provider;
+      if (workersComp.amount) insurancePayload.workersCompAmount = parseFloat(workersComp.amount);
+      if (workersComp.policy) insurancePayload.workersCompPolicy = workersComp.policy;
+      if (workersComp.expiry) insurancePayload.workersCompExpiry = workersComp.expiry;
+      insurancePayload.additionalInsuredSRL = additionalInsuredSRL;
+      insurancePayload.waiverOfSubrogation = waiverOfSubrogation;
+      insurancePayload.thirtyDayCancellationNotice = thirtyDayCancellationNotice;
       const res = await fetch(`${apiUrl}/carrier/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(regData),
+        body: JSON.stringify({ ...regData, ...insurancePayload }),
       });
 
       if (!res.ok) {
@@ -503,11 +549,105 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 2: Documents */}
+          {/* Step 2: Documents & Insurance */}
           {step === 2 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-bold">Document Upload</h2>
-              <p className="text-sm text-slate-500">Upload your carrier documents. PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
+              <h2 className="text-xl font-bold">Insurance & Documents</h2>
+
+              {/* Insurance Information Section */}
+              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">Insurance Information</h3>
+
+                {/* Auto Liability */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-semibold text-slate-700">Auto Liability</span>
+                    <span className="text-[10px] text-slate-400">Required: $1,000,000 minimum</span>
+                    {form.autoLiability.amount && parseFloat(form.autoLiability.amount) < 1000000 && (
+                      <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
+                    )}
+                  </div>
+                  <div className="grid sm:grid-cols-4 gap-3">
+                    <input placeholder="Provider Name" value={form.autoLiability.provider} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Policy Number" value={form.autoLiability.policy} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input type="number" placeholder="Coverage Amount $" value={form.autoLiability.amount} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, amount: e.target.value } }))} className={cn("px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none", form.autoLiability.amount && parseFloat(form.autoLiability.amount) < 1000000 ? "border-red-300 bg-red-50" : "")} />
+                    <input type="date" value={form.autoLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
+                </div>
+
+                {/* Motor Cargo Insurance */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-semibold text-slate-700">Motor Cargo Insurance</span>
+                    <span className="text-[10px] text-slate-400">Required: $100,000 minimum</span>
+                    {form.cargoInsurance.amount && parseFloat(form.cargoInsurance.amount) < 100000 && (
+                      <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
+                    )}
+                  </div>
+                  <div className="grid sm:grid-cols-4 gap-3">
+                    <input placeholder="Provider Name" value={form.cargoInsurance.provider} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Policy Number" value={form.cargoInsurance.policy} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input type="number" placeholder="Coverage Amount $" value={form.cargoInsurance.amount} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, amount: e.target.value } }))} className={cn("px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none", form.cargoInsurance.amount && parseFloat(form.cargoInsurance.amount) < 100000 ? "border-red-300 bg-red-50" : "")} />
+                    <input type="date" value={form.cargoInsurance.expiry} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
+                </div>
+
+                {/* General Liability */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-semibold text-slate-700">General Liability</span>
+                    <span className="text-[10px] text-slate-400">Required: $1,000,000 minimum</span>
+                    {form.generalLiability.amount && parseFloat(form.generalLiability.amount) < 1000000 && (
+                      <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
+                    )}
+                  </div>
+                  <div className="grid sm:grid-cols-4 gap-3">
+                    <input placeholder="Provider Name" value={form.generalLiability.provider} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Policy Number" value={form.generalLiability.policy} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input type="number" placeholder="Coverage Amount $" value={form.generalLiability.amount} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, amount: e.target.value } }))} className={cn("px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none", form.generalLiability.amount && parseFloat(form.generalLiability.amount) < 1000000 ? "border-red-300 bg-red-50" : "")} />
+                    <input type="date" value={form.generalLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
+                </div>
+
+                {/* Workers' Compensation */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-semibold text-slate-700">Workers&#39; Compensation</span>
+                    <span className="text-[10px] text-slate-400">Required by law</span>
+                  </div>
+                  <div className="grid sm:grid-cols-4 gap-3">
+                    <input placeholder="Provider Name" value={form.workersComp.provider} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Policy Number" value={form.workersComp.policy} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input type="number" placeholder="Coverage Amount $" value={form.workersComp.amount} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, amount: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input type="date" value={form.workersComp.expiry} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
+                </div>
+
+                {/* Insurance Checkboxes */}
+                <div className="flex flex-wrap gap-6 pt-3 border-t border-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.additionalInsuredSRL} onChange={(e) => set("additionalInsuredSRL", e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
+                    <span className="text-xs text-slate-700">Silk Route Logistics Inc. is listed as Additional Insured</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.waiverOfSubrogation} onChange={(e) => set("waiverOfSubrogation", e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
+                    <span className="text-xs text-slate-700">Waiver of Subrogation is included</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.thirtyDayCancellationNotice} onChange={(e) => set("thirtyDayCancellationNotice", e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
+                    <span className="text-xs text-slate-700">30-day cancellation notice provision included</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Document Upload Section */}
+              <div className="border-t pt-5">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-1">Upload Documents</h3>
+                <p className="text-sm text-slate-500 mb-4">Upload your carrier documents. PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
+              </div>
               <div className="grid gap-4">
                 {[
                   { key: "w9", label: "W-9 Form", desc: "Required for tax reporting" },
@@ -729,6 +869,31 @@ export default function OnboardingPage() {
                   <p className="text-xs text-slate-500 uppercase mb-1">Operating Regions</p>
                   <p className="text-sm">{form.operatingRegions.join(", ")}</p>
                 </div>
+                {/* Insurance Summary in Review */}
+                {(form.autoLiability.provider || form.cargoInsurance.provider || form.generalLiability.provider || form.workersComp.provider) && (
+                  <div className="p-4 rounded-lg bg-slate-50 border">
+                    <p className="text-xs text-slate-500 uppercase mb-2">Insurance</p>
+                    <div className="space-y-1 text-sm">
+                      {form.autoLiability.provider && (
+                        <p><span className="font-medium">Auto Liability:</span> {form.autoLiability.provider} | {form.autoLiability.policy} | ${Number(form.autoLiability.amount).toLocaleString()} | Exp: {form.autoLiability.expiry}</p>
+                      )}
+                      {form.cargoInsurance.provider && (
+                        <p><span className="font-medium">Cargo:</span> {form.cargoInsurance.provider} | {form.cargoInsurance.policy} | ${Number(form.cargoInsurance.amount).toLocaleString()} | Exp: {form.cargoInsurance.expiry}</p>
+                      )}
+                      {form.generalLiability.provider && (
+                        <p><span className="font-medium">General Liab:</span> {form.generalLiability.provider} | {form.generalLiability.policy} | ${Number(form.generalLiability.amount).toLocaleString()} | Exp: {form.generalLiability.expiry}</p>
+                      )}
+                      {form.workersComp.provider && (
+                        <p><span className="font-medium">Workers Comp:</span> {form.workersComp.provider} | {form.workersComp.policy} | ${Number(form.workersComp.amount).toLocaleString()} | Exp: {form.workersComp.expiry}</p>
+                      )}
+                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-600">
+                        {form.additionalInsuredSRL && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> Additional Insured</span>}
+                        {form.waiverOfSubrogation && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> Waiver of Subrogation</span>}
+                        {form.thirtyDayCancellationNotice && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> 30-Day Notice</span>}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="p-4 rounded-lg bg-slate-50 border">
                   <p className="text-xs text-slate-500 uppercase mb-1">Documents</p>
                   {files.length > 0 ? (

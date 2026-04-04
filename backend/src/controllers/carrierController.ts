@@ -58,6 +58,26 @@ export async function registerCarrier(req: Request, res: Response) {
           equipmentTypes: data.equipmentTypes,
           operatingRegions: data.operatingRegions,
           onboardingStatus: "PENDING",
+          // Extended insurance details
+          autoLiabilityProvider: data.autoLiabilityProvider,
+          autoLiabilityAmount: data.autoLiabilityAmount,
+          autoLiabilityPolicy: data.autoLiabilityPolicy,
+          autoLiabilityExpiry: data.autoLiabilityExpiry ? new Date(data.autoLiabilityExpiry) : undefined,
+          cargoInsuranceProvider: data.cargoInsuranceProvider,
+          cargoInsuranceAmount: data.cargoInsuranceAmount,
+          cargoInsurancePolicy: data.cargoInsurancePolicy,
+          cargoInsuranceExpiry: data.cargoInsuranceExpiry ? new Date(data.cargoInsuranceExpiry) : undefined,
+          generalLiabilityProvider: data.generalLiabilityProvider,
+          generalLiabilityAmount: data.generalLiabilityAmount,
+          generalLiabilityPolicy: data.generalLiabilityPolicy,
+          generalLiabilityExpiry: data.generalLiabilityExpiry ? new Date(data.generalLiabilityExpiry) : undefined,
+          workersCompProvider: data.workersCompProvider,
+          workersCompAmount: data.workersCompAmount,
+          workersCompPolicy: data.workersCompPolicy,
+          workersCompExpiry: data.workersCompExpiry ? new Date(data.workersCompExpiry) : undefined,
+          additionalInsuredSRL: data.additionalInsuredSRL ?? false,
+          waiverOfSubrogation: data.waiverOfSubrogation ?? false,
+          thirtyDayCancellationNotice: data.thirtyDayCancellationNotice ?? false,
         },
       },
     },
@@ -695,6 +715,26 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         city: c.city,
         state: c.state,
         zip: c.zip,
+        // Extended insurance details
+        autoLiabilityProvider: c.autoLiabilityProvider,
+        autoLiabilityAmount: c.autoLiabilityAmount,
+        autoLiabilityPolicy: c.autoLiabilityPolicy,
+        autoLiabilityExpiry: c.autoLiabilityExpiry,
+        cargoInsuranceProvider: c.cargoInsuranceProvider,
+        cargoInsuranceAmount: c.cargoInsuranceAmount,
+        cargoInsurancePolicy: c.cargoInsurancePolicy,
+        cargoInsuranceExpiry: c.cargoInsuranceExpiry,
+        generalLiabilityProvider: c.generalLiabilityProvider,
+        generalLiabilityAmount: c.generalLiabilityAmount,
+        generalLiabilityPolicy: c.generalLiabilityPolicy,
+        generalLiabilityExpiry: c.generalLiabilityExpiry,
+        workersCompProvider: c.workersCompProvider,
+        workersCompAmount: c.workersCompAmount,
+        workersCompPolicy: c.workersCompPolicy,
+        workersCompExpiry: c.workersCompExpiry,
+        additionalInsuredSRL: c.additionalInsuredSRL,
+        waiverOfSubrogation: c.waiverOfSubrogation,
+        thirtyDayCancellationNotice: c.thirtyDayCancellationNotice,
         completedLoads,
         activeLoads,
         totalRevenue: totalRevenue._sum.amount || 0,
@@ -758,13 +798,42 @@ export async function getCarrierDetail(req: AuthRequest, res: Response) {
 
 /** Update carrier profile (admin) */
 export async function updateCarrier(req: AuthRequest, res: Response) {
-  const { safetyScore, tier, numberOfTrucks, insuranceExpiry, onboardingStatus } = req.body;
+  const {
+    safetyScore, tier, numberOfTrucks, insuranceExpiry, onboardingStatus,
+    // Extended insurance fields
+    autoLiabilityProvider, autoLiabilityAmount, autoLiabilityPolicy, autoLiabilityExpiry,
+    cargoInsuranceProvider, cargoInsuranceAmount, cargoInsurancePolicy, cargoInsuranceExpiry,
+    generalLiabilityProvider, generalLiabilityAmount, generalLiabilityPolicy, generalLiabilityExpiry,
+    workersCompProvider, workersCompAmount, workersCompPolicy, workersCompExpiry,
+    additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
+  } = req.body;
   const data: Record<string, unknown> = {};
   if (safetyScore !== undefined) data.safetyScore = parseFloat(safetyScore);
   if (tier !== undefined) data.tier = tier;
   if (numberOfTrucks !== undefined) data.numberOfTrucks = parseInt(numberOfTrucks);
   if (insuranceExpiry !== undefined) data.insuranceExpiry = new Date(insuranceExpiry);
   if (onboardingStatus !== undefined) data.onboardingStatus = onboardingStatus;
+
+  // Extended insurance fields
+  if (autoLiabilityProvider !== undefined) data.autoLiabilityProvider = autoLiabilityProvider;
+  if (autoLiabilityAmount !== undefined) data.autoLiabilityAmount = autoLiabilityAmount ? parseFloat(autoLiabilityAmount) : null;
+  if (autoLiabilityPolicy !== undefined) data.autoLiabilityPolicy = autoLiabilityPolicy;
+  if (autoLiabilityExpiry !== undefined) data.autoLiabilityExpiry = autoLiabilityExpiry ? new Date(autoLiabilityExpiry) : null;
+  if (cargoInsuranceProvider !== undefined) data.cargoInsuranceProvider = cargoInsuranceProvider;
+  if (cargoInsuranceAmount !== undefined) data.cargoInsuranceAmount = cargoInsuranceAmount ? parseFloat(cargoInsuranceAmount) : null;
+  if (cargoInsurancePolicy !== undefined) data.cargoInsurancePolicy = cargoInsurancePolicy;
+  if (cargoInsuranceExpiry !== undefined) data.cargoInsuranceExpiry = cargoInsuranceExpiry ? new Date(cargoInsuranceExpiry) : null;
+  if (generalLiabilityProvider !== undefined) data.generalLiabilityProvider = generalLiabilityProvider;
+  if (generalLiabilityAmount !== undefined) data.generalLiabilityAmount = generalLiabilityAmount ? parseFloat(generalLiabilityAmount) : null;
+  if (generalLiabilityPolicy !== undefined) data.generalLiabilityPolicy = generalLiabilityPolicy;
+  if (generalLiabilityExpiry !== undefined) data.generalLiabilityExpiry = generalLiabilityExpiry ? new Date(generalLiabilityExpiry) : null;
+  if (workersCompProvider !== undefined) data.workersCompProvider = workersCompProvider;
+  if (workersCompAmount !== undefined) data.workersCompAmount = workersCompAmount ? parseFloat(workersCompAmount) : null;
+  if (workersCompPolicy !== undefined) data.workersCompPolicy = workersCompPolicy;
+  if (workersCompExpiry !== undefined) data.workersCompExpiry = workersCompExpiry ? new Date(workersCompExpiry) : null;
+  if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
+  if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";
+  if (thirtyDayCancellationNotice !== undefined) data.thirtyDayCancellationNotice = thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true";
 
   const updated = await prisma.carrierProfile.update({
     where: { id: req.params.id },
