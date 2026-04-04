@@ -76,6 +76,7 @@ export default function OrderBuilderPage() {
   const [distanceAutoFilled, setDistanceAutoFilled] = useState(false);
   const [distanceManual, setDistanceManual] = useState(false);
   const [suggestedClass, setSuggestedClass] = useState("");
+  const [palletRows, setPalletRows] = useState([{ qty: "", l: "48", w: "40", h: "48", weight: "" }]);
   const [showErrors, setShowErrors] = useState(false);
   const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -114,11 +115,35 @@ export default function OrderBuilderPage() {
     return () => { if (distanceTimerRef.current) clearTimeout(distanceTimerRef.current); };
   }, [form.originZip, form.destZip, form.originCity, form.originState, form.destCity, form.destState, form.originAddress, form.destAddress, distanceManual]);
 
-  // FIX 3: Auto-suggest freight class from commodity
+  // FIX 3: Auto-suggest freight class from commodity (fuzzy partial match)
   useEffect(() => {
     const commodity = form.commodity.trim().toLowerCase();
-    if (!commodity) { setSuggestedClass(""); return; }
-    const matched = COMMODITY_CLASS_MAP[commodity];
+    if (!commodity || commodity.length < 2) { setSuggestedClass(""); return; }
+    // Try exact match first
+    let matched = COMMODITY_CLASS_MAP[commodity];
+    // Then try partial match — if any key contains the typed word or typed word contains any key
+    if (!matched) {
+      for (const [key, val] of Object.entries(COMMODITY_CLASS_MAP)) {
+        if (key.includes(commodity) || commodity.includes(key)) {
+          matched = val;
+          break;
+        }
+      }
+    }
+    // Then try matching individual words
+    if (!matched) {
+      const words = commodity.split(/\s+/);
+      for (const word of words) {
+        if (word.length < 3) continue;
+        for (const [key, val] of Object.entries(COMMODITY_CLASS_MAP)) {
+          if (key.includes(word) || word.includes(key)) {
+            matched = val;
+            break;
+          }
+        }
+        if (matched) break;
+      }
+    }
     if (matched) {
       setSuggestedClass(matched);
       if (!form.freightClass) {
@@ -171,7 +196,26 @@ export default function OrderBuilderPage() {
     }
   }, [form.weight, form.palletLength, form.palletWidth, form.palletHeight, form.pallets, suggestedClass]);
 
-  // Auto-calculate weight from pallets and weight per pallet
+  // Auto-calculate weight + pieces + first pallet dims from palletRows
+  useEffect(() => {
+    let totalWeight = 0;
+    let totalPieces = 0;
+    let firstL = "", firstW = "", firstH = "";
+    let firstQty = "";
+    for (const row of palletRows) {
+      const qty = parseInt(row.qty) || 0;
+      const w = parseFloat(row.weight) || 0;
+      totalWeight += qty * w;
+      totalPieces += qty;
+      if (!firstL && row.l) { firstL = row.l; firstW = row.w; firstH = row.h; firstQty = row.qty; }
+    }
+    if (totalWeight > 0) setForm((f) => ({ ...f, weight: String(Math.round(totalWeight)) }));
+    if (totalPieces > 0) setForm((f) => ({ ...f, pieces: String(totalPieces) }));
+    // Sync first row to the legacy single-pallet fields for density calculation
+    if (firstQty) setForm((f) => ({ ...f, pallets: firstQty, palletLength: firstL, palletWidth: firstW, palletHeight: firstH, weightPerPallet: palletRows[0]?.weight || "" }));
+  }, [palletRows]);
+
+  // Legacy: Auto-calculate weight from single pallets and weight per pallet (kept for backward compat)
   useEffect(() => {
     if (form.pallets && form.weightPerPallet) {
       const total = parseInt(form.pallets) * parseFloat(form.weightPerPallet);
@@ -541,45 +585,55 @@ export default function OrderBuilderPage() {
           </div>
         </div>
 
-        {/* Row 2: Number of Pallets | Pallet Dimensions L x W x H | Weight per Pallet */}
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Number of Pallets</label>
-            <input value={form.pallets} onChange={(e) => setForm((f) => ({ ...f, pallets: e.target.value }))}
-              placeholder="e.g. 26" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+        {/* Pallet Rows — multiple rows with + button */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-slate-500 font-medium">PALLET DETAILS</label>
+            <button type="button" onClick={() => setPalletRows((p) => [...p, { qty: "", l: "48", w: "40", h: "48", weight: "" }])}
+              className="text-xs text-gold hover:text-gold/80 font-medium flex items-center gap-1 cursor-pointer">
+              + Add Pallet Type
+            </button>
           </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Pallet Size (L x W x H) in</label>
-            <div className="flex items-center gap-1">
-              <input value={form.palletLength} onChange={(e) => setForm((f) => ({ ...f, palletLength: e.target.value }))}
-                placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
-              <span className="text-slate-500 text-sm shrink-0">&times;</span>
-              <input value={form.palletWidth} onChange={(e) => setForm((f) => ({ ...f, palletWidth: e.target.value }))}
-                placeholder="40" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
-              <span className="text-slate-500 text-sm shrink-0">&times;</span>
-              <input value={form.palletHeight} onChange={(e) => setForm((f) => ({ ...f, palletHeight: e.target.value }))}
-                placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+          <div className="grid grid-cols-[1fr_1.5fr_1fr_auto] gap-2 text-[10px] text-slate-500 px-1">
+            <span>Qty</span><span>Size (L × W × H) in</span><span>Weight/Pallet (lbs)</span><span></span>
+          </div>
+          {palletRows.map((row, idx) => (
+            <div key={idx} className="grid grid-cols-[1fr_1.5fr_1fr_auto] gap-2 items-center">
+              <input value={row.qty} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], qty: e.target.value }; setPalletRows(r); }}
+                placeholder="26" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+              <div className="flex items-center gap-1">
+                <input value={row.l} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], l: e.target.value }; setPalletRows(r); }}
+                  placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+                <span className="text-slate-500 text-xs shrink-0">×</span>
+                <input value={row.w} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], w: e.target.value }; setPalletRows(r); }}
+                  placeholder="40" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+                <span className="text-slate-500 text-xs shrink-0">×</span>
+                <input value={row.h} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], h: e.target.value }; setPalletRows(r); }}
+                  placeholder="48" type="number" className="w-full px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-center focus:outline-none focus:border-gold/50" />
+              </div>
+              <input value={row.weight} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], weight: e.target.value }; setPalletRows(r); }}
+                placeholder="1500" type="number" className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+              {palletRows.length > 1 && (
+                <button type="button" onClick={() => setPalletRows((p) => p.filter((_, i) => i !== idx))}
+                  className="text-red-400 hover:text-red-300 text-xs cursor-pointer px-1">✕</button>
+              )}
+              {palletRows.length <= 1 && <div />}
             </div>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Weight / Pallet (lbs)</label>
-            <input value={form.weightPerPallet} onChange={(e) => setForm((f) => ({ ...f, weightPerPallet: e.target.value }))}
-              placeholder="e.g. 1500" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
-          </div>
+          ))}
         </div>
 
-        {/* Row 3: Total Weight (auto-calculated) | Total Pieces */}
+        {/* Total Weight + Pieces (auto-calculated from all pallet rows) */}
         <div className="grid md:grid-cols-3 gap-3">
           <div>
             <label className="text-xs text-slate-500 mb-1 block flex items-center gap-2">
               Total Weight (lbs)
-              {form.pallets && form.weightPerPallet && <span className="text-[10px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded font-medium">Calculated</span>}
+              {palletRows.some(r => r.qty && r.weight) && <span className="text-[10px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded font-medium">Calculated</span>}
             </label>
             <input value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
               placeholder="Weight (lbs)" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">Pieces</label>
+            <label className="text-xs text-slate-500 mb-1 block">Total Pieces / Pallets</label>
             <input value={form.pieces} onChange={(e) => setForm((f) => ({ ...f, pieces: e.target.value }))}
               placeholder="Pieces" type="number" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
           </div>
