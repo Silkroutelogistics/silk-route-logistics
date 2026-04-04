@@ -155,6 +155,7 @@ export default function OrderBuilderPage() {
   const [showConsigneeBook, setShowConsigneeBook] = useState(false);
   const [poInput, setPoInput] = useState("");
   const [stops, setStops] = useState<Stop[]>([makeStop("Pickup"), makeStop("Delivery")]);
+  const [showStops, setShowStops] = useState(false);
   const shipperBookRef = useRef<HTMLDivElement>(null);
   const consigneeBookRef = useRef<HTMLDivElement>(null);
   const distanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -647,19 +648,23 @@ export default function OrderBuilderPage() {
                   <button type="button" onClick={() => setPalletRows((p) => [...p, { qty: "", l: "48", w: "40", h: "48", weight: "" }])}
                     className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer">+ Add Type</button>
                 </div>
-                <div className="grid grid-cols-[50px_1fr_1fr_1fr_70px_20px] gap-1 text-[9px] text-slate-500 uppercase px-0.5">
-                  <span>Qty</span><span>L (in)</span><span>W (in)</span><span>H (in)</span><span>Wt/plt</span><span></span>
+                <div className="grid grid-cols-[55px_170px_65px_20px] gap-1 text-[9px] text-slate-500 uppercase px-0.5">
+                  <span>Qty</span><span>L × W × H (in)</span><span>Wt/plt</span><span></span>
                 </div>
                 {palletRows.map((row, idx) => (
-                  <div key={idx} className="grid grid-cols-[50px_1fr_1fr_1fr_70px_20px] gap-1 items-center">
+                  <div key={idx} className="grid grid-cols-[55px_170px_65px_20px] gap-1 items-center">
                     <input value={row.qty} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], qty: e.target.value }; setPalletRows(r); }}
                       placeholder="Qty" inputMode="numeric" className={`${inp} text-center !px-1`} />
-                    <input value={row.l} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], l: e.target.value }; setPalletRows(r); }}
-                      placeholder="L" inputMode="numeric" className={`${inp} text-center !px-1`} />
-                    <input value={row.w} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], w: e.target.value }; setPalletRows(r); }}
-                      placeholder="W" inputMode="numeric" className={`${inp} text-center !px-1`} />
-                    <input value={row.h} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], h: e.target.value }; setPalletRows(r); }}
-                      placeholder="H" inputMode="numeric" className={`${inp} text-center !px-1`} />
+                    <div className="flex items-center gap-0.5">
+                      <input value={row.l} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], l: e.target.value }; setPalletRows(r); }}
+                        placeholder="L" inputMode="numeric" className={`w-[50px] ${inp} text-center !px-1`} />
+                      <span className="text-slate-500 text-xs">×</span>
+                      <input value={row.w} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], w: e.target.value }; setPalletRows(r); }}
+                        placeholder="W" inputMode="numeric" className={`w-[50px] ${inp} text-center !px-1`} />
+                      <span className="text-slate-500 text-xs">×</span>
+                      <input value={row.h} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], h: e.target.value }; setPalletRows(r); }}
+                        placeholder="H" inputMode="numeric" className={`w-[50px] ${inp} text-center !px-1`} />
+                    </div>
                     <input value={row.weight} onChange={(e) => { const r = [...palletRows]; r[idx] = { ...r[idx], weight: e.target.value }; setPalletRows(r); }}
                       placeholder="lbs" inputMode="numeric" className={`${inp} text-center !px-1`} />
                     {palletRows.length > 1 ? (
@@ -699,20 +704,23 @@ export default function OrderBuilderPage() {
 
               {/* Toggles */}
               <div className="flex flex-wrap gap-x-3 gap-y-1">
-                <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-1.5 text-sm text-slate-300 cursor-pointer">
                   <input type="checkbox" checked={form.hazmat} onChange={(e) => setForm((f) => ({ ...f, hazmat: e.target.checked }))}
-                    className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                    className="accent-gold" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                   Hazmat
                 </label>
-                <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-1.5 text-sm text-slate-300 cursor-pointer">
                   <input type="checkbox" checked={tempControlled || form.equipmentType === "Reefer"}
                     onChange={(e) => { setTempControlled(e.target.checked); if (!e.target.checked) setForm((f) => ({ ...f, tempMin: "", tempMax: "" })); }}
-                    className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                    className="accent-gold" />
+                  <Thermometer className="w-3.5 h-3.5 text-blue-400" />
                   Temp
                 </label>
-                <label className="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-1.5 text-sm text-slate-300 cursor-pointer">
                   <input type="checkbox" checked={form.customsRequired} onChange={(e) => setForm((f) => ({ ...f, customsRequired: e.target.checked }))}
-                    className="rounded border-white/20 bg-white/5 text-gold focus:ring-gold w-3 h-3" />
+                    className="accent-gold" />
+                  <Globe className="w-3.5 h-3.5 text-green-400" />
                   Customs
                 </label>
               </div>
@@ -794,10 +802,13 @@ export default function OrderBuilderPage() {
                     placeholder="ZIP*" className={`w-16 ${inpErr("originZip")}`}
                     {...(isFirstError("originZip") ? { "data-error": "true" } : {})} />
                 </div>
-                <div className="flex gap-1 items-center" {...(isFirstError("pickupDate") ? { "data-error": "true" } : {})}>
-                  <span className="text-[9px] text-slate-500 shrink-0">PU:</span>
+                <div className="relative cursor-pointer" onClick={(e) => {
+                  const input = e.currentTarget.querySelector('input');
+                  if (input) (input as any).showPicker?.();
+                }} {...(isFirstError("pickupDate") ? { "data-error": "true" } : {})}>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-medium">PU:</span>
                   <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))}
-                    className={`flex-1 ${inpErr("pickupDate")} [color-scheme:dark]`} />
+                    className={`w-full pl-8 ${inpErr("pickupDate")} [color-scheme:dark] cursor-pointer`} />
                 </div>
                 <div className="flex gap-1 items-center">
                   <select value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))}
@@ -873,10 +884,13 @@ export default function OrderBuilderPage() {
                     placeholder="ZIP*" className={`w-16 ${inpErr("destZip")}`}
                     {...(isFirstError("destZip") ? { "data-error": "true" } : {})} />
                 </div>
-                <div className="flex gap-1 items-center" {...(isFirstError("deliveryDate") ? { "data-error": "true" } : {})}>
-                  <span className="text-[9px] text-slate-500 shrink-0">DEL:</span>
+                <div className="relative cursor-pointer" onClick={(e) => {
+                  const input = e.currentTarget.querySelector('input');
+                  if (input) (input as any).showPicker?.();
+                }} {...(isFirstError("deliveryDate") ? { "data-error": "true" } : {})}>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-medium">DEL:</span>
                   <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
-                    className={`flex-1 ${inpErr("deliveryDate")} [color-scheme:dark]`} />
+                    className={`w-full pl-9 ${inpErr("deliveryDate")} [color-scheme:dark] cursor-pointer`} />
                 </div>
                 <div className="flex gap-1 items-center">
                   <select value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))}
@@ -985,78 +999,92 @@ export default function OrderBuilderPage() {
 
             <div className="border-b border-white/5" />
 
-            {/* STOPS */}
-            <div className="flex items-center justify-between">
-              <p className={secHdr}>Stops</p>
-              <button type="button" onClick={() => setStops((prev) => [...prev, makeStop(prev.length === 0 ? "Pickup" : "Delivery")])}
-                className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer flex items-center gap-0.5">
-                <Plus className="w-3 h-3" /> Add
+            {/* STOPS — collapsed by default for single pickup/delivery */}
+            {!showStops ? (
+              <button type="button" onClick={() => setShowStops(true)}
+                className="text-xs text-gold hover:text-gold/80 cursor-pointer">
+                + Add Extra Stops (multi-pickup or multi-delivery)
               </button>
-            </div>
-            {/* Stop header */}
-            <div className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 text-[9px] text-slate-500 uppercase tracking-wider">
-              <span>#</span><span>Type</span><span>Facility</span><span>City,ST,ZIP</span><span>Date</span><span>Time</span><span></span><span></span>
-            </div>
-            {stops.map((stop, idx) => (
-              <div key={stop.id} className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 items-center">
-                <span className="text-[10px] text-slate-500 font-mono text-center">{idx + 1}</span>
-                <select value={stop.type} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], type: e.target.value as "Pickup" | "Delivery" }; setStops(u); }}
-                  className={`${sel} px-1`}>
-                  <option value="Pickup" style={optStyle}>PU</option>
-                  <option value="Delivery" style={optStyle}>DL</option>
-                </select>
-                <div className="relative">
-                  <input value={stop.facilityName} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], facilityName: e.target.value }; setStops(u); }}
-                    placeholder="Facility" className={`w-full ${inp}`} list={`stop-book-${idx}`} onFocus={() => {}} />
-                  <datalist id={`stop-book-${idx}`}>
-                    {getAddressBook().slice(0, 10).map((e, i) => (
-                      <option key={i} value={e.name}>{e.city}, {e.state} {e.zip}</option>
-                    ))}
-                  </datalist>
-                </div>
-                <div className="flex gap-0.5">
-                  <input value={stop.city} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], city: e.target.value }; setStops(u); }}
-                    placeholder="City" className={`flex-1 min-w-0 ${inp}`} />
-                  <input value={stop.state} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], state: e.target.value.toUpperCase().slice(0, 2) }; setStops(u); }}
-                    placeholder="ST" maxLength={2} className={`w-8 ${inp} text-center`} />
-                  <input value={stop.zip} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], zip: e.target.value }; setStops(u); }}
-                    placeholder="ZIP" className={`w-12 ${inp}`} />
-                </div>
-                <input type="date" value={stop.appointmentDate} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentDate: e.target.value }; setStops(u); }}
-                  className={`${inp} [color-scheme:dark]`} />
-                <select value={stop.appointmentTime} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentTime: e.target.value }; setStops(u); }}
-                  className={`${sel}`}>
-                  <option value="" style={optStyle}>--</option>
-                  {TIME_OPTIONS.map((t) => <option key={t} value={t} style={optStyle}>{t}</option>)}
-                </select>
-                <div className="flex flex-col">
-                  {idx > 0 && (
-                    <button type="button" onClick={() => { const u = [...stops]; [u[idx - 1], u[idx]] = [u[idx], u[idx - 1]]; setStops(u); }}
-                      className="text-slate-500 hover:text-white transition cursor-pointer" title="Move up">
-                      <ArrowUp className="w-2.5 h-2.5" />
+            ) : (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className={secHdr}>Stops</p>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setStops((prev) => [...prev, makeStop(prev.length === 0 ? "Pickup" : "Delivery")])}
+                      className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer flex items-center gap-0.5">
+                      <Plus className="w-3 h-3" /> Add
                     </button>
-                  )}
-                  {idx < stops.length - 1 && (
-                    <button type="button" onClick={() => { const u = [...stops]; [u[idx], u[idx + 1]] = [u[idx + 1], u[idx]]; setStops(u); }}
-                      className="text-slate-500 hover:text-white transition cursor-pointer" title="Move down">
-                      <ArrowDown className="w-2.5 h-2.5" />
+                    <button type="button" onClick={() => setShowStops(false)} className="text-xs text-slate-500 hover:text-white">
+                      Hide Stops
                     </button>
-                  )}
+                  </div>
                 </div>
-                <div>
-                  {stops.length > 2 && (
-                    <button type="button" onClick={() => setStops((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-red-400 hover:text-red-300 transition cursor-pointer" title="Remove">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
+                {/* Stop header */}
+                <div className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 text-[9px] text-slate-500 uppercase tracking-wider">
+                  <span>#</span><span>Type</span><span>Facility</span><span>City,ST,ZIP</span><span>Date</span><span>Time</span><span></span><span></span>
                 </div>
+                {stops.map((stop, idx) => (
+                  <div key={stop.id} className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 items-center">
+                    <span className="text-[10px] text-slate-500 font-mono text-center">{idx + 1}</span>
+                    <select value={stop.type} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], type: e.target.value as "Pickup" | "Delivery" }; setStops(u); }}
+                      className={`${sel} px-1`}>
+                      <option value="Pickup" style={optStyle}>PU</option>
+                      <option value="Delivery" style={optStyle}>DL</option>
+                    </select>
+                    <div className="relative">
+                      <input value={stop.facilityName} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], facilityName: e.target.value }; setStops(u); }}
+                        placeholder="Facility" className={`w-full ${inp}`} list={`stop-book-${idx}`} onFocus={() => {}} />
+                      <datalist id={`stop-book-${idx}`}>
+                        {getAddressBook().slice(0, 10).map((e, i) => (
+                          <option key={i} value={e.name}>{e.city}, {e.state} {e.zip}</option>
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="flex gap-0.5">
+                      <input value={stop.city} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], city: e.target.value }; setStops(u); }}
+                        placeholder="City" className={`flex-1 min-w-0 ${inp}`} />
+                      <input value={stop.state} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], state: e.target.value.toUpperCase().slice(0, 2) }; setStops(u); }}
+                        placeholder="ST" maxLength={2} className={`w-8 ${inp} text-center`} />
+                      <input value={stop.zip} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], zip: e.target.value }; setStops(u); }}
+                        placeholder="ZIP" className={`w-12 ${inp}`} />
+                    </div>
+                    <input type="date" value={stop.appointmentDate} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentDate: e.target.value }; setStops(u); }}
+                      className={`${inp} [color-scheme:dark]`} />
+                    <select value={stop.appointmentTime} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], appointmentTime: e.target.value }; setStops(u); }}
+                      className={`${sel}`}>
+                      <option value="" style={optStyle}>--</option>
+                      {TIME_OPTIONS.map((t) => <option key={t} value={t} style={optStyle}>{t}</option>)}
+                    </select>
+                    <div className="flex flex-col">
+                      {idx > 0 && (
+                        <button type="button" onClick={() => { const u = [...stops]; [u[idx - 1], u[idx]] = [u[idx], u[idx - 1]]; setStops(u); }}
+                          className="text-slate-500 hover:text-white transition cursor-pointer" title="Move up">
+                          <ArrowUp className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                      {idx < stops.length - 1 && (
+                        <button type="button" onClick={() => { const u = [...stops]; [u[idx], u[idx + 1]] = [u[idx + 1], u[idx]]; setStops(u); }}
+                          className="text-slate-500 hover:text-white transition cursor-pointer" title="Move down">
+                          <ArrowDown className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      {stops.length > 2 && (
+                        <button type="button" onClick={() => setStops((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-red-400 hover:text-red-300 transition cursor-pointer" title="Remove">
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={() => setStops((prev) => [...prev, makeStop("Delivery")])}
+                  className="w-full py-1 border border-dashed border-white/10 rounded text-[10px] text-slate-400 hover:text-gold hover:border-gold/30 transition cursor-pointer">
+                  + Add Stop
+                </button>
               </div>
-            ))}
-            <button type="button" onClick={() => setStops((prev) => [...prev, makeStop("Delivery")])}
-              className="w-full py-1 border border-dashed border-white/10 rounded text-[10px] text-slate-400 hover:text-gold hover:border-gold/30 transition cursor-pointer">
-              + Add Stop
-            </button>
+            )}
           </div>
 
           {/* ════════ RIGHT COLUMN: Rate + Contact + Instructions ════════ */}
