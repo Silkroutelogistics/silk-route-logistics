@@ -48,6 +48,20 @@ interface FMCSACarrierResult {
   phyZipcode: string | null;
   phone: string | null;
   mcs150Outdated: boolean | null;
+  // Inspection summary fields
+  driverInsp: number | null;
+  driverOosInsp: number | null;
+  driverOosRate: number | null;
+  vehicleInsp: number | null;
+  vehicleOosInsp: number | null;
+  vehicleOosRate: number | null;
+  hazmatInsp: number | null;
+  hazmatOosInsp: number | null;
+  hazmatOosRate: number | null;
+  crashTotal: number | null;
+  fatalCrash: number | null;
+  injCrash: number | null;
+  towawayCrash: number | null;
   errors: string[];
 }
 
@@ -61,6 +75,10 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
       insuranceOnFile: false, outOfServiceDate: null, totalDrivers: null,
       totalPowerUnits: null, phyStreet: null, phyCity: null, phyState: null,
       phyZipcode: null, phone: null, mcs150Outdated: null,
+      driverInsp: null, driverOosInsp: null, driverOosRate: null,
+      vehicleInsp: null, vehicleOosInsp: null, vehicleOosRate: null,
+      hazmatInsp: null, hazmatOosInsp: null, hazmatOosRate: null,
+      crashTotal: null, fatalCrash: null, injCrash: null, towawayCrash: null,
       errors: ["Carrier not found in FMCSA database"],
     };
   }
@@ -86,6 +104,20 @@ function parseCarrierResponse(data: Record<string, any>, dotNumber: string): FMC
     phyZipcode: carrier.phyZipcode || null,
     phone: carrier.telephone || null,
     mcs150Outdated: carrier.mcs150Outdated === "Y" ? true : carrier.mcs150Outdated === "N" ? false : null,
+    // Inspection summary fields from FMCSA response
+    driverInsp: carrier.driverInsp != null ? Number(carrier.driverInsp) : null,
+    driverOosInsp: carrier.driverOosInsp != null ? Number(carrier.driverOosInsp) : null,
+    driverOosRate: carrier.driverOosRate != null ? Number(carrier.driverOosRate) : null,
+    vehicleInsp: carrier.vehicleInsp != null ? Number(carrier.vehicleInsp) : null,
+    vehicleOosInsp: carrier.vehicleOosInsp != null ? Number(carrier.vehicleOosInsp) : null,
+    vehicleOosRate: carrier.vehicleOosRate != null ? Number(carrier.vehicleOosRate) : null,
+    hazmatInsp: carrier.hazmatInsp != null ? Number(carrier.hazmatInsp) : null,
+    hazmatOosInsp: carrier.hazmatOosInsp != null ? Number(carrier.hazmatOosInsp) : null,
+    hazmatOosRate: carrier.hazmatOosRate != null ? Number(carrier.hazmatOosRate) : null,
+    crashTotal: carrier.crashTotal != null ? Number(carrier.crashTotal) : null,
+    fatalCrash: carrier.fatalCrash != null ? Number(carrier.fatalCrash) : null,
+    injCrash: carrier.injCrash != null ? Number(carrier.injCrash) : null,
+    towawayCrash: carrier.towawayCrash != null ? Number(carrier.towawayCrash) : null,
     errors: [],
   };
 }
@@ -127,6 +159,10 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
       safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
       totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
       phyState: null, phyZipcode: null, phone: null, mcs150Outdated: null,
+      driverInsp: null, driverOosInsp: null, driverOosRate: null,
+      vehicleInsp: null, vehicleOosInsp: null, vehicleOosRate: null,
+      hazmatInsp: null, hazmatOosInsp: null, hazmatOosRate: null,
+      crashTotal: null, fatalCrash: null, injCrash: null, towawayCrash: null,
       errors: ["No FMCSA_WEB_KEY configured"],
     };
   }
@@ -140,6 +176,10 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
       safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
       totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
       phyState: null, phyZipcode: null, phone: null, mcs150Outdated: null,
+      driverInsp: null, driverOosInsp: null, driverOosRate: null,
+      vehicleInsp: null, vehicleOosInsp: null, vehicleOosRate: null,
+      hazmatInsp: null, hazmatOosInsp: null, hazmatOosRate: null,
+      crashTotal: null, fatalCrash: null, injCrash: null, towawayCrash: null,
       errors: ["Invalid MC number"],
     };
   }
@@ -175,6 +215,10 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
     safetyRating: null, insuranceOnFile: false, outOfServiceDate: null,
     totalDrivers: null, totalPowerUnits: null, phyStreet: null, phyCity: null,
     phyState: null, phyZipcode: null, phone: null, mcs150Outdated: null,
+    driverInsp: null, driverOosInsp: null, driverOosRate: null,
+    vehicleInsp: null, vehicleOosInsp: null, vehicleOosRate: null,
+    hazmatInsp: null, hazmatOosInsp: null, hazmatOosRate: null,
+    crashTotal: null, fatalCrash: null, injCrash: null, towawayCrash: null,
     errors: ["Carrier not found for this MC number"],
   };
 }
@@ -261,6 +305,10 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     phyZipcode: null,
     phone: null,
     mcs150Outdated: null,
+    driverInsp: null, driverOosInsp: null, driverOosRate: null,
+    vehicleInsp: null, vehicleOosInsp: null, vehicleOosRate: null,
+    hazmatInsp: null, hazmatOosInsp: null, hazmatOosRate: null,
+    crashTotal: null, fatalCrash: null, injCrash: null, towawayCrash: null,
     errors: ["FMCSA API unavailable - verification failed (fail-safe)", ...debugErrors],
   };
 }

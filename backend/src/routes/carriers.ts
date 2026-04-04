@@ -23,6 +23,7 @@ import { upload } from "../config/upload";
 import { z } from "zod";
 import { vetAndStoreReport, type CarrierVettingReport } from "../services/carrierVettingService";
 import { generateCompassReport } from "../services/compassPdfService";
+import { getFullInspectionData } from "../services/fmcsaInspectionService";
 
 const router = Router();
 
@@ -72,6 +73,26 @@ router.get("/", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), v
 router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
 router.get("/:id/score", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierScore);
 router.get("/:id/vetting-report", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getVettingReport);
+
+// FMCSA Inspection history
+router.get("/:id/inspections", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  try {
+    const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+    if (!carrier.dotNumber) {
+      res.status(400).json({ error: "Carrier has no DOT number" });
+      return;
+    }
+    const data = await getFullInspectionData(carrier.dotNumber);
+    res.json(data);
+  } catch (err) {
+    console.error("[Inspections] Error:", err);
+    res.status(500).json({ error: "Failed to fetch inspection data" });
+  }
+});
 
 // Compass PDF report download
 router.get("/:id/compass-report", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {

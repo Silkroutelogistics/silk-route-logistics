@@ -23,11 +23,14 @@ import { crossReferenceCarrier } from "./crossReferenceService";
 
 export type CheckResult = "PASS" | "FAIL" | "WARNING";
 
+export type DataSource = "LIVE" | "DB" | "SELF";
+
 export interface VettingCheck {
   name: string;
   result: CheckResult;
   detail: string;
   deduction: number;
+  source?: DataSource;
 }
 
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
