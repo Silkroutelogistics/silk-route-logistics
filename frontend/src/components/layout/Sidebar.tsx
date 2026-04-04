@@ -221,6 +221,7 @@ export function Sidebar() {
   // Close sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
+    setShowNotifDropdown(false);
   }, [pathname]);
 
   const toggleGroup = useCallback(
@@ -240,10 +241,26 @@ export function Sidebar() {
   });
   const unreadCount = unreadData?.count || 0;
 
-  const handleBellClick = useCallback(() => {
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+
+  const { data: recentNotifs } = useQuery({
+    queryKey: ["recent-notifications"],
+    queryFn: () => api.get("/notifications?limit=8").then((r) => r.data),
+    enabled: showNotifDropdown,
+  });
+
+  const handleMarkAllRead = useCallback(() => {
     api.patch("/notifications/read-all").then(() => {
       queryClient.invalidateQueries({ queryKey: ["unread-count"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-notifications"] });
+    }).catch(() => {});
+  }, [queryClient]);
+
+  const handleMarkOneRead = useCallback((notifId: string) => {
+    api.patch(`/notifications/${notifId}/read`).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-notifications"] });
     }).catch(() => {});
   }, [queryClient]);
 
@@ -439,28 +456,49 @@ export function Sidebar() {
                     : user.role?.toLowerCase()}
                 </p>
               </div>
-              {unreadCount > 0 && (
+              <div className="relative">
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleBellClick(); }}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-gold/20 rounded-full hover:bg-gold/30 transition cursor-pointer"
-                  title="Mark all as read"
+                  onClick={(e) => { e.stopPropagation(); setShowNotifDropdown((p) => !p); }}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-white/10 rounded-full hover:bg-white/20 transition cursor-pointer"
+                  title="Notifications"
                 >
-                  <Bell className="w-3 h-3 text-gold" />
-                  <span className="text-[10px] font-bold text-gold">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                  <Bell className={`w-3 h-3 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
+                  {unreadCount > 0 && <span className="text-[10px] font-bold text-gold">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                 </button>
-              )}
+                {showNotifDropdown && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-[#0c1829] border border-[#1a2d47] rounded-xl shadow-2xl z-50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#1a2d47] flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button onClick={handleMarkAllRead} className="text-[10px] text-gold hover:text-gold/80 cursor-pointer">Mark all read</button>
+                      )}
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {Array.isArray(recentNotifs) && recentNotifs.length > 0 ? recentNotifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
+                        <button key={n.id} onClick={() => { handleMarkOneRead(n.id); if (n.actionUrl) router.push(n.actionUrl); setShowNotifDropdown(false); }}
+                          className={`w-full text-left px-3 py-2.5 border-b border-[#1a2d47]/50 hover:bg-white/5 transition cursor-pointer ${!n.readAt ? "bg-gold/[0.03]" : ""}`}>
+                          <p className={`text-xs font-medium ${!n.readAt ? "text-white" : "text-slate-400"}`}>{n.title}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                          <p className="text-[9px] text-slate-600 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                        </button>
+                      )) : (
+                        <div className="px-3 py-6 text-center text-xs text-slate-500">No notifications</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-1">
-              {unreadCount > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleBellClick(); }}
-                  className="flex items-center justify-center w-full py-1 bg-gold/20 rounded hover:bg-gold/30 transition cursor-pointer"
-                  title="Mark all as read"
-                >
-                  <Bell className="w-3.5 h-3.5 text-gold" />
-                </button>
-              )}
+            <div className="flex flex-col items-center gap-1 relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowNotifDropdown((p) => !p); }}
+                className="flex items-center justify-center w-full py-1 bg-white/10 rounded hover:bg-white/20 transition cursor-pointer relative"
+                title="Notifications"
+              >
+                <Bell className={`w-3.5 h-3.5 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
+                {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-gold rounded-full text-[7px] text-navy font-bold flex items-center justify-center">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+              </button>
             </div>
           )}
         </div>
