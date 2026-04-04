@@ -6,11 +6,11 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
 import {
-  Plus, Search, MapPin, Truck, Calendar, DollarSign, Download, Package,
+  Search, MapPin, Truck, Calendar, DollarSign, Download, Package,
   Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight,
-  ClipboardCheck, Globe, Info, Clock, AlertTriangle,
+  ClipboardCheck, Globe, Info, Clock, AlertTriangle, Trash2,
 } from "lucide-react";
-import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
+
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
@@ -131,7 +131,6 @@ export default function LoadsPage() {
   const queryClient = useQueryClient();
 
   /* ---- UI state ---- */
-  const [showCreate, setShowCreate] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   const [filters, setFilters] = useState({ originState: "", destState: "", equipmentType: "", status: "", search: "" });
   const [page, setPage] = useState(1);
@@ -403,14 +402,6 @@ export default function LoadsPage() {
           <h1 className="text-2xl font-bold text-white">Load Board</h1>
           <p className="text-slate-400 text-sm mt-1">{data?.total || 0} loads available</p>
         </div>
-        {canCreate && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90"
-          >
-            <Plus className="w-4 h-4" /> Create Load
-          </button>
-        )}
       </div>
 
       {/* ---- UPGRADE 1: Status Tabs ---- */}
@@ -536,14 +527,6 @@ export default function LoadsPage() {
               <p className="text-sm text-slate-400 mb-4 max-w-sm">
                 Adjust your filters or create a new load to get started.
               </p>
-              {canCreate && (
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium"
-                >
-                  Create Load
-                </button>
-              )}
             </div>
           )}
 
@@ -570,9 +553,9 @@ export default function LoadsPage() {
 
         {/* ---- UPGRADE 3: Slide-out Detail Panel ---- */}
         {selectedLoadId && load && (
-          <div className="w-[55%] shrink-0 ml-4 bg-white/[0.03] border border-white/10 rounded-xl flex overflow-hidden max-h-[calc(100vh-200px)]">
+          <div className="w-[55%] shrink-0 ml-4 bg-white/[0.03] border border-white/10 rounded-xl flex overflow-hidden sticky top-0 h-[calc(100vh-4rem)]">
             {/* Vertical icon strip */}
-            <div className="w-12 shrink-0 bg-white/5 border-r border-white/10 flex flex-col items-center py-2 gap-1">
+            <div className="w-12 shrink-0 bg-[#111d30] border-r border-[#1a2d47] flex flex-col items-center py-2 gap-1">
               {PANEL_TABS.map((t) => (
                 <button
                   key={t.key}
@@ -676,6 +659,38 @@ export default function LoadsPage() {
                         <X className="w-3 h-3 inline mr-1" />DAT
                       </button>
                     )}
+                    {/* Cancel Load */}
+                    {canCreate && ["POSTED", "BOOKED", "DISPATCHED"].includes(load.status) && (
+                      <button onClick={() => {
+                        if (confirm("Cancel this load? This will notify the carrier and reverse any credit holds.")) {
+                          updateStatus.mutate({ loadId: load.id, status: "CANCELLED" });
+                        }
+                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 text-red-400 rounded text-xs hover:bg-red-500/20">
+                        <X className="w-3 h-3" /> Cancel
+                      </button>
+                    )}
+                    {/* TONU */}
+                    {canCreate && ["BOOKED", "DISPATCHED"].includes(load.status) && (
+                      <button onClick={() => {
+                        if (confirm("Mark as TONU (Truck Ordered Not Used)?")) {
+                          updateStatus.mutate({ loadId: load.id, status: "TONU" });
+                        }
+                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-500/10 text-orange-400 rounded text-xs hover:bg-orange-500/20">
+                        <AlertTriangle className="w-3 h-3" /> TONU
+                      </button>
+                    )}
+                    {/* Delete */}
+                    {["DRAFT", "CANCELLED", "TONU"].includes(load.status) && canCreate && (
+                      <button onClick={async () => {
+                        if (confirm("Permanently delete this load?")) {
+                          await api.delete(`/loads/${load.id}`);
+                          queryClient.invalidateQueries({ queryKey: ["loads"] });
+                          setSelectedLoadId(null);
+                        }
+                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30">
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </button>
+                    )}
                     {/* Carrier actions */}
                     {isCarrier(user?.role) && load.carrier?.firstName === user?.firstName && (
                       <CarrierActions load={load} carrierUpdateStatus={carrierUpdateStatus} />
@@ -699,8 +714,6 @@ export default function LoadsPage() {
       </div>
 
       {/* ---- Modals / Drawers ---- */}
-      <CreateLoadModal open={showCreate} onClose={() => setShowCreate(false)} />
-
       {load && (
         <>
           {/* Tender drawer */}
