@@ -31,6 +31,11 @@ export const carrierRegisterSchema = z.object({
   additionalInsuredSRL: z.boolean().optional(),
   waiverOfSubrogation: z.boolean().optional(),
   thirtyDayCancellationNotice: z.boolean().optional(),
+  // Insurance Agent Contact
+  insuranceAgentName: z.string().optional(),
+  insuranceAgentEmail: z.string().email().optional().or(z.literal("")),
+  insuranceAgentPhone: z.string().optional(),
+  insuranceAgencyName: z.string().optional(),
 });
 
 export const verifyCarrierSchema = z.object({

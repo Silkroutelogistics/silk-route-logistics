@@ -55,6 +55,11 @@ interface CarrierFormData {
   additionalInsuredSRL: boolean;
   waiverOfSubrogation: boolean;
   thirtyDayCancellationNotice: boolean;
+  // Insurance agent contact
+  insuranceAgentName: string;
+  insuranceAgentEmail: string;
+  insuranceAgentPhone: string;
+  insuranceAgencyName: string;
 }
 
 export default function OnboardingPage() {
@@ -80,6 +85,10 @@ export default function OnboardingPage() {
     additionalInsuredSRL: false,
     waiverOfSubrogation: false,
     thirtyDayCancellationNotice: false,
+    insuranceAgentName: "",
+    insuranceAgentEmail: "",
+    insuranceAgentPhone: "",
+    insuranceAgencyName: "",
   });
 
   const [fmcsaResult, setFmcsaResult] = useState<FmcsaResult | null>(null);
@@ -191,6 +200,10 @@ export default function OnboardingPage() {
       insurancePayload.additionalInsuredSRL = additionalInsuredSRL;
       insurancePayload.waiverOfSubrogation = waiverOfSubrogation;
       insurancePayload.thirtyDayCancellationNotice = thirtyDayCancellationNotice;
+      if (form.insuranceAgentName) insurancePayload.insuranceAgentName = form.insuranceAgentName;
+      if (form.insuranceAgentEmail) insurancePayload.insuranceAgentEmail = form.insuranceAgentEmail;
+      if (form.insuranceAgentPhone) insurancePayload.insuranceAgentPhone = form.insuranceAgentPhone;
+      if (form.insuranceAgencyName) insurancePayload.insuranceAgencyName = form.insuranceAgencyName;
       const res = await fetch(`${apiUrl}/carrier/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -640,6 +653,21 @@ export default function OnboardingPage() {
                       className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
                     <span className="text-xs text-slate-700">30-day cancellation notice provision included</span>
                   </label>
+                </div>
+
+                {/* Insurance Agent Contact */}
+                <div className="pt-3 border-t border-slate-200 mt-3">
+                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-3">Insurance Agent Contact (for verification)</h4>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <input placeholder="Agent Name" value={form.insuranceAgentName} onChange={(e) => set("insuranceAgentName", e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Agent Email" type="email" value={form.insuranceAgentEmail} onChange={(e) => set("insuranceAgentEmail", e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Agent Phone" value={form.insuranceAgentPhone} onChange={(e) => set("insuranceAgentPhone", e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <input placeholder="Agency Name" value={form.insuranceAgencyName} onChange={(e) => set("insuranceAgencyName", e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
                 </div>
               </div>
 

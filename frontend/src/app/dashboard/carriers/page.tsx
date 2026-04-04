@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import {
   Search, Shield, Truck, MapPin, Star, CheckCircle2, Clock, AlertCircle, X,
-  ChevronDown, ChevronUp, MessageSquare, FileText, Users, Phone, Mail, Building2,
+  MessageSquare, FileText, Users, Phone, Mail, Building2,
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
+  User, CheckSquare, ClipboardList,
 } from "lucide-react";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 
@@ -76,6 +77,10 @@ interface Carrier {
   additionalInsuredSRL?: boolean;
   waiverOfSubrogation?: boolean;
   thirtyDayCancellationNotice?: boolean;
+  insuranceAgentName?: string | null;
+  insuranceAgentEmail?: string | null;
+  insuranceAgentPhone?: string | null;
+  insuranceAgencyName?: string | null;
 }
 
 interface CompassCheck {
@@ -193,6 +198,44 @@ function insuranceBadge(expiry: string | null) {
   return <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">Valid ({days}d)</span>;
 }
 
+function InsuranceBlock({ title, provider, policy, amount, expiry }: {
+  title: string; provider?: string | null; policy?: string | null; amount?: number | null; expiry?: string | null;
+}) {
+  const days = daysUntil(expiry);
+  const hasData = provider || policy || amount || expiry;
+  return (
+    <div className="bg-white/5 rounded-lg p-4">
+      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{title}</h4>
+      {hasData ? (
+        <div className="space-y-0.5">
+          <InfoRow label="Provider" value={provider || "—"} />
+          <InfoRow label="Policy" value={policy || "—"} />
+          <InfoRow label="Amount" value={amount ? `$${Number(amount).toLocaleString()}` : "—"} />
+          <div className="flex justify-between py-1.5 border-b border-white/5 last:border-0">
+            <span className="text-xs text-slate-500">Expiry</span>
+            <span className={`text-xs font-medium ${expiryColor(expiry)}`}>
+              {formatExpiry(expiry)} {days !== null && days >= 0 ? `(${days} days)` : days !== null ? "(Expired)" : ""}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <span className="text-xs text-red-400">Not on file</span>
+      )}
+    </div>
+  );
+}
+
+function ComplianceRow({ label, status }: { label: string; status: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+      <span className="text-xs text-slate-400">{label}</span>
+      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${status ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+        {status ? "Active" : "Not Verified"}
+      </span>
+    </div>
+  );
+}
+
 export default function CarrierPoolPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -201,7 +244,8 @@ export default function CarrierPoolPage() {
   const [tierFilter, setTierFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
+  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editForm, setEditForm] = useState({
     safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "",
@@ -210,6 +254,7 @@ export default function CarrierPoolPage() {
     generalLiabilityProvider: "", generalLiabilityAmount: "", generalLiabilityPolicy: "", generalLiabilityExpiry: "",
     workersCompProvider: "", workersCompAmount: "", workersCompPolicy: "", workersCompExpiry: "",
     additionalInsuredSRL: false, waiverOfSubrogation: false, thirtyDayCancellationNotice: false,
+    insuranceAgentName: "", insuranceAgentEmail: "", insuranceAgentPhone: "", insuranceAgencyName: "",
   });
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
@@ -265,6 +310,18 @@ export default function CarrierPoolPage() {
   const expiringSoon = carriers.filter((c) => { const d = daysUntil(c.insuranceExpiry); return d !== null && d >= 0 && d <= 30; }).length;
   const pendingOnboard = carriers.filter((c) => c.onboardingStatus !== "APPROVED").length;
 
+  const selectedCarrier = carriers.find((c) => c.id === selectedCarrierId) || null;
+
+  // ESC to close panel
+  const closePanel = useCallback(() => { setSelectedCarrierId(null); }, []);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") closePanel(); };
+    if (selectedCarrierId) {
+      document.addEventListener("keydown", h);
+      return () => document.removeEventListener("keydown", h);
+    }
+  }, [selectedCarrierId, closePanel]);
+
   function openEdit(c: Carrier) {
     setEditingCarrier(c);
     setEditForm({
@@ -291,6 +348,10 @@ export default function CarrierPoolPage() {
       additionalInsuredSRL: c.additionalInsuredSRL ?? false,
       waiverOfSubrogation: c.waiverOfSubrogation ?? false,
       thirtyDayCancellationNotice: c.thirtyDayCancellationNotice ?? false,
+      insuranceAgentName: c.insuranceAgentName || "",
+      insuranceAgentEmail: c.insuranceAgentEmail || "",
+      insuranceAgentPhone: c.insuranceAgentPhone || "",
+      insuranceAgencyName: c.insuranceAgencyName || "",
     });
   }
 
@@ -455,368 +516,523 @@ export default function CarrierPoolPage() {
         </select>
       </div>
 
-      {/* Carrier List */}
-      <div className="space-y-3">
-        {filtered.map((carrier) => (
-          <div key={carrier.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-            <button onClick={() => setExpanded(expanded === carrier.id ? null : carrier.id)}
-              className="w-full text-left p-5 hover:bg-white/5 transition">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center shrink-0">
-                    <Truck className="w-6 h-6 text-gold" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <p className="font-semibold text-white">{carrier.company}</p>
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
-                      {carrier.lastVettingScore != null && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-1">
-                          <Compass className="w-3 h-3" /> {carrier.lastVettingScore}
-                        </span>
-                      )}
-                      {compassCarrierId === carrier.id && compassResult && !carrier.lastVettingScore && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-1">
-                          <Compass className="w-3 h-3" /> {compassResult.score}
-                        </span>
-                      )}
-                      <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-slate-400"}`}>
-                        {carrier.onboardingStatus.replace(/_/g, " ")}
+      {/* Carrier List + Slide Panel Layout */}
+      <div className="flex gap-0 relative">
+        {/* LEFT: Carrier List */}
+        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "w-[40%] min-w-[340px]" : "w-full"}`}>
+          {filtered.map((carrier) => (
+            <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
+              className={`w-full text-left bg-white/5 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-white/10"}`}>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
+                  <Truck className="w-5 h-5 text-gold" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-white text-sm truncate">{carrier.company}</p>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
+                    {carrier.lastVettingScore != null && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-0.5">
+                        <Compass className="w-2.5 h-2.5" /> {carrier.lastVettingScore}
                       </span>
-                      {insuranceBadge(carrier.insuranceExpiry)}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 mt-1.5 text-xs text-slate-400">
-                      <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {carrier.operatingRegions.slice(0, 3).join(", ")}{carrier.operatingRegions.length > 3 ? ` +${carrier.operatingRegions.length - 3}` : ""}</span>
-                      {carrier.numberOfTrucks && <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {carrier.numberOfTrucks} trucks</span>}
-                      {carrier.mcNumber && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{carrier.mcNumber}</span>}
-                    </div>
+                    )}
+                    {compassCarrierId === carrier.id && compassResult && !carrier.lastVettingScore && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-0.5">
+                        <Compass className="w-2.5 h-2.5" /> {compassResult.score}
+                      </span>
+                    )}
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-slate-400"}`}>
+                      {carrier.onboardingStatus.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
+                    {carrier.mcNumber && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{carrier.mcNumber}</span>}
+                    {!selectedCarrier && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {carrier.operatingRegions.slice(0, 3).join(", ")}{carrier.operatingRegions.length > 3 ? ` +${carrier.operatingRegions.length - 3}` : ""}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-6 shrink-0">
-                  <div className="hidden sm:flex items-center gap-6">
+                {!selectedCarrier && (
+                  <div className="hidden sm:flex items-center gap-5 shrink-0">
                     <div className="text-right">
                       <p className="text-sm font-bold text-white">{carrier.completedLoads}</p>
                       <p className="text-[10px] text-slate-500">Loads</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-white">{carrier.acceptanceRate}%</p>
-                      <p className="text-[10px] text-slate-500">Accept Rate</p>
+                      <p className="text-[10px] text-slate-500">Accept</p>
                     </div>
-                    {carrier.safetyScore && (
-                      <div className="text-right">
-                        <p className={`text-sm font-bold ${carrier.safetyScore >= 90 ? "text-green-400" : carrier.safetyScore >= 75 ? "text-yellow-400" : "text-red-400"}`}>
-                          {carrier.safetyScore}%
-                        </p>
-                        <p className="text-[10px] text-slate-500">Safety</p>
-                      </div>
-                    )}
                   </div>
-                  {expanded === carrier.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                </div>
+                )}
               </div>
             </button>
+          ))}
+          {filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Truck className="w-12 h-12 text-slate-300 mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
+              <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
+              <a href="/onboarding" className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Invite Carriers</a>
+            </div>
+          )}
+        </div>
 
-            {expanded === carrier.id && (
-              <div className="border-t border-white/10 p-5 bg-white/[0.02] space-y-5">
-                {/* Three column detail */}
-                <div className="grid md:grid-cols-3 gap-5">
-                  {/* Contact & Company Info */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact Information</h3>
-                    <div className="bg-white/5 rounded-lg p-3 space-y-0.5">
-                      <InfoRow label="Contact" value={carrier.contactName} />
-                      <InfoRow label="Email" value={<a href={`mailto:${carrier.email}`} className="text-gold hover:underline">{carrier.email}</a>} />
-                      <InfoRow label="Phone" value={carrier.phone} />
-                      <InfoRow label="MC Number" value={carrier.mcNumber} />
-                      <InfoRow label="DOT Number" value={carrier.dotNumber} />
-                      <InfoRow label="Location" value={carrier.city && carrier.state ? `${carrier.city}, ${carrier.state} ${carrier.zip || ""}` : null} />
-                      <InfoRow label="Member Since" value={new Date(carrier.createdAt).toLocaleDateString()} />
+        {/* RIGHT: Slide Panel */}
+        {selectedCarrier && (
+          <div className="w-[60%] border-l border-[#1a2d47] bg-[#0c1829] rounded-r-xl flex sticky top-0 h-[calc(100vh-12rem)] ml-3 animate-slide-in-right">
+            {/* Vertical Tab Bar */}
+            <div className="w-[44px] shrink-0 border-r border-[#1a2d47] flex flex-col py-2">
+              {([
+                { key: "profile", icon: User, label: "Profile" },
+                { key: "insurance", icon: Shield, label: "Insurance" },
+                { key: "compliance", icon: CheckSquare, label: "Compliance" },
+                { key: "compass", icon: Compass, label: "Compass" },
+                { key: "inspections", icon: ClipboardList, label: "Inspections" },
+                { key: "performance", icon: BarChart3, label: "Performance" },
+                { key: "history", icon: Clock, label: "History" },
+              ] as const).map(({ key, icon: Icon, label }) => (
+                <button key={key} onClick={() => setPanelTab(key)} title={label}
+                  className={`w-[44px] h-[40px] flex items-center justify-center relative transition ${panelTab === key ? "text-[#C9A84C]" : "text-slate-400 hover:text-slate-200"}`}>
+                  {panelTab === key && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#C9A84C] rounded-r" />}
+                  <Icon className="w-[18px] h-[18px]" />
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Panel Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1a2d47] shrink-0">
+                <h2 className="text-sm font-bold text-white truncate">{selectedCarrier.company}</h2>
+                <button onClick={closePanel} className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-5">
+
+                {/* ===== PROFILE TAB ===== */}
+                {panelTab === "profile" && (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[selectedCarrier.tier] || ""}`}>{selectedCarrier.tier}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[selectedCarrier.onboardingStatus] || "bg-white/10 text-slate-400"}`}>
+                        {selectedCarrier.onboardingStatus.replace(/_/g, " ")}
+                      </span>
+                      {(selectedCarrier.lastVettingScore != null || (compassCarrierId === selectedCarrier.id && compassResult)) && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-1">
+                          <Compass className="w-3 h-3" /> Compass: {selectedCarrier.lastVettingScore ?? compassResult?.score ?? "—"}
+                        </span>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Operations & Equipment */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Operations</h3>
-                    <div className="bg-white/5 rounded-lg p-3 space-y-3">
+                    <div className="bg-white/5 rounded-lg p-4 space-y-0.5">
+                      <InfoRow label="Contact" value={selectedCarrier.contactName} />
+                      <InfoRow label="Email" value={<a href={`mailto:${selectedCarrier.email}`} className="text-gold hover:underline text-xs">{selectedCarrier.email}</a>} />
+                      <InfoRow label="Phone" value={selectedCarrier.phone || "—"} />
+                      <InfoRow label="MC#" value={selectedCarrier.mcNumber ? `MC-${selectedCarrier.mcNumber}` : "—"} />
+                      <InfoRow label="DOT#" value={selectedCarrier.dotNumber || "—"} />
+                      <InfoRow label="Location" value={selectedCarrier.city && selectedCarrier.state ? `${selectedCarrier.city}, ${selectedCarrier.state} ${selectedCarrier.zip || ""}` : "—"} />
+                    </div>
+
+                    <div className="bg-white/5 rounded-lg p-4 space-y-3">
                       <div>
-                        <span className="text-[10px] text-slate-500">Equipment Types</span>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">Equipment</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {carrier.equipmentTypes.map((eq) => (
+                          {selectedCarrier.equipmentTypes.map((eq) => (
                             <span key={eq} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{eq}</span>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500">Operating Regions</span>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">Regions</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {carrier.operatingRegions.map((r) => (
+                          {selectedCarrier.operatingRegions.map((r) => (
                             <span key={r} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{r}</span>
                           ))}
                         </div>
                       </div>
-                      <InfoRow label="Fleet Size" value={carrier.numberOfTrucks ? `${carrier.numberOfTrucks} trucks` : "—"} />
-                      <InfoRow label="Insurance Expiry" value={carrier.insuranceExpiry ? new Date(carrier.insuranceExpiry).toLocaleDateString() : "—"} />
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="text-[10px] text-slate-500">Documents:</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${carrier.w9Uploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>W9</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${carrier.insuranceCertUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>Insurance</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${carrier.authorityDocUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>Authority</span>
-                      </div>
+                      <InfoRow label="Fleet" value={selectedCarrier.numberOfTrucks ? `${selectedCarrier.numberOfTrucks} trucks` : "—"} />
                     </div>
-                  </div>
 
-                  {/* Performance Metrics */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Performance</h3>
-                    <div className="bg-white/5 rounded-lg p-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="text-center p-2 bg-white/5 rounded-lg">
-                          <p className="text-lg font-bold text-white">{carrier.completedLoads}</p>
-                          <p className="text-[10px] text-slate-500">Completed</p>
-                        </div>
-                        <div className="text-center p-2 bg-white/5 rounded-lg">
-                          <p className="text-lg font-bold text-blue-400">{carrier.activeLoads}</p>
-                          <p className="text-[10px] text-slate-500">Active</p>
-                        </div>
-                        <div className="text-center p-2 bg-white/5 rounded-lg">
-                          <p className="text-lg font-bold text-green-400">${(carrier.totalRevenue / 1000).toFixed(1)}k</p>
-                          <p className="text-[10px] text-slate-500">Revenue</p>
-                        </div>
-                        <div className="text-center p-2 bg-white/5 rounded-lg">
-                          <p className="text-lg font-bold text-gold">{carrier.acceptanceRate}%</p>
-                          <p className="text-[10px] text-slate-500">Accept Rate</p>
-                        </div>
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        Tenders: {carrier.tendersAccepted} accepted / {carrier.tendersDeclined} declined / {carrier.tendersTotal} total
-                      </div>
-                      {carrier.performance && (
-                        <div className="space-y-2 pt-1">
-                          <PerformanceBar label="On-Time Pickup" value={carrier.performance.onTimePickup} color="bg-green-500" />
-                          <PerformanceBar label="On-Time Delivery" value={carrier.performance.onTimeDelivery} color="bg-blue-500" />
-                          <PerformanceBar label="Communication" value={carrier.performance.communication} color="bg-purple-500" />
-                          <PerformanceBar label="Doc Timeliness" value={carrier.performance.docTimeliness} color="bg-gold" />
-                          <InfoRow label="Claim Ratio" value={`${carrier.performance.claimRatio}%`} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                    <InfoRow label="Member Since" value={new Date(selectedCarrier.createdAt).toLocaleDateString()} />
 
-                {/* Insurance Details Row */}
-                {(carrier.autoLiabilityProvider || carrier.cargoInsuranceProvider || carrier.generalLiabilityProvider || carrier.workersCompProvider) && (
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Insurance Details</h3>
-                    <div className="space-y-2 text-xs">
-                      {carrier.autoLiabilityProvider && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-500 w-24 shrink-0">Auto Liability:</span>
-                          <span className="text-white">{carrier.autoLiabilityProvider}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-slate-300">{carrier.autoLiabilityPolicy || "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-white font-medium">${carrier.autoLiabilityAmount ? Number(carrier.autoLiabilityAmount).toLocaleString() : "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className={`font-medium ${expiryColor(carrier.autoLiabilityExpiry)}`}>Exp: {formatExpiry(carrier.autoLiabilityExpiry)}</span>
-                        </div>
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-white/10">
+                      <a href="/dashboard/messages" className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
+                        <MessageSquare className="w-3.5 h-3.5" /> Message
+                      </a>
+                      <a href="/dashboard/loads" className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
+                        <FileText className="w-3.5 h-3.5" /> Tender Load
+                      </a>
+                      {isAdmin && selectedCarrier.onboardingStatus !== "APPROVED" && (
+                        <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "APPROVED", company: selectedCarrier.company })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                        </button>
                       )}
-                      {carrier.cargoInsuranceProvider && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-500 w-24 shrink-0">Cargo:</span>
-                          <span className="text-white">{carrier.cargoInsuranceProvider}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-slate-300">{carrier.cargoInsurancePolicy || "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-white font-medium">${carrier.cargoInsuranceAmount ? Number(carrier.cargoInsuranceAmount).toLocaleString() : "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className={`font-medium ${expiryColor(carrier.cargoInsuranceExpiry)}`}>Exp: {formatExpiry(carrier.cargoInsuranceExpiry)}</span>
-                        </div>
+                      {isAdmin && selectedCarrier.onboardingStatus !== "REJECTED" && (
+                        <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "REJECTED", company: selectedCarrier.company })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
+                          <AlertCircle className="w-3.5 h-3.5" /> Reject
+                        </button>
                       )}
-                      {carrier.generalLiabilityProvider && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-500 w-24 shrink-0">General Liab:</span>
-                          <span className="text-white">{carrier.generalLiabilityProvider}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-slate-300">{carrier.generalLiabilityPolicy || "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-white font-medium">${carrier.generalLiabilityAmount ? Number(carrier.generalLiabilityAmount).toLocaleString() : "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className={`font-medium ${expiryColor(carrier.generalLiabilityExpiry)}`}>Exp: {formatExpiry(carrier.generalLiabilityExpiry)}</span>
-                        </div>
+                      {isAdmin && (
+                        <button onClick={() => openEdit(selectedCarrier)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
+                          <BarChart3 className="w-3.5 h-3.5" /> Edit Profile
+                        </button>
                       )}
-                      {carrier.workersCompProvider && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-500 w-24 shrink-0">Workers Comp:</span>
-                          <span className="text-white">{carrier.workersCompProvider}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-slate-300">{carrier.workersCompPolicy || "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className="text-white font-medium">${carrier.workersCompAmount ? Number(carrier.workersCompAmount).toLocaleString() : "—"}</span>
-                          <span className="text-slate-500">|</span>
-                          <span className={`font-medium ${expiryColor(carrier.workersCompExpiry)}`}>Exp: {formatExpiry(carrier.workersCompExpiry)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 mt-3 pt-2 border-t border-white/10">
-                      <span className={`text-xs flex items-center gap-1 ${carrier.additionalInsuredSRL ? "text-green-400" : "text-slate-600"}`}>
-                        {carrier.additionalInsuredSRL ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Additional Insured
-                      </span>
-                      <span className={`text-xs flex items-center gap-1 ${carrier.waiverOfSubrogation ? "text-green-400" : "text-slate-600"}`}>
-                        {carrier.waiverOfSubrogation ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Waiver of Subrogation
-                      </span>
-                      <span className={`text-xs flex items-center gap-1 ${carrier.thirtyDayCancellationNotice ? "text-green-400" : "text-slate-600"}`}>
-                        {carrier.thirtyDayCancellationNotice ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} 30-Day Notice
-                      </span>
                     </div>
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
-                  <a href="/dashboard/messages" className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
-                    <MessageSquare className="w-3.5 h-3.5" /> Message
-                  </a>
-                  <a href="/dashboard/loads" className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
-                    <FileText className="w-3.5 h-3.5" /> Tender Load
-                  </a>
-                  {isAdmin && (
-                    <button
-                      onClick={() => runCompass(carrier.id)}
-                      disabled={compassLoading === carrier.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#C9A84C] text-[#C9A84C] rounded-lg text-xs hover:bg-[#C9A84C]/10 transition disabled:opacity-50"
-                    >
-                      {compassLoading === carrier.id ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Shield className="w-3.5 h-3.5" />
-                      )}
-                      {compassLoading === carrier.id ? "Running..." : "Run Compass"}
-                    </button>
-                  )}
-                  {isAdmin && carrier.onboardingStatus !== "APPROVED" && (
-                    <button onClick={() => setConfirmAction({ id: carrier.id, status: "APPROVED", company: carrier.company })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                    </button>
-                  )}
-                  {isAdmin && carrier.onboardingStatus !== "REJECTED" && (
-                    <button onClick={() => setConfirmAction({ id: carrier.id, status: "REJECTED", company: carrier.company })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
-                      <AlertCircle className="w-3.5 h-3.5" /> Reject
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button onClick={() => openEdit(carrier)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
-                      <BarChart3 className="w-3.5 h-3.5" /> Edit Profile
-                    </button>
-                  )}
-                </div>
+                {/* ===== INSURANCE TAB ===== */}
+                {panelTab === "insurance" && (
+                  <div className="space-y-4">
+                    <InsuranceBlock title="AUTO LIABILITY" provider={selectedCarrier.autoLiabilityProvider} policy={selectedCarrier.autoLiabilityPolicy} amount={selectedCarrier.autoLiabilityAmount} expiry={selectedCarrier.autoLiabilityExpiry} />
+                    <InsuranceBlock title="CARGO INSURANCE" provider={selectedCarrier.cargoInsuranceProvider} policy={selectedCarrier.cargoInsurancePolicy} amount={selectedCarrier.cargoInsuranceAmount} expiry={selectedCarrier.cargoInsuranceExpiry} />
+                    <InsuranceBlock title="GENERAL LIABILITY" provider={selectedCarrier.generalLiabilityProvider} policy={selectedCarrier.generalLiabilityPolicy} amount={selectedCarrier.generalLiabilityAmount} expiry={selectedCarrier.generalLiabilityExpiry} />
+                    <InsuranceBlock title="WORKERS COMPENSATION" provider={selectedCarrier.workersCompProvider} policy={selectedCarrier.workersCompPolicy} amount={selectedCarrier.workersCompAmount} expiry={selectedCarrier.workersCompExpiry} />
 
-                {/* Compass Report Inline */}
-                {compassCarrierId === carrier.id && compassResult && (
-                  <div className="mt-4 p-4 bg-white/5 rounded-xl border border-[#C9A84C]/20">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Compass className="w-5 h-5 text-[#C9A84C]" />
-                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Compass Report</h3>
-                      </div>
-                      <button onClick={() => { setCompassResult(null); setCompassCarrierId(null); }} className="text-slate-400 hover:text-white">
-                        <X className="w-4 h-4" />
-                      </button>
+                    <div className="flex items-center gap-4 pt-3 border-t border-white/10">
+                      <span className={`text-xs flex items-center gap-1 ${selectedCarrier.additionalInsuredSRL ? "text-green-400" : "text-slate-600"}`}>
+                        {selectedCarrier.additionalInsuredSRL ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Additional Insured
+                      </span>
+                      <span className={`text-xs flex items-center gap-1 ${selectedCarrier.waiverOfSubrogation ? "text-green-400" : "text-slate-600"}`}>
+                        {selectedCarrier.waiverOfSubrogation ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Waiver of Subrogation
+                      </span>
+                      <span className={`text-xs flex items-center gap-1 ${selectedCarrier.thirtyDayCancellationNotice ? "text-green-400" : "text-slate-600"}`}>
+                        {selectedCarrier.thirtyDayCancellationNotice ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} 30-Day Notice
+                      </span>
                     </div>
 
-                    {/* Score Summary */}
-                    <div className="flex items-center gap-6 mb-4 pb-3 border-b border-white/10">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Score:</span>
-                        <span className="text-xl font-bold text-[#C9A84C]">{compassResult.score}/100</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Grade:</span>
-                        <span className={`text-lg font-bold ${GRADE_COLORS[compassResult.grade] || "text-white"}`}>{compassResult.grade}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Risk:</span>
-                        <span className={`text-sm font-semibold ${RISK_COLORS[compassResult.riskLevel] || "text-white"}`}>{compassResult.riskLevel}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Recommendation:</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                          compassResult.recommendation === "APPROVE" ? "bg-green-500/20 text-green-400" :
-                          compassResult.recommendation === "REVIEW" ? "bg-yellow-500/20 text-yellow-400" :
-                          "bg-red-500/20 text-red-400"
-                        }`}>{compassResult.recommendation}</span>
-                      </div>
-                    </div>
-
-                    {/* Checks Grid */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      {compassResult.checks.map((check, i) => (
-                        <div key={i} className="flex items-start gap-1.5 text-xs">
-                          {check.result === "PASS" ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
-                          ) : check.result === "WARNING" ? (
-                            <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
-                          ) : (
-                            <X className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
-                          )}
-                          <div>
-                            <span className={`font-medium ${
-                              check.result === "PASS" ? "text-slate-300" :
-                              check.result === "WARNING" ? "text-yellow-400" : "text-red-400"
-                            }`}>{check.name}</span>
-                            {check.result !== "PASS" && (
-                              <p className="text-[10px] text-slate-500 mt-0.5">{check.detail}</p>
-                            )}
-                          </div>
+                    {/* Insurance Agent */}
+                    {(selectedCarrier.insuranceAgentName || selectedCarrier.insuranceAgentEmail || selectedCarrier.insuranceAgencyName) && (
+                      <div className="bg-white/5 rounded-lg p-3 mt-2">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Insurance Agent</span>
+                        <div className="flex flex-wrap gap-3 mt-1 text-xs">
+                          {selectedCarrier.insuranceAgentName && <span className="text-white">{selectedCarrier.insuranceAgentName}</span>}
+                          {selectedCarrier.insuranceAgencyName && <span className="text-slate-400">({selectedCarrier.insuranceAgencyName})</span>}
+                          {selectedCarrier.insuranceAgentEmail && <a href={`mailto:${selectedCarrier.insuranceAgentEmail}`} className="text-gold hover:underline">{selectedCarrier.insuranceAgentEmail}</a>}
+                          {selectedCarrier.insuranceAgentPhone && <span className="text-slate-300">{selectedCarrier.insuranceAgentPhone}</span>}
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Flags */}
-                    {compassResult.flags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {compassResult.flags.map((flag, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[10px] font-medium border border-red-500/20">
-                            {flag}
-                          </span>
-                        ))}
                       </div>
                     )}
 
-                    {/* Footer Actions */}
-                    <div className="flex items-center gap-3 pt-2 border-t border-white/10">
-                      <button
-                        onClick={() => runCompass(carrier.id)}
-                        disabled={compassLoading === carrier.id}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition"
-                      >
-                        <RefreshCw className={`w-3 h-3 ${compassLoading === carrier.id ? "animate-spin" : ""}`} /> Re-run
+                    {isAdmin && (
+                      <button onClick={() => openEdit(selectedCarrier)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition mt-2">
+                        <BarChart3 className="w-3.5 h-3.5" /> Edit Insurance
                       </button>
-                      <button
-                        onClick={() => downloadCompassPdf(carrier.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition"
-                      >
-                        <Download className="w-3 h-3" /> Download Report
-                      </button>
-                      <span className="text-[10px] text-slate-600">
-                        Vetted: {new Date(compassResult.vettedAt).toLocaleString()}
-                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* ===== COMPLIANCE TAB ===== */}
+                {panelTab === "compliance" && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Compliance Status</h3>
+                    <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                      <ComplianceRow label="IRP Registration" status={selectedCarrier.onboardingStatus === "APPROVED"} />
+                      <ComplianceRow label="IFTA Decal" status={selectedCarrier.onboardingStatus === "APPROVED"} />
+                      <ComplianceRow label="BOC-3 Filing" status={selectedCarrier.onboardingStatus === "APPROVED"} />
+                      <ComplianceRow label="MCS-150 (Biennial Update)" status={selectedCarrier.dotNumber !== null} />
+                      <ComplianceRow label="UCR Registration" status={selectedCarrier.onboardingStatus === "APPROVED"} />
+                    </div>
+
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Document Completeness</h3>
+                    <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                      <div className="flex items-center justify-between py-1 border-b border-white/5">
+                        <span className="text-xs text-slate-400">W-9</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.w9Uploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                          {selectedCarrier.w9Uploaded ? "Uploaded" : "Missing"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-white/5">
+                        <span className="text-xs text-slate-400">Insurance Certificate</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.insuranceCertUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                          {selectedCarrier.insuranceCertUploaded ? "Uploaded" : "Missing"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-xs text-slate-400">Operating Authority</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.authorityDocUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                          {selectedCarrier.authorityDocUploaded ? "Uploaded" : "Missing"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
+
+                {/* ===== COMPASS TAB ===== */}
+                {panelTab === "compass" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      {isAdmin && (
+                        <button onClick={() => runCompass(selectedCarrier.id)} disabled={compassLoading === selectedCarrier.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border border-[#C9A84C] text-[#C9A84C] rounded-lg text-xs hover:bg-[#C9A84C]/10 transition disabled:opacity-50">
+                          {compassLoading === selectedCarrier.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Compass className="w-3.5 h-3.5" />}
+                          {compassLoading === selectedCarrier.id ? "Running..." : "Run Compass"}
+                        </button>
+                      )}
+                      <button onClick={() => downloadCompassPdf(selectedCarrier.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
+                        <Download className="w-3.5 h-3.5" /> Download PDF
+                      </button>
+                    </div>
+
+                    {(compassCarrierId === selectedCarrier.id && compassResult) ? (
+                      <div className="space-y-4">
+                        <div className="bg-white/5 rounded-lg p-4">
+                          <div className="flex items-center gap-6 flex-wrap">
+                            <div>
+                              <span className="text-[10px] text-slate-500 uppercase">Score</span>
+                              <p className="text-2xl font-bold text-[#C9A84C]">{compassResult.score}/100</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-500 uppercase">Grade</span>
+                              <p className={`text-2xl font-bold ${GRADE_COLORS[compassResult.grade] || "text-white"}`}>{compassResult.grade}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-500 uppercase">Risk</span>
+                              <p className={`text-lg font-semibold ${RISK_COLORS[compassResult.riskLevel] || "text-white"}`}>{compassResult.riskLevel}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-500 uppercase">Recommendation</span>
+                              <p className={`px-2 py-0.5 rounded text-xs font-bold mt-1 inline-block ${
+                                compassResult.recommendation === "APPROVE" ? "bg-green-500/20 text-green-400" :
+                                compassResult.recommendation === "REVIEW" ? "bg-yellow-500/20 text-yellow-400" :
+                                "bg-red-500/20 text-red-400"
+                              }`}>{compassResult.recommendation}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {compassResult.checks.map((check, i) => (
+                            <div key={i} className="flex items-start gap-2 text-xs py-1 border-b border-white/5">
+                              {check.result === "PASS" ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
+                              ) : check.result === "WARNING" ? (
+                                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                              ) : (
+                                <X className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                              )}
+                              <div className="flex-1">
+                                <span className={`font-medium ${
+                                  check.result === "PASS" ? "text-slate-300" :
+                                  check.result === "WARNING" ? "text-yellow-400" : "text-red-400"
+                                }`}>{check.name}</span>
+                                {check.detail && <span className="text-slate-500 ml-2">{check.detail}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {compassResult.flags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {compassResult.flags.map((flag, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[10px] font-medium border border-red-500/20">
+                                {flag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                          <button onClick={() => runCompass(selectedCarrier.id)} disabled={compassLoading === selectedCarrier.id}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition">
+                            <RefreshCw className={`w-3 h-3 ${compassLoading === selectedCarrier.id ? "animate-spin" : ""}`} /> Re-run
+                          </button>
+                          <span className="text-[10px] text-slate-600">Vetted: {new Date(compassResult.vettedAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ) : selectedCarrier.lastVettingScore != null ? (
+                      <div className="bg-white/5 rounded-lg p-4">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase">Last Score</span>
+                            <p className="text-2xl font-bold text-[#C9A84C]">{selectedCarrier.lastVettingScore}/100</p>
+                          </div>
+                          {selectedCarrier.lastVettingGrade && (
+                            <div>
+                              <span className="text-[10px] text-slate-500 uppercase">Grade</span>
+                              <p className={`text-2xl font-bold ${GRADE_COLORS[selectedCarrier.lastVettingGrade] || "text-white"}`}>{selectedCarrier.lastVettingGrade}</p>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2">Run Compass to see full check details.</p>
+                      </div>
+                    ) : (
+                      <div className="bg-white/5 rounded-lg p-6 text-center">
+                        <Compass className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                        <p className="text-xs text-slate-500">No Compass report on file. Run Compass to vet this carrier.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ===== INSPECTIONS TAB ===== */}
+                {panelTab === "inspections" && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">FMCSA Inspection Summary</h3>
+                    <div className="bg-white/5 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                        <span className="text-xs text-slate-400">Driver Inspections</span>
+                        <span className="text-xs text-white font-medium">&mdash;</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                        <span className="text-xs text-slate-400">Driver OOS Rate</span>
+                        <span className="text-xs text-slate-500">&mdash; (Nat&apos;l avg: 5.51%)</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1.5 border-b border-white/5">
+                        <span className="text-xs text-slate-400">Vehicle Inspections</span>
+                        <span className="text-xs text-white font-medium">&mdash;</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1.5">
+                        <span className="text-xs text-slate-400">Vehicle OOS Rate</span>
+                        <span className="text-xs text-slate-500">&mdash; (Nat&apos;l avg: 20.72%)</span>
+                      </div>
+                    </div>
+
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Crash History</h3>
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="grid grid-cols-4 gap-3 text-center">
+                        <div><p className="text-lg font-bold text-white">&mdash;</p><p className="text-[10px] text-slate-500">Total</p></div>
+                        <div><p className="text-lg font-bold text-red-400">&mdash;</p><p className="text-[10px] text-slate-500">Fatal</p></div>
+                        <div><p className="text-lg font-bold text-yellow-400">&mdash;</p><p className="text-[10px] text-slate-500">Injury</p></div>
+                        <div><p className="text-lg font-bold text-slate-300">&mdash;</p><p className="text-[10px] text-slate-500">Towaway</p></div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-600">FMCSA data populated after Compass vetting with valid DOT number.</p>
+                  </div>
+                )}
+
+                {/* ===== PERFORMANCE TAB ===== */}
+                {panelTab === "performance" && (
+                  <div className="space-y-4">
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Caravan Tier</h3>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[selectedCarrier.tier] || ""}`}>{selectedCarrier.tier}</span>
+                        <span className="text-slate-500 text-xs">&rarr;</span>
+                        <span className="text-xs text-slate-300">
+                          {selectedCarrier.tier === "BRONZE" ? "SILVER (M3 needed)" :
+                           selectedCarrier.tier === "SILVER" ? "GOLD (M5 needed)" :
+                           selectedCarrier.tier === "GOLD" ? "PLATINUM (M7 needed)" :
+                           selectedCarrier.tier === "PLATINUM" ? "Max tier reached" : "BRONZE (M1 needed)"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        <span>Milestone: M{selectedCarrier.completedLoads >= 50 ? "7" : selectedCarrier.completedLoads >= 25 ? "5" : selectedCarrier.completedLoads >= 10 ? "3" : selectedCarrier.completedLoads >= 1 ? "1" : "0"}</span>
+                        {selectedCarrier.completedLoads < 10 && (
+                          <span className="ml-2 text-slate-500">Progress: {selectedCarrier.completedLoads}/{selectedCarrier.completedLoads < 1 ? "1 load to M1 (First Load)" : "10 loads to M2 (Proven)"}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold text-white">{selectedCarrier.completedLoads}</p>
+                        <p className="text-[10px] text-slate-500">Completed Loads</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold text-blue-400">{selectedCarrier.activeLoads}</p>
+                        <p className="text-[10px] text-slate-500">Active Loads</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold text-green-400">${(selectedCarrier.totalRevenue / 1000).toFixed(1)}k</p>
+                        <p className="text-[10px] text-slate-500">Revenue</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold text-gold">{selectedCarrier.acceptanceRate}%</p>
+                        <p className="text-[10px] text-slate-500">Accept Rate</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-lg p-4 text-xs text-slate-400 space-y-1">
+                      <InfoRow label="Tenders Accepted" value={selectedCarrier.tendersAccepted} />
+                      <InfoRow label="Tenders Declined" value={selectedCarrier.tendersDeclined} />
+                      <InfoRow label="Total Tenders" value={selectedCarrier.tendersTotal} />
+                    </div>
+
+                    {selectedCarrier.performance ? (
+                      <div className="bg-white/5 rounded-lg p-4 space-y-3">
+                        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Performance Scores</h3>
+                        <PerformanceBar label="On-Time Pickup" value={selectedCarrier.performance.onTimePickup} color="bg-green-500" />
+                        <PerformanceBar label="On-Time Delivery" value={selectedCarrier.performance.onTimeDelivery} color="bg-blue-500" />
+                        <PerformanceBar label="Communication" value={selectedCarrier.performance.communication} color="bg-purple-500" />
+                        <PerformanceBar label="Doc Timeliness" value={selectedCarrier.performance.docTimeliness} color="bg-gold" />
+                        <InfoRow label="Claim Ratio" value={`${selectedCarrier.performance.claimRatio}%`} />
+                      </div>
+                    ) : (
+                      <div className="bg-white/5 rounded-lg p-4 text-center">
+                        <p className="text-xs text-slate-500">On-Time: —% | Avg Transit: — days</p>
+                        <p className="text-[10px] text-slate-600 mt-1">Performance data available after completing loads.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ===== HISTORY TAB ===== */}
+                {panelTab === "history" && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Compass Reports</h3>
+                    {compassCarrierId === selectedCarrier.id && compassResult ? (
+                      <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                        <div className="flex items-start gap-2 text-xs">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-1.5 shrink-0" />
+                          <div>
+                            <span className="text-white">{new Date(compassResult.vettedAt).toLocaleString()}</span>
+                            <span className="text-slate-500 ml-2">Score: {compassResult.score}/100, Grade {compassResult.grade}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : selectedCarrier.lastVettingScore != null ? (
+                      <div className="bg-white/5 rounded-lg p-4">
+                        <div className="flex items-start gap-2 text-xs">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-1.5 shrink-0" />
+                          <span className="text-white">Last Score: {selectedCarrier.lastVettingScore}/100{selectedCarrier.lastVettingGrade ? `, Grade ${selectedCarrier.lastVettingGrade}` : ""}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white/5 rounded-lg p-4 text-center">
+                        <p className="text-xs text-slate-500">No Compass reports on file.</p>
+                      </div>
+                    )}
+
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Changes</h3>
+                    <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                      <div className="flex items-start gap-2 text-xs">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                        <div>
+                          <span className="text-white">{new Date(selectedCarrier.createdAt).toLocaleDateString()}</span>
+                          <span className="text-slate-500 ml-2">Registered ({selectedCarrier.onboardingStatus.replace(/_/g, " ")})</span>
+                        </div>
+                      </div>
+                      {selectedCarrier.approvedAt && (
+                        <div className="flex items-start gap-2 text-xs">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 shrink-0" />
+                          <div>
+                            <span className="text-white">{new Date(selectedCarrier.approvedAt).toLocaleDateString()}</span>
+                            <span className="text-slate-500 ml-2">Approved</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tender History</h3>
+                    <div className="bg-white/5 rounded-lg p-4">
+                      {selectedCarrier.tendersTotal > 0 ? (
+                        <p className="text-xs text-slate-400">{selectedCarrier.tendersTotal} total tenders | {selectedCarrier.tendersAccepted} accepted | {selectedCarrier.tendersDeclined} declined</p>
+                      ) : (
+                        <p className="text-xs text-slate-500 text-center">No tender history.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               </div>
-            )}
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Truck className="w-12 h-12 text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
-            <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
-            <a href="/onboarding" className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Invite Carriers</a>
+            </div>
           </div>
         )}
       </div>
@@ -925,6 +1141,21 @@ export default function CarrierPoolPage() {
                       className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
                     <span className="text-xs text-gray-700">30-day cancellation notice</span>
                   </label>
+                </div>
+
+                {/* Insurance Agent Contact */}
+                <div className="pt-3 border-t border-gray-100 mt-2">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Insurance Agent Contact</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input placeholder="Agent Name" value={editForm.insuranceAgentName} onChange={(e) => setEditForm({ ...editForm, insuranceAgentName: e.target.value })}
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    <input placeholder="Agent Email" type="email" value={editForm.insuranceAgentEmail} onChange={(e) => setEditForm({ ...editForm, insuranceAgentEmail: e.target.value })}
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    <input placeholder="Agent Phone" value={editForm.insuranceAgentPhone} onChange={(e) => setEditForm({ ...editForm, insuranceAgentPhone: e.target.value })}
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    <input placeholder="Agency Name" value={editForm.insuranceAgencyName} onChange={(e) => setEditForm({ ...editForm, insuranceAgencyName: e.target.value })}
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  </div>
                 </div>
               </div>
 

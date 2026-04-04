@@ -1036,7 +1036,8 @@ export async function vetAndStoreReport(
   dotNumber: string,
   carrierId?: string,
   mcNumber?: string,
-  triggeredBy: string = "USER"
+  triggeredBy: string = "USER",
+  triggeredByUserId?: string
 ): Promise<CarrierVettingReport> {
   const report = await vetCarrier(dotNumber, mcNumber);
 
@@ -1071,6 +1072,7 @@ export async function vetAndStoreReport(
         scoreDelta: report.scoreDelta,
         trendDirection: report.trendDirection,
         triggeredBy,
+        triggeredByUserId: triggeredByUserId || undefined,
         vettingType: "FULL",
       },
     });

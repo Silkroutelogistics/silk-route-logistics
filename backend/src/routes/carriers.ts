@@ -7,7 +7,7 @@ import {
   vetCarrierEndpoint, getVettingReport, runFullVetting,
   runIdentityCheckEndpoint, getIdentityStatus,
   runChameleonCheckEndpoint, getChameleonMatches, reviewChameleonMatch,
-  getVettingHistory, grantGracePeriodEndpoint,
+  getVettingHistory, getCompassHistory, grantGracePeriodEndpoint,
   runOfacScreen, runFacialVerify, runEldValidation, runTinVerify,
   getFraudReports, fileFraudReport, reviewFraudReport, respondToFraudReport,
   getCarrierAgreements, createAgreement, signAgreement,
@@ -24,6 +24,7 @@ import { z } from "zod";
 import { vetAndStoreReport, type CarrierVettingReport } from "../services/carrierVettingService";
 import { generateCompassReport } from "../services/compassPdfService";
 import { getFullInspectionData } from "../services/fmcsaInspectionService";
+import { extractCOIData } from "../services/coiReaderService";
 
 const router = Router();
 
@@ -163,6 +164,52 @@ router.get("/:id/compass-report", authorize("ADMIN", "CEO", "BROKER", "OPERATION
   }
 });
 
+// AI COI Reader — upload COI file and extract structured insurance data
+router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), upload.single("file"), async (req: AuthRequest, res: Response) => {
+  try {
+    const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "No file uploaded. Send a COI file as multipart/form-data with field name 'file'." });
+      return;
+    }
+
+    const extracted = await extractCOIData(file.buffer, file.mimetype);
+
+    // If user confirms (query param ?apply=true), auto-populate carrier insurance fields
+    if (req.query.apply === "true") {
+      const updateData: Record<string, unknown> = {};
+      if (extracted.insurerName) updateData.insuranceCompany = extracted.insurerName;
+      if (extracted.policyNumber) updateData.insurancePolicyNumber = extracted.policyNumber;
+      if (extracted.expirationDate) updateData.insuranceExpiry = new Date(extracted.expirationDate);
+      if (extracted.generalLiability?.perOccurrence) updateData.generalLiabilityAmount = extracted.generalLiability.perOccurrence;
+      if (extracted.autoLiability?.combinedSingleLimit) updateData.autoLiabilityAmount = extracted.autoLiability.combinedSingleLimit;
+      if (extracted.cargoInsurance?.perOccurrence) updateData.cargoInsuranceAmount = extracted.cargoInsurance.perOccurrence;
+      if (extracted.workersComp?.perAccident) updateData.workersCompAmount = extracted.workersComp.perAccident;
+      if (extracted.additionalInsured) updateData.additionalInsuredSRL = true;
+      if (extracted.waiverOfSubrogation) updateData.waiverOfSubrogation = true;
+      if (extracted.agentName) updateData.insuranceAgentName = extracted.agentName;
+      if (extracted.agentEmail) updateData.insuranceAgentEmail = extracted.agentEmail;
+      if (extracted.agentPhone) updateData.insuranceAgentPhone = extracted.agentPhone;
+      if (extracted.agencyName) updateData.insuranceAgencyName = extracted.agencyName;
+
+      if (Object.keys(updateData).length > 0) {
+        await prisma.carrierProfile.update({ where: { id: carrier.id }, data: updateData });
+      }
+    }
+
+    res.json({ extracted, carrierId: carrier.id });
+  } catch (err) {
+    console.error("[COI Reader] Error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "COI reading failed" });
+  }
+});
+
 router.put("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
 
 // Full vetting — runs all checks in one call
@@ -174,6 +221,7 @@ router.get("/:id/identity", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), g
 router.post("/:id/chameleon-check", authorize("ADMIN", "CEO", "OPERATIONS"), runChameleonCheckEndpoint);
 router.get("/:id/chameleon-matches", authorize("ADMIN", "CEO", "OPERATIONS"), getChameleonMatches);
 router.get("/:id/vetting-history", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getVettingHistory);
+router.get("/:id/compass-history", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getCompassHistory);
 router.post("/:id/grace-period", authorize("ADMIN", "OPERATIONS"), grantGracePeriodEndpoint);
 
 // Phase A: OFAC, biometric, ELD, TIN

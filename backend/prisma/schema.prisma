@@ -702,6 +702,7 @@ model User {
   fraudReports        FraudReport[]        @relation("FraudReporter")
   contractRates       ContractRate[]       @relation("ContractRateCreator")
   rfpBids             RfpBid[]             @relation("RfpCreator")
+  vettingReports      VettingReport[]      @relation("VettingReportUser")
 
   @@index([email])
   @@index([role])
@@ -768,6 +769,12 @@ model CarrierProfile {
   additionalInsuredSRL     Boolean   @default(false)
   waiverOfSubrogation      Boolean   @default(false)
   thirtyDayCancellationNotice Boolean @default(false)
+
+  // Insurance Agent Contact
+  insuranceAgentName   String?
+  insuranceAgentEmail  String?
+  insuranceAgentPhone  String?
+  insuranceAgencyName  String?
 
   // Payment preferences
   paymentPreference     PaymentTier?
@@ -2164,6 +2171,8 @@ model VettingReport {
   trendDirection  String?   // IMPROVING, STABLE, DECLINING
 
   triggeredBy     String?   // USER, CRON, REGISTRATION
+  triggeredByUserId String?
+  triggeredByUser   User?   @relation("VettingReportUser", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
   vettingType     String    @default("FULL") // FULL, FMCSA_ONLY, IDENTITY_ONLY
 
   createdAt       DateTime  @default(now())

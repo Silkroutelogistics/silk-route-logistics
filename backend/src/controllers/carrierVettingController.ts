@@ -44,7 +44,7 @@ export async function runFullVetting(req: AuthRequest, res: Response) {
   // 1. FMCSA Vetting (requires DOT number)
   if (carrier.dotNumber) {
     try {
-      const report = await vetAndStoreReport(carrier.dotNumber, carrierId, carrier.mcNumber || undefined);
+      const report = await vetAndStoreReport(carrier.dotNumber, carrierId, carrier.mcNumber || undefined, "USER", req.user?.id);
       results.fmcsa = { status: "completed", data: { grade: report.grade, score: report.score, riskLevel: report.riskLevel, recommendation: report.recommendation, operatingStatus: report.fmcsaData.operatingStatus, checks: report.checks, flags: report.flags } };
     } catch (err) {
       results.fmcsa = { status: "error", error: err instanceof Error ? err.message : "FMCSA vetting failed" };
@@ -139,7 +139,7 @@ export async function vetCarrierEndpoint(req: AuthRequest, res: Response) {
   }
 
   try {
-    const report = await vetAndStoreReport(dotNumber, carrierId, mcNumber);
+    const report = await vetAndStoreReport(dotNumber, carrierId, mcNumber, "USER", req.user?.id);
     res.json(report);
   } catch (err) {
     console.error("[CarrierVetting] Error vetting carrier:", err);
@@ -264,6 +264,7 @@ export async function getVettingHistory(req: AuthRequest, res: Response) {
     where: { carrierId: req.params.id },
     orderBy: { createdAt: "desc" },
     take: 20,
+    include: { triggeredByUser: { select: { firstName: true, lastName: true } } },
   });
 
   // Calculate trend from scores
@@ -283,6 +284,30 @@ export async function getVettingHistory(req: AuthRequest, res: Response) {
     historicalScores: scores,
     trendDirection,
   });
+}
+
+/**
+ * GET /api/carriers/:id/compass-history
+ * Returns array of past vetting reports with user info for audit trail.
+ */
+export async function getCompassHistory(req: AuthRequest, res: Response) {
+  const reports = await prisma.vettingReport.findMany({
+    where: { carrierId: req.params.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      score: true,
+      grade: true,
+      riskLevel: true,
+      recommendation: true,
+      triggeredBy: true,
+      triggeredByUser: { select: { firstName: true, lastName: true } },
+      createdAt: true,
+    },
+    take: 50,
+  });
+
+  res.json({ reports });
 }
 
 /**
