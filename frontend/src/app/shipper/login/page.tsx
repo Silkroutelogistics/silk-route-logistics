@@ -114,7 +114,7 @@ export default function ShipperLoginPage() {
 
       {/* LEFT PANEL — Brand (55%), hidden on mobile */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden flex-col items-center justify-center"
-        style={{ background: "linear-gradient(165deg, #1A1714 0%, #2C261F 50%, #1A1714 100%)" }}>
+        style={{ background: "linear-gradient(165deg, #1b3a5e 0%, #224870 40%, #285280 70%, #1e4060 100%)" }}>
 
         {/* Radial gold glow */}
         <div className="absolute pointer-events-none" style={{
