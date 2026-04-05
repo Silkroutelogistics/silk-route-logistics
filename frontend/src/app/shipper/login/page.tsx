@@ -178,9 +178,9 @@ export default function ShipperLoginPage() {
           </div>
 
           {/* Feature pills */}
-          <div className="flex flex-wrap gap-2 mb-8">
+          <div className="grid grid-cols-2 gap-2 mb-8 w-full max-w-[360px]">
             {FEATURE_PILLS.map((f) => (
-              <div key={f.label} className="flex items-center gap-1.5 border border-white/20 text-white/80 bg-white/10 rounded-lg px-3 py-2 text-xs hover:bg-white/15 transition-all duration-200 cursor-default">
+              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-white/25 text-white bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 {f.label}
               </div>
@@ -188,13 +188,13 @@ export default function ShipperLoginPage() {
           </div>
 
           {/* Animated transitioning cards — WHITE */}
-          <div className="relative w-full h-[140px] mb-6">
+          <div className="relative w-full h-[150px] mb-6">
             <div className="absolute -right-2 -bottom-2 w-full h-full bg-white/10 rounded-2xl" />
             {SLIDES.map((slide, i) => (
               <div key={i} className="absolute inset-0 bg-white rounded-2xl p-8 transition-opacity duration-[1200ms]"
                 style={{ opacity: currentSlide === i ? 1 : 0, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-                <div className="text-[#C9A84C] text-xs tracking-[3px] uppercase font-semibold">{slide.label}</div>
-                <p className="text-[#1A1714] text-lg font-light leading-relaxed mt-2">{slide.text}</p>
+                <div className="text-[#8B7428] text-xs tracking-[3px] uppercase font-bold">{slide.label}</div>
+                <p className="text-[#1A1714] text-lg font-normal leading-relaxed mt-2">{slide.text}</p>
               </div>
             ))}
           </div>
@@ -210,9 +210,9 @@ export default function ShipperLoginPage() {
           {/* Daily insight — LARGER, WHITE */}
           <div className="relative pl-5 max-w-[440px]">
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/20 rounded-full" />
-            <div className="text-[#C9A84C] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
+            <div className="text-[#E8D48B] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
             <p className="text-white text-[16px] italic leading-relaxed m-0 font-light">{insight.text}</p>
-            <p className="text-white/50 text-[12px] mt-2 m-0">&mdash; {insight.src}</p>
+            <p className="text-white/70 text-[13px] mt-2 m-0">&mdash; {insight.src}</p>
           </div>
         </div>
 
