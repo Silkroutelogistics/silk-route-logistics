@@ -428,6 +428,26 @@ input:-webkit-autofill:focus {
 [data-mode="dark"][data-theme="highway-green"] .bg-navy { background-color: #14532D !important; }
 [data-mode="dark"][data-theme="chrome-steel"] .bg-navy { background-color: #27272A !important; }
 
+/* Mobile-specific improvements */
+@media (max-width: 767px) {
+  /* Ensure minimum tap targets */
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Prevent horizontal overflow */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Responsive table containers */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Google Places Autocomplete dropdown styling */
 .pac-container {
   background: #ffffff !important;

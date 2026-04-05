@@ -405,7 +405,7 @@ export default function LoadsPage() {
       </div>
 
       {/* ---- UPGRADE 1: Status Tabs ---- */}
-      <div className="flex gap-0.5 overflow-x-auto border-b border-white/10 scrollbar-none">
+      <div className="flex flex-wrap gap-0.5 overflow-x-auto border-b border-white/10 scrollbar-none">
         {tabBtn("attention", "Needs Attention", tabCounts.attention)}
         {tabBtn("POSTED", "Posted", tabCounts.POSTED)}
         {tabBtn("BOOKED", "Booked", tabCounts.BOOKED)}
@@ -471,7 +471,7 @@ export default function LoadsPage() {
       {/* ---- Main: Load list + Detail Panel ---- */}
       <div className="flex gap-0">
         {/* Load list */}
-        <div className={`space-y-3 transition-all duration-300 ${selectedLoadId ? "w-[45%] shrink-0" : "w-full"}`}>
+        <div className={`space-y-3 transition-all duration-300 ${selectedLoadId ? "w-full lg:w-[45%] lg:shrink-0" : "w-full"}`}>
           {filteredLoads.map((ld) => (
             <button
               key={ld.id}
@@ -553,7 +553,12 @@ export default function LoadsPage() {
 
         {/* ---- UPGRADE 3: Slide-out Detail Panel ---- */}
         {selectedLoadId && load && (
-          <div className="w-[55%] shrink-0 ml-4 bg-[#161921] border border-white/10 rounded-xl flex overflow-hidden sticky top-0 h-[calc(100vh-4rem)]">
+          <div className="w-full lg:w-[55%] shrink-0 lg:ml-4 fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto bg-[#161921] border border-white/10 rounded-xl flex flex-col overflow-hidden lg:sticky lg:top-0 h-full lg:h-[calc(100vh-4rem)]">
+            {/* Mobile close bar */}
+            <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-white/10 text-slate-400 hover:text-white shrink-0">
+              <X className="w-4 h-4" /> <span className="text-sm">Close</span>
+            </button>
+            <div className="flex flex-1 min-h-0">
             {/* Vertical icon strip */}
             <div className="w-12 shrink-0 bg-[#161921] border-r border-[#2A2F42] flex flex-col items-center py-2 gap-1">
               {PANEL_TABS.map((t) => (
@@ -709,6 +714,7 @@ export default function LoadsPage() {
               {/* Active panel tab content */}
               <div className="p-4">{renderPanelContent()}</div>
             </div>
+            </div>{/* end inner flex wrapper */}
           </div>
         )}
       </div>

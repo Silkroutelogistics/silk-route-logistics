@@ -550,9 +550,9 @@ export default function OrderBuilderPage() {
   const optStyle = { backgroundColor: "#0F1117", color: "#f8fafc" } as const;
 
   return (
-    <div className="p-3 h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto">
+    <div className="p-3 lg:h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto">
       {/* ─── HEADER BAR ─── */}
-      <div className="flex items-center justify-between mb-2 shrink-0">
+      <div className="flex flex-wrap items-center justify-between mb-2 shrink-0 gap-2">
         <div className="flex items-center gap-2">
           <ClipboardEdit className="w-5 h-5 text-gold" />
           <h1 className="text-base font-bold text-white">Order Builder</h1>
@@ -590,10 +590,10 @@ export default function OrderBuilderPage() {
 
       {/* ─── MAIN FORM: single card, 3-column grid ─── */}
       <div className="bg-[#161921] border border-white/10 rounded-xl flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-[25%_45%_30%] h-full min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-[25%_45%_30%] h-full min-h-0">
 
           {/* ════════ LEFT COLUMN: Customer + Freight ════════ */}
-          <div className="border-r border-white/5 p-3 space-y-3 overflow-y-auto">
+          <div className="border-r border-white/5 p-3 space-y-3 lg:overflow-y-auto">
             {/* CUSTOMER */}
             <div className="space-y-1.5">
               <p className={secHdr}>Customer</p>
@@ -653,7 +653,7 @@ export default function OrderBuilderPage() {
                     <option value="" style={optStyle}>--</option>
                     {FREIGHT_CLASSES.map((c) => <option key={c} value={c} style={optStyle}>{c}</option>)}
                   </select>
-                  {suggestedClass && <span className="text-[9px] text-gold">Auto: {suggestedClass}</span>}
+                  {suggestedClass && <span className="text-[10px] lg:text-[9px] text-gold">Auto: {suggestedClass}</span>}
                 </div>
                 <div>
                   <span className={lbl}>NMFC</span>
@@ -669,7 +669,7 @@ export default function OrderBuilderPage() {
                   <button type="button" onClick={() => setPalletRows((p) => [...p, { qty: "", l: "48", w: "40", h: "48", weight: "" }])}
                     className="text-[10px] text-gold hover:text-gold/80 font-medium cursor-pointer">+ Add Type</button>
                 </div>
-                <div className="grid grid-cols-[55px_170px_65px_20px] gap-1 text-[9px] text-slate-500 uppercase px-0.5">
+                <div className="grid grid-cols-[55px_170px_65px_20px] gap-1 text-[10px] lg:text-[9px] text-slate-500 uppercase px-0.5">
                   <span>Qty</span><span>L × W × H (in)</span><span>Wt/plt</span><span></span>
                 </div>
                 {palletRows.map((row, idx) => (
@@ -758,7 +758,7 @@ export default function OrderBuilderPage() {
           </div>
 
           {/* ════════ CENTER COLUMN: Route + Reference & Handling + Stops ════════ */}
-          <div className="border-r border-white/5 p-3 space-y-3 overflow-y-auto">
+          <div className="border-r border-white/5 p-3 space-y-3 lg:overflow-y-auto">
             {/* ROUTE — side by side origin/dest */}
             <p className={secHdr}>Route</p>
             <div className="grid grid-cols-2 gap-3">
@@ -782,7 +782,7 @@ export default function OrderBuilderPage() {
                     return (
                       <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-40 overflow-y-auto"
                         style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-                        <div className="px-2 py-1 text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
+                        <div className="px-2 py-1 text-[10px] lg:text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
                         {matches.map((entry, i) => (
                           <button key={i} onClick={() => {
                             setForm((f) => ({ ...f, shipperName: entry.name, originAddress: entry.address, originCity: entry.city, originState: entry.state, originZip: entry.zip }));
@@ -809,7 +809,7 @@ export default function OrderBuilderPage() {
                     placeholder="Unit / Suite #" className={`w-full ${inp}`} />
                 )}
                 {!showOriginUnit && !form.originUnit && (
-                  <button type="button" onClick={() => setShowOriginUnit(true)} className="text-[9px] text-gold hover:text-gold/80 font-medium">+ Unit</button>
+                  <button type="button" onClick={() => setShowOriginUnit(true)} className="text-[10px] lg:text-[9px] text-gold hover:text-gold/80 font-medium">+ Unit</button>
                 )}
                 <input value={form.originAddress} onChange={(e) => setForm((f) => ({ ...f, originAddress: e.target.value }))}
                   placeholder="Street" className={`w-full ${inp}`} />
@@ -837,7 +837,7 @@ export default function OrderBuilderPage() {
                     <option value="" style={optStyle}>Start</option>
                     {TIME_OPTIONS.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
                   </select>
-                  <span className="text-[9px] text-slate-500">to</span>
+                  <span className="text-[10px] lg:text-[9px] text-slate-500">to</span>
                   <select value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))}
                     className={`flex-1 ${sel}`}>
                     <option value="" style={optStyle}>End</option>
@@ -865,7 +865,7 @@ export default function OrderBuilderPage() {
                     return (
                       <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-40 overflow-y-auto"
                         style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-                        <div className="px-2 py-1 text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
+                        <div className="px-2 py-1 text-[10px] lg:text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
                         {matches.map((entry, i) => (
                           <button key={i} onClick={() => {
                             setForm((f) => ({ ...f, consigneeName: entry.name, destAddress: entry.address, destCity: entry.city, destState: entry.state, destZip: entry.zip }));
@@ -891,7 +891,7 @@ export default function OrderBuilderPage() {
                     placeholder="Unit / Suite #" className={`w-full ${inp}`} />
                 )}
                 {!showDestUnit && !form.destUnit && (
-                  <button type="button" onClick={() => setShowDestUnit(true)} className="text-[9px] text-gold hover:text-gold/80 font-medium">+ Unit</button>
+                  <button type="button" onClick={() => setShowDestUnit(true)} className="text-[10px] lg:text-[9px] text-gold hover:text-gold/80 font-medium">+ Unit</button>
                 )}
                 <input value={form.destAddress} onChange={(e) => setForm((f) => ({ ...f, destAddress: e.target.value }))}
                   placeholder="Street" className={`w-full ${inp}`} />
@@ -919,7 +919,7 @@ export default function OrderBuilderPage() {
                     <option value="" style={optStyle}>Start</option>
                     {TIME_OPTIONS.map(t => <option key={t} value={t} style={optStyle}>{t}</option>)}
                   </select>
-                  <span className="text-[9px] text-slate-500">to</span>
+                  <span className="text-[10px] lg:text-[9px] text-slate-500">to</span>
                   <select value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))}
                     className={`flex-1 ${sel}`}>
                     <option value="" style={optStyle}>End</option>
@@ -934,7 +934,7 @@ export default function OrderBuilderPage() {
               <span className={`${lbl} shrink-0`}>Distance:</span>
               <input value={form.distance} onChange={(e) => { setForm((f) => ({ ...f, distance: e.target.value })); setDistanceManual(true); setDistanceAutoFilled(false); }}
                 placeholder="mi" type="number" className={`w-20 ${inp}`} />
-              {distanceAutoFilled && <span className="text-[9px] text-green-400">Calc</span>}
+              {distanceAutoFilled && <span className="text-[10px] lg:text-[9px] text-green-400">Calc</span>}
             </div>
 
             <div className="border-b border-white/5" />
@@ -1041,7 +1041,7 @@ export default function OrderBuilderPage() {
                   </div>
                 </div>
                 {/* Stop header */}
-                <div className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 text-[9px] text-slate-500 uppercase tracking-wider">
+                <div className="grid grid-cols-[20px_60px_1fr_1fr_90px_70px_20px_20px] gap-1 text-[10px] lg:text-[9px] text-slate-500 uppercase tracking-wider">
                   <span>#</span><span>Type</span><span>Facility</span><span>City,ST,ZIP</span><span>Date</span><span>Time</span><span></span><span></span>
                 </div>
                 {stops.map((stop, idx) => (
@@ -1109,7 +1109,7 @@ export default function OrderBuilderPage() {
           </div>
 
           {/* ════════ RIGHT COLUMN: Rate + Contact + Instructions ════════ */}
-          <div className="p-3 space-y-3 overflow-y-auto">
+          <div className="p-3 space-y-3 lg:overflow-y-auto">
             <p className={secHdr}>Rate &amp; Pricing</p>
             <div {...(isFirstError("rate") ? { "data-error": "true" } : {})}>
               <span className={lbl}>Rate ($)*</span>
@@ -1285,7 +1285,7 @@ function AddressAutocomplete({ label, value, onSelect }: {
               <MapPin className="w-3 h-3 inline mr-1.5 text-[#C9A84C]" />{r.description}
             </button>
           ))}
-          <div className="px-3 py-1 text-[9px] text-right" style={{ color: "#94a3b8" }}>Powered by Google</div>
+          <div className="px-3 py-1 text-[10px] lg:text-[9px] text-right" style={{ color: "#94a3b8" }}>Powered by Google</div>
         </div>
       )}
     </div>
