@@ -120,6 +120,19 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 [data-mode="light"] .bg-white\/\[0\.03\] {
   background: var(--srl-bg-surface) !important;
 }
+
+/* CATCH-ALL: Any hardcoded dark hex backgrounds → surface in light mode */
+[data-mode="light"] .bg-\[\#0F1117\],
+[data-mode="light"] .bg-\[\#161921\],
+[data-mode="light"] .bg-\[\#080C18\],
+[data-mode="light"] .bg-\[\#1C1F2B\],
+[data-mode="light"] .bg-\[\#0F1117\]\/95,
+[data-mode="light"] .bg-\[\#0F1117\]\/90 {
+  background: var(--srl-bg-elevated) !important;
+}
+[data-mode="light"] .hover\:bg-\[\#0F1117\]:hover {
+  background: var(--srl-bg-elevated) !important;
+}
 [data-mode="light"] .bg-white\/\[0\.07\],
 [data-mode="light"] .bg-white\/\[0\.08\],
 [data-mode="light"] .hover\:bg-white\/5:hover,

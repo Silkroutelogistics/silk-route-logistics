@@ -228,7 +228,7 @@ export default function CRMPage() {
           const isExp = expanded === c.id;
           return (
             <div key={c.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-              <button onClick={() => setExpanded(isExp ? null : c.id)} className="w-full text-left p-5 hover:bg-[#0F1117] transition">
+              <button onClick={() => setExpanded(isExp ? null : c.id)} className="w-full text-left p-5 transition" style={{ background: isExp ? 'var(--srl-bg-elevated)' : 'transparent' }}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
@@ -270,7 +270,7 @@ export default function CRMPage() {
               </button>
 
               {isExp && (
-                <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
+                <div className="border-t p-5 space-y-4" style={{ borderColor: 'var(--srl-border-subtle)', background: 'var(--srl-bg-surface)' }}>
                   {/* Customer Details */}
                   <div className="grid sm:grid-cols-4 gap-4 text-sm">
                     <InfoRow label="Primary Contact" value={c.contactName || "—"} />
