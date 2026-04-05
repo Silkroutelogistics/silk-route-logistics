@@ -464,7 +464,7 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
     buildBody: (contactName: string) => `
       <h2 style="color:#C9A84C">Silk Route Logistics Inc.</h2>
       <p>Hi ${contactName},</p>
-      <p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Galesburg, Michigan.</p>
+      <p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Kalamazoo, MI.</p>
       <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
       <ul>
         <li>Real-time shipment tracking via our shipper portal</li>
@@ -538,14 +538,17 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
       continue;
     }
 
-    const contactName = c.contactName || c.name;
+    const fullName = c.contactName || c.name;
+    const firstName = fullName.split(/\s+/)[0]; // Extract first name only
     let emailBody: string;
 
     if (templateType === "CUSTOM") {
-      emailBody = (body || "").replace(/\{contactName\}/g, contactName);
+      emailBody = (body || "")
+        .replace(/\{contactName\}/g, firstName)
+        .replace(/\{fullName\}/g, fullName);
     } else {
       const template = MASS_EMAIL_TEMPLATES[templateType];
-      emailBody = template.buildBody(contactName, c.industryType || "");
+      emailBody = template.buildBody(firstName, c.industryType || "");
     }
 
     const html = wrap(emailBody);

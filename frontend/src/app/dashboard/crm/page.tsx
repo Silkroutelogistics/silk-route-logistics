@@ -114,7 +114,7 @@ export default function CRMPage() {
       subject: "Introducing Silk Route Logistics — Your Freight Partner",
       preview: (name: string) => `<h2 style="color:#C9A84C;margin:0 0 16px">Silk Route Logistics Inc.</h2>
 <p>Hi ${name},</p>
-<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Galesburg, Michigan.</p>
+<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Kalamazoo, MI.</p>
 <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
 <ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
 <p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
@@ -1045,7 +1045,7 @@ export default function CRMPage() {
                           <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
                         </div>
                         <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
-                          dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATES[emailTemplate].preview("{contactName}") }} />
+                          dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATES[emailTemplate].preview((data?.customers || []).find((c: Customer) => selectedRecipients.has(c.id))?.contactName?.split(/\s+/)[0] || "there") }} />
                         <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
                           Silk Route Logistics &bull; silkroutelogistics.ai
                         </div>
