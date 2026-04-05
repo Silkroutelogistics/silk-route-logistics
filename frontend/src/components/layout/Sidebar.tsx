@@ -566,16 +566,18 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#161921] border-b border-[#2A2F42] px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between"
+        style={{ background: 'var(--srl-bg-deepest)', borderBottom: '1px solid var(--srl-border)' }}>
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
-          <span className="text-sm font-semibold text-white">Silk Route</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--srl-text)' }}>Silk Route</span>
         </Link>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition"
+          className="p-3 rounded-lg transition"
+          style={{ color: 'var(--srl-text-secondary)' }}
         >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
@@ -590,11 +592,12 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-[#080C18] border-r border-[#2A2F42] flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
+          "flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
           "fixed lg:sticky top-0 z-50 lg:z-auto",
           collapsed ? "w-[60px]" : "w-[220px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
+        style={{ background: 'var(--srl-bg-deepest)', borderRight: '1px solid var(--srl-border)' }}
       >
         {sidebarContent}
 
