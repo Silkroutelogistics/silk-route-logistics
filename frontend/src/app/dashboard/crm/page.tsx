@@ -7,7 +7,8 @@ import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
   X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Pencil,
-  ShieldCheck, Loader2, ExternalLink, Package,
+  ShieldCheck, Loader2, ExternalLink, Package, Upload, Download, PhoneCall,
+  MessageSquare, Calendar, StickyNote,
 } from "lucide-react";
 
 interface CustomerContact {
@@ -79,6 +80,129 @@ export default function CRMPage() {
     status: "Active", creditLimit: "", paymentTerms: "Net 30", notes: "",
     type: "SHIPPER", taxId: "", industryType: "", mcNumber: "", billingAddress: "",
   });
+
+  // CSV Import state
+  const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
+  const [showCsvPreview, setShowCsvPreview] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvProgress, setCsvProgress] = useState({ current: 0, total: 0 });
+  const [csvResult, setCsvResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // Call Log state
+  interface CallLog { date: string; type: string; notes: string; by: string; }
+  const [callLogs, setCallLogs] = useState<Record<string, CallLog[]>>({});
+  const [showLogForm, setShowLogForm] = useState<string | null>(null);
+  const [logForm, setLogForm] = useState({ type: "Call", notes: "" });
+
+  // Load call logs from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("srl-call-logs");
+      if (saved) setCallLogs(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const saveCallLog = (customerId: string) => {
+    if (!logForm.notes.trim()) return;
+    const newLog: CallLog = {
+      date: new Date().toISOString(),
+      type: logForm.type,
+      notes: logForm.notes.trim(),
+      by: "WH",
+    };
+    const updated = {
+      ...callLogs,
+      [customerId]: [newLog, ...(callLogs[customerId] || [])],
+    };
+    setCallLogs(updated);
+    localStorage.setItem("srl-call-logs", JSON.stringify(updated));
+    setLogForm({ type: "Call", notes: "" });
+    setShowLogForm(null);
+  };
+
+  // CSV parsing
+  const handleCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) return;
+      const headers = lines[0].split(",").map((h) => h.trim());
+      const rows: Record<string, string>[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        // Handle CSV values that might contain commas inside quotes
+        const vals: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (const ch of lines[i]) {
+          if (ch === '"') { inQuotes = !inQuotes; }
+          else if (ch === "," && !inQuotes) { vals.push(current.trim()); current = ""; }
+          else { current += ch; }
+        }
+        vals.push(current.trim());
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => { row[h] = vals[idx] || ""; });
+        if (Object.values(row).some((v) => v)) rows.push(row);
+      }
+      setCsvRows(rows);
+      setShowCsvPreview(true);
+      setCsvResult(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const mapCsvRow = (row: Record<string, string>) => ({
+    name: row["Company Name"] || row["company_name"] || row["Name"] || "",
+    contactName: row["Contact Name"] || row["contact_name"] || row["Contact"] || "",
+    email: row["Email"] || row["email"] || "",
+    phone: row["Phone"] || row["phone"] || "",
+    city: row["City"] || row["city"] || "",
+    state: row["State"] || row["state"] || "",
+    industryType: row["Industry"] || row["industry"] || row["IndustryType"] || "",
+    type: row["Type"] || row["type"] || "SHIPPER",
+  });
+
+  const handleCsvImport = async () => {
+    setCsvImporting(true);
+    const mapped = csvRows.map(mapCsvRow).filter((r) => r.name);
+    setCsvProgress({ current: 0, total: mapped.length });
+
+    try {
+      // Use bulk endpoint
+      const res = await api.post("/customers/bulk", { customers: mapped });
+      setCsvResult(res.data);
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+    } catch (err: any) {
+      setCsvResult({ created: 0, skipped: 0, errors: [err?.response?.data?.error || "Import failed"] });
+    } finally {
+      setCsvImporting(false);
+    }
+  };
+
+  // CSV Export
+  const handleCsvExport = () => {
+    if (!data?.customers) return;
+    const headers = ["Name", "Contact", "Email", "Phone", "City", "State", "Type", "Industry", "Credit Limit", "Payment Terms", "Status", "Created Date"];
+    const escCsv = (v: string) => v.includes(",") || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+    const rows = data.customers.map((c) => [
+      c.name, c.contactName || "", c.email || "", c.phone || "",
+      c.city || "", c.state || "", c.type || "", c.industryType || "",
+      c.creditLimit?.toString() || "", c.paymentTerms || "", c.status,
+      "",
+    ].map(escCsv).join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const date = new Date().toISOString().split("T")[0];
+    a.download = `srl-customers-${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const { data: stats } = useQuery({
     queryKey: ["customer-stats"],
@@ -192,9 +316,22 @@ export default function CRMPage() {
           <h1 className="text-2xl font-bold text-white">Customer Relationship Management</h1>
           <p className="text-sm text-slate-400 mt-1">Manage shippers, contacts, credit, and relationships</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
-          <Plus className="w-4 h-4" /> Add Customer
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleCsvExport} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={() => csvInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
+            <Upload className="w-4 h-4" /> Import CSV
+          </button>
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleCsvFile(file);
+            e.target.value = "";
+          }} />
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
+            <Plus className="w-4 h-4" /> Add Customer
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -340,6 +477,65 @@ export default function CRMPage() {
                       </div>
                     ) : (
                       <p className="text-xs text-slate-500">No contacts added yet</p>
+                    )}
+                  </div>
+
+                  {/* Activity Log */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-white flex items-center gap-1"><MessageSquare className="w-4 h-4 text-gold" /> Activity Log</h3>
+                      <button onClick={() => setShowLogForm(showLogForm === c.id ? null : c.id)}
+                        className="flex items-center gap-1 text-xs text-gold hover:text-gold/80">
+                        <Plus className="w-3 h-3" /> Log Activity
+                      </button>
+                    </div>
+
+                    {showLogForm === c.id && (
+                      <div className="bg-white/5 rounded-lg border border-white/10 p-3 mb-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <select value={logForm.type} onChange={(e) => setLogForm((f) => ({ ...f, type: e.target.value }))}
+                            className="px-2.5 py-1.5 bg-white/10 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-gold/50">
+                            {["Call", "Email", "Meeting", "Note"].map((t) => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
+                          </select>
+                        </div>
+                        <textarea value={logForm.notes} onChange={(e) => setLogForm((f) => ({ ...f, notes: e.target.value }))}
+                          rows={2} placeholder="Notes about this activity..."
+                          className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50 resize-none" />
+                        <div className="flex gap-2">
+                          <button onClick={() => saveCallLog(c.id)} disabled={!logForm.notes.trim()}
+                            className="px-3 py-1.5 bg-gold text-navy rounded text-xs font-medium hover:bg-gold/90 disabled:opacity-50">Save</button>
+                          <button onClick={() => { setShowLogForm(null); setLogForm({ type: "Call", notes: "" }); }}
+                            className="px-3 py-1.5 text-slate-400 hover:text-white text-xs">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {(callLogs[c.id] && callLogs[c.id].length > 0) ? (
+                      <div className="space-y-2">
+                        {callLogs[c.id].slice(0, 10).map((log, idx) => {
+                          const icons: Record<string, React.ReactNode> = {
+                            Call: <PhoneCall className="w-3.5 h-3.5 text-blue-400" />,
+                            Email: <Mail className="w-3.5 h-3.5 text-green-400" />,
+                            Meeting: <Calendar className="w-3.5 h-3.5 text-purple-400" />,
+                            Note: <StickyNote className="w-3.5 h-3.5 text-yellow-400" />,
+                          };
+                          const d = new Date(log.date);
+                          const dateStr = `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")}/${d.getFullYear()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+                          return (
+                            <div key={idx} className="flex items-start gap-2 text-sm">
+                              <div className="mt-0.5">{icons[log.type] || icons.Note}</div>
+                              <div className="min-w-0">
+                                <span className="text-xs text-slate-500">{dateStr}</span>
+                                <span className="text-slate-400 mx-1.5">&mdash;</span>
+                                <span className="text-slate-300">{log.notes}</span>
+                                <span className="text-xs text-slate-600 ml-2">&mdash; {log.by}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500">No activity logged yet</p>
                     )}
                   </div>
 
@@ -617,6 +813,80 @@ export default function CRMPage() {
             </button>
             </div>
       </SlideDrawer>
+
+      {/* CSV Import Preview Modal */}
+      {showCsvPreview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div>
+                <h2 className="text-lg font-bold text-white">CSV Import Preview</h2>
+                <p className="text-sm text-slate-400 mt-0.5">Found {csvRows.length} contact{csvRows.length !== 1 ? "s" : ""}. Ready to import?</p>
+              </div>
+              <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}
+                className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-5">
+              {csvResult ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 font-medium">{csvResult.created} imported</span>
+                    {csvResult.skipped > 0 && <span className="px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 font-medium">{csvResult.skipped} skipped (duplicates)</span>}
+                    {csvResult.errors.length > 0 && <span className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 font-medium">{csvResult.errors.length} failed</span>}
+                  </div>
+                  {csvResult.errors.length > 0 && (
+                    <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3 space-y-1">
+                      {csvResult.errors.map((e, i) => <p key={i} className="text-xs text-red-400">{e}</p>)}
+                    </div>
+                  )}
+                  <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}
+                    className="px-4 py-2 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">Done</button>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          {Object.keys(csvRows[0] || {}).slice(0, 8).map((h) => (
+                            <th key={h} className="text-left py-2 px-2 text-xs text-slate-500 font-medium">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvRows.slice(0, 5).map((row, i) => (
+                          <tr key={i} className="border-b border-white/5">
+                            {Object.keys(csvRows[0] || {}).slice(0, 8).map((h) => (
+                              <td key={h} className="py-2 px-2 text-slate-300 text-xs truncate max-w-[150px]">{row[h] || "—"}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {csvRows.length > 5 && <p className="text-xs text-slate-500 mt-2">...and {csvRows.length - 5} more rows</p>}
+                </>
+              )}
+            </div>
+
+            {!csvResult && (
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
+                <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); }}
+                  className="px-4 py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
+                <button onClick={handleCsvImport} disabled={csvImporting}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
+                  {csvImporting ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Importing {csvProgress.current}/{csvProgress.total}...</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> Import {csvRows.length} Customers</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

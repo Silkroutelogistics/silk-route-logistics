@@ -372,6 +372,77 @@ export async function deleteCustomerContact(req: AuthRequest, res: Response) {
   res.status(204).send();
 }
 
+export async function bulkCreateCustomers(req: AuthRequest, res: Response) {
+  const { customers } = req.body as {
+    customers: {
+      name: string; contactName?: string; email?: string; phone?: string;
+      city?: string; state?: string; type?: string; industryType?: string;
+    }[];
+  };
+
+  if (!Array.isArray(customers) || customers.length === 0) {
+    res.status(400).json({ error: "customers array is required" });
+    return;
+  }
+
+  // Get existing customer names for duplicate detection
+  const existingNames = new Set(
+    (await prisma.customer.findMany({
+      where: { deletedAt: null },
+      select: { name: true },
+    })).map((c) => c.name.toLowerCase().trim())
+  );
+
+  let created = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const row of customers) {
+    if (!row.name || !row.name.trim()) {
+      errors.push("Skipped row with empty company name");
+      continue;
+    }
+
+    if (existingNames.has(row.name.toLowerCase().trim())) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const customer = await prisma.customer.create({
+        data: {
+          name: row.name.trim(),
+          contactName: row.contactName || null,
+          email: row.email || null,
+          phone: row.phone || null,
+          city: row.city || null,
+          state: row.state || null,
+          type: row.type || "SHIPPER",
+          industryType: row.industryType || null,
+          status: "Prospect",
+        } as any,
+      });
+
+      // Auto-initialize ShipperCredit
+      await prisma.shipperCredit.create({
+        data: {
+          customerId: customer.id,
+          creditLimit: 50000,
+          creditGrade: "B",
+          paymentTerms: "NET30",
+        },
+      }).catch(() => {});
+
+      existingNames.add(row.name.toLowerCase().trim());
+      created++;
+    } catch (err: any) {
+      errors.push(`Failed to create "${row.name}": ${err.message || "Unknown error"}`);
+    }
+  }
+
+  res.status(201).json({ created, skipped, errors });
+}
+
 export async function updateCustomerCredit(req: AuthRequest, res: Response) {
   const customer = await prisma.customer.findFirst({ where: { id: req.params.id, deletedAt: null } });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
