@@ -434,15 +434,15 @@ export default function CRMPage() {
           <h1 className="text-2xl font-bold text-white">Customer Relationship Management</h1>
           <p className="text-sm text-slate-400 mt-1">Manage shippers, contacts, credit, and relationships</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={openEmailModal} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
-            <Send className="w-4 h-4" /> Send Email
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={openEmailModal} className="flex items-center gap-1.5 px-3 py-2 border border-gold text-gold font-medium rounded-lg text-xs hover:bg-gold/10">
+            <Send className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Send</span> Email
           </button>
-          <button onClick={handleCsvExport} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
-            <Download className="w-4 h-4" /> Export CSV
+          <button onClick={handleCsvExport} className="flex items-center gap-1.5 px-3 py-2 border border-gold text-gold font-medium rounded-lg text-xs hover:bg-gold/10">
+            <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Export</span>
           </button>
-          <button onClick={() => csvInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
-            <Upload className="w-4 h-4" /> Import CSV
+          <button onClick={() => csvInputRef.current?.click()} className="flex items-center gap-1.5 px-3 py-2 border border-gold text-gold font-medium rounded-lg text-xs hover:bg-gold/10">
+            <Upload className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Import</span>
           </button>
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => {
             const file = e.target.files?.[0];
@@ -938,7 +938,7 @@ export default function CRMPage() {
       {/* Email Campaign Modal */}
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" style={{ background: 'var(--srl-bg-surface)', border: '1px solid var(--srl-border)' }}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>
                 <h2 className="text-lg font-bold text-white">Send Email Campaign</h2>
