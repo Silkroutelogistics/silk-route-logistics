@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
+import { sendEmail, wrap } from "../services/emailService";
 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
@@ -453,4 +454,133 @@ export async function updateCustomerCredit(req: AuthRequest, res: Response) {
     data,
   });
   res.json(updated);
+}
+
+// ─── Mass Email Campaign ──────────────────────────────────
+
+const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contactName: string, industryType: string) => string }> = {
+  INTRO: {
+    subject: "Introducing Silk Route Logistics — Your Freight Partner",
+    buildBody: (contactName: string) => `
+      <h2 style="color:#C9A84C">Silk Route Logistics Inc.</h2>
+      <p>Hi ${contactName},</p>
+      <p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Galesburg, Michigan.</p>
+      <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
+      <ul>
+        <li>Real-time shipment tracking via our shipper portal</li>
+        <li>Competitive rates backed by AI-powered market intelligence</li>
+        <li>35-point carrier compliance vetting (Compass Engine)</li>
+        <li>Dedicated account management — not a call center</li>
+      </ul>
+      <p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
+      <p>Best regards,<br/>
+      <strong>Wasi Haider</strong><br/>
+      CEO, Silk Route Logistics Inc.<br/>
+      MC# 01794414 | DOT# 4526880<br/>
+      (269) 220-6760 | whaider@silkroutelogistics.ai<br/>
+      silkroutelogistics.ai</p>`,
+  },
+  FOLLOW_UP: {
+    subject: "Following Up — Silk Route Logistics",
+    buildBody: (contactName: string, industryType: string) => `
+      <p>Hi ${contactName},</p>
+      <p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped ${industryType || "manufacturing"} companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
+      <p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
+      <p>Just reply to this email or book a call at your convenience.</p>
+      <p>Best regards,<br/>
+      <strong>Wasi Haider</strong><br/>
+      CEO, Silk Route Logistics Inc.<br/>
+      (269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+  },
+  RATE_SHEET: {
+    subject: "Silk Route Logistics — Rate Information",
+    buildBody: (contactName: string) => `
+      <p>Hi ${contactName},</p>
+      <p>Thank you for your interest in Silk Route Logistics. Attached is our current rate information for the lanes most relevant to your operation.</p>
+      <p>Key highlights:</p>
+      <ul>
+        <li>FTL Dry Van rates from $2.15/mile (Midwest lanes)</li>
+        <li>No hidden fees — all-in rates published monthly</li>
+        <li>Quick Pay available for carriers (Net-7 to same-day)</li>
+        <li>Free real-time tracking portal for all shipments</li>
+      </ul>
+      <p>Let me know if you'd like a custom quote on specific lanes.</p>
+      <p>Best regards,<br/>
+      <strong>Wasi Haider</strong><br/>
+      CEO, Silk Route Logistics Inc.<br/>
+      (269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+  },
+};
+
+const massEmailSchema = z.object({
+  customerIds: z.array(z.string()).min(1, "At least one customer is required"),
+  subject: z.string().min(1, "Subject is required"),
+  body: z.string().optional(),
+  templateType: z.enum(["INTRO", "RATE_SHEET", "FOLLOW_UP", "CUSTOM"]),
+});
+
+export async function sendMassEmail(req: AuthRequest, res: Response) {
+  const { customerIds, subject, body, templateType } = massEmailSchema.parse(req.body);
+
+  const customers = await prisma.customer.findMany({
+    where: { id: { in: customerIds }, deletedAt: null },
+    select: { id: true, name: true, contactName: true, email: true, industryType: true },
+  });
+
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < customers.length; i++) {
+    const c = customers[i];
+    if (!c.email) {
+      skipped++;
+      continue;
+    }
+
+    const contactName = c.contactName || c.name;
+    let emailBody: string;
+
+    if (templateType === "CUSTOM") {
+      emailBody = (body || "").replace(/\{contactName\}/g, contactName);
+    } else {
+      const template = MASS_EMAIL_TEMPLATES[templateType];
+      emailBody = template.buildBody(contactName, c.industryType || "");
+    }
+
+    const html = wrap(emailBody);
+
+    try {
+      await sendEmail(c.email, subject, html);
+      sent++;
+
+      await prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "INFO",
+          source: "MassEmailCampaign",
+          message: `Campaign email sent to ${c.name} (${c.email}) — template: ${templateType}`,
+          details: { customerId: c.id, subject, templateType },
+        },
+      });
+    } catch (err: any) {
+      failed++;
+      await prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "ERROR",
+          source: "MassEmailCampaign",
+          message: `Failed to send campaign email to ${c.name} (${c.email}): ${err.message || "Unknown error"}`,
+          details: { customerId: c.id, subject, templateType },
+        },
+      });
+    }
+
+    // 500ms delay between sends to avoid rate limits
+    if (i < customers.length - 1) {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+
+  res.json({ sent, failed, skipped });
 }

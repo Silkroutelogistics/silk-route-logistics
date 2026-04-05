@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   createCustomer, getCustomers, getCustomerById, getCustomerStats, updateCustomer, deleteCustomer, restoreCustomer,
   getCustomerContacts, addCustomerContact, updateCustomerContact, deleteCustomerContact, updateCustomerCredit,
-  bulkCreateCustomers,
+  bulkCreateCustomers, sendMassEmail,
 } from "../controllers/customerController";
 import { authenticate, authorize } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -29,6 +29,7 @@ router.use(authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"));
 
 router.post("/", validateBody(createCustomerSchema), createCustomer);
 router.post("/bulk", authorize("ADMIN", "CEO", "BROKER"), bulkCreateCustomers);
+router.post("/mass-email", authorize("ADMIN", "CEO", "BROKER"), sendMassEmail);
 router.get("/", validateQuery(customerQuerySchema), getCustomers);
 router.get("/stats", getCustomerStats);
 router.get("/:id", getCustomerById);

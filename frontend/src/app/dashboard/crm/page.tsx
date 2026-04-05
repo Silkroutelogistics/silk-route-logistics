@@ -8,7 +8,7 @@ import {
   Search, Building2, Phone, Mail, MapPin, Plus, Star, ChevronDown, ChevronUp,
   X, Users, CreditCard, FileCheck, Briefcase, UserPlus, Trash2, Pencil,
   ShieldCheck, Loader2, ExternalLink, Package, Upload, Download, PhoneCall,
-  MessageSquare, Calendar, StickyNote,
+  MessageSquare, Calendar, StickyNote, Send, CheckCircle2, Eye,
 } from "lucide-react";
 
 interface CustomerContact {
@@ -94,6 +94,71 @@ export default function CRMPage() {
   const [callLogs, setCallLogs] = useState<Record<string, CallLog[]>>({});
   const [showLogForm, setShowLogForm] = useState<string | null>(null);
   const [logForm, setLogForm] = useState({ type: "Call", notes: "" });
+
+  // Mass Email Campaign state
+  type TemplateType = "INTRO" | "FOLLOW_UP" | "RATE_SHEET" | "CUSTOM";
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTemplate, setEmailTemplate] = useState<TemplateType>("INTRO");
+  const [emailSubject, setEmailSubject] = useState("Introducing Silk Route Logistics — Your Freight Partner");
+  const [emailBody, setEmailBody] = useState("");
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
+  const [selectAllRecipients, setSelectAllRecipients] = useState(true);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailProgress, setEmailProgress] = useState({ current: 0, total: 0 });
+  const [emailResult, setEmailResult] = useState<{ sent: number; failed: number; skipped: number } | null>(null);
+  const [emailToast, setEmailToast] = useState<string | null>(null);
+
+  const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; preview: (name: string) => string }> = {
+    INTRO: {
+      label: "Company Introduction",
+      subject: "Introducing Silk Route Logistics — Your Freight Partner",
+      preview: (name: string) => `<h2 style="color:#C9A84C;margin:0 0 16px">Silk Route Logistics Inc.</h2>
+<p>Hi ${name},</p>
+<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Galesburg, Michigan.</p>
+<p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
+<ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
+<p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 01794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
+    },
+    FOLLOW_UP: {
+      label: "Follow-Up",
+      subject: "Following Up — Silk Route Logistics",
+      preview: (name: string) => `<p>Hi ${name},</p>
+<p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped manufacturing companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
+<p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
+<p>Just reply to this email or book a call at your convenience.</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+    },
+    RATE_SHEET: {
+      label: "Rate Sheet",
+      subject: "Silk Route Logistics — Rate Information",
+      preview: (name: string) => `<p>Hi ${name},</p>
+<p>Thank you for your interest in Silk Route Logistics. Attached is our current rate information for the lanes most relevant to your operation.</p>
+<p>Key highlights:</p>
+<ul><li>FTL Dry Van rates from $2.15/mile (Midwest lanes)</li><li>No hidden fees — all-in rates published monthly</li><li>Quick Pay available for carriers (Net-7 to same-day)</li><li>Free real-time tracking portal for all shipments</li></ul>
+<p>Let me know if you'd like a custom quote on specific lanes.</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+    },
+    CUSTOM: {
+      label: "Custom",
+      subject: "Message from Silk Route Logistics",
+      preview: () => "",
+    },
+  };
+
+  const handleTemplateChange = useCallback((t: TemplateType) => {
+    setEmailTemplate(t);
+    setEmailSubject(EMAIL_TEMPLATES[t].subject);
+    if (t !== "CUSTOM") setEmailBody("");
+  }, []);
+
+  const handleToggleRecipient = useCallback((id: string) => {
+    setSelectedRecipients((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   // Load call logs from localStorage
   useEffect(() => {
@@ -218,6 +283,59 @@ export default function CRMPage() {
     queryFn: () => api.get<{ customers: Customer[]; total: number }>(`/customers?${params.toString()}`).then((r) => r.data),
   });
 
+  const openEmailModal = useCallback(() => {
+    const allCustomers = data?.customers || [];
+    const withEmail = allCustomers.filter((c) => c.email);
+    setSelectedRecipients(new Set(withEmail.map((c) => c.id)));
+    setSelectAllRecipients(true);
+    setEmailTemplate("INTRO");
+    setEmailSubject(EMAIL_TEMPLATES.INTRO.subject);
+    setEmailBody("");
+    setEmailResult(null);
+    setEmailSending(false);
+    setShowEmailModal(true);
+  }, [data?.customers]);
+
+  const handleToggleAllRecipients = useCallback((checked: boolean) => {
+    setSelectAllRecipients(checked);
+    if (checked) {
+      const withEmail = (data?.customers || []).filter((c) => c.email);
+      setSelectedRecipients(new Set(withEmail.map((c) => c.id)));
+    } else {
+      setSelectedRecipients(new Set());
+    }
+  }, [data?.customers]);
+
+  const handleSendCampaign = async () => {
+    const ids = Array.from(selectedRecipients);
+    if (ids.length === 0) return;
+    setEmailSending(true);
+    setEmailProgress({ current: 0, total: ids.length });
+
+    try {
+      const progressInterval = setInterval(() => {
+        setEmailProgress((p) => ({ ...p, current: Math.min(p.current + 1, p.total - 1) }));
+      }, 600);
+
+      const res = await api.post<{ sent: number; failed: number; skipped: number }>("/customers/mass-email", {
+        customerIds: ids,
+        subject: emailSubject,
+        body: emailTemplate === "CUSTOM" ? emailBody : undefined,
+        templateType: emailTemplate,
+      });
+
+      clearInterval(progressInterval);
+      setEmailProgress({ current: ids.length, total: ids.length });
+      setEmailResult(res.data);
+      setEmailToast(`Sent to ${res.data.sent} recipient${res.data.sent !== 1 ? "s" : ""}`);
+      setTimeout(() => setEmailToast(null), 4000);
+    } catch {
+      setEmailResult({ sent: 0, failed: ids.length, skipped: 0 });
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const { data: contacts } = useQuery({
     queryKey: ["customer-contacts", expanded],
     queryFn: () => api.get<CustomerContact[]>(`/customers/${expanded}/contacts`).then((r) => r.data),
@@ -317,6 +435,9 @@ export default function CRMPage() {
           <p className="text-sm text-slate-400 mt-1">Manage shippers, contacts, credit, and relationships</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={openEmailModal} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
+            <Send className="w-4 h-4" /> Send Email
+          </button>
           <button onClick={handleCsvExport} className="flex items-center gap-2 px-4 py-2.5 border border-gold text-gold font-medium rounded-lg text-sm hover:bg-gold/10">
             <Download className="w-4 h-4" /> Export CSV
           </button>
@@ -813,6 +934,172 @@ export default function CRMPage() {
             </button>
             </div>
       </SlideDrawer>
+
+      {/* Email Campaign Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div>
+                <h2 className="text-lg font-bold text-white">Send Email Campaign</h2>
+                <p className="text-sm text-slate-400 mt-0.5">Send branded emails to your CRM contacts</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {emailResult ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    {emailResult.sent > 0 && (
+                      <span className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" /> {emailResult.sent} sent
+                      </span>
+                    )}
+                    {emailResult.skipped > 0 && (
+                      <span className="px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 font-medium">
+                        {emailResult.skipped} skipped (no email)
+                      </span>
+                    )}
+                    {emailResult.failed > 0 && (
+                      <span className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 font-medium">
+                        {emailResult.failed} failed
+                      </span>
+                    )}
+                  </div>
+                  <button onClick={() => setShowEmailModal(false)}
+                    className="px-4 py-2 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Recipients */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Recipients</label>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                      <label className="flex items-center gap-2 text-sm text-slate-300 pb-2 border-b border-white/5 cursor-pointer">
+                        <input type="checkbox" checked={selectAllRecipients}
+                          onChange={(e) => handleToggleAllRecipients(e.target.checked)}
+                          className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20" />
+                        <span className="font-medium">All Customers with Email ({(data?.customers || []).filter((c) => c.email).length})</span>
+                      </label>
+                      {(data?.customers || []).map((c) => (
+                        <label key={c.id} className={`flex items-center gap-2 text-sm cursor-pointer ${c.email ? "text-slate-300" : "text-slate-600"}`}>
+                          <input type="checkbox" checked={selectedRecipients.has(c.id)}
+                            onChange={() => handleToggleRecipient(c.id)}
+                            disabled={!c.email}
+                            className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20 disabled:opacity-30" />
+                          <span>{c.name}</span>
+                          {c.email ? (
+                            <span className="text-xs text-slate-500 ml-auto truncate max-w-[200px]">{c.email}</span>
+                          ) : (
+                            <span className="text-xs text-red-400/60 ml-auto">No email</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Template */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Template</label>
+                    <select value={emailTemplate} onChange={(e) => handleTemplateChange(e.target.value as TemplateType)}
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
+                      <option value="INTRO" className="bg-slate-900">Company Introduction</option>
+                      <option value="FOLLOW_UP" className="bg-slate-900">Follow-Up</option>
+                      <option value="RATE_SHEET" className="bg-slate-900">Rate Sheet</option>
+                      <option value="CUSTOM" className="bg-slate-900">Custom</option>
+                    </select>
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Subject</label>
+                    <input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50" />
+                  </div>
+
+                  {/* Custom body textarea */}
+                  {emailTemplate === "CUSTOM" && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                        Message Body <span className="text-slate-600 normal-case">(HTML supported, use {"{contactName}"} for personalization)</span>
+                      </label>
+                      <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={8}
+                        placeholder="<p>Hi {contactName},</p><p>Your message here...</p>"
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 font-mono" />
+                    </div>
+                  )}
+
+                  {/* Preview */}
+                  {emailTemplate !== "CUSTOM" && (
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                        <Eye className="w-3.5 h-3.5" /> Preview
+                      </label>
+                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
+                        <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
+                          <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
+                        </div>
+                        <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
+                          dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATES[emailTemplate].preview("{contactName}") }} />
+                        <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
+                          Silk Route Logistics &bull; silkroutelogistics.ai
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {emailTemplate === "CUSTOM" && emailBody && (
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                        <Eye className="w-3.5 h-3.5" /> Preview
+                      </label>
+                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
+                        <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
+                          <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
+                        </div>
+                        <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
+                          dangerouslySetInnerHTML={{ __html: emailBody.replace(/\{contactName\}/g, "{contactName}") }} />
+                        <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
+                          Silk Route Logistics &bull; silkroutelogistics.ai
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {!emailResult && (
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
+                <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm">
+                  Cancel
+                </button>
+                <button onClick={handleSendCampaign}
+                  disabled={emailSending || selectedRecipients.size === 0 || !emailSubject.trim() || (emailTemplate === "CUSTOM" && !emailBody.trim())}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {emailSending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Sending {emailProgress.current}/{emailProgress.total}...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Send to {selectedRecipients.size} Recipient{selectedRecipients.size !== 1 ? "s" : ""}</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast notification */}
+      {emailToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-green-500/90 text-white rounded-lg shadow-xl text-sm font-medium animate-in slide-in-from-bottom-4">
+          <CheckCircle2 className="w-4 h-4" /> {emailToast}
+        </div>
+      )}
 
       {/* CSV Import Preview Modal */}
       {showCsvPreview && (
