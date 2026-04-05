@@ -2,11 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   DollarSign, Users, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle2, Shield, Clock,
   ChevronRight, UserCheck, Package, BarChart3,
-  FileText, Loader2, Zap,
+  FileText, Loader2, Zap, Bell,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -283,8 +286,9 @@ export function CeoOverview() {
               What happened, what&apos;s urgent, and what to focus on today.
             </p>
           </div>
-          <div className="hidden md:flex items-center gap-2 text-sm text-slate-500">
+          <div className="hidden md:flex items-center gap-3 text-sm text-slate-500">
             {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+            <NotificationBell />
           </div>
         </div>
       </div>
@@ -704,6 +708,74 @@ function QuickPayHealthCard() {
       >
         Details <ChevronRight className="w-3 h-3" />
       </Link>
+    </div>
+  );
+}
+
+function NotificationBell() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const { data: unreadData } = useQuery({
+    queryKey: ["unread-count"],
+    queryFn: () => api.get<{ count: number }>("/notifications/unread-count").then((r) => r.data),
+    refetchInterval: 30000,
+  });
+  const unreadCount = unreadData?.count || 0;
+
+  const { data: notifs } = useQuery({
+    queryKey: ["recent-notifications-ceo"],
+    queryFn: () => api.get("/notifications?limit=8").then((r) => r.data),
+    enabled: open,
+  });
+
+  const markAllRead = useCallback(() => {
+    api.patch("/notifications/read-all").then(() => {
+      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-notifications-ceo"] });
+    }).catch(() => {});
+  }, [queryClient]);
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen((p) => !p)}
+        className="relative w-10 h-10 flex items-center justify-center rounded-xl transition cursor-pointer"
+        style={{ background: "var(--srl-bg-surface)", border: "1px solid var(--srl-border)" }}>
+        <Bell className="w-5 h-5" style={{ color: unreadCount > 0 ? "var(--srl-gold)" : "var(--srl-text-muted)" }} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center px-1">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[99]" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-80 rounded-xl shadow-2xl z-[100] overflow-hidden"
+            style={{ background: "var(--srl-bg-surface)", border: "1px solid var(--srl-border)" }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--srl-border-subtle)" }}>
+              <span className="text-sm font-semibold" style={{ color: "var(--srl-text)" }}>Notifications</span>
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-xs cursor-pointer" style={{ color: "var(--srl-gold)" }}>Mark all read</button>
+              )}
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {Array.isArray(notifs) && notifs.length > 0 ? notifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
+                <button key={n.id} onClick={() => { if (n.actionUrl) router.push(n.actionUrl); setOpen(false); }}
+                  className="w-full text-left px-4 py-3 transition cursor-pointer"
+                  style={{ borderBottom: "1px solid var(--srl-border-subtle)", background: !n.readAt ? "var(--srl-gold-muted)" : "transparent" }}>
+                  <p className="text-xs font-medium" style={{ color: !n.readAt ? "var(--srl-text)" : "var(--srl-text-secondary)" }}>{n.title}</p>
+                  <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: "var(--srl-text-muted)" }}>{n.message}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--srl-text-muted)" }}>{new Date(n.createdAt).toLocaleString()}</p>
+                </button>
+              )) : (
+                <div className="px-4 py-8 text-center text-xs" style={{ color: "var(--srl-text-muted)" }}>No notifications</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

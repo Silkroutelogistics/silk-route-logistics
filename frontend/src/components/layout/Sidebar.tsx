@@ -457,41 +457,20 @@ export function Sidebar() {
                 </p>
               </div>
               <div className="relative">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowNotifDropdown((p) => !p); }}
-                  className="relative w-9 h-9 flex items-center justify-center bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer shrink-0"
+                {/* Bell moved to dashboard header — keeping small indicator here */}
+                <Link href="/dashboard/overview"
+                  className="relative w-9 h-9 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0"
+                  style={{ background: 'var(--srl-bg-surface)' }}
                   title="Notifications"
                 >
-                  <Bell className={`w-4.5 h-4.5 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
+                  <Bell className="w-4 h-4" style={{ color: unreadCount > 0 ? 'var(--srl-gold)' : 'var(--srl-text-muted)' }} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center px-1">
-                      {unreadCount > 99 ? "99+" : unreadCount}
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center px-0.5">
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
-                </button>
-                {showNotifDropdown && (
-                  <div className="fixed right-6 top-4 w-80 rounded-xl shadow-2xl z-[100] overflow-hidden" style={{ background: 'var(--srl-bg-surface)', border: '1px solid var(--srl-border)' }}>
-                    <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid var(--srl-border)' }}>
-                      <span className="text-xs font-semibold" style={{ color: 'var(--srl-text)' }}>Notifications</span>
-                      {unreadCount > 0 && (
-                        <button onClick={handleMarkAllRead} className="text-[10px] text-gold hover:text-gold/80 cursor-pointer">Mark all read</button>
-                      )}
-                    </div>
-                    <div className="max-h-72 overflow-y-auto">
-                      {Array.isArray(recentNotifs) && recentNotifs.length > 0 ? recentNotifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
-                        <button key={n.id} onClick={() => { handleMarkOneRead(n.id); if (n.actionUrl) router.push(n.actionUrl); setShowNotifDropdown(false); }}
-                          className="w-full text-left px-3 py-2.5 transition cursor-pointer"
-                          style={{ borderBottom: '1px solid var(--srl-border-subtle)', background: !n.readAt ? 'var(--srl-gold-muted)' : 'transparent' }}>
-                          <p className={`text-xs font-medium ${!n.readAt ? "text-white" : "text-slate-400"}`}>{n.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
-                          <p className="text-[9px] text-slate-600 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                        </button>
-                      )) : (
-                        <div className="px-3 py-6 text-center text-xs text-slate-500">No notifications</div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                </Link>
+                {/* Dropdown removed — notifications now in dashboard header */}
               </div>
             </div>
           ) : (
