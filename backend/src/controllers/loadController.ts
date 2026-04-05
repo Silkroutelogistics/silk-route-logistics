@@ -12,6 +12,7 @@ import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
 import { notifyMatchedCarriers } from "../services/carrierOutreachService";
 import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getLoadAuditHistory } from "../services/loadAuditService";
+import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -175,6 +176,11 @@ export async function createLoad(req: AuthRequest, res: Response) {
     );
   }
 
+  // AI Learning Loop: record new load creation event
+  aiOnLoadStatusChange(load.id, "NEW", load.status, new Date()).catch((e) =>
+    console.error("[AI Feedback]", e.message)
+  );
+
   res.status(201).json(load);
 }
 
@@ -321,6 +327,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // Field-level audit: log status transition
   logStatusChange(load.id, req.user!.id, existing.status, status).catch((e) =>
     console.error("[LoadAudit] status change log error:", e.message)
+  );
+
+  // AI Learning Loop: record status change for feedback collection
+  aiOnLoadStatusChange(load.id, existing.status, status, new Date()).catch((e) =>
+    console.error("[AI Feedback]", e.message)
   );
 
   // Sync linked shipment status

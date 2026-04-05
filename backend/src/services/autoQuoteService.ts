@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { checkContractRate } from "./contractRateService";
+import { buildLaneContext } from "./aiLearningLoop/contextEngine";
 
 /**
  * AI Auto-Quote Service — Instant Rate Quotes for Shipper RFQs
@@ -313,6 +314,14 @@ export async function generateQuote(params: QuoteRequest): Promise<QuoteResponse
     }
   }
 
+  // 0. Try to get AI-enriched lane context (optional — failures are non-blocking)
+  let laneContext: Awaited<ReturnType<typeof buildLaneContext>> | null = null;
+  try {
+    laneContext = await buildLaneContext(originState, destState);
+  } catch {
+    /* context enrichment is optional */
+  }
+
   // 1. Estimate distance
   const estimatedMiles = estimateDistance(originState, destState);
   factors.push(`Estimated distance: ${estimatedMiles} miles (${originState.toUpperCase()} → ${destState.toUpperCase()})`);
@@ -331,6 +340,13 @@ export async function generateQuote(params: QuoteRequest): Promise<QuoteResponse
     historicalCount = market.count;
     factors.push(`Historical data: ${market.count} loads on this lane (last 90 days)`);
     factors.push(`Historical avg rate: $${market.avg.toFixed(2)} ($${carrierRatePerMile.toFixed(2)}/mile)`);
+  } else if (laneContext?.avgRate) {
+    // Use AI context engine lane intelligence as fallback before base rates
+    carrierRatePerMile = laneContext.avgRate / estimatedMiles;
+    factors.push(`AI lane intelligence avg rate: $${laneContext.avgRate.toFixed(2)} ($${carrierRatePerMile.toFixed(2)}/mile)`);
+    if (laneContext.trend) {
+      factors.push(`Lane trend: ${laneContext.trend}`);
+    }
   } else {
     // Use base rates
     carrierRatePerMile = BASE_RATES[normalizedEquip] || BASE_RATES.DRY_VAN;
@@ -338,6 +354,16 @@ export async function generateQuote(params: QuoteRequest): Promise<QuoteResponse
     if (market && market.count > 0) {
       historicalCount = market.count;
       factors.push(`Limited historical data: ${market.count} load(s) found`);
+    }
+  }
+
+  // Enrich with AI context signals if available
+  if (laneContext) {
+    if (laneContext.seasonalFactor && laneContext.seasonalFactor !== 1.0) {
+      factors.push(`AI seasonal factor: ${laneContext.seasonalFactor.toFixed(2)}`);
+    }
+    if (laneContext.recentAnomalies > 0) {
+      factors.push(`AI anomaly alert: ${laneContext.recentAnomalies} recent anomaly(ies) on this lane`);
     }
   }
 

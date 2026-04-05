@@ -8,6 +8,7 @@ import { upload } from "../config/upload";
 import { uploadFile } from "../services/storageService";
 import { nextShipmentNumber } from "../controllers/shipmentController";
 import { sendPODToContact } from "../services/shipperLoadNotifyService";
+import { onLoadStatusChange as aiOnLoadStatusChange, onCarrierResponse } from "../services/aiLearningLoop/feedbackCollector";
 
 const router = Router();
 
@@ -227,6 +228,14 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     },
   });
 
+  // AI Learning Loop: record carrier acceptance
+  aiOnLoadStatusChange(load.id, "POSTED", "BOOKED", new Date()).catch((e) =>
+    console.error("[AI Feedback]", e.message)
+  );
+  onCarrierResponse(req.user!.id, load.id, "ACCEPTED", 0).catch((e) =>
+    console.error("[AI Feedback]", e.message)
+  );
+
   res.json(updated);
 });
 
@@ -250,6 +259,11 @@ router.post("/:id/decline", async (req: AuthRequest, res: Response) => {
       data: { status: "DECLINED", respondedAt: new Date() },
     });
   }
+
+  // AI Learning Loop: record carrier decline
+  onCarrierResponse(req.user!.id, load.id, "DECLINED", 0).catch((e) =>
+    console.error("[AI Feedback]", e.message)
+  );
 
   // Notify broker
   if (load.posterId) {
@@ -324,7 +338,13 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
     data.actualPickupDatetime = new Date();
   }
 
+  const oldStatus = load.status;
   const updated = await prisma.load.update({ where: { id: load.id }, data });
+
+  // AI Learning Loop: record carrier status change
+  aiOnLoadStatusChange(load.id, oldStatus, status, new Date()).catch((e) =>
+    console.error("[AI Feedback]", e.message)
+  );
 
   // Create check call for the status update
   try {

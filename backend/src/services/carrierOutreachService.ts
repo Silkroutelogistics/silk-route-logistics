@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
+import { matchCarriersForLoad } from "./smartMatchService";
 
 /**
  * AI Carrier Outreach Service
@@ -138,51 +139,76 @@ export async function notifyMatchedCarriers(
     return { notified: 0, carriers: [] };
   }
 
-  // Determine regions the load touches
-  const loadRegions = getRegionsForLoad(load.originState, load.destState);
+  // Try AI smart matching first, fall back to simple equipment/region matching
+  let top5: Array<{
+    userId: string;
+    user: { id: string; email: string; firstName: string | null; lastName: string | null; company: string | null; isVerified: boolean };
+    operatingRegions: string[];
+    equipmentTypes: string[];
+  }> = [];
 
-  // Find APPROVED carriers with matching equipment type
-  const matchingCarriers = await prisma.carrierProfile.findMany({
-    where: {
-      onboardingStatus: "APPROVED",
-      equipmentTypes: { hasSome: [load.equipmentType] },
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          company: true,
-          isVerified: true,
+  try {
+    const smartResult = await matchCarriersForLoad(loadId);
+    if (smartResult.matches.length > 0) {
+      // Fetch full user info for each smart-matched carrier
+      const smartCarrierProfiles = await prisma.carrierProfile.findMany({
+        where: { userId: { in: smartResult.matches.slice(0, 5).map((m) => m.userId) } },
+        include: {
+          user: {
+            select: { id: true, email: true, firstName: true, lastName: true, company: true, isVerified: true },
+          },
         },
-      },
-    },
-  });
-
-  // Filter by operating regions overlap
-  const regionMatched = matchingCarriers.filter((cp) => {
-    if (cp.operatingRegions.length === 0) return true; // No regions = nationwide
-    return cp.operatingRegions.some((r) => loadRegions.includes(r));
-  });
-
-  // Filter out carriers at capacity (active loads >= 3)
-  const withCapacity: typeof regionMatched = [];
-  for (const carrier of regionMatched) {
-    const activeLoads = await prisma.load.count({
-      where: {
-        carrierId: carrier.userId,
-        status: { in: ["BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY"] },
-      },
-    });
-    if (activeLoads < 3) {
-      withCapacity.push(carrier);
+      });
+      top5 = smartCarrierProfiles;
+      console.log(`[CarrierOutreach] Smart match found ${smartResult.matches.length} candidates for load ${load.referenceNumber}`);
     }
+  } catch (e: any) {
+    console.log(`[CarrierOutreach] Smart match unavailable, falling back to simple matching: ${e.message}`);
   }
 
-  // Take top 5
-  const top5 = withCapacity.slice(0, 5);
+  // Fallback: simple equipment/region matching if smart match returned nothing
+  if (top5.length === 0) {
+    const loadRegions = getRegionsForLoad(load.originState, load.destState);
+
+    const matchingCarriers = await prisma.carrierProfile.findMany({
+      where: {
+        onboardingStatus: "APPROVED",
+        equipmentTypes: { hasSome: [load.equipmentType] },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            company: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    const regionMatched = matchingCarriers.filter((cp) => {
+      if (cp.operatingRegions.length === 0) return true;
+      return cp.operatingRegions.some((r) => loadRegions.includes(r));
+    });
+
+    const withCapacity: typeof regionMatched = [];
+    for (const carrier of regionMatched) {
+      const activeLoads = await prisma.load.count({
+        where: {
+          carrierId: carrier.userId,
+          status: { in: ["BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY"] },
+        },
+      });
+      if (activeLoads < 3) {
+        withCapacity.push(carrier);
+      }
+    }
+
+    top5 = withCapacity.slice(0, 5);
+  }
 
   if (top5.length === 0) {
     console.log(`[CarrierOutreach] No matching carriers found for load ${load.referenceNumber}`);
