@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
 import { sendEmail, wrap } from "../services/emailService";
+import { EMAIL_SIGNATURE } from "../services/emailSequenceService";
 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
@@ -474,13 +475,8 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
       </ul>
       <p>I'd genuinely love to learn about your shipping operations and explore whether we can add value. Even if the timing isn't right, I'm happy to provide a <strong>free, no-obligation freight audit</strong> on your top lanes.</p>
       <p>Would you be open to a brief 10-minute call this week?</p>
-      <p style="margin-top:24px">Best regards,</p>
-      <p><strong>Wasih Haider</strong><br/>
-      Founder & CEO<br/>
-      Silk Route Logistics Inc.<br/>
-      MC# 01794414 | DOT# 4526880<br/>
-      <a href="tel:+12692206760" style="color:#C9A84C">(269) 220-6760</a> | <a href="mailto:whaider@silkroutelogistics.ai" style="color:#C9A84C">whaider@silkroutelogistics.ai</a><br/>
-      <a href="https://silkroutelogistics.ai" style="color:#C9A84C">silkroutelogistics.ai</a></p>`,
+      <p>Best regards,</p>
+      ${EMAIL_SIGNATURE}`,
   },
   FOLLOW_UP: {
     subject: "Following Up — Silk Route Logistics",
@@ -489,10 +485,8 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
       <p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped ${industryType || "manufacturing"} companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
       <p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
       <p>Just reply to this email or book a call at your convenience.</p>
-      <p>Best regards,<br/>
-      <strong>Wasih Haider</strong><br/>
-      CEO, Silk Route Logistics Inc.<br/>
-      (269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+      <p>Best regards,</p>
+      ${EMAIL_SIGNATURE}`,
   },
   CAPACITY: {
     subject: "Freight capacity when you need it — Silk Route Logistics",
@@ -508,12 +502,8 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
       </ul>
       <p>If you ever find yourself short on capacity or want a backup option for critical loads, I'd love to be that call you make.</p>
       <p>Happy to start with a single trial load so you can see how we operate — no long-term commitment required.</p>
-      <p style="margin-top:24px">Best regards,</p>
-      <p><strong>Wasih Haider</strong><br/>
-      Founder & CEO<br/>
-      Silk Route Logistics Inc.<br/>
-      <a href="tel:+12692206760" style="color:#C9A84C">(269) 220-6760</a> | <a href="mailto:whaider@silkroutelogistics.ai" style="color:#C9A84C">whaider@silkroutelogistics.ai</a><br/>
-      <a href="https://silkroutelogistics.ai" style="color:#C9A84C">silkroutelogistics.ai</a></p>`,
+      <p>Best regards,</p>
+      ${EMAIL_SIGNATURE}`,
   },
 };
 

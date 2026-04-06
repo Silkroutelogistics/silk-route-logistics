@@ -351,9 +351,30 @@ export async function checkProspectStageChange(prospectId: string, newStatus: st
   }
 }
 
+/** Wasih's email signature — matches Gmail signature */
+const EMAIL_SIGNATURE = `
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px">
+  <tr>
+    <td style="padding-right:14px;vertical-align:top">
+      <img src="https://silkroutelogistics.ai/logo-penguin.gif" alt="SRL" width="48" height="48" style="border-radius:8px" />
+    </td>
+    <td style="vertical-align:top;font-size:13px;line-height:1.5">
+      <strong style="font-size:14px;color:#0f172a">Wasih Haider</strong><br>
+      Founder & CEO<br>
+      Silk Route Logistics Inc.<br>
+      <span style="color:#64748b">MC# 01794414 | DOT# 4526880</span><br>
+      <a href="tel:+12692206760" style="color:#C8963E;text-decoration:none">(269) 220-6760</a><br>
+      <a href="mailto:whaider@silkroutelogistics.ai" style="color:#C8963E;text-decoration:none">whaider@silkroutelogistics.ai</a>
+      &nbsp;|&nbsp;
+      <a href="https://silkroutelogistics.ai" style="color:#C8963E;text-decoration:none">silkroutelogistics.ai</a>
+    </td>
+  </tr>
+</table>`;
+
 /**
  * Build personal-style email for prospect outreach.
  * No brand headers/footers — looks like a real email from Wasih.
+ * Includes the standard email signature on all templates.
  */
 function buildSequenceEmail(template: string, name: string, step: number): string {
   const firstName = name.split(" ")[0] || name;
@@ -364,33 +385,35 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
       <p>I'm Wasih, founder of Silk Route Logistics here in Kalamazoo, Michigan. I came across your company and thought there might be a fit.</p>
       <p>We're a freight brokerage that runs on technology — real-time tracking on every load, 98% pickup rate, and I personally manage every account. No call centers, no runaround.</p>
       <p>Would you have 10 minutes this week for a quick call? I'd love to hear about your shipping lanes and see if we can help.</p>
-      <p>Best,<br>Wasih Haider<br><span style="color:#64748b;font-size:13px">Silk Route Logistics | silkroutelogistics.ai<br>Kalamazoo, MI</span></p>
+      <p>Best,</p>
     `,
     followup_1: `
       <p>Hi ${firstName},</p>
       <p>Just bumping this up in case my last email got buried. I know inboxes can be brutal.</p>
       <p>Quick background: we handle dry van, flatbed, reefer, and specialized — coast to coast. What makes us different is the tech and the personal touch. You'll always have my direct line, and every load gets GPS tracking from pickup to delivery.</p>
       <p>Happy to jump on a 10-minute call whenever works for you. No pressure at all.</p>
-      <p>Wasih</p>
+      <p>Best,</p>
     `,
     followup_2: `
       <p>Hi ${firstName},</p>
       <p>I realize timing is everything — if you're all set with your current carriers, I totally get it. But in case you ever need backup capacity or want to compare rates on a tricky lane, I'm here.</p>
       <p>I'm happy to run a free lane analysis for you — just send me your top 3-5 lanes and I'll come back with competitive pricing. No obligation, no follow-up calls from a sales team. Just me.</p>
       <p>Let me know if that's useful.</p>
-      <p>Wasih</p>
+      <p>Best,</p>
     `,
     followup_3: `
       <p>Hi ${firstName},</p>
       <p>Last note from me — I promise I won't keep filling your inbox.</p>
       <p>If you ever need a reliable freight partner, a last-minute truck, or just want a second opinion on rates — my door is always open. Feel free to reply to this email anytime, even months from now.</p>
       <p>Wishing you and your team a great rest of the quarter.</p>
-      <p>Wasih Haider<br><span style="color:#64748b;font-size:13px">Silk Route Logistics<br>whaider@silkroutelogistics.ai</span></p>
     `,
   };
 
   const body = bodies[template] || bodies.introduction;
 
-  // Personal email style — no branded header/footer, just clean text
-  return `<div style="max-width:600px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.6;font-size:15px">${body}</div>`;
+  // Personal email style + consistent signature
+  return `<div style="max-width:600px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.6;font-size:15px">${body}${EMAIL_SIGNATURE}</div>`;
 }
+
+/** Export signature for use in mass emails */
+export { EMAIL_SIGNATURE };
