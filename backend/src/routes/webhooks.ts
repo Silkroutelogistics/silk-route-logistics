@@ -72,7 +72,7 @@ router.post("/resend", async (req, res) => {
       return;
     }
 
-    const validTypes = ["email.sent", "email.delivered", "email.bounced", "email.complained", "email.opened", "email.clicked", "email.received"];
+    const validTypes = ["email.sent", "email.delivered", "email.bounced", "email.complained", "email.opened", "email.clicked", "email.received", "email.replied"];
     if (!validTypes.includes(event.type)) {
       console.warn(`[Webhook] Unknown Resend event type: ${event.type}`);
       res.status(400).json({ error: "Unknown event type" });

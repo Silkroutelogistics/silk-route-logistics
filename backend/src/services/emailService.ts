@@ -264,10 +264,13 @@ export async function sendSequenceEmail(
   subject: string,
   html: string,
   sequenceId: string,
+  options?: { fromName?: string; replyTo?: string },
 ) {
-  // Send via the standard sendEmail function
-  await sendEmail(to, subject, html);
-  console.log(`[Sequence][Email] Sent to ${to}: ${subject} (seq: ${sequenceId})`);
+  await sendEmail(to, subject, html, undefined, {
+    fromName: options?.fromName,
+    replyTo: options?.replyTo,
+  });
+  console.log(`[Sequence][Email] Sent to ${to}: ${subject} (seq: ${sequenceId}, from: ${options?.fromName || "default"})`);
 }
 
 // ─── Shipper Notification Templates ──────────────────────────
