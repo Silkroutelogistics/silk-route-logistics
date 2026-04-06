@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { register, login, getProfile, updateProfile, updatePreferences, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword, checkPasswordStrength, handleTotpLoginVerify } from "../controllers/authController";
 import { authenticate, authorize, registerSession } from "../middleware/auth";
 import { generateTotpSetup, verifyTotpCode, enableTotp, disableTotp } from "../services/totpService";
+import { getAuthUrl, exchangeCode } from "../services/gmailService";
 import { AuthRequest } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { registerSchema, loginSchema } from "../validators/auth";
@@ -206,6 +207,39 @@ router.patch("/users/:id/status", authenticate, authorize("ADMIN") as any, async
   } catch (err) {
     res.status(500).json({ error: process.env.NODE_ENV !== "production" ? String(err) : "Internal server error" });
   }
+});
+
+// ─── Google OAuth (Gmail Reply Tracking) ─────────────────────────
+
+// Google OAuth callback — exchanges auth code for tokens
+router.get("/google/callback", async (req, res) => {
+  const { code } = req.query;
+  if (!code) {
+    res.status(400).json({ error: "No authorization code provided" });
+    return;
+  }
+  try {
+    const tokens = await exchangeCode(code as string);
+    // In production, store refresh_token in env/DB
+    // For now, display it so the admin can add to Render env vars
+    res.json({
+      message: "Gmail connected successfully! Add the refresh_token to Render as GOOGLE_OAUTH_REFRESH_TOKEN",
+      refresh_token: tokens.refresh_token,
+      note: "Save this refresh token — it won't be shown again",
+    });
+  } catch (err) {
+    console.error("[Gmail OAuth] Token exchange error:", err);
+    res.status(500).json({ error: "Failed to exchange code for tokens" });
+  }
+});
+
+// Get Gmail OAuth authorization URL (admin only)
+router.get("/google/auth-url", authenticate, authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res) => {
+  if (!env.GOOGLE_OAUTH_CLIENT_ID) {
+    res.status(400).json({ error: "Google OAuth not configured — set GOOGLE_OAUTH_CLIENT_ID in environment" });
+    return;
+  }
+  res.json({ url: getAuthUrl() });
 });
 
 export default router;

@@ -46,6 +46,11 @@ const envSchema = z.object({
   PROJECT44_API_KEY: z.string().optional(),
   // Inbound email webhook
   INBOUND_EMAIL_SECRET: z.string().optional(),
+  // Google OAuth (Gmail reply tracking)
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_OAUTH_REDIRECT_URI: z.string().optional().default("https://api.silkroutelogistics.ai/api/auth/google/callback"),
+  GOOGLE_OAUTH_REFRESH_TOKEN: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

@@ -576,6 +576,18 @@ export function startSchedulers() {
     });
   });
 
+  // Gmail reply tracking: every 30 minutes at :25 and :55
+  cron.schedule("25,55 * * * *", async () => {
+    console.log("[Scheduler] Running Gmail reply checker...");
+    await withLock("gmail-reply-checker", 5 * 60 * 1000, async () => {
+      const { checkForReplies } = await import("./gmailService");
+      const result = await checkForReplies();
+      if (result.logged > 0) {
+        console.log(`[Scheduler] Gmail: ${result.checked} checked, ${result.matched} matched, ${result.logged} logged`);
+      }
+    });
+  });
+
   // Shipper contact email ETA updates: daily noon EST = 17:00 UTC
   cron.schedule("0 17 * * *", async () => {
     console.log("[Scheduler] Running shipper contact ETA updates (noon EST)...");
