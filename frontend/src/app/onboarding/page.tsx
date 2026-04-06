@@ -44,7 +44,7 @@ interface CarrierFormData {
   firstName: string; lastName: string; email: string; password: string;
   company: string; phone: string; mcNumber: string; dotNumber: string;
   address: string; city: string; state: string; zip: string; unit: string;
-  numberOfTrucks: string;
+  numberOfTrucks: string; ein: string;
   equipmentTypes: string[]; operatingRegions: string[];
   agreeTerms: boolean;
   // Extended insurance fields
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
     firstName: "", lastName: "", email: "", password: "",
     company: "", phone: "", mcNumber: "", dotNumber: "",
     address: "", city: "", state: "", zip: "", unit: "",
-    numberOfTrucks: "",
+    numberOfTrucks: "", ein: "",
     equipmentTypes: [], operatingRegions: [],
     agreeTerms: false,
     autoLiability: { ...emptyInsLine },
@@ -160,7 +160,7 @@ export default function OnboardingPage() {
   };
 
   const canNext = () => {
-    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber);
+    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company && form.phone.length >= 10 && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber) && form.address && form.city && form.state && form.zip;
     if (step === 1) return form.equipmentTypes.length > 0 && form.operatingRegions.length > 0;
     if (step === 3) return form.agreeTerms;
     return true;
@@ -176,9 +176,10 @@ export default function OnboardingPage() {
         return;
       }
 
-      const { agreeTerms: _, address: _a, city: _c, state: _s, zip: _z, numberOfTrucks: _n,
+      const { agreeTerms: _, unit: _u,
         autoLiability, cargoInsurance, generalLiability, workersComp,
         additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
+        numberOfTrucks: numTrucksStr,
         ...regData } = form;
       const insurancePayload: Record<string, unknown> = {};
       if (autoLiability.provider) insurancePayload.autoLiabilityProvider = autoLiability.provider;
@@ -207,7 +208,11 @@ export default function OnboardingPage() {
       const res = await fetch(`${apiUrl}/carrier/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...regData, ...insurancePayload }),
+        body: JSON.stringify({
+          ...regData,
+          ...insurancePayload,
+          ...(numTrucksStr ? { numberOfTrucks: parseInt(numTrucksStr) } : {}),
+        }),
       });
 
       if (!res.ok) {
@@ -414,8 +419,13 @@ export default function OnboardingPage() {
                   <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone *</label>
                   <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">EIN (Federal Tax ID)</label>
+                  <input value={form.ein} onChange={(e) => set("ein", e.target.value.replace(/\D/g, "").slice(0, 9))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="XX-XXXXXXX" maxLength={9} />
+                  <p className="text-xs text-slate-400 mt-1">9-digit EIN for business verification</p>
                 </div>
               </div>
 
@@ -885,6 +895,7 @@ export default function OnboardingPage() {
                   </p>
                   <p className="text-sm text-slate-600">
                     DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
+                    {form.ein && ` | EIN: ${form.ein.slice(0,2)}-${form.ein.slice(2)}`}
                     {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
                     {fmcsaResult?.verified && <span className="ml-2 text-green-600 font-medium">FMCSA Verified</span>}
                   </p>

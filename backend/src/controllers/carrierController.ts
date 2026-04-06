@@ -58,6 +58,15 @@ export async function registerCarrier(req: Request, res: Response) {
           equipmentTypes: data.equipmentTypes,
           operatingRegions: data.operatingRegions,
           onboardingStatus: "PENDING",
+          // Contact + address (for compliance fingerprinting)
+          contactName: `${data.firstName} ${data.lastName}`,
+          contactPhone: data.phone,
+          contactEmail: data.email,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+          numberOfTrucks: data.numberOfTrucks ?? null,
           // Extended insurance details
           autoLiabilityProvider: data.autoLiabilityProvider,
           autoLiabilityAmount: data.autoLiabilityAmount,
@@ -121,6 +130,22 @@ export async function registerCarrier(req: Request, res: Response) {
 
     // Fire and forget — don't block response
     Promise.all(uploadPromises).catch((e) => console.error("[Registration Files] Upload error:", e.message));
+  }
+
+  // Store EIN in identity verification if provided
+  if (data.ein && user.carrierProfile) {
+    await prisma.carrierIdentityVerification.upsert({
+      where: { carrierId: user.carrierProfile.id },
+      create: {
+        carrierId: user.carrierProfile.id,
+        w9TinFull: data.ein,
+        w9TinLastFour: data.ein.slice(-4),
+      },
+      update: {
+        w9TinFull: data.ein,
+        w9TinLastFour: data.ein.slice(-4),
+      },
+    });
   }
 
   // No JWT issued at registration — carrier must be approved first
@@ -224,21 +249,56 @@ export async function registerCarrier(req: Request, res: Response) {
     }
   }).catch((e) => console.error("[Admin Notify] Error fetching admins:", e.message));
 
-  // 3. Auto-trigger Compass vetting (background)
+  // 3. Build chameleon fingerprint (needs address, phone, EIN stored first)
+  if (profileId) {
+    const { buildFingerprint } = await import("../services/chameleonDetectionService");
+    buildFingerprint(profileId, req.ip || undefined).catch((e) =>
+      console.error("[Compass Chameleon] Fingerprint build error:", e.message)
+    );
+  }
+
+  // 4. Auto-trigger Compass vetting (background)
   if (dot) {
-    vetAndStoreReport(dot, profileId, mc, "AUTO_REGISTRATION").catch((e) =>
+    vetAndStoreReport(dot, profileId, mc, "AUTO_REGISTRATION").then(async (report) => {
+      // Auto-approve A-grade carriers (score >= 90, no instant-fail flags)
+      if (report.grade === "A" && report.recommendation === "APPROVE" && profileId) {
+        try {
+          await prisma.carrierProfile.update({
+            where: { id: profileId },
+            data: { onboardingStatus: "APPROVED", approvedAt: new Date() },
+          });
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { isVerified: true },
+          });
+          // Notify carrier of auto-approval
+          await prisma.notification.create({
+            data: {
+              userId: user.id,
+              type: "ONBOARDING",
+              title: "Application Approved!",
+              message: "Your carrier application has been automatically approved. Welcome to Silk Route Logistics!",
+              actionUrl: "/carrier/dashboard",
+            },
+          });
+          console.log(`[Compass Auto-Approve] Carrier ${data.company} (DOT: ${dot}) auto-approved with grade A (score: ${report.score})`);
+        } catch (e: any) {
+          console.error("[Compass Auto-Approve] Error:", e.message);
+        }
+      }
+    }).catch((e) =>
       console.error("[Compass Auto-Vet] Registration vetting error:", e.message)
     );
   }
 
-  // 4. Auto-trigger identity verification (background)
+  // 5. Auto-trigger identity verification (background)
   if (profileId) {
     runIdentityCheck(profileId).catch((e) =>
       console.error("[Compass Identity] Auto identity check error:", e.message)
     );
   }
 
-  // 5. Auto-trigger OFAC screening (background)
+  // 6. Auto-trigger OFAC screening (background)
   if (profileId) {
     screenCarrier(profileId).catch((e) =>
       console.error("[Compass OFAC] Auto OFAC screening error:", e.message)

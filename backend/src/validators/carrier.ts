@@ -6,11 +6,19 @@ export const carrierRegisterSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   company: z.string().min(1),
-  phone: z.string().optional(),
+  phone: z.string().min(10, "Phone number is required"),
   mcNumber: z.string().min(1, "MC number is required"),
   dotNumber: z.string().min(5, "DOT number is required (minimum 5 digits)").regex(/^\d+$/, "DOT number must be numeric"),
   equipmentTypes: z.array(z.string()).min(1),
   operatingRegions: z.array(z.string()).min(1),
+  // Address (required for compliance fingerprinting)
+  address: z.string().min(1, "Street address is required"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(2, "State is required"),
+  zip: z.string().min(5, "ZIP code is required"),
+  // EIN/TIN (required for business verification)
+  ein: z.string().regex(/^\d{9}$/, "EIN must be 9 digits").optional(),
+  numberOfTrucks: z.number().int().min(1).optional(),
   // Extended insurance fields (optional at registration)
   autoLiabilityProvider: z.string().optional(),
   autoLiabilityAmount: z.number().optional(),
