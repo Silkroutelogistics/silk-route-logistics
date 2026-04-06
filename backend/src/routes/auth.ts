@@ -242,4 +242,15 @@ router.get("/google/auth-url", authenticate, authorize("ADMIN", "CEO") as any, a
   res.json({ url: getAuthUrl() });
 });
 
+// Manually trigger Gmail reply check (admin only)
+router.get("/google/check-replies", authenticate, authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res) => {
+  try {
+    const { checkForReplies } = await import("../services/gmailService");
+    const result = await checkForReplies();
+    res.json({ message: "Gmail reply check completed", ...result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
