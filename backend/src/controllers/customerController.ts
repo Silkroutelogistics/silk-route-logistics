@@ -463,7 +463,7 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
     subject: "Introducing Silk Route Logistics — Your Freight Partner",
     buildBody: (contactName: string) => `
       <p>Hi ${contactName},</p>
-      <p>I hope this message finds you well. My name is Wasi Haider, and I'm the founder of <strong>Silk Route Logistics</strong> — a technology-driven freight brokerage based in Kalamazoo, Michigan.</p>
+      <p>I hope this message finds you well. My name is Wasih Haider, and I'm the founder of <strong>Silk Route Logistics</strong> — a technology-driven freight brokerage based in Kalamazoo, Michigan.</p>
       <p>Inspired by the ancient Silk Road that connected civilizations through trade, we built SRL to connect shippers and carriers across North America with the same principles: <strong>trust, transparency, and reliability</strong>.</p>
       <p>What makes us different:</p>
       <ul style="line-height:1.8">
@@ -475,7 +475,7 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
       <p>I'd genuinely love to learn about your shipping operations and explore whether we can add value. Even if the timing isn't right, I'm happy to provide a <strong>free, no-obligation freight audit</strong> on your top lanes.</p>
       <p>Would you be open to a brief 10-minute call this week?</p>
       <p style="margin-top:24px">Best regards,</p>
-      <p><strong>Wasi Haider</strong><br/>
+      <p><strong>Wasih Haider</strong><br/>
       Founder & CEO<br/>
       Silk Route Logistics Inc.<br/>
       MC# 01794414 | DOT# 4526880<br/>
@@ -490,27 +490,30 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
       <p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
       <p>Just reply to this email or book a call at your convenience.</p>
       <p>Best regards,<br/>
-      <strong>Wasi Haider</strong><br/>
+      <strong>Wasih Haider</strong><br/>
       CEO, Silk Route Logistics Inc.<br/>
       (269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
-  RATE_SHEET: {
-    subject: "Silk Route Logistics — Rate Information",
-    buildBody: (contactName: string) => `
+  CAPACITY: {
+    subject: "Freight capacity when you need it — Silk Route Logistics",
+    buildBody: (contactName: string, industryType: string) => `
       <p>Hi ${contactName},</p>
-      <p>Thank you for your interest in Silk Route Logistics. Attached is our current rate information for the lanes most relevant to your operation.</p>
-      <p>Key highlights:</p>
-      <ul>
-        <li>FTL Dry Van rates from $2.15/mile (Midwest lanes)</li>
-        <li>No hidden fees — all-in rates published monthly</li>
-        <li>Quick Pay available for carriers (Net-7 to same-day)</li>
-        <li>Free real-time tracking portal for all shipments</li>
+      <p>I know finding reliable freight capacity can be a headache — especially during peak seasons or when you need last-minute trucks${industryType ? ` for ${industryType} shipments` : ""}.</p>
+      <p>At Silk Route Logistics, we maintain a vetted carrier network across all 48 states with:</p>
+      <ul style="line-height:1.8">
+        <li><strong>Same-day truck coverage</strong> — Dry van, flatbed, reefer, and specialized</li>
+        <li><strong>98% pickup rate</strong> — When we commit to a load, it gets picked up</li>
+        <li><strong>Real-time GPS tracking</strong> — Full visibility from pickup to delivery, no check-call phone tag</li>
+        <li><strong>Dedicated point of contact</strong> — You deal with me directly, not a rotating desk</li>
       </ul>
-      <p>Let me know if you'd like a custom quote on specific lanes.</p>
-      <p>Best regards,<br/>
-      <strong>Wasi Haider</strong><br/>
-      CEO, Silk Route Logistics Inc.<br/>
-      (269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+      <p>If you ever find yourself short on capacity or want a backup option for critical loads, I'd love to be that call you make.</p>
+      <p>Happy to start with a single trial load so you can see how we operate — no long-term commitment required.</p>
+      <p style="margin-top:24px">Best regards,</p>
+      <p><strong>Wasih Haider</strong><br/>
+      Founder & CEO<br/>
+      Silk Route Logistics Inc.<br/>
+      <a href="tel:+12692206760" style="color:#C9A84C">(269) 220-6760</a> | <a href="mailto:whaider@silkroutelogistics.ai" style="color:#C9A84C">whaider@silkroutelogistics.ai</a><br/>
+      <a href="https://silkroutelogistics.ai" style="color:#C9A84C">silkroutelogistics.ai</a></p>`,
   },
 };
 
@@ -518,7 +521,7 @@ const massEmailSchema = z.object({
   customerIds: z.array(z.string()).min(1, "At least one customer is required"),
   subject: z.string().min(1, "Subject is required"),
   body: z.string().optional(),
-  templateType: z.enum(["INTRO", "RATE_SHEET", "FOLLOW_UP", "CUSTOM"]),
+  templateType: z.enum(["INTRO", "CAPACITY", "FOLLOW_UP", "CUSTOM"]),
 });
 
 export async function sendMassEmail(req: AuthRequest, res: Response) {
@@ -556,7 +559,7 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
     const html = wrap(emailBody);
 
     try {
-      await sendEmail(c.email, subject, html, undefined, { replyTo: "whaider@silkroutelogistics.ai", fromName: "Wasi Haider — Silk Route Logistics" });
+      await sendEmail(c.email, subject, html, undefined, { replyTo: "whaider@silkroutelogistics.ai", fromName: "Wasih Haider" });
       sent++;
 
       await prisma.systemLog.create({
@@ -566,6 +569,22 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
           source: "MassEmailCampaign",
           message: `Campaign email sent to ${c.name} (${c.email}) — template: ${templateType}`,
           details: { customerId: c.id, subject, templateType },
+        },
+      });
+
+      // Log as Communication for Lead Hunter conversation trail
+      await prisma.communication.create({
+        data: {
+          type: "EMAIL_OUTBOUND",
+          direction: "OUTBOUND",
+          entityType: "SHIPPER",
+          entityId: c.id,
+          from: "whaider@silkroutelogistics.ai",
+          to: c.email,
+          subject,
+          body: `[Mass email — template: ${templateType}]`,
+          userId: req.user!.id,
+          metadata: { templateType, source: "MassEmailCampaign" },
         },
       });
     } catch (err: any) {

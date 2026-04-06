@@ -200,6 +200,28 @@ export async function processDueSequences() {
         replyTo: CEO_EMAIL,
       });
 
+      // Log outbound email as Communication for Lead Hunter conversation trail
+      const ceoUser = await prisma.user.findFirst({
+        where: { role: { in: ["ADMIN", "CEO"] }, isActive: true },
+        select: { id: true },
+      });
+      if (ceoUser) {
+        await prisma.communication.create({
+          data: {
+            type: "EMAIL_OUTBOUND",
+            direction: "OUTBOUND",
+            entityType: "SHIPPER",
+            entityId: seq.prospectId,
+            from: CEO_EMAIL,
+            to: seq.prospectEmail,
+            subject: step.subject,
+            body: `[Auto-sequence step ${seq.currentStep + 1}/${seq.totalSteps}]`,
+            userId: ceoUser.id,
+            metadata: { sequenceId: seq.id, step: seq.currentStep, template: step.template, source: "EmailSequence" },
+          },
+        });
+      }
+
       console.log(`[Sequence] Sent step ${seq.currentStep + 1}/${seq.totalSteps} to ${seq.prospectEmail}: ${step.subject}`);
     } catch (err) {
       console.error(`[Sequence] Failed to send email to ${seq.prospectEmail}:`, err);

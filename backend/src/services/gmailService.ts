@@ -271,6 +271,28 @@ export async function checkForReplies(): Promise<{
       },
     });
 
+    // Log as Communication record for Lead Hunter conversation trail
+    const ceoUser = await prisma.user.findFirst({
+      where: { role: { in: ["ADMIN", "CEO"] }, isActive: true },
+      select: { id: true },
+    });
+    if (ceoUser) {
+      await prisma.communication.create({
+        data: {
+          type: "EMAIL_INBOUND",
+          direction: "INBOUND",
+          entityType: "SHIPPER",
+          entityId: customer.id,
+          from: senderEmail,
+          to: "whaider@silkroutelogistics.ai",
+          subject: subjectHeader,
+          body: snippet,
+          userId: ceoUser.id,
+          metadata: { gmailId: msg.id, intent, intentConfidence: confidence, action, source: "GmailReplyTracker" },
+        },
+      });
+    }
+
     // Create notification for admins/CEO with intent context
     const admins = await prisma.user.findMany({
       where: { role: { in: ["ADMIN", "CEO"] }, isActive: true },

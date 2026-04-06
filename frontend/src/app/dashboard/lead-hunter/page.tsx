@@ -27,7 +27,7 @@ interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: 
 interface CallLog { date: string; type: string; notes: string; by: string; }
 type PipelineStage = "LEAD" | "CONTACTED" | "QUALIFIED" | "PROPOSAL" | "WON";
 type Tab = "pipeline" | "activity" | "regions" | "lanes";
-type TemplateType = "INTRO" | "FOLLOW_UP" | "RATE_SHEET" | "CUSTOM";
+type TemplateType = "INTRO" | "FOLLOW_UP" | "CAPACITY" | "CUSTOM";
 
 const PIPELINE_STAGES: { key: PipelineStage; label: string; color: string; bg: string }[] = [
   { key: "LEAD", label: "Lead", color: "text-blue-400", bg: "bg-blue-500/20 border-blue-500/30" },
@@ -57,7 +57,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
 <ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
 <p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
-<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 01794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
+<p>Best regards,<br/><strong>Wasih Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 01794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
   },
   FOLLOW_UP: {
     label: "Follow-Up",
@@ -66,17 +66,17 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 <p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped manufacturing companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
 <p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
 <p>Just reply to this email or book a call at your convenience.</p>
-<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+<p>Best regards,<br/><strong>Wasih Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
-  RATE_SHEET: {
-    label: "Rate Sheet",
-    subject: "Silk Route Logistics — Rate Information",
+  CAPACITY: {
+    label: "Capacity Pitch",
+    subject: "Freight capacity when you need it — Silk Route Logistics",
     preview: (name: string) => `<p>Hi ${name},</p>
-<p>Thank you for your interest in Silk Route Logistics. Attached is our current rate information for the lanes most relevant to your operation.</p>
-<p>Key highlights:</p>
-<ul><li>FTL Dry Van rates from $2.15/mile (Midwest lanes)</li><li>No hidden fees — all-in rates published monthly</li><li>Quick Pay available for carriers (Net-7 to same-day)</li><li>Free real-time tracking portal for all shipments</li></ul>
-<p>Let me know if you'd like a custom quote on specific lanes.</p>
-<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+<p>I know finding reliable freight capacity can be a headache — especially during peak seasons or when you need last-minute trucks.</p>
+<p>At Silk Route Logistics, we maintain a vetted carrier network across all 48 states with:</p>
+<ul><li><strong>Same-day truck coverage</strong> — Dry van, flatbed, reefer, and specialized</li><li><strong>98% pickup rate</strong> — When we commit to a load, it gets picked up</li><li><strong>Real-time GPS tracking</strong> — Full visibility from pickup to delivery</li><li><strong>Dedicated point of contact</strong> — You deal with me directly, not a rotating desk</li></ul>
+<p>Happy to start with a single trial load so you can see how we operate — no long-term commitment required.</p>
+<p>Best regards,<br/><strong>Wasih Haider</strong><br/>Founder & CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
   CUSTOM: {
     label: "Custom",
@@ -514,7 +514,13 @@ export default function LeadHunterPage() {
             if (file) handleCsvFile(file);
             e.target.value = "";
           }} />
-          <button onClick={() => openEmailModal()}
+          <button onClick={() => {
+              if (selectedProspects.size > 0) {
+                handleBulkEmail();
+              } else {
+                openEmailModal();
+              }
+            }}
             className="flex items-center gap-1.5 px-3 py-2 border border-white/10 text-slate-300 font-medium rounded-lg text-xs hover:bg-white/5 hover:text-white">
             <Send className="w-3.5 h-3.5" /> Send Email
           </button>
@@ -642,7 +648,7 @@ export default function LeadHunterPage() {
                         <p className="text-white font-medium">{c.name}</p>
                         {c.annualRevenue && <p className="text-xs text-slate-500">${(c.annualRevenue / 1000).toFixed(0)}K rev</p>}
                       </td>
-                      <td className="px-3 py-3 text-slate-300 hidden md:table-cell">{c.contactName ?? "---"}</td>
+                      <td className="px-3 py-3 text-slate-300 hidden md:table-cell">{c.contactName || c.name.split(/\s+/)[0]}</td>
                       <td className="px-3 py-3 text-slate-400 hidden lg:table-cell">
                         {[c.city, c.state].filter(Boolean).join(", ") || "---"}
                       </td>
@@ -1034,7 +1040,7 @@ export default function LeadHunterPage() {
                       className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
                       <option value="INTRO" className="bg-[#0F1117]">Company Introduction</option>
                       <option value="FOLLOW_UP" className="bg-[#0F1117]">Follow-Up</option>
-                      <option value="RATE_SHEET" className="bg-[#0F1117]">Rate Sheet</option>
+                      <option value="CAPACITY" className="bg-[#0F1117]">Capacity Pitch</option>
                       <option value="CUSTOM" className="bg-[#0F1117]">Custom</option>
                     </select>
                   </div>
@@ -1070,7 +1076,7 @@ export default function LeadHunterPage() {
                         </div>
                         <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
                           dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATES[emailTemplate].preview(
-                            prospects.find((c) => selectedRecipients.has(c.id))?.contactName?.split(/\s+/)[0] || "there"
+                            (() => { const p = prospects.find((c) => selectedRecipients.has(c.id)); return (p?.contactName || p?.name || "").split(/\s+/)[0] || "there"; })()
                           ) }} />
                         <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
                           Silk Route Logistics &bull; silkroutelogistics.ai
