@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
@@ -11,6 +12,10 @@ import { parseCheckCallFromEmail } from "../services/emailCheckCallParser";
 import { processInboundEmail } from "../services/emailToLoadService";
 
 const router = Router();
+
+// Rate limit all webhooks: 100 requests per 15 min per IP
+const webhookLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { error: "Too many webhook requests" } });
+router.use(webhookLimiter);
 
 // OpenPhone webhook — signature verification if secret is configured
 router.post("/openphone", (req, res, next) => {
@@ -40,11 +45,17 @@ router.post("/openphone", (req, res, next) => {
 }, openPhoneWebhook as any);
 
 // OpenPhone SMS response — auto check-call handler
+// Validates sender phone format to prevent spoofed requests
 router.post("/openphone-checkcall", async (req, res) => {
   try {
     const { from, body: msgBody } = req.body;
     if (!from || !msgBody) {
       res.status(400).json({ error: "Missing from or body" });
+      return;
+    }
+    // Basic phone format validation (E.164 or US format)
+    if (!/^\+?1?\d{10,15}$/.test(from.replace(/[\s()-]/g, ""))) {
+      res.status(400).json({ error: "Invalid phone number format" });
       return;
     }
 

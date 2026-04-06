@@ -224,6 +224,9 @@ app.use("/api/loads", writeLimiter);
 app.use("/api/invoices", writeLimiter);
 app.use("/api/tenders", writeLimiter);
 app.use("/api/shipments", writeLimiter);
+app.use("/api/carrier-pay", writeLimiter);
+app.use("/api/carrier-payments", writeLimiter);
+app.use("/api/settlements", writeLimiter);
 app.use("/api", apiLimiter);
 
 // ─── Audit Trail Middleware ─────────────────────────────────

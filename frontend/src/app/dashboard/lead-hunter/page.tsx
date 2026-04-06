@@ -106,7 +106,17 @@ function savePipelineStages(stages: Record<string, PipelineStage>) {
 }
 
 function resolveStage(customerId: string, customerStatus: string, pipelineStages: Record<string, PipelineStage>, callLogs: Record<string, CallLog[]>): PipelineStage {
-  if (customerStatus === "Active") return "WON";
+  // DB-persisted status is the source of truth
+  const STATUS_TO_STAGE: Record<string, PipelineStage> = {
+    Active: "WON",
+    Contacted: "CONTACTED",
+    Qualified: "QUALIFIED",
+    Proposal: "PROPOSAL",
+    Prospect: "LEAD",
+  };
+  const dbStage = STATUS_TO_STAGE[customerStatus];
+  if (dbStage) return dbStage;
+  // Fallback to localStorage override (legacy)
   const explicit = pipelineStages[customerId];
   if (explicit) return explicit;
   const logs = callLogs[customerId];
@@ -237,8 +247,8 @@ export default function LeadHunterPage() {
   /* ─── Derived Data ─── */
 
   const allCustomers = customersData?.customers ?? [];
-  // Prospects = status Prospect OR not Active (exclude won/active)
-  const prospects = allCustomers.filter((c) => c.status !== "Active" && c.status !== "ACTIVE");
+  // All prospects in the pipeline — show everyone except won/Active customers
+  const prospects = allCustomers.filter((c) => c.status !== "Active");
 
   const getStage = useCallback((c: Customer) => resolveStage(c.id, c.status, pipelineStages, callLogs), [pipelineStages, callLogs]);
 
@@ -256,18 +266,54 @@ export default function LeadHunterPage() {
     ? ((stageCounts.WON / (prospects.length + stageCounts.WON)) * 100).toFixed(1)
     : "0";
 
-  /* ─── Pipeline Stage Update ─── */
+  /* ─── Pipeline Stage Update (persists to DB) ─── */
+
+  const STAGE_TO_STATUS: Record<PipelineStage, string> = {
+    LEAD: "Prospect",
+    CONTACTED: "Contacted",
+    QUALIFIED: "Qualified",
+    PROPOSAL: "Proposal",
+    WON: "Active",
+  };
 
   const updateStage = (customerId: string, stage: PipelineStage) => {
+    // Persist to DB via Customer.status
+    api.patch(`/customers/${customerId}`, { status: STAGE_TO_STATUS[stage] })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
+        queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+      })
+      .catch(() => toast("Failed to update stage", "error"));
+    // Also keep local cache for instant UI update
     const updated = { ...pipelineStages, [customerId]: stage };
     setPipelineStages(updated);
     savePipelineStages(updated);
   };
 
-  /* ─── Activity Log ─── */
+  /* ─── Activity Log (persists to Communication table) ─── */
 
   const saveCallLog = (customerId: string) => {
     if (!logForm.notes.trim()) return;
+
+    const typeMap: Record<string, string> = {
+      Call: "CALL_OUTBOUND",
+      Email: "EMAIL_OUTBOUND",
+      Meeting: "NOTE",
+      Note: "NOTE",
+    };
+
+    // Persist to DB via Communication table
+    api.post("/communications", {
+      type: typeMap[logForm.type] || "NOTE",
+      direction: logForm.type === "Call" ? "OUTBOUND" : null,
+      entityType: "SHIPPER",
+      entityId: customerId,
+      body: logForm.notes.trim(),
+      subject: `${logForm.type}: ${logForm.notes.trim().substring(0, 60)}`,
+      metadata: { source: "LeadHunter", activityType: logForm.type },
+    }).catch(() => toast("Failed to save activity to server", "error"));
+
+    // Also keep in localStorage for instant UI (legacy compat)
     const newLog: CallLog = {
       date: new Date().toISOString(),
       type: logForm.type,
