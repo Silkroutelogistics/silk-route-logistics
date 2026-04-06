@@ -12,12 +12,13 @@ interface EmailAttachment {
   contentType?: string;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[]) {
+export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[], options?: { replyTo?: string; fromName?: string }) {
   if (resend) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const { data, error } = await resend.emails.send({
-          from: `Silk Route Logistics <${fromEmail}>`,
+          from: `${options?.fromName || "Silk Route Logistics"} <${fromEmail}>`,
+          replyTo: options?.replyTo || undefined,
           to,
           subject,
           html,

@@ -462,23 +462,25 @@ const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contac
   INTRO: {
     subject: "Introducing Silk Route Logistics — Your Freight Partner",
     buildBody: (contactName: string) => `
-      <h2 style="color:#C9A84C">Silk Route Logistics Inc.</h2>
       <p>Hi ${contactName},</p>
-      <p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Kalamazoo, MI.</p>
-      <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
-      <ul>
-        <li>Real-time shipment tracking via our shipper portal</li>
-        <li>Competitive rates backed by AI-powered market intelligence</li>
-        <li>35-point carrier compliance vetting (Compass Engine)</li>
-        <li>Dedicated account management — not a call center</li>
+      <p>I hope this message finds you well. My name is Wasi Haider, and I'm the founder of <strong>Silk Route Logistics</strong> — a technology-driven freight brokerage based in Kalamazoo, Michigan.</p>
+      <p>Inspired by the ancient Silk Road that connected civilizations through trade, we built SRL to connect shippers and carriers across North America with the same principles: <strong>trust, transparency, and reliability</strong>.</p>
+      <p>What makes us different:</p>
+      <ul style="line-height:1.8">
+        <li><strong>AI-Powered Operations</strong> — Our proprietary platform uses artificial intelligence for rate predictions, carrier matching, and real-time tracking — giving you enterprise-grade visibility without the enterprise price tag</li>
+        <li><strong>Compass Compliance Engine</strong> — Every carrier in our network passes a 35-point safety and compliance vetting process before hauling a single load</li>
+        <li><strong>Self-Service Shipper Portal</strong> — Track shipments, view invoices, request quotes, and manage documents 24/7 from your own dashboard at silkroutelogistics.ai</li>
+        <li><strong>Dedicated Account Team</strong> — You'll always speak to someone who knows your business. No call centers, no ticket queues</li>
       </ul>
-      <p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
-      <p>Best regards,<br/>
-      <strong>Wasi Haider</strong><br/>
-      CEO, Silk Route Logistics Inc.<br/>
+      <p>I'd genuinely love to learn about your shipping operations and explore whether we can add value. Even if the timing isn't right, I'm happy to provide a <strong>free, no-obligation freight audit</strong> on your top lanes.</p>
+      <p>Would you be open to a brief 10-minute call this week?</p>
+      <p style="margin-top:24px">Best regards,</p>
+      <p><strong>Wasi Haider</strong><br/>
+      Founder & CEO<br/>
+      Silk Route Logistics Inc.<br/>
       MC# 01794414 | DOT# 4526880<br/>
-      (269) 220-6760 | whaider@silkroutelogistics.ai<br/>
-      silkroutelogistics.ai</p>`,
+      <a href="tel:+12692206760" style="color:#C9A84C">(269) 220-6760</a> | <a href="mailto:whaider@silkroutelogistics.ai" style="color:#C9A84C">whaider@silkroutelogistics.ai</a><br/>
+      <a href="https://silkroutelogistics.ai" style="color:#C9A84C">silkroutelogistics.ai</a></p>`,
   },
   FOLLOW_UP: {
     subject: "Following Up — Silk Route Logistics",
@@ -554,7 +556,7 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
     const html = wrap(emailBody);
 
     try {
-      await sendEmail(c.email, subject, html);
+      await sendEmail(c.email, subject, html, undefined, { replyTo: "whaider@silkroutelogistics.ai", fromName: "Wasi Haider — Silk Route Logistics" });
       sent++;
 
       await prisma.systemLog.create({
