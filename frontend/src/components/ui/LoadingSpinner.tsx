@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
@@ -10,16 +9,17 @@ interface LoadingSpinnerProps {
 }
 
 const sizes = {
-  sm: "w-5 h-5",
-  md: "w-8 h-8",
-  lg: "w-12 h-12",
+  sm: { img: "w-8 h-8", text: "text-xs" },
+  md: { img: "w-12 h-12", text: "text-sm" },
+  lg: { img: "w-16 h-16", text: "text-sm" },
 };
 
 export function LoadingSpinner({ message = "Loading...", className, size = "md" }: LoadingSpinnerProps) {
+  const s = sizes[size];
   return (
     <div className={cn("flex flex-col items-center justify-center py-16", className)}>
-      <Loader2 className={cn("animate-spin text-gold", sizes[size])} />
-      {message && <p className="mt-3 text-sm text-white/50">{message}</p>}
+      <img src="/logo-penguin.gif" alt="Loading" className={cn(s.img, "rounded-xl")} />
+      {message && <p className={cn("mt-3 text-white/50", s.text)}>{message}</p>}
     </div>
   );
 }
