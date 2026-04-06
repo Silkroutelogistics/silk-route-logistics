@@ -1,31 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import {
   Search, Plus, X, ChevronDown, ChevronUp, Target, Users, DollarSign,
   TrendingUp, Building2, MapPin, Phone, Mail, Crosshair, Map, Route,
+  Upload, Send, Loader2, CheckCircle2, Eye, PhoneCall, MessageSquare,
+  Calendar, Clock, AlertTriangle, ArrowRight, Filter, BarChart3,
 } from "lucide-react";
+
+/* ─── Types ─── */
 
 interface Customer {
   id: string; name: string; contactName: string | null; email: string | null; phone: string | null;
-  state: string | null; status: string; notes: string | null; creditLimit: number | null;
-  paymentTerms: string | null; annualRevenue: number | null; industryType: string | null;
+  city: string | null; state: string | null; status: string; notes: string | null;
+  creditLimit: number | null; paymentTerms: string | null; annualRevenue: number | null;
+  industryType: string | null; onboardingStatus: string | null;
 }
 
 interface CustomerStats { totalCustomers: number; activeCustomers: number; totalRevenue: number; totalShipments: number; }
 interface RegionStat { region: string; states: string[]; loadCount: number; avgRate: number; avgRatePerMile: number; availableCarriers: number; }
 interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: number; loadCount: number; avgTransitDays: number; topEquipment: string; trend: string; }
 
-type Tab = "pipeline" | "regions" | "lanes";
+interface CallLog { date: string; type: string; notes: string; by: string; }
+type PipelineStage = "LEAD" | "CONTACTED" | "QUALIFIED" | "PROPOSAL" | "WON";
+type Tab = "pipeline" | "activity" | "regions" | "lanes";
+type TemplateType = "INTRO" | "FOLLOW_UP" | "RATE_SHEET" | "CUSTOM";
 
-const STATUS_COLORS: Record<string, string> = {
-  PROSPECT: "bg-blue-500/20 text-blue-400",
-  ACTIVE: "bg-green-500/20 text-green-400",
-  INACTIVE: "bg-slate-500/20 text-slate-400",
-};
+const PIPELINE_STAGES: { key: PipelineStage; label: string; color: string; bg: string }[] = [
+  { key: "LEAD", label: "Lead", color: "text-blue-400", bg: "bg-blue-500/20 border-blue-500/30" },
+  { key: "CONTACTED", label: "Contacted", color: "text-amber-400", bg: "bg-amber-500/20 border-amber-500/30" },
+  { key: "QUALIFIED", label: "Qualified", color: "text-purple-400", bg: "bg-purple-500/20 border-purple-500/30" },
+  { key: "PROPOSAL", label: "Proposal", color: "text-cyan-400", bg: "bg-cyan-500/20 border-cyan-500/30" },
+  { key: "WON", label: "Won", color: "text-green-400", bg: "bg-green-500/20 border-green-500/30" },
+];
 
 const INDUSTRIES = [
   "Manufacturing", "Retail", "Agriculture", "Automotive", "Food & Beverage",
@@ -33,26 +43,139 @@ const INDUSTRIES = [
 ];
 
 const EMPTY_FORM = {
-  name: "", contactName: "", email: "", phone: "", industryType: "", state: "",
+  name: "", contactName: "", email: "", phone: "", industryType: "", state: "", city: "",
   annualRevenue: "", notes: "", status: "Prospect", type: "SHIPPER", paymentTerms: "Net 30",
 };
+
+const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; preview: (name: string) => string }> = {
+  INTRO: {
+    label: "Company Introduction",
+    subject: "Introducing Silk Route Logistics — Your Freight Partner",
+    preview: (name: string) => `<h2 style="color:#C9A84C;margin:0 0 16px">Silk Route Logistics Inc.</h2>
+<p>Hi ${name},</p>
+<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Kalamazoo, MI.</p>
+<p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
+<ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
+<p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 01794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
+  },
+  FOLLOW_UP: {
+    label: "Follow-Up",
+    subject: "Following Up — Silk Route Logistics",
+    preview: (name: string) => `<p>Hi ${name},</p>
+<p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped manufacturing companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
+<p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
+<p>Just reply to this email or book a call at your convenience.</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+  },
+  RATE_SHEET: {
+    label: "Rate Sheet",
+    subject: "Silk Route Logistics — Rate Information",
+    preview: (name: string) => `<p>Hi ${name},</p>
+<p>Thank you for your interest in Silk Route Logistics. Attached is our current rate information for the lanes most relevant to your operation.</p>
+<p>Key highlights:</p>
+<ul><li>FTL Dry Van rates from $2.15/mile (Midwest lanes)</li><li>No hidden fees — all-in rates published monthly</li><li>Quick Pay available for carriers (Net-7 to same-day)</li><li>Free real-time tracking portal for all shipments</li></ul>
+<p>Let me know if you'd like a custom quote on specific lanes.</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+  },
+  CUSTOM: {
+    label: "Custom",
+    subject: "Message from Silk Route Logistics",
+    preview: () => "",
+  },
+};
+
+/* ─── Helpers ─── */
+
+function getCallLogs(): Record<string, CallLog[]> {
+  try {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("srl-call-logs") : null;
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+}
+
+function getPipelineStages(): Record<string, PipelineStage> {
+  try {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("srl-pipeline-stages") : null;
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+}
+
+function savePipelineStages(stages: Record<string, PipelineStage>) {
+  localStorage.setItem("srl-pipeline-stages", JSON.stringify(stages));
+}
+
+function resolveStage(customerId: string, customerStatus: string, pipelineStages: Record<string, PipelineStage>, callLogs: Record<string, CallLog[]>): PipelineStage {
+  if (customerStatus === "Active") return "WON";
+  const explicit = pipelineStages[customerId];
+  if (explicit) return explicit;
+  const logs = callLogs[customerId];
+  if (logs && logs.length > 0) return "CONTACTED";
+  return "LEAD";
+}
+
+function daysSince(isoDate: string): number {
+  return Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000);
+}
+
+function formatActivityDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = daysSince(iso);
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (diff === 0) return `Today ${time}`;
+  if (diff === 1) return `Yesterday ${time}`;
+  if (diff < 7) return `${diff}d ago ${time}`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ` ${time}`;
+}
+
+/* ─── Component ─── */
 
 export default function LeadHunterPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("pipeline");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [laneRegion, setLaneRegion] = useState("");
 
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  if (statusFilter) params.set("status", statusFilter);
-  params.set("page", "1");
-  params.set("limit", "50");
+  // Pipeline
+  const [pipelineStages, setPipelineStages] = useState<Record<string, PipelineStage>>({});
+  const [callLogs, setCallLogs] = useState<Record<string, CallLog[]>>({});
+  const [showLogForm, setShowLogForm] = useState<string | null>(null);
+  const [logForm, setLogForm] = useState({ type: "Call", notes: "" });
+  const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set());
+  const [stageFilter, setStageFilter] = useState<PipelineStage | "">("");
+
+  // CSV Import
+  const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
+  const [showCsvPreview, setShowCsvPreview] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvProgress, setCsvProgress] = useState({ current: 0, total: 0 });
+  const [csvResult, setCsvResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // Mass Email
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTemplate, setEmailTemplate] = useState<TemplateType>("INTRO");
+  const [emailSubject, setEmailSubject] = useState(EMAIL_TEMPLATES.INTRO.subject);
+  const [emailBody, setEmailBody] = useState("");
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
+  const [selectAllRecipients, setSelectAllRecipients] = useState(true);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailProgress, setEmailProgress] = useState({ current: 0, total: 0 });
+  const [emailResult, setEmailResult] = useState<{ sent: number; failed: number; skipped: number } | null>(null);
+  const [emailPrefilter, setEmailPrefilter] = useState<string | null>(null);
+
+  // Load localStorage data
+  useEffect(() => {
+    setCallLogs(getCallLogs());
+    setPipelineStages(getPipelineStages());
+  }, []);
+
+  /* ─── Queries ─── */
 
   const { data: stats } = useQuery({
     queryKey: ["customer-stats"],
@@ -60,14 +183,20 @@ export default function LeadHunterPage() {
   });
 
   const { data: customersData } = useQuery({
-    queryKey: ["customers", search, statusFilter],
-    queryFn: () => api.get<{ customers: Customer[] }>(`/customers?${params}`).then((r) => r.data),
+    queryKey: ["customers-prospects", search],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (search) p.set("search", search);
+      p.set("page", "1");
+      p.set("limit", "200");
+      return api.get<{ customers: Customer[] }>(`/customers?${p}`).then((r) => r.data);
+    },
   });
 
   const { data: regions } = useQuery({
     queryKey: ["market-regions"],
     queryFn: () => api.get<RegionStat[]>("/market/regions").then((r) => r.data),
-    enabled: tab === "regions",
+    enabled: tab === "regions" || tab === "lanes",
   });
 
   const { data: lanesData } = useQuery({
@@ -76,10 +205,12 @@ export default function LeadHunterPage() {
     enabled: tab === "lanes",
   });
 
+  /* ─── Mutations ─── */
+
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.post("/customers", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
       toast("Prospect created successfully", "success");
       setShowModal(false);
@@ -90,17 +221,245 @@ export default function LeadHunterPage() {
 
   const convertMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/customers/${id}`, { status: "Active" }),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+      // Update pipeline stage
+      const updated = { ...pipelineStages, [id]: "WON" as PipelineStage };
+      setPipelineStages(updated);
+      savePipelineStages(updated);
       toast("Prospect converted to active customer!", "success");
     },
     onError: () => toast("Failed to convert prospect", "error"),
   });
 
-  const customers = customersData?.customers ?? [];
-  const prospects = stats ? stats.totalCustomers - stats.activeCustomers : 0;
-  const conversionRate = stats && stats.totalCustomers > 0 ? ((stats.activeCustomers / stats.totalCustomers) * 100).toFixed(1) : "0";
+  /* ─── Derived Data ─── */
+
+  const allCustomers = customersData?.customers ?? [];
+  // Prospects = status Prospect OR not Active (exclude won/active)
+  const prospects = allCustomers.filter((c) => c.status !== "Active" && c.status !== "ACTIVE");
+
+  const getStage = useCallback((c: Customer) => resolveStage(c.id, c.status, pipelineStages, callLogs), [pipelineStages, callLogs]);
+
+  const filteredProspects = stageFilter
+    ? prospects.filter((c) => getStage(c) === stageFilter)
+    : prospects;
+
+  const stageCounts = PIPELINE_STAGES.reduce((acc, s) => {
+    acc[s.key] = prospects.filter((c) => getStage(c) === s.key).length;
+    return acc;
+  }, {} as Record<PipelineStage, number>);
+
+  const contactedCount = stageCounts.CONTACTED + stageCounts.QUALIFIED + stageCounts.PROPOSAL;
+  const winRate = prospects.length > 0
+    ? ((stageCounts.WON / (prospects.length + stageCounts.WON)) * 100).toFixed(1)
+    : "0";
+
+  /* ─── Pipeline Stage Update ─── */
+
+  const updateStage = (customerId: string, stage: PipelineStage) => {
+    const updated = { ...pipelineStages, [customerId]: stage };
+    setPipelineStages(updated);
+    savePipelineStages(updated);
+  };
+
+  /* ─── Activity Log ─── */
+
+  const saveCallLog = (customerId: string) => {
+    if (!logForm.notes.trim()) return;
+    const newLog: CallLog = {
+      date: new Date().toISOString(),
+      type: logForm.type,
+      notes: logForm.notes.trim(),
+      by: "WH",
+    };
+    const updated = {
+      ...callLogs,
+      [customerId]: [newLog, ...(callLogs[customerId] || [])],
+    };
+    setCallLogs(updated);
+    localStorage.setItem("srl-call-logs", JSON.stringify(updated));
+    setLogForm({ type: "Call", notes: "" });
+    setShowLogForm(null);
+
+    // Auto-advance stage if still LEAD
+    const currentStage = resolveStage(customerId, "Prospect", pipelineStages, updated);
+    if (currentStage === "LEAD" || !pipelineStages[customerId]) {
+      updateStage(customerId, "CONTACTED");
+    }
+    toast("Activity logged", "success");
+  };
+
+  // All activities across prospects, sorted by date
+  const allActivities = Object.entries(callLogs)
+    .flatMap(([custId, logs]) => {
+      const customer = allCustomers.find((c) => c.id === custId);
+      return logs.map((log) => ({ ...log, customerId: custId, customerName: customer?.name ?? "Unknown", contactName: customer?.contactName ?? "" }));
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  /* ─── CSV Import ─── */
+
+  const handleCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) return;
+      const headers = lines[0].split(",").map((h) => h.trim());
+      const rows: Record<string, string>[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const vals: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (const ch of lines[i]) {
+          if (ch === '"') { inQuotes = !inQuotes; }
+          else if (ch === "," && !inQuotes) { vals.push(current.trim()); current = ""; }
+          else { current += ch; }
+        }
+        vals.push(current.trim());
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => { row[h] = vals[idx] || ""; });
+        if (Object.values(row).some((v) => v)) rows.push(row);
+      }
+      setCsvRows(rows);
+      setShowCsvPreview(true);
+      setCsvResult(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const mapCsvRow = (row: Record<string, string>) => ({
+    name: row["Company Name"] || row["company_name"] || row["Name"] || "",
+    contactName: row["Contact Name"] || row["contact_name"] || row["Contact"] || "",
+    email: row["Email"] || row["email"] || "",
+    phone: row["Phone"] || row["phone"] || "",
+    city: row["City"] || row["city"] || "",
+    state: row["State"] || row["state"] || "",
+    industryType: row["Industry"] || row["industry"] || row["IndustryType"] || "",
+    type: row["Type"] || row["type"] || "SHIPPER",
+    status: "Prospect",
+  });
+
+  const handleCsvImport = async () => {
+    setCsvImporting(true);
+    const mapped = csvRows.map(mapCsvRow).filter((r) => r.name);
+    setCsvProgress({ current: 0, total: mapped.length });
+    try {
+      const res = await api.post("/customers/bulk", { customers: mapped });
+      setCsvResult(res.data);
+      queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setCsvResult({ created: 0, skipped: 0, errors: [error?.response?.data?.error || "Import failed"] });
+    } finally {
+      setCsvImporting(false);
+    }
+  };
+
+  /* ─── Mass Email ─── */
+
+  const handleTemplateChange = useCallback((t: TemplateType) => {
+    setEmailTemplate(t);
+    setEmailSubject(EMAIL_TEMPLATES[t].subject);
+    if (t !== "CUSTOM") setEmailBody("");
+  }, []);
+
+  const handleToggleRecipient = useCallback((id: string) => {
+    setSelectedRecipients((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const openEmailModal = useCallback((prefilterIds?: string[]) => {
+    const prospectList = prefilterIds
+      ? prospects.filter((c) => prefilterIds.includes(c.id) && c.email)
+      : prospects.filter((c) => c.email);
+    setSelectedRecipients(new Set(prospectList.map((c) => c.id)));
+    setSelectAllRecipients(!prefilterIds);
+    setEmailTemplate("INTRO");
+    setEmailSubject(EMAIL_TEMPLATES.INTRO.subject);
+    setEmailBody("");
+    setEmailResult(null);
+    setEmailSending(false);
+    setEmailPrefilter(prefilterIds ? prefilterIds[0] ?? null : null);
+    setShowEmailModal(true);
+  }, [prospects]);
+
+  const handleToggleAllRecipients = useCallback((checked: boolean) => {
+    setSelectAllRecipients(checked);
+    if (checked) {
+      const withEmail = prospects.filter((c) => c.email);
+      setSelectedRecipients(new Set(withEmail.map((c) => c.id)));
+    } else {
+      setSelectedRecipients(new Set());
+    }
+  }, [prospects]);
+
+  const handleSendCampaign = async () => {
+    const ids = Array.from(selectedRecipients);
+    if (ids.length === 0) return;
+    setEmailSending(true);
+    setEmailProgress({ current: 0, total: ids.length });
+    try {
+      const progressInterval = setInterval(() => {
+        setEmailProgress((p) => ({ ...p, current: Math.min(p.current + 1, p.total - 1) }));
+      }, 600);
+      const res = await api.post<{ sent: number; failed: number; skipped: number }>("/customers/mass-email", {
+        customerIds: ids,
+        subject: emailSubject,
+        body: emailTemplate === "CUSTOM" ? emailBody : undefined,
+        templateType: emailTemplate,
+      });
+      clearInterval(progressInterval);
+      setEmailProgress({ current: ids.length, total: ids.length });
+      setEmailResult(res.data);
+
+      // Auto-advance emailed prospects to CONTACTED
+      ids.forEach((id) => {
+        if (!pipelineStages[id] || pipelineStages[id] === "LEAD") {
+          updateStage(id, "CONTACTED");
+        }
+      });
+      toast(`Email sent to ${res.data.sent} prospect${res.data.sent !== 1 ? "s" : ""}`, "success");
+    } catch {
+      setEmailResult({ sent: 0, failed: ids.length, skipped: 0 });
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  /* ─── Bulk Actions ─── */
+
+  const handleBulkStageChange = (stage: PipelineStage) => {
+    const updated = { ...pipelineStages };
+    selectedProspects.forEach((id) => { updated[id] = stage; });
+    setPipelineStages(updated);
+    savePipelineStages(updated);
+    setSelectedProspects(new Set());
+    toast(`${selectedProspects.size} prospect${selectedProspects.size !== 1 ? "s" : ""} moved to ${stage}`, "success");
+  };
+
+  const handleBulkEmail = () => {
+    const ids = Array.from(selectedProspects);
+    openEmailModal(ids);
+    setSelectedProspects(new Set());
+  };
+
+  const toggleSelectProspect = (id: string) => {
+    setSelectedProspects((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  /* ─── Handlers ─── */
 
   const handleCreate = () => {
     const payload: Record<string, unknown> = { ...form };
@@ -108,41 +467,84 @@ export default function LeadHunterPage() {
     createMutation.mutate(payload);
   };
 
+  const lastContactDate = (customerId: string): string | null => {
+    const logs = callLogs[customerId];
+    if (!logs || logs.length === 0) return null;
+    return logs[0].date;
+  };
+
+  const daysSinceContact = (customerId: string): number | null => {
+    const last = lastContactDate(customerId);
+    if (!last) return null;
+    return daysSince(last);
+  };
+
+  /* ─── Tabs Config ─── */
+
   const tabs: { key: Tab; label: string; icon: typeof Target }[] = [
-    { key: "pipeline", label: "Prospect Pipeline", icon: Crosshair },
+    { key: "pipeline", label: "Pipeline", icon: Crosshair },
+    { key: "activity", label: "Activity Log", icon: MessageSquare },
     { key: "regions", label: "Regional Intelligence", icon: Map },
     { key: "lanes", label: "Lane Opportunities", icon: Route },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Target className="w-7 h-7 text-gold" /> Lead Hunter
-        </h1>
-        <p className="text-slate-400 mt-1">Shipper Prospecting &amp; Intelligence</p>
+      {/* ─── Header ─── */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Target className="w-7 h-7 text-gold" /> Lead Hunter
+            <span className="text-sm font-normal text-slate-400 ml-2">Sales Command Center</span>
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Pipeline: <span className="text-white font-medium">{prospects.length}</span> prospects
+            {" | "}<span className="text-amber-400 font-medium">{contactedCount}</span> contacted
+            {" | "}<span className="text-purple-400 font-medium">{stageCounts.QUALIFIED}</span> qualified
+            {" | "}<span className="text-green-400 font-medium">{stageCounts.WON}</span> won
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => csvInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/10 text-slate-300 font-medium rounded-lg text-xs hover:bg-white/5 hover:text-white">
+            <Upload className="w-3.5 h-3.5" /> Import CSV
+          </button>
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleCsvFile(file);
+            e.target.value = "";
+          }} />
+          <button onClick={() => openEmailModal()}
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/10 text-slate-300 font-medium rounded-lg text-xs hover:bg-white/5 hover:text-white">
+            <Send className="w-3.5 h-3.5" /> Send Email
+          </button>
+          <button onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 font-medium text-xs">
+            <Plus className="w-3.5 h-3.5" /> Add Prospect
+          </button>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ─── KPI Cards ─── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
-          { label: "Total Prospects", value: prospects, icon: Users, color: "text-blue-400" },
-          { label: "Active Customers", value: stats?.activeCustomers ?? 0, icon: Building2, color: "text-green-400" },
-          { label: "Revenue Pipeline", value: `$${((stats?.totalRevenue ?? 0) / 1000).toFixed(0)}K`, icon: DollarSign, color: "text-gold" },
-          { label: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUp, color: "text-purple-400" },
+          { label: "Total Leads", value: stageCounts.LEAD, icon: Users, color: "text-blue-400" },
+          { label: "Contacted", value: stageCounts.CONTACTED, icon: PhoneCall, color: "text-amber-400" },
+          { label: "Qualified", value: stageCounts.QUALIFIED, icon: CheckCircle2, color: "text-purple-400" },
+          { label: "Proposals", value: stageCounts.PROPOSAL, icon: DollarSign, color: "text-cyan-400" },
+          { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-green-400" },
         ].map((kpi) => (
-          <div key={kpi.label} className="bg-white/5 border border-white/10 rounded-xl p-5">
+          <div key={kpi.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 text-sm">{kpi.label}</span>
-              <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
+              <span className="text-slate-500 text-xs">{kpi.label}</span>
+              <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
             </div>
-            <p className="text-2xl font-bold text-white mt-2">{kpi.value}</p>
+            <p className="text-xl font-bold text-white mt-1">{kpi.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
+      {/* ─── Tabs ─── */}
       <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -153,90 +555,243 @@ export default function LeadHunterPage() {
         ))}
       </div>
 
-      {/* Prospect Pipeline Tab */}
+      {/* ═══════════════ TAB 1: PIPELINE ═══════════════ */}
       {tab === "pipeline" && (
         <div className="space-y-4">
+          {/* Search + Filters + Bulk Actions */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[240px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search companies..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-gold/50" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search prospects..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-gold/50 text-sm" />
             </div>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:outline-none">
-              <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
-              <option value="Prospect" className="bg-[#0F1117] text-white">Prospect</option>
-              <option value="Active" className="bg-[#0F1117] text-white">Active</option>
-              <option value="Inactive" className="bg-[#0F1117] text-white">Inactive</option>
-            </select>
-            <button onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 font-medium text-sm">
-              <Plus className="w-4 h-4" /> Add Prospect
-            </button>
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-slate-500" />
+              <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value as PipelineStage | "")}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none">
+                <option value="" className="bg-[#0F1117]">All Stages</option>
+                {PIPELINE_STAGES.map((s) => <option key={s.key} value={s.key} className="bg-[#0F1117]">{s.label} ({stageCounts[s.key]})</option>)}
+              </select>
+            </div>
+            {selectedProspects.size > 0 && (
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
+                <span className="text-xs text-slate-400">{selectedProspects.size} selected</span>
+                <button onClick={handleBulkEmail} className="text-xs text-gold hover:text-gold/80 font-medium">Email</button>
+                <span className="text-slate-600">|</span>
+                <select onChange={(e) => { if (e.target.value) handleBulkStageChange(e.target.value as PipelineStage); e.target.value = ""; }}
+                  className="bg-transparent text-xs text-gold font-medium focus:outline-none cursor-pointer">
+                  <option value="" className="bg-[#0F1117]">Move to...</option>
+                  {PIPELINE_STAGES.map((s) => <option key={s.key} value={s.key} className="bg-[#0F1117]">{s.label}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
+          {/* Pipeline Stage Headers (Kanban-style summary) */}
+          <div className="grid grid-cols-5 gap-2">
+            {PIPELINE_STAGES.map((s) => (
+              <button key={s.key} onClick={() => setStageFilter(stageFilter === s.key ? "" : s.key)}
+                className={`rounded-lg border p-3 text-center transition ${
+                  stageFilter === s.key ? s.bg : "bg-white/5 border-white/10 hover:bg-white/10"}`}>
+                <p className={`text-lg font-bold ${s.color}`}>{stageCounts[s.key]}</p>
+                <p className="text-xs text-slate-400">{s.label}</p>
+              </button>
+            ))}
+          </div>
+
+          {/* Prospect List */}
           <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-slate-400">
-                  <th className="text-left px-4 py-3 font-medium">Company</th>
-                  <th className="text-left px-4 py-3 font-medium">Contact</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Industry</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">State</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Est. Revenue</th>
-                  <th className="text-left px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium w-10" />
+                  <th className="px-3 py-3 w-8">
+                    <input type="checkbox"
+                      checked={selectedProspects.size === filteredProspects.length && filteredProspects.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedProspects(new Set(filteredProspects.map((c) => c.id)));
+                        else setSelectedProspects(new Set());
+                      }}
+                      className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20" />
+                  </th>
+                  <th className="text-left px-3 py-3 font-medium">Company</th>
+                  <th className="text-left px-3 py-3 font-medium hidden md:table-cell">Contact</th>
+                  <th className="text-left px-3 py-3 font-medium hidden lg:table-cell">Location</th>
+                  <th className="text-left px-3 py-3 font-medium hidden md:table-cell">Industry</th>
+                  <th className="text-left px-3 py-3 font-medium">Stage</th>
+                  <th className="text-left px-3 py-3 font-medium hidden lg:table-cell">Last Contact</th>
+                  <th className="px-3 py-3 font-medium w-10" />
                 </tr>
               </thead>
               <tbody>
-                {customers.map((c) => (
-                  <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 cursor-pointer"
-                    onClick={() => setExpanded(expanded === c.id ? null : c.id)}>
-                    <td className="px-4 py-3 text-white font-medium">{c.name}</td>
-                    <td className="px-4 py-3 text-slate-300">{c.contactName ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-400 hidden md:table-cell">{c.industryType ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-400 hidden lg:table-cell">{c.state ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-300 hidden lg:table-cell">
-                      {c.annualRevenue ? `$${(c.annualRevenue / 1000).toFixed(0)}K` : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] ?? "bg-slate-500/20 text-slate-400"}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{expanded === c.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}</td>
-                  </tr>
-                ))}
-                {customers.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">No prospects found</td></tr>
+                {filteredProspects.map((c) => {
+                  const stage = getStage(c);
+                  const stageInfo = PIPELINE_STAGES.find((s) => s.key === stage)!;
+                  const daysSince_ = daysSinceContact(c.id);
+                  const isStale = daysSince_ !== null && daysSince_ > 7;
+                  const isExpanded = expanded === c.id;
+
+                  return (
+                    <tr key={c.id} className={`border-b border-white/5 hover:bg-white/5 cursor-pointer ${isExpanded ? "bg-white/5" : ""}`}
+                      onClick={() => setExpanded(isExpanded ? null : c.id)}>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={selectedProspects.has(c.id)}
+                          onChange={() => toggleSelectProspect(c.id)}
+                          className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20" />
+                      </td>
+                      <td className="px-3 py-3">
+                        <p className="text-white font-medium">{c.name}</p>
+                        {c.annualRevenue && <p className="text-xs text-slate-500">${(c.annualRevenue / 1000).toFixed(0)}K rev</p>}
+                      </td>
+                      <td className="px-3 py-3 text-slate-300 hidden md:table-cell">{c.contactName ?? "---"}</td>
+                      <td className="px-3 py-3 text-slate-400 hidden lg:table-cell">
+                        {[c.city, c.state].filter(Boolean).join(", ") || "---"}
+                      </td>
+                      <td className="px-3 py-3 text-slate-400 hidden md:table-cell">{c.industryType ?? "---"}</td>
+                      <td className="px-3 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${stageInfo.bg} ${stageInfo.color}`}>
+                          {stageInfo.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 hidden lg:table-cell">
+                        {daysSince_ !== null ? (
+                          <span className={`text-xs flex items-center gap-1 ${isStale ? "text-red-400" : "text-slate-400"}`}>
+                            {isStale && <AlertTriangle className="w-3 h-3" />}
+                            {daysSince_}d ago
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-600">Never</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredProspects.length === 0 && (
+                  <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-500">No prospects found</td></tr>
                 )}
               </tbody>
             </table>
+
+            {/* ─── Expanded Prospect Detail ─── */}
             {expanded && (() => {
-              const c = customers.find((x) => x.id === expanded);
+              const c = filteredProspects.find((x) => x.id === expanded);
               if (!c) return null;
+              const stage = getStage(c);
+              const logs = callLogs[c.id] || [];
+              const daysSince_ = daysSinceContact(c.id);
+              const isStale = daysSince_ !== null && daysSince_ > 7;
+
               return (
-                <div className="border-t border-white/10 bg-[#0F1117] px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <p className="text-slate-400 text-xs uppercase font-semibold">Contact Info</p>
-                    {c.email && <p className="text-slate-300 text-sm flex items-center gap-2"><Mail className="w-3.5 h-3.5" />{c.email}</p>}
-                    {c.phone && <p className="text-slate-300 text-sm flex items-center gap-2"><Phone className="w-3.5 h-3.5" />{c.phone}</p>}
-                    {c.state && <p className="text-slate-300 text-sm flex items-center gap-2"><MapPin className="w-3.5 h-3.5" />{c.state}</p>}
+                <div className="border-t border-white/10 bg-[#0F1117] px-6 py-5 space-y-5">
+                  {/* Top row: info + actions */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Contact Info */}
+                    <div className="space-y-2">
+                      <p className="text-slate-400 text-xs uppercase font-semibold tracking-wider">Contact Info</p>
+                      {c.contactName && <p className="text-white text-sm font-medium">{c.contactName}</p>}
+                      {c.email && <p className="text-slate-300 text-sm flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-slate-500" />{c.email}</p>}
+                      {c.phone && <p className="text-slate-300 text-sm flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-slate-500" />{c.phone}</p>}
+                      {(c.city || c.state) && <p className="text-slate-300 text-sm flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-slate-500" />{[c.city, c.state].filter(Boolean).join(", ")}</p>}
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-2">
+                      <p className="text-slate-400 text-xs uppercase font-semibold tracking-wider">Details</p>
+                      <p className="text-slate-300 text-sm">Industry: {c.industryType ?? "---"}</p>
+                      <p className="text-slate-300 text-sm">Est. Revenue: {c.annualRevenue ? `$${(c.annualRevenue / 1000).toFixed(0)}K` : "---"}</p>
+                      <p className="text-slate-300 text-sm">Payment Terms: {c.paymentTerms ?? "---"}</p>
+                      {c.notes && <p className="text-slate-400 text-sm italic">{c.notes}</p>}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="space-y-3">
+                      <p className="text-slate-400 text-xs uppercase font-semibold tracking-wider">Actions</p>
+
+                      {/* Stage selector */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Stage:</span>
+                        <select value={stage}
+                          onChange={(e) => { e.stopPropagation(); updateStage(c.id, e.target.value as PipelineStage); }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none">
+                          {PIPELINE_STAGES.map((s) => <option key={s.key} value={s.key} className="bg-[#0F1117]">{s.label}</option>)}
+                        </select>
+                      </div>
+
+                      {isStale && (
+                        <div className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          {daysSince_}d since last contact — follow up!
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); setShowLogForm(showLogForm === c.id ? null : c.id); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 hover:text-white">
+                          <PhoneCall className="w-3.5 h-3.5" /> Log Activity
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); openEmailModal([c.id]); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 hover:text-white">
+                          <Mail className="w-3.5 h-3.5" /> Email
+                        </button>
+                        {(stage === "QUALIFIED" || stage === "PROPOSAL" || stage === "CONTACTED") && (
+                          <button onClick={(e) => { e.stopPropagation(); convertMutation.mutate(c.id); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-400 hover:bg-green-500/30 font-medium">
+                            <ArrowRight className="w-3.5 h-3.5" /> Convert to Customer
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-slate-400 text-xs uppercase font-semibold">Details</p>
-                    <p className="text-slate-300 text-sm">Credit Limit: {c.creditLimit ? `$${c.creditLimit.toLocaleString()}` : "—"}</p>
-                    <p className="text-slate-300 text-sm">Payment Terms: {c.paymentTerms ?? "—"}</p>
-                    <p className="text-slate-300 text-sm">Notes: {c.notes ?? "—"}</p>
-                  </div>
-                  <div className="flex items-end justify-end">
-                    {c.status === "Prospect" && (
-                      <button onClick={(e) => { e.stopPropagation(); convertMutation.mutate(c.id); }}
-                        className="px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 text-sm font-medium">
-                        Convert to Customer
-                      </button>
-                    )}
-                  </div>
+
+                  {/* Inline Log Activity Form */}
+                  {showLogForm === c.id && (
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                      <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Log Activity</p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <select value={logForm.type} onChange={(e) => setLogForm({ ...logForm, type: e.target.value })}
+                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                          <option value="Call" className="bg-[#0F1117]">Phone Call</option>
+                          <option value="Email" className="bg-[#0F1117]">Email</option>
+                          <option value="Meeting" className="bg-[#0F1117]">Meeting</option>
+                          <option value="Note" className="bg-[#0F1117]">Note</option>
+                        </select>
+                        <input value={logForm.notes} onChange={(e) => setLogForm({ ...logForm, notes: e.target.value })}
+                          placeholder="What happened?"
+                          className="flex-1 min-w-[200px] px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-gold/50"
+                          onKeyDown={(e) => { if (e.key === "Enter") saveCallLog(c.id); }} />
+                        <button onClick={() => saveCallLog(c.id)} disabled={!logForm.notes.trim()}
+                          className="px-4 py-2 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 text-sm font-medium disabled:opacity-50">
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activity History */}
+                  {logs.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Activity History</p>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {logs.slice(0, 10).map((log, idx) => (
+                          <div key={idx} className="flex items-start gap-3 text-sm py-1.5">
+                            <span className="text-slate-500 shrink-0">
+                              {log.type === "Call" ? <PhoneCall className="w-3.5 h-3.5" /> :
+                               log.type === "Email" ? <Mail className="w-3.5 h-3.5" /> :
+                               log.type === "Meeting" ? <Calendar className="w-3.5 h-3.5" /> :
+                               <MessageSquare className="w-3.5 h-3.5" />}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-slate-300">{log.notes}</p>
+                              <p className="text-xs text-slate-600">{formatActivityDate(log.date)} — {log.by}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -244,7 +799,53 @@ export default function LeadHunterPage() {
         </div>
       )}
 
-      {/* Regional Intelligence Tab */}
+      {/* ═══════════════ TAB 2: ACTIVITY LOG ═══════════════ */}
+      {tab === "activity" && (
+        <div className="space-y-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-gold" /> All Prospect Activity
+              <span className="text-xs text-slate-500 font-normal ml-2">{allActivities.length} entries</span>
+            </h3>
+            {allActivities.length === 0 ? (
+              <p className="text-slate-500 text-sm py-8 text-center">No activity logged yet. Start by logging calls or sending emails to prospects.</p>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {allActivities.map((log, idx) => (
+                  <div key={idx} className="flex items-start gap-3 py-3 border-b border-white/5 last:border-0">
+                    <span className={`mt-0.5 shrink-0 ${
+                      log.type === "Call" ? "text-blue-400" :
+                      log.type === "Email" ? "text-amber-400" :
+                      log.type === "Meeting" ? "text-purple-400" :
+                      "text-slate-400"
+                    }`}>
+                      {log.type === "Call" ? <PhoneCall className="w-4 h-4" /> :
+                       log.type === "Email" ? <Mail className="w-4 h-4" /> :
+                       log.type === "Meeting" ? <Calendar className="w-4 h-4" /> :
+                       <MessageSquare className="w-4 h-4" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-slate-500">{formatActivityDate(log.date)}</span>
+                        <span className="text-xs text-slate-600">|</span>
+                        <span className="text-xs font-medium text-white">{log.type}</span>
+                      </div>
+                      <p className="text-sm text-slate-300 mt-0.5">
+                        <span className="text-gold font-medium">{log.customerName}</span>
+                        {log.contactName && <span className="text-slate-500"> ({log.contactName})</span>}
+                        {" — "}{log.notes}
+                      </p>
+                    </div>
+                    <span className="text-xs text-slate-600 shrink-0">{log.by}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ TAB 3: REGIONAL INTELLIGENCE ═══════════════ */}
       {tab === "regions" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {(regions ?? []).map((r) => (
@@ -275,13 +876,13 @@ export default function LeadHunterPage() {
         </div>
       )}
 
-      {/* Lane Opportunities Tab */}
+      {/* ═══════════════ TAB 4: LANE OPPORTUNITIES ═══════════════ */}
       {tab === "lanes" && (
         <div className="space-y-4">
           <select value={laneRegion} onChange={(e) => setLaneRegion(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:outline-none">
-            <option value="" className="bg-[#0F1117] text-white">All Regions</option>
-            {(regions ?? []).map((r) => <option key={r.region} value={r.region} className="bg-[#0F1117] text-white">{r.region.replace(/_/g, " ")}</option>)}
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:outline-none text-sm">
+            <option value="" className="bg-[#0F1117]">All Regions</option>
+            {(regions ?? []).map((r) => <option key={r.region} value={r.region} className="bg-[#0F1117]">{r.region.replace(/_/g, " ")}</option>)}
           </select>
           <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
@@ -315,7 +916,7 @@ export default function LeadHunterPage() {
         </div>
       )}
 
-      {/* Add Prospect Modal */}
+      {/* ═══════════════ ADD PROSPECT MODAL ═══════════════ */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -329,6 +930,7 @@ export default function LeadHunterPage() {
                 { key: "contactName", label: "Contact Name" },
                 { key: "email", label: "Email" },
                 { key: "phone", label: "Phone" },
+                { key: "city", label: "City" },
                 { key: "state", label: "State" },
                 { key: "annualRevenue", label: "Est. Annual Revenue ($)" },
               ] as { key: string; label: string; span?: boolean }[]).map((f) => (
@@ -342,8 +944,8 @@ export default function LeadHunterPage() {
                 <label className="text-slate-400 text-xs font-medium mb-1 block">Industry</label>
                 <select value={form.industryType} onChange={(e) => setForm({ ...form, industryType: e.target.value })}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none text-sm">
-                  <option value="" className="bg-[#0F1117] text-white">Select...</option>
-                  {INDUSTRIES.map((ind) => <option key={ind} value={ind} className="bg-[#0F1117] text-white">{ind}</option>)}
+                  <option value="" className="bg-[#0F1117]">Select...</option>
+                  {INDUSTRIES.map((ind) => <option key={ind} value={ind} className="bg-[#0F1117]">{ind}</option>)}
                 </select>
               </div>
               <div className="sm:col-span-2">
@@ -359,6 +961,233 @@ export default function LeadHunterPage() {
                 {createMutation.isPending ? "Creating..." : "Create Prospect"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ EMAIL CAMPAIGN MODAL ═══════════════ */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEmailModal(false)}>
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div>
+                <h2 className="text-lg font-bold text-white">Send Email Campaign</h2>
+                <p className="text-sm text-slate-400 mt-0.5">Send branded emails to prospects</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {emailResult ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    {emailResult.sent > 0 && (
+                      <span className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" /> {emailResult.sent} sent
+                      </span>
+                    )}
+                    {emailResult.skipped > 0 && (
+                      <span className="px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 font-medium">{emailResult.skipped} skipped</span>
+                    )}
+                    {emailResult.failed > 0 && (
+                      <span className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 font-medium">{emailResult.failed} failed</span>
+                    )}
+                  </div>
+                  <button onClick={() => setShowEmailModal(false)}
+                    className="px-4 py-2 bg-gold/20 text-gold font-medium rounded-lg text-sm hover:bg-gold/30">Done</button>
+                </div>
+              ) : (
+                <>
+                  {/* Recipients */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Recipients (Prospects Only)</label>
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                      <label className="flex items-center gap-2 text-sm text-slate-300 pb-2 border-b border-white/5 cursor-pointer">
+                        <input type="checkbox" checked={selectAllRecipients}
+                          onChange={(e) => handleToggleAllRecipients(e.target.checked)}
+                          className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20" />
+                        <span className="font-medium">All Prospects with Email ({prospects.filter((c) => c.email).length})</span>
+                      </label>
+                      {prospects.map((c) => (
+                        <label key={c.id} className={`flex items-center gap-2 text-sm cursor-pointer ${c.email ? "text-slate-300" : "text-slate-600"}`}>
+                          <input type="checkbox" checked={selectedRecipients.has(c.id)}
+                            onChange={() => handleToggleRecipient(c.id)}
+                            disabled={!c.email}
+                            className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20 disabled:opacity-30" />
+                          <span>{c.name}</span>
+                          {c.email ? (
+                            <span className="text-xs text-slate-500 ml-auto truncate max-w-[200px]">{c.email}</span>
+                          ) : (
+                            <span className="text-xs text-red-400/60 ml-auto">No email</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Template */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Template</label>
+                    <select value={emailTemplate} onChange={(e) => handleTemplateChange(e.target.value as TemplateType)}
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
+                      <option value="INTRO" className="bg-[#0F1117]">Company Introduction</option>
+                      <option value="FOLLOW_UP" className="bg-[#0F1117]">Follow-Up</option>
+                      <option value="RATE_SHEET" className="bg-[#0F1117]">Rate Sheet</option>
+                      <option value="CUSTOM" className="bg-[#0F1117]">Custom</option>
+                    </select>
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Subject</label>
+                    <input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50" />
+                  </div>
+
+                  {/* Custom body */}
+                  {emailTemplate === "CUSTOM" && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                        Message Body <span className="text-slate-600 normal-case">(HTML supported, use {"{contactName}"} for personalization)</span>
+                      </label>
+                      <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={8}
+                        placeholder="<p>Hi {contactName},</p><p>Your message here...</p>"
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 font-mono" />
+                    </div>
+                  )}
+
+                  {/* Preview */}
+                  {emailTemplate !== "CUSTOM" && (
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                        <Eye className="w-3.5 h-3.5" /> Preview
+                      </label>
+                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
+                        <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
+                          <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
+                        </div>
+                        <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
+                          dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATES[emailTemplate].preview(
+                            prospects.find((c) => selectedRecipients.has(c.id))?.contactName?.split(/\s+/)[0] || "there"
+                          ) }} />
+                        <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
+                          Silk Route Logistics &bull; silkroutelogistics.ai
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {emailTemplate === "CUSTOM" && emailBody && (
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                        <Eye className="w-3.5 h-3.5" /> Preview
+                      </label>
+                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
+                        <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
+                          <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
+                        </div>
+                        <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
+                          dangerouslySetInnerHTML={{ __html: emailBody.replace(/\{contactName\}/g, "{contactName}") }} />
+                        <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
+                          Silk Route Logistics &bull; silkroutelogistics.ai
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {!emailResult && (
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
+                <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
+                <button onClick={handleSendCampaign}
+                  disabled={emailSending || selectedRecipients.size === 0 || !emailSubject.trim() || (emailTemplate === "CUSTOM" && !emailBody.trim())}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gold/20 text-gold font-medium rounded-lg text-sm hover:bg-gold/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {emailSending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Sending {emailProgress.current}/{emailProgress.total}...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Send to {selectedRecipients.size} Prospect{selectedRecipients.size !== 1 ? "s" : ""}</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ CSV IMPORT MODAL ═══════════════ */}
+      {showCsvPreview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}>
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div>
+                <h2 className="text-lg font-bold text-white">Import Prospects from CSV</h2>
+                <p className="text-sm text-slate-400 mt-0.5">Found {csvRows.length} contact{csvRows.length !== 1 ? "s" : ""}. Imported as Prospects (Lead stage).</p>
+              </div>
+              <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}
+                className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-5">
+              {csvResult ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 font-medium">{csvResult.created} imported as prospects</span>
+                    {csvResult.skipped > 0 && <span className="px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 font-medium">{csvResult.skipped} skipped (duplicates)</span>}
+                    {csvResult.errors.length > 0 && <span className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 font-medium">{csvResult.errors.length} failed</span>}
+                  </div>
+                  {csvResult.errors.length > 0 && (
+                    <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3 space-y-1">
+                      {csvResult.errors.map((e, i) => <p key={i} className="text-xs text-red-400">{e}</p>)}
+                    </div>
+                  )}
+                  <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}
+                    className="px-4 py-2 bg-gold/20 text-gold font-medium rounded-lg text-sm hover:bg-gold/30">Done</button>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          {Object.keys(csvRows[0] || {}).slice(0, 8).map((h) => (
+                            <th key={h} className="text-left py-2 px-2 text-xs text-slate-500 font-medium">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvRows.slice(0, 5).map((row, i) => (
+                          <tr key={i} className="border-b border-white/5">
+                            {Object.keys(csvRows[0] || {}).slice(0, 8).map((h) => (
+                              <td key={h} className="py-2 px-2 text-slate-300 text-xs truncate max-w-[150px]">{row[h] || "---"}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {csvRows.length > 5 && <p className="text-xs text-slate-500 mt-2">...and {csvRows.length - 5} more rows</p>}
+                </>
+              )}
+            </div>
+
+            {!csvResult && (
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
+                <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); }}
+                  className="px-4 py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
+                <button onClick={handleCsvImport} disabled={csvImporting}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gold/20 text-gold font-medium rounded-lg text-sm hover:bg-gold/30 disabled:opacity-50">
+                  {csvImporting ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Importing {csvProgress.current}/{csvProgress.total}...</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> Import {csvRows.length} Prospects</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
