@@ -346,16 +346,21 @@ export function generateBOLFromLoad(load: LoadBOLData): PDFDoc {
     "8. Carrier shall maintain valid operating authority (MC/DOT), auto liability insurance (min $1,000,000), and cargo insurance (min $100,000) at all times during carriage.",
     "9. Carrier agrees to comply with all applicable federal, state, and provincial laws, rules, and regulations including FMCSA safety regulations and ELD mandates.",
   ].join(" ");
-  doc.text(terms, L, y, { width: W, lineGap: 0.5 });
 
-  // Footer — always at bottom of page 1
-  const footerY = 740;
+  // Calculate remaining space — if T&C would overflow, shrink font
+  const remainingSpace = 735 - y; // 735 = safe bottom before footer
+  const termsSize = remainingSpace < 60 ? 4.5 : 5;
+  doc.fontSize(termsSize).fillColor(LTGRAY).text(terms, L, y, { width: W, lineGap: 0.5 });
+
+  // Footer line + text — placed inline after terms, not at fixed Y
+  const footerY = Math.min(doc.y + 8, 738);
   doc.moveTo(L, footerY).lineTo(R, footerY).strokeColor(BLACK).lineWidth(0.5).stroke();
-  doc.fontSize(7).fillColor(GRAY).text(
+  doc.fontSize(6.5).fillColor(GRAY).text(
     `${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`,
-    L, footerY + 4, { align: "center", width: W }
+    L, footerY + 3, { align: "center", width: W }
   );
 
+  // Ensure no blank page 2 — PDFKit won't add a page if we end here
   doc.end();
   return doc;
 }
