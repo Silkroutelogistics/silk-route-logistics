@@ -7,10 +7,10 @@ type PDFDoc = InstanceType<typeof PDFDocument>;
 
 const COMPANY = {
   name: "Silk Route Logistics Inc.",
-  address: "Galesburg, MI",
-  cityStateZip: "Galesburg, MI",
+  address: "Kalamazoo, Michigan",
+  cityStateZip: "Kalamazoo, MI",
   phone: "+1 (269) 220-6760",
-  email: "info@silkroutelogistics.ai",
+  email: "whaider@silkroutelogistics.ai",
   website: "silkroutelogistics.ai",
   mc: "01794414",
   dot: "4526880",
@@ -135,7 +135,9 @@ export function generateBOLFromLoad(load: LoadBOLData): PDFDoc {
   // BOL title + reference numbers (right side of header)
   doc.fontSize(14).fillColor("#FFFFFF").text("BILL OF LADING", 380, 40, { align: "right", width: rightEdge - 380 });
   doc.fontSize(7).fillColor("#D4A843");
-  const bolNum = `BOL-SRL-${load.loadNumber || load.referenceNumber}`;
+  // Avoid double prefix: referenceNumber already starts with "SRL-"
+  const ref = load.loadNumber || load.referenceNumber;
+  const bolNum = ref.startsWith("SRL-") ? `BOL-${ref}` : `BOL-SRL-${ref}`;
   doc.text(`BOL#: ${bolNum}`, 380, 57, { align: "right", width: rightEdge - 380 });
   doc.text(`Date: ${new Date().toLocaleDateString()}`, 380, 67, { align: "right", width: rightEdge - 380 });
   doc.text(`Ref#: ${load.referenceNumber}`, 380, 77, { align: "right", width: rightEdge - 380 });
@@ -188,7 +190,7 @@ export function generateBOLFromLoad(load: LoadBOLData): PDFDoc {
   doc.fontSize(8).fillColor("#1E1E2F");
   const carrierName = load.carrier
     ? (load.carrier.company || `${load.carrier.firstName} ${load.carrier.lastName}`)
-    : COMPANY.name;
+    : "— Not Yet Assigned —";
   doc.text(carrierName, col3, y, { width: colW });
   let cry = y + 10;
   doc.fontSize(7).fillColor("#444444");

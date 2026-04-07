@@ -6,7 +6,7 @@
 // v3.2 — Gmail reply tracking, Lead Hunter DB-persist, full system audit, Compass 25-check wiring
 // v3.2.a — Current release
 
-export const SRL_VERSION = "3.2.c";
+export const SRL_VERSION = "3.2.d";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
