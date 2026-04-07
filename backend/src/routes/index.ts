@@ -62,6 +62,7 @@ import trackTraceSSERoutes from "./trackTraceSSE";
 import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
+import addressBookRoutes from "./addressBook";
 
 const router = Router();
 
@@ -212,5 +213,6 @@ router.use("/track-trace", trackTraceSSERoutes);
 router.use("/external-integrations", externalIntegrations);
 router.use("/contract-rates", contractRateRoutes);
 router.use("/rfps", rfpRoutes);
+router.use("/address-book", addressBookRoutes);
 
 export default router;

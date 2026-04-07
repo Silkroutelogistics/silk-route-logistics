@@ -2924,6 +2924,36 @@ model FacilityProfile {
   @@map("facility_profiles")
 }
 
+// ─── Address Book (Shipper/Consignee saved locations for Order Builder) ────
+model AddressBook {
+  id           String   @id @default(cuid())
+  type         String   // SHIPPER, CONSIGNEE, BOTH
+  companyName  String
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  address      String
+  address2     String?
+  city         String
+  state        String
+  zip          String
+  country      String   @default("US")
+  notes        String?
+  pickupHours  String?  // e.g. "Mon-Fri 7AM-5PM"
+  deliveryHours String? // e.g. "Mon-Fri 8AM-4PM, appointment required"
+  usageCount   Int      @default(0)
+  lastUsedAt   DateTime?
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([type])
+  @@index([companyName])
+  @@index([state])
+  @@index([usageCount(sort: Desc)])
+  @@map("address_book")
+}
+
 model CarrierPreferences {
   id                 String   @id @default(uuid())
   carrierId          String   @unique

@@ -47,38 +47,16 @@ const COMMODITY_CLASS_MAP: Record<string, string> = {
 };
 
 interface AddressBookEntry {
-  name: string;
+  id?: string;
+  companyName: string;
+  contactName?: string;
+  contactPhone?: string;
   address: string;
   city: string;
   state: string;
   zip: string;
-  phone: string;
-  updatedAt: number;
-}
-
-const ADDRESS_BOOK_KEY = "srl-address-book";
-const MAX_ADDRESS_ENTRIES = 50;
-
-function getAddressBook(): AddressBookEntry[] {
-  try {
-    const raw = localStorage.getItem(ADDRESS_BOOK_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveToAddressBook(entry: Omit<AddressBookEntry, "updatedAt">) {
-  if (!entry.name?.trim() || !entry.city?.trim()) return;
-  const book = getAddressBook();
-  const existing = book.findIndex((e) => e.name.toLowerCase() === entry.name.toLowerCase());
-  const record: AddressBookEntry = { ...entry, updatedAt: Date.now() };
-  if (existing >= 0) {
-    book[existing] = record;
-  } else {
-    book.unshift(record);
-  }
-  // Keep max entries, most recent first
-  book.sort((a, b) => b.updatedAt - a.updatedAt);
-  localStorage.setItem(ADDRESS_BOOK_KEY, JSON.stringify(book.slice(0, MAX_ADDRESS_ENTRIES)));
+  type: string;
+  usageCount?: number;
 }
 
 interface Stop {
@@ -363,6 +341,18 @@ export default function OrderBuilderPage() {
     enabled: customerSearch.length > 0,
   });
 
+  // Address book from DB
+  const { data: addressBookData, refetch: refetchAddressBook } = useQuery({
+    queryKey: ["address-book"],
+    queryFn: () => api.get<{ entries: AddressBookEntry[] }>("/address-book?limit=200").then((r) => r.data),
+  });
+  const addressBook = addressBookData?.entries || [];
+
+  const saveToAddressBook = (entry: { companyName: string; address: string; city: string; state: string; zip: string; contactPhone?: string; type: string }) => {
+    if (!entry.companyName?.trim() || !entry.city?.trim()) return;
+    api.post("/address-book", entry).then(() => refetchAddressBook()).catch(() => {});
+  };
+
   // Auto-select customer from URL params (e.g., from CRM "Create Load" button)
   useEffect(() => {
     if (prefilledFromUrl) return;
@@ -459,25 +449,26 @@ export default function OrderBuilderPage() {
       return api.post("/loads", payload).then((r) => r.data);
     },
     onSuccess: (data, status) => {
-      // Auto-save origin + destination to address book
+      // Auto-save origin + destination to address book (DB-persisted)
       if (form.shipperName || form.originCity) {
         saveToAddressBook({
-          name: form.shipperName || `${form.originCity}, ${form.originState}`,
+          companyName: form.shipperName || `${form.originCity}, ${form.originState}`,
           address: form.originAddress,
           city: form.originCity,
           state: form.originState,
           zip: form.originZip,
-          phone: form.contactPhone || "",
+          contactPhone: form.contactPhone || undefined,
+          type: "SHIPPER",
         });
       }
       if (form.consigneeName || form.destCity) {
         saveToAddressBook({
-          name: form.consigneeName || `${form.destCity}, ${form.destState}`,
+          companyName: form.consigneeName || `${form.destCity}, ${form.destState}`,
           address: form.destAddress,
           city: form.destCity,
           state: form.destState,
           zip: form.destZip,
-          phone: "",
+          type: "CONSIGNEE",
         });
       }
       setSuccess({ id: data.id, ref: data.referenceNumber, status });
@@ -777,21 +768,22 @@ export default function OrderBuilderPage() {
                   />
                   {showShipperBook && (() => {
                     const q = form.shipperName.toLowerCase();
-                    const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
+                    const matches = addressBook.filter((e) => (e.type === "SHIPPER" || e.type === "BOTH") && (!q || e.companyName.toLowerCase().includes(q))).slice(0, 8);
                     if (matches.length === 0) return null;
                     return (
                       <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-40 overflow-y-auto"
                         style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-                        <div className="px-2 py-1 text-[10px] lg:text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
+                        <div className="px-2 py-1 text-[10px] lg:text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved Shippers</div>
                         {matches.map((entry, i) => (
-                          <button key={i} onClick={() => {
-                            setForm((f) => ({ ...f, shipperName: entry.name, originAddress: entry.address, originCity: entry.city, originState: entry.state, originZip: entry.zip }));
-                            if (entry.phone) setForm((f) => ({ ...f, contactPhone: entry.phone }));
+                          <button key={entry.id || i} onClick={() => {
+                            setForm((f) => ({ ...f, shipperName: entry.companyName, originAddress: entry.address, originCity: entry.city, originState: entry.state, originZip: entry.zip }));
+                            if (entry.contactPhone) setForm((f) => ({ ...f, contactPhone: entry.contactPhone! }));
+                            if (entry.id) api.patch(`/address-book/${entry.id}/use`).catch(() => {});
                             setShowShipperBook(false);
                           }}
                             className="w-full text-left px-2 py-1.5 text-[11px] transition cursor-pointer hover:!bg-amber-50"
                             style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                            <span className="font-semibold" style={{ color: "#0F1117" }}>{entry.name}</span>
+                            <span className="font-semibold" style={{ color: "#0F1117" }}>{entry.companyName}</span>
                             <span style={{ color: "#64748b", marginLeft: "4px", fontSize: "10px" }}>{entry.city}, {entry.state}</span>
                           </button>
                         ))}
@@ -860,20 +852,21 @@ export default function OrderBuilderPage() {
                   />
                   {showConsigneeBook && (() => {
                     const q = form.consigneeName.toLowerCase();
-                    const matches = getAddressBook().filter((e) => !q || e.name.toLowerCase().includes(q)).slice(0, 8);
+                    const matches = addressBook.filter((e) => (e.type === "CONSIGNEE" || e.type === "BOTH") && (!q || e.companyName.toLowerCase().includes(q))).slice(0, 8);
                     if (matches.length === 0) return null;
                     return (
                       <div className="absolute z-20 top-full mt-1 w-full rounded-lg max-h-40 overflow-y-auto"
                         style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
-                        <div className="px-2 py-1 text-[10px] lg:text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved</div>
+                        <div className="px-2 py-1 text-[10px] lg:text-[9px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">Saved Consignees</div>
                         {matches.map((entry, i) => (
-                          <button key={i} onClick={() => {
-                            setForm((f) => ({ ...f, consigneeName: entry.name, destAddress: entry.address, destCity: entry.city, destState: entry.state, destZip: entry.zip }));
+                          <button key={entry.id || i} onClick={() => {
+                            setForm((f) => ({ ...f, consigneeName: entry.companyName, destAddress: entry.address, destCity: entry.city, destState: entry.state, destZip: entry.zip }));
+                            if (entry.id) api.patch(`/address-book/${entry.id}/use`).catch(() => {});
                             setShowConsigneeBook(false);
                           }}
                             className="w-full text-left px-2 py-1.5 text-[11px] transition cursor-pointer hover:!bg-amber-50"
                             style={{ color: "#1e293b", borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff" }}>
-                            <span className="font-semibold" style={{ color: "#0F1117" }}>{entry.name}</span>
+                            <span className="font-semibold" style={{ color: "#0F1117" }}>{entry.companyName}</span>
                             <span style={{ color: "#64748b", marginLeft: "4px", fontSize: "10px" }}>{entry.city}, {entry.state}</span>
                           </button>
                         ))}
@@ -1056,8 +1049,8 @@ export default function OrderBuilderPage() {
                       <input value={stop.facilityName} onChange={(e) => { const u = [...stops]; u[idx] = { ...u[idx], facilityName: e.target.value }; setStops(u); }}
                         placeholder="Facility" className={`w-full ${inp}`} list={`stop-book-${idx}`} onFocus={() => {}} />
                       <datalist id={`stop-book-${idx}`}>
-                        {getAddressBook().slice(0, 10).map((e, i) => (
-                          <option key={i} value={e.name}>{e.city}, {e.state} {e.zip}</option>
+                        {addressBook.slice(0, 10).map((e, i) => (
+                          <option key={e.id || i} value={e.companyName}>{e.city}, {e.state} {e.zip}</option>
                         ))}
                       </datalist>
                     </div>
