@@ -303,54 +303,57 @@ export function generateBOLFromLoad(load: LoadBOLData): PDFDoc {
   }
 
   // ═══════════════════════════════════════════════════
-  // SIGNATURES — 3 bordered columns with room to sign
+  // SIGNATURES — 3 bordered columns, compact
   // ═══════════════════════════════════════════════════
   const sigW = W / 3;
-  const sigH = 80;
-  headerCell("SHIPPER / REPRESENTATIVE", L, y, sigW, 14);
-  headerCell("CARRIER / DRIVER", L + sigW, y, sigW, 14);
-  headerCell("CONSIGNEE / RECEIVER", L + sigW * 2, y, sigW, 14);
-  y += 14;
+  const sigH = 60;
+  headerCell("SHIPPER / REPRESENTATIVE", L, y, sigW, 12);
+  headerCell("CARRIER / DRIVER", L + sigW, y, sigW, 12);
+  headerCell("CONSIGNEE / RECEIVER", L + sigW * 2, y, sigW, 12);
+  y += 12;
 
   for (let i = 0; i < 3; i++) {
     const sx = L + sigW * i;
     box(sx, y, sigW, sigH);
     const labels = i === 1
-      ? ["Signature:", "Driver Name:", "Truck #:", "Trailer #:", "Seal #:", "Date:"]
+      ? ["Signature:", "Driver Name:", "Truck / Trailer #:", "Seal #:"]
       : ["Signature:", "Print Name:", "Date:", "Pieces " + (i === 0 ? "Tendered:" : "Received:")];
-    let ly = y + 6;
+    let ly = y + 4;
     labels.forEach((lbl) => {
-      doc.fontSize(7).fillColor(LTGRAY).text(lbl, sx + 5, ly);
-      doc.moveTo(sx + 70, ly + 8).lineTo(sx + sigW - 8, ly + 8).strokeColor("#999999").lineWidth(0.3).stroke();
-      ly += 14;
+      doc.fontSize(6.5).fillColor(LTGRAY).text(lbl, sx + 4, ly);
+      doc.moveTo(sx + 68, ly + 7).lineTo(sx + sigW - 6, ly + 7).strokeColor("#999999").lineWidth(0.3).stroke();
+      ly += 13;
     });
   }
-  y += sigH + 6;
+  y += sigH + 4;
 
   // ═══════════════════════════════════════════════════
-  // TERMS & CONDITIONS
+  // TERMS & CONDITIONS — comprehensive like ISG
   // ═══════════════════════════════════════════════════
   doc.moveTo(L, y).lineTo(R, y).strokeColor(BLACK).lineWidth(1).stroke();
-  y += 4;
+  y += 3;
   doc.fontSize(6.5).fillColor(BLACK).text("TERMS AND CONDITIONS", L, y);
-  y += 9;
-  doc.fontSize(5.5).fillColor(LTGRAY);
-  const terms =
-    "The goods declared herein are accepted in apparent good order and condition (except as noted) for carriage. This shipment is subject to the terms " +
-    "of the Uniform Straight Bill of Lading and applicable regulations of the U.S. Department of Transportation. The carrier shall be liable for loss, " +
-    "damage, or delay to cargo pursuant to the Carmack Amendment (49 U.S.C. \u00A7 14706). Carrier\u2019s liability is limited to the actual value of the goods. " +
-    "Claims must be filed within 9 months of delivery or reasonable delivery date. Shipper certifies that the commodities described herein are properly " +
-    "classified, described, packaged, marked, and labeled per DOT regulations. Carrier must report any damage, shortage, or loss at time of delivery. " +
-    "This BOL is non-negotiable. Subject to the Broker-Carrier Agreement between Silk Route Logistics Inc. and the carrier. Freight charges are prepaid " +
-    "unless otherwise noted. Hazardous materials (if applicable) are tendered in compliance with 49 CFR Parts 171-180.";
-  doc.text(terms, L, y, { width: W, lineGap: 1 });
+  y += 8;
+  doc.fontSize(5).fillColor(LTGRAY);
+  const terms = [
+    "1. The goods declared herein are accepted in apparent good order and condition (except as noted) for carriage subject to the Uniform Straight Bill of Lading and applicable DOT regulations.",
+    "2. Carrier shall be liable for loss, damage, or delay to cargo pursuant to the Carmack Amendment (49 U.S.C. \u00A7 14706). Carrier\u2019s liability is limited to the actual value of the goods unless a higher value is declared.",
+    "3. Claims must be filed within 9 months of delivery or reasonable delivery date. Suits must be instituted within 2 years and 1 day from the date of written notice of claim disallowance.",
+    "4. Shipper certifies that the commodities described herein are properly classified, described, packaged, marked, and labeled per DOT regulations including 49 CFR Parts 171-180 for hazardous materials.",
+    "5. Carrier must report any damage, shortage, or loss at time of delivery. Consignee must note exceptions on this BOL and delivery receipt before signing.",
+    "6. This BOL is non-negotiable. Subject to the Broker-Carrier Agreement between Silk Route Logistics Inc. and the carrier. Freight charges are prepaid unless otherwise noted.",
+    "7. Carrier shall not sub-contract, broker, or re-broker any shipment tendered under this BOL without prior written consent of Silk Route Logistics Inc.",
+    "8. Carrier shall maintain valid operating authority (MC/DOT), auto liability insurance (min $1,000,000), and cargo insurance (min $100,000) at all times during carriage.",
+    "9. Carrier agrees to comply with all applicable federal, state, and provincial laws, rules, and regulations including FMCSA safety regulations and ELD mandates.",
+  ].join(" ");
+  doc.text(terms, L, y, { width: W, lineGap: 0.5 });
 
-  // Footer
-  y = doc.page.height - 45;
-  doc.moveTo(L, y).lineTo(R, y).strokeColor(BLACK).lineWidth(0.5).stroke();
+  // Footer — always at bottom of page 1
+  const footerY = 740;
+  doc.moveTo(L, footerY).lineTo(R, footerY).strokeColor(BLACK).lineWidth(0.5).stroke();
   doc.fontSize(7).fillColor(GRAY).text(
     `${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`,
-    L, y + 4, { align: "center", width: W }
+    L, footerY + 4, { align: "center", width: W }
   );
 
   doc.end();
