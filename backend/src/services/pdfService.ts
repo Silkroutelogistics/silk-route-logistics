@@ -111,306 +111,219 @@ interface LoadBOLData {
 
 export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
   const doc = new PDFDocument({ margin: 34, size: "LETTER" });
-  const M = 34; // margin
-  const CW = 612 - 2 * M; // content width (letter = 612pt)
-  const PH = 792; // page height
-  const INK = "#1A1A1A";
-  const GRAY1 = "#3D3D3D";
-  const GRAY2 = "#6E6E6E";
-  const GRAY3 = "#AAAAAA";
-  const RULE = "#C8C8C8";
-  const GOLD = "#B8972F";
-  const TINT = "#F8F7F4";
-  const HDR_BG = "#2A2A2A";
-  const TOT_BG = "#F0EDE6";
+  const M = 34;
+  const R = 612 - M;
+  const CW = R - M;
+  const INK = "#1A1A1A"; const GRAY1 = "#3D3D3D"; const GRAY2 = "#6E6E6E";
+  const GRAY3 = "#AAAAAA"; const RULE = "#C8C8C8"; const GOLD = "#B8972F";
+  const TINT = "#F8F7F4"; const HDR_BG = "#2A2A2A"; const TOT_BG = "#F0EDE6";
 
   const ref = load.loadNumber || load.referenceNumber;
   const bolNum = ref.startsWith("SRL-") ? `BOL-${ref}` : `BOL-SRL-${ref}`;
 
-  // Generate barcode
   let barcodeBuffer: Buffer | null = null;
-  try {
-    barcodeBuffer = await bwipjs.toBuffer({
-      bcid: "code128",
-      text: bolNum,
-      scale: 3,
-      height: 10,
-      includetext: false,
-    });
-  } catch { /* barcode generation failed — continue without it */ }
+  try { barcodeBuffer = await bwipjs.toBuffer({ bcid: "code128", text: bolNum, scale: 3, height: 10, includetext: false }); } catch {}
 
-  // ════════════════════════════════════════════════════
-  // PAGE 1 — SHIPMENT DETAILS
-  // ════════════════════════════════════════════════════
-
-  // Gold accent bar at top
-  doc.rect(0, PH - 4, 612, 4).fill(GOLD);
-
-  let y = PH - 4;
-
-  // ── Logo
-  if (hasLogo) {
-    doc.image(LOGO_PATH, M, y - 78, { width: 62, height: 62, fit: [62, 62] });
-  }
-
-  // ── Company info
-  const tx = M + 76;
-  doc.fontSize(15).fillColor(INK).text("SILK ROUTE LOGISTICS INC.", tx, y - 20);
-  doc.fontSize(7).fillColor(GRAY1);
-  doc.text(COMPANY.address, tx, y - 32);
-  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}`, tx, y - 43);
-  doc.text(COMPANY.website, tx, y - 54);
-  // Tagline
-  doc.fontSize(6.5).fillColor(GOLD).text("Where Trust Travels.", tx, y - 66, { oblique: true });
-
-  // ── Title + barcode right
-  doc.fontSize(22).fillColor(INK).text("Bill of Lading", 0, y - 14, { align: "right", width: 612 - M });
-  doc.fontSize(8).fillColor(GOLD).text("Straight \u2014 Non Negotiable", 0, y - 28, { align: "right", width: 612 - M });
-
-  if (barcodeBuffer) {
-    doc.image(barcodeBuffer, 612 - M - 150, y - 68, { width: 150, height: 36 });
-    doc.fontSize(7).fillColor(INK).text(bolNum, 612 - M - 150, y - 80, { width: 150, align: "center" });
-  }
-
-  y -= 90;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(INK).lineWidth(1.2).stroke();
-  doc.moveTo(M, y - 2.5).lineTo(612 - M, y - 2.5).strokeColor(GOLD).lineWidth(0.5).stroke();
-
-  // ── Reference row (5 columns)
-  y -= 7;
-  const rh = 36;
-  const ry = y - rh;
-  doc.rect(M, ry, CW, rh).fill(TINT);
-  doc.rect(M, ry, CW, rh).strokeColor(RULE).lineWidth(0.4).stroke();
-  const cw5 = CW / 5;
-  const pickupDateFmt = load.pickupDate instanceof Date
-    ? load.pickupDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : String(load.pickupDate);
-  const refs = [
-    ["BOL #", bolNum],
-    ["DATE", pickupDateFmt],
-    ["LOAD REF", load.referenceNumber],
-    ["EQUIPMENT", load.equipmentType],
-    ["MC# / DOT#", `${COMPANY.mc} / ${COMPANY.dot}`],
-  ];
-  refs.forEach(([lbl, val], i) => {
-    const rx = M + i * cw5;
-    if (i) doc.moveTo(rx, ry).lineTo(rx, ry + rh).strokeColor(RULE).lineWidth(0.4).stroke();
-    doc.fontSize(5.5).fillColor(GRAY2).text(lbl, rx + 6, ry + rh - 10);
-    doc.fontSize(i < 4 ? 9 : 8).fillColor(INK).text(val, rx + 6, ry + 5);
-  });
-
-  // ── Shipper / Consignee
-  y = ry - 8;
-  const leftX = M;
-  const rightX = M + CW * 0.52;
-
-  // Section labels with gold rule
-  doc.fontSize(7).fillColor(GOLD).text("PICKUP FROM", leftX, y);
-  doc.text("DELIVER TO", rightX, y);
-  y -= 4;
-  doc.moveTo(leftX, y).lineTo(leftX + CW * 0.48, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  doc.moveTo(rightX, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
-
-  y -= 14;
-  // Shipper: always use origin (physical pickup location), fallback to customer only if origin is empty
-  const shipperName = load.shipperFacility || load.customer?.name || "\u2014";
-  doc.fontSize(12).fillColor(INK).text(shipperName, leftX, y);
-  doc.fontSize(8.5).fillColor(GRAY1);
-  let sty = y - 14;
-  const shipperAddr = load.originAddress || load.customer?.address;
-  if (shipperAddr) { doc.text(shipperAddr, leftX, sty); sty -= 12; }
-  const shipperCSZ = `${load.originCity}, ${load.originState} ${load.originZip}`;
-  doc.text(shipperCSZ, leftX, sty); sty -= 16;
-  doc.fontSize(7.5).fillColor(GRAY2);
-  const sc = load.originContactName || load.customer?.contactName;
-  const sp = load.originContactPhone || load.customer?.phone;
-  if (sc || sp) doc.text(`Contact:  ${sc || ""}  |  ${sp || ""}`, leftX, sty);
-
-  const consigneeName = load.consigneeFacility || "\u2014";
-  doc.fontSize(12).fillColor(INK).text(consigneeName, rightX, y);
-  doc.fontSize(8.5).fillColor(GRAY1);
-  let cty = y - 14;
-  if (load.destAddress) { doc.text(load.destAddress, rightX, cty); cty -= 12; }
-  doc.text(`${load.destCity}, ${load.destState} ${load.destZip}`, rightX, cty); cty -= 16;
-  doc.fontSize(7.5).fillColor(GRAY2);
-  if (load.destContactName || load.destContactPhone) doc.text(`Contact:  ${load.destContactName || ""}  |  ${load.destContactPhone || ""}`, rightX, cty);
-
-  y = Math.min(sty, cty) - 14;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
-
-  // ── Third Party / Schedule
-  y -= 8;
-  doc.fontSize(7).fillColor(GOLD).text("THIRD PARTY BILL TO", leftX, y);
-  doc.text("PICKUP & DELIVERY SCHEDULE", rightX, y);
-  y -= 4;
-  doc.moveTo(leftX, y).lineTo(leftX + CW * 0.48, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  doc.moveTo(rightX, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
-
-  y -= 14;
-  doc.fontSize(10).fillColor(INK).text(COMPANY.name, leftX, y);
-  doc.fontSize(8).fillColor(GRAY1);
-  doc.text(COMPANY.address, leftX, y - 13);
-  doc.text(COMPANY.phone, leftX, y - 25);
-
-  // Schedule with time windows + route dots
-  const deliveryDateFmt = load.deliveryDate instanceof Date
-    ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
-    : String(load.deliveryDate);
-  const puDateFmt = load.pickupDate instanceof Date
-    ? load.pickupDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
-    : String(load.pickupDate);
+  const pickupDateFmt = load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : String(load.pickupDate);
+  const deliveryDateFmt = load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : String(load.deliveryDate);
   const pickupWindow = (load.pickupTimeStart && load.pickupTimeEnd) ? `${load.pickupTimeStart} \u2013 ${load.pickupTimeEnd}` : (load.pickupTimeStart || "\u2014");
   const deliveryWindow = (load.deliveryTimeStart && load.deliveryTimeEnd) ? `${load.deliveryTimeStart} \u2013 ${load.deliveryTimeEnd}` : (load.deliveryTimeStart || "\u2014");
 
-  doc.fontSize(6.5).fillColor(GRAY2).text("PICKUP", rightX, y + 2);
-  doc.fontSize(11).fillColor(INK).text(puDateFmt, rightX, y - 12);
-  doc.fontSize(7.5).fillColor(GRAY2).text(`Window:  ${pickupWindow}`, rightX, y - 24);
+  // ════════════════ PAGE 1 ════════════════
+  // PDFKit: Y=0 is TOP, increases downward
 
-  doc.fontSize(6.5).fillColor(GRAY2).text("DELIVERY", rightX, y - 38);
-  doc.fontSize(11).fillColor(INK).text(deliveryDateFmt, rightX, y - 50);
-  doc.fontSize(7.5).fillColor(GRAY2).text(`Window:  ${deliveryWindow}`, rightX, y - 62);
+  // Gold accent bar
+  doc.rect(0, 0, 612, 4).fill(GOLD);
+  let y = 12;
+
+  // Logo
+  if (hasLogo) doc.image(LOGO_PATH, M, y, { width: 52, height: 52, fit: [52, 52] });
+
+  // Company info
+  const tx = M + 62;
+  doc.fontSize(14).fillColor(INK).text("SILK ROUTE LOGISTICS INC.", tx, y + 4);
+  doc.fontSize(7).fillColor(GRAY1).text(COMPANY.address, tx, y + 20);
+  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}`, tx, y + 29);
+  doc.text(COMPANY.website, tx, y + 38);
+  doc.fontSize(6).fillColor(GOLD).text("Where Trust Travels.", tx, y + 48);
+
+  // Title + barcode right
+  doc.fontSize(20).fillColor(INK).text("Bill of Lading", R - 200, y + 2, { width: 200, align: "right" });
+  doc.fontSize(7).fillColor(GOLD).text("Straight \u2014 Non Negotiable", R - 200, y + 24, { width: 200, align: "right" });
+  if (barcodeBuffer) {
+    doc.image(barcodeBuffer, R - 150, y + 34, { width: 150, height: 28 });
+    doc.fontSize(6.5).fillColor(INK).text(bolNum, R - 150, y + 63, { width: 150, align: "center" });
+  }
+
+  y += 72;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(INK).lineWidth(1.2).stroke();
+  doc.moveTo(M, y + 2).lineTo(R, y + 2).strokeColor(GOLD).lineWidth(0.5).stroke();
+  y += 6;
+
+  // Reference row
+  const rh = 30; const cw5 = CW / 5;
+  doc.rect(M, y, CW, rh).fill(TINT);
+  doc.rect(M, y, CW, rh).strokeColor(RULE).lineWidth(0.4).stroke();
+  const refs: [string, string][] = [["BOL #", bolNum], ["DATE", pickupDateFmt], ["LOAD REF", load.referenceNumber], ["EQUIPMENT", load.equipmentType], ["MC# / DOT#", `${COMPANY.mc} / ${COMPANY.dot}`]];
+  refs.forEach(([lbl, val], i) => {
+    const rx = M + i * cw5;
+    if (i) doc.moveTo(rx, y).lineTo(rx, y + rh).strokeColor(RULE).lineWidth(0.4).stroke();
+    doc.fontSize(5.5).fillColor(GRAY2).text(lbl, rx + 5, y + 3);
+    doc.fontSize(i < 4 ? 9 : 7.5).fillColor(INK).text(val, rx + 5, y + 14);
+  });
+  y += rh + 6;
+
+  // Shipper / Consignee
+  const leftX = M; const rightX = M + CW * 0.52;
+  doc.fontSize(7).fillColor(GOLD).text("PICKUP FROM", leftX, y);
+  doc.text("DELIVER TO", rightX, y);
+  y += 9;
+  doc.moveTo(leftX, y).lineTo(leftX + CW * 0.48, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  doc.moveTo(rightX, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 5;
+
+  const shipperName = load.shipperFacility || load.customer?.name || "\u2014";
+  doc.fontSize(11).fillColor(INK).text(shipperName, leftX, y);
+  doc.fontSize(8).fillColor(GRAY1);
+  let sy = y + 14;
+  const shipperAddr = load.originAddress || load.customer?.address;
+  if (shipperAddr) { doc.text(shipperAddr, leftX, sy); sy += 10; }
+  doc.text(`${load.originCity}, ${load.originState} ${load.originZip}`, leftX, sy); sy += 12;
+  doc.fontSize(7).fillColor(GRAY2);
+  const sc = load.originContactName || load.customer?.contactName;
+  const sp = load.originContactPhone || load.customer?.phone;
+  if (sc || sp) { doc.text(`Contact:  ${sc || ""}  |  ${sp || ""}`, leftX, sy); sy += 10; }
+
+  const consigneeName = load.consigneeFacility || "\u2014";
+  doc.fontSize(11).fillColor(INK).text(consigneeName, rightX, y);
+  doc.fontSize(8).fillColor(GRAY1);
+  let cy = y + 14;
+  if (load.destAddress) { doc.text(load.destAddress, rightX, cy); cy += 10; }
+  doc.text(`${load.destCity}, ${load.destState} ${load.destZip}`, rightX, cy); cy += 12;
+  doc.fontSize(7).fillColor(GRAY2);
+  if (load.destContactName || load.destContactPhone) { doc.text(`Contact:  ${load.destContactName || ""}  |  ${load.destContactPhone || ""}`, rightX, cy); cy += 10; }
+
+  y = Math.max(sy, cy) + 4;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 6;
+
+  // Third Party / Schedule
+  doc.fontSize(7).fillColor(GOLD).text("THIRD PARTY BILL TO", leftX, y);
+  doc.text("PICKUP & DELIVERY SCHEDULE", rightX, y);
+  y += 9;
+  doc.moveTo(leftX, y).lineTo(leftX + CW * 0.48, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  doc.moveTo(rightX, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 5;
+
+  const tpY = y;
+  doc.fontSize(9).fillColor(INK).text(COMPANY.name, leftX, y);
+  doc.fontSize(7.5).fillColor(GRAY1).text(COMPANY.address, leftX, y + 12);
+  doc.text(COMPANY.phone, leftX, y + 22);
+
+  doc.fontSize(6).fillColor(GRAY2).text("PICKUP", rightX, tpY);
+  doc.fontSize(10).fillColor(INK).text(pickupDateFmt, rightX, tpY + 9);
+  doc.fontSize(7).fillColor(GRAY2).text(`Window:  ${pickupWindow}`, rightX, tpY + 21);
+  doc.fontSize(6).fillColor(GRAY2).text("DELIVERY", rightX, tpY + 34);
+  doc.fontSize(10).fillColor(INK).text(deliveryDateFmt, rightX, tpY + 43);
+  doc.fontSize(7).fillColor(GRAY2).text(`Window:  ${deliveryWindow}`, rightX, tpY + 55);
 
   // Gold route dots
-  const dx = 612 - M - 18;
-  doc.circle(dx, PH - (PH - (y - 16)), 4).fill(GOLD);
-  doc.circle(dx, PH - (PH - (y - 54)), 4).fill(GOLD);
-  doc.moveTo(dx, y - 20).lineTo(dx, y - 50).strokeColor(GOLD).lineWidth(1.2).dash(3, { space: 3 }).stroke();
+  const dx = R - 14;
+  doc.circle(dx, tpY + 14, 3).fill(GOLD);
+  doc.circle(dx, tpY + 48, 3).fill(GOLD);
+  doc.moveTo(dx, tpY + 17).lineTo(dx, tpY + 45).strokeColor(GOLD).lineWidth(1).dash(3, { space: 3 }).stroke();
   doc.undash();
 
-  y -= 76;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y = tpY + 68;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 6;
 
-  // ── Additional References
-  y -= 8;
+  // Additional References
   doc.fontSize(7).fillColor(GOLD).text("ADDITIONAL REFERENCES", M, y);
-  y -= 4;
-  doc.moveTo(M, y).lineTo(M + 130, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y -= 14;
-  doc.fontSize(6.5).fillColor(GRAY2).text("PO #:", M, y);
-  doc.fontSize(8.5).fillColor(INK).text("\u2014", M + 28, y);
-  doc.fontSize(6.5).fillColor(GRAY2).text("Pickup Ref #:", M + 120, y);
-  doc.fontSize(8.5).fillColor(INK).text("\u2014", M + 178, y);
-  doc.fontSize(6.5).fillColor(GRAY2).text("Delivery Ref #:", M + 280, y);
-  doc.fontSize(8.5).fillColor(INK).text("\u2014", M + 346, y);
+  y += 10;
+  doc.fontSize(6.5).fillColor(GRAY2).text("PO #:", M, y); doc.fillColor(INK).text("\u2014", M + 28, y);
+  doc.fillColor(GRAY2).text("Pickup Ref #:", M + 120, y); doc.fillColor(INK).text("\u2014", M + 178, y);
+  doc.fillColor(GRAY2).text("Delivery Ref #:", M + 280, y); doc.fillColor(INK).text("\u2014", M + 346, y);
+  y += 12;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 6;
 
-  y -= 14;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
-
-  // ── Shipment Details header
-  y -= 8;
+  // Shipment Details
   doc.fontSize(7).fillColor(GOLD).text("SHIPMENT DETAILS", M, y);
-  y -= 14;
+  y += 12;
 
-  // ── Grid table (Mainfreight-style: thick uniform borders, proper column widths)
-  // Columns: Pieces | Type | Description | Dims | Weight-lbs | Class | NMFC# | HM
+  // Grid table
   const colDefs = [
-    { label: "Pieces",        w: 50 },
-    { label: "Type",          w: 40 },
-    { label: "Description",   w: 150 },
-    { label: "Dims (L\u00D7W\u00D7H)", w: 80 },
-    { label: "Weight-lbs",    w: 72 },
-    { label: "Class",         w: 40 },
-    { label: "NMFC#",         w: 50 },
-    { label: "HM",            w: CW - 50 - 40 - 150 - 80 - 72 - 40 - 50 },
+    { label: "Pieces", w: 50 }, { label: "Type", w: 40 }, { label: "Description", w: 150 },
+    { label: "Dims (L\u00D7W\u00D7H)", w: 80 }, { label: "Weight-lbs", w: 72 },
+    { label: "Class", w: 40 }, { label: "NMFC#", w: 50 },
+    { label: "HM", w: CW - 50 - 40 - 150 - 80 - 72 - 40 - 50 },
   ];
-  const hdrH = 16;
-  const dataRowH = 22;
-  const TBLBORDER = "#333333";
+  const hdrH = 16; const dataRowH = 20; const TB = "#333333";
 
-  // Header row (dark bg, white uppercase text)
-  doc.rect(M, y - hdrH, CW, hdrH).fill(HDR_BG);
+  // Header
+  doc.rect(M, y, CW, hdrH).fill(HDR_BG);
   let cx = M;
-  colDefs.forEach((col) => {
-    doc.fontSize(6.5).fillColor("#FFFFFF").font("Helvetica-Bold").text(col.label, cx + 5, y - hdrH + 5, { width: col.w - 10 });
-    cx += col.w;
-  });
+  colDefs.forEach((c) => { doc.fontSize(6.5).fillColor("#FFFFFF").font("Helvetica-Bold").text(c.label, cx + 4, y + 4, { width: c.w - 8 }); cx += c.w; });
   doc.font("Helvetica");
-  // Header outer border + all verticals
-  doc.rect(M, y - hdrH, CW, hdrH).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
-  cx = M;
-  colDefs.forEach((col) => {
-    cx += col.w;
-    if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y - hdrH).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
-  });
-
-  const tableTop = y - hdrH;
+  doc.rect(M, y, CW, hdrH).strokeColor(TB).lineWidth(0.8).stroke();
+  cx = M; colDefs.forEach((c) => { cx += c.w; if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y + hdrH).strokeColor(TB).lineWidth(0.8).stroke(); });
+  y += hdrH;
 
   // Data row
   const pcs = load.pieces ? String(load.pieces) : "\u2014";
-  const dims = (load.dimensionsLength && load.dimensionsWidth && load.dimensionsHeight)
-    ? `${load.dimensionsLength}"\u00D7${load.dimensionsWidth}"\u00D7${load.dimensionsHeight}"`
-    : "\u2014";
+  const dims = (load.dimensionsLength && load.dimensionsWidth && load.dimensionsHeight) ? `${load.dimensionsLength}"\u00D7${load.dimensionsWidth}"\u00D7${load.dimensionsHeight}"` : "\u2014";
   const rowData = [
-    { text: pcs, bold: true, size: 9 },
-    { text: "PLT", bold: true, size: 8 },
-    { text: load.commodity || "General Freight", bold: false, size: 8 },
-    { text: dims, bold: false, size: 7.5 },
-    { text: load.weight ? load.weight.toLocaleString() : "\u2014", bold: true, size: 9 },
-    { text: load.freightClass || "\u2014", bold: false, size: 8 },
-    { text: "\u2014", bold: false, size: 8 },
-    { text: load.hazmat ? "Yes" : "No", bold: false, size: 8 },
+    { t: pcs, b: true, s: 9 }, { t: "PLT", b: true, s: 8 }, { t: load.commodity || "General Freight", b: false, s: 8 },
+    { t: dims, b: false, s: 7 }, { t: load.weight ? load.weight.toLocaleString() : "\u2014", b: true, s: 9 },
+    { t: load.freightClass || "\u2014", b: false, s: 8 }, { t: "\u2014", b: false, s: 8 }, { t: load.hazmat ? "Yes" : "No", b: false, s: 8 },
   ];
-
-  const dry = tableTop - dataRowH;
-  doc.rect(M, dry, CW, dataRowH).fill(TINT);
-  // Outer border
-  doc.rect(M, dry, CW, dataRowH).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
-  // Cell content + vertical dividers
+  doc.rect(M, y, CW, dataRowH).fill(TINT);
+  doc.rect(M, y, CW, dataRowH).strokeColor(TB).lineWidth(0.8).stroke();
   cx = M;
   rowData.forEach((cell, ci) => {
-    // Vertical divider
-    if (ci > 0) doc.moveTo(cx, tableTop).lineTo(cx, dry).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
-    // Cell text
-    doc.fontSize(cell.size).fillColor(INK);
-    if (cell.bold) doc.font("Helvetica-Bold"); else doc.font("Helvetica");
-    doc.text(cell.text, cx + 5, dry + 7, { width: colDefs[ci].w - 10 });
+    if (ci > 0) doc.moveTo(cx, y).lineTo(cx, y + dataRowH).strokeColor(TB).lineWidth(0.8).stroke();
+    doc.fontSize(cell.s).fillColor(INK);
+    if (cell.b) doc.font("Helvetica-Bold"); else doc.font("Helvetica");
+    doc.text(cell.t, cx + 4, y + 5, { width: colDefs[ci].w - 8 });
     cx += colDefs[ci].w;
   });
   doc.font("Helvetica");
+  y += dataRowH;
 
-  // Totals row (Mainfreight style: bold totals, uniform borders)
-  const totY = dry - dataRowH;
-  doc.rect(M, totY, CW, dataRowH).fill(TOT_BG);
-  doc.rect(M, totY, CW, dataRowH).strokeColor(INK).lineWidth(1).stroke();
-  // Vertical dividers in totals
-  cx = M;
-  colDefs.forEach((col) => {
-    cx += col.w;
-    if (cx < M + CW) doc.moveTo(cx, totY).lineTo(cx, totY + dataRowH).strokeColor(RULE).lineWidth(0.4).stroke();
-  });
+  // Totals row
+  doc.rect(M, y, CW, dataRowH).fill(TOT_BG);
+  doc.rect(M, y, CW, dataRowH).strokeColor(INK).lineWidth(1).stroke();
+  cx = M; colDefs.forEach((c) => { cx += c.w; if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y + dataRowH).strokeColor(RULE).lineWidth(0.4).stroke(); });
   doc.fontSize(8).fillColor(INK).font("Helvetica-Bold");
-  doc.text("TOTALS", M + 5, totY + 7);
-  doc.text(pcs, M + 50 + 5, totY + 7);  // under Pieces
-  doc.text("PLT", M + 50 + 40 + 5, totY + 7);  // under Type
-  const weightCol = M + 50 + 40 + 150 + 80;
-  doc.text(load.weight ? load.weight.toLocaleString() : "\u2014", weightCol + 5, totY + 7);
+  doc.text("TOTALS", M + 4, y + 5);
+  doc.text(pcs, M + 50 + 4, y + 5);
+  doc.text("PLT", M + 90 + 4, y + 5);
+  doc.text(load.weight ? load.weight.toLocaleString() : "\u2014", M + 50 + 40 + 150 + 80 + 4, y + 5);
   doc.font("Helvetica");
+  y += dataRowH + 4;
 
-  y = totY - 10;
-  doc.fontSize(7).fillColor(GRAY2);
-  doc.text("Declared Value:  NVD", M, y);
-  doc.text("Freight Charges:  PREPAID (Third Party)", 0, y, { align: "right", width: 612 - M });
+  doc.fontSize(7).fillColor(GRAY2).text("Declared Value:  NVD", M, y);
+  doc.text("Freight Charges:  PREPAID (Third Party)", R - 200, y, { width: 200, align: "right" });
+  y += 12;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 6;
 
-  y -= 12;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
-
-  // ── Special Instructions
-  y -= 8;
+  // Special Instructions
   const instructions = load.specialInstructions || load.notes;
   doc.fontSize(7).fillColor(GOLD).text("SPECIAL INSTRUCTIONS", M, y);
-  doc.fontSize(7.5).fillColor(GRAY2).text(instructions || "None", M + 108, y);
+  doc.fontSize(7).fillColor(GRAY2).text(instructions || "None", M + 108, y);
+  y += 12;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 6;
 
-  y -= 12;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  // Signatures
+  doc.fontSize(7).fillColor(GOLD).text("SIGNATURES", M, y);
+  y += 10;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
+  y += 4;
 
-  // ── Signatures — anchored to bottom
-  const sigBase = 46;
   const tw = (CW - 24) / 3;
-
-  doc.fontSize(7).fillColor(GOLD).text("SIGNATURES", M, sigBase + 118);
-  doc.moveTo(M, sigBase + 114).lineTo(612 - M, sigBase + 114).strokeColor(RULE).lineWidth(0.3).stroke();
-
   const sigs: [string, string[]][] = [
     ["Shipper / Representative", ["Signature", "Print Name", "Date", "Pieces Tendered"]],
     ["Carrier / Driver", ["Signature", "Driver Name", "Truck #", "Trailer #", "Seal #", "Date"]],
@@ -418,104 +331,76 @@ export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
   ];
   sigs.forEach(([title, fields], i) => {
     const bx = M + i * (tw + 12);
-    let by = sigBase + 100;
+    let by = y;
     doc.fontSize(7).fillColor(INK).font("Helvetica-Bold").text(title, bx, by);
     doc.font("Helvetica");
-    by -= 13;
+    by += 13;
     fields.forEach((f) => {
       doc.fontSize(6.5).fillColor(GRAY2).text(f, bx, by);
       const lw = doc.widthOfString(f) + 5;
-      doc.moveTo(bx + lw, by - 2).lineTo(bx + tw, by - 2).strokeColor(GRAY3).lineWidth(0.3).stroke();
-      by -= 14;
+      doc.moveTo(bx + lw, by + 8).lineTo(bx + tw, by + 8).strokeColor(GRAY3).lineWidth(0.3).stroke();
+      by += 13;
     });
   });
 
-  // ── Footer p1
-  doc.moveTo(M, 34).lineTo(612 - M, 34).strokeColor(GOLD).lineWidth(1).stroke();
-  doc.fontSize(6).fillColor(GRAY2).text(
-    `${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`,
-    0, 22, { align: "center", width: 612 }
-  );
-  doc.fontSize(5.5).fillColor(GOLD).text("Where Trust Travels.", 0, 12, { align: "center", width: 612 });
-  doc.fontSize(5).fillColor(GRAY3).text("Page 1 of 2", 0, 12, { align: "right", width: 612 - M });
+  // Footer p1
+  const fy = 755;
+  doc.moveTo(M, fy).lineTo(R, fy).strokeColor(GOLD).lineWidth(1).stroke();
+  doc.fontSize(6).fillColor(GRAY2).text(`${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`, 0, fy + 6, { align: "center", width: 612 });
+  doc.fontSize(5.5).fillColor(GOLD).text("Where Trust Travels.", 0, fy + 16, { align: "center", width: 612 });
+  doc.fontSize(5).fillColor(GRAY3).text("Page 1 of 2", 0, fy + 16, { align: "right", width: R });
 
-  // ════════════════════════════════════════════════════
-  // PAGE 2 — TERMS AND CONDITIONS (17 clauses)
-  // ════════════════════════════════════════════════════
+  // ════════════════ PAGE 2 — T&C ════════════════
   doc.addPage();
-  doc.rect(0, PH - 4, 612, 4).fill(GOLD);
+  doc.rect(0, 0, 612, 4).fill(GOLD);
+  y = 14;
 
-  y = PH - 4;
-  doc.fontSize(11).fillColor(INK).font("Helvetica-Bold").text("SILK ROUTE LOGISTICS INC.", M, y - 24);
-  doc.font("Helvetica").fontSize(7).fillColor(GRAY2).text(`MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}  |  ${COMPANY.phone}`, M, y - 36);
-  doc.fontSize(9).fillColor(INK).font("Helvetica-Bold").text(bolNum, 0, y - 24, { align: "right", width: 612 - M });
-  doc.font("Helvetica").fontSize(7).fillColor(GRAY2).text(`${pickupDateFmt}  |  ${load.referenceNumber}`, 0, y - 36, { align: "right", width: 612 - M });
+  doc.fontSize(11).fillColor(INK).font("Helvetica-Bold").text("SILK ROUTE LOGISTICS INC.", M, y);
+  doc.font("Helvetica").fontSize(7).fillColor(GRAY2).text(`MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}  |  ${COMPANY.phone}`, M, y + 14);
+  doc.fontSize(9).fillColor(INK).font("Helvetica-Bold").text(bolNum, R - 200, y, { width: 200, align: "right" });
+  doc.font("Helvetica").fontSize(7).fillColor(GRAY2).text(`${pickupDateFmt}  |  ${load.referenceNumber}`, R - 200, y + 14, { width: 200, align: "right" });
 
-  y -= 48;
-  doc.moveTo(M, y).lineTo(612 - M, y).strokeColor(INK).lineWidth(0.8).stroke();
-  y -= 20;
+  y += 30;
+  doc.moveTo(M, y).lineTo(R, y).strokeColor(INK).lineWidth(0.8).stroke();
+  y += 10;
   doc.fontSize(14).fillColor(INK).font("Helvetica-Bold").text("Terms and Conditions", M, y);
-  y -= 6;
+  y += 18;
   doc.moveTo(M, y).lineTo(M + 170, y).strokeColor(GOLD).lineWidth(1.5).stroke();
-  y -= 16;
+  y += 8;
 
   const tclauses: [string, string][] = [
-    ["1. ACCEPTANCE & CARRIAGE",
-     "The goods described herein are accepted in apparent good order and condition (except as noted) for carriage subject to the Uniform Straight Bill of Lading and applicable U.S. DOT regulations. This BOL is non-negotiable and serves as receipt of goods only; it does not constitute a separate contract of carriage."],
-    ["2. LIABILITY (CARMACK AMENDMENT)",
-     "Carrier is liable for loss, damage, or delay to cargo pursuant to 49 U.S.C. \u00A7 14706. Liability extends to the full actual value of the goods. No limitation stated on this BOL or any other document shall reduce Carrier\u2019s liability below full actual value unless a written released-value agreement is executed per 49 CFR \u00A7 1035."],
-    ["3. INSURANCE REQUIREMENTS",
-     "Carrier shall maintain: (a) Commercial General Liability and Automobile Liability with combined single limits of not less than $1,000,000 per occurrence; (b) Cargo Liability of not less than $100,000 per shipment; (c) Workers\u2019 Compensation as required by law."],
-    ["4. CLAIMS",
-     "Written claims for loss, damage, or delay must be filed within nine (9) months of delivery or scheduled delivery date. Carrier shall note any damage, shortage, or discrepancy on this BOL or delivery receipt at time of delivery."],
-    ["5. INDEPENDENT CONTRACTOR",
-     "Carrier operates as an independent contractor with sole control over the manner and means of transportation. Carrier is not an agent, employee, or partner of Silk Route Logistics Inc. (\u201CSRL\u201D)."],
-    ["6. DOUBLE BROKERING & SUB-CONTRACTING PROHIBITION",
-     "Carrier shall transport all freight on equipment operated exclusively by Carrier. Carrier shall not re-broker, assign, interline, sub-contract, or transfer freight to any third party without prior written consent of SRL. Violation constitutes a material breach."],
-    ["7. NON-SOLICITATION & NON-CIRCUMVENTION",
-     "Carrier shall not directly or indirectly solicit, divert, or accept traffic from any shipper or customer of SRL where such traffic became known through SRL, for twelve (12) months following the last load tendered. Violation entitles SRL to a commission of 35% of gross transportation revenue."],
-    ["8. NON-BILLING",
-     "Carrier shall not bill or accept payment from the shipper, consignee, or any third party for transportation arranged by SRL. Carrier waives any tariff, lien, or right to pursue the shipper/consignee for amounts owed."],
-    ["9. INDEMNIFICATION",
-     "Carrier shall defend, indemnify, and hold harmless SRL from all claims, damages, liabilities, fines, and expenses arising from Carrier\u2019s performance, negligence, or breach."],
-    ["10. DETENTION & ACCESSORIALS",
-     "All accessorial charges including detention, lumper fees, layover, and TONU must be pre-approved in writing by SRL prior to being incurred. Unapproved charges will not be honored."],
-    ["11. FORCE MAJEURE",
-     "Neither party shall be liable for failure to perform due to causes beyond its reasonable control, including acts of God, war, terrorism, government action, epidemic, or natural disaster."],
-    ["12. DELIVERY RECEIPT & PROOF OF DELIVERY",
-     "Carrier shall obtain a signed delivery receipt from the consignee. The delivery receipt must be dated and signed. Signed BOL/POD must accompany all invoices for payment processing."],
-    ["13. EQUIPMENT & COMPLIANCE",
-     "Carrier certifies that all equipment meets FMCSA/DOT safety standards and holds a Satisfactory safety rating. Carrier shall comply with all applicable laws including ELD mandates and 49 CFR Parts 171-180 for hazardous materials."],
-    ["14. CONFIDENTIALITY",
-     "All rates, lanes, shipper identities, and business terms are proprietary and confidential. Carrier shall not disclose such information to any third party."],
-    ["15. SEVERABILITY",
-     "If any provision is held to be invalid, the remaining provisions shall continue in full force and effect."],
-    ["16. ENTIRE AGREEMENT",
-     "This BOL, together with the Broker-Carrier Agreement and any applicable Rate/Load Confirmation, constitutes the entire agreement. No oral agreements shall be binding unless confirmed in writing."],
-    ["17. GOVERNING LAW",
-     "This BOL shall be governed by the laws of the State of Michigan and applicable federal transportation law. Freight charges are prepaid unless otherwise noted."],
+    ["1. ACCEPTANCE & CARRIAGE", "The goods described herein are accepted in apparent good order and condition (except as noted) for carriage subject to the Uniform Straight Bill of Lading and applicable U.S. DOT regulations. This BOL is non-negotiable and serves as receipt of goods only."],
+    ["2. LIABILITY (CARMACK AMENDMENT)", "Carrier is liable for loss, damage, or delay to cargo pursuant to 49 U.S.C. \u00A7 14706. Liability extends to the full actual value of the goods unless a written released-value agreement is executed per 49 CFR \u00A7 1035."],
+    ["3. INSURANCE REQUIREMENTS", "Carrier shall maintain: (a) Commercial General Liability and Automobile Liability min $1,000,000 per occurrence; (b) Cargo Liability min $100,000 per shipment; (c) Workers\u2019 Compensation as required by law."],
+    ["4. CLAIMS", "Written claims must be filed within nine (9) months of delivery. Carrier shall note any damage, shortage, or discrepancy on this BOL at time of delivery."],
+    ["5. INDEPENDENT CONTRACTOR", "Carrier operates as an independent contractor. Carrier is not an agent, employee, or partner of Silk Route Logistics Inc."],
+    ["6. DOUBLE BROKERING PROHIBITION", "Carrier shall not re-broker, assign, interline, sub-contract, or transfer freight to any third party without prior written consent of SRL. Violation constitutes a material breach."],
+    ["7. NON-SOLICITATION", "Carrier shall not solicit traffic from any shipper or customer of SRL for twelve (12) months following the last load. Violation entitles SRL to 35% commission on diverted revenue."],
+    ["8. NON-BILLING", "Carrier shall not bill or accept payment from the shipper/consignee. Carrier waives any tariff or lien rights."],
+    ["9. INDEMNIFICATION", "Carrier shall defend, indemnify, and hold harmless SRL from all claims, damages, and expenses arising from Carrier\u2019s performance or breach."],
+    ["10. DETENTION & ACCESSORIALS", "All accessorial charges must be pre-approved in writing by SRL. Unapproved charges will not be honored."],
+    ["11. FORCE MAJEURE", "Neither party shall be liable for failure to perform due to causes beyond reasonable control including acts of God, war, epidemic, or natural disaster."],
+    ["12. PROOF OF DELIVERY", "Carrier shall obtain a signed delivery receipt. Signed BOL/POD must accompany all invoices for payment processing."],
+    ["13. EQUIPMENT & COMPLIANCE", "Carrier certifies equipment meets FMCSA/DOT standards. Carrier shall comply with ELD mandates and 49 CFR Parts 171-180 for hazardous materials."],
+    ["14. CONFIDENTIALITY", "All rates, lanes, and business terms are proprietary. Carrier shall not disclose to any third party."],
+    ["15. SEVERABILITY", "If any provision is invalid, remaining provisions continue in full force."],
+    ["16. ENTIRE AGREEMENT", "This BOL with the Broker-Carrier Agreement constitutes the entire agreement. No oral modifications are binding."],
+    ["17. GOVERNING LAW", "Governed by Michigan law and applicable federal transportation law. Freight charges are prepaid unless otherwise noted."],
   ];
 
   doc.font("Helvetica");
-  const fs = 6.8;
-  const lh = 9;
   for (const [title, body] of tclauses) {
-    doc.fontSize(7.2).fillColor(INK).font("Helvetica-Bold").text(title, M, y);
-    y -= lh + 0.5;
-    doc.fontSize(fs).fillColor(GRAY1).font("Helvetica");
-    const lines = doc.heightOfString(body, { width: CW, lineGap: 0 });
-    doc.text(body, M, y, { width: CW, lineGap: 0 });
-    y -= lines + 4;
+    doc.fontSize(7).fillColor(INK).font("Helvetica-Bold").text(title, M, y);
+    y += 10;
+    doc.fontSize(6.5).fillColor(GRAY1).font("Helvetica").text(body, M, y, { width: CW, lineGap: 0.5 });
+    y = doc.y + 5;
   }
 
   // Footer p2
-  doc.moveTo(M, 36).lineTo(612 - M, 36).strokeColor(GOLD).lineWidth(1).stroke();
-  doc.fontSize(6).fillColor(GRAY2).text(
-    `${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`,
-    0, 24, { align: "center", width: 612 }
-  );
-  doc.fontSize(5.5).fillColor(GOLD).text("Where Trust Travels.", 0, 14, { align: "center", width: 612 });
-  doc.fontSize(5).fillColor(GRAY3).text("Page 2 of 2", 0, 14, { align: "right", width: 612 - M });
+  doc.moveTo(M, 755).lineTo(R, 755).strokeColor(GOLD).lineWidth(1).stroke();
+  doc.fontSize(6).fillColor(GRAY2).text(`${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`, 0, 761, { align: "center", width: 612 });
+  doc.fontSize(5.5).fillColor(GOLD).text("Where Trust Travels.", 0, 771, { align: "center", width: 612 });
+  doc.fontSize(5).fillColor(GRAY3).text("Page 2 of 2", 0, 771, { align: "right", width: R });
 
   doc.end();
   return doc;
