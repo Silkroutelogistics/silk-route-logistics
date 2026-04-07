@@ -110,7 +110,7 @@ interface LoadBOLData {
 }
 
 export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
-  const doc = new PDFDocument({ margin: 34, size: "LETTER" });
+  const doc = new PDFDocument({ margins: { top: 34, bottom: 0, left: 34, right: 34 }, size: "LETTER" });
   const M = 34;
   const R = 612 - M;
   const CW = R - M;
