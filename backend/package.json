@@ -25,6 +25,7 @@
     "@prisma/client": "^6.3.1",
     "@sentry/node": "^10.39.0",
     "bcryptjs": "^2.4.3",
+    "bwip-js": "^4.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -42,6 +43,7 @@
     "prisma": "^6.3.1",
     "qrcode": "^1.5.4",
     "resend": "^6.9.2",
+    "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
     "zod": "^3.24.1"

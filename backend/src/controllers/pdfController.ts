@@ -12,7 +12,7 @@ export async function downloadBOL(req: AuthRequest, res: Response) {
 
     if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
 
-    const doc = generateBOL(shipment);
+    const doc = await generateBOL(shipment);
     const filename = `BOL-${shipment.bolNumber || shipment.shipmentNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
@@ -157,7 +157,7 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
 
     if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
-    const doc = generateBOLFromLoad(load);
+    const doc = await generateBOLFromLoad(load);
     const filename = `BOL-${load.referenceNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
