@@ -302,33 +302,36 @@ export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
   doc.fontSize(7).fillColor(GOLD).text("SHIPMENT DETAILS", M, y);
   y -= 14;
 
-  // ── Grid table: header
+  // ── Grid table (Mainfreight-style: thick uniform borders, proper column widths)
+  // Columns: Pieces | Type | Description | Dims | Weight-lbs | Class | NMFC# | HM
   const colDefs = [
-    { label: "Pieces", w: 44 },
-    { label: "Type", w: 34 },
-    { label: "Description", w: 114 },
-    { label: 'Dims (L\u00D7W\u00D7H)', w: 76 },
-    { label: "Weight", w: 66 },
-    { label: "Class", w: 36 },
-    { label: "NMFC#", w: 44 },
-    { label: "HM", w: CW - 44 - 34 - 114 - 76 - 66 - 36 - 44 },
+    { label: "Pieces",        w: 50 },
+    { label: "Type",          w: 40 },
+    { label: "Description",   w: 150 },
+    { label: "Dims (L\u00D7W\u00D7H)", w: 80 },
+    { label: "Weight-lbs",    w: 72 },
+    { label: "Class",         w: 40 },
+    { label: "NMFC#",         w: 50 },
+    { label: "HM",            w: CW - 50 - 40 - 150 - 80 - 72 - 40 - 50 },
   ];
-  const hdrH = 18;
-  const dataRowH = 20;
+  const hdrH = 16;
+  const dataRowH = 22;
+  const TBLBORDER = "#333333";
 
-  // Header row (dark bg)
+  // Header row (dark bg, white uppercase text)
   doc.rect(M, y - hdrH, CW, hdrH).fill(HDR_BG);
   let cx = M;
   colDefs.forEach((col) => {
-    doc.fontSize(6).fillColor("#FFFFFF").text(col.label, cx + 4, y - hdrH + 6);
+    doc.fontSize(6.5).fillColor("#FFFFFF").font("Helvetica-Bold").text(col.label, cx + 5, y - hdrH + 5, { width: col.w - 10 });
     cx += col.w;
   });
-  // Header border + verticals
-  doc.rect(M, y - hdrH, CW, hdrH).strokeColor("#444444").lineWidth(0.5).stroke();
+  doc.font("Helvetica");
+  // Header outer border + all verticals
+  doc.rect(M, y - hdrH, CW, hdrH).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
   cx = M;
   colDefs.forEach((col) => {
     cx += col.w;
-    if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y - hdrH).strokeColor("#444444").lineWidth(0.5).stroke();
+    if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y - hdrH).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
   });
 
   const tableTop = y - hdrH;
@@ -338,33 +341,50 @@ export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
   const dims = (load.dimensionsLength && load.dimensionsWidth && load.dimensionsHeight)
     ? `${load.dimensionsLength}"\u00D7${load.dimensionsWidth}"\u00D7${load.dimensionsHeight}"`
     : "\u2014";
-  const rowData = [pcs, "PLT", load.commodity || "General Freight", dims, load.weight ? `${load.weight.toLocaleString()} lbs` : "\u2014", load.freightClass || "\u2014", "\u2014", load.hazmat ? "Yes" : "No"];
+  const rowData = [
+    { text: pcs, bold: true, size: 9 },
+    { text: "PLT", bold: true, size: 8 },
+    { text: load.commodity || "General Freight", bold: false, size: 8 },
+    { text: dims, bold: false, size: 7.5 },
+    { text: load.weight ? load.weight.toLocaleString() : "\u2014", bold: true, size: 9 },
+    { text: load.freightClass || "\u2014", bold: false, size: 8 },
+    { text: "\u2014", bold: false, size: 8 },
+    { text: load.hazmat ? "Yes" : "No", bold: false, size: 8 },
+  ];
 
   const dry = tableTop - dataRowH;
   doc.rect(M, dry, CW, dataRowH).fill(TINT);
-  doc.rect(M, dry, CW, dataRowH).strokeColor(RULE).lineWidth(0.4).stroke();
+  // Outer border
+  doc.rect(M, dry, CW, dataRowH).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
+  // Cell content + vertical dividers
   cx = M;
-  colDefs.forEach((col, ci) => {
-    if (ci > 0) doc.moveTo(cx, tableTop).lineTo(cx, dry).strokeColor(RULE).lineWidth(0.4).stroke();
-    if (rowData[ci]) {
-      const isBold = ci < 3;
-      doc.fontSize(8).fillColor(INK);
-      if (isBold) doc.font("Helvetica-Bold"); else doc.font("Helvetica");
-      doc.text(rowData[ci], cx + 4, dry + 6);
-    }
-    cx += col.w;
+  rowData.forEach((cell, ci) => {
+    // Vertical divider
+    if (ci > 0) doc.moveTo(cx, tableTop).lineTo(cx, dry).strokeColor(TBLBORDER).lineWidth(0.8).stroke();
+    // Cell text
+    doc.fontSize(cell.size).fillColor(INK);
+    if (cell.bold) doc.font("Helvetica-Bold"); else doc.font("Helvetica");
+    doc.text(cell.text, cx + 5, dry + 7, { width: colDefs[ci].w - 10 });
+    cx += colDefs[ci].w;
   });
-  doc.font("Helvetica"); // reset
+  doc.font("Helvetica");
 
-  // Totals row
+  // Totals row (Mainfreight style: bold totals, uniform borders)
   const totY = dry - dataRowH;
   doc.rect(M, totY, CW, dataRowH).fill(TOT_BG);
-  doc.rect(M, totY, CW, dataRowH).strokeColor(INK).lineWidth(0.6).stroke();
-  doc.fontSize(7).fillColor(INK).font("Helvetica-Bold");
-  doc.text("TOTALS:", M + 4, totY + 6);
-  doc.text(pcs + " PLT", M + 44, totY + 6);
-  const weightX = M + 44 + 34 + 114 + 76;
-  doc.text(load.weight ? `${load.weight.toLocaleString()} lbs` : "\u2014", weightX + 4, totY + 6);
+  doc.rect(M, totY, CW, dataRowH).strokeColor(INK).lineWidth(1).stroke();
+  // Vertical dividers in totals
+  cx = M;
+  colDefs.forEach((col) => {
+    cx += col.w;
+    if (cx < M + CW) doc.moveTo(cx, totY).lineTo(cx, totY + dataRowH).strokeColor(RULE).lineWidth(0.4).stroke();
+  });
+  doc.fontSize(8).fillColor(INK).font("Helvetica-Bold");
+  doc.text("TOTALS", M + 5, totY + 7);
+  doc.text(pcs, M + 50 + 5, totY + 7);  // under Pieces
+  doc.text("PLT", M + 50 + 40 + 5, totY + 7);  // under Type
+  const weightCol = M + 50 + 40 + 150 + 80;
+  doc.text(load.weight ? load.weight.toLocaleString() : "\u2014", weightCol + 5, totY + 7);
   doc.font("Helvetica");
 
   y = totY - 10;
