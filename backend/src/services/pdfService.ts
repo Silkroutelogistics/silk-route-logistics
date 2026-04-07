@@ -213,14 +213,14 @@ export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
   doc.moveTo(rightX, y).lineTo(612 - M, y).strokeColor(RULE).lineWidth(0.3).stroke();
 
   y -= 14;
+  // Shipper: always use origin (physical pickup location), fallback to customer only if origin is empty
   const shipperName = load.shipperFacility || load.customer?.name || "\u2014";
   doc.fontSize(12).fillColor(INK).text(shipperName, leftX, y);
   doc.fontSize(8.5).fillColor(GRAY1);
   let sty = y - 14;
-  if (load.customer?.address || load.originAddress) { doc.text(load.customer?.address || load.originAddress || "", leftX, sty); sty -= 12; }
-  const shipperCSZ = load.customer?.city
-    ? `${load.customer.city}, ${load.customer.state} ${load.customer.zip}`
-    : `${load.originCity}, ${load.originState} ${load.originZip}`;
+  const shipperAddr = load.originAddress || load.customer?.address;
+  if (shipperAddr) { doc.text(shipperAddr, leftX, sty); sty -= 12; }
+  const shipperCSZ = `${load.originCity}, ${load.originState} ${load.originZip}`;
   doc.text(shipperCSZ, leftX, sty); sty -= 16;
   doc.fontSize(7.5).fillColor(GRAY2);
   const sc = load.originContactName || load.customer?.contactName;
