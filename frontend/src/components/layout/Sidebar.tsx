@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Truck, FileText, DollarSign, Settings, LogOut,
   BarChart3, TrendingUp, MessageSquare, FolderOpen, CreditCard,
-  MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity, Bell,
+  MapPin, PieChart, Users, BookOpen, UserCheck, Zap, Activity,
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
@@ -23,8 +23,7 @@ import { isAdmin, isCarrier, isCeo } from "@/lib/roles";
 import { api } from "@/lib/api";
 import { useState, useEffect, useCallback } from "react";
 import type { LucideIcon } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+
 
 /* ────────────────────────────────────────────────────────── */
 /*  Nav definitions                                          */
@@ -199,8 +198,6 @@ function useLocalStorageState<T>(key: string, initial: T): [T, (v: T | ((prev: T
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const { user, logout } = useAuthStore();
   const { viewMode, setViewMode } = useViewMode();
   const carrier = isCarrier(user?.role);
@@ -221,7 +218,6 @@ export function Sidebar() {
   // Close sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
-    setShowNotifDropdown(false);
   }, [pathname]);
 
   const toggleGroup = useCallback(
@@ -233,36 +229,7 @@ export function Sidebar() {
 
   /* ── Notifications ──────────────────────────────────────── */
 
-  const { data: unreadData } = useQuery({
-    queryKey: ["unread-count"],
-    queryFn: () => api.get<{ count: number }>("/notifications/unread-count").then((r) => r.data),
-    refetchInterval: 30000,
-    enabled: !!user,
-  });
-  const unreadCount = unreadData?.count || 0;
-
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-
-  const { data: recentNotifs } = useQuery({
-    queryKey: ["recent-notifications"],
-    queryFn: () => api.get("/notifications?limit=8").then((r) => r.data),
-    enabled: showNotifDropdown,
-  });
-
-  const handleMarkAllRead = useCallback(() => {
-    api.patch("/notifications/read-all").then(() => {
-      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-notifications"] });
-    }).catch(() => {});
-  }, [queryClient]);
-
-  const handleMarkOneRead = useCallback((notifId: string) => {
-    api.patch(`/notifications/${notifId}/read`).then(() => {
-      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-notifications"] });
-    }).catch(() => {});
-  }, [queryClient]);
+  /* Notification bell removed from sidebar — single bell lives in dashboard header (CeoOverview NotificationBell) */
 
   /* ── View toggle + console buttons ─────────────────────── */
 
@@ -456,38 +423,9 @@ export function Sidebar() {
                     : user.role?.toLowerCase()}
                 </p>
               </div>
-              <div className="relative">
-                {/* Bell moved to dashboard header — keeping small indicator here */}
-                <Link href="/dashboard/overview"
-                  className="relative w-9 h-9 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0"
-                  style={{ background: 'var(--srl-bg-surface)' }}
-                  title="Notifications"
-                >
-                  <Bell className="w-4 h-4" style={{ color: unreadCount > 0 ? 'var(--srl-gold)' : 'var(--srl-text-muted)' }} />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center px-0.5">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </Link>
-                {/* Dropdown removed — notifications now in dashboard header */}
-              </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-1 relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowNotifDropdown((p) => !p); }}
-                className="relative w-9 h-9 flex items-center justify-center bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer"
-                title="Notifications"
-              >
-                <Bell className={`w-4 h-4 ${unreadCount > 0 ? "text-gold" : "text-slate-400"}`} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center px-0.5">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
+            <div className="flex flex-col items-center gap-1 relative" />
           )}
         </div>
       )}

@@ -220,7 +220,13 @@ export function EmployeeOverview() {
             </div>
             <div className="space-y-3">
               {notifications?.slice(0, 6).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt?: string }) => (
-                <Link key={n.id} href={n.actionUrl || "/dashboard/overview"}
+                <Link key={n.id} href={(() => {
+                    const url = n.actionUrl || "/dashboard/overview";
+                    const path = url.split("?")[0];
+                    const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
+                    if (hasEntityId) return path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "") || "/dashboard/overview";
+                    return url;
+                  })()}
                   onClick={() => { if (!n.readAt) markRead.mutate(n.id); }}
                   className={`flex items-start gap-3 no-underline rounded-lg p-2 -m-1 transition ${n.readAt ? "opacity-60 hover:opacity-80" : "hover:bg-white/5 bg-[#161921]"}`}>
                   <div className="relative shrink-0 mt-0.5">

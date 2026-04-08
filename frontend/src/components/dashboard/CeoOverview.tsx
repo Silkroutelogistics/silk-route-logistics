@@ -762,7 +762,31 @@ function NotificationBell() {
             </div>
             <div className="max-h-80 overflow-y-auto">
               {Array.isArray(notifs) && notifs.length > 0 ? notifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
-                <button key={n.id} onClick={() => { if (n.actionUrl) router.push(n.actionUrl); setOpen(false); }}
+                <button key={n.id} onClick={() => {
+                  // Mark as read
+                  if (!n.readAt) {
+                    api.patch(`/notifications/${n.id}/read`).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ["unread-count"] });
+                      queryClient.invalidateQueries({ queryKey: ["recent-notifications-ceo"] });
+                    }).catch(() => {});
+                  }
+                  setOpen(false);
+                  if (n.actionUrl) {
+                    // Validate the route exists before navigating — deleted entities cause 404 → login redirect
+                    const url = n.actionUrl;
+                    // URLs with specific entity IDs (e.g. /loads/uuid) may point to deleted records
+                    // Strip query params for pattern matching
+                    const path = url.split("?")[0];
+                    const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
+                    if (hasEntityId) {
+                      // Navigate to the list page instead of the specific entity
+                      const listPath = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
+                      router.push(listPath || "/dashboard/overview");
+                    } else {
+                      router.push(url);
+                    }
+                  }
+                }}
                   className="w-full text-left px-4 py-3 transition cursor-pointer"
                   style={{ borderBottom: "1px solid var(--srl-border-subtle)", background: !n.readAt ? "var(--srl-gold-muted)" : "transparent" }}>
                   <p className="text-xs font-medium" style={{ color: !n.readAt ? "var(--srl-text)" : "var(--srl-text-secondary)" }}>{n.title}</p>
