@@ -85,6 +85,7 @@ These rules override all defaults. Follow them exactly.
 - **Feature flags:** Currently using env vars. Consider build-time elimination when/if migrating to Bun.
 - **Centralized command registry (Hermes):** Single registry auto-generates CLI help, Slack menus, API docs. Plan when multi-platform.
 - **Print-mode automation (Hermes):** One-shot CLI mode for CI/testing without trust dialogs. Plan for CI pipeline.
+- **MemPalace conversation persistence:** Local AI memory system (ChromaDB) that stores every session verbatim and makes it searchable. Auto-save hooks fire every 15 messages. Install when doing daily SRL sessions to preserve architecture decisions across conversations. `pip install mempalace && mempalace init`.
 
 ## 13. Company Information (Single Source of Truth)
 - Company: Silk Route Logistics Inc.
