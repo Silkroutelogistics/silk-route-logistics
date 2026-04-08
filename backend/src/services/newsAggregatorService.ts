@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { isUniqueConstraintViolation } from "../lib/dbErrors";
 
 // ─── Default RSS Feed Sources ─────────────────────────────────────
 
@@ -364,8 +365,7 @@ async function fetchFeed(source: { name: string; feedUrl: string; iconUrl?: stri
 
         added++;
       } catch (err: any) {
-        // Unique constraint violation — skip duplicate
-        if (err?.code === "P2002") continue;
+        if (isUniqueConstraintViolation(err)) continue;
         console.error(`[News] Error storing article "${article.title}":`, err?.message || err);
       }
     }
