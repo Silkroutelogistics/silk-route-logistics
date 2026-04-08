@@ -8,6 +8,9 @@ created: 2026-04-07
 ## [2026-04-07] ingest | Initial knowledge base creation
 Seeded wiki from full system audit conducted on Apr 5-7, 2026. Created index, company-info, compass-engine, version-history pages. Knowledge base covers freight operations, compliance, sales/CRM, system architecture, and company details.
 
+## [2026-04-07] query | 5 unexplored connections between wiki topics
+Cross-analyzed all 18 wiki pages for hidden connections. Found 5: (1) Compass score → QP capital priority, (2) Detention tracking from check-call timestamps → shipper scorecard, (3) Volume gate trigger = min(shipper demand, carrier supply), (4) Trip Folder flipped = carrier operating system vision, (5) Chameleon fingerprints as fraud detection product at scale. Each has a concrete action item. Output: outputs/unexplored-connections-2026-04-07.md
+
 ## [2026-04-07] lint | Health check v2 — post full ingestion
 Wiki health: 7/10 (up from 5/10). 18 pages (+50%), 29/29 sources ingested (100%), 49 citations (+58%). 16 broken links remain (all are code-doc gaps, not research gaps). 0 orphans. 7 contradictions (2 new). 2 near-orphans (srl-vision, tms-comparison need more backlinks). Top 3 articles to create: invoicing-payments (money flow), carrier-onboarding (supply funnel), performance-dashboard (actuals tracking). Output: wiki/lint-report-2026-04-07-v2.md
 
