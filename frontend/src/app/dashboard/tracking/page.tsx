@@ -479,6 +479,14 @@ function LoadRow({
   onDownloadBol: () => void;
   onUpdateStatus: (status: string) => void;
 }) {
+  const isAtFacility = ["AT_PICKUP", "AT_DELIVERY"].includes(load.status);
+  const { data: detention } = useQuery({
+    queryKey: ["detention", load.id],
+    queryFn: () => api.get(`/load-tracking/${load.id}/detention`).then((r) => r.data),
+    enabled: isAtFacility,
+    refetchInterval: isAtFacility ? 60000 : false, // refresh every minute when at facility
+  });
+
   const pipelineIdx = (() => {
     const mapped = load.status === "PICKED_UP" ? "LOADED" : load.status;
     return LOAD_PIPELINE.indexOf(mapped);
@@ -517,6 +525,15 @@ function LoadRow({
           <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[load.status] || ""}`}>
             {STATUS_LABELS[load.status] || load.status}
           </span>
+          {detention?.detention && (
+            <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              detention.severity === "CRITICAL" ? "bg-red-500/20 text-red-400 animate-pulse"
+              : detention.severity === "HIGH" ? "bg-red-500/20 text-red-400"
+              : "bg-amber-500/20 text-amber-400"
+            }`}>
+              {Math.floor(detention.dwellMinutes / 60)}h {detention.dwellMinutes % 60}m dwell
+            </span>
+          )}
           {shipment?.lastLocation && (
             <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
               <MapPin className="w-2.5 h-2.5" /> {shipment.lastLocation}

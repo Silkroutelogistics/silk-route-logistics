@@ -483,4 +483,41 @@ router.get(
   }
 );
 
+// GET /api/load-tracking/:loadId/detention — Current dwell time and detention alert
+router.get("/:loadId/detention", async (req: AuthRequest, res: Response) => {
+  try {
+    const { loadId } = req.params;
+    const load = await prisma.load.findUnique({
+      where: { id: loadId },
+      select: { status: true, loadStops: { orderBy: { stopNumber: "asc" } } },
+    });
+    if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+    // Find the current stop (AT_PICKUP or AT_DELIVERY) with arrival but no departure
+    const activeStop = load.loadStops.find((s) => s.actualArrival && !s.actualDeparture);
+    if (!activeStop) { res.json({ detention: false, dwellMinutes: 0 }); return; }
+
+    const dwellMs = Date.now() - new Date(activeStop.actualArrival!).getTime();
+    const dwellMinutes = Math.round(dwellMs / 60000);
+    const freeTimeMinutes = 120; // 2 hour industry standard
+    const inDetention = dwellMinutes > freeTimeMinutes;
+    const detentionMinutes = inDetention ? dwellMinutes - freeTimeMinutes : 0;
+    const estimatedCharge = inDetention ? Math.round((detentionMinutes / 60) * 75 * 100) / 100 : 0;
+
+    res.json({
+      detention: inDetention,
+      dwellMinutes,
+      detentionMinutes,
+      freeTimeMinutes,
+      estimatedCharge,
+      facilityName: activeStop.facilityName,
+      stopType: activeStop.stopType,
+      arrivedAt: activeStop.actualArrival,
+      severity: detentionMinutes > 120 ? "CRITICAL" : detentionMinutes > 60 ? "HIGH" : inDetention ? "MEDIUM" : "LOW",
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch detention data" });
+  }
+});
+
 export default router;
