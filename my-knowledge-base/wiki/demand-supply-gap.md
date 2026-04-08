@@ -40,9 +40,12 @@ This lane demand data should feed a **carrier recruitment engine** that:
 4. Tracks engagement and follow-ups
 5. Converts interested carriers through the [[carrier-onboarding]] flow
 
+## Solution: Carrier Recruitment Pipeline
+See [[carrier-recruitment-pipeline]] for the full build plan. Summary: DAT responses provide warm carrier prospects, FMCSA enriches with verified data, existing email sequence engine handles outreach. 75% of infrastructure already exists. Critical blocker: email acquisition (FMCSA has no email).
+
 ## Priority
 This gap means SRL could win shipper customers but fail to find carriers to haul their freight. The demand-supply balance must be maintained for the business to work.
 
-See also: [[lead-hunter]], [[srcpp-program]], [[carrier-onboarding]], [[data-flows]], [[knowledge-gaps]]
+See also: [[lead-hunter]], [[srcpp-program]], [[carrier-onboarding]], [[carrier-recruitment-pipeline]], [[data-flows]], [[knowledge-gaps]]
 
 [Source: data-flows.md, srcpp-program.md, load-lifecycle.md, compass-engine.md]

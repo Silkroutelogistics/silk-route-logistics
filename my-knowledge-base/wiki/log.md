@@ -8,6 +8,9 @@ created: 2026-04-07
 ## [2026-04-07] ingest | Initial knowledge base creation
 Seeded wiki from full system audit conducted on Apr 5-7, 2026. Created index, company-info, compass-engine, version-history pages. Knowledge base covers freight operations, compliance, sales/CRM, system architecture, and company details.
 
+## [2026-04-07] query | Re-run five queries after DAT/FMCSA audit
+Updated gap analysis with DAT/FMCSA integration capabilities. Gap 1 (demand-supply) now has concrete build plan. New gap found: email acquisition strategy undocumented (FMCSA has no email, DAT response format unknown, CarrierOk needs API key). Created carrier-recruitment-pipeline.md with 4-stage funnel and build plan. Updated demand-supply-gap.md with solution link. Key insight: pipeline is 75% built, missing pieces are templates + wiring + email source.
+
 ## [2026-04-07] query | Five-query knowledge audit
 Ran all 5 diagnostic queries against wiki. Findings: 13 placeholder pages with no content, financial pipeline undocumented, 28/29 raw sources un-ingested. Discovered critical demand-supply gap — shipper acquisition automated, carrier acquisition manual. Created 2 new insight pages: knowledge-gaps.md, demand-supply-gap.md. Updated index with Strategy & Analysis section.
 

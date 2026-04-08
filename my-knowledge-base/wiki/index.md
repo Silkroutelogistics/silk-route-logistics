@@ -37,7 +37,8 @@ last_updated: 2026-04-07
 - [[address-book]] — DB-backed shipper/consignee address storage, usage tracking, bulk import
 
 ## Strategy & Analysis
-- [[demand-supply-gap]] — Shipper acquisition is automated, carrier acquisition is not — biggest strategic gap
+- [[carrier-recruitment-pipeline]] — Build plan: DAT→FMCSA→outreach→convert, 4 pieces, 75% infra exists
+- [[demand-supply-gap]] — Shipper acquisition is automated, carrier acquisition is not — solution identified
 - [[knowledge-gaps]] — Missing wiki pages, contradictions, research priority queue
 
 ## Company
