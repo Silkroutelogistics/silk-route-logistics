@@ -78,10 +78,10 @@ const METHOD_ICONS: Record<string, typeof PhoneCall> = {
 
 type Tab = "loads" | "eld";
 
-/* ═══ Active loads filter — only show loads that are being tracked ═══ */
+/* ═══ Active loads filter — only in-motion loads (DISPATCHED onward) ═══ */
 const TRACKABLE_STATUSES = [
-  "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP",
-  "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED",
+  "DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP",
+  "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED",
 ];
 
 export default function TrackingPage() {
@@ -174,7 +174,7 @@ export default function TrackingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Track & Trace</h1>
-          <p className="text-sm text-slate-400 mt-1">Load tracking, check calls, ELD monitoring & GPS</p>
+          <p className="text-sm text-slate-400 mt-1">Monitor & deliver — dispatched loads, check calls, ELD & GPS</p>
         </div>
         <span className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded text-xs text-green-400">
           <Radio className="w-3 h-3" /> Live Tracking
@@ -215,7 +215,7 @@ export default function TrackingPage() {
                     className={`w-full text-left px-3 py-2 text-sm transition ${!statusFilter ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-white hover:bg-white/5"}`}>
                     Active Loads
                   </button>
-                  {LOAD_PIPELINE.map(s => (
+                  {TRACKABLE_STATUSES.map(s => (
                     <button key={s} onClick={() => { setStatusFilter(s); setShowStatusDropdown(false); }}
                       className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === s ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
                       {STATUS_LABELS[s]}

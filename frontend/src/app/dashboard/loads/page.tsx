@@ -62,7 +62,7 @@ const TENDER_COLORS: Record<string, string> = {
 
 const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
 
-type StatusTab = "attention" | "POSTED" | "BOOKED" | "IN_TRANSIT" | "DELIVERED" | "all";
+type StatusTab = "attention" | "DRAFT" | "POSTED" | "TENDERED" | "BOOKED" | "all";
 type PanelTab = "details" | "tracking" | "invoice" | "documents" | "history" | "carrier" | "exceptions";
 
 const PANEL_TABS: { key: PanelTab; icon: typeof Info; label: string }[] = [
@@ -113,10 +113,7 @@ function needsAttention(l: Load): boolean {
 function matchesTab(l: Load, tab: StatusTab): boolean {
   if (tab === "all") return true;
   if (tab === "attention") return needsAttention(l);
-  if (tab === "IN_TRANSIT")
-    return ["DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY"].includes(l.status);
-  if (tab === "DELIVERED")
-    return ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(l.status);
+  if (tab === "TENDERED") return ["TENDERED", "CONFIRMED"].includes(l.status);
   return l.status === tab;
 }
 
@@ -293,14 +290,13 @@ export default function LoadsPage() {
   const allLoads = data?.loads || [];
 
   const tabCounts = useMemo(() => {
-    const c = { attention: 0, POSTED: 0, BOOKED: 0, IN_TRANSIT: 0, DELIVERED: 0, all: allLoads.length };
+    const c = { attention: 0, DRAFT: 0, POSTED: 0, TENDERED: 0, BOOKED: 0, all: allLoads.length };
     allLoads.forEach((l) => {
       if (needsAttention(l)) c.attention++;
+      if (l.status === "DRAFT") c.DRAFT++;
       if (l.status === "POSTED") c.POSTED++;
+      if (["TENDERED", "CONFIRMED"].includes(l.status)) c.TENDERED++;
       if (l.status === "BOOKED") c.BOOKED++;
-      if (["DISPATCHED", "AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY"].includes(l.status))
-        c.IN_TRANSIT++;
-      if (["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(l.status)) c.DELIVERED++;
     });
     return c;
   }, [allLoads]);
@@ -400,17 +396,17 @@ export default function LoadsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Load Board</h1>
-          <p className="text-slate-400 text-sm mt-1">{data?.total || 0} loads available</p>
+          <p className="text-slate-400 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
         </div>
       </div>
 
       {/* ---- UPGRADE 1: Status Tabs ---- */}
       <div className="flex flex-wrap gap-0.5 overflow-x-auto border-b border-white/10 scrollbar-none">
         {tabBtn("attention", "Needs Attention", tabCounts.attention)}
+        {tabBtn("DRAFT", "Drafts", tabCounts.DRAFT)}
         {tabBtn("POSTED", "Posted", tabCounts.POSTED)}
+        {tabBtn("TENDERED", "Tendered", tabCounts.TENDERED)}
         {tabBtn("BOOKED", "Booked", tabCounts.BOOKED)}
-        {tabBtn("IN_TRANSIT", "In Transit", tabCounts.IN_TRANSIT)}
-        {tabBtn("DELIVERED", "Delivered", tabCounts.DELIVERED)}
         {tabBtn("all", "All", tabCounts.all)}
       </div>
 

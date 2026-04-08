@@ -6,7 +6,7 @@
 // v3.2 — Gmail reply tracking, Lead Hunter DB-persist, full system audit, Compass 25-check wiring
 // v3.2.h — BOL v7 (barcode, gold accents, 17 T&C, Mainfreight-style table), Address Book DB, 3D logo
 
-export const SRL_VERSION = "3.2.m";
+export const SRL_VERSION = "3.2.n";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

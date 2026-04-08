@@ -97,10 +97,18 @@ export default function DispatchBoardPage() {
 
   /* ── Data queries ────────────────────────────────────────── */
 
+  const [dispatchTab, setDispatchTab] = useState<"POSTED" | "TENDERED" | "BOOKED" | "all">("all");
+
   const { data: loadsData, isLoading: loadsLoading } = useQuery({
     queryKey: ["dispatch-loads"],
-    queryFn: () =>
-      api.get<{ loads: Load[] }>("/loads?status=POSTED&limit=50").then((r) => r.data),
+    queryFn: async () => {
+      const [posted, tendered, booked] = await Promise.all([
+        api.get<{ loads: Load[] }>("/loads?status=POSTED&limit=50").then((r) => r.data),
+        api.get<{ loads: Load[] }>("/loads?status=TENDERED&limit=50").then((r) => r.data),
+        api.get<{ loads: Load[] }>("/loads?status=BOOKED&limit=50").then((r) => r.data),
+      ]);
+      return { loads: [...(posted.loads || []), ...(tendered.loads || []), ...(booked.loads || [])] };
+    },
     refetchInterval: 15000,
   });
 
@@ -137,7 +145,11 @@ export default function DispatchBoardPage() {
   /* ── Filtered lists ──────────────────────────────────────── */
 
   const filteredLoads = useMemo(() => {
-    const loads = loadsData?.loads || [];
+    let loads = loadsData?.loads || [];
+    if (dispatchTab !== "all") {
+      const statusGroup = dispatchTab === "TENDERED" ? ["TENDERED", "CONFIRMED"] : [dispatchTab];
+      loads = loads.filter((l) => statusGroup.includes(l.status));
+    }
     if (!loadSearch) return loads;
     const q = loadSearch.toLowerCase();
     return loads.filter((l) =>
@@ -146,7 +158,7 @@ export default function DispatchBoardPage() {
       `${l.destCity} ${l.destState}`.toLowerCase().includes(q) ||
       (l.commodity || "").toLowerCase().includes(q)
     );
-  }, [loadsData, loadSearch]);
+  }, [loadsData, loadSearch, dispatchTab]);
 
   const filteredCarriers = useMemo(() => {
     let list = carriersData || [];
@@ -215,7 +227,7 @@ export default function DispatchBoardPage() {
             <Crosshair className="w-6 h-6 text-gold" /> Dispatch Board
           </h1>
           <p className="text-slate-400 text-sm mt-0.5">
-            Match unassigned loads with available carriers
+            Match & assign — tender, confirm, book carriers
           </p>
         </div>
         {assignSuccess && (
@@ -232,12 +244,23 @@ export default function DispatchBoardPage() {
         {/* TOP HALF: Unassigned Loads */}
         <div className="flex-1 min-h-0 flex flex-col bg-white/5 border border-white/10 rounded-t-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0 bg-gradient-to-r from-[#C9A84C]/10 to-transparent">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Package className="w-4 h-4 text-gold" />
-              <h2 className="text-sm font-semibold text-gold uppercase tracking-wider">Unassigned Loads</h2>
-              <span className="text-xs text-slate-400 bg-white/5 px-2 py-0.5 rounded-full">
-                {filteredLoads.length} load{filteredLoads.length !== 1 ? "s" : ""}
-              </span>
+              {(["all", "POSTED", "TENDERED", "BOOKED"] as const).map((tab) => {
+                const allLoads = loadsData?.loads || [];
+                const count = tab === "all" ? allLoads.length
+                  : tab === "TENDERED" ? allLoads.filter((l) => ["TENDERED", "CONFIRMED"].includes(l.status)).length
+                  : allLoads.filter((l) => l.status === tab).length;
+                const label = tab === "all" ? "All" : tab === "POSTED" ? "Posted" : tab === "TENDERED" ? "Tendered" : "Booked";
+                return (
+                  <button key={tab} onClick={() => setDispatchTab(tab)}
+                    className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-md transition cursor-pointer ${
+                      dispatchTab === tab ? "text-gold bg-gold/15" : "text-slate-400 hover:text-slate-200"
+                    }`}>
+                    {label} <span className="text-[10px] ml-0.5 opacity-70">{count}</span>
+                  </button>
+                );
+              })}
             </div>
             <div className="relative">
               <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-500" />
@@ -264,12 +287,12 @@ export default function DispatchBoardPage() {
                 <thead className="sticky top-0 bg-[#0F1117]/90 backdrop-blur-sm">
                   <tr className="text-[10px] text-slate-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2 font-medium">Ref#</th>
+                    <th className="text-left px-4 py-2 font-medium">Status</th>
                     <th className="text-left px-4 py-2 font-medium">Route</th>
                     <th className="text-left px-4 py-2 font-medium">Equip</th>
                     <th className="text-right px-4 py-2 font-medium">Rate</th>
                     <th className="text-left px-4 py-2 font-medium">PU Date</th>
                     <th className="text-right px-4 py-2 font-medium">Miles</th>
-                    <th className="text-left px-4 py-2 font-medium">Commodity</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -291,6 +314,13 @@ export default function DispatchBoardPage() {
                       >
                         <td className="px-4 py-2.5 font-mono text-xs text-white">{load.referenceNumber}</td>
                         <td className="px-4 py-2.5">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            load.status === "POSTED" ? "bg-blue-500/20 text-blue-400"
+                            : load.status === "BOOKED" ? "bg-violet-500/20 text-violet-400"
+                            : "bg-indigo-500/20 text-indigo-400"
+                          }`}>{load.status}</span>
+                        </td>
+                        <td className="px-4 py-2.5">
                           <span className="text-white">{load.originCity}, {load.originState}</span>
                           <ChevronRight className="w-3 h-3 inline mx-1 text-slate-500" />
                           <span className="text-white">{load.destCity}, {load.destState}</span>
@@ -303,7 +333,6 @@ export default function DispatchBoardPage() {
                         <td className="px-4 py-2.5 text-right text-gold font-medium">{fmtMoney(load.rate)}</td>
                         <td className="px-4 py-2.5 text-slate-300">{fmtDate(load.pickupDate)}</td>
                         <td className="px-4 py-2.5 text-right text-slate-400">{load.distance ? `${load.distance} mi` : "—"}</td>
-                        <td className="px-4 py-2.5 text-slate-400 truncate max-w-[140px]">{load.commodity || "—"}</td>
                       </tr>
                     );
                   })}
