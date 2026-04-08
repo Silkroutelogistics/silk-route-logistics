@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer } from "lucide-react";
+import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Camera, Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
@@ -56,6 +56,21 @@ export default function MyLoadsPage() {
       api.post(`/carrier-loads/${loadId}/check-call`, data),
     onSuccess: () => {
       setCheckCallForm({ city: "", state: "", notes: "" });
+      queryClient.invalidateQueries({ queryKey: ["carrier-my-load-detail", selectedId] });
+    },
+  });
+
+  const podUploadMutation = useMutation({
+    mutationFn: ({ loadId, file }: { loadId: string; file: File }) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("docType", "POD");
+      return api.post(`/carrier-loads/${loadId}/documents`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-my-loads"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-my-load-detail", selectedId] });
     },
   });
@@ -200,6 +215,43 @@ export default function MyLoadsPage() {
                   </div>
                   {statusMutation.isError && (
                     <p className="text-xs text-red-500 mt-2">{(statusMutation.error as any)?.response?.data?.error || "Update failed"}</p>
+                  )}
+                </CarrierCard>
+              )}
+
+              {/* POD Upload */}
+              {["DELIVERED", "AT_DELIVERY"].includes(detail.status) && (
+                <CarrierCard padding="p-4" className="mt-3">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                    <Camera size={14} className="text-green-600" /> Upload Proof of Delivery
+                  </h4>
+                  {detail.podUrl ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                      <CheckCircle size={16} className="text-green-600" />
+                      <span className="text-xs text-green-700 font-medium">POD uploaded</span>
+                      <a href={detail.podUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline ml-auto">View</a>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition">
+                      <Upload size={24} className="text-gray-400" />
+                      <span className="text-xs text-gray-500">{podUploadMutation.isPending ? "Uploading..." : "Tap to upload photo or PDF"}</span>
+                      <span className="text-[10px] text-gray-400">JPG, PNG, or PDF — max 10MB</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,application/pdf"
+                        className="hidden"
+                        disabled={podUploadMutation.isPending}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && selectedId) podUploadMutation.mutate({ loadId: selectedId, file });
+                        }}
+                      />
+                    </label>
+                  )}
+                  {podUploadMutation.isError && (
+                    <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                      <AlertCircle size={12} /> Upload failed. Please try again.
+                    </p>
                   )}
                 </CarrierCard>
               )}
