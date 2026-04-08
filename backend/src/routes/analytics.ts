@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import * as ctrl from "../controllers/analyticsController";
 import { getTopLanes, getLaneDetail, getLaneHeatmap, getMarginAnalysis } from "../services/laneAnalyticsService";
+import { prisma } from "../config/database";
 
 const router = Router();
 
@@ -42,6 +43,79 @@ router.get("/margins", authorize("ADMIN", "CEO", "BROKER") as any, async (req: A
   } catch (err) {
     console.error("[Analytics] Margin analysis error:", err);
     res.status(500).json({ error: "Failed to fetch margin analysis" });
+  }
+});
+
+// Lane rate quick-stats — lightweight endpoint for load creation/pricing
+router.get("/lane-rate/:origin/:dest", async (req: AuthRequest, res: Response) => {
+  try {
+    const origin = req.params.origin.toUpperCase();
+    const dest = req.params.dest.toUpperCase();
+    const equipment = (req.query.equipment as string) || "";
+    const laneKey = `${origin}:${dest}`;
+
+    // Try RateIntelligence table first (pre-computed)
+    const ri = await prisma.rateIntelligence.findFirst({
+      where: {
+        laneKey,
+        ...(equipment ? { equipmentType: { contains: equipment, mode: "insensitive" as any } } : {}),
+      },
+      orderBy: { lastTrainedAt: "desc" },
+    });
+
+    if (ri) {
+      res.json({
+        lane: `${origin} → ${dest}`,
+        avgRate: ri.avgRate,
+        minRate: ri.minRate,
+        maxRate: ri.maxRate,
+        medianRate: ri.medianRate,
+        sampleSize: ri.sampleSize,
+        trend: ri.trend,
+        trendPct: ri.trendPct,
+        predictedRate: ri.predictedRate,
+        equipmentType: ri.equipmentType,
+        lastUpdated: ri.lastTrainedAt,
+      });
+      return;
+    }
+
+    // Fallback: aggregate from recent loads (90 days)
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const loads = await prisma.load.findMany({
+      where: {
+        originState: origin,
+        destState: dest,
+        deletedAt: null,
+        rate: { gt: 0 },
+        createdAt: { gte: ninetyDaysAgo },
+        ...(equipment ? { equipmentType: { contains: equipment, mode: "insensitive" as any } } : {}),
+      },
+      select: { rate: true },
+    });
+
+    if (loads.length === 0) {
+      res.json({ lane: `${origin} → ${dest}`, sampleSize: 0 });
+      return;
+    }
+
+    const rates = loads.map((l) => l.rate).sort((a, b) => a - b);
+    const avg = rates.reduce((s, r) => s + r, 0) / rates.length;
+    res.json({
+      lane: `${origin} → ${dest}`,
+      avgRate: Math.round(avg),
+      minRate: rates[0],
+      maxRate: rates[rates.length - 1],
+      medianRate: rates[Math.floor(rates.length / 2)],
+      sampleSize: rates.length,
+      trend: "UNKNOWN",
+      trendPct: 0,
+      predictedRate: Math.round(avg),
+      lastUpdated: null,
+    });
+  } catch (err) {
+    console.error("[Analytics] Lane rate error:", err);
+    res.status(500).json({ error: "Failed to fetch lane rate data" });
   }
 });
 

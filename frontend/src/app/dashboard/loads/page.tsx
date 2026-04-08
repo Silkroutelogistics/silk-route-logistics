@@ -847,6 +847,59 @@ export default function LoadsPage() {
 /*  Sub-components: Panel tabs                                         */
 /* ================================================================== */
 
+function LaneRateWidget({ originState, destState, equipment, currentRate }: {
+  originState: string; destState: string; equipment: string; currentRate: number;
+}) {
+  const { data } = useQuery({
+    queryKey: ["lane-rate", originState, destState, equipment],
+    queryFn: () => api.get(`/analytics/lane-rate/${originState}/${destState}?equipment=${encodeURIComponent(equipment)}`).then((r) => r.data),
+    enabled: !!originState && !!destState,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (!data || data.sampleSize === 0) return null;
+  const diff = currentRate - data.avgRate;
+  const diffPct = ((diff / data.avgRate) * 100).toFixed(1);
+  const trendColor = data.trend === "RISING" ? "text-red-400" : data.trend === "FALLING" ? "text-green-400" : "text-slate-400";
+  return (
+    <section>
+      <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Lane Rate Intelligence</h3>
+      <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-400">{originState} → {destState} ({data.equipmentType || equipment})</span>
+          <span className="text-slate-500">{data.sampleSize} loads</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className="text-[10px] text-slate-500">Low</p>
+            <p className="text-sm text-white font-medium">${data.minRate?.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500">Avg</p>
+            <p className="text-sm text-[#C9A84C] font-bold">${data.avgRate?.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500">High</p>
+            <p className="text-sm text-white font-medium">${data.maxRate?.toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
+          <span className="text-slate-400">
+            Your rate: <span className={diff > 0 ? "text-green-400" : diff < 0 ? "text-red-400" : "text-slate-300"}>
+              {diff > 0 ? "+" : ""}{diffPct}% vs avg
+            </span>
+          </span>
+          {data.trend && data.trend !== "UNKNOWN" && (
+            <span className={`${trendColor}`}>
+              {data.trend === "RISING" ? "↑" : data.trend === "FALLING" ? "↓" : "→"} {data.trend.toLowerCase()}
+              {data.trendPct ? ` ${data.trendPct > 0 ? "+" : ""}${data.trendPct.toFixed(1)}%` : ""}
+            </span>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Detail({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
   return (
     <div>
@@ -991,6 +1044,9 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           </div>
         )}
       </section>
+
+      {/* Lane Rate Intelligence */}
+      <LaneRateWidget originState={load.originState} destState={load.destState} equipment={load.equipmentType} currentRate={load.rate} />
 
       {/* Contact */}
       {(load.contactName || load.poster) && (
