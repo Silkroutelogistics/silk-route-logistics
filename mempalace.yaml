@@ -1,0 +1,20 @@
+wing: silk_route_logistics
+rooms:
+- name: backend
+  description: Files from backend/
+- name: documentation
+  description: Files from docs/
+- name: frontend
+  description: Files from frontend/
+- name: hooks
+  description: Files from hooks/
+- name: my_knowledge_base
+  description: Files from my-knowledge-base/
+- name: shared
+  description: Files from shared/
+- name: design
+  description: Files from assets/
+- name: scripts
+  description: Files from scripts/
+- name: general
+  description: Files that don't fit other rooms

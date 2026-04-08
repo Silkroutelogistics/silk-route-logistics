@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "bash hooks/mempal_save_hook.sh"}]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "bash hooks/mempal_precompact_hook.sh"}]
+      }
+    ]
+  }
+}
