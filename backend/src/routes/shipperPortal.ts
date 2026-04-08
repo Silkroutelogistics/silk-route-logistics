@@ -6,6 +6,9 @@ import {
   getShipperInvoices,
   getShipperAnalytics,
   getShipperTracking,
+  getShipperTrackingHistory,
+  getShipperTrackingTimeline,
+  generateTrackingLink,
   getShipperDocuments,
   createQuoteRequest,
   fileShipperDispute,
@@ -24,6 +27,9 @@ router.get("/shipments", getShipperShipments as any);
 router.get("/invoices", getShipperInvoices as any);
 router.get("/analytics", getShipperAnalytics as any);
 router.get("/tracking", getShipperTracking as any);
+router.get("/tracking/history", getShipperTrackingHistory as any);
+router.get("/tracking/:loadId/timeline", getShipperTrackingTimeline as any);
+router.post("/tracking/:loadId/share", generateTrackingLink as any);
 router.get("/documents", getShipperDocuments as any);
 router.get("/disputes", getShipperDisputes as any);
 router.post("/quotes", createQuoteRequest as any);

@@ -605,6 +605,151 @@ export async function getShipperTracking(req: AuthRequest, res: Response) {
   }
 }
 
+// ─── Tracking History (completed shipments) ─────────────
+
+export async function getShipperTrackingHistory(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const baseWhere = await resolveShipperLoadWhere(userId);
+    const completedStatuses: LoadStatus[] = ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"];
+
+    const loads = await prisma.load.findMany({
+      where: { ...baseWhere, status: { in: completedStatuses } },
+      include: {
+        carrier: { select: { id: true, company: true, firstName: true, lastName: true } },
+      },
+      orderBy: { deliveryDate: "desc" },
+      take: 50,
+    });
+
+    const shipments = loads.map((load) => ({
+      ...mapLoadToShipment(load),
+      deliveredAt: load.statusUpdatedAt?.toISOString() || load.deliveryDate?.toISOString() || null,
+    }));
+
+    res.json({ shipments });
+  } catch (err) {
+    console.error("[ShipperPortal] Tracking history error:", err);
+    res.status(500).json({ error: "Failed to load tracking history" });
+  }
+}
+
+// ─── Tracking Timeline (detailed events for a load) ─────
+
+export async function getShipperTrackingTimeline(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { loadId } = req.params;
+
+    // Verify shipper has access to this load
+    const baseWhere = await resolveShipperLoadWhere(userId);
+    const load = await prisma.load.findFirst({
+      where: { ...baseWhere, id: loadId },
+      select: { id: true, referenceNumber: true },
+    });
+    if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+    // Gather all tracking events
+    const [events, checkCalls, stops] = await Promise.all([
+      prisma.loadTrackingEvent.findMany({
+        where: { loadId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+      prisma.checkCall.findMany({
+        where: { loadId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+      prisma.loadStop.findMany({
+        where: { loadId },
+        orderBy: { stopNumber: "asc" },
+      }),
+    ]);
+
+    const timeline = [
+      ...events.map((e) => ({
+        type: "event" as const,
+        eventType: e.eventType,
+        status: e.statusTo || e.eventType,
+        city: e.locationCity || "",
+        state: e.locationState || "",
+        lat: e.latitude ? Number(e.latitude) : null,
+        lng: e.longitude ? Number(e.longitude) : null,
+        timestamp: e.createdAt.toISOString(),
+        detail: e.alertLevel || null,
+      })),
+      ...checkCalls.map((cc) => ({
+        type: "checkCall" as const,
+        eventType: "CHECK_CALL",
+        status: cc.status,
+        city: cc.city || "",
+        state: cc.state || "",
+        lat: null as number | null,
+        lng: null as number | null,
+        timestamp: cc.createdAt.toISOString(),
+        detail: cc.method || "PHONE",
+      })),
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const stopsFormatted = stops.map((s) => ({
+      stopNumber: s.stopNumber,
+      type: s.stopType,
+      facility: s.facilityName || "",
+      appointment: s.appointmentDate?.toISOString() || null,
+      actualArrival: s.actualArrival?.toISOString() || null,
+      actualDeparture: s.actualDeparture?.toISOString() || null,
+      onTime: s.onTime,
+    }));
+
+    res.json({ loadId, referenceNumber: load.referenceNumber, timeline, stops: stopsFormatted });
+  } catch (err) {
+    console.error("[ShipperPortal] Timeline error:", err);
+    res.status(500).json({ error: "Failed to load timeline" });
+  }
+}
+
+// ─── Share Tracking Link ────────────────────────────────
+
+export async function generateTrackingLink(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { loadId } = req.params;
+
+    const baseWhere = await resolveShipperLoadWhere(userId);
+    const load = await prisma.load.findFirst({
+      where: { ...baseWhere, id: loadId },
+      select: { id: true, referenceNumber: true },
+    });
+    if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+    // Find shipper's customer record for shipperId
+    const customer = await prisma.customer.findUnique({ where: { userId } });
+
+    // Generate a 12-char token
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let token = "";
+    for (let i = 0; i < 12; i++) token += chars[Math.floor(Math.random() * chars.length)];
+
+    const trackingToken = await prisma.shipperTrackingToken.create({
+      data: {
+        loadId: load.id,
+        token,
+        shipperId: customer?.id || null,
+        accessLevel: "FULL",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
+    });
+
+    const trackingUrl = `${process.env.FRONTEND_URL || "https://silkroutelogistics.ai"}/tracking/${token}`;
+
+    res.json({ token: trackingToken.token, url: trackingUrl, expiresAt: trackingToken.expiresAt });
+  } catch (err) {
+    console.error("[ShipperPortal] Generate tracking link error:", err);
+    res.status(500).json({ error: "Failed to generate tracking link" });
+  }
+}
+
 // ─── Documents ───────────────────────────────────────────
 
 export async function getShipperDocuments(req: AuthRequest, res: Response) {
