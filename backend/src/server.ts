@@ -18,6 +18,7 @@ import hpp from "hpp";
 import { env } from "./config/env";
 import { prisma } from "./config/database";
 import routes from "./routes";
+import "./lib/hooksInit";
 import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeInput } from "./middleware/security";
 import { auditMiddleware } from "./middleware/auditTrail";
