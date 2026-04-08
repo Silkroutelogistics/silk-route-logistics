@@ -8,6 +8,21 @@ created: 2026-04-07
 ## [2026-04-07] ingest | Initial knowledge base creation
 Seeded wiki from full system audit conducted on Apr 5-7, 2026. Created index, company-info, compass-engine, version-history pages. Knowledge base covers freight operations, compliance, sales/CRM, system architecture, and company details.
 
+## [2026-04-07] ingest | Bulk process remaining 26 raw sources
+Processed all remaining raw files. Created 4 new wiki pages:
+- ai-operations.md — growth phases, volume gates, AI security, cost model (from SRL-AI-OPERATIONS-PLAYBOOK, SECURITY_PLAYBOOK, AI_DEPLOYMENT_GATES)
+- quickpay-program.md — $70K capital model, Denim Wallet, 5-year projections (from QUICK_PAY_MARKET_RESEARCH)
+- srl-vision.md — carrier-first thesis, Bison Transport model (from srl-vision-strategy)
+- tms-comparison.md — SRL vs TMW feature matrix, 70% parity (from TMW_SUITE_DEEP_DIVE)
+
+Updated: index.md (8 new entries, reorganized into 7 categories), security-architecture.md (AI security controls added).
+
+Reference-only ingests (logged, no dedicated pages): README, CHANGELOG, FINAL_BUILD_AUDIT, FULL_AUDIT_REPORT (x2), PHASE_C_AUDIT, ENHANCEMENT_AUDIT_REPORT, DEPLOYMENT_READY, AGENT_TESTING, ENV_VARS_REQUIRED, MILEAGE_SWITCH_GUIDE, HIGHWAY_UPGRADE_GUIDE, terms.md, privacy.md, env examples (x2), project-audit-apr2026.
+
+Key new facts: Denim Wallet recommended for QP platform, Bland.ai voice agent at $460/mo for Gate 3, JWT expiry downgraded 7d→24h, Bison Transport as organizational model, TMW Trip Folder as high-priority UI gap.
+
+Total: 29/29 raw sources ingested. Wiki health: improving.
+
 ## [2026-04-07] ingest | Process COMPETITIVE_BENCHMARKS.md
 Created competitive-landscape.md: performance benchmarks (SRL at Gate 1 for most metrics), build-vs-buy matrix (6 capabilities), 3 threat scenarios with SRL moats, synthesized competitive positioning for shipper/carrier/vs-mega-broker/vs-factoring messaging. Flagged SRAPP vs SRCPP acronym contradiction. Key insight: SRL moat is relationships + speed-to-pay, not technology. Source touched 2 pages (1 new + 1 index update).
 
