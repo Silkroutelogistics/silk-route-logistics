@@ -19,6 +19,7 @@ import { env } from "./config/env";
 import { prisma } from "./config/database";
 import routes from "./routes";
 import "./lib/hooksInit";
+import "./lib/pluginsInit";
 import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders, sanitizeInput } from "./middleware/security";
 import { auditMiddleware } from "./middleware/auditTrail";
@@ -162,6 +163,13 @@ app.get("/api/build-version", (_req, res) => {
 import { features } from "./config/features";
 app.get("/api/features", (_req, res) => {
   res.json(features);
+});
+
+// ─── Plugin Status (admin diagnostic) ────────────────────────
+import { registry } from "./lib/pluginRegistry";
+app.get("/api/plugins", (_req, res) => {
+  const all = registry.listAll();
+  res.json(all.map((p) => ({ id: p.id, name: p.name, type: p.type, configured: p.isConfigured() })));
 });
 
 // ─── Health Check (outside rate limiter) ────────────────────
