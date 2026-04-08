@@ -513,6 +513,44 @@ router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRe
   res.json(cc);
 });
 
+// ─── Post Capacity / Availability ────────────────────────────────────
+// Carrier announces where they are and when they'll be available.
+// Stored on CarrierProfile.preferredLanes JSON field as capacity posts.
+router.post("/post-capacity", async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentCity, currentState, availableDate, equipmentType, preferredDestStates, notes } = req.body;
+    if (!currentCity || !currentState || !availableDate) {
+      res.status(400).json({ error: "currentCity, currentState, and availableDate required" });
+      return;
+    }
+    const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
+    if (!profile) { res.status(404).json({ error: "Carrier profile not found" }); return; }
+
+    const capacityPost = {
+      currentCity, currentState, availableDate, equipmentType: equipmentType || profile.equipmentTypes?.[0] || "Dry Van",
+      preferredDestStates: preferredDestStates || [], notes: notes || "",
+      postedAt: new Date().toISOString(), carrierId: req.user!.id, companyName: profile.companyName,
+    };
+
+    // Store as latest capacity post in preferredLanes JSON
+    const existing = (profile.preferredLanes as any) || {};
+    const capacityPosts = Array.isArray(existing.capacityPosts) ? existing.capacityPosts : [];
+    capacityPosts.unshift(capacityPost);
+    // Keep last 10 posts
+    if (capacityPosts.length > 10) capacityPosts.length = 10;
+
+    await prisma.carrierProfile.update({
+      where: { userId: req.user!.id },
+      data: { preferredLanes: { ...existing, capacityPosts, lastCapacityPost: capacityPost } },
+    });
+
+    res.json({ ok: true, capacityPost });
+  } catch (err) {
+    console.error("[Capacity] Post error:", err);
+    res.status(500).json({ error: "Failed to post capacity" });
+  }
+});
+
 // ─── GPS Location Update (Geofence Check) ───────────────────────────
 // Carrier app sends periodic location pings; service auto-detects
 // arrival/departure at stops and triggers status changes.

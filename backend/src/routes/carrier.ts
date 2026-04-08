@@ -5,7 +5,8 @@ import {
   getDashboard, getScorecard, getRevenue, getBonuses,
   getAllCarriers, getCarrierDetail, updateCarrier, setupAdminCarrierProfile,
 } from "../controllers/carrierController";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
 import { validateBody } from "../middleware/validate";
@@ -124,5 +125,44 @@ router.patch("/:id", authorize("ADMIN", "CEO"), auditLog("UPDATE", "Carrier"), u
 
 // Admin only
 router.post("/verify/:id", authorize("ADMIN", "CEO"), validateBody(verifyCarrierSchema), auditLog("VERIFY", "Carrier"), verifyCarrier);
+
+// Capacity feed — carriers who have posted availability
+router.get("/capacity-feed", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS") as any, async (_req: AuthRequest, res: Response) => {
+  try {
+    const profiles = await prisma.carrierProfile.findMany({
+      where: { preferredLanes: { not: undefined } },
+      select: {
+        userId: true, companyName: true, mcNumber: true, equipmentTypes: true,
+        operatingRegions: true, preferredLanes: true, activeLoadCount: true,
+        numberOfTrucks: true,
+      },
+    });
+
+    const feed = profiles
+      .map((p) => {
+        const lanes = p.preferredLanes as any;
+        if (!lanes?.lastCapacityPost) return null;
+        const post = lanes.lastCapacityPost;
+        // Only include posts from the last 7 days
+        const postedAt = new Date(post.postedAt);
+        if (Date.now() - postedAt.getTime() > 7 * 24 * 60 * 60 * 1000) return null;
+        return {
+          carrierId: p.userId, companyName: p.companyName, mcNumber: p.mcNumber,
+          equipmentTypes: p.equipmentTypes, trucks: p.numberOfTrucks,
+          activeLoads: p.activeLoadCount,
+          currentCity: post.currentCity, currentState: post.currentState,
+          availableDate: post.availableDate, equipmentType: post.equipmentType,
+          preferredDestStates: post.preferredDestStates, notes: post.notes,
+          postedAt: post.postedAt,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ feed });
+  } catch (err) {
+    console.error("[Capacity] Feed error:", err);
+    res.status(500).json({ error: "Failed to fetch capacity feed" });
+  }
+});
 
 export default router;

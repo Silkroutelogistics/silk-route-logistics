@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Calendar, Weight, Ruler, DollarSign, ChevronRight } from "lucide-react";
+import { MapPin, Calendar, Weight, Ruler, DollarSign, ChevronRight, Truck, Send, CheckCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
@@ -50,16 +50,67 @@ export default function AvailableLoadsPage() {
     },
   });
 
+  const [showCapacity, setShowCapacity] = useState(false);
+  const [capForm, setCapForm] = useState({ currentCity: "", currentState: "", availableDate: "", equipmentType: "Dry Van", notes: "" });
+  const [capSuccess, setCapSuccess] = useState(false);
+  const postCapacity = useMutation({
+    mutationFn: (data: typeof capForm) => api.post("/carrier-loads/post-capacity", data),
+    onSuccess: () => {
+      setCapSuccess(true);
+      setTimeout(() => setCapSuccess(false), 3000);
+      setCapForm({ currentCity: "", currentState: "", availableDate: "", equipmentType: "Dry Van", notes: "" });
+    },
+  });
+
   const loads = data?.loads || [];
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Available Loads</h1>
-        <p className="text-[13px] text-gray-500">
-          Loads matching your equipment and operating regions &middot; {data?.total || 0} available
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Available Loads</h1>
+          <p className="text-[13px] text-gray-500">
+            Loads matching your equipment and operating regions &middot; {data?.total || 0} available
+          </p>
+        </div>
+        <button onClick={() => setShowCapacity((p) => !p)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-lg hover:bg-[#1a1f2e] transition cursor-pointer">
+          <Truck size={14} /> Post My Capacity
+        </button>
       </div>
+
+      {showCapacity && (
+        <CarrierCard padding="p-4" className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
+            <Truck size={16} className="text-gray-600" /> Announce Your Availability
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">Tell brokers where you are and when you&apos;re available. Matching loads will be pushed to you.</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <input placeholder="Current City" value={capForm.currentCity} onChange={(e) => setCapForm({ ...capForm, currentCity: e.target.value })}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400" />
+            <input placeholder="State (e.g. MI)" value={capForm.currentState} onChange={(e) => setCapForm({ ...capForm, currentState: e.target.value.toUpperCase().slice(0, 2) })}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400" />
+            <input type="date" value={capForm.availableDate} onChange={(e) => setCapForm({ ...capForm, availableDate: e.target.value })}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400" />
+            <select value={capForm.equipmentType} onChange={(e) => setCapForm({ ...capForm, equipmentType: e.target.value })}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400">
+              {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Power Only"].map((eq) => (
+                <option key={eq} value={eq}>{eq}</option>
+              ))}
+            </select>
+          </div>
+          <textarea placeholder="Notes (e.g. prefer loads heading east)" value={capForm.notes} onChange={(e) => setCapForm({ ...capForm, notes: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-400 mb-3" rows={2} />
+          <div className="flex items-center gap-2">
+            <button onClick={() => postCapacity.mutate(capForm)}
+              disabled={!capForm.currentCity || !capForm.currentState || !capForm.availableDate || postCapacity.isPending}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-[#1a1f2e] transition cursor-pointer">
+              <Send size={12} /> {postCapacity.isPending ? "Posting..." : "Post Capacity"}
+            </button>
+            {capSuccess && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> Posted!</span>}
+          </div>
+        </CarrierCard>
+      )}
 
       <div className="grid grid-cols-[1fr_380px] gap-5">
         {/* Load list */}
