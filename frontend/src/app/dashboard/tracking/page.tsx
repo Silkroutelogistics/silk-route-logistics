@@ -11,6 +11,7 @@ import {
   PhoneCall, MessageSquare, Plus, Send,
 } from "lucide-react";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
+import { downloadCSV } from "@/lib/csvExport";
 
 /* ═══ Types ═══ */
 
@@ -176,9 +177,32 @@ export default function TrackingPage() {
           <h1 className="text-2xl font-bold text-white">Track & Trace</h1>
           <p className="text-sm text-slate-400 mt-1">Monitor & deliver — dispatched loads, check calls, ELD & GPS</p>
         </div>
-        <span className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded text-xs text-green-400">
-          <Radio className="w-3 h-3" /> Live Tracking
-        </span>
+        <div className="flex items-center gap-2">
+          {trackedLoads.length > 0 && (
+            <button onClick={() => downloadCSV(
+              trackedLoads.map((l) => ({
+                ref: l.referenceNumber, status: l.status,
+                origin: `${l.originCity}, ${l.originState}`, dest: `${l.destCity}, ${l.destState}`,
+                carrier: l.carrier?.company || l.carrier ? `${l.carrier.firstName} ${l.carrier.lastName}` : "",
+                pickup: l.pickupDate?.split("T")[0] || "", delivery: l.deliveryDate?.split("T")[0] || "",
+                equipment: l.equipmentType, rate: l.rate,
+              })),
+              [
+                { key: "ref", label: "Reference #" }, { key: "status", label: "Status" },
+                { key: "origin", label: "Origin" }, { key: "dest", label: "Destination" },
+                { key: "carrier", label: "Carrier" }, { key: "pickup", label: "Pickup" },
+                { key: "delivery", label: "Delivery" }, { key: "equipment", label: "Equipment" },
+                { key: "rate", label: "Rate ($)" },
+              ],
+              `srl-tracking-${new Date().toISOString().split("T")[0]}.csv`,
+            )} className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
+          )}
+          <span className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded text-xs text-green-400">
+            <Radio className="w-3 h-3" /> Live Tracking
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}

@@ -4,9 +4,10 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
-  Crosshair, Package, Truck, Search, ChevronRight, X,
+  Crosshair, Package, Truck, Search, ChevronRight, X, Download,
   Calendar, DollarSign, MapPin, CheckCircle, Loader2, AlertTriangle,
 } from "lucide-react";
+import { downloadCSV } from "@/lib/csvExport";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -230,12 +231,34 @@ export default function DispatchBoardPage() {
             Match & assign — tender, confirm, book carriers
           </p>
         </div>
-        {assignSuccess && (
-          <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2 text-sm text-green-400">
-            <CheckCircle className="w-4 h-4" />
-            {assignSuccess}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {filteredLoads.length > 0 && (
+            <button onClick={() => downloadCSV(
+              filteredLoads.map((l) => ({
+                ref: l.referenceNumber, status: l.status,
+                origin: `${l.originCity}, ${l.originState}`, dest: `${l.destCity}, ${l.destState}`,
+                equipment: l.equipmentType, rate: l.rate, miles: l.distance || "",
+                pickup: l.pickupDate?.split("T")[0] || "", carrier: l.carrier?.company || "Unassigned",
+              })),
+              [
+                { key: "ref", label: "Reference #" }, { key: "status", label: "Status" },
+                { key: "origin", label: "Origin" }, { key: "dest", label: "Destination" },
+                { key: "equipment", label: "Equipment" }, { key: "rate", label: "Rate ($)" },
+                { key: "miles", label: "Miles" }, { key: "pickup", label: "Pickup Date" },
+                { key: "carrier", label: "Carrier" },
+              ],
+              `srl-dispatch-${new Date().toISOString().split("T")[0]}.csv`,
+            )} className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
+          )}
+          {assignSuccess && (
+            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2 text-sm text-green-400">
+              <CheckCircle className="w-4 h-4" />
+              {assignSuccess}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Split pane container */}

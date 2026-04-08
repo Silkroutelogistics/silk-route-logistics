@@ -13,6 +13,7 @@ import {
 
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
+import { downloadCSV } from "@/lib/csvExport";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -398,6 +399,28 @@ export default function LoadsPage() {
           <h1 className="text-2xl font-bold text-white">Load Board</h1>
           <p className="text-slate-400 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
         </div>
+        {filteredLoads.length > 0 && (
+          <button onClick={() => downloadCSV(
+            filteredLoads.map((l) => ({
+              ref: l.referenceNumber, status: l.status,
+              origin: `${l.originCity}, ${l.originState}`, dest: `${l.destCity}, ${l.destState}`,
+              equipment: l.equipmentType, rate: l.rate, distance: l.distance || "",
+              pickup: l.pickupDate?.split("T")[0] || "", delivery: l.deliveryDate?.split("T")[0] || "",
+              commodity: l.commodity || "", weight: l.weight || "",
+            })),
+            [
+              { key: "ref", label: "Reference #" }, { key: "status", label: "Status" },
+              { key: "origin", label: "Origin" }, { key: "dest", label: "Destination" },
+              { key: "equipment", label: "Equipment" }, { key: "rate", label: "Rate ($)" },
+              { key: "distance", label: "Miles" }, { key: "pickup", label: "Pickup Date" },
+              { key: "delivery", label: "Delivery Date" }, { key: "commodity", label: "Commodity" },
+              { key: "weight", label: "Weight (lbs)" },
+            ],
+            `srl-loads-${activeTab}-${new Date().toISOString().split("T")[0]}.csv`,
+          )} className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </button>
+        )}
       </div>
 
       {/* ---- UPGRADE 1: Status Tabs ---- */}
