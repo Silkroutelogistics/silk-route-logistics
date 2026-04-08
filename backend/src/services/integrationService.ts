@@ -599,7 +599,7 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
         type: "GENERAL",
         title: `CPP Tier ${direction === "upgraded" ? "Upgrade" : "Change"}: ${tierNames[newTier]}`,
         message: `Your CPP tier has been ${direction} from ${tierNames[oldTier] || oldTier} to ${tierNames[newTier]}. Score: ${overallScore}. ${direction === "upgraded" ? "Congratulations!" : "Keep improving your performance metrics."}`,
-        actionUrl: "/carrier/dashboard.html",
+        actionUrl: "/carrier/dashboard",
       },
     });
 

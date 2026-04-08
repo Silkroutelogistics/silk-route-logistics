@@ -327,7 +327,7 @@ router.post("/:id/promote-to-bronze", authorize("ADMIN", "CEO", "BROKER"), async
       type: "GENERAL",
       title: "Welcome to The Caravan!",
       message: "You have been promoted to Bronze tier in The Caravan by your account executive.",
-      actionUrl: "/carrier/dashboard.html",
+      actionUrl: "/carrier/dashboard",
     },
   });
 

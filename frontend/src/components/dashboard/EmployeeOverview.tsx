@@ -221,10 +221,14 @@ export function EmployeeOverview() {
             <div className="space-y-3">
               {notifications?.slice(0, 6).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt?: string }) => (
                 <Link key={n.id} href={(() => {
-                    const url = n.actionUrl || "/dashboard/overview";
+                    let url = n.actionUrl || "/dashboard/overview";
+                    if (url.includes("/ae/") || url.includes(".html")) url = "/dashboard/overview";
                     const path = url.split("?")[0];
                     const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
-                    if (hasEntityId) return path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "") || "/dashboard/overview";
+                    if (hasEntityId) {
+                      const listPath = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
+                      return listPath.startsWith("/dashboard") ? listPath : "/dashboard/overview";
+                    }
                     return url;
                   })()}
                   onClick={() => { if (!n.readAt) markRead.mutate(n.id); }}

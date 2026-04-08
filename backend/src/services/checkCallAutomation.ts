@@ -155,7 +155,7 @@ export async function processDueCheckCalls() {
           type: "LOAD_UPDATE",
           title: `Check-Call Missed: Load #${cc.load.referenceNumber}`,
           message: `Carrier has not responded to ${cc.type} check-call. Auto-retrying.`,
-          actionUrl: `/ae/loads.html`,
+          actionUrl: `/dashboard/loads`,
         },
       });
 
@@ -179,7 +179,7 @@ export async function processDueCheckCalls() {
           type: "LOAD_UPDATE",
           title: `URGENT: Carrier Unresponsive — Load #${cc.load.referenceNumber}`,
           message: `Carrier has not responded to check-call after retry. Manual intervention required.`,
-          actionUrl: `/ae/loads.html`,
+          actionUrl: `/dashboard/loads`,
         },
       });
 
@@ -282,7 +282,7 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
           type: "POD_RECEIVED",
           title: `Upload POD: Load #${schedule.load.referenceNumber}`,
           message: "Load marked as delivered. Please upload the Proof of Delivery document.",
-          actionUrl: `/carrier/loads.html`,
+          actionUrl: `/carrier/dashboard/loads`,
         },
       });
     }

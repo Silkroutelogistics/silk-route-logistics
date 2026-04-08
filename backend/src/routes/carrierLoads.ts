@@ -290,7 +290,7 @@ router.post("/:id/decline", async (req: AuthRequest, res: Response) => {
         type: "LOAD",
         title: "Load Declined",
         message: `A carrier declined load ${load.referenceNumber}.`,
-        actionUrl: "/ae/loads.html?id=" + load.id,
+        actionUrl: "/dashboard/loads",
       },
     });
   }
@@ -385,7 +385,7 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
         type: "LOAD",
         title: "Load Status Updated",
         message: `Load ${load.referenceNumber} status: ${status.replace(/_/g, " ")}`,
-        actionUrl: "/ae/loads.html?id=" + load.id,
+        actionUrl: "/dashboard/loads",
       },
     });
   }
@@ -448,7 +448,7 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
           type: "LOAD",
           title: "POD Received",
           message: `POD uploaded for load ${load.referenceNumber}`,
-          actionUrl: "/ae/loads.html?id=" + load.id,
+          actionUrl: "/dashboard/loads",
         },
       });
     }
@@ -505,7 +505,7 @@ router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRe
         type: "LOAD",
         title: "Check Call Received",
         message: `Check call for ${load.referenceNumber}: ${location || "Location update"}${etaHours ? " — ETA " + etaHours + "h" : ""}`,
-        actionUrl: "/ae/loads.html?id=" + load.id,
+        actionUrl: "/dashboard/loads",
       },
     });
   }

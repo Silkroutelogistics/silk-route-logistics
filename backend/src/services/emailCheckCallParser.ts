@@ -207,7 +207,7 @@ export async function parseCheckCallFromEmail(
           type: "LOAD_UPDATE",
           title: `Email Check-Call: ${load.referenceNumber}`,
           message: `Auto-parsed from carrier email: ${status || "update"}${city ? ` at ${city}, ${state}` : ""}`,
-          actionUrl: "/ae/track-trace.html",
+          actionUrl: "/dashboard/tracking",
         },
       });
     }

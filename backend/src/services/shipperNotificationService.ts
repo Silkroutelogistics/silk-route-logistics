@@ -47,7 +47,7 @@ export async function sendShipperPickupEmail(loadId: string) {
       type: "LOAD_UPDATE",
       title: `Shipper Pickup: ${load.referenceNumber}`,
       message: `Pickup email sent to ${load.customer.email} for load ${load.referenceNumber}`,
-      actionUrl: "/ae/loads.html",
+      actionUrl: "/dashboard/loads",
     },
   });
 
@@ -110,7 +110,7 @@ export async function sendShipperTransitUpdate(loadId: string) {
       type: "LOAD_UPDATE",
       title: `Shipper Transit: ${load.referenceNumber}`,
       message: `Transit update sent to ${load.customer.email} — ${percentComplete}% complete`,
-      actionUrl: "/ae/loads.html",
+      actionUrl: "/dashboard/loads",
     },
   });
 
@@ -153,7 +153,7 @@ export async function sendShipperDeliveryEmail(loadId: string) {
       type: "LOAD_UPDATE",
       title: `Shipper Delivery: ${load.referenceNumber}`,
       message: `Delivery email sent to ${load.customer.email} for load ${load.referenceNumber}`,
-      actionUrl: "/ae/loads.html",
+      actionUrl: "/dashboard/loads",
     },
   });
 
@@ -368,7 +368,7 @@ export async function sendShipperDelayNotification(
         type: "LOAD_UPDATE",
         title: `Shipper Delay ${alert.level}: ${refNum}`,
         message: `Delay alert sent to ${shipperEmail} — ${alert.reason}`,
-        actionUrl: "/ae/track-trace.html",
+        actionUrl: "/dashboard/tracking",
       },
     });
   }

@@ -354,7 +354,7 @@ export async function applyMilestoneRewards(
       type: "GENERAL",
       title: `Carvan Milestone Reached: ${milestone.replace(/_/g, " ")}`,
       message: `Congratulations! You have reached the ${milestone.replace(/_/g, " ")} milestone in the Carvan Carrier Program.`,
-      actionUrl: "/carrier/dashboard.html",
+      actionUrl: "/carrier/dashboard",
     },
   });
 }

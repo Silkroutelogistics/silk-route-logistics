@@ -135,7 +135,7 @@ export async function runRiskFlagging() {
               type: "LOAD_UPDATE",
               title: `Risk AMBER: Load #${load.referenceNumber}`,
               message: risk.factors.map((f) => f.description).join("; "),
-              actionUrl: `/ae/loads.html`,
+              actionUrl: `/dashboard/tracking`,
             },
           });
         }
@@ -158,7 +158,7 @@ export async function runRiskFlagging() {
               type: "LOAD_UPDATE",
               title: `RISK RED: Load #${load.referenceNumber}`,
               message: `URGENT — ${risk.factors.map((f) => f.description).join("; ")}`,
-              actionUrl: `/ae/loads.html`,
+              actionUrl: `/dashboard/tracking`,
             },
           });
 

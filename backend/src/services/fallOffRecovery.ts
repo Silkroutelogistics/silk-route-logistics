@@ -35,7 +35,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
       type: "LOAD_UPDATE",
       title: `CARRIER FALL-OFF: Load #${load.referenceNumber}`,
       message: `Carrier ${load.carrier?.company || load.carrier?.firstName || "Unknown"} has fallen off. Recovery in progress.`,
-      actionUrl: `/ae/loads.html`,
+      actionUrl: `/dashboard/loads`,
     },
   });
 
@@ -84,7 +84,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
           type: "LOAD_TENDERED",
           title: `Urgent Load Available: #${load.referenceNumber}`,
           message: `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}. Rate: $${load.carrierRate || load.rate}. Reply to accept.`,
-          actionUrl: `/carrier/loads.html`,
+          actionUrl: `/carrier/dashboard/loads`,
         },
       });
 
@@ -126,7 +126,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
               type: "GENERAL",
               title: `Carrier Deactivation Review: ${carrierProfile.companyName || "Unknown"}`,
               message: `This carrier has ${fallOffCount} fall-offs. Consider deactivation review.`,
-              actionUrl: `/ae/caravan.html`,
+              actionUrl: `/dashboard/carriers`,
             },
           });
           console.log(`[FallOff] Carrier ${carrierProfile.companyName} flagged for deactivation review (${fallOffCount} fall-offs)`);
@@ -201,7 +201,7 @@ export async function handleFallOffAcceptance(loadId: string, carrierUserId: str
         type: "LOAD_UPDATE",
         title: `Fall-Off Recovered: Load #${load.referenceNumber}`,
         message: `${load.carrier?.company || load.carrier?.firstName || "New carrier"} accepted. Recovery time: ${recoveryTimeMin.toFixed(0)} min.`,
-        actionUrl: `/ae/loads.html`,
+        actionUrl: `/dashboard/loads`,
       },
     });
   }

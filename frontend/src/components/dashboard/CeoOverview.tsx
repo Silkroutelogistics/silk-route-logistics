@@ -772,16 +772,17 @@ function NotificationBell() {
                   }
                   setOpen(false);
                   if (n.actionUrl) {
-                    // Validate the route exists before navigating — deleted entities cause 404 → login redirect
-                    const url = n.actionUrl;
-                    // URLs with specific entity IDs (e.g. /loads/uuid) may point to deleted records
-                    // Strip query params for pattern matching
+                    let url = n.actionUrl;
+                    // Normalize legacy paths
+                    if (url.includes("/ae/") || url.includes(".html")) {
+                      url = "/dashboard/overview";
+                    }
+                    // URLs with entity UUIDs may point to deleted records — strip to list page
                     const path = url.split("?")[0];
                     const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
                     if (hasEntityId) {
-                      // Navigate to the list page instead of the specific entity
                       const listPath = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
-                      router.push(listPath || "/dashboard/overview");
+                      router.push(listPath.startsWith("/dashboard") ? listPath : "/dashboard/overview");
                     } else {
                       router.push(url);
                     }

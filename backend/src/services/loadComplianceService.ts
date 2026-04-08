@@ -262,7 +262,7 @@ export async function checkAllActiveLoadCompliance(): Promise<BatchComplianceSta
     const issuesSummary = result.issues.join("; ");
     const title = `Load ${load.referenceNumber ?? load.id} — Compliance ${result.severity}`;
     const message = `Compliance issues detected: ${issuesSummary}`;
-    const actionUrl = `/loads/${load.id}`;
+    const actionUrl = `/dashboard/loads`;
 
     // Notify load poster
     if (load.posterId) {

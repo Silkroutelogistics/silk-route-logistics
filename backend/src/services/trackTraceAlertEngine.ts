@@ -194,7 +194,7 @@ export async function runAlertScanner() {
         "LOAD_UPDATE",
         `${alert.level} Alert: ${load.loadNumber || load.referenceNumber}`,
         alert.reason,
-        { actionUrl: "/ae/track-trace.html" }
+        { actionUrl: "/dashboard/tracking" }
       );
     }
 
@@ -259,7 +259,7 @@ export async function runAlertScanner() {
             "LOAD_UPDATE",
             `Auto-Layover: ${stop.load.loadNumber || stop.load.referenceNumber}`,
             `Detention exceeded 24hrs at ${stop.facilityName || "stop"}. Layover accessorial ($350) auto-created.`,
-            { actionUrl: "/ae/track-trace.html" }
+            { actionUrl: "/dashboard/tracking" }
           );
         }
 
@@ -320,7 +320,7 @@ export async function runAlertScanner() {
           "LOAD_UPDATE",
           `TEMP ${level}: ${load.loadNumber || load.referenceNumber}`,
           reason,
-          { actionUrl: "/ae/track-trace.html" }
+          { actionUrl: "/dashboard/tracking" }
         );
       }
 

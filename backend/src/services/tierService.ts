@@ -56,7 +56,7 @@ export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
       type: "GENERAL",
       title: "Welcome to The Caravan!",
       message: "Congratulations! You've completed 3 loads with a qualifying score and earned Bronze tier in The Caravan.",
-      actionUrl: "/carrier/dashboard.html",
+      actionUrl: "/carrier/dashboard",
     },
   });
 

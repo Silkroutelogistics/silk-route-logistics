@@ -95,7 +95,7 @@ router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, 
           type: "GENERAL",
           title: "CPP Tier Updated",
           message: `Your CPP tier has changed from ${oldTier} to ${newTier}.`,
-          actionUrl: "/carrier/dashboard.html",
+          actionUrl: "/carrier/dashboard",
         },
       });
 
