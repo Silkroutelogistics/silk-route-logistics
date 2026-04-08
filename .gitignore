@@ -39,3 +39,5 @@ coverage/
 
 # Frontend production env (contains API keys)
 frontend/.env.production
+my-knowledge-base/raw/assets/_extracted/
+my-knowledge-base/raw/assets/*.zip
