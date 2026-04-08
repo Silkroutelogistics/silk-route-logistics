@@ -28,6 +28,7 @@ last_updated: 2026-04-07
 
 ## Carrier Programs
 - [[srcpp-program]] — SRCPP loyalty tiers (GUEST→PLATINUM), QuickPay fee rates, weekly recalculation
+- [[carrier-pain-points]] — 15 financial pain points, cost breakdown, factoring vs QP comparison, recruitment messaging
 
 ## System Architecture
 - [[tech-stack]] — Next.js 15, Express/Prisma, PostgreSQL (Neon), Cloudflare Pages, Render, 10+ integrations

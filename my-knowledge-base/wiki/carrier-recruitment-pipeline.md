@@ -39,11 +39,11 @@ The carrier recruitment pipeline closes the [[demand-supply-gap]] by using DAT r
 | SMS via OpenPhone | N/A (phone-based) | Already integrated for check-calls |
 
 ## Carrier Email Templates (4-step sequence)
-Must speak to carrier pain points, not broker features:
-- **Day 0:** Loads on your lanes — introduce SRL, mention consistent freight
-- **Day 3:** QuickPay pitch — 3-day payment at 1.5% (PLATINUM), not 3-5% factoring
-- **Day 7:** Free compliance dashboard — FMCSA monitoring, CSA alerts, insurance tracking
-- **Day 14:** Last note — your lanes, your terms, link to register
+Informed by [[carrier-pain-points]] research. Lead with carrier survival issues, not broker features:
+- **Day 0:** "Get paid in 3 days, not 30" — introduce SRL, highlight $3,600+/year savings vs factoring, no contracts, no hidden fees
+- **Day 3:** "No more factoring traps" — QuickPay at 1.5-3% vs 4-5.5% effective factoring rate, no reserve holdback, no termination fees, SRL Payment Guarantee
+- **Day 7:** "Your compliance, handled" — free FMCSA monitoring, CSA alerts, insurance expiry tracking, Compass safety dashboard. Plus: we never double-broker
+- **Day 14:** "Last note — your lanes, your terms" — consistent freight on preferred lanes, link to register, mention SRCPP tier ladder (better performance = lower fees + faster pay)
 
 ## Recruitment Pipeline Stages
 `PROSPECT → CONTACTED → INTERESTED → REGISTERED → APPROVED`
@@ -57,7 +57,7 @@ Must speak to carrier pain points, not broker features:
 4. Lane-demand matching (loads with no matches → target carrier recruitment)
 
 ## Dependencies
-- Ingest CARRIER_FINANCIAL_PAIN_POINTS.md before writing templates
+- ~~Ingest CARRIER_FINANCIAL_PAIN_POINTS.md before writing templates~~ DONE — see [[carrier-pain-points]]
 - Determine email acquisition path (DAT vs CarrierOk vs SMS)
 - Confirm DAT API response data format (does it include carrier email?)
 

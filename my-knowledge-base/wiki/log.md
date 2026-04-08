@@ -8,6 +8,9 @@ created: 2026-04-07
 ## [2026-04-07] ingest | Initial knowledge base creation
 Seeded wiki from full system audit conducted on Apr 5-7, 2026. Created index, company-info, compass-engine, version-history pages. Knowledge base covers freight operations, compliance, sales/CRM, system architecture, and company details.
 
+## [2026-04-07] ingest | Process CARRIER_FINANCIAL_PAIN_POINTS.md
+Created carrier-pain-points.md: 15 pain points mapped to SRL coverage (5 direct, 5 partial, 5 unaddressed). Key data: OO net income $64,524/yr, factoring costs 4-5.5% effective, 30-day delay costs $13K-$48K/yr. QP validated as 2-8x ROI. Flagged SRCPP contradiction: no same-day tier to compete with factoring instant payment. Updated srcpp-program.md with market validation + gaps. Updated carrier-recruitment-pipeline.md templates with pain-point-informed messaging. 4 critical gaps identified: fuel card, fuel advance, detention pay, emergency advance. Source touched 4 pages (1 new + 3 updated).
+
 ## [2026-04-07] lint | Full wiki health check
 Ran lint workflow per CLAUDE.md schema. Results: 15 broken links (missing pages), 0 orphans, 5 contradictions (3 acknowledged), 3 draft pages, 28/29 raw sources un-ingested. Overall health: 5/10. Top 3 articles recommended: carrier-pain-points (unblocks recruitment), competitive-landscape (shapes messaging), operations-playbook (business runbook). Output: wiki/lint-report-2026-04-07.md
 
