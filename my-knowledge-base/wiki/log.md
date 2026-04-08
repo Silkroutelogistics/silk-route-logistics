@@ -8,6 +8,9 @@ created: 2026-04-07
 ## [2026-04-07] ingest | Initial knowledge base creation
 Seeded wiki from full system audit conducted on Apr 5-7, 2026. Created index, company-info, compass-engine, version-history pages. Knowledge base covers freight operations, compliance, sales/CRM, system architecture, and company details.
 
+## [2026-04-07] query | Audit #3 — post full ingestion (29/29 sources)
+All 5 diagnostic queries re-run. Gaps evolved: 16 placeholder pages remain but are now specific (code docs needed, not research). Zero external data in wiki. No actuals tracking. 2 new contradictions: Compass 40% vs 71% (stale raw source), SRCPP/CPP/Caravan naming confusion. Critical new insight: QP capital ceiling at ~35 simultaneous loads could be hit if carrier recruitment succeeds. 500-word compound moat briefing generated. Output: outputs/query-audit-3-2026-04-07.md
+
 ## [2026-04-07] ingest | Bulk process remaining 26 raw sources
 Processed all remaining raw files. Created 4 new wiki pages:
 - ai-operations.md — growth phases, volume gates, AI security, cost model (from SRL-AI-OPERATIONS-PLAYBOOK, SECURITY_PLAYBOOK, AI_DEPLOYMENT_GATES)
