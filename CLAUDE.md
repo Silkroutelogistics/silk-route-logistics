@@ -68,10 +68,23 @@ These rules override all defaults. Follow them exactly.
 - Lanes reduce merge conflicts and enable parallel work across sessions.
 - Document active lanes in the relevant wiki page's "Open Threads" section.
 
-## 12. Future Patterns (documented, not yet implemented)
+## 12. Event-Based State Transitions (claw-code roadmap pattern)
+- State changes on Load, Carrier, Invoice, Sequence should emit structured events, not just update a DB field.
+- Log every transition: `{ entity, id, from, to, actor, timestamp, metadata }` in SystemLog.
+- This enables: audit trail, webhook triggers, external monitoring, undo capability.
+- Example: `Load SRL-121483: POSTED → BOOKED by userId=xyz at 2026-04-08T10:30:00Z`
+
+## 13. Knowledge Graph Awareness (Graphify pattern)
+- The wiki should track "god nodes" — concepts referenced by 10+ pages (currently: srcpp-program at 21 refs, compass-engine at 10, carrier-recruitment-pipeline at 13).
+- Surprising connections between topics should be documented in outputs/ when discovered.
+- Every factual claim carries EXTRACTED/INFERRED/AMBIGUOUS confidence tags (already implemented in KB v2).
+
+## 14. Future Patterns (documented, not yet implemented)
 - **Hook system (claude-brain):** PreToolUse/PostToolUse interceptors for permission gates and compliance checks. Plan for Q2.
 - **Cost tracker modularization (src-repo):** Split token counting, cost calculation, and analytics into separate modules. Plan for Q2.
 - **Feature flags:** Currently using env vars. Consider build-time elimination when/if migrating to Bun.
+- **Centralized command registry (Hermes):** Single registry auto-generates CLI help, Slack menus, API docs. Plan when multi-platform.
+- **Print-mode automation (Hermes):** One-shot CLI mode for CI/testing without trust dialogs. Plan for CI pipeline.
 
 ## 13. Company Information (Single Source of Truth)
 - Company: Silk Route Logistics Inc.
