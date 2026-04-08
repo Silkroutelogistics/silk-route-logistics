@@ -236,10 +236,22 @@ router.post("/import-from-dat", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", 
     include: { user: { select: { id: true, firstName: true, lastName: true, company: true, email: true } } },
   });
 
+  // Auto-start carrier recruitment email sequence if carrier has a real email
+  if (data.email && !data.email.includes("placeholder")) {
+    try {
+      const { startCarrierSequence } = await import("../services/emailSequenceService");
+      await startCarrierSequence(profile.id, data.email, data.contactName || data.companyName, req.user!.id);
+      console.log(`[DAT Import] Carrier recruitment sequence started for ${data.email}`);
+    } catch (err: any) {
+      console.log(`[DAT Import] Sequence not started: ${err.message}`);
+    }
+  }
+
   res.status(201).json({
     carrier: updated,
     fmcsa: fmcsaResult,
     tempPassword: data.email ? tempPassword : null,
+    sequenceStarted: !!(data.email && !data.email.includes("placeholder")),
   });
 });
 

@@ -6,6 +6,7 @@ import { calculateLoadRisk } from "../services/riskEngine";
 import { executeFallOffRecovery, handleFallOffAcceptance } from "../services/fallOffRecovery";
 import {
   startSequence,
+  startCarrierSequence,
   stopSequence,
   getActiveSequences,
 } from "../services/emailSequenceService";
@@ -197,6 +198,28 @@ router.post(
     }
     try {
       const sequence = await startSequence(prospectId, req.user!.id, customSchedule);
+      res.status(201).json(sequence);
+    } catch (err: any) {
+      const status = err.message.includes("not found") ? 404
+        : err.message.includes("already exists") ? 409
+        : 500;
+      res.status(status).json({ error: err.message });
+    }
+  },
+);
+
+// POST /api/automation/sequences/start-carrier — start carrier recruitment sequence
+router.post(
+  "/sequences/start-carrier",
+  authorize("ADMIN", "CEO", "BROKER"),
+  async (req: AuthRequest, res: Response) => {
+    const { carrierId, carrierEmail, carrierName } = req.body;
+    if (!carrierId || !carrierEmail) {
+      res.status(400).json({ error: "carrierId and carrierEmail required" });
+      return;
+    }
+    try {
+      const sequence = await startCarrierSequence(carrierId, carrierEmail, carrierName || "Carrier", req.user!.id);
       res.status(201).json(sequence);
     } catch (err: any) {
       const status = err.message.includes("not found") ? 404

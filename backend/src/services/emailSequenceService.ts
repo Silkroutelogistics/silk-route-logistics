@@ -12,30 +12,21 @@ const CEO_EMAIL = "whaider@silkroutelogistics.ai";
 const CEO_NAME = "Wasih Haider";
 
 const DEFAULT_SCHEDULE = [
-  {
-    day: 0,
-    subject: "Quick intro — Silk Route Logistics",
-    template: "introduction",
-  },
-  {
-    day: 3,
-    subject: "Following up — freight capacity for your team",
-    template: "followup_1",
-  },
-  {
-    day: 7,
-    subject: "Free lane analysis — no strings attached",
-    template: "followup_2",
-  },
-  {
-    day: 14,
-    subject: "Last note from me",
-    template: "followup_3",
-  },
+  { day: 0, subject: "Quick intro — Silk Route Logistics", template: "introduction" },
+  { day: 3, subject: "Following up — freight capacity for your team", template: "followup_1" },
+  { day: 7, subject: "Free lane analysis — no strings attached", template: "followup_2" },
+  { day: 14, subject: "Last note from me", template: "followup_3" },
+];
+
+const CARRIER_SCHEDULE = [
+  { day: 0, subject: "Get paid in 3 days, not 30 — Silk Route Logistics", template: "carrier_intro" },
+  { day: 3, subject: "No more factoring traps — save $3,600+/year", template: "carrier_quickpay" },
+  { day: 7, subject: "Free compliance dashboard for your fleet", template: "carrier_compliance" },
+  { day: 14, subject: "Last note — your lanes, your terms", template: "carrier_final" },
 ];
 
 /**
- * Start an email sequence for a prospect.
+ * Start an email sequence for a shipper prospect (Customer).
  */
 export async function startSequence(
   prospectId: string,
@@ -75,6 +66,47 @@ export async function startSequence(
   });
 
   console.log(`[Sequence] Started for ${prospect.email} (${schedule.length} steps)`);
+  return sequence;
+}
+
+/**
+ * Start a carrier recruitment email sequence.
+ * Uses CarrierProfile instead of Customer. Same engine, carrier templates.
+ */
+export async function startCarrierSequence(
+  carrierId: string,
+  carrierEmail: string,
+  carrierName: string,
+  startedById: string,
+): Promise<any> {
+  if (!carrierEmail) throw new Error("Carrier has no email address");
+
+  const existing = await prisma.emailSequence.findFirst({
+    where: { prospectId: carrierId, status: "ACTIVE" },
+  });
+  if (existing) throw new Error("Active sequence already exists for this carrier");
+
+  const schedule = CARRIER_SCHEDULE;
+  const now = new Date();
+  const firstSendAt = new Date(now.getTime() + 5 * 60 * 1000);
+
+  const sequence = await prisma.emailSequence.create({
+    data: {
+      prospectId: carrierId,
+      prospectEmail: carrierEmail,
+      prospectName: carrierName,
+      templateName: "carrier_recruitment",
+      currentStep: 0,
+      totalSteps: schedule.length,
+      nextSendAt: firstSendAt,
+      status: "ACTIVE",
+      schedule: schedule as any,
+      startedById,
+      metadata: { opens: 0, clicks: 0, emailIds: [], engagementScore: 0, type: "carrier" } as any,
+    },
+  });
+
+  console.log(`[Sequence] Carrier recruitment started for ${carrierEmail} (${schedule.length} steps)`);
   return sequence;
 }
 
@@ -406,6 +438,51 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
       <p>Last note from me — I promise I won't keep filling your inbox.</p>
       <p>If you ever need a reliable freight partner, a last-minute truck, or just want a second opinion on rates — my door is always open. Feel free to reply to this email anytime, even months from now.</p>
       <p>Wishing you and your team a great rest of the quarter.</p>
+    `,
+
+    // ── Carrier Recruitment Templates ──
+    carrier_intro: `
+      <p>Hi ${firstName},</p>
+      <p>I'm Wasih, founder of Silk Route Logistics in Kalamazoo, Michigan. I came across your authority and wanted to reach out.</p>
+      <p>We're a freight brokerage that pays carriers in <strong>3 days, not 30</strong>. No factoring company needed. Our QuickPay program has zero contracts, zero hidden fees, and zero reserve holdback — just a flat 1.5-3% fee that saves our carriers <strong>$3,600+ per year</strong> compared to traditional factoring.</p>
+      <p>If you're running lanes in the Midwest or cross-country, I'd love to get you set up on our load board. We have consistent freight and I personally work with every carrier in our network.</p>
+      <p>Would you have 5 minutes for a quick call, or just reply to this email? I'll get you onboarded same day.</p>
+      <p>Best,</p>
+    `,
+    carrier_quickpay: `
+      <p>Hi ${firstName},</p>
+      <p>Quick follow-up on my last email. I know most carriers are stuck choosing between waiting 30-45 days for broker payment or paying 4-5% to a factoring company. That math is brutal — a 30-day payment delay costs the average owner-operator <strong>$13,000-$48,000 per year</strong> in real costs (bridge financing, missed fuel discounts, deferred maintenance).</p>
+      <p>At SRL, our QuickPay works differently:</p>
+      <ul style="line-height:2">
+        <li><strong>1.5-3% flat fee</strong> — no ACH fees, no processing fees, no monthly minimums</li>
+        <li><strong>No contracts</strong> — use it on any load, skip it on others, cancel anytime</li>
+        <li><strong>No reserve holdback</strong> — you get the full amount minus the fee, same week</li>
+        <li><strong>No credit check on you</strong> — we vet the shippers, not the carriers</li>
+      </ul>
+      <p>Plus, our top carriers earn their way to PLATINUM tier — <strong>1.5% QuickPay with Net-3 payment</strong>. The more loads you run with us, the better your terms get.</p>
+      <p>Interested? Just reply and I'll send you a registration link.</p>
+      <p>Wasih</p>
+    `,
+    carrier_compliance: `
+      <p>Hi ${firstName},</p>
+      <p>One more thing I wanted to mention — every carrier in our network gets a free compliance dashboard. No charge, no catch.</p>
+      <p>What you get:</p>
+      <ul style="line-height:2">
+        <li><strong>FMCSA authority monitoring</strong> — we alert you if anything changes on your DOT record</li>
+        <li><strong>CSA score tracking</strong> — see your BASIC scores and get notified of inspection results</li>
+        <li><strong>Insurance expiry alerts</strong> — never let your COI lapse by accident</li>
+        <li><strong>Safety scorecard</strong> — track your on-time rate, claim ratio, and performance tier</li>
+      </ul>
+      <p>We also have a strict <strong>no double-brokering policy</strong>. Your load stays on your truck. Period. That's our commitment — we think it's the minimum a carrier should expect from a broker.</p>
+      <p>If any of this sounds useful, reply and I'll get you set up.</p>
+      <p>Wasih</p>
+    `,
+    carrier_final: `
+      <p>Hi ${firstName},</p>
+      <p>Last note from me — I respect your inbox and won't keep sending.</p>
+      <p>If you ever need consistent freight on your lanes, faster payment than your current broker, or just want to see what loads we have available — reply to this email anytime. Even months from now.</p>
+      <p>We're a small operation that treats carriers like partners, not interchangeable trucks. Our best carriers earn PLATINUM status: 1.5% QuickPay, Net-3 payment, priority load access, and a dedicated point of contact (me).</p>
+      <p>Wishing you safe miles and good rates.</p>
     `,
   };
 
