@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import {
   Crosshair, Package, Truck, Search, ChevronRight, X, Download,
   Calendar, DollarSign, MapPin, CheckCircle, Loader2, AlertTriangle,
+  Zap, Clock, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { downloadCSV } from "@/lib/csvExport";
 
@@ -95,6 +96,13 @@ export default function DispatchBoardPage() {
   const [equipFilter, setEquipFilter] = useState("");
   const [confirmingAssign, setConfirmingAssign] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
+
+  // Waterfall tendering state
+  const [showWaterfall, setShowWaterfall] = useState(false);
+  const [waterfallExpiry, setWaterfallExpiry] = useState(60);
+  const [waterfallLoading, setWaterfallLoading] = useState(false);
+  const [waterfallResult, setWaterfallResult] = useState<{ campaignId: string; tenderCount: number } | null>(null);
+  const [waterfallStatusLoadId, setWaterfallStatusLoadId] = useState<string | null>(null);
 
   /* ── Data queries ────────────────────────────────────────── */
 
@@ -212,6 +220,47 @@ export default function DispatchBoardPage() {
     },
   });
 
+  // Waterfall status query
+  const { data: waterfallStatus, refetch: refetchWaterfall } = useQuery({
+    queryKey: ["waterfall-status", waterfallStatusLoadId],
+    queryFn: () => api.get(`/loads/${waterfallStatusLoadId}/waterfall`).then((r) => r.data),
+    enabled: !!waterfallStatusLoadId,
+    refetchInterval: 15000,
+  });
+
+  // Launch waterfall
+  const launchWaterfall = async () => {
+    if (!selectedLoad || !matchScores || matchScores.length === 0) return;
+    setWaterfallLoading(true);
+    try {
+      const topMatches = matchScores.slice(0, 5);
+      const candidates = topMatches.map((m: CarrierMatch) => {
+        const carrier = (carriersData || []).find((c) => c.userId === m.carrierId);
+        return {
+          carrierId: carrier?.id || m.carrierId,
+          carrierUserId: m.carrierId,
+          companyName: carrier?.companyName || "Unknown",
+          score: m.score,
+          offeredRate: selectedLoad.rate,
+        };
+      }).filter((c: any) => c.carrierId);
+
+      const result = await api.post(`/loads/${selectedLoad.id}/waterfall`, {
+        candidates,
+        expirationMinutes: waterfallExpiry,
+      });
+      setWaterfallResult({ campaignId: result.data.campaignId, tenderCount: result.data.tenders.length });
+      setWaterfallStatusLoadId(selectedLoad.id);
+      setShowWaterfall(false);
+      queryClient.invalidateQueries({ queryKey: ["dispatch-loads"] });
+      setTimeout(() => setWaterfallResult(null), 5000);
+    } catch (err) {
+      console.error("Waterfall launch failed:", err);
+    } finally {
+      setWaterfallLoading(false);
+    }
+  };
+
   const estimatedMargin = selectedLoad
     ? Math.round(selectedLoad.rate * 0.15)
     : 0;
@@ -256,6 +305,12 @@ export default function DispatchBoardPage() {
             <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2 text-sm text-green-400">
               <CheckCircle className="w-4 h-4" />
               {assignSuccess}
+            </div>
+          )}
+          {waterfallResult && (
+            <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-lg px-4 py-2 text-sm text-purple-400">
+              <Zap className="w-4 h-4" />
+              Waterfall {waterfallResult.campaignId} launched — {waterfallResult.tenderCount} carriers queued
             </div>
           )}
         </div>
@@ -431,6 +486,22 @@ export default function DispatchBoardPage() {
                   Filtered: {equipAbbrev(selectedLoad.equipmentType)} match
                 </span>
               )}
+              {selectedLoad && matchScores && matchScores.length >= 2 && (
+                <button
+                  onClick={() => setShowWaterfall(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-lg hover:bg-purple-500/30 transition cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5" /> Waterfall Tender
+                </button>
+              )}
+              {selectedLoad && (
+                <button
+                  onClick={() => setWaterfallStatusLoadId(waterfallStatusLoadId === selectedLoad.id ? null : selectedLoad.id)}
+                  className="text-xs text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                >
+                  {waterfallStatusLoadId === selectedLoad.id ? <ChevronUp className="w-3.5 h-3.5 inline" /> : <ChevronDown className="w-3.5 h-3.5 inline" />} Status
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <select
@@ -564,6 +635,143 @@ export default function DispatchBoardPage() {
           </div>
         </div>
       </div>
+
+      {/* Waterfall Status Panel */}
+      {waterfallStatusLoadId && waterfallStatus && (
+        <div className="mt-4 bg-white/5 border border-purple-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-purple-400" />
+              <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wider">Waterfall Status</h3>
+              <span className="text-xs text-slate-400 font-mono">{waterfallStatus.referenceNumber}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                waterfallStatus.accepted ? "bg-green-500/20 text-green-400"
+                : waterfallStatus.allDeclined ? "bg-red-500/20 text-red-400"
+                : "bg-purple-500/20 text-purple-400"
+              }`}>
+                {waterfallStatus.accepted ? "ACCEPTED" : waterfallStatus.allDeclined ? "ALL DECLINED" : "IN PROGRESS"}
+              </span>
+              <button onClick={() => refetchWaterfall()} className="text-xs text-slate-500 hover:text-slate-300 cursor-pointer">Refresh</button>
+              <button onClick={() => setWaterfallStatusLoadId(null)} className="text-slate-500 hover:text-slate-300 cursor-pointer">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {(waterfallStatus.tenders || []).map((t: any, i: number) => (
+              <div key={t.id} className={`flex-shrink-0 w-48 p-3 rounded-lg border ${
+                t.status === "ACCEPTED" ? "border-green-500/30 bg-green-500/10"
+                : t.status === "OFFERED" ? "border-purple-500/30 bg-purple-500/10"
+                : t.status === "COUNTERED" ? "border-amber-500/30 bg-amber-500/10"
+                : t.status === "DECLINED" ? "border-red-500/20 bg-red-500/5"
+                : "border-white/10 bg-white/5"
+              }`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] text-slate-400">#{t.sequence}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                    t.status === "ACCEPTED" ? "bg-green-500/30 text-green-400"
+                    : t.status === "OFFERED" ? "bg-purple-500/30 text-purple-400"
+                    : t.status === "COUNTERED" ? "bg-amber-500/30 text-amber-400"
+                    : t.status === "DECLINED" ? "bg-red-500/30 text-red-400"
+                    : "bg-slate-500/30 text-slate-400"
+                  }`}>{t.status}</span>
+                </div>
+                <div className="text-xs text-white font-medium truncate">{t.companyName}</div>
+                <div className="flex justify-between mt-1 text-[10px] text-slate-400">
+                  <span>${t.offeredRate?.toLocaleString()}</span>
+                  {t.counterRate && <span className="text-amber-400">Counter: ${t.counterRate.toLocaleString()}</span>}
+                </div>
+                {t.expiresAt && t.status === "OFFERED" && (
+                  <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500">
+                    <Clock className="w-2.5 h-2.5" />
+                    Expires {new Date(t.expiresAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Waterfall Launch Modal */}
+      {showWaterfall && selectedLoad && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowWaterfall(false)} />
+          <div className="relative bg-[#0F1117] border border-white/10 rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-purple-400" />
+                <h3 className="text-sm font-bold text-white">Waterfall Tender</h3>
+              </div>
+              <button onClick={() => setShowWaterfall(false)} className="text-slate-500 hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-white/5 rounded-lg">
+              <div className="text-xs text-slate-400">Load</div>
+              <div className="text-sm text-white font-medium">{selectedLoad.referenceNumber}</div>
+              <div className="text-xs text-slate-500 mt-0.5">
+                {selectedLoad.originCity}, {selectedLoad.originState} → {selectedLoad.destCity}, {selectedLoad.destState}
+              </div>
+              <div className="text-xs text-gold mt-1">Rate: ${selectedLoad.rate.toLocaleString()}</div>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-xs text-slate-400 mb-2">Top {Math.min(matchScores?.length || 0, 5)} matched carriers will be tendered sequentially</div>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {(matchScores || []).slice(0, 5).map((m: CarrierMatch, i: number) => {
+                  const carrier = (carriersData || []).find((c) => c.userId === m.carrierId);
+                  return (
+                    <div key={m.carrierId} className="flex items-center gap-3 p-2 bg-white/5 rounded text-xs">
+                      <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
+                      <span className="text-white flex-1 truncate">{carrier?.companyName || "Unknown"}</span>
+                      <span className={`font-bold ${m.score >= 80 ? "text-green-400" : m.score >= 50 ? "text-yellow-400" : "text-slate-400"}`}>
+                        {m.score}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="text-xs text-slate-400 block mb-1.5">Expiration per carrier (minutes)</label>
+              <select
+                value={waterfallExpiry}
+                onChange={(e) => setWaterfallExpiry(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-purple-500/50 cursor-pointer"
+              >
+                <option value={30} style={{ backgroundColor: "#0F1117" }}>30 minutes</option>
+                <option value={60} style={{ backgroundColor: "#0F1117" }}>1 hour</option>
+                <option value={120} style={{ backgroundColor: "#0F1117" }}>2 hours</option>
+                <option value={240} style={{ backgroundColor: "#0F1117" }}>4 hours</option>
+                <option value={480} style={{ backgroundColor: "#0F1117" }}>8 hours</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={launchWaterfall}
+                disabled={waterfallLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white font-semibold rounded-lg text-sm hover:bg-purple-500 disabled:opacity-50 transition cursor-pointer"
+              >
+                {waterfallLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                Launch Waterfall
+              </button>
+              <button
+                onClick={() => setShowWaterfall(false)}
+                className="px-4 py-2.5 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

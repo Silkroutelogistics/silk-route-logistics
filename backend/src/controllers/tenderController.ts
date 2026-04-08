@@ -36,6 +36,17 @@ export async function createTender(req: AuthRequest, res: Response) {
       where: { id: load.id },
       data: { status: "TENDERED", tenderedAt: new Date(), tenderedById: req.user!.id },
     });
+
+    // Structured event: Load POSTED → TENDERED
+    await prisma.loadTrackingEvent.create({
+      data: {
+        loadId: load.id,
+        eventType: "STATUS_CHANGE",
+        statusFrom: "POSTED",
+        statusTo: "TENDERED",
+        locationSource: "AE_MANUAL",
+      },
+    });
   }
 
   await prisma.notification.create({
@@ -89,6 +100,17 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       data: { status: "DECLINED" },
     }),
   ]);
+
+  // Structured event: Load TENDERED → BOOKED
+  await prisma.loadTrackingEvent.create({
+    data: {
+      loadId: load.id,
+      eventType: "STATUS_CHANGE",
+      statusFrom: load.status,
+      statusTo: "BOOKED",
+      locationSource: "AE_MANUAL",
+    },
+  });
 
   // Auto-create Shipment linked to this load
   const shipmentNumber = await nextShipmentNumber();
@@ -274,6 +296,18 @@ export async function processExpiredTenders() {
       const load = await prisma.load.findUnique({ where: { id: loadId } });
       if (load && load.status === "TENDERED") {
         await prisma.load.update({ where: { id: loadId }, data: { status: "POSTED" } });
+
+        // Structured event: Load TENDERED → POSTED (all tenders expired)
+        await prisma.loadTrackingEvent.create({
+          data: {
+            loadId,
+            eventType: "STATUS_CHANGE",
+            statusFrom: "TENDERED",
+            statusTo: "POSTED",
+            locationSource: "AE_MANUAL",
+          },
+        });
+
         loadsReverted++;
 
         // Notify poster
