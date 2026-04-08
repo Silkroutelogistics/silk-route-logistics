@@ -703,6 +703,7 @@ model User {
   contractRates       ContractRate[]       @relation("ContractRateCreator")
   rfpBids             RfpBid[]             @relation("RfpCreator")
   vettingReports      VettingReport[]      @relation("VettingReportUser")
+  webhooks            WebhookEndpoint[]    @relation("UserWebhooks")
 
   @@index([email])
   @@index([role])
@@ -3610,4 +3611,28 @@ enum RfpStatus {
   AWARDED
   DECLINED
   EXPIRED
+}
+
+// ─── Webhook Subscriptions ──────────────────────────────
+
+model WebhookEndpoint {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  secret      String                // HMAC signing secret
+  events      String[]              // e.g. ["LOAD_BOOKED", "LOAD_DELIVERED"]
+  headers     Json?                 // custom headers
+  isEnabled   Boolean  @default(true)
+  userId      String                // who created it
+  user        User     @relation("UserWebhooks", fields: [userId], references: [id], onDelete: Cascade)
+  failCount   Int      @default(0)  // consecutive failures
+  lastFiredAt DateTime?
+  lastStatus  Int?                  // last HTTP status
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([userId])
+  @@index([isEnabled, deletedAt])
+  @@map("webhook_endpoints")
 }

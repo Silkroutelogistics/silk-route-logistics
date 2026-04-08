@@ -33,6 +33,7 @@ import carriersRoutes from "./carriers";
 import shipperRoutes from "./shippers";
 import communicationRoutes from "./communications";
 import webhookRoutes from "./webhooks";
+import webhookSubscriptionRoutes from "./webhookSubscriptions";
 import emailRoutes from "./email";
 import carrierAuthRoutes from "./carrierAuth";
 import carrierLoadRoutes from "./carrierLoads";
@@ -152,6 +153,7 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
 router.use("/tracking", trackingRoutes);
 router.use("/blog", blogRoutes);
 router.use("/webhooks", webhookRoutes);
+router.use("/webhook-subscriptions", webhookSubscriptionRoutes);
 router.use("/", websiteRoutes);
 
 // --- API Routes ---
