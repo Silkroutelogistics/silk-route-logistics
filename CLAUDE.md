@@ -52,7 +52,28 @@ These rules override all defaults. Follow them exactly.
 - localStorage is acceptable ONLY for: UI preferences (theme, sidebar state, view mode).
 - When migrating localStorage to DB, keep localStorage as instant-UI cache but always read/write to API.
 
-## 10. Company Information (Single Source of Truth)
+## 10. State Machines for Load & Carrier Lifecycle (claw-code pattern)
+- Every entity with a lifecycle (Load, Carrier, Invoice, Sequence) has defined states and valid transitions.
+- Load: `DRAFT → POSTED → TENDERED → BOOKED → DISPATCHED → AT_PICKUP → LOADED → IN_TRANSIT → AT_DELIVERY → DELIVERED → COMPLETED`
+- Carrier: `PROSPECT → CONTACTED → INTERESTED → REGISTERED → PENDING → APPROVED` (or `REJECTED`)
+- Invoice: `DRAFT → SUBMITTED → SENT → UNDER_REVIEW → APPROVED → FUNDED → PAID`
+- Sequence: `ACTIVE → PAUSED → COMPLETED → STOPPED`
+- Invalid transitions should be rejected (e.g., can't go from POSTED directly to DELIVERED).
+- State changes should be observable — log every transition with timestamp and actor.
+
+## 11. Lane-Based Development (claw-codes pattern)
+- For features touching multiple systems (e.g., carrier vetting has FMCSA, OFAC, identity, docs, scoring), split into independent lanes.
+- Each lane has its own scope, can be built/tested/merged independently.
+- Track lane status in commit messages: `[Lane 3/5] OFAC screening integration`
+- Lanes reduce merge conflicts and enable parallel work across sessions.
+- Document active lanes in the relevant wiki page's "Open Threads" section.
+
+## 12. Future Patterns (documented, not yet implemented)
+- **Hook system (claude-brain):** PreToolUse/PostToolUse interceptors for permission gates and compliance checks. Plan for Q2.
+- **Cost tracker modularization (src-repo):** Split token counting, cost calculation, and analytics into separate modules. Plan for Q2.
+- **Feature flags:** Currently using env vars. Consider build-time elimination when/if migrating to Bun.
+
+## 13. Company Information (Single Source of Truth)
 - Company: Silk Route Logistics Inc.
 - Location: Kalamazoo, Michigan
 - MC#: 01794414
