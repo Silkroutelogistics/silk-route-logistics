@@ -75,4 +75,6 @@ The Compass Engine is SRL's proprietary carrier vetting system that runs 35 comp
 - `backend/src/services/samGovService.ts` — federal exclusion check
 - `backend/src/services/csaBasicService.ts` — CSA BASIC scores
 
+See also: [[carrier-onboarding]], [[load-lifecycle]], [[data-flows]], [[security-architecture]]
+
 [Source: carrierVettingService.ts, project audit Apr 2026, compass check analysis]

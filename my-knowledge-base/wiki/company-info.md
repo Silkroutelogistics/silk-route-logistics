@@ -29,4 +29,6 @@ Silk Route Logistics Inc. is a technology-driven freight brokerage based in Kala
 - Logo: Compass with silk route path (navy ring, gold left half, white highlight)
 - Email sender: "Wasih Haider" for outreach, "noreply@" for transactional
 
-[Source: CLAUDE.md, project audit Apr 2026]
+See also: [[tech-stack]], [[security-architecture]], [[version-history]], [[data-flows]]
+
+[Source: CLAUDE.md, project audit Apr 2026, SYSTEM_ARCHITECTURE.md]
