@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
+import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 
@@ -135,6 +136,10 @@ export default function LoadsPage() {
   const [activeTab, setActiveTab] = useState<StatusTab>("all");
   const [laneFilter, setLaneFilter] = useState<string | null>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>("details");
+
+  /* ---- Clone / Create state ---- */
+  const [showCreate, setShowCreate] = useState(false);
+  const [cloneData, setCloneData] = useState<Record<string, unknown> | null>(null);
 
   /* ---- Tender / Compliance state ---- */
   const [showTender, setShowTender] = useState(false);
@@ -399,6 +404,18 @@ export default function LoadsPage() {
           <h1 className="text-2xl font-bold text-white">Load Board</h1>
           <p className="text-slate-400 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
         </div>
+        {canCreate && (
+          <button onClick={() => { setCloneData(null); setShowCreate(true); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gold text-navy font-semibold rounded-lg text-xs hover:bg-gold/90 transition cursor-pointer">
+            + New Load
+          </button>
+        )}
+        {load && canCreate && (
+          <button onClick={() => { setCloneData(load as unknown as Record<string, unknown>); setShowCreate(true); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+            Clone Load
+          </button>
+        )}
         {filteredLoads.length > 0 && (
           <button onClick={() => downloadCSV(
             filteredLoads.map((l) => ({
@@ -810,6 +827,9 @@ export default function LoadsPage() {
 
           {/* Rate confirmation modal */}
           <RateConfirmationModal open={showRateConf} onClose={() => setShowRateConf(false)} load={showRateConf ? load : null} />
+
+          {/* Create / Clone load modal */}
+          <CreateLoadModal open={showCreate} onClose={() => { setShowCreate(false); setCloneData(null); }} cloneFrom={cloneData} />
         </>
       )}
 

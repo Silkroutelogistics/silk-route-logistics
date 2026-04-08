@@ -27,9 +27,9 @@ const US_STATES = [
 const CA_PROVINCES = ["AB","BC","MB","NB","NL","NT","NS","NU","ON","PE","QC","SK","YT"];
 const NON_PERISHABLE = ["auto parts", "steel", "lumber", "paper", "electronics", "furniture", "machinery", "plastics"];
 
-interface Props { open: boolean; onClose: () => void; }
+interface Props { open: boolean; onClose: () => void; cloneFrom?: Record<string, unknown> | null; }
 
-export function CreateLoadModal({ open, onClose }: Props) {
+export function CreateLoadModal({ open, onClose, cloneFrom }: Props) {
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [attempted, setAttempted] = useState<Record<number, boolean>>({});
@@ -53,6 +53,39 @@ export function CreateLoadModal({ open, onClose }: Props) {
     rate: "", accessorials: [] as string[], specialInstructions: "",
     contactName: "", contactPhone: "", contactEmail: "",
   });
+
+  // Populate form from cloned load
+  useEffect(() => {
+    if (!cloneFrom) return;
+    setForm((prev) => ({
+      ...prev,
+      originAddress: String(cloneFrom.originAddress || ""),
+      originCity: String(cloneFrom.originCity || ""),
+      originState: String(cloneFrom.originState || ""),
+      originZip: String(cloneFrom.originZip || ""),
+      destAddress: String(cloneFrom.destAddress || ""),
+      destCity: String(cloneFrom.destCity || ""),
+      destState: String(cloneFrom.destState || ""),
+      destZip: String(cloneFrom.destZip || ""),
+      distance: cloneFrom.distance ? String(cloneFrom.distance) : "",
+      equipmentType: String(cloneFrom.equipmentType || "Dry Van"),
+      commodity: String(cloneFrom.commodity || ""),
+      weight: cloneFrom.weight ? String(cloneFrom.weight) : "",
+      pieces: cloneFrom.pieces ? String(cloneFrom.pieces) : "",
+      freightClass: String(cloneFrom.freightClass || ""),
+      rate: cloneFrom.rate ? String(cloneFrom.rate) : "",
+      accessorials: Array.isArray(cloneFrom.accessorials) ? cloneFrom.accessorials as string[] : [],
+      specialInstructions: String(cloneFrom.specialInstructions || ""),
+      contactName: String(cloneFrom.contactName || ""),
+      contactPhone: String(cloneFrom.contactPhone || ""),
+      contactEmail: String(cloneFrom.contactEmail || ""),
+      hazmat: Boolean(cloneFrom.hazmat),
+      temperatureControlled: Boolean(cloneFrom.temperatureControlled),
+      tempMin: cloneFrom.tempMin ? String(cloneFrom.tempMin) : "",
+      tempMax: cloneFrom.tempMax ? String(cloneFrom.tempMax) : "",
+    }));
+    setStep(1);
+  }, [cloneFrom]);
 
   const [distanceLoading, setDistanceLoading] = useState(false);
   const [distanceAuto, setDistanceAuto] = useState(false);
