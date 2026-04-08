@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { createTender, acceptTender, counterTender, declineTender, getCarrierTenders, getLoadTenders } from "../controllers/tenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { launchWaterfall, getWaterfallStatus, WaterfallCandidate } from "../services/waterfallTenderService";
+import { isFeatureEnabled } from "../config/features";
 import { z } from "zod";
 
 const router = Router();
@@ -33,6 +34,10 @@ router.post(
   "/loads/:id/waterfall",
   authorize("BROKER", "ADMIN", "CEO", "DISPATCH"),
   async (req: AuthRequest, res: Response) => {
+    if (!isFeatureEnabled("waterfallTendering")) {
+      res.status(403).json({ error: "Waterfall tendering is not enabled" });
+      return;
+    }
     try {
       const parsed = waterfallSchema.parse(req.body);
       const result = await launchWaterfall({

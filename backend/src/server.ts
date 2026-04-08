@@ -157,6 +157,12 @@ app.get("/api/build-version", (_req, res) => {
   res.json({ version: BUILD_VERSION });
 });
 
+// ─── Feature Flags (public, no auth needed) ──────────────────
+import { features } from "./config/features";
+app.get("/api/features", (_req, res) => {
+  res.json(features);
+});
+
 // ─── Health Check (outside rate limiter) ────────────────────
 app.get("/health", async (_req, res) => {
   let dbOk = false;
