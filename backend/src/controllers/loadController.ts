@@ -11,6 +11,7 @@ import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelle
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
 import { notifyMatchedCarriers } from "../services/carrierOutreachService";
+import { notifyLoadStatusChange } from "../services/notificationService";
 import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getLoadAuditHistory } from "../services/loadAuditService";
 import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
 
@@ -438,10 +439,17 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     });
   }
 
-  // Shipper milestone tracking email
+  // In-app notification for both poster and carrier on every status change
+  notifyLoadStatusChange(load.id, status).catch((e) => console.error("[NotificationService] notifyLoadStatusChange error:", e.message));
+
+  // Shipper milestone tracking email (fires on every status change)
   sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
 
   // Contact email load milestone notifications
+  if (["BOOKED", "DISPATCHED"].includes(status)) {
+    // Shipper should know when a carrier is assigned and when load is dispatched
+    sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+  }
   if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
     sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
   }
