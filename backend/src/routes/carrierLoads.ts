@@ -9,6 +9,7 @@ import { uploadFile } from "../services/storageService";
 import { nextShipmentNumber } from "../controllers/shipmentController";
 import { sendPODToContact } from "../services/shipperLoadNotifyService";
 import { onLoadStatusChange as aiOnLoadStatusChange, onCarrierResponse } from "../services/aiLearningLoop/feedbackCollector";
+import { processGpsUpdate } from "../services/geofenceService";
 
 const router = Router();
 
@@ -510,6 +511,25 @@ router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRe
   }
 
   res.json(cc);
+});
+
+// ─── GPS Location Update (Geofence Check) ───────────────────────────
+// Carrier app sends periodic location pings; service auto-detects
+// arrival/departure at stops and triggers status changes.
+router.post("/gps-update", async (req: AuthRequest, res: Response) => {
+  try {
+    const { latitude, longitude } = req.body;
+    if (!latitude || !longitude) {
+      res.status(400).json({ error: "latitude and longitude required" });
+      return;
+    }
+    const carrierId = req.user!.id;
+    await processGpsUpdate(carrierId, Number(latitude), Number(longitude));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[GPS] Update error:", err);
+    res.status(500).json({ error: "Failed to process GPS update" });
+  }
 });
 
 export default router;

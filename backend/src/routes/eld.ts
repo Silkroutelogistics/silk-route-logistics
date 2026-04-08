@@ -4,6 +4,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
 import { processSamsaraLocations } from "../services/samsaraService";
 import { processMotiveLocations } from "../services/motiveService";
+import { checkGeofence } from "../services/geofenceService";
 
 const router = Router();
 
@@ -90,6 +91,24 @@ router.post("/sync", authorize("ADMIN") as any, async (_req: AuthRequest, res: R
       totalMatched: (sRes.matched || 0) + (mRes.matched || 0),
     });
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── ELD Webhook: GPS Ping with Geofence Check ──────────────────────
+// External ELD providers (Samsara, Motive, etc.) send location updates
+// via webhook. This checks geofences and auto-triggers status changes.
+router.post("/webhook/location", async (req: AuthRequest, res: Response) => {
+  try {
+    const { loadId, latitude, longitude, source } = req.body;
+    if (!loadId || !latitude || !longitude) {
+      res.status(400).json({ error: "loadId, latitude, and longitude required" });
+      return;
+    }
+    const events = await checkGeofence(loadId, Number(latitude), Number(longitude), source || "ELD");
+    res.json({ events });
+  } catch (err: any) {
+    console.error("[ELD Webhook] Location error:", err);
     res.status(500).json({ error: err.message });
   }
 });
