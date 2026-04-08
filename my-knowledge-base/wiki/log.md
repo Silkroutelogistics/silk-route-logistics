@@ -8,6 +8,9 @@ created: 2026-04-07
 ## [2026-04-07] ingest | Initial knowledge base creation
 Seeded wiki from full system audit conducted on Apr 5-7, 2026. Created index, company-info, compass-engine, version-history pages. Knowledge base covers freight operations, compliance, sales/CRM, system architecture, and company details.
 
+## [2026-04-07] lint | Health check v2 — post full ingestion
+Wiki health: 7/10 (up from 5/10). 18 pages (+50%), 29/29 sources ingested (100%), 49 citations (+58%). 16 broken links remain (all are code-doc gaps, not research gaps). 0 orphans. 7 contradictions (2 new). 2 near-orphans (srl-vision, tms-comparison need more backlinks). Top 3 articles to create: invoicing-payments (money flow), carrier-onboarding (supply funnel), performance-dashboard (actuals tracking). Output: wiki/lint-report-2026-04-07-v2.md
+
 ## [2026-04-07] query | Audit #3 — post full ingestion (29/29 sources)
 All 5 diagnostic queries re-run. Gaps evolved: 16 placeholder pages remain but are now specific (code docs needed, not research). Zero external data in wiki. No actuals tracking. 2 new contradictions: Compass 40% vs 71% (stale raw source), SRCPP/CPP/Caravan naming confusion. Critical new insight: QP capital ceiling at ~35 simultaneous loads could be hit if carrier recruitment succeeds. 500-word compound moat briefing generated. Output: outputs/query-audit-3-2026-04-07.md
 
