@@ -594,5 +594,15 @@ export function startSchedulers() {
     await withLock("shipper-eta-updates", 15 * 60 * 1000, dailyETAUpdates);
   });
 
+  // Detention tracking: weekly Sunday 7 AM ET (12:00 UTC)
+  cron.schedule("0 12 * * 0", async () => {
+    console.log("[Scheduler] Running facility detention tracking...");
+    await withLock("detention-tracking", 30 * 60 * 1000, async () => {
+      const { computeFacilityDwellTimes } = await import("./detentionTrackingService");
+      const result = await computeFacilityDwellTimes();
+      console.log(`[Scheduler] Detention: ${result.facilitiesProcessed} facilities, ${result.highDetention} high-detention, ${result.updated} updated`);
+    });
+  });
+
   console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);
 }

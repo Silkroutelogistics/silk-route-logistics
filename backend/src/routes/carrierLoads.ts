@@ -65,7 +65,23 @@ router.get("/available", async (req: AuthRequest, res: Response) => {
     prisma.load.count({ where }),
   ]);
 
-  res.json({ loads, total, page, totalPages: Math.ceil(total / limit) });
+  // Enrich loads with facility detention warnings
+  const { getFacilityDetentionWarning } = await import("../services/detentionTrackingService");
+  const enrichedLoads = await Promise.all(
+    loads.map(async (load) => {
+      const pickupWarning = await getFacilityDetentionWarning("", load.originCity, load.originState);
+      const deliveryWarning = await getFacilityDetentionWarning("", load.destCity, load.destState);
+      return {
+        ...load,
+        detentionWarnings: {
+          pickup: pickupWarning,
+          delivery: deliveryWarning,
+        },
+      };
+    })
+  );
+
+  res.json({ loads: enrichedLoads, total, page, totalPages: Math.ceil(total / limit) });
 });
 
 // GET /api/carrier-loads/my-loads — Carrier's assigned loads
