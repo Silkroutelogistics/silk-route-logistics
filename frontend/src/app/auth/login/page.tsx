@@ -58,8 +58,7 @@ export default function EmployeeLoginPage() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
 
-  const BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:4000" : "https://api.silkroutelogistics.ai";
+  const BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").replace(/\/api$/, "");
   const fetchOpts: RequestInit = { credentials: "include" };
 
   useEffect(() => {
