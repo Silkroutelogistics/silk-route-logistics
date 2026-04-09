@@ -317,12 +317,6 @@ enum FactoringTransactionType {
   WITHDRAWAL
 }
 
-enum ReconciliationStatus {
-  IN_PROGRESS
-  RECONCILED
-  DISCREPANCY
-}
-
 enum ApprovalType {
   CARRIER_PAYMENT
   INVOICE_VOID
@@ -683,7 +677,6 @@ model User {
   filedDisputes      PaymentDispute[]   @relation("DisputeFiler")
   resolvedDisputes   PaymentDispute[]   @relation("DisputeResolver")
   factoringEntries   FactoringFund[]    @relation("FactoringCreator")
-  reconciliations    BankReconciliation[] @relation("ReconciliationUser")
   communications     Communication[]
   filedClaims        Claim[]            @relation("ClaimFiler")
   assignedClaims     Claim[]            @relation("ClaimAssignee")
@@ -1525,30 +1518,6 @@ model FactoringFund {
   @@index([createdAt])
   @@index([transactionType])
   @@map("factoring_fund")
-}
-
-// ─── Bank Reconciliation ──────────────────────────────────
-
-model BankReconciliation {
-  id                  String          @id @default(cuid())
-  accountName         String
-  periodStart         DateTime
-  periodEnd           DateTime
-  bankStatementBalance Float
-  systemBalance       Float
-  difference          Float
-  status              ReconciliationStatus @default(IN_PROGRESS)
-  matchedCount        Int             @default(0)
-  unmatchedCount      Int             @default(0)
-  reconciledById      String?
-  reconciledBy        User?           @relation("ReconciliationUser", fields: [reconciledById], references: [id])
-  reconciledAt        DateTime?
-  csvUploadUrl        String?
-  notes               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-
-  @@map("bank_reconciliations")
 }
 
 // ─── Settlement ──────────────────────────────────────────
@@ -3001,20 +2970,6 @@ model LaneRateIntelligence {
   @@index([confidence])
   @@index([updatedAt])
   @@map("lane_rate_intelligence")
-}
-
-model CarrierScoreEvent {
-  id        String   @id @default(uuid())
-  carrierId String
-  eventType String
-  adjustment Float
-  reason    String
-  loadId    String?
-  createdAt DateTime @default(now())
-
-  @@index([carrierId])
-  @@index([createdAt])
-  @@map("carrier_score_events")
 }
 
 model DemandForecast {
