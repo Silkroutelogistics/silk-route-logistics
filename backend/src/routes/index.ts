@@ -149,6 +149,10 @@ router.get("/audit-trail", authenticate, authorize("ADMIN") as any, async (req: 
   }
 });
 
+// --- API Documentation ---
+import apiDocsRoutes from "./apiDocs";
+router.use("/docs", apiDocsRoutes);
+
 // --- Public Routes (no auth) ---
 router.use("/tracking", trackingRoutes);
 router.use("/blog", blogRoutes);
