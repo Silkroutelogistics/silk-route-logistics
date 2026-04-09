@@ -6,6 +6,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 
+interface DocItem { id: string; fileName: string; fileUrl: string; docType?: string; type?: string; loadRef?: string; createdAt?: string; uploaded?: string; uploadedAt?: string }
+interface LoadWithDocs { id: string; referenceNumber: string; status?: string; originCity?: string; originState?: string; destCity?: string; destState?: string; documents?: DocItem[]; rateConfirmationPdfUrl?: string; podUrl?: string; bolPdfUrl?: string }
+
 const DOC_TYPE_OPTIONS = [
   { value: "BOL", label: "Bill of Lading" },
   { value: "POD", label: "Proof of Delivery" },
@@ -70,10 +73,10 @@ export default function CarrierDocumentsPage() {
   const loads = myLoads?.loads || [];
 
   // Collect all documents from loads
-  const loadDocs: any[] = [];
-  loads.forEach((load: any) => {
+  const loadDocs: DocItem[] = [];
+  loads.forEach((load: LoadWithDocs) => {
     if (load.documents) {
-      load.documents.forEach((doc: any) => {
+      load.documents.forEach((doc: DocItem) => {
         loadDocs.push({ ...doc, loadRef: load.referenceNumber });
       });
     }
@@ -155,7 +158,7 @@ export default function CarrierDocumentsPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none bg-white"
                 >
                   <option value="">Select a load...</option>
-                  {loads.map((load: any) => (
+                  {loads.map((load: LoadWithDocs) => (
                     <option key={load.id} value={load.id}>{load.referenceNumber} — {load.originCity} → {load.destCity}</option>
                   ))}
                 </select>
@@ -199,7 +202,7 @@ export default function CarrierDocumentsPage() {
           </div>
 
           {uploadMutation.isError && (
-            <p className="text-xs text-red-500 mt-2">{(uploadMutation.error as any)?.response?.data?.error || "Upload failed"}</p>
+            <p className="text-xs text-red-500 mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || "Upload failed"}</p>
           )}
 
           <div className="flex justify-end mt-4">
@@ -239,7 +242,7 @@ export default function CarrierDocumentsPage() {
               <Shield size={16} className="text-violet-500" /> Compliance Documents
             </h3>
           </div>
-          {complianceDocs.map((doc: any, i: number) => (
+          {complianceDocs.map((doc: DocItem, i: number) => (
             <div key={doc.id || i} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-md bg-violet-500/10 flex items-center justify-center">
@@ -268,7 +271,7 @@ export default function CarrierDocumentsPage() {
         {loadDocs.length === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-gray-400">No load documents yet</div>
         ) : (
-          loadDocs.slice(0, 20).map((doc: any) => (
+          loadDocs.slice(0, 20).map((doc: DocItem) => (
             <div key={doc.id} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-md bg-red-500/10 flex items-center justify-center">
