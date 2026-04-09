@@ -16,8 +16,8 @@ router.post("/", upload.array("files", 5), uploadDocuments as any);
 // List documents with filters
 router.get("/", getDocuments as any);
 
-// Download a document
-router.get("/:id/download", downloadDocument as any);
+// Download a document (any authenticated user with a valid role)
+router.get("/:id/download", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "AE", "CARRIER", "SHIPPER") as any, downloadDocument as any);
 
 // Generate rate confirmation for a load
 router.post(
@@ -26,7 +26,7 @@ router.post(
   generateRateConfirmation as any
 );
 
-// Delete a document
-router.delete("/:id", deleteDocument as any);
+// Delete a document (admin/management only)
+router.delete("/:id", authorize("ADMIN", "CEO") as any, deleteDocument as any);
 
 export default router;

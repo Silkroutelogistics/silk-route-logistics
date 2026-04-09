@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createTenderSchema, counterTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
+import { hooks } from "../lib/hooks";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -36,17 +37,7 @@ export async function createTender(req: AuthRequest, res: Response) {
       where: { id: load.id },
       data: { status: "TENDERED", tenderedAt: new Date(), tenderedById: req.user!.id },
     });
-
-    // Structured event: Load POSTED → TENDERED
-    await prisma.loadTrackingEvent.create({
-      data: {
-        loadId: load.id,
-        eventType: "STATUS_CHANGE",
-        statusFrom: "POSTED",
-        statusTo: "TENDERED",
-        locationSource: "AE_MANUAL",
-      },
-    });
+    await hooks.run("PostLoadStateChange", { loadId: load.id, from: "POSTED", to: "TENDERED", actor: req.user!.id });
   }
 
   await prisma.notification.create({
@@ -101,16 +92,8 @@ export async function acceptTender(req: AuthRequest, res: Response) {
     }),
   ]);
 
-  // Structured event: Load TENDERED → BOOKED
-  await prisma.loadTrackingEvent.create({
-    data: {
-      loadId: load.id,
-      eventType: "STATUS_CHANGE",
-      statusFrom: load.status,
-      statusTo: "BOOKED",
-      locationSource: "AE_MANUAL",
-    },
-  });
+  await hooks.run("PostLoadStateChange", { loadId: load.id, from: load.status, to: "BOOKED", actor: req.user!.id });
+  await hooks.run("PostTenderAccept", { tenderId: tender.id, loadId: load.id, carrierId: tender.carrierId, rate: tender.offeredRate, actor: req.user!.id });
 
   // Auto-create Shipment linked to this load
   const shipmentNumber = await nextShipmentNumber();
@@ -296,18 +279,7 @@ export async function processExpiredTenders() {
       const load = await prisma.load.findUnique({ where: { id: loadId } });
       if (load && load.status === "TENDERED") {
         await prisma.load.update({ where: { id: loadId }, data: { status: "POSTED" } });
-
-        // Structured event: Load TENDERED → POSTED (all tenders expired)
-        await prisma.loadTrackingEvent.create({
-          data: {
-            loadId,
-            eventType: "STATUS_CHANGE",
-            statusFrom: "TENDERED",
-            statusTo: "POSTED",
-            locationSource: "AE_MANUAL",
-          },
-        });
-
+        await hooks.run("PostLoadStateChange", { loadId, from: "TENDERED", to: "POSTED", actor: "system" });
         loadsReverted++;
 
         // Notify poster

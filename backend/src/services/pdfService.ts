@@ -122,7 +122,7 @@ export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
   const bolNum = ref.startsWith("SRL-") ? `BOL-${ref}` : `BOL-SRL-${ref}`;
 
   let barcodeBuffer: Buffer | null = null;
-  try { barcodeBuffer = await bwipjs.toBuffer({ bcid: "code128", text: bolNum, scale: 3, height: 10, includetext: false }); } catch {}
+  try { barcodeBuffer = await bwipjs.toBuffer({ bcid: "code128", text: bolNum, scale: 3, height: 10, includetext: false }); } catch (err) { console.warn("[PDF] Barcode generation failed, continuing without barcode:", (err as Error).message); }
 
   const pickupDateFmt = load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : String(load.pickupDate);
   const deliveryDateFmt = load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : String(load.deliveryDate);

@@ -50,7 +50,7 @@ app.use(
         "style-src-elem": ["'self'", "https://fonts.googleapis.com"],
         "style-src-attr": ["'unsafe-inline'"], // inline style= attributes on elements; low risk (CSS, not JS)
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https://api.silkroutelogistics.ai", "http://localhost:4000", "https://*.sentry.io"],
+        connectSrc: ["'self'", "https://api.silkroutelogistics.ai", "https://*.sentry.io", ...(env.NODE_ENV !== "production" ? ["http://localhost:4000"] : [])],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
@@ -74,9 +74,7 @@ const allowedOrigins = [
   "https://silkroutelogistics.ai",
   "https://www.silkroutelogistics.ai",
   "https://silk-route-logistics.pages.dev",
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "http://localhost:4000",
+  ...(env.NODE_ENV !== "production" ? ["http://localhost:3000", "http://localhost:5173", "http://localhost:4000"] : []),
 ];
 // Merge any extra origins from env (for staging/preview deploys)
 if (env.CORS_ORIGIN) {
