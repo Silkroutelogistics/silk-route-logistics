@@ -93,11 +93,11 @@ export default function CommunicationsPage() {
 
   // Build unified contact list
   const contacts: Contact[] = [
-    ...(Array.isArray(customers?.data) ? customers.data : Array.isArray(customers) ? customers : []).map((c: any) => ({
+    ...(Array.isArray(customers?.data) ? customers.data : Array.isArray(customers) ? customers : []).map((c: Record<string, any>) => ({
       id: c.id, name: c.contactName || c.name, contactName: c.contactName,
       email: c.email, phone: c.phone, type: "SHIPPER" as const, company: c.name,
     })),
-    ...(Array.isArray(carriers) ? carriers : []).map((c: any) => ({
+    ...(Array.isArray(carriers) ? carriers : []).map((c: Record<string, any>) => ({
       id: c.id, name: c.companyName || c.name || `${c.firstName || ""} ${c.lastName || ""}`.trim(),
       contactName: c.contactName, email: c.email || c.contactEmail,
       phone: c.phone || c.contactPhone, type: "CARRIER" as const, company: c.companyName || c.name,

@@ -61,7 +61,7 @@ export default function CarrierPaymentsPage() {
   const exportCSV = () => {
     if (!payments.length) return;
     const headers = ["Payment #", "Load Ref", "Gross", "Discount", "Net", "Status", "Method", "Date"];
-    const rows = payments.map((pay: any) => [
+    const rows = payments.map((pay: Record<string, any>) => [
       pay.paymentNumber || pay.id.slice(-8),
       pay.load?.referenceNumber || "",
       pay.amount || 0,
@@ -177,7 +177,7 @@ export default function CarrierPaymentsPage() {
               ) : payments.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">No payments found</td></tr>
               ) : (
-                payments.map((pay: any) => (
+                payments.map((pay: Record<string, any>) => (
                   <tr key={pay.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-[11px] font-semibold text-[#0F1117]">{pay.paymentNumber || pay.id.slice(-8)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-gray-600">{pay.load?.referenceNumber || "—"}</td>

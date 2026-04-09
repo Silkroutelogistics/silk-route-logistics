@@ -123,7 +123,7 @@ export default function AICostsPage() {
               </h3>
               {costs?.byProvider?.length > 0 ? (
                 <div className="space-y-3">
-                  {costs.byProvider.map((p: any) => (
+                  {costs.byProvider.map((p: Record<string, any>) => (
                     <div key={p.provider} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${
@@ -151,7 +151,7 @@ export default function AICostsPage() {
               </h3>
               {costs?.byModel?.length > 0 ? (
                 <div className="space-y-3">
-                  {costs.byModel.map((m: any) => (
+                  {costs.byModel.map((m: Record<string, any>) => (
                     <div key={m.model} className="flex items-center justify-between">
                       <div className="min-w-0">
                         <p className="text-sm text-white truncate">{m.model}</p>
@@ -174,7 +174,7 @@ export default function AICostsPage() {
               </h3>
               {costs?.byQueryType?.length > 0 ? (
                 <div className="space-y-3">
-                  {costs.byQueryType.map((q: any) => (
+                  {costs.byQueryType.map((q: Record<string, any>) => (
                     <div key={q.queryType} className="flex items-center justify-between">
                       <span className="text-sm text-white capitalize">{q.queryType?.replace(/_/g, " ")}</span>
                       <div className="text-right">
@@ -197,8 +197,8 @@ export default function AICostsPage() {
               </h3>
               {costs?.dailyCosts?.length > 0 ? (
                 <div className="space-y-1">
-                  {costs.dailyCosts.slice(-14).map((d: any) => {
-                    const maxCost = Math.max(...costs.dailyCosts.map((x: any) => x.cost), 0.01);
+                  {costs.dailyCosts.slice(-14).map((d: Record<string, any>) => {
+                    const maxCost = Math.max(...costs.dailyCosts.map((x: Record<string, any>) => x.cost), 0.01);
                     const pct = (d.cost / maxCost) * 100;
                     return (
                       <div key={d.date} className="flex items-center gap-2">

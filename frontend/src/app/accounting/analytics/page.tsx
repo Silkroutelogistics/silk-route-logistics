@@ -149,7 +149,7 @@ export default function FinancialAnalyticsPage() {
                 <th className="text-right py-2">Margin</th><th className="text-right py-2">Margin %</th>
               </tr></thead>
               <tbody>
-                {(loadPnl?.loads || []).slice(0, 10).map((l: any) => (
+                {(loadPnl?.loads || []).slice(0, 10).map((l: Record<string, any>) => (
                   <tr key={l.id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="py-2 text-white font-mono text-xs">{l.referenceNumber}</td>
                     <td className="py-2 text-slate-300 text-xs">{l.originCity}, {l.originState} → {l.destCity}, {l.destState}</td>

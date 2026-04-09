@@ -18,7 +18,7 @@ export default function ShipperShipmentsPage() {
 
   const exportShipmentsCSV = (shipments: Shipment[]) => {
     const headers = ["Reference", "Origin", "Destination", "Equipment", "Status", "Pickup Date", "Delivery Date", "Rate"];
-    const rows = shipments.map((s: any) => [
+    const rows = shipments.map((s: Record<string, any>) => [
       s.referenceNumber || "",
       `${s.originCity || ""} ${s.originState || ""}`,
       `${s.destCity || ""} ${s.destState || ""}`,

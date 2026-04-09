@@ -137,7 +137,7 @@ function OverviewTab() {
           </h3>
           {anomalies?.length > 0 ? (
             <div className="space-y-3">
-              {anomalies.slice(0, 5).map((a: any) => (
+              {anomalies.slice(0, 5).map((a: Record<string, any>) => (
                 <div key={a.id} className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
                   <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
                     a.severity === "CRITICAL" ? "bg-red-500" : a.severity === "HIGH" ? "bg-orange-500" : "bg-yellow-500"
@@ -316,7 +316,7 @@ function CarrierList({ title, carriers, badge, badgeColor }: { title: string; ca
       <h3 className="text-white font-semibold mb-4">{title}</h3>
       {carriers?.length > 0 ? (
         <div className="space-y-3">
-          {carriers.slice(0, 8).map((c: any) => (
+          {carriers.slice(0, 8).map((c: Record<string, any>) => (
             <div key={c.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
               <div className="min-w-0">
                 <p className="text-sm text-white truncate">{c.carrier?.companyName ?? "Unknown"}</p>
@@ -355,7 +355,7 @@ function AnomaliesTab() {
       </h3>
       {anomalies?.length > 0 ? (
         <div className="space-y-2">
-          {anomalies.map((a: any) => (
+          {anomalies.map((a: Record<string, any>) => (
             <div key={a.id} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg">
               <div className={`mt-1 w-2.5 h-2.5 rounded-full shrink-0 ${
                 a.severity === "CRITICAL" ? "bg-red-500" : a.severity === "HIGH" ? "bg-orange-500" : a.severity === "MEDIUM" ? "bg-yellow-500" : "bg-blue-500"
@@ -471,7 +471,7 @@ function LearningTab() {
           Service Status
         </h3>
         <div className="space-y-2">
-          {status?.serviceStatus?.map((s: any) => (
+          {status?.serviceStatus?.map((s: Record<string, any>) => (
             <div key={s.service} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
               <div>
                 <p className="text-sm text-white capitalize">{s.service?.replace(/_/g, " ")}</p>

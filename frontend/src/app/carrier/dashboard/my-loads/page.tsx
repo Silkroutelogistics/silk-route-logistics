@@ -112,7 +112,7 @@ export default function MyLoadsPage() {
               <div className="text-center text-gray-400 text-sm">No loads found</div>
             </CarrierCard>
           ) : (
-            loads.map((load: any) => (
+            loads.map((load: Record<string, any>) => (
               <CarrierCard
                 key={load.id}
                 hover

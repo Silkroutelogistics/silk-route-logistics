@@ -327,7 +327,7 @@ export default function CarrierOverviewPage() {
           {recentLoads.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-gray-400">No loads assigned yet</div>
           ) : (
-            recentLoads.slice(0, 5).map((load: any) => (
+            recentLoads.slice(0, 5).map((load: Record<string, any>) => (
               <div key={load.id} className="px-5 py-3 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50">
                 <div>
                   <div className="text-xs font-mono font-semibold text-[#0F1117]">{load.referenceNumber}</div>
@@ -355,7 +355,7 @@ export default function CarrierOverviewPage() {
           {availableLoads.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-gray-400">No available loads right now</div>
           ) : (
-            availableLoads.slice(0, 5).map((load: any) => (
+            availableLoads.slice(0, 5).map((load: Record<string, any>) => (
               <div key={load.id} className="px-5 py-3 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50">
                 <div>
                   <div className="text-xs font-mono font-semibold text-[#0F1117]">{load.referenceNumber}</div>
