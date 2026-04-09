@@ -11,7 +11,9 @@ try {
       region: process.env.AWS_REGION || "us-east-1",
     });
   }
-} catch {}
+} catch (err) {
+  console.warn("[Biometric] AWS Rekognition SDK not available, using hash-based verification:", (err as Error).message);
+}
 
 const MATCH_THRESHOLD = 80;
 

@@ -159,7 +159,7 @@ export function authorize(...roles: string[]) {
             message: `Access denied: ${req.user.email} (${req.user.role}) attempted ${req.method} ${req.originalUrl} — required: ${roles.join(", ")}`,
             ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
           },
-        }).catch(() => {});
+        }).catch((e) => console.warn("[Auth] Audit log write failed:", (e as Error).message));
       }
       res.status(403).json({ error: "Insufficient permissions" });
       return;
