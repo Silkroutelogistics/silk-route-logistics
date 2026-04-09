@@ -96,6 +96,7 @@ registry.register("notification", "resend", emailPlugin);
 
 // ─── Summary ────────────────────────────────────────────
 
+import { log } from "./logger";
 const all = registry.listAll();
 const configured = all.filter((p) => p.isConfigured()).length;
-console.log(`[Plugins] ${all.length} plugins registered, ${configured} configured`);
+log.info({ total: all.length, configured }, "Plugin registry initialized");

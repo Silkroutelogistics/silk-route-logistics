@@ -93,8 +93,7 @@ class PluginRegistry {
   register<T extends PluginType>(type: T, id: string, plugin: PluginMap[T]) {
     const key = `${type}:${id}`;
     this.plugins.set(key, plugin);
-    const configured = plugin.isConfigured() ? "configured" : "NOT configured";
-    console.log(`[Plugin] Registered ${key} (${plugin.name}) — ${configured}`);
+    // Registration is silent — summary logged by pluginsInit.ts
   }
 
   /** Get a specific plugin by type and id */

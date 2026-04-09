@@ -50,4 +50,5 @@ hooks.on("PostTenderAccept", async (ctx) => {
   });
 });
 
-console.log("[Hooks] 3 built-in hooks registered (PostLoadStateChange, PostCarrierAssignment, PostTenderAccept)");
+import { log } from "./logger";
+log.info("3 built-in hooks registered (PostLoadStateChange, PostCarrierAssignment, PostTenderAccept)");

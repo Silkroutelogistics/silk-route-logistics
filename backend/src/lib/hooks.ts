@@ -47,11 +47,11 @@ class HookRegistry {
       try {
         const result = await handler(ctx);
         if (result && result.blocked) {
-          console.log(`[Hook] ${event} blocked: ${result.reason}`, ctx);
+          // Hook blocked — logged by caller
           return { blocked: true, reason: result.reason };
         }
       } catch (err) {
-        console.error(`[Hook] ${event} handler error:`, err);
+        // Hook error — Pre hooks fail-safe, Post hooks continue
         // Pre hooks: fail-safe blocks on error; Post hooks: log and continue
         if (event.startsWith("Pre")) {
           return { blocked: true, reason: "Internal hook error" };

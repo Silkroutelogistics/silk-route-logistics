@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * SRL Cron Job System
@@ -12,7 +13,7 @@ const runningJobs = new Set<string>();
 
 async function withGuard(jobName: string, fn: () => Promise<void>): Promise<void> {
   if (runningJobs.has(jobName)) {
-    console.warn(`[Cron] Skipping ${jobName} — previous run still in progress`);
+    log.warn({ job: jobName }, "Skipping — previous run still in progress");
     return;
   }
   runningJobs.add(jobName);
@@ -24,7 +25,7 @@ async function withGuard(jobName: string, fn: () => Promise<void>): Promise<void
 }
 
 export function initCronJobs() {
-  console.log("[Cron] Initializing scheduled jobs...");
+  log.info("Initializing cron scheduled jobs");
 
   // ─── Every 5 minutes: Check call reminders ───────────────────
   cron.schedule("*/5 * * * *", () => withGuard("check-call-reminders", async () => {
@@ -62,11 +63,11 @@ export function initCronJobs() {
 
         if (notificationData.length > 0) {
           await prisma.notification.createMany({ data: notificationData })
-            .catch(err => console.error('[Cron] Error:', err.message));
+            .catch(err => log.error({ err }, 'Cron notification create error'));
         }
       }
     } catch (err) {
-      console.error("[Cron 5min] Check call reminder error:", err);
+      log.error({ err }, "[Cron 5min] Check call reminder error:");
     }
   }));
 
@@ -85,10 +86,10 @@ export function initCronJobs() {
       });
 
       if (overdueInvoices.count > 0) {
-        console.log(`[Cron Hourly] Marked ${overdueInvoices.count} invoices as overdue`);
+        log.info(`[Cron Hourly] Marked ${overdueInvoices.count} invoices as overdue`);
       }
     } catch (err) {
-      console.error("[Cron Hourly] Invoice aging error:", err);
+      log.error({ err }, "[Cron Hourly] Invoice aging error:");
     }
   }));
 
@@ -113,7 +114,7 @@ export function initCronJobs() {
             where: { id: carrier.id },
             data: { cppTier: newTier },
           });
-          console.log(`[Cron Daily] Updated carrier ${carrier.id} tier: ${carrier.cppTier} → ${newTier}`);
+          log.info(`[Cron Daily] Updated carrier ${carrier.id} tier: ${carrier.cppTier} → ${newTier}`);
         }
       }
 
@@ -121,7 +122,7 @@ export function initCronJobs() {
       const { cleanupBlacklist } = require("../utils/tokenBlacklist");
       const blacklistCleaned = await cleanupBlacklist();
       if (blacklistCleaned > 0) {
-        console.log(`[Cron Daily] Cleaned ${blacklistCleaned} expired blacklist entries`);
+        log.info(`[Cron Daily] Cleaned ${blacklistCleaned} expired blacklist entries`);
       }
 
       // Clean old system logs (keep 90 days)
@@ -130,22 +131,22 @@ export function initCronJobs() {
         where: { createdAt: { lt: cutoff } },
       });
       if (deleted.count > 0) {
-        console.log(`[Cron Daily] Cleaned ${deleted.count} old system logs`);
+        log.info(`[Cron Daily] Cleaned ${deleted.count} old system logs`);
       }
     } catch (err) {
-      console.error("[Cron Daily] Error:", err);
+      log.error({ err }, "[Cron Daily] Error:");
     }
   }));
 
   // ─── Daily at 7 AM: System health digest email to admins ────
   cron.schedule("0 7 * * *", () => withGuard("health-digest", async () => {
     try {
-      console.log("[Cron Daily] Generating system health digest...");
+      log.info("[Cron Daily] Generating system health digest...");
       const { sendHealthDigest } = require("../services/healthDigestService");
       await sendHealthDigest();
-      console.log("[Cron Daily] Health digest sent");
+      log.info("[Cron Daily] Health digest sent");
     } catch (err) {
-      console.error("[Cron Daily] Health digest error:", err);
+      log.error({ err }, "[Cron Daily] Health digest error:");
     }
   }));
 
@@ -165,7 +166,7 @@ export function initCronJobs() {
         _sum: { customerRate: true },
       });
 
-      console.log(`[Cron Weekly] Report: ${loads} loads created, ${delivered} delivered, $${revenue._sum.customerRate || 0} revenue`);
+      log.info(`[Cron Weekly] Report: ${loads} loads created, ${delivered} delivered, $${revenue._sum.customerRate || 0} revenue`);
 
       // Store as system log for reporting
       await prisma.systemLog.create({
@@ -183,7 +184,7 @@ export function initCronJobs() {
         },
       });
     } catch (err) {
-      console.error("[Cron Weekly] Error:", err);
+      log.error({ err }, "[Cron Weekly] Error:");
     }
   }));
 
@@ -216,13 +217,13 @@ export function initCronJobs() {
 
         if (daysSinceDue >= 60 && !inv.reminderSent60) {
           ids60.push(inv.id);
-          console.log(`[Cron Monthly] 60-day reminder for invoice ${inv.invoiceNumber}`);
+          log.info(`[Cron Monthly] 60-day reminder for invoice ${inv.invoiceNumber}`);
         } else if (daysSinceDue >= 45 && !inv.reminderSent45) {
           ids45.push(inv.id);
-          console.log(`[Cron Monthly] 45-day reminder for invoice ${inv.invoiceNumber}`);
+          log.info(`[Cron Monthly] 45-day reminder for invoice ${inv.invoiceNumber}`);
         } else if (daysSinceDue >= 31 && !inv.reminderSent31) {
           ids31.push(inv.id);
-          console.log(`[Cron Monthly] 31-day reminder for invoice ${inv.invoiceNumber}`);
+          log.info(`[Cron Monthly] 31-day reminder for invoice ${inv.invoiceNumber}`);
         }
       }
 
@@ -232,26 +233,26 @@ export function initCronJobs() {
         ...(ids31.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids31 } }, data: { reminderSent31: true } })] : []),
       ]);
     } catch (err) {
-      console.error("[Cron Monthly] Invoice reminder error:", err);
+      log.error({ err }, "[Cron Monthly] Invoice reminder error:");
     }
   }));
 
   // ─── Weekly (Monday 3 AM): FMCSA compliance scan ─────────
   cron.schedule("0 3 * * 1", () => withGuard("fmcsa-compliance", async () => {
     try {
-      console.log("[Cron Weekly] Starting FMCSA compliance scan...");
+      log.info("[Cron Weekly] Starting FMCSA compliance scan...");
       const { weeklyFmcsaScan } = require("../services/complianceMonitorService");
       const result = await weeklyFmcsaScan();
-      console.log("[Cron Weekly] FMCSA scan complete:", result);
+      log.info({ result }, "[Cron Weekly] FMCSA scan complete");
     } catch (err) {
-      console.error("[Cron Weekly] FMCSA scan error:", err);
+      log.error({ err }, "[Cron Weekly] FMCSA scan error:");
     }
   }));
 
   // ─── Daily (6 AM): Identity/email/phone validation for pending carriers ──
   cron.schedule("0 6 * * *", () => withGuard("identity-validation", async () => {
     try {
-      console.log("[Cron Daily] Running identity validation for pending carriers...");
+      log.info("[Cron Daily] Running identity validation for pending carriers...");
       const { runIdentityCheck } = require("../services/identityVerificationService");
       const pendingCarriers = await prisma.carrierProfile.findMany({
         where: {
@@ -268,48 +269,48 @@ export function initCronJobs() {
           checked++;
         } catch (err) {
           errors++;
-          console.error(`[Cron Identity] Error for ${carrier.id}:`, (err as Error).message);
+          log.error({ err, carrierId: carrier.id }, "Identity validation error");
         }
       }
-      console.log(`[Cron Daily] Identity validation: ${checked} checked, ${errors} errors`);
+      log.info(`[Cron Daily] Identity validation: ${checked} checked, ${errors} errors`);
     } catch (err) {
-      console.error("[Cron Daily] Identity validation error:", err);
+      log.error({ err }, "[Cron Daily] Identity validation error:");
     }
   }));
 
   // ─── Daily (5 AM): Compliance reminder emails ──────────────
   cron.schedule("0 5 * * *", () => withGuard("compliance-reminders", async () => {
     try {
-      console.log("[Cron Daily] Sending compliance reminders...");
+      log.info("[Cron Daily] Sending compliance reminders...");
       const { dailyComplianceReminders } = require("../services/complianceMonitorService");
       const result = await dailyComplianceReminders();
-      console.log("[Cron Daily] Compliance reminders sent:", result);
+      log.info({ result }, "[Cron Daily] Compliance reminders sent");
     } catch (err) {
-      console.error("[Cron Daily] Compliance reminder error:", err);
+      log.error({ err }, "[Cron Daily] Compliance reminder error:");
     }
   }));
 
   // ─── Weekly (Monday 3:30 AM): Full chameleon scan ─────────────
   cron.schedule("30 3 * * 1", () => withGuard("chameleon-scan", async () => {
     try {
-      console.log("[Cron Weekly] Starting full chameleon detection scan...");
+      log.info("[Cron Weekly] Starting full chameleon detection scan...");
       const { runFullChameleonScan } = require("../services/chameleonDetectionService");
       const result = await runFullChameleonScan();
-      console.log("[Cron Weekly] Chameleon scan complete:", result);
+      log.info({ result }, "[Cron Weekly] Chameleon scan complete");
     } catch (err) {
-      console.error("[Cron Weekly] Chameleon scan error:", err);
+      log.error({ err }, "[Cron Weekly] Chameleon scan error:");
     }
   }));
 
   // ─── Weekly (Monday 4 AM): Auto-reversal check for suspended carriers ──
   cron.schedule("0 4 * * 1", () => withGuard("auto-reversal", async () => {
     try {
-      console.log("[Cron Weekly] Checking auto-reversal for suspended carriers...");
+      log.info("[Cron Weekly] Checking auto-reversal for suspended carriers...");
       const { checkAutoReversal } = require("../services/complianceMonitorService");
       const result = await checkAutoReversal();
-      console.log("[Cron Weekly] Auto-reversal complete:", result);
+      log.info({ result }, "[Cron Weekly] Auto-reversal complete");
     } catch (err) {
-      console.error("[Cron Weekly] Auto-reversal error:", err);
+      log.error({ err }, "[Cron Weekly] Auto-reversal error:");
     }
   }));
 
@@ -318,84 +319,84 @@ export function initCronJobs() {
   // Daily at 4:00 AM: Rate Intelligence learning
   cron.schedule("0 4 * * *", () => withGuard("ai-rate-intelligence", async () => {
     try {
-      console.log("[Cron AI] Running Rate Intelligence learning cycle...");
+      log.info("[Cron AI] Running Rate Intelligence learning cycle...");
       const { runRateLearningCycle } = require("../services/rateIntelligenceService");
       const result = await runRateLearningCycle();
-      console.log("[Cron AI] Rate Intelligence complete:", result);
+      log.info({ result }, "[Cron AI] Rate Intelligence complete");
     } catch (err) {
-      console.error("[Cron AI] Rate Intelligence error:", err);
+      log.error({ err }, "[Cron AI] Rate Intelligence error:");
     }
   }));
 
   // Daily at 4:15 AM: Carrier Intelligence learning
   cron.schedule("15 4 * * *", () => withGuard("ai-carrier-intelligence", async () => {
     try {
-      console.log("[Cron AI] Running Carrier Intelligence learning cycle...");
+      log.info("[Cron AI] Running Carrier Intelligence learning cycle...");
       const { runCarrierLearningCycle } = require("../services/carrierIntelligenceService");
       const result = await runCarrierLearningCycle();
-      console.log("[Cron AI] Carrier Intelligence complete:", result);
+      log.info({ result }, "[Cron AI] Carrier Intelligence complete");
     } catch (err) {
-      console.error("[Cron AI] Carrier Intelligence error:", err);
+      log.error({ err }, "[Cron AI] Carrier Intelligence error:");
     }
   }));
 
   // Weekly Monday at 4:30 AM: Lane Optimizer learning
   cron.schedule("30 4 * * 1", () => withGuard("ai-lane-optimizer", async () => {
     try {
-      console.log("[Cron AI] Running Lane Optimizer learning cycle...");
+      log.info("[Cron AI] Running Lane Optimizer learning cycle...");
       const { runLaneLearningCycle } = require("../services/laneOptimizerService");
       const result = await runLaneLearningCycle();
-      console.log("[Cron AI] Lane Optimizer complete:", result);
+      log.info({ result }, "[Cron AI] Lane Optimizer complete");
     } catch (err) {
-      console.error("[Cron AI] Lane Optimizer error:", err);
+      log.error({ err }, "[Cron AI] Lane Optimizer error:");
     }
   }));
 
   // Weekly Monday at 5:00 AM: Customer Intelligence learning
   cron.schedule("0 5 * * 1", () => withGuard("ai-customer-intelligence", async () => {
     try {
-      console.log("[Cron AI] Running Customer Intelligence learning cycle...");
+      log.info("[Cron AI] Running Customer Intelligence learning cycle...");
       const { runCustomerLearningCycle } = require("../services/customerIntelligenceService");
       const result = await runCustomerLearningCycle();
-      console.log("[Cron AI] Customer Intelligence complete:", result);
+      log.info({ result }, "[Cron AI] Customer Intelligence complete");
     } catch (err) {
-      console.error("[Cron AI] Customer Intelligence error:", err);
+      log.error({ err }, "[Cron AI] Customer Intelligence error:");
     }
   }));
 
   // Daily at 5:30 AM: Compliance Forecast
   cron.schedule("30 5 * * *", () => withGuard("ai-compliance-forecast", async () => {
     try {
-      console.log("[Cron AI] Running Compliance Forecast cycle...");
+      log.info("[Cron AI] Running Compliance Forecast cycle...");
       const { runComplianceForecastCycle } = require("../services/complianceForecastService");
       const result = await runComplianceForecastCycle();
-      console.log("[Cron AI] Compliance Forecast complete:", result);
+      log.info({ result }, "[Cron AI] Compliance Forecast complete");
     } catch (err) {
-      console.error("[Cron AI] Compliance Forecast error:", err);
+      log.error({ err }, "[Cron AI] Compliance Forecast error:");
     }
   }));
 
   // Weekly Monday at 6:00 AM: System Self-Optimizer
   cron.schedule("0 6 * * 1", () => withGuard("ai-system-optimizer", async () => {
     try {
-      console.log("[Cron AI] Running System Self-Optimizer...");
+      log.info("[Cron AI] Running System Self-Optimizer...");
       const { runSystemOptimizationCycle } = require("../services/systemOptimizerService");
       const result = await runSystemOptimizationCycle();
-      console.log("[Cron AI] System Optimizer complete: Health", result.overallScore, "%");
+      log.info({ score: result.overallScore }, "[Cron AI] System Optimizer complete");
     } catch (err) {
-      console.error("[Cron AI] System Optimizer error:", err);
+      log.error({ err }, "[Cron AI] System Optimizer error:");
     }
   }));
 
   // ─── Every 4 hours: Fetch latest trucking news ──────────────
   cron.schedule("0 */4 * * *", () => withGuard("news-fetch", async () => {
     try {
-      console.log("[Cron] Fetching trucking news feeds...");
+      log.info("[Cron] Fetching trucking news feeds...");
       const { fetchAllFeeds } = require("../services/newsAggregatorService");
       const result = await fetchAllFeeds();
-      console.log("[Cron] News fetch complete:", result);
+      log.info({ result }, "[Cron] News fetch complete");
     } catch (err) {
-      console.error("[Cron] News fetch error:", err);
+      log.error({ err }, "[Cron] News fetch error:");
     }
   }));
 
@@ -404,99 +405,99 @@ export function initCronJobs() {
     try {
       const { isFeatureUnlocked } = require("../ai/volumeGates");
       if (!(await isFeatureUnlocked("morningBriefing"))) {
-        console.log("[Cron AI] Morning briefing skipped — volume gate locked");
+        log.info("[Cron AI] Morning briefing skipped — volume gate locked");
         return;
       }
-      console.log("[Cron AI] Generating morning briefing...");
+      log.info("[Cron AI] Generating morning briefing...");
       const { generateMorningBriefing } = require("../automation/tools/morning-briefing");
       const result = await generateMorningBriefing();
-      console.log("[Cron AI] Morning briefing complete:", result.summary?.slice(0, 80));
+      log.info({ summary: result.summary?.slice(0, 80) }, "[Cron AI] Morning briefing complete");
     } catch (err) {
-      console.error("[Cron AI] Morning briefing error:", err);
+      log.error({ err }, "[Cron AI] Morning briefing error:");
     }
   }));
 
   // ─── Weekly (Monday 2 AM): OFAC/SDN rescan ──────────────
   cron.schedule("0 2 * * 1", () => withGuard("ofac-rescan", async () => {
     try {
-      console.log("[Cron Weekly] Running OFAC/SDN rescan...");
+      log.info("[Cron Weekly] Running OFAC/SDN rescan...");
       const { weeklyOfacRescan } = require("../services/ofacScreeningService");
       const result = await weeklyOfacRescan();
-      console.log("[Cron Weekly] OFAC rescan complete:", result);
+      log.info({ result }, "[Cron Weekly] OFAC rescan complete");
     } catch (err) {
-      console.error("[Cron Weekly] OFAC rescan error:", err);
+      log.error({ err }, "[Cron Weekly] OFAC rescan error:");
     }
   }));
 
   // ─── Weekly (Monday 2:30 AM): ELD validation sweep ─────
   cron.schedule("30 2 * * 1", () => withGuard("eld-validation", async () => {
     try {
-      console.log("[Cron Weekly] Running ELD validation sweep...");
+      log.info("[Cron Weekly] Running ELD validation sweep...");
       const { validateAllCarrierElds } = require("../services/eldValidationService");
       const result = await validateAllCarrierElds();
-      console.log("[Cron Weekly] ELD validation complete:", result);
+      log.info({ result }, "[Cron Weekly] ELD validation complete");
     } catch (err) {
-      console.error("[Cron Weekly] ELD validation error:", err);
+      log.error({ err }, "[Cron Weekly] ELD validation error:");
     }
   }));
 
   // ─── Weekly (Monday 2:45 AM): TIN verification batch ───
   cron.schedule("45 2 * * 1", () => withGuard("tin-verification", async () => {
     try {
-      console.log("[Cron Weekly] Running TIN verification batch...");
+      log.info("[Cron Weekly] Running TIN verification batch...");
       const { batchVerifyTins } = require("../services/tinMatchService");
       const result = await batchVerifyTins();
-      console.log("[Cron Weekly] TIN verification complete:", result);
+      log.info({ result }, "[Cron Weekly] TIN verification complete");
     } catch (err) {
-      console.error("[Cron Weekly] TIN verification error:", err);
+      log.error({ err }, "[Cron Weekly] TIN verification error:");
     }
   }));
 
   // ─── Every 2 hours: Post-booking load compliance scan (Compass) ──
   cron.schedule("0 */2 * * *", () => withGuard("load-compliance-scan", async () => {
     try {
-      console.log("[Compass] Running load-level compliance scan...");
+      log.info("[Compass] Running load-level compliance scan...");
       const { checkAllActiveLoadCompliance } = require("../services/loadComplianceService");
       const result = await checkAllActiveLoadCompliance();
-      console.log("[Compass] Load compliance scan:", result);
+      log.info({ result }, "[Compass] Load compliance scan");
     } catch (err) {
-      console.error("[Compass] Load compliance error:", err);
+      log.error({ err }, "[Compass] Load compliance error:");
     }
   }));
 
   // ─── Every 4 hours: Overbooking detection ─────────────
   cron.schedule("30 */4 * * *", () => withGuard("overbooking-check", async () => {
     try {
-      console.log("[Compass] Running overbooking detection...");
+      log.info("[Compass] Running overbooking detection...");
       const { checkAllCarrierOverbooking } = require("../services/overbookingService");
       const result = await checkAllCarrierOverbooking();
-      console.log("[Compass] Overbooking check:", result);
+      log.info({ result }, "[Compass] Overbooking check");
     } catch (err) {
-      console.error("[Compass] Overbooking error:", err);
+      log.error({ err }, "[Compass] Overbooking error:");
     }
   }));
 
   // ─── Weekly (Monday 1:30 AM): CSA BASIC score update ──
   cron.schedule("30 1 * * 1", () => withGuard("csa-basic-update", async () => {
     try {
-      console.log("[Compass] Running CSA BASIC score update...");
+      log.info("[Compass] Running CSA BASIC score update...");
       const { batchUpdateCsaScores } = require("../services/csaBasicService");
       const result = await batchUpdateCsaScores();
-      console.log("[Compass] CSA update:", result);
+      log.info({ result }, "[Compass] CSA update");
     } catch (err) {
-      console.error("[Compass] CSA update error:", err);
+      log.error({ err }, "[Compass] CSA update error:");
     }
   }));
 
   // ─── Weekly (Monday 3:15 AM): Batch VIN verification sweep ──
   cron.schedule("15 3 * * 1", () => withGuard("vin-batch-verify", async () => {
     try {
-      console.log("[Compass] Running batch VIN verification...");
+      log.info("[Compass] Running batch VIN verification...");
       const { verifyAllCarrierVins } = require("../services/vinVerificationService");
       const result = await verifyAllCarrierVins();
-      console.log("[Compass] VIN batch verify:", result);
+      log.info({ result }, "[Compass] VIN batch verify");
     } catch (err) {
-      console.error("[Compass] VIN batch verify error:", err);
+      log.error({ err }, "[Compass] VIN batch verify error:");
     }
   }));
 
@@ -512,18 +513,18 @@ export function initCronJobs() {
         data: { status: "PERMANENT" },
       });
       if (result.count > 0) {
-        console.log(`[Cron Daily] ${result.count} fraud reports made permanent`);
+        log.info(`[Cron Daily] ${result.count} fraud reports made permanent`);
       }
     } catch (err) {
-      console.error("[Cron Daily] Fraud report permanence error:", err);
+      log.error({ err }, "[Cron Daily] Fraud report permanence error:");
     }
   }));
 
   // Seed news sources on startup
   try {
     const { seedNewsSources } = require("../services/newsAggregatorService");
-    seedNewsSources().catch((e: any) => console.error("[Cron] News source seed error:", e.message));
+    seedNewsSources().catch((e: any) => log.error({ err: e }, "News source seed error"));
   } catch {}
 
-  console.log("[Cron] All scheduled jobs initialized (including AI learning cycles)");
+  log.info("[Cron] All scheduled jobs initialized (including AI learning cycles)");
 }
