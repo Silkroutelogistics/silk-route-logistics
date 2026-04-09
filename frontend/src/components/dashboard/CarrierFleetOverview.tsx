@@ -8,17 +8,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
-
-interface Carrier {
-  carrierId: string;
-  company: string;
-  tier: string;
-  equipmentTypes: string[];
-  safetyScore: number | null;
-  onTimeDelivery: number | null;
-  totalLoads: number;
-  isActive: boolean;
-}
+import type { CarrierFleetSummary as Carrier } from "@/types/entities";
 
 const TIER_COLORS: Record<string, { text: string; bg: string }> = {
   PLATINUM: { text: "text-purple-300", bg: "bg-purple-500/20" },

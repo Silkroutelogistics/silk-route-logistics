@@ -143,6 +143,19 @@ export interface Notification {
   createdAt: string;
 }
 
+// ─── Carrier Fleet Summary (for fleet overview) ─────────
+
+export interface CarrierFleetSummary {
+  carrierId: string;
+  company: string;
+  tier: string;
+  equipmentTypes: string[];
+  safetyScore: number | null;
+  onTimeDelivery: number | null;
+  totalLoads: number;
+  isActive: boolean;
+}
+
 // ─── Carrier Detail (full profile for carriers page) ────
 
 export interface CarrierDetail extends CarrierProfile {
