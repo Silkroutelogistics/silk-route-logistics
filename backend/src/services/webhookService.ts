@@ -12,6 +12,7 @@ import crypto from "crypto";
 import { prisma } from "../config/database";
 import { isUrlSafe } from "../lib/urlSafety";
 import { isFeatureEnabled } from "../config/features";
+import { log } from "../lib/logger";
 
 export type WebhookEvent =
   | "LOAD_POSTED"
@@ -62,7 +63,7 @@ export async function fireWebhooks(event: WebhookEvent, data: Record<string, any
     // SSRF check
     const urlCheck = await isUrlSafe(ep.url);
     if (!urlCheck.safe) {
-      console.warn(`[Webhook] SSRF blocked for ${ep.name}: ${urlCheck.reason}`);
+      log.warn(`[Webhook] SSRF blocked for ${ep.name}: ${urlCheck.reason}`);
       return;
     }
 
@@ -98,7 +99,7 @@ export async function fireWebhooks(event: WebhookEvent, data: Record<string, any
       });
 
       if (!response.ok) {
-        console.warn(`[Webhook] ${ep.name} returned ${response.status} for ${event}`);
+        log.warn(`[Webhook] ${ep.name} returned ${response.status} for ${event}`);
       }
     } catch (err: any) {
       const newFailCount = ep.failCount + 1;
@@ -110,7 +111,7 @@ export async function fireWebhooks(event: WebhookEvent, data: Record<string, any
           isEnabled: newFailCount >= 10 ? false : undefined,
         },
       });
-      console.error(`[Webhook] ${ep.name} failed for ${event}: ${err.message}`);
+      log.error(`[Webhook] ${ep.name} failed for ${event}: ${err.message}`);
     }
   });
 

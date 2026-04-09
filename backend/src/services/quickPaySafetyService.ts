@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { getEffectiveTier, getTierConfig } from "./carvanService";
 import { sendRemittanceEmail } from "./emailService";
+import { log } from "../lib/logger";
 
 // ─── Quick Pay Capital Constants ────────────────────────────
 
@@ -334,10 +335,10 @@ export async function processQuickPay(
       estimatedArrival,
     });
   } catch (e: any) {
-    console.error(`[QuickPay] Remittance email failed: ${e.message}`);
+    log.error(`[QuickPay] Remittance email failed: ${e.message}`);
   }
 
-  console.log(
+  log.info(
     `[QuickPay] Processed ${paymentNumber}: gross=$${grossAmount}, fee=$${validation.feeAmount}, net=$${validation.netPayment}`
   );
 
@@ -380,7 +381,7 @@ export async function updateCashPosition(): Promise<void> {
     },
   });
 
-  console.log(
+  log.info(
     `[QuickPay] Cash position updated: deployed=$${deployed}, available=$${available}, bronzePaused=${bronzePaused}, allPaused=${allQPPaused}`
   );
 }

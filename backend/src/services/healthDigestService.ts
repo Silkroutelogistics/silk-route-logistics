@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { sendEmail } from "./emailService";
 import * as Sentry from "@sentry/node";
+import { log } from "../lib/logger";
 
 /**
  * Daily Health Digest — Emails admins a system status summary every morning.
@@ -214,7 +215,7 @@ export async function sendHealthDigest() {
         html
       );
     } catch (e: any) {
-      console.error(`[HealthDigest] Failed to send to ${admin.email}:`, e.message);
+      log.error({ err: e }, `[HealthDigest] Failed to send to ${admin.email}:`);
       Sentry.captureException(e, { tags: { service: "health-digest" } });
     }
   }

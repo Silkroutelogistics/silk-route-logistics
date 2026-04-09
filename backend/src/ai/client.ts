@@ -16,6 +16,7 @@ import { sanitizeForLLM } from "../security/sanitizeForLLM";
 import { checkLimits, CircuitBreakerError } from "../security/circuitBreaker";
 import { trackUsage } from "../services/aiRouter/costTracker";
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ─── Model Configuration ────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallRes
   });
 
   if (limitsResult.warnings.length > 0) {
-    console.warn(`[AIClient] Warnings for ${opts.functionName}:`, limitsResult.warnings);
+    log.warn({ data: limitsResult.warnings }, `[AIClient] Warnings for ${opts.functionName}:`);
   }
 
   // 2. Security: redact PII and sanitize input
@@ -191,6 +192,6 @@ export async function logAutomationEvent(event: {
       },
     });
   } catch (err) {
-    console.error("[AIClient] Failed to log automation event:", err);
+    log.error({ err: err }, "[AIClient] Failed to log automation event:");
   }
 }

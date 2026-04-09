@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import type { CarrierTier, CarrierMilestone } from "@prisma/client";
+import { log } from "../lib/logger";
 
 // ─── Tier Configuration (SRL Blueprint) ─────────────────────
 
@@ -286,7 +287,7 @@ export async function checkMilestoneAdvancement(
     data: { milestone: threshold.next },
   });
 
-  console.log(`[Carvan] Carrier ${carrierId} advanced to milestone ${threshold.next}`);
+  log.info(`[Carvan] Carrier ${carrierId} advanced to milestone ${threshold.next}`);
   return { advanced: true, newMilestone: threshold.next, reason: "All thresholds met" };
 }
 
@@ -344,7 +345,7 @@ export async function applyMilestoneRewards(
       where: { id: carrierId },
       data: updates,
     });
-    console.log(`[Carvan] Milestone rewards applied for ${carrierId}: ${milestone}`, updates);
+    log.info({ data: updates }, `[Carvan] Milestone rewards applied for ${carrierId}: ${milestone}`);
   }
 
   // Create notification for the carrier

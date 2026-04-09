@@ -4,6 +4,7 @@
  */
 import { prisma } from "../config/database";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
+import { log } from "../lib/logger";
 
 // ─── Types ────────────────────────────────────────────────────────
 type Severity = "CRITICAL" | "WARNING" | "INFO";
@@ -42,7 +43,7 @@ export async function snapshotAllCarriers(): Promise<CarrierSnapshot[]> {
     select: { id: true, dotNumber: true, companyName: true },
   });
 
-  console.log(`[FMCSA Bulk] Snapshotting ${carriers.length} approved carriers`);
+  log.info(`[FMCSA Bulk] Snapshotting ${carriers.length} approved carriers`);
   const snapshots: CarrierSnapshot[] = [];
   const batchSize = 5; // parallel batch size to avoid overwhelming FMCSA
 
@@ -78,7 +79,7 @@ export async function snapshotAllCarriers(): Promise<CarrierSnapshot[]> {
     }
   }
 
-  console.log(`[FMCSA Bulk] Snapshot complete: ${snapshots.length}/${carriers.length} carriers`);
+  log.info(`[FMCSA Bulk] Snapshot complete: ${snapshots.length}/${carriers.length} carriers`);
   return snapshots;
 }
 
@@ -133,7 +134,7 @@ export async function processChanges(changes: SnapshotChange[]): Promise<string[
         },
       });
     } catch (err) {
-      console.error(`[FMCSA Bulk] Failed to create alert for ${change.carrierId}:`, err);
+      log.error({ err: err }, `[FMCSA Bulk] Failed to create alert for ${change.carrierId}:`);
     }
 
     // Auto-suspend if authority revoked or insurance dropped
@@ -151,11 +152,11 @@ export async function processChanges(changes: SnapshotChange[]): Promise<string[
             data: { onboardingStatus: "SUSPENDED", suspensionReason: `FMCSA change: ${change.field} → ${change.currentValue}`, suspendedAt: new Date() },
           });
           autoSuspended.push(change.carrierId);
-          console.warn(
+          log.warn(
             `[FMCSA Bulk] AUTO-SUSPENDED carrier ${change.companyName} (${change.dotNumber}): ${change.field} changed to ${change.currentValue}`
           );
         } catch (err) {
-          console.error(`[FMCSA Bulk] Failed to suspend ${change.carrierId}:`, err);
+          log.error({ err: err }, `[FMCSA Bulk] Failed to suspend ${change.carrierId}:`);
         }
       }
     }
@@ -180,7 +181,7 @@ async function loadPreviousSnapshot(): Promise<CarrierSnapshot[]> {
       return previousSnapshot;
     }
   } catch {
-    console.warn("[FMCSA Bulk] No previous snapshot found, treating as first run");
+    log.warn("[FMCSA Bulk] No previous snapshot found, treating as first run");
   }
   return [];
 }
@@ -198,14 +199,14 @@ async function saveSnapshot(snapshots: CarrierSnapshot[]): Promise<void> {
       },
     });
   } catch (err) {
-    console.error("[FMCSA Bulk] Failed to persist snapshot:", err);
+    log.error({ err: err }, "[FMCSA Bulk] Failed to persist snapshot:");
   }
 }
 
 // ─── Main Entry: Daily Monitor ────────────────────────────────────
 export async function runDailyMonitor(): Promise<MonitorResult> {
   const date = new Date().toISOString().split("T")[0];
-  console.log(`[FMCSA Bulk] Starting daily monitor for ${date}`);
+  log.info(`[FMCSA Bulk] Starting daily monitor for ${date}`);
   const errors: string[] = [];
 
   // 1. Load previous snapshot
@@ -218,7 +219,7 @@ export async function runDailyMonitor(): Promise<MonitorResult> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push(`Snapshot failed: ${msg}`);
-    console.error("[FMCSA Bulk] Snapshot failed:", msg);
+    log.error({ err: msg }, "[FMCSA Bulk] Snapshot failed:");
   }
 
   const changes = previous.length > 0 ? diffSnapshots(previous, current) : [];
@@ -243,6 +244,6 @@ export async function runDailyMonitor(): Promise<MonitorResult> {
     criticalChanges: critical, warningChanges: warn, infoChanges: info,
     autoSuspended, errors,
   };
-  console.log(`[FMCSA Bulk] Complete: ${current.length} carriers, ${changes.length} changes (${critical} critical), ${autoSuspended.length} suspended`);
+  log.info(`[FMCSA Bulk] Complete: ${current.length} carriers, ${changes.length} changes (${critical} critical), ${autoSuspended.length} suspended`);
   return result;
 }

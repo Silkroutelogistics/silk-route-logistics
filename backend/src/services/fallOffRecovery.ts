@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { matchCarriersForLoad } from "./smartMatchService";
+import { log } from "../lib/logger";
 
 /**
  * C.4 — Carrier Fall-Off Recovery
@@ -75,7 +76,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
     for (const match of top3) {
       // Send urgent text to each carrier
       const msg = `SRL urgent load: ${load.originCity}, ${load.originState} to ${load.destCity}, ${load.destState}, $${load.carrierRate || load.rate}, pickup ${new Date(load.pickupDate).toLocaleDateString()}. Reply YES to accept.`;
-      console.log(`[FallOff][SMS] To ${match.phone}: ${msg}`);
+      log.info(`[FallOff][SMS] To ${match.phone}: ${msg}`);
 
       // Create notification for the carrier
       await prisma.notification.create({
@@ -91,11 +92,11 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
       backupsSent++;
     }
   } catch (err) {
-    console.error("[FallOff] Smart matching failed:", err);
+    log.error({ err: err }, "[FallOff] Smart matching failed:");
   }
 
   // 3. DAT placeholder (for Phase D)
-  console.log(`[FallOff] DAT auto-post placeholder for load ${load.referenceNumber}`);
+  log.info(`[FallOff] DAT auto-post placeholder for load ${load.referenceNumber}`);
 
   // 4. LOG: carrier scoring penalty
   if (originalCarrierId) {
@@ -129,11 +130,11 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
               actionUrl: `/dashboard/carriers`,
             },
           });
-          console.log(`[FallOff] Carrier ${carrierProfile.companyName} flagged for deactivation review (${fallOffCount} fall-offs)`);
+          log.info(`[FallOff] Carrier ${carrierProfile.companyName} flagged for deactivation review (${fallOffCount} fall-offs)`);
         }
       }
     } catch (err) {
-      console.error("[FallOff] Carrier penalty logging failed:", err);
+      log.error({ err: err }, "[FallOff] Carrier penalty logging failed:");
     }
   }
 
@@ -143,7 +144,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
     data: { backupsSent },
   });
 
-  console.log(`[FallOff] Recovery initiated for load ${load.referenceNumber}: ${backupsSent} backups contacted`);
+  log.info(`[FallOff] Recovery initiated for load ${load.referenceNumber}: ${backupsSent} backups contacted`);
 
   return {
     eventId: event.id,
@@ -206,6 +207,6 @@ export async function handleFallOffAcceptance(loadId: string, carrierUserId: str
     });
   }
 
-  console.log(`[FallOff] Recovered load ${loadId} in ${recoveryTimeMin.toFixed(0)} min`);
+  log.info(`[FallOff] Recovered load ${loadId} in ${recoveryTimeMin.toFixed(0)} min`);
   return { eventId: event.id, recoveryTimeMin };
 }

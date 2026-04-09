@@ -12,6 +12,7 @@ import { sanitizeExternalMessage } from "../../security/sanitizeForLLM";
 import { redact } from "../../security/redactSensitiveData";
 import fs from "fs";
 import path from "path";
+import { log } from "../../lib/logger";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ export async function parseCheckCallReply(opts: {
 
     return data;
   } catch (err) {
-    console.error("[CheckCallParser] AI call failed, using fallback:", err instanceof Error ? err.message : err);
+    log.error({ err }, "[CheckCallParser] AI call failed, using fallback:");
 
     const fallback = parseByPatterns(opts.replyText);
 

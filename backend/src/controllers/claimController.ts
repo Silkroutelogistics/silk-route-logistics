@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createClaimSchema, updateClaimSchema } from "../validators/claim";
 import { sendEmail, wrap } from "../services/emailService";
+import { log } from "../lib/logger";
 
 export async function createClaim(req: AuthRequest, res: Response) {
   const data = createClaimSchema.parse(req.body);
@@ -49,7 +50,7 @@ export async function createClaim(req: AuthRequest, res: Response) {
             <td style="padding:8px">${data.description}</td></tr>
       </table>
     `;
-    sendEmail(load.carrier.email, `Claim Filed: ${claimNumber} — Load ${load.referenceNumber}`, wrap(body)).catch((e: any) => console.error("[Claims] Carrier email error:", e.message));
+    sendEmail(load.carrier.email, `Claim Filed: ${claimNumber} — Load ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Claims] Carrier email error:"));
   }
 
   // Notify shipper
@@ -59,7 +60,7 @@ export async function createClaim(req: AuthRequest, res: Response) {
       <p style="color:#475569">A claim has been filed for your shipment <strong>${load.referenceNumber}</strong>. We will keep you updated on the investigation.</p>
       <p style="color:#475569"><strong>Type:</strong> ${data.claimType}<br><strong>Estimated Value:</strong> ${data.estimatedValue ? '$' + data.estimatedValue.toLocaleString() : 'TBD'}</p>
     `;
-    sendEmail(load.customer.email, `Claim Filed: ${claimNumber} — Shipment ${load.referenceNumber}`, wrap(body)).catch((e: any) => console.error("[Claims] Shipper email error:", e.message));
+    sendEmail(load.customer.email, `Claim Filed: ${claimNumber} — Shipment ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Claims] Shipper email error:"));
   }
 
   res.status(201).json(claim);

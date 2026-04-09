@@ -12,6 +12,7 @@ import { auditLog } from "../middleware/audit";
 import { validateBody } from "../middleware/validate";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { verifyCarrierWithFMCSA, lookupByMcNumber } from "../services/fmcsaService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -53,7 +54,7 @@ router.get("/fmcsa-lookup/:dotNumber", fmcsaLookupLimiter, async (req: Request, 
       errors: result.errors,
     });
   } catch (err) {
-    console.error("[FMCSA Lookup] Error:", err);
+    log.error({ err: err }, "[FMCSA Lookup] Error:");
     res.status(500).json({ error: "FMCSA lookup failed. Please try again." });
   }
 });
@@ -88,7 +89,7 @@ router.get("/fmcsa-mc-lookup/:mcNumber", fmcsaLookupLimiter, async (req: Request
       errors: result.errors,
     });
   } catch (err) {
-    console.error("[FMCSA MC Lookup] Error:", err);
+    log.error({ err: err }, "[FMCSA MC Lookup] Error:");
     res.status(500).json({ error: "FMCSA MC lookup failed. Please try again." });
   }
 });
@@ -160,7 +161,7 @@ router.get("/capacity-feed", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OP
 
     res.json({ feed });
   } catch (err) {
-    console.error("[Capacity] Feed error:", err);
+    log.error({ err: err }, "[Capacity] Feed error:");
     res.status(500).json({ error: "Failed to fetch capacity feed" });
   }
 });

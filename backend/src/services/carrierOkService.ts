@@ -3,6 +3,7 @@
  * Provides 300+ fields per carrier via REST API for enhanced carrier intelligence.
  * Docs: https://docs.carrier-ok.com
  */
+import { log } from "../lib/logger";
 
 const BASE_URL = "https://api.carrier-ok.com/v1";
 const TIMEOUT_MS = 10_000;
@@ -68,7 +69,7 @@ async function carrierOkFetch<T>(path: string, cacheKey: string): Promise<T | nu
 
   const apiKey = process.env.CARRIER_OK_API_KEY;
   if (!apiKey) {
-    console.warn("[CarrierOk] CARRIER_OK_API_KEY not configured — skipping request");
+    log.warn("[CarrierOk] CARRIER_OK_API_KEY not configured — skipping request");
     return null;
   }
 
@@ -87,17 +88,17 @@ async function carrierOkFetch<T>(path: string, cacheKey: string): Promise<T | nu
     clearTimeout(timeout);
 
     if (response.status === 404) {
-      console.warn(`[CarrierOk] Not found: ${path}`);
+      log.warn(`[CarrierOk] Not found: ${path}`);
       return null;
     }
 
     if (response.status === 429) {
-      console.warn("[CarrierOk] Rate limited — backing off");
+      log.warn("[CarrierOk] Rate limited — backing off");
       return null;
     }
 
     if (!response.ok) {
-      console.error(`[CarrierOk] HTTP ${response.status} for ${path}`);
+      log.error(`[CarrierOk] HTTP ${response.status} for ${path}`);
       return null;
     }
 
@@ -108,9 +109,9 @@ async function carrierOkFetch<T>(path: string, cacheKey: string): Promise<T | nu
     clearTimeout(timeout);
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("abort")) {
-      console.error(`[CarrierOk] Timeout (${TIMEOUT_MS}ms) for ${path}`);
+      log.error(`[CarrierOk] Timeout (${TIMEOUT_MS}ms) for ${path}`);
     } else {
-      console.error(`[CarrierOk] Request error for ${path}:`, msg);
+      log.error({ data: msg }, `[CarrierOk] Request error for ${path}`);
     }
     return null;
   }

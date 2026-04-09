@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "./auth";
 import { redactRequestBody } from "../utils/logRedaction";
+import { log } from "../lib/logger";
 
 let requestCount = 0;
 
@@ -53,7 +54,7 @@ export function requestLogger(req: AuthRequest, res: Response, next: NextFunctio
         },
       })
       .catch((err: unknown) => {
-        console.error("Failed to log API request:", err);
+        log.error({ err: err }, "Failed to log API request:");
       });
   });
 

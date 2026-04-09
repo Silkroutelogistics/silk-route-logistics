@@ -1,4 +1,5 @@
 import { prisma } from "../../config/database";
+import { log } from "../../lib/logger";
 
 /**
  * Cost Tracker — Tracks AI API usage and costs with budget monitoring.
@@ -41,7 +42,7 @@ export async function trackUsage(record: UsageRecord): Promise<void> {
       },
     });
   } catch (err) {
-    console.error("[CostTracker] Failed to record usage:", err);
+    log.error({ err: err }, "[CostTracker] Failed to record usage:");
   }
 }
 

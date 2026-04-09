@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
+import { log } from "../lib/logger";
 
 export async function getIntegrations(_req: AuthRequest, res: Response) {
   const integrations = await prisma.brokerIntegration.findMany({
@@ -18,7 +19,7 @@ export async function triggerSync(req: AuthRequest, res: Response) {
     return;
   }
 
-  console.log(`[Integration] Sync initiated for ${provider} at ${new Date().toISOString()}`);
+  log.info(`[Integration] Sync initiated for ${provider} at ${new Date().toISOString()}`);
 
   await prisma.brokerIntegration.update({
     where: { provider },

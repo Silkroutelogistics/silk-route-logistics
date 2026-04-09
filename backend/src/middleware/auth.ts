@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/node";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
 import { isTokenBlacklisted } from "../utils/tokenBlacklist";
+import { log } from "../lib/logger";
 
 export interface AuthRequest extends Request<any, any, any, any> {
   user?: {
@@ -159,7 +160,7 @@ export function authorize(...roles: string[]) {
             message: `Access denied: ${req.user.email} (${req.user.role}) attempted ${req.method} ${req.originalUrl} — required: ${roles.join(", ")}`,
             ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
           },
-        }).catch((e) => console.warn("[Auth] Audit log write failed:", (e as Error).message));
+        }).catch((e) => log.warn({ err: e }, "[Auth] Audit log write failed:"));
       }
       res.status(403).json({ error: "Insufficient permissions" });
       return;

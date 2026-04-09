@@ -5,6 +5,7 @@ import fsp from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 import { env } from "../config/env";
+import { log } from "../lib/logger";
 
 const useS3 = !!(env.S3_BUCKET_NAME && env.AWS_ACCESS_KEY_ID);
 
@@ -17,9 +18,9 @@ if (useS3) {
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY!,
     },
   });
-  console.log(`[Storage] Using S3 bucket: ${env.S3_BUCKET_NAME}`);
+  log.info(`[Storage] Using S3 bucket: ${env.S3_BUCKET_NAME}`);
 } else {
-  console.log("[Storage] Using local disk storage (S3 not configured)");
+  log.info("[Storage] Using local disk storage (S3 not configured)");
 }
 
 /**

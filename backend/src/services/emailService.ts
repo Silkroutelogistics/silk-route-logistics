@@ -1,10 +1,11 @@
 import { Resend } from "resend";
 import { env } from "../config/env";
+import { log } from "../lib/logger";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 const fromEmail = env.EMAIL_FROM;
 
-console.log(`[Email] Resend configured: ${!!resend}, from: ${fromEmail}`);
+log.info(`[Email] Resend configured: ${!!resend}, from: ${fromEmail}`);
 
 interface EmailAttachment {
   filename: string;
@@ -37,22 +38,22 @@ export async function sendEmail(to: string, subject: string, html: string, attac
             await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
             continue;
           }
-          console.error(`[Email] Resend error to ${to}: ${error.message}`);
+          log.error(`[Email] Resend error to ${to}: ${error.message}`);
           throw new Error(error.message);
         }
-        console.log(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
+        log.info(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
         return;
       } catch (err: any) {
         if (err.message?.includes("rate limit") && attempt < 2) {
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
           continue;
         }
-        console.error(`[Email] FAILED to send to ${to}: ${err.message}`);
+        log.error(`[Email] FAILED to send to ${to}: ${err.message}`);
         throw err;
       }
     }
   } else {
-    console.log(`[Email][NoAPI] To: ${to} | Subject: ${subject}${attachments ? ` | ${attachments.length} attachment(s)` : ""}`);
+    log.info(`[Email][NoAPI] To: ${to} | Subject: ${subject}${attachments ? ` | ${attachments.length} attachment(s)` : ""}`);
   }
 }
 
@@ -270,7 +271,7 @@ export async function sendSequenceEmail(
     fromName: options?.fromName,
     replyTo: options?.replyTo,
   });
-  console.log(`[Sequence][Email] Sent to ${to}: ${subject} (seq: ${sequenceId}, from: ${options?.fromName || "default"})`);
+  log.info(`[Sequence][Email] Sent to ${to}: ${subject} (seq: ${sequenceId}, from: ${options?.fromName || "default"})`);
 }
 
 // ─── Shipper Notification Templates ──────────────────────────

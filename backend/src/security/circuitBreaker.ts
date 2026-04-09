@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ export async function checkLimits(input: CheckLimitsInput): Promise<CheckLimitsR
   } catch (err) {
     // If budget check fails (DB issue), log warning but don't block
     if (err instanceof CircuitBreakerError) throw err;
-    console.error("[CircuitBreaker] Budget check failed:", err);
+    log.error({ err: err }, "[CircuitBreaker] Budget check failed:");
     warnings.push("Budget check unavailable — proceeding with caution");
   }
 

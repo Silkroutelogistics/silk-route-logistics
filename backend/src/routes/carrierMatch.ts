@@ -5,6 +5,7 @@ import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
 import { checkGuestPromotion } from "../services/tierService";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -226,7 +227,7 @@ router.post("/import-from-dat", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", 
         });
       }
     } catch (err) {
-      console.error("[FMCSA] Verification error during DAT import:", err);
+      log.error({ err: err }, "[FMCSA] Verification error during DAT import:");
     }
   }
 
@@ -241,9 +242,9 @@ router.post("/import-from-dat", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", 
     try {
       const { startCarrierSequence } = await import("../services/emailSequenceService");
       await startCarrierSequence(profile.id, data.email, data.contactName || data.companyName, req.user!.id);
-      console.log(`[DAT Import] Carrier recruitment sequence started for ${data.email}`);
+      log.info(`[DAT Import] Carrier recruitment sequence started for ${data.email}`);
     } catch (err: any) {
-      console.log(`[DAT Import] Sequence not started: ${err.message}`);
+      log.info(`[DAT Import] Sequence not started: ${err.message}`);
     }
   }
 

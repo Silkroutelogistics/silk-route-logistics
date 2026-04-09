@@ -4,6 +4,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { launchWaterfall, getWaterfallStatus, WaterfallCandidate } from "../services/waterfallTenderService";
 import { isFeatureEnabled } from "../config/features";
 import { z } from "zod";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.post(
       if (err.name === "ZodError") {
         res.status(400).json({ error: "Invalid input", details: err.errors });
       } else {
-        console.error("[Waterfall] Launch error:", err);
+        log.error({ err: err }, "[Waterfall] Launch error:");
         res.status(400).json({ error: err.message || "Failed to launch waterfall" });
       }
     }
@@ -68,7 +69,7 @@ router.get(
       if (!status) { res.status(404).json({ error: "Load not found" }); return; }
       res.json(status);
     } catch (err) {
-      console.error("[Waterfall] Status error:", err);
+      log.error({ err: err }, "[Waterfall] Status error:");
       res.status(500).json({ error: "Failed to get waterfall status" });
     }
   },

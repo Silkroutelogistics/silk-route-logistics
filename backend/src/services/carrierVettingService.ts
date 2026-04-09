@@ -18,6 +18,7 @@ import { checkExclusions } from "./samGovService";
 import { verifyTinWithIRS } from "./tinMatchService";
 import type { EnhancedTinResult } from "./tinMatchService";
 import { crossReferenceCarrier } from "./crossReferenceService";
+import { log } from "../lib/logger";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -274,7 +275,7 @@ export async function vetCarrier(
         csaBasics = numericScores as Record<string, number>;
       }
     } catch (e) {
-      console.error("[Compass Vet] Live CSA score fetch error:", e);
+      log.error({ err: e }, "[Compass Vet] Live CSA score fetch error:");
     }
   }
   if (csaBasics && typeof csaBasics === "object") {
@@ -462,7 +463,7 @@ export async function vetCarrier(
       const ofacResult = await screenCarrier(existingCarrier.id);
       ofacStatus = ofacResult.ofacStatus;
     } catch (e) {
-      console.error("[Compass Vet] Live OFAC screening error:", e);
+      log.error({ err: e }, "[Compass Vet] Live OFAC screening error:");
       ofacStatus = existingCarrier.ofacStatus || "ERROR";
     }
   }
@@ -495,7 +496,7 @@ export async function vetCarrier(
       eldStatus = eldResult.status;
       eldProvider = eldResult.eldProvider || existingCarrier.eldProvider;
     } catch (e) {
-      console.error("[Compass Vet] Live ELD validation error:", e);
+      log.error({ err: e }, "[Compass Vet] Live ELD validation error:");
       eldStatus = existingCarrier.eldOnFmcsaList;
       eldProvider = existingCarrier.eldProvider;
     }
@@ -519,7 +520,7 @@ export async function vetCarrier(
     try {
       tinResult = await verifyTinWithIRS(idv.w9TinFull, idv.w9CompanyName);
     } catch (err) {
-      console.warn("[Vetting] Enhanced TIN check failed, falling back to stored status:", err);
+      log.warn({ data: err }, "[Vetting] Enhanced TIN check failed, falling back to stored status:");
     }
   }
 
@@ -657,7 +658,7 @@ export async function vetCarrier(
       overbooking = obResult.risk;
       activeLoads = obResult.activeLoadCount;
     } catch (e) {
-      console.error("[Compass Vet] Live overbooking check error:", e);
+      log.error({ err: e }, "[Compass Vet] Live overbooking check error:");
       overbooking = existingCarrier.overbookingRisk;
       activeLoads = existingCarrier.activeLoadCount;
     }
@@ -874,7 +875,7 @@ export async function vetCarrier(
         });
       }
     } catch (e) {
-      console.error("[Compass Vet] Cross-reference check error:", e);
+      log.error({ err: e }, "[Compass Vet] Cross-reference check error:");
       checks.push({
         name: "Cross-Reference Identity Validation",
         result: "WARNING",

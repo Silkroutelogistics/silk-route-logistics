@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "../services/emailService";
+import { log } from "../lib/logger";
 
 const quoteRequestSchema = z.object({
   name: z.string().min(1).max(200),
@@ -71,7 +72,7 @@ export async function createWebsiteLead(req: Request, res: Response) {
         </table>
         <p><a href="https://silkroutelogistics.ai/ae/crm.html" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold">View in CRM</a></p>
       `),
-    ).catch((e) => console.error("[Website] Failed to send lead notification:", e.message));
+    ).catch((e) => log.error({ err: e }, "[Website] Failed to send lead notification:"));
 
     // Send confirmation to shipper (fire-and-forget)
     sendEmail(
@@ -86,15 +87,15 @@ export async function createWebsiteLead(req: Request, res: Response) {
         </table>
         <p>In the meantime, feel free to call us at <strong>(269) 220-6760</strong> for immediate assistance.</p>
       `),
-    ).catch((e) => console.error("[Website] Failed to send lead confirmation:", e.message));
+    ).catch((e) => log.error({ err: e }, "[Website] Failed to send lead confirmation:"));
 
-    console.log(`[Website] New quote request: ${lead.id} — ${data.company} — ${data.originCity},${data.originState} → ${data.destCity},${data.destState}`);
+    log.info(`[Website] New quote request: ${lead.id} — ${data.company} — ${data.originCity},${data.originState} → ${data.destCity},${data.destState}`);
     res.status(201).json({ success: true, id: lead.id });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: "Validation failed", details: err.errors });
     }
-    console.error("[Website] Lead creation error:", err.message);
+    log.error({ err: err }, "[Website] Lead creation error:");
     res.status(500).json({ error: "Failed to submit quote request" });
   }
 }
@@ -134,15 +135,15 @@ export async function createContactSubmission(req: Request, res: Response) {
         </table>
         <p>Reply directly to this email or contact the sender at ${data.email}.</p>
       `),
-    ).catch((e) => console.error("[Website] Failed to send contact notification:", e.message));
+    ).catch((e) => log.error({ err: e }, "[Website] Failed to send contact notification:"));
 
-    console.log(`[Website] Contact submission: ${lead.id} — ${data.inquiryType} — ${data.name}`);
+    log.info(`[Website] Contact submission: ${lead.id} — ${data.inquiryType} — ${data.name}`);
     res.status(201).json({ success: true, id: lead.id });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: "Validation failed", details: err.errors });
     }
-    console.error("[Website] Contact submission error:", err.message);
+    log.error({ err: err }, "[Website] Contact submission error:");
     res.status(500).json({ error: "Failed to submit contact form" });
   }
 }

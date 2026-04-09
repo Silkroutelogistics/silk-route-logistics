@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
+import { log } from "../lib/logger";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -347,14 +348,14 @@ export async function processArReminders(): Promise<{ processed: number; reminde
       });
 
       sent++;
-      console.log(`[ARCollections] ${stageLabel(stage)}: ${inv.invoiceNumber} → ${inv.load.customer.email}`);
+      log.info(`[ARCollections] ${stageLabel(stage)}: ${inv.invoiceNumber} → ${inv.load.customer.email}`);
     } catch (err) {
       errors++;
-      console.error(`[ARCollections] Error processing ${inv.invoiceNumber}:`, err);
+      log.error({ err: err }, `[ARCollections] Error processing ${inv.invoiceNumber}:`);
     }
   }
 
-  console.log(`[ARCollections] Processed ${invoices.length} invoices, sent ${sent} reminders, ${errors} errors`);
+  log.info(`[ARCollections] Processed ${invoices.length} invoices, sent ${sent} reminders, ${errors} errors`);
   return { processed: invoices.length, remindersSent: sent, errors };
 }
 

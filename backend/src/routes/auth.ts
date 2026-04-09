@@ -12,6 +12,7 @@ import { env } from "../config/env";
 import { prisma } from "../config/database";
 import { setTokenCookie } from "../utils/cookies";
 import { z } from "zod";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -228,7 +229,7 @@ router.get("/google/callback", async (req, res) => {
       note: "Save this refresh token — it won't be shown again",
     });
   } catch (err) {
-    console.error("[Gmail OAuth] Token exchange error:", err);
+    log.error({ err: err }, "[Gmail OAuth] Token exchange error:");
     res.status(500).json({ error: "Failed to exchange code for tokens" });
   }
 });

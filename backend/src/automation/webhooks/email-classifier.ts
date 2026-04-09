@@ -13,6 +13,7 @@ import { redact } from "../../security/redactSensitiveData";
 import { CircuitBreakerError } from "../../security/circuitBreaker";
 import fs from "fs";
 import path from "path";
+import { log } from "../../lib/logger";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export async function classifyEmail(opts: {
     return classification;
   } catch (err) {
     // Fallback to rule-based classification
-    console.error("[EmailClassifier] AI call failed, using fallback:", err instanceof Error ? err.message : err);
+    log.error({ err }, "[EmailClassifier] AI call failed, using fallback:");
 
     const fallback = classifyByRules(opts.subject, opts.body);
 

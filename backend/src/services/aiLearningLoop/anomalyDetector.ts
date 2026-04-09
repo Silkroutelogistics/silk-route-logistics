@@ -1,5 +1,6 @@
 import { prisma } from "../../config/database";
 import { Prisma } from "@prisma/client";
+import { log } from "../../lib/logger";
 
 /**
  * Anomaly Detector — Detects unusual patterns across the platform.
@@ -195,7 +196,7 @@ export async function runAnomalyScan(): Promise<{
   bySeverity: Record<string, number>;
   anomalies: AnomalyResult[];
 }> {
-  console.log("[AnomalyDetector] Starting scan...");
+  log.info("[AnomalyDetector] Starting scan...");
   const startTime = Date.now();
 
   const [rateAnomalies, carrierAnomalies, customerAnomalies, systemAnomalies] =
@@ -225,7 +226,7 @@ export async function runAnomalyScan(): Promise<{
         dataJson: toJson(a.data),
         status: "NEW",
       },
-    }).catch((err) => console.error("[AnomalyDetector] Failed to log:", err.message));
+    }).catch((err) => log.error({ err: err }, "[AnomalyDetector] Failed to log:"));
   }
 
   const bySeverity: Record<string, number> = {};
@@ -233,7 +234,7 @@ export async function runAnomalyScan(): Promise<{
     bySeverity[a.severity] = (bySeverity[a.severity] ?? 0) + 1;
   }
 
-  console.log(`[AnomalyDetector] Scan complete in ${Date.now() - startTime}ms — ${allAnomalies.length} anomalies found`);
+  log.info(`[AnomalyDetector] Scan complete in ${Date.now() - startTime}ms — ${allAnomalies.length} anomalies found`);
 
   return { totalAnomalies: allAnomalies.length, bySeverity, anomalies: allAnomalies };
 }

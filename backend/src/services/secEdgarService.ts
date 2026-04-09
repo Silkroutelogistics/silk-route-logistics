@@ -3,6 +3,7 @@
  * Uses the free SEC EDGAR API to look up public company financials.
  * No API key required. Rate limit: 10 req/sec.
  */
+import { log } from "../lib/logger";
 
 const USER_AGENT = "SilkRouteLogistics support@silkroutelogistics.ai";
 const TIMEOUT_MS = 10_000;
@@ -182,7 +183,7 @@ export async function getCompanyFilings(cik: string): Promise<CompanyFilingsResu
     cacheSet(cacheKey, result);
     return result;
   } catch (err) {
-    console.error(`SEC EDGAR filings fetch failed for CIK ${cik}:`, err);
+    log.error({ err: err }, `SEC EDGAR filings fetch failed for CIK ${cik}:`);
     return null;
   }
 }
@@ -257,7 +258,7 @@ export async function getCompanyFacts(cik: string): Promise<CompanyFinancials | 
     cacheSet(cacheKey, result);
     return result;
   } catch (err) {
-    console.error(`SEC EDGAR facts fetch failed for CIK ${cik}:`, err);
+    log.error({ err: err }, `SEC EDGAR facts fetch failed for CIK ${cik}:`);
     return null;
   }
 }

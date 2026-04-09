@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { env } from "../config/env";
 import crypto from "crypto";
+import { log } from "../lib/logger";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ async function getCached(originHash: string, destHash: string, provider: string)
     }
     // Expired — delete stale entry
     if (cached) {
-      await prisma.mileageCache.delete({ where: { id: cached.id } }).catch(err => console.error('[Mileage] Cache error:', err.message));
+      await prisma.mileageCache.delete({ where: { id: cached.id } }).catch(err => log.error({ err: err }, '[Mileage] Cache error:'));
     }
   } catch {
     // Cache miss or DB error — proceed to API
@@ -99,7 +100,7 @@ async function setCache(origin: string, destination: string, provider: string, r
       },
     });
   } catch (err) {
-    console.error("[MileageCache] Failed to write cache:", err instanceof Error ? err.message : err);
+    log.error({ err }, "[MileageCache] Failed to write cache:");
   }
 }
 
@@ -154,7 +155,7 @@ async function milemakerCalculate(origin: string, destination: string, options?:
   const clientSecret = env.MILEMAKER_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    console.warn("[Mileage] MileMaker credentials not configured — falling back to Google");
+    log.warn("[Mileage] MileMaker credentials not configured — falling back to Google");
     return googleCalculate(origin, destination);
   }
 
@@ -219,7 +220,7 @@ async function pcmilerCalculate(origin: string, destination: string, options?: M
   const apiKey = env.PCMILER_API_KEY;
 
   if (!apiKey) {
-    console.warn("[Mileage] PC*Miler API key not configured — falling back to Google");
+    log.warn("[Mileage] PC*Miler API key not configured — falling back to Google");
     return googleCalculate(origin, destination);
   }
 
@@ -310,18 +311,18 @@ export async function calculateMileage(
     await setCache(origin, destination, providerName, result);
     return result;
   } catch (primaryErr) {
-    console.error(`[Mileage] ${providerName} failed: ${primaryErr instanceof Error ? primaryErr.message : primaryErr}`);
+    log.error(`[Mileage] ${providerName} failed: ${primaryErr instanceof Error ? primaryErr.message : primaryErr}`);
 
     // Fallback chain
     for (const fallback of fallbackOrder) {
       if (fallback === providerName) continue;
       try {
-        console.warn(`[Mileage] Falling back to ${fallback}`);
+        log.warn(`[Mileage] Falling back to ${fallback}`);
         const result = await providers[fallback](origin, destination, options);
         await setCache(origin, destination, fallback, result);
         return result;
       } catch (fbErr) {
-        console.error(`[Mileage] ${fallback} also failed: ${fbErr instanceof Error ? fbErr.message : fbErr}`);
+        log.error(`[Mileage] ${fallback} also failed: ${fbErr instanceof Error ? fbErr.message : fbErr}`);
       }
     }
 

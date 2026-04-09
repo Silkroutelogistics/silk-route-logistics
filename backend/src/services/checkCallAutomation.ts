@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { autoGenerateInvoice } from "./invoiceService";
+import { log } from "../lib/logger";
 
 /**
  * C.2 — Check-Call Automation
@@ -89,7 +90,7 @@ export async function createCheckCallSchedule(loadId: string) {
     })),
   });
 
-  console.log(`[CheckCall] Created ${futureSchedules.length} ${isExpedited ? 'EXPEDITED' : 'STANDARD'} check calls for load ${load.referenceNumber}`);
+  log.info(`[CheckCall] Created ${futureSchedules.length} ${isExpedited ? 'EXPEDITED' : 'STANDARD'} check calls for load ${load.referenceNumber}`);
 }
 
 /**
@@ -122,7 +123,7 @@ export async function processDueCheckCalls() {
       data: { status: "SENT", sentAt: now },
     });
 
-    console.log(`[CheckCall] Sent check call for load ${cc.load.referenceNumber} (${cc.type})`);
+    log.info(`[CheckCall] Sent check call for load ${cc.load.referenceNumber} (${cc.type})`);
   }
 
   // Process missed check calls (SENT > 30 min without response)
@@ -170,7 +171,7 @@ export async function processDueCheckCalls() {
         data: { retryCount: 1, sentAt: now },
       });
 
-      console.log(`[CheckCall] AMBER: Retry sent for load ${cc.load.referenceNumber} (${cc.type})`);
+      log.info(`[CheckCall] AMBER: Retry sent for load ${cc.load.referenceNumber} (${cc.type})`);
     } else {
       // Second miss: RED alert — carrier unresponsive
       await prisma.notification.create({
@@ -188,7 +189,7 @@ export async function processDueCheckCalls() {
         data: { status: "ESCALATED", escalatedAt: now },
       });
 
-      console.log(`[CheckCall] RED: Carrier unresponsive on load ${cc.load.referenceNumber} (${cc.type})`);
+      log.info(`[CheckCall] RED: Carrier unresponsive on load ${cc.load.referenceNumber} (${cc.type})`);
     }
   }
 }
@@ -254,19 +255,19 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
     });
   }
 
-  console.log(`[CheckCall] Response received for load ${schedule.load.referenceNumber}: ${mapping.label}`);
+  log.info(`[CheckCall] Response received for load ${schedule.load.referenceNumber}: ${mapping.label}`);
 
   // If delivered, trigger full delivery pipeline (invoice, AP, CPP, etc.)
   if (mapping.status === "DELIVERED") {
     // Auto-generate invoice
     autoGenerateInvoice(schedule.loadId).catch((e) =>
-      console.error("[CheckCall] autoGenerateInvoice error:", e.message)
+      log.error({ err: e }, "[CheckCall] autoGenerateInvoice error:")
     );
 
     // Integration: AP, credit, CPP
     import("./integrationService").then(({ onLoadDelivered }) =>
       onLoadDelivered(schedule.loadId).catch((e) =>
-        console.error("[CheckCall] onLoadDelivered error:", e.message)
+        log.error({ err: e }, "[CheckCall] onLoadDelivered error:")
       )
     );
 
@@ -296,7 +297,7 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
  */
 async function sendCheckCallText(to: string, message: string) {
   // For now, always log. When OpenPhone API is configured, send real text.
-  console.log(`[CheckCall][SMS] To: ${to} | ${message}`);
+  log.info(`[CheckCall][SMS] To: ${to} | ${message}`);
 
   // OpenPhone API integration would go here:
   // POST https://api.openphone.com/v1/messages

@@ -5,6 +5,7 @@
  */
 
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ async function searchExclusions(searchTerm: string): Promise<ExclusionResult> {
     });
 
     if (!response.ok) {
-      console.error(`SAM.gov API returned ${response.status}: ${response.statusText}`);
+      log.error(`SAM.gov API returned ${response.status}: ${response.statusText}`);
       return { excluded: false, matches: [], totalResults: 0, searchedAt };
     }
 
@@ -112,7 +113,7 @@ async function searchExclusions(searchTerm: string): Promise<ExclusionResult> {
     setCache(cacheKey, result);
     return result;
   } catch (err) {
-    console.error("SAM.gov exclusion check failed:", err);
+    log.error({ err: err }, "SAM.gov exclusion check failed:");
     return { excluded: false, matches: [], totalResults: 0, searchedAt };
   }
 }

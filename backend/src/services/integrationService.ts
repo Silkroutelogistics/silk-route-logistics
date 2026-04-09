@@ -3,6 +3,7 @@ import { calculateTier, calculateOverallScore, getBonusPercentage, checkGuestPro
 import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
 import { checkMilestoneAdvancement, applyMilestoneRewards } from "./carvanService";
+import { log } from "../lib/logger";
 
 /**
  * Cross-System Integration Service
@@ -50,7 +51,7 @@ export async function onCarrierApproved(carrierProfileId: string) {
     },
   });
 
-  console.log(`[Integration] Carrier ${profile.user?.company || profile.id} approved → GUEST tier + initial scorecard created`);
+  log.info(`[Integration] Carrier ${profile.user?.company || profile.id} approved → GUEST tier + initial scorecard created`);
 }
 
 // ──────────────────────────────────────────────────
@@ -59,7 +60,7 @@ export async function onCarrierApproved(carrierProfileId: string) {
 
 export async function onLoadPosted(loadId: string) {
   const result = await notifyMatchedCarriers(loadId);
-  console.log(`[Integration] Load ${loadId} posted → ${result.notified} carrier(s) notified via outreach`);
+  log.info(`[Integration] Load ${loadId} posted → ${result.notified} carrier(s) notified via outreach`);
   return result;
 }
 
@@ -69,7 +70,7 @@ export async function onLoadPosted(loadId: string) {
 
 export async function onLoadDispatched(loadId: string) {
   await createCheckCallSchedule(loadId);
-  console.log(`[Integration] Load ${loadId} dispatched → check-call schedule created`);
+  log.info(`[Integration] Load ${loadId} dispatched → check-call schedule created`);
 }
 
 // ──────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export async function onLoadDelivered(loadId: string) {
 
     // Fire-and-forget CPP recalculation
     recalculateCarrierCPP(profileId).catch((e) =>
-      console.error(`[Integration] CPP recalc error for ${profileId}:`, e.message)
+      log.error({ err: e }, `[Integration] CPP recalc error for ${profileId}:`)
     );
   }
 
@@ -135,10 +136,10 @@ export async function onLoadDelivered(loadId: string) {
     const cpId = load.carrier.carrierProfile.id;
     checkMilestoneAdvancement(cpId).then(result => {
       if (result.advanced) applyMilestoneRewards(cpId, result.newMilestone!);
-    }).catch(e => console.error("[Milestone]", e.message));
+    }).catch(e => log.error({ err: e }, "[Milestone]"));
   }
 
-  console.log(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + CPP + milestone triggered`);
+  log.info(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + CPP + milestone triggered`);
 }
 
 // ── Create Carrier Pay entry on delivery ──
@@ -146,7 +147,7 @@ async function createCarrierPayOnDelivery(load: any) {
   // Check for duplicate
   const existingPay = await prisma.carrierPay.findFirst({ where: { loadId: load.id } });
   if (existingPay) {
-    console.log(`[Integration] CarrierPay already exists for load ${load.id}`);
+    log.info(`[Integration] CarrierPay already exists for load ${load.id}`);
     return;
   }
 
@@ -224,7 +225,7 @@ async function createCarrierPayOnDelivery(load: any) {
         requestedById: load.carrierId,
       },
     });
-    console.log(`[Integration] $5K+ threshold → approval queue entry created for ${paymentNumber}`);
+    log.info(`[Integration] $5K+ threshold → approval queue entry created for ${paymentNumber}`);
   }
 
   // Record QP fee in factoring fund (if any)
@@ -247,7 +248,7 @@ async function createCarrierPayOnDelivery(load: any) {
     });
   }
 
-  console.log(`[Integration] CarrierPay ${paymentNumber} created: gross=$${grossAmount}, net=$${netAmount}, tier=${paymentTier}`);
+  log.info(`[Integration] CarrierPay ${paymentNumber} created: gross=$${grossAmount}, net=$${netAmount}, tier=${paymentTier}`);
 }
 
 // ── Update Shipper Credit utilization on delivery ──
@@ -281,9 +282,9 @@ async function updateShipperCreditOnDelivery(load: any) {
         blockedAt: new Date(),
       },
     });
-    console.log(`[Integration] Shipper credit AUTO-BLOCKED for customer ${load.customerId} — utilization ${utilizationPct.toFixed(1)}%`);
+    log.info(`[Integration] Shipper credit AUTO-BLOCKED for customer ${load.customerId} — utilization ${utilizationPct.toFixed(1)}%`);
   } else if (utilizationPct >= 80) {
-    console.log(`[Integration] Shipper credit WARNING: customer ${load.customerId} at ${utilizationPct.toFixed(1)}% utilization`);
+    log.info(`[Integration] Shipper credit WARNING: customer ${load.customerId} at ${utilizationPct.toFixed(1)}% utilization`);
   }
 }
 
@@ -341,7 +342,7 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
         updateData.autoBlocked = false;
         updateData.blockedReason = null;
         updateData.blockedAt = null;
-        console.log(`[Integration] Shipper credit UNBLOCKED for customer ${invoice.load.customerId}`);
+        log.info(`[Integration] Shipper credit UNBLOCKED for customer ${invoice.load.customerId}`);
       }
 
       // Update avg days to pay
@@ -388,12 +389,12 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
             description: `Factoring reserve released — shipper paid invoice ${invoice.invoiceNumber}`,
           },
         });
-        console.log(`[Integration] Factoring reserve $${reserveRelease} released for carrier pay ${carrierPay.paymentNumber}`);
+        log.info(`[Integration] Factoring reserve $${reserveRelease} released for carrier pay ${carrierPay.paymentNumber}`);
       }
     }
   }
 
-  console.log(`[Integration] Invoice ${invoice.invoiceNumber} paid → fund credited $${paidAmount}, shipper credit released`);
+  log.info(`[Integration] Invoice ${invoice.invoiceNumber} paid → fund credited $${paidAmount}, shipper credit released`);
 }
 
 // ──────────────────────────────────────────────────
@@ -428,7 +429,7 @@ export async function onPODUploaded(loadId: string) {
       data: { status: "INVOICED" },
     });
 
-    console.log(`[Integration] POD uploaded → invoice ${invoice.invoiceNumber} advanced to SENT, load to INVOICED`);
+    log.info(`[Integration] POD uploaded → invoice ${invoice.invoiceNumber} advanced to SENT, load to INVOICED`);
   }
 
   // Mark POD received on the CarrierPay if exists
@@ -603,7 +604,7 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
       },
     });
 
-    console.log(`[Integration] CPP tier change: ${oldTier} → ${newTier} (score: ${overallScore}) for carrier ${profile.id}`);
+    log.info(`[Integration] CPP tier change: ${oldTier} → ${newTier} (score: ${overallScore}) for carrier ${profile.id}`);
   }
 
   // Create bonus if earned
@@ -620,7 +621,7 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     });
   }
 
-  console.log(`[Integration] CPP recalculated for carrier ${profile.id}: score=${overallScore}, tier=${newTier}`);
+  log.info(`[Integration] CPP recalculated for carrier ${profile.id}: score=${overallScore}, tier=${newTier}`);
 }
 
 // ──────────────────────────────────────────────────
@@ -688,7 +689,7 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
           updateData.autoBlocked = false;
           updateData.blockedReason = null;
           updateData.blockedAt = null;
-          console.log(`[Integration] Shipper credit UNBLOCKED after load cancellation for customer ${load.customerId}`);
+          log.info(`[Integration] Shipper credit UNBLOCKED after load cancellation for customer ${load.customerId}`);
         }
 
         await prisma.shipperCredit.update({ where: { id: credit.id }, data: updateData });
@@ -756,7 +757,7 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
     data: { status: "CANCELLED" },
   });
 
-  console.log(`[Integration] Load ${load.referenceNumber || loadId} ${load.status === "TONU" ? "TONU" : "cancelled"} → credit reversed, AP voided, fund reversed, tenders cancelled`);
+  log.info(`[Integration] Load ${load.referenceNumber || loadId} ${load.status === "TONU" ? "TONU" : "cancelled"} → credit reversed, AP voided, fund reversed, tenders cancelled`);
 }
 
 // ──────────────────────────────────────────────────
@@ -778,10 +779,10 @@ export async function processAllCPPRecalculations() {
       await recalculateCarrierCPP(carrier.id);
       recalculated++;
     } catch (e: any) {
-      console.error(`[Integration] CPP recalc failed for ${carrier.id}:`, e.message);
+      log.error({ err: e }, `[Integration] CPP recalc failed for ${carrier.id}:`);
     }
   }
 
-  console.log(`[Integration] CPP batch recalculation: ${recalculated}/${carriers.length} carriers processed`);
+  log.info(`[Integration] CPP batch recalculation: ${recalculated}/${carriers.length} carriers processed`);
   return { total: carriers.length, recalculated };
 }

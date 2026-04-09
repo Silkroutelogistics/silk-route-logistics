@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
+import { log } from "../lib/logger";
 
 export function auditLog(action: string, entity: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -20,7 +21,7 @@ export function auditLog(action: string, entity: string) {
               userAgent: req.headers["user-agent"] || null,
             },
           })
-          .catch(err => console.error('[Audit] Error:', err.message));
+          .catch(err => log.error({ err: err }, '[Audit] Error:'));
       }
       return originalJson(data);
     };

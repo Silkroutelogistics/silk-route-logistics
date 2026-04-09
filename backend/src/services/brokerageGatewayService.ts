@@ -3,6 +3,7 @@
  * Aggregates load search, posting, rate quotes, and tracking across providers.
  * Placeholder implementations return structured data for future API integration.
  */
+import { log } from "../lib/logger";
 
 // ─── Shared Types ─────────────────────────────────────────────────
 export interface LoadFilters {
@@ -57,7 +58,7 @@ class BrokerageProvider {
     const missing = this.cfg.envKeys.filter((k) => !process.env[k]);
     if (missing.length > 0) {
       if (!warnedProviders.has(this.cfg.name)) {
-        console.warn(`[BrokerageGateway] ${this.cfg.name}: missing env vars ${missing.join(", ")} — skipping`);
+        log.warn(`[BrokerageGateway] ${this.cfg.name}: missing env vars ${missing.join(", ")} — skipping`);
         warnedProviders.add(this.cfg.name);
       }
       return false;

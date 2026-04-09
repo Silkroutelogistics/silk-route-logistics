@@ -1,5 +1,6 @@
 import { prisma } from "../../config/database";
 import { Prisma } from "@prisma/client";
+import { log } from "../../lib/logger";
 
 /**
  * A/B Tester — Controlled experiment framework for AI model variants.
@@ -44,7 +45,7 @@ export function registerExperiment(
   };
 
   experiments.set(name, experiment);
-  console.log(`[ABTester] Registered experiment: ${name} — variants: ${variants.join(", ")}`);
+  log.info(`[ABTester] Registered experiment: ${name} — variants: ${variants.join(", ")}`);
   return experiment;
 }
 
@@ -94,7 +95,7 @@ export async function recordOutcome(
       outcome: variant,
       confidence: value,
     },
-  }).catch((err) => console.error("[ABTester] Failed to record:", err.message));
+  }).catch((err) => log.error({ err: err }, "[ABTester] Failed to record:"));
 }
 
 // ─── Get Experiment Results ──────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { executeTool, TOOL_DEFINITIONS, ToolContext } from "../services/marcoPoloService";
+import { log } from "../lib/logger";
 
 // ── AI Provider Setup ──────────────────────────────────────────
 
@@ -146,7 +147,7 @@ async function callGeminiWithTools(
 
     const toolResults = [];
     for (const call of calls) {
-      console.log(`[MarcoPolo] Tool call: ${call.name}(${JSON.stringify(call.args)})`);
+      log.info(`[MarcoPolo] Tool call: ${call.name}(${JSON.stringify(call.args)})`);
       const toolResult = await executeTool(call.name, call.args || {}, toolCtx);
 
       // Generate action suggestions based on tool results
@@ -228,7 +229,7 @@ async function callAI(
       const { reply, actions } = await callGeminiWithTools(messages, systemPrompt, toolCtx);
       return { reply, actions, provider: "gemini" };
     } catch (err: any) {
-      console.error("[MarcoPolo] Gemini failed, trying Anthropic:", err.message);
+      log.error({ err: err }, "[MarcoPolo] Gemini failed, trying Anthropic:");
     }
   }
 
@@ -238,7 +239,7 @@ async function callAI(
       const { reply, actions } = await callAnthropicSimple(messages, systemPrompt, toolCtx);
       return { reply, actions, provider: "anthropic" };
     } catch (err: any) {
-      console.error("[MarcoPolo] Anthropic also failed:", err.message);
+      log.error({ err: err }, "[MarcoPolo] Anthropic also failed:");
       throw err;
     }
   }
@@ -401,12 +402,12 @@ export async function chat(req: AuthRequest, res: Response) {
         { role: "assistant", content: reply, timestamp: Date.now(), actions },
       ]);
     } catch (e) {
-      console.error("[MarcoPolo] Failed to persist conversation:", e);
+      log.error({ err: e }, "[MarcoPolo] Failed to persist conversation:");
     }
 
     res.json({ reply, actions, provider });
   } catch (error: unknown) {
-    console.error("[MarcoPolo] Chat error:", error);
+    log.error({ err: error }, "[MarcoPolo] Chat error:");
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Marco Polo encountered an error",
@@ -448,7 +449,7 @@ export async function publicChat(req: AuthRequest, res: Response) {
           },
         });
       } catch (e) {
-        console.error("[MarcoPolo] Lead capture error:", e);
+        log.error({ err: e }, "[MarcoPolo] Lead capture error:");
       }
     }
 
@@ -494,7 +495,7 @@ export async function publicChat(req: AuthRequest, res: Response) {
 
     res.json({ reply, actions: [] });
   } catch (error: unknown) {
-    console.error("[MarcoPolo] Public chat error:", error);
+    log.error({ err: error }, "[MarcoPolo] Public chat error:");
     res.status(500).json({
       reply: "I'm having trouble connecting right now. Please try the contact form on this page, or call us directly!",
       actions: [{ label: "Contact Us", type: "navigate", url: "/contact.html" }],
@@ -525,7 +526,7 @@ export async function getHistory(req: AuthRequest, res: Response) {
       conversationId: conversation.id,
     });
   } catch (error) {
-    console.error("[MarcoPolo] History error:", error);
+    log.error({ err: error }, "[MarcoPolo] History error:");
     res.json({ messages: [], conversationId: null });
   }
 }
@@ -546,7 +547,7 @@ export async function newConversation(req: AuthRequest, res: Response) {
 
     res.json({ conversationId: conversation.id, messages: [] });
   } catch (error) {
-    console.error("[MarcoPolo] New conversation error:", error);
+    log.error({ err: error }, "[MarcoPolo] New conversation error:");
     res.status(500).json({ error: "Failed to create conversation" });
   }
 }

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import cron from "node-cron";
+import { log } from "../lib/logger";
 
 /**
  * Cron Registry Service
@@ -31,7 +32,7 @@ export async function registerCronJob(def: CronJobDef) {
       enabled: true,
       nextRun: getNextRunTime(def.schedule),
     },
-  }).catch((e) => console.error(`[CronRegistry] Failed to register ${def.jobName}:`, e.message));
+  }).catch((e) => log.error({ err: e }, `[CronRegistry] Failed to register ${def.jobName}:`));
 
   // Schedule the job
   cron.schedule(def.schedule, async () => {
@@ -49,7 +50,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
   // Check if enabled
   const entry = await prisma.cronRegistry.findUnique({ where: { jobName } });
   if (entry && !entry.enabled) {
-    console.log(`[CronRegistry] Skipping disabled job: ${jobName}`);
+    log.info(`[CronRegistry] Skipping disabled job: ${jobName}`);
     return { success: false, error: "Job is disabled" };
   }
 
@@ -58,7 +59,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
     where: { jobName },
     update: { lastStatus: "RUNNING", lastRun: new Date() },
     create: { jobName, schedule: "manual", lastStatus: "RUNNING", lastRun: new Date() },
-  }).catch(err => console.error('[CronRegistry] Error:', err.message));
+  }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
 
   const start = Date.now();
   try {
@@ -74,9 +75,9 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
         runCount: { increment: 1 },
         nextRun: entry?.schedule ? getNextRunTime(entry.schedule) : null,
       },
-    }).catch(err => console.error('[CronRegistry] Error:', err.message));
+    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
 
-    console.log(`[CronRegistry] ${jobName} completed in ${duration}ms`);
+    log.info(`[CronRegistry] ${jobName} completed in ${duration}ms`);
     return { success: true, duration };
   } catch (e: any) {
     const duration = Date.now() - start;
@@ -90,7 +91,7 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
         failCount: { increment: 1 },
         runCount: { increment: 1 },
       },
-    }).catch(err => console.error('[CronRegistry] Error:', err.message));
+    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
 
     // Log to error_logs table
     await prisma.errorLog.create({
@@ -100,9 +101,9 @@ export async function runRegisteredJob(jobName: string): Promise<{ success: bool
         stackTrace: e.stack?.slice(0, 2000),
         endpoint: `cron:${jobName}`,
       },
-    }).catch(err => console.error('[CronRegistry] Error:', err.message));
+    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
 
-    console.error(`[CronRegistry] ${jobName} FAILED in ${duration}ms:`, e.message);
+    log.error({ err: e }, `[CronRegistry] ${jobName} FAILED in ${duration}ms:`);
     return { success: false, duration, error: e.message };
   }
 }
@@ -187,8 +188,8 @@ export async function seedCronRegistry() {
       where: { jobName: job.jobName },
       update: { schedule: job.schedule, description: job.description },
       create: { ...job, enabled: true, nextRun: getNextRunTime(job.schedule) },
-    }).catch(err => console.error('[CronRegistry] Error:', err.message));
+    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
   }
 
-  console.log(`[CronRegistry] Seeded ${jobs.length} cron jobs into registry`);
+  log.info(`[CronRegistry] Seeded ${jobs.length} cron jobs into registry`);
 }

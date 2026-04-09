@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * Compliance Forecasting Engine — Predictive Compliance Management
@@ -35,7 +36,7 @@ export async function runComplianceForecastCycle(): Promise<{
   criticalIssues: number;
 }> {
   const startTime = Date.now();
-  console.log("[ComplianceForecast] Starting forecast cycle...");
+  log.info("[ComplianceForecast] Starting forecast cycle...");
 
   const carriers = await prisma.carrierProfile.findMany({
     where: { onboardingStatus: "APPROVED" },
@@ -162,7 +163,7 @@ export async function runComplianceForecastCycle(): Promise<{
             message: `Overall risk ${Math.round(overallRisk * 100)}% — ${predictedIssues.length} issue(s) detected`,
             link: `/compliance/carrier/${carrier.id}`,
           },
-        }).catch((err) => console.error("[ComplianceForecast] Notification error:", err.message));
+        }).catch((err) => log.error({ err: err }, "[ComplianceForecast] Notification error:"));
       }
       autoAlertSent = true;
       alertsSent++;
@@ -209,6 +210,6 @@ export async function runComplianceForecastCycle(): Promise<{
     },
   });
 
-  console.log(`[ComplianceForecast] Cycle complete: ${carriers.length} carriers, ${criticalIssues} critical, ${alertsSent} alerts`);
+  log.info(`[ComplianceForecast] Cycle complete: ${carriers.length} carriers, ${criticalIssues} critical, ${alertsSent} alerts`);
   return { carriersScanned: carriers.length, alertsSent, criticalIssues };
 }

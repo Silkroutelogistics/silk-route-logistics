@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // Notification types aligned with application events
 export type NotificationType =
@@ -62,7 +63,7 @@ export async function notifyLoadStatusChange(loadId: string, newStatus: string) 
   });
 
   if (!load) {
-    console.warn(`[NotificationService] Load ${loadId} not found`);
+    log.warn(`[NotificationService] Load ${loadId} not found`);
     return;
   }
 
@@ -113,7 +114,7 @@ export async function notifyTenderAction(
   });
 
   if (!tender) {
-    console.warn(`[NotificationService] Tender ${tenderId} not found`);
+    log.warn(`[NotificationService] Tender ${tenderId} not found`);
     return;
   }
 
@@ -188,7 +189,7 @@ export async function notifyPaymentEvent(
   });
 
   if (!payment) {
-    console.warn(`[NotificationService] Payment ${paymentId} not found`);
+    log.warn(`[NotificationService] Payment ${paymentId} not found`);
     return;
   }
 
@@ -245,7 +246,7 @@ export async function notifyInvoiceEvent(
   });
 
   if (!invoice) {
-    console.warn(`[NotificationService] Invoice ${invoiceId} not found`);
+    log.warn(`[NotificationService] Invoice ${invoiceId} not found`);
     return;
   }
 
@@ -310,7 +311,7 @@ export async function notifyDisputeEvent(
   });
 
   if (!dispute) {
-    console.warn(`[NotificationService] Dispute ${disputeId} not found`);
+    log.warn(`[NotificationService] Dispute ${disputeId} not found`);
     return;
   }
 
@@ -372,7 +373,7 @@ export async function notifyCreditAlert(shipperId: string, message: string) {
   });
 
   if (admins.length === 0) {
-    console.warn("[NotificationService] No active admins found for credit alert");
+    log.warn("[NotificationService] No active admins found for credit alert");
     return;
   }
 

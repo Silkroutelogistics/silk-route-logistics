@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ export async function screenName(
     const res = await fetch(url.toString(), { signal: controller.signal });
 
     if (!res.ok) {
-      console.error(`OFAC API returned ${res.status} for name="${name}"`);
+      log.error(`OFAC API returned ${res.status} for name="${name}"`);
       return { status: "ERROR", matches: [] };
     }
 
@@ -66,9 +67,9 @@ export async function screenName(
     };
   } catch (err: any) {
     if (err.name === "AbortError") {
-      console.error(`OFAC API timeout for name="${name}"`);
+      log.error(`OFAC API timeout for name="${name}"`);
     } else {
-      console.error(`OFAC API error for name="${name}":`, err.message);
+      log.error(`OFAC API error for name="${name}":`, err.message);
     }
     return { status: "ERROR", matches: [] };
   } finally {
@@ -143,7 +144,7 @@ export async function weeklyOfacRescan() {
     select: { id: true, companyName: true, contactName: true },
   });
 
-  console.log(`[OFAC Rescan] Screening ${carriers.length} approved carriers`);
+  log.info(`[OFAC Rescan] Screening ${carriers.length} approved carriers`);
 
   let matchCount = 0;
   let errorCount = 0;
@@ -203,7 +204,7 @@ export async function weeklyOfacRescan() {
             });
           }
 
-          console.log(`[OFAC Rescan] AUTO-SUSPENDED carrier ${carrier.id} — OFAC match score ${topScore}`);
+          log.info(`[OFAC Rescan] AUTO-SUSPENDED carrier ${carrier.id} — OFAC match score ${topScore}`);
         }
       }
 
@@ -211,7 +212,7 @@ export async function weeklyOfacRescan() {
         errorCount++;
       }
     } catch (err: any) {
-      console.error(
+      log.error(
         `[OFAC Rescan] Failed for carrier ${carrier.id}:`,
         err.message
       );
@@ -219,7 +220,7 @@ export async function weeklyOfacRescan() {
     }
   }
 
-  console.log(
+  log.info(
     `[OFAC Rescan] Complete — ${carriers.length} screened, ${matchCount} matches, ${errorCount} errors`
   );
 

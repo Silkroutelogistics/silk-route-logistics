@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { calculatePredictiveETA } from "../services/predictiveEtaService";
+import { log } from "../lib/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -152,7 +153,7 @@ router.get(
 
       res.json({ loads: enrichedLoads, total: enrichedLoads.length });
     } catch (err) {
-      console.error("Track trace board error:", err);
+      log.error({ err: err }, "Track trace board error:");
       res.status(500).json({ error: "Failed to fetch board data" });
     }
   }

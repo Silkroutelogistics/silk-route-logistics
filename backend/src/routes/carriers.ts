@@ -25,6 +25,7 @@ import { vetAndStoreReport, type CarrierVettingReport } from "../services/carrie
 import { generateCompassReport } from "../services/compassPdfService";
 import { getFullInspectionData } from "../services/fmcsaInspectionService";
 import { extractCOIData } from "../services/coiReaderService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -90,7 +91,7 @@ router.get("/:id/inspections", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS")
     const data = await getFullInspectionData(carrier.dotNumber);
     res.json(data);
   } catch (err) {
-    console.error("[Inspections] Error:", err);
+    log.error({ err: err }, "[Inspections] Error:");
     res.status(500).json({ error: "Failed to fetch inspection data" });
   }
 });
@@ -159,7 +160,7 @@ router.get("/:id/compass-report", authorize("ADMIN", "CEO", "BROKER", "OPERATION
     res.setHeader("Content-Disposition", `attachment; filename="Compass-Report-${carrier.id}.pdf"`);
     pdfDoc.pipe(res);
   } catch (err) {
-    console.error("[Compass PDF] Error generating report:", err);
+    log.error({ err: err }, "[Compass PDF] Error generating report:");
     res.status(500).json({ error: "Failed to generate Compass PDF report" });
   }
 });
@@ -205,7 +206,7 @@ router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), 
 
     res.json({ extracted, carrierId: carrier.id });
   } catch (err) {
-    console.error("[COI Reader] Error:", err);
+    log.error({ err: err }, "[COI Reader] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "COI reading failed" });
   }
 });

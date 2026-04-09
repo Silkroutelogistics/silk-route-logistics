@@ -11,6 +11,7 @@ import { callClaude, logAutomationEvent } from "../../ai/client";
 import { prisma } from "../../config/database";
 import fs from "fs";
 import path from "path";
+import { log } from "../../lib/logger";
 
 // ─── System Prompt ──────────────────────────────────────────────────────────
 
@@ -176,7 +177,7 @@ export async function generateMorningBriefing(): Promise<BriefingResult> {
       aiCostUsd: result.costUsd,
     };
   } catch (err) {
-    console.error("[MorningBriefing] AI call failed, using plain text:", err instanceof Error ? err.message : err);
+    log.error({ err }, "[MorningBriefing] AI call failed, using plain text:");
 
     await logAutomationEvent({
       type: "morning_briefing",

@@ -8,6 +8,7 @@
 
 import { prisma } from "../config/database";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
+import { log } from "../lib/logger";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -153,7 +154,7 @@ export async function crossReferenceCarrier(carrierId: string): Promise<CrossRef
     try {
       fmcsa = await verifyCarrierWithFMCSA(carrier.dotNumber);
     } catch (e) {
-      console.error("[CrossRef] FMCSA lookup error:", e);
+      log.error({ err: e }, "[CrossRef] FMCSA lookup error:");
     }
   }
 

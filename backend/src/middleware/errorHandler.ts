@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import * as Sentry from "@sentry/node";
 import { prisma } from "../config/database";
 import { trackError } from "../services/sentryAlertService";
+import { log } from "../lib/logger";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -24,7 +25,7 @@ function logErrorToDb(err: Error, req: Request, statusCode: number, errorType: s
       userAgent: req.headers["user-agent"]?.slice(0, 500),
       statusCode,
     },
-  }).catch(err => console.error('[ErrorHandler] Alert failed:', err.message));
+  }).catch(err => log.error({ err: err }, '[ErrorHandler] Alert failed:'));
 
   // Track error rate for alerting
   recentErrorCount++;
@@ -46,19 +47,19 @@ function logErrorToDb(err: Error, req: Request, statusCode: number, errorType: s
               message: `10+ errors in the last hour. Latest: ${err.message?.slice(0, 100)}`,
               actionUrl: "/admin/monitoring",
             },
-          }).catch(err => console.error('[ErrorHandler] Alert failed:', err.message));
+          }).catch(err => log.error({ err: err }, '[ErrorHandler] Alert failed:'));
         }
-      }).catch(err => console.error('[ErrorHandler] Alert failed:', err.message));
-    console.error("[ErrorHandler] ALERT: 10+ errors in the last hour");
+      }).catch(err => log.error({ err: err }, '[ErrorHandler] Alert failed:'));
+    log.error("[ErrorHandler] ALERT: 10+ errors in the last hour");
   }
 }
 
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
   // Log the full error server-side (always)
   if (isProduction) {
-    console.error(`[ERROR] ${err.message}`);
+    log.error(`[ERROR] ${err.message}`);
   } else {
-    console.error(err);
+    log.error(err);
   }
 
   // Validation errors — safe to return details

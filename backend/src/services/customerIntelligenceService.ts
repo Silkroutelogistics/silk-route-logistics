@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * Customer Intelligence Engine — Self-Learning Shipper Behavior Predictor
@@ -36,7 +37,7 @@ export async function runCustomerLearningCycle(): Promise<{
   upsellOpportunities: number;
 }> {
   const startTime = Date.now();
-  console.log("[CustomerIntelligence] Starting learning cycle...");
+  log.info("[CustomerIntelligence] Starting learning cycle...");
 
   const customers = await prisma.customer.findMany({
     where: { status: "Active" },
@@ -243,7 +244,7 @@ export async function runCustomerLearningCycle(): Promise<{
     },
   });
 
-  console.log(`[CustomerIntelligence] Cycle complete: ${customers.length} customers, ${churnAlerts} churn alerts, ${upsellOpportunities} upsell ops`);
+  log.info(`[CustomerIntelligence] Cycle complete: ${customers.length} customers, ${churnAlerts} churn alerts, ${upsellOpportunities} upsell ops`);
   return { customersProcessed: customers.length, churnAlerts, upsellOpportunities };
 }
 

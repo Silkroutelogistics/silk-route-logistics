@@ -20,6 +20,7 @@ import { checkLoadCompliance, checkAllActiveLoadCompliance } from "../services/l
 import { verifyTruckVin, verifyAllCarrierVins } from "../services/vinVerificationService";
 import { buildFingerprint } from "../services/chameleonDetectionService";
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * POST /api/carriers/:id/full-vet
@@ -142,7 +143,7 @@ export async function vetCarrierEndpoint(req: AuthRequest, res: Response) {
     const report = await vetAndStoreReport(dotNumber, carrierId, mcNumber, "USER", req.user?.id);
     res.json(report);
   } catch (err) {
-    console.error("[CarrierVetting] Error vetting carrier:", err);
+    log.error({ err: err }, "[CarrierVetting] Error vetting carrier:");
     res.status(500).json({ error: err instanceof Error ? err.message : "Vetting failed" });
   }
 }
@@ -174,7 +175,7 @@ export async function runIdentityCheckEndpoint(req: AuthRequest, res: Response) 
     const result = await runIdentityCheck(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("[IdentityCheck] Error:", err);
+    log.error({ err: err }, "[IdentityCheck] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "Identity check failed" });
   }
 }
@@ -203,7 +204,7 @@ export async function runChameleonCheckEndpoint(req: AuthRequest, res: Response)
     const result = await checkChameleon(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("[ChameleonCheck] Error:", err);
+    log.error({ err: err }, "[ChameleonCheck] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "Chameleon check failed" });
   }
 }
@@ -356,7 +357,7 @@ export async function runOfacScreen(req: AuthRequest, res: Response) {
     const result = await screenCarrier(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("[OFAC Screen] Error:", err);
+    log.error({ err: err }, "[OFAC Screen] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "OFAC screening failed" });
   }
 }
@@ -369,7 +370,7 @@ export async function runFacialVerify(req: AuthRequest, res: Response) {
     const result = await verifyFacialMatch(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("[FacialVerify] Error:", err);
+    log.error({ err: err }, "[FacialVerify] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "Facial verification failed" });
   }
 }
@@ -382,7 +383,7 @@ export async function runEldValidation(req: AuthRequest, res: Response) {
     const result = await validateEldProvider(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("[ELD Validate] Error:", err);
+    log.error({ err: err }, "[ELD Validate] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "ELD validation failed" });
   }
 }
@@ -395,7 +396,7 @@ export async function runTinVerify(req: AuthRequest, res: Response) {
     const result = await verifyTin(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("[TIN Verify] Error:", err);
+    log.error({ err: err }, "[TIN Verify] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "TIN verification failed" });
   }
 }

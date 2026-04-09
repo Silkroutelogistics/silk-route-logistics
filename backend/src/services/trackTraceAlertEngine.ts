@@ -7,6 +7,7 @@ import { prisma } from "../config/database";
 import { sendShipperDelayNotification } from "./shipperNotificationService";
 import { createNotification } from "./notificationService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
+import { log } from "../lib/logger";
 
 export interface AlertResult {
   loadId: string;
@@ -335,6 +336,6 @@ export async function runAlertScanner() {
   }
 
   if (yellowCount + redCount + criticalCount + tempAlerts > 0) {
-    console.log(`[AlertEngine] Alerts: ${yellowCount} YELLOW, ${redCount} RED, ${criticalCount} CRITICAL, ${tempAlerts} TEMP`);
+    log.info(`[AlertEngine] Alerts: ${yellowCount} YELLOW, ${redCount} RED, ${criticalCount} CRITICAL, ${tempAlerts} TEMP`);
   }
 }

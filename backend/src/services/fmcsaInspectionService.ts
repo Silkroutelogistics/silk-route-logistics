@@ -6,6 +6,7 @@
 
 import { env } from "../config/env";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
+import { log } from "../lib/logger";
 
 // ── Cache (24h for detailed inspections) ──
 const INSPECTION_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -102,7 +103,7 @@ export async function getInspectionSummary(dotNumber: string): Promise<Inspectio
         carrier = data?.content?.carrier || null;
       }
     } catch (err) {
-      console.error(`[FMCSA Inspection] Error fetching carrier data for DOT ${dotNumber}:`, err instanceof Error ? err.message : err);
+      log.error({ err }, `[FMCSA Inspection] Error fetching carrier data for DOT ${dotNumber}:`);
     }
   }
 
@@ -169,7 +170,7 @@ export async function getDetailedInspections(dotNumber: string): Promise<Detaile
 
   const webKey = env.FMCSA_WEB_KEY;
   if (!webKey) {
-    console.warn("[FMCSA Inspection] No FMCSA_WEB_KEY configured — cannot fetch detailed inspections");
+    log.warn("[FMCSA Inspection] No FMCSA_WEB_KEY configured — cannot fetch detailed inspections");
     return [];
   }
 
@@ -184,7 +185,7 @@ export async function getDetailedInspections(dotNumber: string): Promise<Detaile
     clearTimeout(timeout);
 
     if (!response.ok) {
-      console.error(`[FMCSA Inspection] HTTP ${response.status} fetching inspections for DOT ${dotNumber}`);
+      log.error(`[FMCSA Inspection] HTTP ${response.status} fetching inspections for DOT ${dotNumber}`);
       return [];
     }
 
@@ -234,7 +235,7 @@ export async function getDetailedInspections(dotNumber: string): Promise<Detaile
     cacheSet(`insp:${dotNumber}`, inspections);
     return inspections;
   } catch (err) {
-    console.error(`[FMCSA Inspection] Error fetching inspections for DOT ${dotNumber}:`, err instanceof Error ? err.message : err);
+    log.error({ err }, `[FMCSA Inspection] Error fetching inspections for DOT ${dotNumber}:`);
     return [];
   }
 }

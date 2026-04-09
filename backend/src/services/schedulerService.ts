@@ -27,6 +27,7 @@ import {
 } from "./complianceMonitorService";
 import { weeklyOfacRescan } from "./ofacScreeningService";
 import { runFullChameleonScan } from "./chameleonDetectionService";
+import { log } from "../lib/logger";
 
 const INSTANCE_ID = crypto.randomUUID();
 
@@ -129,7 +130,7 @@ async function runPreTracing() {
       hoursUntilPickup,
     );
 
-    console.log(`[PreTracing] Sent ${window} alert to ${carrier.email} for ${shipment.load.referenceNumber}`);
+    log.info(`[PreTracing] Sent ${window} alert to ${carrier.email} for ${shipment.load.referenceNumber}`);
   }
 }
 
@@ -203,7 +204,7 @@ async function runLateDetection() {
       hoursSinceUpdate,
     );
 
-    console.log(`[LateDetection] Alert sent for ${shipment.shipmentNumber} — ${Math.round(hoursSinceUpdate)}h stale`);
+    log.info(`[LateDetection] Alert sent for ${shipment.shipmentNumber} — ${Math.round(hoursSinceUpdate)}h stale`);
   }
 }
 
@@ -268,7 +269,7 @@ async function runPasswordExpiryReminder() {
       // Email
       await sendPasswordExpiryReminder(user.email, user.firstName, daysLeft);
 
-      console.log(`[PasswordExpiry] Sent ${daysLeft}-day reminder to ${user.email}`);
+      log.info(`[PasswordExpiry] Sent ${daysLeft}-day reminder to ${user.email}`);
     }
   }
 }
@@ -288,14 +289,14 @@ async function runOtpCleanup() {
     },
   });
   if (result.count > 0) {
-    console.log(`[OtpCleanup] Purged ${result.count} expired/used OTP codes`);
+    log.info(`[OtpCleanup] Purged ${result.count} expired/used OTP codes`);
   }
 }
 
 /** Wrapper that acquires a distributed lock before running a job. */
 async function withLock(jobName: string, ttlMs: number, fn: () => Promise<void>) {
   if (!(await acquireLock(jobName, ttlMs))) {
-    console.log(`[Scheduler] Skipping ${jobName} — another instance holds the lock`);
+    log.info(`[Scheduler] Skipping ${jobName} — another instance holds the lock`);
     return;
   }
   try {
@@ -308,79 +309,79 @@ async function withLock(jobName: string, ttlMs: number, fn: () => Promise<void>)
 export function startSchedulers() {
   // Pre-tracing: every hour at :00
   cron.schedule("0 * * * *", async () => {
-    console.log("[Scheduler] Running pre-tracing check...");
+    log.info("[Scheduler] Running pre-tracing check...");
     await withLock("pre-tracing", 5 * 60 * 1000, runPreTracing);
   });
 
   // Late detection: every 30 minutes at :00 and :30
   cron.schedule("0,30 * * * *", async () => {
-    console.log("[Scheduler] Running late detection check...");
+    log.info("[Scheduler] Running late detection check...");
     await withLock("late-detection", 5 * 60 * 1000, runLateDetection);
   });
 
   // Password expiry reminders: daily at 9:00 AM
   cron.schedule("0 9 * * *", async () => {
-    console.log("[Scheduler] Running password expiry reminder check...");
+    log.info("[Scheduler] Running password expiry reminder check...");
     await withLock("password-expiry", 10 * 60 * 1000, runPasswordExpiryReminder);
   });
 
   // OTP cleanup: daily at 3:00 AM
   cron.schedule("0 3 * * *", async () => {
-    console.log("[Scheduler] Running OTP cleanup...");
+    log.info("[Scheduler] Running OTP cleanup...");
     await withLock("otp-cleanup", 5 * 60 * 1000, runOtpCleanup);
   });
 
   // Phase C: Check-call automation: every 15 minutes
   cron.schedule("*/15 * * * *", async () => {
-    console.log("[Scheduler] Running check-call automation...");
+    log.info("[Scheduler] Running check-call automation...");
     await withLock("check-call-automation", 5 * 60 * 1000, processDueCheckCalls);
   });
 
   // Phase C: Risk flagging: every 30 minutes at :05 and :35
   cron.schedule("5,35 * * * *", async () => {
-    console.log("[Scheduler] Running risk flagging engine...");
+    log.info("[Scheduler] Running risk flagging engine...");
     await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
   });
 
   // Phase C: Email sequence processor: every hour at :10
   cron.schedule("10 * * * *", async () => {
-    console.log("[Scheduler] Processing due email sequences...");
+    log.info("[Scheduler] Processing due email sequences...");
     await withLock("email-sequences", 5 * 60 * 1000, processDueSequences);
   });
 
   // Shipper transit updates: 9 AM ET (14:00 UTC) daily
   cron.schedule("0 14 * * *", async () => {
-    console.log("[Scheduler] Running shipper transit updates (9 AM ET)...");
+    log.info("[Scheduler] Running shipper transit updates (9 AM ET)...");
     await withLock("shipper-transit-am", 10 * 60 * 1000, processShipperTransitUpdates);
   });
 
   // Shipper transit updates: 4 PM ET (21:00 UTC) daily
   cron.schedule("0 21 * * *", async () => {
-    console.log("[Scheduler] Running shipper transit updates (4 PM ET)...");
+    log.info("[Scheduler] Running shipper transit updates (4 PM ET)...");
     await withLock("shipper-transit-pm", 10 * 60 * 1000, processShipperTransitUpdates);
   });
 
   // Accounting: Daily AR reminders at 6 AM ET (11:00 UTC)
   cron.schedule("0 11 * * *", async () => {
-    console.log("[Scheduler] Running daily AR reminder processing...");
+    log.info("[Scheduler] Running daily AR reminder processing...");
     await withLock("ar-reminders-daily", 10 * 60 * 1000, async () => {
       const result = await processARReminders();
-      console.log(`[Scheduler] AR reminders: ${result.remindersSent} sent of ${result.processed} processed`);
+      log.info(`[Scheduler] AR reminders: ${result.remindersSent} sent of ${result.processed} processed`);
     });
   });
 
   // AR Collections: Daily enhanced reminders at 9 AM ET (14:00 UTC)
   cron.schedule("0 14 * * *", async () => {
-    console.log("[Scheduler] Running AR collections daily reminders (9 AM ET)...");
+    log.info("[Scheduler] Running AR collections daily reminders (9 AM ET)...");
     await withLock("ar-daily-reminders", 15 * 60 * 1000, async () => {
       const result = await processArCollections();
-      console.log(`[Scheduler] AR collections: ${result.remindersSent} reminders sent, ${result.processed} processed, ${result.errors} errors`);
+      log.info(`[Scheduler] AR collections: ${result.remindersSent} reminders sent, ${result.processed} processed, ${result.errors} errors`);
     });
   });
 
   // Accounting: Weekly AP aging check — Monday 7 AM ET (12:00 UTC)
   cron.schedule("0 12 * * 1", async () => {
-    console.log("[Scheduler] Running weekly AP aging check...");
+    log.info("[Scheduler] Running weekly AP aging check...");
     await withLock("ap-aging-weekly", 10 * 60 * 1000, async () => {
       const overduePayments = await prisma.carrierPay.findMany({
         where: {
@@ -389,13 +390,13 @@ export function startSchedulers() {
         },
         select: { id: true, paymentNumber: true, netAmount: true, dueDate: true },
       });
-      console.log(`[Scheduler] Weekly AP: ${overduePayments.length} overdue carrier payments found`);
+      log.info(`[Scheduler] Weekly AP: ${overduePayments.length} overdue carrier payments found`);
     });
   });
 
   // Accounting: Monthly financial report generation — 1st of month 8 AM ET (13:00 UTC)
   cron.schedule("0 13 1 * *", async () => {
-    console.log("[Scheduler] Running monthly financial report generation...");
+    log.info("[Scheduler] Running monthly financial report generation...");
     await withLock("monthly-report-gen", 15 * 60 * 1000, async () => {
       const now = new Date();
       const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -429,16 +430,16 @@ export function startSchedulers() {
           },
         },
       });
-      console.log(`[Scheduler] Monthly report generated for ${monthName}`);
+      log.info(`[Scheduler] Monthly report generated for ${monthName}`);
     });
   });
 
   // CPP: Weekly tier recalculation — Sunday 6 AM ET (11:00 UTC)
   cron.schedule("0 11 * * 0", async () => {
-    console.log("[Scheduler] Running weekly CPP tier recalculation...");
+    log.info("[Scheduler] Running weekly CPP tier recalculation...");
     await withLock("cpp-weekly-recalc", 30 * 60 * 1000, async () => {
       const result = await processAllCPPRecalculations();
-      console.log(`[Scheduler] CPP recalc: ${result.recalculated}/${result.total} carriers processed`);
+      log.info(`[Scheduler] CPP recalc: ${result.recalculated}/${result.total} carriers processed`);
     });
   });
 
@@ -446,37 +447,37 @@ export function startSchedulers() {
 
   // AI Queue Processor: every 10 minutes
   cron.schedule("*/10 * * * *", async () => {
-    console.log("[Scheduler] Processing AI learning queue...");
+    log.info("[Scheduler] Processing AI learning queue...");
     await withLock("ai-queue-processor", 5 * 60 * 1000, async () => {
       const result = await processQueue();
-      console.log(`[Scheduler] AI queue: ${result.processed} processed, ${result.failed} failed, ${result.dead} dead-lettered`);
+      log.info(`[Scheduler] AI queue: ${result.processed} processed, ${result.failed} failed, ${result.dead} dead-lettered`);
     });
   });
 
   // Anomaly Scanner: every 2 hours
   cron.schedule("15 */2 * * *", async () => {
-    console.log("[Scheduler] Running anomaly scan...");
+    log.info("[Scheduler] Running anomaly scan...");
     await withLock("ai-anomaly-scan", 10 * 60 * 1000, async () => {
       const result = await runAnomalyScan();
-      console.log(`[Scheduler] Anomaly scan: ${result.totalAnomalies} anomalies found`);
+      log.info(`[Scheduler] Anomaly scan: ${result.totalAnomalies} anomalies found`);
     });
   });
 
   // Full AI Training Cycle: daily 2 AM ET (07:00 UTC)
   cron.schedule("0 7 * * *", async () => {
-    console.log("[Scheduler] Running full AI training cycle...");
+    log.info("[Scheduler] Running full AI training cycle...");
     await withLock("ai-full-training", 60 * 60 * 1000, async () => {
       const result = await runFullTrainingCycle();
-      console.log(`[Scheduler] AI training: ${result.results.filter(r => r.success).length}/${result.results.length} services, ${result.totalDurationMs}ms`);
+      log.info(`[Scheduler] AI training: ${result.results.filter(r => r.success).length}/${result.results.length} services, ${result.totalDurationMs}ms`);
     });
   });
 
   // Shipment Risk Monitor: every 30 minutes
   cron.schedule("20,50 * * * *", async () => {
-    console.log("[Scheduler] Running shipment risk monitor...");
+    log.info("[Scheduler] Running shipment risk monitor...");
     await withLock("ai-shipment-monitor", 10 * 60 * 1000, async () => {
       const result = await scanActiveShipments();
-      console.log(`[Scheduler] Risk scan: ${result.scanned} loads, ${result.critical} critical, ${result.highRisk} high`);
+      log.info(`[Scheduler] Risk scan: ${result.scanned} loads, ${result.critical} critical, ${result.highRisk} high`);
     });
   });
 
@@ -484,13 +485,13 @@ export function startSchedulers() {
 
   // Geofence scanner: every 5 minutes
   cron.schedule("*/5 * * * *", async () => {
-    console.log("[Scheduler] Running geofence scanner...");
+    log.info("[Scheduler] Running geofence scanner...");
     await withLock("geofence-scanner", 4 * 60 * 1000, scanGeofences);
   });
 
   // ELD GPS sync: every 15 minutes at :03, :18, :33, :48
   cron.schedule("3,18,33,48 * * * *", async () => {
-    console.log("[Scheduler] Running ELD GPS sync...");
+    log.info("[Scheduler] Running ELD GPS sync...");
     await withLock("eld-gps-sync", 10 * 60 * 1000, async () => {
       const [samsara, motive] = await Promise.allSettled([
         processSamsaraLocations(),
@@ -500,23 +501,23 @@ export function startSchedulers() {
       const mRes = motive.status === "fulfilled" ? motive.value : { processed: 0, matched: 0 };
       const total = sRes.processed + mRes.processed;
       if (total > 0) {
-        console.log(`[Scheduler] ELD sync: Samsara ${sRes.processed}/${sRes.matched}, Motive ${mRes.processed}/${mRes.matched}`);
+        log.info(`[Scheduler] ELD sync: Samsara ${sRes.processed}/${sRes.matched}, Motive ${mRes.processed}/${mRes.matched}`);
       }
     });
   });
 
   // Alert engine (ETA vs appointment): every 15 minutes at :07, :22, :37, :52
   cron.schedule("7,22,37,52 * * * *", async () => {
-    console.log("[Scheduler] Running track & trace alert engine...");
+    log.info("[Scheduler] Running track & trace alert engine...");
     await withLock("tt-alert-engine", 10 * 60 * 1000, runAlertScanner);
   });
 
   // Tender expiration: every 30 minutes at :12 and :42
   cron.schedule("12,42 * * * *", async () => {
-    console.log("[Scheduler] Running tender expiration check...");
+    log.info("[Scheduler] Running tender expiration check...");
     await withLock("tender-expiry", 5 * 60 * 1000, async () => {
       const result = await processExpiredTenders();
-      console.log(`[Scheduler] Tender expiry: ${result.expired} expired, ${result.loadsReverted} loads reverted`);
+      log.info(`[Scheduler] Tender expiry: ${result.expired} expired, ${result.loadsReverted} loads reverted`);
     });
   });
 
@@ -524,85 +525,85 @@ export function startSchedulers() {
 
   // Insurance expiry enforcement: daily at 6 AM ET (11:00 UTC)
   cron.schedule("0 11 * * *", async () => {
-    console.log("[Scheduler] Running insurance expiry enforcement...");
+    log.info("[Scheduler] Running insurance expiry enforcement...");
     await withLock("insurance-expiry-enforce", 15 * 60 * 1000, async () => {
       const result = await processInsuranceExpiryEnforcement();
-      console.log(`[Scheduler] Insurance expiry: ${result.suspended} suspended, ${result.warned} warned`);
+      log.info(`[Scheduler] Insurance expiry: ${result.suspended} suspended, ${result.warned} warned`);
     });
   });
 
   // Document expiry alerts: daily at 7 AM ET (12:00 UTC)
   cron.schedule("0 12 * * *", async () => {
-    console.log("[Scheduler] Running document expiry alerts...");
+    log.info("[Scheduler] Running document expiry alerts...");
     await withLock("doc-expiry-alerts", 10 * 60 * 1000, async () => {
       const result = await processDocumentExpiryAlerts();
-      console.log(`[Scheduler] Document expiry: ${result.alerts} alerts sent`);
+      log.info(`[Scheduler] Document expiry: ${result.alerts} alerts sent`);
     });
   });
 
   // FMCSA authority change detection: daily at 4 AM ET (09:00 UTC)
   cron.schedule("0 9 * * *", async () => {
-    console.log("[Scheduler] Running FMCSA authority change detection...");
+    log.info("[Scheduler] Running FMCSA authority change detection...");
     await withLock("fmcsa-authority-watch", 30 * 60 * 1000, async () => {
       const result = await detectFmcsaAuthorityChanges();
-      console.log(`[Scheduler] FMCSA watch: ${result.checked} checked, ${result.changes} changes, ${result.suspensions} suspended`);
+      log.info(`[Scheduler] FMCSA watch: ${result.checked} checked, ${result.changes} changes, ${result.suspensions} suspended`);
     });
   });
 
   // OFAC weekly rescan: Sunday 5 AM ET (10:00 UTC)
   cron.schedule("0 10 * * 0", async () => {
-    console.log("[Scheduler] Running weekly OFAC rescan...");
+    log.info("[Scheduler] Running weekly OFAC rescan...");
     await withLock("ofac-weekly-rescan", 60 * 60 * 1000, async () => {
       const result = await weeklyOfacRescan();
-      console.log(`[Scheduler] OFAC rescan: ${result.total} screened, ${result.matches} matches, ${result.errors} errors`);
+      log.info(`[Scheduler] OFAC rescan: ${result.total} screened, ${result.matches} matches, ${result.errors} errors`);
     });
   });
 
   // Chameleon detection full scan: weekly Wednesday 3 AM ET (08:00 UTC)
   cron.schedule("0 8 * * 3", async () => {
-    console.log("[Scheduler] Running full chameleon detection scan...");
+    log.info("[Scheduler] Running full chameleon detection scan...");
     await withLock("chameleon-full-scan", 30 * 60 * 1000, async () => {
       const result = await runFullChameleonScan();
-      console.log(`[Scheduler] Chameleon scan: ${result.scanned} scanned, ${result.matchesFound} matches, ${result.errors} errors`);
+      log.info(`[Scheduler] Chameleon scan: ${result.scanned} scanned, ${result.matchesFound} matches, ${result.errors} errors`);
     });
   });
 
   // Monthly full re-vetting: 1st of month 2 AM ET (07:00 UTC)
   cron.schedule("0 7 1 * *", async () => {
-    console.log("[Scheduler] Running monthly carrier re-vetting...");
+    log.info("[Scheduler] Running monthly carrier re-vetting...");
     await withLock("monthly-carrier-revet", 120 * 60 * 1000, async () => {
       const result = await monthlyCarrierReVetting();
-      console.log(`[Scheduler] Monthly re-vet: ${result.revetted}/${result.total} revetted, ${result.critical} CRITICAL, ${result.suspended} suspended`);
+      log.info(`[Scheduler] Monthly re-vet: ${result.revetted}/${result.total} revetted, ${result.critical} CRITICAL, ${result.suspended} suspended`);
     });
   });
 
   // Gmail reply tracking: every 30 minutes at :25 and :55
   cron.schedule("25,55 * * * *", async () => {
-    console.log("[Scheduler] Running Gmail reply checker...");
+    log.info("[Scheduler] Running Gmail reply checker...");
     await withLock("gmail-reply-checker", 5 * 60 * 1000, async () => {
       const { checkForReplies } = await import("./gmailService");
       const result = await checkForReplies();
       if (result.logged > 0) {
-        console.log(`[Scheduler] Gmail: ${result.checked} checked, ${result.matched} matched, ${result.logged} logged`);
+        log.info(`[Scheduler] Gmail: ${result.checked} checked, ${result.matched} matched, ${result.logged} logged`);
       }
     });
   });
 
   // Shipper contact email ETA updates: daily noon EST = 17:00 UTC
   cron.schedule("0 17 * * *", async () => {
-    console.log("[Scheduler] Running shipper contact ETA updates (noon EST)...");
+    log.info("[Scheduler] Running shipper contact ETA updates (noon EST)...");
     await withLock("shipper-eta-updates", 15 * 60 * 1000, dailyETAUpdates);
   });
 
   // Detention tracking: weekly Sunday 7 AM ET (12:00 UTC)
   cron.schedule("0 12 * * 0", async () => {
-    console.log("[Scheduler] Running facility detention tracking...");
+    log.info("[Scheduler] Running facility detention tracking...");
     await withLock("detention-tracking", 30 * 60 * 1000, async () => {
       const { computeFacilityDwellTimes } = await import("./detentionTrackingService");
       const result = await computeFacilityDwellTimes();
-      console.log(`[Scheduler] Detention: ${result.facilitiesProcessed} facilities, ${result.highDetention} high-detention, ${result.updated} updated`);
+      log.info(`[Scheduler] Detention: ${result.facilitiesProcessed} facilities, ${result.highDetention} high-detention, ${result.updated} updated`);
     });
   });
 
-  console.log(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);
+  log.info(`[Scheduler] All jobs started (instance: ${INSTANCE_ID.slice(0, 8)})`);
 }

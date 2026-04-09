@@ -15,6 +15,7 @@ import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap } from "../services/emailService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
+import { log } from "../lib/logger";
 
 export async function registerCarrier(req: Request, res: Response) {
   try {
@@ -129,7 +130,7 @@ export async function registerCarrier(req: Request, res: Response) {
     }
 
     // Fire and forget — don't block response
-    Promise.all(uploadPromises).catch((e) => console.error("[Registration Files] Upload error:", e.message));
+    Promise.all(uploadPromises).catch((e) => log.error({ err: e }, "[Registration Files] Upload error:"));
   }
 
   // Store EIN in identity verification if provided
@@ -208,7 +209,7 @@ export async function registerCarrier(req: Request, res: Response) {
         <p style="color:#94a3b8;font-size:13px;margin-top:4px"><a href="mailto:operations@silkroutelogistics.ai" style="color:#d4a574">operations@silkroutelogistics.ai</a> &bull; Mon–Fri 7AM–7PM ET</p>
       </div>
     `)
-  ).catch((e) => console.error("[Registration Email] Error:", e.message));
+  ).catch((e) => log.error({ err: e }, "[Registration Email] Error:"));
 
   // 2. Notify all ADMIN users about the new application
   prisma.user.findMany({ where: { role: "ADMIN" } }).then((admins) => {
@@ -245,15 +246,15 @@ export async function registerCarrier(req: Request, res: Response) {
             <a href="${reviewUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Review Application</a>
           </div>
         `)
-      ).catch((e) => console.error(`[Admin Notify] Error emailing ${admin.email}:`, e.message));
+      ).catch((e) => log.error({ err: e }, `[Admin Notify] Error emailing ${admin.email}:`));
     }
-  }).catch((e) => console.error("[Admin Notify] Error fetching admins:", e.message));
+  }).catch((e) => log.error({ err: e }, "[Admin Notify] Error fetching admins:"));
 
   // 3. Build chameleon fingerprint (needs address, phone, EIN stored first)
   if (profileId) {
     const { buildFingerprint } = await import("../services/chameleonDetectionService");
     buildFingerprint(profileId, req.ip || undefined).catch((e) =>
-      console.error("[Compass Chameleon] Fingerprint build error:", e.message)
+      log.error({ err: e }, "[Compass Chameleon] Fingerprint build error:")
     );
   }
 
@@ -281,31 +282,31 @@ export async function registerCarrier(req: Request, res: Response) {
               actionUrl: "/carrier/dashboard",
             },
           });
-          console.log(`[Compass Auto-Approve] Carrier ${data.company} (DOT: ${dot}) auto-approved with grade A (score: ${report.score})`);
+          log.info(`[Compass Auto-Approve] Carrier ${data.company} (DOT: ${dot}) auto-approved with grade A (score: ${report.score})`);
         } catch (e: any) {
-          console.error("[Compass Auto-Approve] Error:", e.message);
+          log.error({ err: e }, "[Compass Auto-Approve] Error:");
         }
       }
     }).catch((e) =>
-      console.error("[Compass Auto-Vet] Registration vetting error:", e.message)
+      log.error({ err: e }, "[Compass Auto-Vet] Registration vetting error:")
     );
   }
 
   // 5. Auto-trigger identity verification (background)
   if (profileId) {
     runIdentityCheck(profileId).catch((e) =>
-      console.error("[Compass Identity] Auto identity check error:", e.message)
+      log.error({ err: e }, "[Compass Identity] Auto identity check error:")
     );
   }
 
   // 6. Auto-trigger OFAC screening (background)
   if (profileId) {
     screenCarrier(profileId).catch((e) =>
-      console.error("[Compass OFAC] Auto OFAC screening error:", e.message)
+      log.error({ err: e }, "[Compass OFAC] Auto OFAC screening error:")
     );
   }
   } catch (err: unknown) {
-    console.error("[Carrier Registration] Error:", err);
+    log.error({ err: err }, "[Carrier Registration] Error:");
     const message = err instanceof Error ? err.message : "Registration failed";
     if (message.includes("Unique constraint")) {
       res.status(409).json({ error: "A carrier with this email, DOT, or MC number is already registered" });
@@ -417,10 +418,10 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
     });
 
     // Integration: create initial CPP scorecard + GUEST tier
-    onCarrierApproved(profile.id).catch((e) => console.error("[Integration] onCarrierApproved error:", e.message));
+    onCarrierApproved(profile.id).catch((e) => log.error({ err: e }, "[Integration] onCarrierApproved error:"));
 
     // Auto-trigger FMCSA scan to populate compliance data
-    runFmcsaScan(profile.id).catch((e) => console.error("[Compliance] Auto FMCSA scan error:", e.message));
+    runFmcsaScan(profile.id).catch((e) => log.error({ err: e }, "[Compliance] Auto FMCSA scan error:"));
 
     // Send approval email to carrier
     const carrierUser = await prisma.user.findUnique({ where: { id: profile.userId } });
@@ -442,7 +443,7 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
           </ul>
           <p style="color:#64748b;font-size:13px;margin-top:24px">Questions? Contact your account representative or email <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.</p>
         `)
-      ).catch((e) => console.error("[Approval Email] Error:", e.message));
+      ).catch((e) => log.error({ err: e }, "[Approval Email] Error:"));
     }
   }
 
@@ -472,7 +473,7 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
           <p>You may reapply once the issues above have been resolved.</p>
           <p style="color:#64748b;font-size:13px;margin-top:24px">Questions? Contact <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.</p>
         `)
-      ).catch((e) => console.error("[Rejection Email] Error:", e.message));
+      ).catch((e) => log.error({ err: e }, "[Rejection Email] Error:"));
     }
 
     await prisma.notification.create({

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { isUniqueConstraintViolation } from "../lib/dbErrors";
+import { log } from "../lib/logger";
 
 // ─── Default RSS Feed Sources ─────────────────────────────────────
 
@@ -295,7 +296,7 @@ function parseRssXml(xml: string, sourceName: string): ParsedArticle[] {
       });
     } catch (err) {
       // Skip individual articles that fail to parse
-      console.error(`[News] Error parsing article from ${sourceName}:`, err);
+      log.error({ err: err }, `[News] Error parsing article from ${sourceName}:`);
     }
   }
 
@@ -324,7 +325,7 @@ async function fetchFeed(source: { name: string; feedUrl: string; iconUrl?: stri
     clearTimeout(timeout);
 
     if (!response.ok) {
-      console.error(`[News] Feed ${source.name} returned HTTP ${response.status}`);
+      log.error(`[News] Feed ${source.name} returned HTTP ${response.status}`);
       return 0;
     }
 
@@ -366,7 +367,7 @@ async function fetchFeed(source: { name: string; feedUrl: string; iconUrl?: stri
         added++;
       } catch (err: any) {
         if (isUniqueConstraintViolation(err)) continue;
-        console.error(`[News] Error storing article "${article.title}":`, err?.message || err);
+        log.error(`[News] Error storing article "${article.title}":`, err?.message || err);
       }
     }
 
@@ -385,9 +386,9 @@ async function fetchFeed(source: { name: string; feedUrl: string; iconUrl?: stri
   } catch (err: any) {
     clearTimeout(timeout);
     if (err?.name === "AbortError") {
-      console.error(`[News] Feed ${source.name} timed out`);
+      log.error(`[News] Feed ${source.name} timed out`);
     } else {
-      console.error(`[News] Error fetching ${source.name}:`, err?.message || err);
+      log.error({ err }, `[News] Error fetching ${source.name}:`);
     }
     return 0;
   }
@@ -416,7 +417,7 @@ export async function fetchAllFeeds(): Promise<{ articlesAdded: number; errors: 
     });
   }
 
-  console.log(`[News] Fetching from ${sources.length} active sources...`);
+  log.info(`[News] Fetching from ${sources.length} active sources...`);
 
   for (const source of sources) {
     try {
@@ -428,11 +429,11 @@ export async function fetchAllFeeds(): Promise<{ articlesAdded: number; errors: 
         id: source.id,
       });
       totalAdded += added;
-      console.log(`[News] ${source.name}: +${added} articles`);
+      log.info(`[News] ${source.name}: +${added} articles`);
     } catch (err: any) {
       const errorMsg = `${source.name}: ${err?.message || "Unknown error"}`;
       errors.push(errorMsg);
-      console.error(`[News] Error with ${source.name}:`, err?.message || err);
+      log.error({ err }, `[News] Error with ${source.name}:`);
     }
   }
 
@@ -454,10 +455,10 @@ export async function fetchAllFeeds(): Promise<{ articlesAdded: number; errors: 
       }
     }
   } catch (err) {
-    console.error("[News] Error auto-featuring articles:", err);
+    log.error({ err: err }, "[News] Error auto-featuring articles:");
   }
 
-  console.log(`[News] Fetch complete: ${totalAdded} articles added, ${errors.length} errors`);
+  log.info(`[News] Fetch complete: ${totalAdded} articles added, ${errors.length} errors`);
   return { articlesAdded: totalAdded, errors };
 }
 
@@ -563,7 +564,7 @@ export async function getCategories(): Promise<{ category: string; count: number
  * Upsert the default news sources into the NewsSource table.
  */
 export async function seedNewsSources(): Promise<void> {
-  console.log("[News] Seeding default news sources...");
+  log.info("[News] Seeding default news sources...");
 
   for (const source of DEFAULT_SOURCES) {
     await prisma.newsSource.upsert({
@@ -584,5 +585,5 @@ export async function seedNewsSources(): Promise<void> {
     });
   }
 
-  console.log(`[News] Seeded ${DEFAULT_SOURCES.length} news sources`);
+  log.info(`[News] Seeded ${DEFAULT_SOURCES.length} news sources`);
 }

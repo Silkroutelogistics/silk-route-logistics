@@ -4,6 +4,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -61,7 +62,7 @@ router.post("/post-load", async (req: AuthRequest, res: Response) => {
     }
   } else {
     // Mock mode
-    console.log("[DAT] API not configured - using mock data for post-load");
+    log.info("[DAT] API not configured - using mock data for post-load");
     const mockDatPostId = `DAT-MOCK-${Date.now()}`;
 
     await prisma.load.update({
@@ -150,7 +151,7 @@ router.post("/post-load-advanced", validateBody(advancedPostSchema), async (req:
       res.status(500).json({ error: "DAT API error: " + (err instanceof Error ? err.message : "Unknown") });
     }
   } else {
-    console.log("[DAT] API not configured - using mock data for advanced post");
+    log.info("[DAT] API not configured - using mock data for advanced post");
     const mockDatPostId = `DAT-MOCK-${Date.now()}`;
 
     await prisma.load.update({
@@ -178,10 +179,10 @@ router.delete("/remove-post/:datPostId", async (req: AuthRequest, res: Response)
         headers: { "Authorization": `Bearer ${env.DAT_API_KEY}` },
       });
     } catch (err) {
-      console.error("[DAT] Failed to remove post:", err);
+      log.error({ err: err }, "[DAT] Failed to remove post:");
     }
   } else {
-    console.log("[DAT] Mock: removed post", datPostId);
+    log.info({ data: datPostId }, "[DAT] Mock: removed post");
   }
 
   // Clear from load record
@@ -221,7 +222,7 @@ router.get("/responses/:loadId", async (req: AuthRequest, res: Response) => {
     }
   } else {
     // Return mock responses
-    console.log("[DAT] API not configured - returning mock responses");
+    log.info("[DAT] API not configured - returning mock responses");
     res.json({
       responses: [
         {

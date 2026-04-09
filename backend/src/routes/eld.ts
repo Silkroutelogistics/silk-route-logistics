@@ -5,6 +5,7 @@ import { prisma } from "../config/database";
 import { processSamsaraLocations } from "../services/samsaraService";
 import { processMotiveLocations } from "../services/motiveService";
 import { checkGeofence } from "../services/geofenceService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -108,7 +109,7 @@ router.post("/webhook/location", async (req: AuthRequest, res: Response) => {
     const events = await checkGeofence(loadId, Number(latitude), Number(longitude), source || "ELD");
     res.json({ events });
   } catch (err: any) {
-    console.error("[ELD Webhook] Location error:", err);
+    log.error({ err: err }, "[ELD Webhook] Location error:");
     res.status(500).json({ error: err.message });
   }
 });

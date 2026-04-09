@@ -1,5 +1,6 @@
 import { env } from "../config/env";
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * Gmail Reply Tracking Service
@@ -168,7 +169,7 @@ export async function checkForReplies(): Promise<{
   logged: number;
 }> {
   if (!env.GOOGLE_OAUTH_REFRESH_TOKEN) {
-    console.log("[Gmail] No refresh token configured — skipping reply check");
+    log.info("[Gmail] No refresh token configured — skipping reply check");
     return { checked: 0, matched: 0, logged: 0 };
   }
 
@@ -183,7 +184,7 @@ export async function checkForReplies(): Promise<{
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!listRes.ok) {
-    console.error(`[Gmail] List messages failed (${listRes.status})`);
+    log.error(`[Gmail] List messages failed (${listRes.status})`);
     return { checked: 0, matched: 0, logged: 0 };
   }
   const listData = (await listRes.json()) as GmailListResponse;
@@ -247,7 +248,7 @@ export async function checkForReplies(): Promise<{
       const stopped = await stopSequenceByProspectEmail(senderEmail, "REPLIED");
       sequenceStopped = !!stopped;
     } catch (err) {
-      console.error(`[Gmail] Failed to stop sequence for ${senderEmail}:`, err);
+      log.error({ err: err }, `[Gmail] Failed to stop sequence for ${senderEmail}:`);
     }
 
     // Log the reply as a SystemLog entry
@@ -318,7 +319,7 @@ export async function checkForReplies(): Promise<{
   }
 
   if (logged > 0) {
-    console.log(
+    log.info(
       `[Gmail] Checked ${checked} messages, matched ${matched} prospects, logged ${logged} replies`
     );
   }

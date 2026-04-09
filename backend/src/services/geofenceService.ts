@@ -5,6 +5,7 @@
  */
 import { prisma } from "../config/database";
 import { broadcastSSE } from "../routes/trackTraceSSE";
+import { log } from "../lib/logger";
 
 const GEOFENCE_RADIUS_MILES = 1.0;
 
@@ -268,6 +269,6 @@ export async function scanGeofences() {
   }
 
   if (eventsDetected > 0) {
-    console.log(`[Geofence] Detected ${eventsDetected} geofence events across ${activeLoads.length} loads`);
+    log.info(`[Geofence] Detected ${eventsDetected} geofence events across ${activeLoads.length} loads`);
   }
 }

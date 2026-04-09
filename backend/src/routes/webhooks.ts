@@ -10,6 +10,7 @@ import { processSamsaraWebhook } from "../services/samsaraService";
 import { processMotiveWebhook } from "../services/motiveService";
 import { parseCheckCallFromEmail } from "../services/emailCheckCallParser";
 import { processInboundEmail } from "../services/emailToLoadService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -65,13 +66,13 @@ router.post("/openphone-checkcall", async (req, res) => {
 
     const result = await handleCheckCallResponse(from, msgBody);
     if (result) {
-      console.log(`[Webhook] Check-call response processed: Load ${result.loadId} → ${result.label}`);
+      log.info(`[Webhook] Check-call response processed: Load ${result.loadId} → ${result.label}`);
       res.json({ success: true, ...result });
     } else {
       res.json({ success: false, message: "No matching check-call found or invalid response" });
     }
   } catch (err: any) {
-    console.error("[Webhook] Check-call error:", err);
+    log.error({ err: err }, "[Webhook] Check-call error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
@@ -89,16 +90,16 @@ router.post("/resend", async (req, res) => {
 
     const validTypes = ["email.sent", "email.delivered", "email.bounced", "email.complained", "email.opened", "email.clicked", "email.received", "email.replied"];
     if (!validTypes.includes(event.type)) {
-      console.warn(`[Webhook] Unknown Resend event type: ${event.type}`);
+      log.warn(`[Webhook] Unknown Resend event type: ${event.type}`);
       res.status(400).json({ error: "Unknown event type" });
       return;
     }
 
     await handleResendWebhook(event);
-    console.log(`[Webhook] Resend event processed: ${event.type}`);
+    log.info(`[Webhook] Resend event processed: ${event.type}`);
     res.json({ success: true });
   } catch (err: any) {
-    console.error("[Webhook] Resend error:", err);
+    log.error({ err: err }, "[Webhook] Resend error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
@@ -127,7 +128,7 @@ router.post("/inbound-email", async (req, res) => {
       text = d.text || d.body || "";
       html = d.html || "";
       emailId = d.email_id || d.id;
-      console.log(`[Inbound Email] Resend webhook event, emailId: ${emailId}`);
+      log.info(`[Inbound Email] Resend webhook event, emailId: ${emailId}`);
 
       // If body is missing, try to fetch from Resend API
       if (!text && !html && emailId && env.RESEND_API_KEY) {
@@ -143,7 +144,7 @@ router.post("/inbound-email", async (req, res) => {
             if (!subject && emailData.subject) subject = emailData.subject;
           }
         } catch (fetchErr) {
-          console.error("[Inbound Email] Failed to fetch email content:", fetchErr);
+          log.error({ err: fetchErr }, "[Inbound Email] Failed to fetch email content:");
         }
       }
     } else {
@@ -166,7 +167,7 @@ router.post("/inbound-email", async (req, res) => {
     const recipientAddr = Array.isArray(to) ? to[0] : (to || "sales@silkroutelogistics.ai");
     const body = text || (html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "");
 
-    console.log(`[Inbound Email] From: ${senderEmail}, Subject: ${subject || "(no subject)"}`);
+    log.info(`[Inbound Email] From: ${senderEmail}, Subject: ${subject || "(no subject)"}`);
 
     // Try to match sender to a carrier or customer
     let entityType = "UNKNOWN";
@@ -229,21 +230,21 @@ router.post("/inbound-email", async (req, res) => {
       },
     });
 
-    console.log(`[Inbound Email] Stored as ${entityType}/${entityId}`);
+    log.info(`[Inbound Email] Stored as ${entityType}/${entityId}`);
 
     // Auto-try check-call parsing for carrier emails
     if (entityType === "CARRIER" && body) {
       try {
         const ccResult = await parseCheckCallFromEmail(senderEmail, subject || "", body);
         if (ccResult) {
-          console.log(`[Inbound Email] Auto-parsed check-call: ${ccResult.status} at ${ccResult.city}, ${ccResult.state}`);
+          log.info(`[Inbound Email] Auto-parsed check-call: ${ccResult.status} at ${ccResult.city}, ${ccResult.state}`);
         }
       } catch { /* non-blocking */ }
     }
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("[Inbound Email] Error:", err);
+    log.error({ err: err }, "[Inbound Email] Error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
@@ -276,11 +277,11 @@ router.post("/samsara", async (req, res) => {
     const { eventType, data } = req.body;
     if (eventType && data) {
       await processSamsaraWebhook(eventType, data);
-      console.log(`[Webhook] Samsara event processed: ${eventType}`);
+      log.info(`[Webhook] Samsara event processed: ${eventType}`);
     }
     res.json({ success: true });
   } catch (err: any) {
-    console.error("[Webhook] Samsara error:", err);
+    log.error({ err: err }, "[Webhook] Samsara error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
@@ -313,11 +314,11 @@ router.post("/motive", async (req, res) => {
     const { event_type, data } = req.body;
     if (event_type && data) {
       await processMotiveWebhook(event_type, data);
-      console.log(`[Webhook] Motive event processed: ${event_type}`);
+      log.info(`[Webhook] Motive event processed: ${event_type}`);
     }
     res.json({ success: true });
   } catch (err: any) {
-    console.error("[Webhook] Motive error:", err);
+    log.error({ err: err }, "[Webhook] Motive error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
@@ -333,13 +334,13 @@ router.post("/inbound-checkcall", async (req, res) => {
 
     const result = await parseCheckCallFromEmail(from, subject || "", text);
     if (result) {
-      console.log(`[Webhook] Email check-call parsed: Load ${result.loadRef} → ${result.status}`);
+      log.info(`[Webhook] Email check-call parsed: Load ${result.loadRef} → ${result.status}`);
       res.json({ success: true, ...result });
     } else {
       res.json({ success: false, message: "Could not extract check-call data from email" });
     }
   } catch (err: any) {
-    console.error("[Webhook] Email check-call error:", err);
+    log.error({ err: err }, "[Webhook] Email check-call error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
@@ -367,10 +368,10 @@ router.post("/inbound-email-load", async (req, res) => {
     }
 
     const result = await processInboundEmail(from, subject || "(no subject)", emailBody);
-    console.log(`[Webhook] Email-to-Load processed: ${result.action}`);
+    log.info(`[Webhook] Email-to-Load processed: ${result.action}`);
     res.json({ success: true, ...result });
   } catch (err: any) {
-    console.error("[Webhook] Email-to-Load error:", err);
+    log.error({ err: err }, "[Webhook] Email-to-Load error:");
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });

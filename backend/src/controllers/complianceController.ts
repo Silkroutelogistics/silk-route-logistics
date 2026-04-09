@@ -4,6 +4,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import * as complianceMonitorService from "../services/complianceMonitorService";
 import { sendEmail } from "../services/emailService";
+import { log } from "../lib/logger";
 
 const alertQuerySchema = z.object({
   status: z.string().optional(),
@@ -283,7 +284,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
     const data = await complianceMonitorService.getDashboardData();
     res.json(data);
   } catch (err) {
-    console.error("[Compliance] Dashboard error:", err);
+    log.error({ err: err }, "[Compliance] Dashboard error:");
     res.status(500).json({ error: "Failed to load dashboard data" });
   }
 }
@@ -299,7 +300,7 @@ export async function getOverview(req: AuthRequest, res: Response) {
     const data = await complianceMonitorService.getOverviewMatrix(filters);
     res.json(data);
   } catch (err) {
-    console.error("[Compliance] Overview error:", err);
+    log.error({ err: err }, "[Compliance] Overview error:");
     res.status(500).json({ error: "Failed to load overview data" });
   }
 }
@@ -314,7 +315,7 @@ export async function getCarrierDetail(req: AuthRequest, res: Response) {
     }
     res.json(data);
   } catch (err) {
-    console.error("[Compliance] Carrier detail error:", err);
+    log.error({ err: err }, "[Compliance] Carrier detail error:");
     res.status(500).json({ error: "Failed to load carrier compliance data" });
   }
 }
@@ -346,7 +347,7 @@ export async function snoozeAlert(req: AuthRequest, res: Response) {
     });
     res.json(updated);
   } catch (err) {
-    console.error("[Compliance] Snooze error:", err);
+    log.error({ err: err }, "[Compliance] Snooze error:");
     res.status(500).json({ error: "Failed to snooze alert" });
   }
 }
@@ -388,7 +389,7 @@ export async function sendReminder(req: AuthRequest, res: Response) {
     try {
       await sendEmail(carrier.user.email, `Compliance Reminder - ${carrierName}`, html);
     } catch {
-      console.log(`[Compliance] Email send failed for ${carrier.user.email}`);
+      log.info(`[Compliance] Email send failed for ${carrier.user.email}`);
     }
 
     // Record the reminder
@@ -403,7 +404,7 @@ export async function sendReminder(req: AuthRequest, res: Response) {
 
     res.json({ success: true, message: `Reminder sent to ${carrier.user.email}` });
   } catch (err) {
-    console.error("[Compliance] Send reminder error:", err);
+    log.error({ err: err }, "[Compliance] Send reminder error:");
     res.status(500).json({ error: "Failed to send reminder" });
   }
 }
@@ -414,7 +415,7 @@ export async function runFmcsaCheck(req: AuthRequest, res: Response) {
     const result = await complianceMonitorService.runFmcsaScan(req.params.carrierId);
     res.json(result);
   } catch (err: any) {
-    console.error("[Compliance] FMCSA check error:", err);
+    log.error({ err: err }, "[Compliance] FMCSA check error:");
     res.status(500).json({ error: err.message || "Failed to run FMCSA check" });
   }
 }
@@ -489,7 +490,7 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
       message: `Override created. Expires at ${expiresAt.toISOString()}`,
     });
   } catch (err) {
-    console.error("[Compliance] Override error:", err);
+    log.error({ err: err }, "[Compliance] Override error:");
     res.status(500).json({ error: "Failed to create override" });
   }
 }
@@ -528,7 +529,7 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
 
     res.json({ success: true, carrier: updated });
   } catch (err) {
-    console.error("[Compliance] Suspend error:", err);
+    log.error({ err: err }, "[Compliance] Suspend error:");
     res.status(500).json({ error: "Failed to suspend carrier" });
   }
 }
@@ -564,7 +565,7 @@ export async function addNote(req: AuthRequest, res: Response) {
 
     res.json(note);
   } catch (err) {
-    console.error("[Compliance] Add note error:", err);
+    log.error({ err: err }, "[Compliance] Add note error:");
     res.status(500).json({ error: "Failed to add note" });
   }
 }
@@ -582,7 +583,7 @@ export async function getNotes(req: AuthRequest, res: Response) {
 
     res.json(notes);
   } catch (err) {
-    console.error("[Compliance] Get notes error:", err);
+    log.error({ err: err }, "[Compliance] Get notes error:");
     res.status(500).json({ error: "Failed to load notes" });
   }
 }
@@ -634,7 +635,7 @@ export async function exportCSV(req: AuthRequest, res: Response) {
     res.setHeader("Content-Disposition", `attachment; filename=compliance-export-${new Date().toISOString().split("T")[0]}.csv`);
     res.send(csv);
   } catch (err) {
-    console.error("[Compliance] Export error:", err);
+    log.error({ err: err }, "[Compliance] Export error:");
     res.status(500).json({ error: "Failed to export compliance data" });
   }
 }
@@ -650,7 +651,7 @@ export async function getScanHistory(req: AuthRequest, res: Response) {
 
     res.json(scans);
   } catch (err) {
-    console.error("[Compliance] Scan history error:", err);
+    log.error({ err: err }, "[Compliance] Scan history error:");
     res.status(500).json({ error: "Failed to load scan history" });
   }
 }
@@ -679,7 +680,7 @@ export async function getLatestScan(req: AuthRequest, res: Response) {
       }))
     );
   } catch (err) {
-    console.error("[Compliance] Latest scan error:", err);
+    log.error({ err: err }, "[Compliance] Latest scan error:");
     res.status(500).json({ error: "Failed to load latest scans" });
   }
 }
@@ -690,7 +691,7 @@ export async function checkCarrier(req: AuthRequest, res: Response) {
     const result = await complianceMonitorService.complianceCheck(req.params.carrierId);
     res.json(result);
   } catch (err) {
-    console.error("[Compliance] Check carrier error:", err);
+    log.error({ err: err }, "[Compliance] Check carrier error:");
     res.status(500).json({ error: "Failed to check carrier compliance" });
   }
 }

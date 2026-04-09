@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * System Self-Optimizer — Meta-Learning Service
@@ -47,7 +48,7 @@ interface KPI {
 // ─── Run System Optimization Cycle ────────────────────────────────
 export async function runSystemOptimizationCycle(): Promise<SystemHealth> {
   const startTime = Date.now();
-  console.log("[SystemOptimizer] Starting system-wide optimization cycle...");
+  log.info("[SystemOptimizer] Starting system-wide optimization cycle...");
 
   // 1. Check health of all AI services
   const serviceNames = ["rate_intelligence", "carrier_intelligence", "lane_optimizer", "customer_intelligence", "compliance_forecast"];
@@ -280,7 +281,7 @@ export async function runSystemOptimizationCycle(): Promise<SystemHealth> {
     },
   });
 
-  console.log(`[SystemOptimizer] Cycle complete: Health ${overallScore}%, ${kpis.length} KPIs, ${nextUpgrades.length} recommended upgrades`);
+  log.info(`[SystemOptimizer] Cycle complete: Health ${overallScore}%, ${kpis.length} KPIs, ${nextUpgrades.length} recommended upgrades`);
 
   return {
     overallScore,

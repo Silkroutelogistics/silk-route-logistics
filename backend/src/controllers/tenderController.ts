@@ -5,6 +5,7 @@ import { createTenderSchema, counterTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { hooks } from "../lib/hooks";
+import { log } from "../lib/logger";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -298,6 +299,6 @@ export async function processExpiredTenders() {
     }
   }
 
-  console.log(`[TenderExpiry] ${expired.length} tenders expired, ${loadsReverted} loads reverted to POSTED`);
+  log.info(`[TenderExpiry] ${expired.length} tenders expired, ${loadsReverted} loads reverted to POSTED`);
   return { expired: expired.length, loadsReverted };
 }

@@ -3,6 +3,7 @@
  * Uses Gemini Vision API to extract structured data from COI documents.
  * Falls back to basic text extraction if no AI API key is available.
  */
+import { log } from "../lib/logger";
 
 export interface COIExtractedData {
   insurerName: string | null;
@@ -103,7 +104,7 @@ async function extractWithGemini(
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error("[COI Reader] Gemini API error:", errText);
+    log.error({ data: errText }, "[COI Reader] Gemini API error");
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
@@ -116,7 +117,7 @@ async function extractWithGemini(
   // Parse JSON from response (may be wrapped in markdown code block)
   const jsonMatch = textContent.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    console.error("[COI Reader] No JSON found in Gemini response:", textContent);
+    log.error({ data: textContent }, "[COI Reader] No JSON found in Gemini response");
     throw new Error("Failed to parse COI data from AI response");
   }
 
@@ -124,7 +125,7 @@ async function extractWithGemini(
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch {
-    console.error("[COI Reader] JSON parse error:", jsonMatch[0]);
+    log.error({ data: jsonMatch[0] }, "[COI Reader] JSON parse error");
     throw new Error("Invalid JSON in AI response");
   }
 

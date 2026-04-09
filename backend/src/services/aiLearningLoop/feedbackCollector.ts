@@ -1,5 +1,6 @@
 import { prisma } from "../../config/database";
 import { Prisma } from "@prisma/client";
+import { log } from "../../lib/logger";
 
 /** Cast a plain object to Prisma InputJsonValue safely. */
 const toJson = (v: Record<string, unknown>): Prisma.InputJsonValue =>
@@ -223,7 +224,7 @@ export async function onLoadStatusChange(
     // Other status transitions are not currently tracked
   } catch (error) {
     // Last-resort catch — hook must never crash the parent
-    console.error("[feedbackCollector] onLoadStatusChange failed:", error);
+    log.error({ err: error }, "[feedbackCollector] onLoadStatusChange failed:");
   }
 }
 
@@ -255,7 +256,7 @@ export async function onRateEvent(
 
     await enqueue("RATE_EVENT", payload);
   } catch (error) {
-    console.error("[feedbackCollector] onRateEvent failed:", error);
+    log.error({ err: error }, "[feedbackCollector] onRateEvent failed:");
   }
 }
 
@@ -280,7 +281,7 @@ export async function onCarrierResponse(
 
     await enqueue("CARRIER_RESPONSE", payload);
   } catch (error) {
-    console.error("[feedbackCollector] onCarrierResponse failed:", error);
+    log.error({ err: error }, "[feedbackCollector] onCarrierResponse failed:");
   }
 }
 
@@ -307,7 +308,7 @@ export async function onPaymentEvent(
 
     await enqueue("PAYMENT_EVENT", payload);
   } catch (error) {
-    console.error("[feedbackCollector] onPaymentEvent failed:", error);
+    log.error({ err: error }, "[feedbackCollector] onPaymentEvent failed:");
   }
 }
 
@@ -346,7 +347,7 @@ export async function onAIQuery(
       },
     });
   } catch (error) {
-    console.error("[feedbackCollector] onAIQuery failed:", error);
+    log.error({ err: error }, "[feedbackCollector] onAIQuery failed:");
   }
 }
 
@@ -438,7 +439,7 @@ export async function processQueue(): Promise<{
       }
     }
   } catch (error) {
-    console.error("[feedbackCollector] processQueue failed:", error);
+    log.error({ err: error }, "[feedbackCollector] processQueue failed:");
   }
 
   return counts;

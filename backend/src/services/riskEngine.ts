@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 interface RiskFactor {
   factor: string;
   points: number;
@@ -174,14 +175,14 @@ export async function runRiskFlagging() {
           // If RED + unassigned, trigger fall-off recovery
           const hasUnassigned = risk.factors.some((f) => f.factor.startsWith("UNASSIGNED"));
           if (hasUnassigned) {
-            console.log(`[Risk] RED + unassigned: Load ${load.referenceNumber} — consider fall-off recovery`);
+            log.info(`[Risk] RED + unassigned: Load ${load.referenceNumber} — consider fall-off recovery`);
           }
         }
       }
     } catch (err) {
-      console.error(`[Risk] Error processing load ${load.id}:`, err);
+      log.error({ err: err }, `[Risk] Error processing load ${load.id}:`);
     }
   }
 
-  console.log(`[Risk] Flagging complete: ${loads.length} loads, ${redCount} RED, ${amberCount} AMBER`);
+  log.info(`[Risk] Flagging complete: ${loads.length} loads, ${redCount} RED, ${amberCount} AMBER`);
 }

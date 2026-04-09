@@ -8,6 +8,7 @@ import { creditCheck } from "../services/secEdgarService";
 import * as fmcsaInsurance from "../services/fmcsaInsuranceService";
 import { checkExclusions } from "../services/samGovService";
 import { crossReferenceCarrier } from "../services/crossReferenceService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -179,7 +180,7 @@ router.get("/credit-check/:companyName", async (req: AuthRequest, res: Response)
     const result = await creditCheck(decodeURIComponent(companyName.trim()));
     res.json(result);
   } catch (err) {
-    console.error("SEC EDGAR credit check failed:", err);
+    log.error({ err: err }, "SEC EDGAR credit check failed:");
     res.status(500).json({ error: "Credit check failed" });
   }
 });
@@ -200,7 +201,7 @@ router.get("/insurance/:dotNumber", async (req: AuthRequest, res: Response) => {
 
     res.json({ insurance: details, compliance });
   } catch (err: any) {
-    console.error("FMCSA insurance lookup failed:", err);
+    log.error({ err: err }, "FMCSA insurance lookup failed:");
     res.status(500).json({ error: err.message || "FMCSA insurance lookup failed" });
   }
 });
@@ -217,7 +218,7 @@ router.get("/sam-check/:companyName", async (req: AuthRequest, res: Response) =>
     const result = await checkExclusions(decodeURIComponent(companyName.trim()));
     res.json(result);
   } catch (err) {
-    console.error("SAM.gov exclusion check failed:", err);
+    log.error({ err: err }, "SAM.gov exclusion check failed:");
     res.status(500).json({ error: "SAM.gov exclusion check failed" });
   }
 });
@@ -234,7 +235,7 @@ router.get("/cross-ref/:carrierId", async (req: AuthRequest, res: Response) => {
     const result = await crossReferenceCarrier(carrierId.trim());
     res.json(result);
   } catch (err) {
-    console.error("Cross-reference identity validation failed:", err);
+    log.error({ err: err }, "Cross-reference identity validation failed:");
     res.status(500).json({ error: "Cross-reference identity validation failed" });
   }
 });

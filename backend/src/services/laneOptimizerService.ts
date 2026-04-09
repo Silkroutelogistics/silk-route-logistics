@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * Lane Optimization Engine — Self-Learning Lane & Deadhead Optimizer
@@ -68,7 +69,7 @@ export async function runLaneLearningCycle(): Promise<{
   dataPoints: number;
 }> {
   const startTime = Date.now();
-  console.log("[LaneOptimizer] Starting learning cycle...");
+  log.info("[LaneOptimizer] Starting learning cycle...");
 
   const yearAgo = new Date(Date.now() - 365 * 86_400_000);
   const loads = await prisma.load.findMany({
@@ -236,7 +237,7 @@ export async function runLaneLearningCycle(): Promise<{
     },
   });
 
-  console.log(`[LaneOptimizer] Cycle complete: ${lanesProcessed} lanes, ${backhaulsIdentified} backhaul opportunities`);
+  log.info(`[LaneOptimizer] Cycle complete: ${lanesProcessed} lanes, ${backhaulsIdentified} backhaul opportunities`);
   return { lanesProcessed, backhaulsIdentified, dataPoints: loads.length };
 }
 

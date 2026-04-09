@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
+import { log } from "../lib/logger";
 
 // ============================================================
 // HELPERS
@@ -144,7 +145,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("Dashboard error:", error);
+    log.error({ err: error }, "Dashboard error:");
     res.status(500).json({ error: "Failed to load dashboard", details: error.message });
   }
 }
@@ -218,7 +219,7 @@ export async function getInvoices(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getInvoices error:", error);
+    log.error({ err: error }, "getInvoices error:");
     res.status(500).json({ error: "Failed to fetch invoices", details: error.message });
   }
 }
@@ -264,7 +265,7 @@ export async function getInvoiceById(req: AuthRequest, res: Response) {
 
     res.json(invoice);
   } catch (error: any) {
-    console.error("getInvoiceById error:", error);
+    log.error({ err: error }, "getInvoiceById error:");
     res.status(500).json({ error: "Failed to fetch invoice", details: error.message });
   }
 }
@@ -346,7 +347,7 @@ export async function createInvoice(req: AuthRequest, res: Response) {
 
     res.status(201).json(invoice);
   } catch (error: any) {
-    console.error("createInvoice error:", error);
+    log.error({ err: error }, "createInvoice error:");
     res.status(500).json({ error: "Failed to create invoice", details: error.message });
   }
 }
@@ -413,7 +414,7 @@ export async function updateInvoice(req: AuthRequest, res: Response) {
 
     res.json(invoice);
   } catch (error: any) {
-    console.error("updateInvoice error:", error);
+    log.error({ err: error }, "updateInvoice error:");
     res.status(500).json({ error: "Failed to update invoice", details: error.message });
   }
 }
@@ -441,7 +442,7 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
 
     res.json(invoice);
   } catch (error: any) {
-    console.error("sendInvoice error:", error);
+    log.error({ err: error }, "sendInvoice error:");
     res.status(500).json({ error: "Failed to send invoice", details: error.message });
   }
 }
@@ -489,11 +490,11 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
 
     // Integration: credit factoring fund + release shipper credit
     const { onInvoicePaid } = await import("../services/integrationService");
-    onInvoicePaid(id, amountPaid).catch((e: any) => console.error("[Integration] onInvoicePaid error:", e.message));
+    onInvoicePaid(id, amountPaid).catch((e: any) => log.error({ err: e }, "[Integration] onInvoicePaid error:"));
 
     res.json(invoice);
   } catch (error: any) {
-    console.error("markInvoicePaid error:", error);
+    log.error({ err: error }, "markInvoicePaid error:");
     res.status(500).json({ error: "Failed to mark invoice paid", details: error.message });
   }
 }
@@ -527,7 +528,7 @@ export async function voidInvoice(req: AuthRequest, res: Response) {
 
     res.json(invoice);
   } catch (error: any) {
-    console.error("voidInvoice error:", error);
+    log.error({ err: error }, "voidInvoice error:");
     res.status(500).json({ error: "Failed to void invoice", details: error.message });
   }
 }
@@ -604,7 +605,7 @@ export async function getInvoiceAging(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("getInvoiceAging error:", error);
+    log.error({ err: error }, "getInvoiceAging error:");
     res.status(500).json({ error: "Failed to fetch aging report", details: error.message });
   }
 }
@@ -667,7 +668,7 @@ export async function getPayments(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getPayments error:", error);
+    log.error({ err: error }, "getPayments error:");
     res.status(500).json({ error: "Failed to fetch payments", details: error.message });
   }
 }
@@ -728,7 +729,7 @@ export async function getPaymentById(req: AuthRequest, res: Response) {
 
     res.json(payment);
   } catch (error: any) {
-    console.error("getPaymentById error:", error);
+    log.error({ err: error }, "getPaymentById error:");
     res.status(500).json({ error: "Failed to fetch payment", details: error.message });
   }
 }
@@ -819,7 +820,7 @@ export async function preparePayment(req: AuthRequest, res: Response) {
 
     res.status(201).json(payment);
   } catch (error: any) {
-    console.error("preparePayment error:", error);
+    log.error({ err: error }, "preparePayment error:");
     res.status(500).json({ error: "Failed to prepare payment", details: error.message });
   }
 }
@@ -884,7 +885,7 @@ export async function updatePayment(req: AuthRequest, res: Response) {
 
     res.json(payment);
   } catch (error: any) {
-    console.error("updatePayment error:", error);
+    log.error({ err: error }, "updatePayment error:");
     res.status(500).json({ error: "Failed to update payment", details: error.message });
   }
 }
@@ -929,7 +930,7 @@ export async function submitPayment(req: AuthRequest, res: Response) {
 
     res.json({ ...payment, needsApproval });
   } catch (error: any) {
-    console.error("submitPayment error:", error);
+    log.error({ err: error }, "submitPayment error:");
     res.status(500).json({ error: "Failed to submit payment", details: error.message });
   }
 }
@@ -964,7 +965,7 @@ export async function approvePayment(req: AuthRequest, res: Response) {
 
     res.json(payment);
   } catch (error: any) {
-    console.error("approvePayment error:", error);
+    log.error({ err: error }, "approvePayment error:");
     res.status(500).json({ error: "Failed to approve payment", details: error.message });
   }
 }
@@ -999,7 +1000,7 @@ export async function schedulePaymentProcessing(req: AuthRequest, res: Response)
 
     res.json(payment);
   } catch (error: any) {
-    console.error("schedulePaymentProcessing error:", error);
+    log.error({ err: error }, "schedulePaymentProcessing error:");
     res.status(500).json({ error: "Failed to schedule payment processing", details: error.message });
   }
 }
@@ -1029,7 +1030,7 @@ export async function bulkProcessPayments(req: AuthRequest, res: Response) {
 
     res.json({ processing: result.count, requested: paymentIds.length, batchId: batchRef });
   } catch (error: any) {
-    console.error("bulkProcessPayments error:", error);
+    log.error({ err: error }, "bulkProcessPayments error:");
     res.status(500).json({ error: "Failed to bulk process payments", details: error.message });
   }
 }
@@ -1067,7 +1068,7 @@ export async function rejectPayment(req: AuthRequest, res: Response) {
 
     res.json(payment);
   } catch (error: any) {
-    console.error("rejectPayment error:", error);
+    log.error({ err: error }, "rejectPayment error:");
     res.status(500).json({ error: "Failed to reject payment", details: error.message });
   }
 }
@@ -1097,7 +1098,7 @@ export async function holdPayment(req: AuthRequest, res: Response) {
 
     res.json(payment);
   } catch (error: any) {
-    console.error("holdPayment error:", error);
+    log.error({ err: error }, "holdPayment error:");
     res.status(500).json({ error: "Failed to hold payment", details: error.message });
   }
 }
@@ -1195,7 +1196,7 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
 
     res.json(payment);
   } catch (error: any) {
-    console.error("markPaymentPaid error:", error);
+    log.error({ err: error }, "markPaymentPaid error:");
     res.status(500).json({ error: "Failed to mark payment paid", details: error.message });
   }
 }
@@ -1222,7 +1223,7 @@ export async function bulkApprovePayments(req: AuthRequest, res: Response) {
 
     res.json({ approved: result.count, requested: paymentIds.length });
   } catch (error: any) {
-    console.error("bulkApprovePayments error:", error);
+    log.error({ err: error }, "bulkApprovePayments error:");
     res.status(500).json({ error: "Failed to bulk approve", details: error.message });
   }
 }
@@ -1294,7 +1295,7 @@ export async function getPaymentQueue(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getPaymentQueue error:", error);
+    log.error({ err: error }, "getPaymentQueue error:");
     res.status(500).json({ error: "Failed to fetch payment queue", details: error.message });
   }
 }
@@ -1344,7 +1345,7 @@ export async function getDisputes(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getDisputes error:", error);
+    log.error({ err: error }, "getDisputes error:");
     res.status(500).json({ error: "Failed to fetch disputes", details: error.message });
   }
 }
@@ -1385,7 +1386,7 @@ export async function getDisputeById(req: AuthRequest, res: Response) {
 
     res.json(dispute);
   } catch (error: any) {
-    console.error("getDisputeById error:", error);
+    log.error({ err: error }, "getDisputeById error:");
     res.status(500).json({ error: "Failed to fetch dispute", details: error.message });
   }
 }
@@ -1447,7 +1448,7 @@ export async function fileDispute(req: AuthRequest, res: Response) {
 
     res.status(201).json(dispute);
   } catch (error: any) {
-    console.error("fileDispute error:", error);
+    log.error({ err: error }, "fileDispute error:");
     res.status(500).json({ error: "Failed to file dispute", details: error.message });
   }
 }
@@ -1479,7 +1480,7 @@ export async function investigateDispute(req: AuthRequest, res: Response) {
 
     res.json(dispute);
   } catch (error: any) {
-    console.error("investigateDispute error:", error);
+    log.error({ err: error }, "investigateDispute error:");
     res.status(500).json({ error: "Failed to update investigation", details: error.message });
   }
 }
@@ -1515,7 +1516,7 @@ export async function proposeDisputeResolution(req: AuthRequest, res: Response) 
 
     res.json(dispute);
   } catch (error: any) {
-    console.error("proposeDisputeResolution error:", error);
+    log.error({ err: error }, "proposeDisputeResolution error:");
     res.status(500).json({ error: "Failed to propose resolution", details: error.message });
   }
 }
@@ -1575,7 +1576,7 @@ export async function resolveDispute(req: AuthRequest, res: Response) {
 
     res.json(dispute);
   } catch (error: any) {
-    console.error("resolveDispute error:", error);
+    log.error({ err: error }, "resolveDispute error:");
     res.status(500).json({ error: "Failed to resolve dispute", details: error.message });
   }
 }
@@ -1626,7 +1627,7 @@ export async function getCreditList(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getCreditList error:", error);
+    log.error({ err: error }, "getCreditList error:");
     res.status(500).json({ error: "Failed to fetch credit list", details: error.message });
   }
 }
@@ -1693,7 +1694,7 @@ export async function getCreditById(req: AuthRequest, res: Response) {
       paymentHistory,
     });
   } catch (error: any) {
-    console.error("getCreditById error:", error);
+    log.error({ err: error }, "getCreditById error:");
     res.status(500).json({ error: "Failed to fetch credit detail", details: error.message });
   }
 }
@@ -1735,7 +1736,7 @@ export async function updateCredit(req: AuthRequest, res: Response) {
 
     res.json(credit);
   } catch (error: any) {
-    console.error("updateCredit error:", error);
+    log.error({ err: error }, "updateCredit error:");
     res.status(500).json({ error: "Failed to update credit", details: error.message });
   }
 }
@@ -1802,7 +1803,7 @@ export async function getCreditAlerts(req: AuthRequest, res: Response) {
 
     res.json({ alerts, count: alerts.length });
   } catch (error: any) {
-    console.error("getCreditAlerts error:", error);
+    log.error({ err: error }, "getCreditAlerts error:");
     res.status(500).json({ error: "Failed to fetch credit alerts", details: error.message });
   }
 }
@@ -1853,7 +1854,7 @@ export async function getFundBalance(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("getFundBalance error:", error);
+    log.error({ err: error }, "getFundBalance error:");
     res.status(500).json({ error: "Failed to fetch fund balance", details: error.message });
   }
 }
@@ -1892,7 +1893,7 @@ export async function getFundTransactions(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getFundTransactions error:", error);
+    log.error({ err: error }, "getFundTransactions error:");
     res.status(500).json({ error: "Failed to fetch fund transactions", details: error.message });
   }
 }
@@ -1953,7 +1954,7 @@ export async function getFundPerformance(req: AuthRequest, res: Response) {
       monthly,
     });
   } catch (error: any) {
-    console.error("getFundPerformance error:", error);
+    log.error({ err: error }, "getFundPerformance error:");
     res.status(500).json({ error: "Failed to fetch fund performance", details: error.message });
   }
 }
@@ -1990,7 +1991,7 @@ export async function fundAdjustment(req: AuthRequest, res: Response) {
       newBalance,
     });
   } catch (error: any) {
-    console.error("fundAdjustment error:", error);
+    log.error({ err: error }, "fundAdjustment error:");
     res.status(500).json({ error: "Failed to create adjustment", details: error.message });
   }
 }
@@ -2074,7 +2075,7 @@ export async function getLoadPnl(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("getLoadPnl error:", error);
+    log.error({ err: error }, "getLoadPnl error:");
     res.status(500).json({ error: "Failed to fetch load P&L", details: error.message });
   }
 }
@@ -2182,7 +2183,7 @@ export async function getLaneProfitability(req: AuthRequest, res: Response) {
       bottomLane: laneResults[laneResults.length - 1] ?? null,
     });
   } catch (error: any) {
-    console.error("getLaneProfitability error:", error);
+    log.error({ err: error }, "getLaneProfitability error:");
     res.status(500).json({ error: "Failed to fetch lane profitability", details: error.message });
   }
 }
@@ -2275,7 +2276,7 @@ export async function getCarrierProfitability(req: AuthRequest, res: Response) {
       totalCarriers: carrierResults.length,
     });
   } catch (error: any) {
-    console.error("getCarrierProfitability error:", error);
+    log.error({ err: error }, "getCarrierProfitability error:");
     res.status(500).json({ error: "Failed to fetch carrier profitability", details: error.message });
   }
 }
@@ -2367,7 +2368,7 @@ export async function getShipperProfitability(req: AuthRequest, res: Response) {
       totalShippers: shipperResults.length,
     });
   } catch (error: any) {
-    console.error("getShipperProfitability error:", error);
+    log.error({ err: error }, "getShipperProfitability error:");
     res.status(500).json({ error: "Failed to fetch shipper profitability", details: error.message });
   }
 }
@@ -2469,7 +2470,7 @@ export async function getWeeklyReport(req: AuthRequest, res: Response) {
       openDisputes,
     });
   } catch (error: any) {
-    console.error("getWeeklyReport error:", error);
+    log.error({ err: error }, "getWeeklyReport error:");
     res.status(500).json({ error: "Failed to generate weekly report", details: error.message });
   }
 }
@@ -2599,7 +2600,7 @@ export async function getMonthlyReport(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("getMonthlyReport error:", error);
+    log.error({ err: error }, "getMonthlyReport error:");
     res.status(500).json({ error: "Failed to generate monthly report", details: error.message });
   }
 }
@@ -3049,7 +3050,7 @@ export async function exportData(req: AuthRequest, res: Response) {
       exportedBy: req.user!.id,
     });
   } catch (error: any) {
-    console.error("exportData error:", error);
+    log.error({ err: error }, "exportData error:");
     res.status(500).json({ error: "Failed to export data", details: error.message });
   }
 }
@@ -3113,7 +3114,7 @@ export async function getApprovals(req: AuthRequest, res: Response) {
       statusCounts: counts,
     });
   } catch (error: any) {
-    console.error("getApprovals error:", error);
+    log.error({ err: error }, "getApprovals error:");
     res.status(500).json({ error: "Failed to fetch approvals", details: error.message });
   }
 }
@@ -3154,7 +3155,7 @@ export async function getApprovalById(req: AuthRequest, res: Response) {
 
     res.json({ ...approval, referenceData });
   } catch (error: any) {
-    console.error("getApprovalById error:", error);
+    log.error({ err: error }, "getApprovalById error:");
     res.status(500).json({ error: "Failed to fetch approval", details: error.message });
   }
 }
@@ -3208,7 +3209,7 @@ export async function reviewApproval(req: AuthRequest, res: Response) {
 
     res.json(approval);
   } catch (error: any) {
-    console.error("reviewApproval error:", error);
+    log.error({ err: error }, "reviewApproval error:");
     res.status(500).json({ error: "Failed to review approval", details: error.message });
   }
 }
@@ -3298,7 +3299,7 @@ export async function getFundHealth(req: AuthRequest, res: Response) {
       alerts,
     });
   } catch (error: any) {
-    console.error("getFundHealth error:", error);
+    log.error({ err: error }, "getFundHealth error:");
     res.status(500).json({ error: "Failed to fetch fund health", details: error.message });
   }
 }
@@ -3337,7 +3338,7 @@ export async function getFinancialReports(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
-    console.error("getFinancialReports error:", error);
+    log.error({ err: error }, "getFinancialReports error:");
     res.status(500).json({ error: "Failed to fetch financial reports", details: error.message });
   }
 }
@@ -3421,7 +3422,7 @@ export async function generateFinancialReport(req: AuthRequest, res: Response) {
 
     res.status(201).json(report);
   } catch (error: any) {
-    console.error("generateFinancialReport error:", error);
+    log.error({ err: error }, "generateFinancialReport error:");
     res.status(500).json({ error: "Failed to generate report", details: error.message });
   }
 }
@@ -3437,7 +3438,7 @@ export async function deleteFinancialReport(req: AuthRequest, res: Response) {
     await prisma.financialReport.delete({ where: { id } });
     res.json({ success: true });
   } catch (error: any) {
-    console.error("deleteFinancialReport error:", error);
+    log.error({ err: error }, "deleteFinancialReport error:");
     res.status(500).json({ error: "Failed to delete report", details: error.message });
   }
 }
@@ -3606,7 +3607,7 @@ export async function getAPAging(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("getAPAging error:", error);
+    log.error({ err: error }, "getAPAging error:");
     res.status(500).json({ error: "Failed to fetch AP aging", details: error.message });
   }
 }
@@ -3721,7 +3722,7 @@ export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Resp
       recentApprovals,
     });
   } catch (error: any) {
-    console.error("Enhanced dashboard error:", error);
+    log.error({ err: error }, "Enhanced dashboard error:");
     res.status(500).json({ error: "Failed to load dashboard", details: error.message });
   }
 }
@@ -3815,7 +3816,7 @@ export async function getQuickPayHealth(req: AuthRequest, res: Response) {
       utilizationTrend,
     });
   } catch (error: any) {
-    console.error("getQuickPayHealth error:", error);
+    log.error({ err: error }, "getQuickPayHealth error:");
     res.status(500).json({ error: "Failed to fetch QP health", details: error.message });
   }
 }
@@ -3966,7 +3967,7 @@ export async function getQuickPayRevenue(req: AuthRequest, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error("getQuickPayRevenue error:", error);
+    log.error({ err: error }, "getQuickPayRevenue error:");
     res.status(500).json({ error: "Failed to fetch QP revenue", details: error.message });
   }
 }

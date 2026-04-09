@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * C.5 — Email Auto-Sequences
@@ -65,7 +66,7 @@ export async function startSequence(
     },
   });
 
-  console.log(`[Sequence] Started for ${prospect.email} (${schedule.length} steps)`);
+  log.info(`[Sequence] Started for ${prospect.email} (${schedule.length} steps)`);
   return sequence;
 }
 
@@ -106,7 +107,7 @@ export async function startCarrierSequence(
     },
   });
 
-  console.log(`[Sequence] Carrier recruitment started for ${carrierEmail} (${schedule.length} steps)`);
+  log.info(`[Sequence] Carrier recruitment started for ${carrierEmail} (${schedule.length} steps)`);
   return sequence;
 }
 
@@ -118,7 +119,7 @@ export async function stopSequence(sequenceId: string, reason: string) {
     where: { id: sequenceId },
     data: { status: "STOPPED", stopReason: reason, nextSendAt: null },
   });
-  console.log(`[Sequence] Stopped ${sequenceId}: ${reason}`);
+  log.info(`[Sequence] Stopped ${sequenceId}: ${reason}`);
   return sequence;
 }
 
@@ -156,7 +157,7 @@ export async function stopSequenceByProspectEmail(
     });
   }
 
-  console.log(`[Sequence] Auto-stopped for ${prospectEmail} — reason: ${reason}`);
+  log.info(`[Sequence] Auto-stopped for ${prospectEmail} — reason: ${reason}`);
   return sequence;
 }
 
@@ -254,9 +255,9 @@ export async function processDueSequences() {
         });
       }
 
-      console.log(`[Sequence] Sent step ${seq.currentStep + 1}/${seq.totalSteps} to ${seq.prospectEmail}: ${step.subject}`);
+      log.info(`[Sequence] Sent step ${seq.currentStep + 1}/${seq.totalSteps} to ${seq.prospectEmail}: ${step.subject}`);
     } catch (err) {
-      console.error(`[Sequence] Failed to send email to ${seq.prospectEmail}:`, err);
+      log.error({ err: err }, `[Sequence] Failed to send email to ${seq.prospectEmail}:`);
     }
 
     // Update engagement score
@@ -317,7 +318,7 @@ async function handleSequenceCompleted(seq: any) {
     });
   }
 
-  console.log(`[Sequence] Completed for ${seq.prospectEmail} — engagement: ${level} (${meta.engagementScore})`);
+  log.info(`[Sequence] Completed for ${seq.prospectEmail} — engagement: ${level} (${meta.engagementScore})`);
 }
 
 /**
@@ -345,7 +346,7 @@ export async function handleResendWebhook(event: {
           where: { id: sequence.id },
           data: { metadata: meta },
         });
-        console.log(`[Sequence] ${eventType} for ${email} — score: ${meta.engagementScore}`);
+        log.info(`[Sequence] ${eventType} for ${email} — score: ${meta.engagementScore}`);
       }
     }
   }

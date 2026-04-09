@@ -14,6 +14,7 @@ import { notifyMatchedCarriers } from "../services/carrierOutreachService";
 import { notifyLoadStatusChange } from "../services/notificationService";
 import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getLoadAuditHistory } from "../services/loadAuditService";
 import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
+import { log } from "../lib/logger";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -167,19 +168,19 @@ export async function createLoad(req: AuthRequest, res: Response) {
 
   // Field-level audit: log creation with all initial values
   logLoadCreation(load.id, req.user!.id, data).catch((e) =>
-    console.error("[LoadAudit] create log error:", e.message)
+    log.error({ err: e }, "[LoadAudit] create log error:")
   );
 
   // AI Carrier Outreach: email + in-app notify top matched carriers
   if (load.status === "POSTED" && load.equipmentType) {
     notifyMatchedCarriers(load.id).catch((e) =>
-      console.error("[CarrierOutreach]", e.message)
+      log.error({ err: e }, "[CarrierOutreach]")
     );
   }
 
   // AI Learning Loop: record new load creation event
   aiOnLoadStatusChange(load.id, "NEW", load.status, new Date()).catch((e) =>
-    console.error("[AI Feedback]", e.message)
+    log.error({ err: e }, "[AI Feedback]")
   );
 
   res.status(201).json(load);
@@ -327,12 +328,12 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
 
   // Field-level audit: log status transition
   logStatusChange(load.id, req.user!.id, existing.status, status).catch((e) =>
-    console.error("[LoadAudit] status change log error:", e.message)
+    log.error({ err: e }, "[LoadAudit] status change log error:")
   );
 
   // AI Learning Loop: record status change for feedback collection
   aiOnLoadStatusChange(load.id, existing.status, status, new Date()).catch((e) =>
-    console.error("[AI Feedback]", e.message)
+    log.error({ err: e }, "[AI Feedback]")
   );
 
   // Sync linked shipment status
@@ -347,16 +348,16 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // AI Carrier Outreach: when a load transitions to POSTED, notify matched carriers
   if (status === "POSTED" && load.equipmentType) {
     notifyMatchedCarriers(load.id).catch((e) =>
-      console.error("[CarrierOutreach]", e.message)
+      log.error({ err: e }, "[CarrierOutreach]")
     );
   }
 
   // Auto-generate invoice and notify when delivered
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
-    sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
+    sendShipperDeliveryEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] delivery email error:"));
     // Integration: create AP, update shipper credit, recalc CPP
-    onLoadDelivered(load.id).catch((e) => console.error("[Integration] onLoadDelivered error:", e.message));
+    onLoadDelivered(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDelivered error:"));
 
     if (load.posterId) {
       await prisma.notification.create({
@@ -373,19 +374,19 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
 
   // Create check-call schedule when dispatched
   if (status === "DISPATCHED") {
-    onLoadDispatched(load.id).catch((e) => console.error("[Integration] onLoadDispatched error:", e.message));
+    onLoadDispatched(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDispatched error:"));
   }
 
   // Shipper pickup notification on LOADED
   if (status === "LOADED") {
-    sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
+    sendShipperPickupEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] pickup email error:"));
   }
 
   // TONU / CANCELLED cleanup: reverse credit, void AP, cancel tenders, reverse fund
   if (status === "TONU" || status === "CANCELLED") {
     const reason = req.body.reason || req.body.cancellationReason;
     onLoadCancelledOrTONU(load.id, reason).catch((e) =>
-      console.error(`[Integration] onLoadCancelledOrTONU error:`, e.message)
+      log.error({ err: e }, `[Integration] onLoadCancelledOrTONU error:`)
     );
 
     // Notify the assigned carrier
@@ -440,27 +441,27 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   }
 
   // In-app notification for both poster and carrier on every status change
-  notifyLoadStatusChange(load.id, status).catch((e) => console.error("[NotificationService] notifyLoadStatusChange error:", e.message));
+  notifyLoadStatusChange(load.id, status).catch((e) => log.error({ err: e }, "[NotificationService] notifyLoadStatusChange error:"));
 
   // Shipper milestone tracking email (fires on every status change)
-  sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
+  sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
 
   // Contact email load milestone notifications
   if (["BOOKED", "DISPATCHED"].includes(status)) {
     // Shipper should know when a carrier is assigned and when load is dispatched
-    sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
-    sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (status === "IN_TRANSIT") {
-    sendInTransitUpdate(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendInTransitUpdate(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (status === "AT_DELIVERY") {
-    sendArrivedAtDelivery(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendArrivedAtDelivery(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (status === "DELIVERED") {
-    sendDeliveredWithPOD(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendDeliveredWithPOD(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
 
   res.json(load);
@@ -518,31 +519,31 @@ export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
   // If delivered, trigger auto-invoice + shipper email + integration
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);
-    sendShipperDeliveryEmail(load.id).catch((e) => console.error("[ShipperNotify] delivery email error:", e.message));
+    sendShipperDeliveryEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] delivery email error:"));
     // Integration: create AP, update shipper credit, recalc CPP
-    onLoadDelivered(load.id).catch((e) => console.error("[Integration] onLoadDelivered error:", e.message));
+    onLoadDelivered(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDelivered error:"));
   }
 
   // Shipper pickup notification on LOADED
   if (status === "LOADED") {
-    sendShipperPickupEmail(load.id).catch((e) => console.error("[ShipperNotify] pickup email error:", e.message));
+    sendShipperPickupEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] pickup email error:"));
   }
 
   // Shipper milestone tracking email
-  sendShipperMilestoneEmail(load.id, status).catch((e) => console.error("[ShipperNotify] milestone email error:", e.message));
+  sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
 
   // Contact email load milestone notifications
   if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
-    sendPickupNotification(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (status === "IN_TRANSIT") {
-    sendInTransitUpdate(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendInTransitUpdate(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (status === "AT_DELIVERY") {
-    sendArrivedAtDelivery(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendArrivedAtDelivery(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
   if (status === "DELIVERED") {
-    sendDeliveredWithPOD(load.id).catch((e) => console.error("[ShipperNotify]", e.message));
+    sendDeliveredWithPOD(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
 
   res.json(updated);
@@ -667,7 +668,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
 
     // Fire post-assignment load-level compliance scan (non-blocking)
     onLoadAssigned(req.params.id, carrierId).catch((e) =>
-      console.error("[Compass] onLoadAssigned compliance scan error:", e.message)
+      log.error({ err: e }, "[Compass] onLoadAssigned compliance scan error:")
     );
   }
 
@@ -681,7 +682,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
       data.marginPercent = Math.round(((finalCustRate - finalCarrRate) / finalCustRate) * 10000) / 100;
     }
     if ((data.grossMargin as number) < 0) {
-      console.warn(`[Load] Negative margin on load ${req.params.id}: customer=$${finalCustRate} carrier=$${finalCarrRate}`);
+      log.warn(`[Load] Negative margin on load ${req.params.id}: customer=$${finalCustRate} carrier=$${finalCarrRate}`);
     }
   }
   if (finalDist && finalDist > 0) {
@@ -694,7 +695,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   const fieldChanges = diffLoadChanges(existing as Record<string, any>, data);
   if (fieldChanges.length > 0) {
     logLoadChanges(existing.id, req.user!.id, fieldChanges, "UPDATE").catch((e) =>
-      console.error("[LoadAudit] update diff log error:", e.message)
+      log.error({ err: e }, "[LoadAudit] update diff log error:")
     );
   }
 
@@ -761,7 +762,7 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
 
   // Full cleanup: reverse credit, void AP, reverse fund entries
   onLoadCancelledOrTONU(load.id, reason).catch((e) =>
-    console.error(`[Integration] deleteLoad cleanup error:`, e.message)
+    log.error({ err: e }, `[Integration] deleteLoad cleanup error:`)
   );
 
   res.json({ success: true, message: "Load archived" });

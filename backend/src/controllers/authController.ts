@@ -12,6 +12,7 @@ import { blacklistToken } from "../utils/tokenBlacklist";
 import { validatePassword } from "../utils/passwordPolicy";
 import { verifyTotpCode } from "../services/totpService";
 import { registerSession, removeSession } from "../middleware/auth";
+import { log } from "../lib/logger";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 function signToken(userId: string): string {
@@ -56,7 +57,7 @@ export async function register(req: Request, res: Response) {
         status: "Active",
         userId: user.id,
       },
-    }).catch((err) => console.error("[Register] Auto-create customer failed:", err.message));
+    }).catch((err) => log.error({ err: err }, "[Register] Auto-create customer failed:"));
   }
 
   const token = signToken(user.id);
@@ -134,7 +135,7 @@ export async function login(req: Request, res: Response) {
   // Send OTP instead of issuing JWT
   const code = await createOtp(user.id);
   sendOtpEmail(user.email, user.firstName, code).catch((err) =>
-    console.error("[OTP Email] Failed to send:", err.message),
+    log.error({ err: err }, "[OTP Email] Failed to send:"),
   );
 
   res.json({ pendingOtp: true, email: user.email });
@@ -450,7 +451,7 @@ export async function forgotPassword(req: Request, res: Response) {
     const frontendUrl = env.CORS_ORIGIN.split(",")[0].trim();
     const resetUrl = `${frontendUrl}/auth/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
     sendPasswordResetEmail(user.email, user.firstName, resetUrl).catch((err) =>
-      console.error("[Password Reset Email] Failed:", err.message),
+      log.error({ err: err }, "[Password Reset Email] Failed:"),
     );
   }
 

@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { getAllCronJobs } from "../services/cronRegistryService";
+import { log } from "../lib/logger";
 
 // ──────────────────────────────────────────────────
 // Get Users (with pagination, search, filters)
@@ -67,7 +68,7 @@ export async function getUsers(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err: any) {
-    console.error("getUsers error:", err);
+    log.error({ err: err }, "getUsers error:");
     res.status(500).json({ error: "Failed to fetch users" });
   }
 }
@@ -111,7 +112,7 @@ export async function updateUserStatus(req: AuthRequest, res: Response) {
 
     res.json({ message: `User ${active ? "activated" : "deactivated"} successfully` });
   } catch (err: any) {
-    console.error("updateUserStatus error:", err);
+    log.error({ err: err }, "updateUserStatus error:");
     res.status(500).json({ error: "Failed to update user status" });
   }
 }
@@ -160,7 +161,7 @@ export async function resetUserPassword(req: AuthRequest, res: Response) {
       message: "Password has been reset successfully. The user will need to set a new password on next login.",
     });
   } catch (err: any) {
-    console.error("resetUserPassword error:", err);
+    log.error({ err: err }, "resetUserPassword error:");
     res.status(500).json({ error: "Failed to reset password" });
   }
 }
@@ -351,7 +352,7 @@ export async function getSystemStatus(_req: AuthRequest, res: Response) {
       },
     });
   } catch (err: any) {
-    console.error("getSystemStatus error:", err);
+    log.error({ err: err }, "getSystemStatus error:");
     res.status(500).json({ error: "Failed to fetch system status" });
   }
 }
@@ -460,7 +461,7 @@ export async function getAnalytics(_req: AuthRequest, res: Response) {
       topLanes,
     });
   } catch (err: any) {
-    console.error("getAnalytics error:", err);
+    log.error({ err: err }, "getAnalytics error:");
     res.status(500).json({ error: "Failed to fetch analytics" });
   }
 }

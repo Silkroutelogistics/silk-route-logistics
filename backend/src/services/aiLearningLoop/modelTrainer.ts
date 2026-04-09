@@ -5,6 +5,7 @@ import { runLaneLearningCycle } from "../laneOptimizerService";
 import { runCustomerLearningCycle } from "../customerIntelligenceService";
 import { runComplianceForecastCycle } from "../complianceForecastService";
 import { processQueue } from "./feedbackCollector";
+import { log } from "../../lib/logger";
 
 /**
  * Model Trainer — Orchestrator for all AI learning cycles.
@@ -30,15 +31,15 @@ export async function runFullTrainingCycle(): Promise<{
   queueStats: { processed: number; failed: number; dead: number };
 }> {
   const startTime = Date.now();
-  console.log("[ModelTrainer] Starting full training cycle...");
+  log.info("[ModelTrainer] Starting full training cycle...");
 
   // Step 1: Drain the feedback queue so data is current
   let queueStats = { processed: 0, failed: 0, dead: 0 };
   try {
     queueStats = await processQueue();
-    console.log(`[ModelTrainer] Queue drained: ${queueStats.processed} processed, ${queueStats.failed} failed, ${queueStats.dead} dead`);
+    log.info(`[ModelTrainer] Queue drained: ${queueStats.processed} processed, ${queueStats.failed} failed, ${queueStats.dead} dead`);
   } catch (err) {
-    console.error("[ModelTrainer] Queue drain failed:", err);
+    log.error({ err: err }, "[ModelTrainer] Queue drain failed:");
   }
 
   // Step 2: Run each learning cycle in sequence (order matters — rates first)
@@ -71,7 +72,7 @@ export async function runFullTrainingCycle(): Promise<{
         summary: {},
         error: errorMsg,
       });
-      console.error(`[ModelTrainer] ${cycle.name} failed:`, errorMsg);
+      log.error({ err: errorMsg }, `[ModelTrainer] ${cycle.name} failed:`);
     }
   }
 
@@ -96,7 +97,7 @@ export async function runFullTrainingCycle(): Promise<{
     },
   });
 
-  console.log(`[ModelTrainer] Full cycle complete in ${totalDurationMs}ms — ${results.filter((r) => r.success).length}/${results.length} services succeeded`);
+  log.info(`[ModelTrainer] Full cycle complete in ${totalDurationMs}ms — ${results.filter((r) => r.success).length}/${results.length} services succeeded`);
 
   return { totalDurationMs, results, queueStats };
 }

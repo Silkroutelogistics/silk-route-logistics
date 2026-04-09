@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "./auth";
+import { log } from "../lib/logger";
 
 /**
  * Creates an audit trail entry for significant actions.
@@ -27,7 +28,7 @@ export async function createAuditEntry(
     });
   } catch {
     // Non-blocking — don't fail the request if audit logging fails
-    console.error("[AuditTrail] Failed to create entry:", action, entityType, entityId);
+    log.error({ action, entityType, entityId }, "[AuditTrail] Failed to create entry");
   }
 }
 

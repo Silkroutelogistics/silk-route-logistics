@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { getArticles, getArticle, getFeaturedArticles, getCategories, fetchAllFeeds, seedNewsSources } from "../services/newsAggregatorService";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get("/posts", async (req, res) => {
     const result = await getArticles(page, limit, category, search);
     res.json(result);
   } catch (err) {
-    console.error("[Blog] Error fetching posts:", err);
+    log.error({ err: err }, "[Blog] Error fetching posts:");
     res.status(500).json({ error: "Failed to fetch articles" });
   }
 });
@@ -25,7 +26,7 @@ router.get("/posts/featured", async (req, res) => {
     const articles = await getFeaturedArticles(limit);
     res.json(articles);
   } catch (err) {
-    console.error("[Blog] Error fetching featured posts:", err);
+    log.error({ err: err }, "[Blog] Error fetching featured posts:");
     res.status(500).json({ error: "Failed to fetch featured articles" });
   }
 });
@@ -36,7 +37,7 @@ router.get("/posts/:slug", async (req, res) => {
     if (!article) return res.status(404).json({ error: "Article not found" });
     res.json(article);
   } catch (err) {
-    console.error("[Blog] Error fetching article:", err);
+    log.error({ err: err }, "[Blog] Error fetching article:");
     res.status(500).json({ error: "Failed to fetch article" });
   }
 });
@@ -46,7 +47,7 @@ router.get("/categories", async (_req, res) => {
     const categories = await getCategories();
     res.json(categories);
   } catch (err) {
-    console.error("[Blog] Error fetching categories:", err);
+    log.error({ err: err }, "[Blog] Error fetching categories:");
     res.status(500).json({ error: "Failed to fetch categories" });
   }
 });
@@ -57,7 +58,7 @@ router.post("/fetch", authenticate, authorize("ADMIN") as any, async (req: AuthR
     const result = await fetchAllFeeds();
     res.json(result);
   } catch (err) {
-    console.error("[Blog] Error fetching feeds:", err);
+    log.error({ err: err }, "[Blog] Error fetching feeds:");
     res.status(500).json({ error: "Failed to fetch feeds" });
   }
 });

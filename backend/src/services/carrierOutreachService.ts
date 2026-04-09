@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { matchCarriersForLoad } from "./smartMatchService";
+import { log } from "../lib/logger";
 
 /**
  * AI Carrier Outreach Service
@@ -135,7 +136,7 @@ export async function notifyMatchedCarriers(
   });
 
   if (!load || load.status !== "POSTED") {
-    console.log(`[CarrierOutreach] Load ${loadId} not found or not POSTED, skipping`);
+    log.info(`[CarrierOutreach] Load ${loadId} not found or not POSTED, skipping`);
     return { notified: 0, carriers: [] };
   }
 
@@ -160,10 +161,10 @@ export async function notifyMatchedCarriers(
         },
       });
       top5 = smartCarrierProfiles;
-      console.log(`[CarrierOutreach] Smart match found ${smartResult.matches.length} candidates for load ${load.referenceNumber}`);
+      log.info(`[CarrierOutreach] Smart match found ${smartResult.matches.length} candidates for load ${load.referenceNumber}`);
     }
   } catch (e: any) {
-    console.log(`[CarrierOutreach] Smart match unavailable, falling back to simple matching: ${e.message}`);
+    log.info(`[CarrierOutreach] Smart match unavailable, falling back to simple matching: ${e.message}`);
   }
 
   // Fallback: simple equipment/region matching if smart match returned nothing
@@ -211,7 +212,7 @@ export async function notifyMatchedCarriers(
   }
 
   if (top5.length === 0) {
-    console.log(`[CarrierOutreach] No matching carriers found for load ${load.referenceNumber}`);
+    log.info(`[CarrierOutreach] No matching carriers found for load ${load.referenceNumber}`);
     return { notified: 0, carriers: [] };
   }
 
@@ -250,7 +251,7 @@ export async function notifyMatchedCarriers(
 
     // Check rate limit
     if (!canSendOutreach()) {
-      console.log(`[CarrierOutreach] Rate limit reached (${MAX_OUTREACH_PER_HOUR}/hr), stopping outreach for load ${load.referenceNumber}`);
+      log.info(`[CarrierOutreach] Rate limit reached (${MAX_OUTREACH_PER_HOUR}/hr), stopping outreach for load ${load.referenceNumber}`);
       break;
     }
 
@@ -263,7 +264,7 @@ export async function notifyMatchedCarriers(
       recordOutreach();
       emailsSent++;
     } catch (err: any) {
-      console.error(`[CarrierOutreach] Email failed for ${carrier.user.email}:`, err.message);
+      log.error({ err: err }, `[CarrierOutreach] Email failed for ${carrier.user.email}:`);
       // Continue to next carrier on email failure
     }
 
@@ -304,6 +305,6 @@ export async function notifyMatchedCarriers(
     });
   }
 
-  console.log(`[CarrierOutreach] Load ${load.referenceNumber}: ${emailsSent} email(s) sent to [${notifiedCarrierNames.join(", ")}]`);
+  log.info(`[CarrierOutreach] Load ${load.referenceNumber}: ${emailsSent} email(s) sent to [${notifiedCarrierNames.join(", ")}]`);
   return { notified: emailsSent, carriers: notifiedCarrierNames };
 }

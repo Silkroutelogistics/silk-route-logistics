@@ -7,6 +7,7 @@ import {
   shipperDeliveryHtml,
   shipperPODHtml,
 } from "./emailService";
+import { log } from "../lib/logger";
 
 /**
  * Send "Shipment picked up" email to shipper when load goes LOADED.
@@ -51,7 +52,7 @@ export async function sendShipperPickupEmail(loadId: string) {
     },
   });
 
-  console.log(`[ShipperNotify] Pickup email sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] Pickup email sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
 
 /**
@@ -114,7 +115,7 @@ export async function sendShipperTransitUpdate(loadId: string) {
     },
   });
 
-  console.log(`[ShipperNotify] Transit update sent to ${load.customer.email} for ${load.referenceNumber} (${percentComplete}%)`);
+  log.info(`[ShipperNotify] Transit update sent to ${load.customer.email} for ${load.referenceNumber} (${percentComplete}%)`);
 }
 
 /**
@@ -157,7 +158,7 @@ export async function sendShipperDeliveryEmail(loadId: string) {
     },
   });
 
-  console.log(`[ShipperNotify] Delivery email sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] Delivery email sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
 
 /**
@@ -176,7 +177,7 @@ export async function sendShipperPODEmail(loadId: string, podUrl: string) {
   const html = shipperPODHtml(load.referenceNumber, fullPodUrl);
   await sendEmail(load.customer.email, `POD Available: ${load.referenceNumber}`, html);
 
-  console.log(`[ShipperNotify] POD email sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] POD email sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
 
 /**
@@ -212,7 +213,7 @@ export async function validateAndNotifyPOD(loadId: string, documentId: string) {
     // Send POD email to shipper
     await sendShipperPODEmail(loadId, doc.fileUrl);
 
-    console.log(`[ShipperNotify] POD auto-validated for ${load.referenceNumber}`);
+    log.info(`[ShipperNotify] POD auto-validated for ${load.referenceNumber}`);
   } else {
     // Just store the POD URL for manual review
     await prisma.load.update({
@@ -220,7 +221,7 @@ export async function validateAndNotifyPOD(loadId: string, documentId: string) {
       data: { podUrl: doc.fileUrl },
     });
 
-    console.log(`[ShipperNotify] POD uploaded for ${load.referenceNumber} — pending manual validation`);
+    log.info(`[ShipperNotify] POD uploaded for ${load.referenceNumber} — pending manual validation`);
   }
 }
 
@@ -281,7 +282,7 @@ export async function sendShipperMilestoneEmail(loadId: string, newStatus: strin
   `;
 
   await sendEmail(load.customer.email, `Shipment ${label}: ${load.referenceNumber}`, wrap(body));
-  console.log(`[ShipperNotify] Milestone email "${label}" sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] Milestone email "${label}" sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
 
 /**
@@ -373,7 +374,7 @@ export async function sendShipperDelayNotification(
     });
   }
 
-  console.log(`[ShipperNotify] ${alert.level} delay alert sent to ${shipperEmail} for ${refNum}`);
+  log.info(`[ShipperNotify] ${alert.level} delay alert sent to ${shipperEmail} for ${refNum}`);
 }
 
 /**
@@ -388,13 +389,13 @@ export async function processShipperTransitUpdates() {
     select: { id: true, referenceNumber: true },
   });
 
-  console.log(`[ShipperNotify] Processing transit updates for ${inTransitLoads.length} loads`);
+  log.info(`[ShipperNotify] Processing transit updates for ${inTransitLoads.length} loads`);
 
   for (const load of inTransitLoads) {
     try {
       await sendShipperTransitUpdate(load.id);
     } catch (err: any) {
-      console.error(`[ShipperNotify] Failed transit update for ${load.referenceNumber}: ${err.message}`);
+      log.error(`[ShipperNotify] Failed transit update for ${load.referenceNumber}: ${err.message}`);
     }
   }
 }

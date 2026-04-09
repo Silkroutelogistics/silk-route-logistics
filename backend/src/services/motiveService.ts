@@ -8,6 +8,7 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { checkGeofence } from "./geofenceService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
+import { log } from "../lib/logger";
 
 const MOTIVE_BASE = "https://api.gomotive.com/v1";
 const PROVIDER = "MOTIVE";
@@ -76,14 +77,14 @@ export async function fetchMotiveVehicleLocations(): Promise<MotiveVehicle[]> {
     clearTimeout(t);
 
     if (!res.ok) {
-      console.error(`[Motive] Vehicle locations error: ${res.status} ${res.statusText}`);
+      log.error(`[Motive] Vehicle locations error: ${res.status} ${res.statusText}`);
       return [];
     }
 
     const data: any = await res.json();
     return data.vehicles || [];
   } catch (err: any) {
-    console.error(`[Motive] Vehicle locations fetch failed: ${err.message}`);
+    log.error(`[Motive] Vehicle locations fetch failed: ${err.message}`);
     return [];
   }
 }
@@ -118,7 +119,7 @@ export async function fetchMotiveDriverLogs(): Promise<MotiveDriverLog[]> {
  */
 export async function processMotiveLocations() {
   if (!isConfigured()) {
-    console.log("[Motive] Not configured — skipping sync");
+    log.info("[Motive] Not configured — skipping sync");
     return { processed: 0, matched: 0 };
   }
 
@@ -249,7 +250,7 @@ export async function processMotiveLocations() {
   }
 
   if (processed > 0) {
-    console.log(`[Motive] Synced ${processed} locations, ${matched} matched to loads`);
+    log.info(`[Motive] Synced ${processed} locations, ${matched} matched to loads`);
   }
 
   return { processed, matched };

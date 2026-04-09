@@ -13,6 +13,7 @@
 import { prisma } from "../config/database";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
 import { sendEmail, wrap } from "./emailService";
+import { log } from "../lib/logger";
 
 // ────────────────────────────────────────────────────────────
 // complianceCheck — called before carrier assignment
@@ -764,11 +765,11 @@ export async function weeklyFmcsaScan() {
 
         // Email carrier about suspension
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, fmcsaResult.operatingStatus, carrier.dotNumber!, "AUTHORITY_REVOKED")
-          .catch((e) => console.error(`[WeeklyFMCSA] Suspension email error for ${carrierName}:`, e.message));
+          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Suspension email error for ${carrierName}:`));
 
         // Email admins about critical finding
         sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, fmcsaResult.operatingStatus, "Authority revoked/not authorized")
-          .catch((e) => console.error(`[WeeklyFMCSA] Admin alert email error:`, e.message));
+          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Admin alert email error:`));
       }
 
       // Insurance not on file -> CRITICAL alert + auto-block + email
@@ -788,11 +789,11 @@ export async function weeklyFmcsaScan() {
 
         // Email carrier about missing insurance
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "INSURANCE NOT ON FILE", carrier.dotNumber!, "OUT_OF_SERVICE")
-          .catch((e) => console.error(`[WeeklyFMCSA] Insurance email error for ${carrierName}:`, e.message));
+          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Insurance email error for ${carrierName}:`));
 
         // Email admins
         sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, "INSURANCE NOT ON FILE", "FMCSA reports no insurance on file for this carrier")
-          .catch((e) => console.error(`[WeeklyFMCSA] Admin insurance alert error:`, e.message));
+          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Admin insurance alert error:`));
       }
 
       // Safety rating downgraded -> WARNING alert
@@ -840,7 +841,7 @@ export async function weeklyFmcsaScan() {
             },
           });
           results.alerts++;
-          console.log(`[Compass] FMCSA contact change for ${carrierName}: ${contactChanges.join(", ")}`);
+          log.info(`[Compass] FMCSA contact change for ${carrierName}: ${contactChanges.join(", ")}`);
         }
       }
       // Store current FMCSA contact info for next comparison
@@ -875,17 +876,14 @@ export async function weeklyFmcsaScan() {
 
         // Email carrier about out-of-service suspension
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "OUT OF SERVICE", carrier.dotNumber!, "OUT_OF_SERVICE")
-          .catch((e) => console.error(`[WeeklyFMCSA] OOS email error for ${carrierName}:`, e.message));
+          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] OOS email error for ${carrierName}:`));
 
         // Email admins
         sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, "OUT OF SERVICE", `Out-of-service date: ${fmcsaResult.outOfServiceDate}`)
-          .catch((e) => console.error(`[WeeklyFMCSA] Admin OOS alert error:`, e.message));
+          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Admin OOS alert error:`));
       }
     } catch (err) {
-      console.error(
-        `[WeeklyFMCSA] Error scanning carrier ${carrier.id}:`,
-        err
-      );
+      log.error({ err }, `[WeeklyFMCSA] Error scanning carrier ${carrier.id}`);
       results.errors++;
     }
   }
@@ -981,7 +979,7 @@ export async function dailyComplianceReminders() {
       try {
         await sendEmail(carrier.user.email, subject, html);
       } catch {
-        console.log(`[ComplianceReminder] Email send failed for ${carrier.user.email}, logging anyway`);
+        log.info(`[ComplianceReminder] Email send failed for ${carrier.user.email}, logging anyway`);
       }
 
       // Record the reminder
@@ -996,10 +994,7 @@ export async function dailyComplianceReminders() {
 
       results.sent++;
     } catch (err) {
-      console.error(
-        `[DailyReminders] Error for carrier ${carrier.id}:`,
-        err
-      );
+      log.error({ err }, `[DailyReminders] Error for carrier ${carrier.id}`);
       results.errors++;
     }
   }
@@ -1080,12 +1075,12 @@ export async function checkAutoReversal() {
         results.reinstated++;
       }
     } catch (err) {
-      console.error(`[AutoReversal] Error for carrier ${carrier.id}:`, err);
+      log.error({ err: err }, `[AutoReversal] Error for carrier ${carrier.id}:`);
       results.errors++;
     }
   }
 
-  console.log(`[AutoReversal] ${results.checked} checked, ${results.reinstated} reinstated, ${results.errors} errors`);
+  log.info(`[AutoReversal] ${results.checked} checked, ${results.reinstated} reinstated, ${results.errors} errors`);
   return results;
 }
 
@@ -1150,7 +1145,7 @@ async function sendFmcsaSuspensionEmail(
   `;
 
   await sendEmail(carrierEmail, `[SRL] Account Suspended — ${carrierName}`, wrap(body));
-  console.log(`[FMCSA] Suspension email sent to ${carrierEmail} (${reason})`);
+  log.info(`[FMCSA] Suspension email sent to ${carrierEmail} (${reason})`);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -1193,10 +1188,10 @@ async function sendFmcsaAdminAlert(
 
   for (const admin of admins) {
     await sendEmail(admin.email, `[SRL CRITICAL] FMCSA Alert: ${carrierName} — ${fmcsaStatus}`, wrap(body))
-      .catch((e) => console.error(`[FMCSA] Admin email to ${admin.email} failed:`, e.message));
+      .catch((e) => log.error({ err: e }, `[FMCSA] Admin email to ${admin.email} failed:`));
   }
 
-  console.log(`[FMCSA] Admin alert sent to ${admins.length} users for ${carrierName}`);
+  log.info(`[FMCSA] Admin alert sent to ${admins.length} users for ${carrierName}`);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -1322,14 +1317,14 @@ export async function processInsuranceExpiryEnforcement() {
               </p>
             </div>
           `)
-        ).catch((e) => console.error(`[InsuranceExpiry] Email failed for ${carrier.user.email}:`, e.message));
+        ).catch((e) => log.error({ err: e }, `[InsuranceExpiry] Email failed for ${carrier.user.email}:`));
       }
 
       warned++;
     }
   }
 
-  console.log(`[InsuranceExpiry] Enforcement complete: ${suspended} suspended, ${warned} warned`);
+  log.info(`[InsuranceExpiry] Enforcement complete: ${suspended} suspended, ${warned} warned`);
   return { suspended, warned };
 }
 
@@ -1404,11 +1399,11 @@ export async function monthlyCarrierReVetting() {
       }
     } catch (e: any) {
       errors++;
-      console.error(`[MonthlyReVet] Error for carrier ${carrier.id}:`, e.message);
+      log.error({ err: e }, `[MonthlyReVet] Error for carrier ${carrier.id}:`);
     }
   }
 
-  console.log(`[MonthlyReVet] Complete: ${revetted}/${carriers.length} revetted, ${critical} CRITICAL, ${suspended} suspended, ${errors} errors`);
+  log.info(`[MonthlyReVet] Complete: ${revetted}/${carriers.length} revetted, ${critical} CRITICAL, ${suspended} suspended, ${errors} errors`);
   return { total: carriers.length, revetted, critical, suspended, errors };
 }
 
@@ -1495,7 +1490,7 @@ export async function detectFmcsaAuthorityChanges() {
           });
 
           suspensions++;
-          console.log(`[FMCSAWatch] AUTO-SUSPENDED carrier ${carrier.id}: ${previousStatus} → ${currentStatus}`);
+          log.info(`[FMCSAWatch] AUTO-SUSPENDED carrier ${carrier.id}: ${previousStatus} → ${currentStatus}`);
         }
       }
 
@@ -1529,11 +1524,11 @@ export async function detectFmcsaAuthorityChanges() {
       }
     } catch (e: any) {
       errors++;
-      console.error(`[FMCSAWatch] Error checking carrier ${carrier.id}:`, e.message);
+      log.error({ err: e }, `[FMCSAWatch] Error checking carrier ${carrier.id}:`);
     }
   }
 
-  console.log(`[FMCSAWatch] Complete: ${checked} checked, ${changes} changes, ${suspensions} suspended, ${errors} errors`);
+  log.info(`[FMCSAWatch] Complete: ${checked} checked, ${changes} changes, ${suspensions} suspended, ${errors} errors`);
   return { checked, changes, suspensions, errors };
 }
 
@@ -1594,6 +1589,6 @@ export async function processDocumentExpiryAlerts() {
     }
   }
 
-  console.log(`[DocExpiry] ${alerts} document expiry alerts sent`);
+  log.info(`[DocExpiry] ${alerts} document expiry alerts sent`);
   return { alerts };
 }

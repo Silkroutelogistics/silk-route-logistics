@@ -10,6 +10,7 @@
  */
 
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 interface FacilityDwellStats {
   facilityKey: string; // "facilityName|address|city|state"
@@ -54,7 +55,7 @@ export async function computeFacilityDwellTimes(): Promise<{
   });
 
   if (completedStops.length === 0) {
-    console.log("[Detention] No completed stops with arrival/departure timestamps found");
+    log.info("[Detention] No completed stops with arrival/departure timestamps found");
     return { facilitiesProcessed: 0, highDetention: 0, updated: 0 };
   }
 
@@ -145,7 +146,7 @@ export async function computeFacilityDwellTimes(): Promise<{
     updated++;
   }
 
-  console.log(`[Detention] Processed ${facilityMap.size} facilities, ${highDetention} high-detention (>50% over 2hr), ${updated} profiles updated`);
+  log.info(`[Detention] Processed ${facilityMap.size} facilities, ${highDetention} high-detention (>50% over 2hr), ${updated} profiles updated`);
 
   // Create SystemLog for audit trail
   await prisma.systemLog.create({

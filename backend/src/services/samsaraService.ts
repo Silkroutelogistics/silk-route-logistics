@@ -8,6 +8,7 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { checkGeofence } from "./geofenceService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
+import { log } from "../lib/logger";
 
 const SAMSARA_BASE = "https://api.samsara.com";
 const PROVIDER = "SAMSARA";
@@ -66,14 +67,14 @@ export async function fetchSamsaraVehicleLocations(): Promise<SamsaraLocation[]>
     clearTimeout(t);
 
     if (!res.ok) {
-      console.error(`[Samsara] Vehicle locations error: ${res.status} ${res.statusText}`);
+      log.error(`[Samsara] Vehicle locations error: ${res.status} ${res.statusText}`);
       return [];
     }
 
     const data: any = await res.json();
     return data.data || [];
   } catch (err: any) {
-    console.error(`[Samsara] Vehicle locations fetch failed: ${err.message}`);
+    log.error(`[Samsara] Vehicle locations fetch failed: ${err.message}`);
     return [];
   }
 }
@@ -94,14 +95,14 @@ export async function fetchSamsaraHOS(): Promise<SamsaraHOS[]> {
     clearTimeout(t);
 
     if (!res.ok) {
-      console.error(`[Samsara] HOS error: ${res.status}`);
+      log.error(`[Samsara] HOS error: ${res.status}`);
       return [];
     }
 
     const data: any = await res.json();
     return data.data || [];
   } catch (err: any) {
-    console.error(`[Samsara] HOS fetch failed: ${err.message}`);
+    log.error(`[Samsara] HOS fetch failed: ${err.message}`);
     return [];
   }
 }
@@ -136,7 +137,7 @@ export async function fetchSamsaraVehicleStats() {
  */
 export async function processSamsaraLocations() {
   if (!isConfigured()) {
-    console.log("[Samsara] Not configured — skipping sync");
+    log.info("[Samsara] Not configured — skipping sync");
     return { processed: 0, matched: 0 };
   }
 
@@ -267,7 +268,7 @@ export async function processSamsaraLocations() {
   }
 
   if (processed > 0) {
-    console.log(`[Samsara] Synced ${processed} locations, ${matched} matched to loads`);
+    log.info(`[Samsara] Synced ${processed} locations, ${matched} matched to loads`);
   }
 
   return { processed, matched };

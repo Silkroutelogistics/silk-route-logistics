@@ -12,6 +12,7 @@ import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt } from "../s
 import { sendOtpEmail } from "../services/emailService";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -132,7 +133,7 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
   // Send OTP instead of issuing JWT directly
   const code = await createOtp(user.id);
   sendOtpEmail(user.email, user.firstName, code).catch((err) =>
-    console.error("[Carrier OTP Email] Failed to send:", err.message),
+    log.error({ err: err }, "[Carrier OTP Email] Failed to send:"),
   );
 
   res.json({ pendingOtp: true, email: user.email });

@@ -8,6 +8,7 @@
  */
 
 import { env } from "../config/env";
+import { log } from "../lib/logger";
 
 // In-memory cache: DOT/MC → result, expires after 1 hour
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
@@ -206,7 +207,7 @@ export async function lookupByMcNumber(mcNumber: string): Promise<FMCSACarrierRe
       }
     }
   } catch (err) {
-    console.error(`[FMCSA] MC lookup error for MC-${mcNum}:`, err instanceof Error ? err.message : err);
+    log.error({ err }, `[FMCSA] MC lookup error for MC-${mcNum}:`);
   }
 
   return {
@@ -258,7 +259,7 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       debugErrors.push(`Keyed: ${msg}`);
-      console.error(`[FMCSA] Keyed request error for DOT ${dotNumber}:`, msg);
+      log.error({ err: msg }, `[FMCSA] Keyed request error for DOT ${dotNumber}:`);
     }
   } else {
     debugErrors.push("No FMCSA_WEB_KEY configured");
@@ -285,7 +286,7 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
   }
 
   // Fail safe — do NOT default to verified
-  console.error(`[FMCSA] All verification attempts failed for DOT ${dotNumber}. Errors: ${debugErrors.join(" | ")}`);
+  log.error(`[FMCSA] All verification attempts failed for DOT ${dotNumber}. Errors: ${debugErrors.join(" | ")}`);
   return {
     verified: false,
     legalName: null,

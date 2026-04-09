@@ -5,6 +5,7 @@ import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema, b
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendEmail, wrap } from "../services/emailService";
 import { onInvoicePaid } from "../services/integrationService";
+import { log } from "../lib/logger";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
@@ -321,7 +322,7 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     const pdfUrl = await uploadFileToPath(pdfBuffer, `invoices/${invoiceNumber}.pdf`, "application/pdf");
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { pdfUrl } });
   } catch (e: any) {
-    console.error("[Invoice] PDF generation error:", e.message);
+    log.error({ err: e }, "[Invoice] PDF generation error:");
   }
 
   // Email to shipper if requested
@@ -343,7 +344,7 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
       </table>
       <p style="color:#94a3b8;font-size:12px">If you have questions, contact us at info@silkroutelogistics.ai</p>
     `;
-    await sendEmail(load.customer.email, `Invoice ${invoiceNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => console.error("[Invoice] Email error:", e.message));
+    await sendEmail(load.customer.email, `Invoice ${invoiceNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
 
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { status: "SENT", sentDate: new Date() } });
   }
@@ -372,7 +373,7 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
 
   // Trigger integration chain: credit factoring fund, release shipper credit, release factoring reserve
   onInvoicePaid(invoice.id, paidAmount || invoice.amount).catch((e) =>
-    console.error("[Invoice] onInvoicePaid integration error:", e.message)
+    log.error({ err: e }, "[Invoice] onInvoicePaid integration error:")
   );
 
   res.json(updated);

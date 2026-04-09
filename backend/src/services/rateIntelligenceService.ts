@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * Rate Intelligence Engine — Self-Learning Rate Prediction
@@ -101,7 +102,7 @@ export async function runRateLearningCycle(): Promise<{
   improvements: any[];
 }> {
   const startTime = Date.now();
-  console.log("[RateIntelligence] Starting daily learning cycle...");
+  log.info("[RateIntelligence] Starting daily learning cycle...");
 
   // Get all completed loads with rates from last 180 days
   const sixMonthsAgo = new Date(Date.now() - 180 * 86_400_000);
@@ -128,7 +129,7 @@ export async function runRateLearningCycle(): Promise<{
   });
 
   if (loads.length === 0) {
-    console.log("[RateIntelligence] No completed loads to learn from");
+    log.info("[RateIntelligence] No completed loads to learn from");
     return { lanesProcessed: 0, dataPoints: 0, improvements: [] };
   }
 
@@ -288,7 +289,7 @@ export async function runRateLearningCycle(): Promise<{
     },
   });
 
-  console.log(`[RateIntelligence] Cycle complete: ${lanesProcessed} lanes, ${loads.length} data points, ${improvements.length} significant changes`);
+  log.info(`[RateIntelligence] Cycle complete: ${lanesProcessed} lanes, ${loads.length} data points, ${improvements.length} significant changes`);
   return { lanesProcessed, dataPoints: loads.length, improvements };
 }
 

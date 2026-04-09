@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ interface QcMobileContent {
 async function fetchQcMobileData(dotNumber: string): Promise<Partial<CsaBasicScores>> {
   const webKey = process.env.FMCSA_WEB_KEY;
   if (!webKey) {
-    console.warn("[CSA] FMCSA_WEB_KEY not set — skipping QCMobile API call");
+    log.warn("[CSA] FMCSA_WEB_KEY not set — skipping QCMobile API call");
     return {};
   }
 
@@ -82,7 +83,7 @@ async function fetchQcMobileData(dotNumber: string): Promise<Partial<CsaBasicSco
   try {
     const res = await fetchWithTimeout(url);
     if (!res.ok) {
-      console.warn(`[CSA] QCMobile API returned ${res.status} for DOT#${dotNumber}`);
+      log.warn(`[CSA] QCMobile API returned ${res.status} for DOT#${dotNumber}`);
       return {};
     }
 
@@ -97,7 +98,7 @@ async function fetchQcMobileData(dotNumber: string): Promise<Partial<CsaBasicSco
       totalCrashes: safeNum(carrier.crashTotal),
     };
   } catch (err) {
-    console.warn(`[CSA] QCMobile API error for DOT#${dotNumber}:`, (err as Error).message);
+    log.warn({ err }, `[CSA] QCMobile API error for DOT#${dotNumber}:`);
     return {};
   }
 }
@@ -133,14 +134,14 @@ async function fetchSmsBasicPercentiles(dotNumber: string): Promise<Partial<CsaB
   try {
     const res = await fetchWithTimeout(url);
     if (!res.ok) {
-      console.warn(`[CSA] SMS BASIC endpoint returned ${res.status} for DOT#${dotNumber}`);
+      log.warn(`[CSA] SMS BASIC endpoint returned ${res.status} for DOT#${dotNumber}`);
       return {};
     }
 
     // The endpoint may return HTML instead of JSON — detect and bail
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("json")) {
-      console.warn(`[CSA] SMS BASIC endpoint returned non-JSON content-type for DOT#${dotNumber}`);
+      log.warn(`[CSA] SMS BASIC endpoint returned non-JSON content-type for DOT#${dotNumber}`);
       return {};
     }
 
@@ -159,7 +160,7 @@ async function fetchSmsBasicPercentiles(dotNumber: string): Promise<Partial<CsaB
 
     return scores;
   } catch (err) {
-    console.warn(`[CSA] SMS BASIC endpoint error for DOT#${dotNumber}:`, (err as Error).message);
+    log.warn({ err }, `[CSA] SMS BASIC endpoint error for DOT#${dotNumber}:`);
     return {};
   }
 }
@@ -186,7 +187,7 @@ export async function fetchCsaBasicScores(dotNumber: string): Promise<CsaBasicSc
     Object.assign(scores, qcData, smsData);
     scores.fetchedAt = new Date().toISOString();
   } catch (err) {
-    console.error(`[CSA] Unexpected error fetching scores for DOT#${dotNumber}:`, (err as Error).message);
+    log.error({ err }, `[CSA] Unexpected error fetching scores for DOT#${dotNumber}:`);
   }
 
   return scores;
@@ -203,7 +204,7 @@ export async function updateCarrierCsaScores(carrierId: string): Promise<CsaBasi
     });
 
     if (!carrier?.dotNumber) {
-      console.warn(`[CSA] Carrier ${carrierId} has no DOT number — skipping`);
+      log.warn(`[CSA] Carrier ${carrierId} has no DOT number — skipping`);
       return null;
     }
 
@@ -217,10 +218,10 @@ export async function updateCarrierCsaScores(carrierId: string): Promise<CsaBasi
       },
     });
 
-    console.log(`[CSA] Updated CSA scores for carrier ${carrierId} (DOT#${carrier.dotNumber})`);
+    log.info(`[CSA] Updated CSA scores for carrier ${carrierId} (DOT#${carrier.dotNumber})`);
     return scores;
   } catch (err) {
-    console.error(`[CSA] Failed to update carrier ${carrierId}:`, (err as Error).message);
+    log.error({ err }, `[CSA] Failed to update carrier ${carrierId}:`);
     return null;
   }
 }
@@ -242,7 +243,7 @@ export async function batchUpdateCsaScores(): Promise<{ updated: number; failed:
       select: { id: true, dotNumber: true },
     });
 
-    console.log(`[CSA] Batch update starting for ${carriers.length} carriers`);
+    log.info(`[CSA] Batch update starting for ${carriers.length} carriers`);
 
     for (const carrier of carriers) {
       const result = await updateCarrierCsaScores(carrier.id);
@@ -256,9 +257,9 @@ export async function batchUpdateCsaScores(): Promise<{ updated: number; failed:
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    console.log(`[CSA] Batch update complete: ${updated} updated, ${failed} failed`);
+    log.info(`[CSA] Batch update complete: ${updated} updated, ${failed} failed`);
   } catch (err) {
-    console.error(`[CSA] Batch update error:`, (err as Error).message);
+    log.error({ err }, `[CSA] Batch update error:`);
   }
 
   return { updated, failed };

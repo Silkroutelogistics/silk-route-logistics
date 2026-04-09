@@ -4,6 +4,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
 import { TEMPLATE_MAP } from "../templates/emailTemplates";
+import { log } from "../lib/logger";
 
 const router = Router();
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -135,7 +136,7 @@ router.post("/send", async (req: any, res: Response) => {
     }
   } else {
     // Dev mode: log and return success
-    console.log(`[Email][Dev] To: ${to} | Subject: ${subject}`);
+    log.info(`[Email][Dev] To: ${to} | Subject: ${subject}`);
 
     if (entityType && entityId) {
       await prisma.communication.create({

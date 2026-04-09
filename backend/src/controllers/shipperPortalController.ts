@@ -5,6 +5,7 @@ import { prisma } from "../config/database";
 import { LoadStatus } from "@prisma/client";
 import { getVehicleLocation } from "../services/eldService";
 import { env } from "../config/env";
+import { log } from "../lib/logger";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -219,7 +220,7 @@ export async function getShipperDashboard(req: AuthRequest, res: Response) {
       openQuotes: openQuotes.map(mapTenderToQuote),
     });
   } catch (err) {
-    console.error("[ShipperPortal] Dashboard error:", err);
+    log.error({ err: err }, "[ShipperPortal] Dashboard error:");
     res.status(500).json({ error: "Failed to load dashboard" });
   }
 }
@@ -298,7 +299,7 @@ export async function getShipperShipments(req: AuthRequest, res: Response) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
-    console.error("[ShipperPortal] Shipments error:", err);
+    log.error({ err: err }, "[ShipperPortal] Shipments error:");
     res.status(500).json({ error: "Failed to load shipments" });
   }
 }
@@ -382,7 +383,7 @@ export async function getShipperInvoices(req: AuthRequest, res: Response) {
       },
     });
   } catch (err) {
-    console.error("[ShipperPortal] Invoices error:", err);
+    log.error({ err: err }, "[ShipperPortal] Invoices error:");
     res.status(500).json({ error: "Failed to load invoices" });
   }
 }
@@ -534,7 +535,7 @@ export async function getShipperAnalytics(req: AuthRequest, res: Response) {
       carrierScorecard,
     });
   } catch (err) {
-    console.error("[ShipperPortal] Analytics error:", err);
+    log.error({ err: err }, "[ShipperPortal] Analytics error:");
     res.status(500).json({ error: "Failed to load analytics" });
   }
 }
@@ -600,7 +601,7 @@ export async function getShipperTracking(req: AuthRequest, res: Response) {
 
     res.json({ shipments });
   } catch (err) {
-    console.error("[ShipperPortal] Tracking error:", err);
+    log.error({ err: err }, "[ShipperPortal] Tracking error:");
     res.status(500).json({ error: "Failed to load tracking" });
   }
 }
@@ -629,7 +630,7 @@ export async function getShipperTrackingHistory(req: AuthRequest, res: Response)
 
     res.json({ shipments });
   } catch (err) {
-    console.error("[ShipperPortal] Tracking history error:", err);
+    log.error({ err: err }, "[ShipperPortal] Tracking history error:");
     res.status(500).json({ error: "Failed to load tracking history" });
   }
 }
@@ -704,7 +705,7 @@ export async function getShipperTrackingTimeline(req: AuthRequest, res: Response
 
     res.json({ loadId, referenceNumber: load.referenceNumber, timeline, stops: stopsFormatted });
   } catch (err) {
-    console.error("[ShipperPortal] Timeline error:", err);
+    log.error({ err: err }, "[ShipperPortal] Timeline error:");
     res.status(500).json({ error: "Failed to load timeline" });
   }
 }
@@ -745,7 +746,7 @@ export async function generateTrackingLink(req: AuthRequest, res: Response) {
 
     res.json({ token: trackingToken.token, url: trackingUrl, expiresAt: trackingToken.expiresAt });
   } catch (err) {
-    console.error("[ShipperPortal] Generate tracking link error:", err);
+    log.error({ err: err }, "[ShipperPortal] Generate tracking link error:");
     res.status(500).json({ error: "Failed to generate tracking link" });
   }
 }
@@ -788,7 +789,7 @@ export async function getShipperDocuments(req: AuthRequest, res: Response) {
 
     res.json({ typeCounts, documents: recent });
   } catch (err) {
-    console.error("[ShipperPortal] Documents error:", err);
+    log.error({ err: err }, "[ShipperPortal] Documents error:");
     res.status(500).json({ error: "Failed to load documents" });
   }
 }
@@ -843,7 +844,7 @@ export async function createQuoteRequest(req: AuthRequest, res: Response) {
       message: "Quote request submitted successfully",
     });
   } catch (err) {
-    console.error("[ShipperPortal] Create quote error:", err);
+    log.error({ err: err }, "[ShipperPortal] Create quote error:");
     res.status(500).json({ error: "Failed to submit quote request" });
   }
 }
@@ -939,7 +940,7 @@ export async function fileShipperDispute(req: AuthRequest, res: Response) {
       message: "Dispute filed successfully. Our accounting team has been notified.",
     });
   } catch (err) {
-    console.error("[ShipperPortal] File dispute error:", err);
+    log.error({ err: err }, "[ShipperPortal] File dispute error:");
     res.status(500).json({ error: "Failed to file dispute" });
   }
 }
@@ -985,7 +986,7 @@ export async function getShipperDisputes(req: AuthRequest, res: Response) {
 
     res.json(enriched);
   } catch (err) {
-    console.error("[ShipperPortal] Get disputes error:", err);
+    log.error({ err: err }, "[ShipperPortal] Get disputes error:");
     res.status(500).json({ error: "Failed to load disputes" });
   }
 }
@@ -1112,7 +1113,7 @@ You represent Silk Route Logistics, a carrier-first freight brokerage based in K
         const result = await chat.sendMessage(messages[messages.length - 1].content);
         reply = result.response.text();
       } catch (geminiErr: any) {
-        console.error("[ShipperChat] Gemini failed, trying Anthropic:", geminiErr.message);
+        log.error({ err: geminiErr }, "[ShipperChat] Gemini failed, trying Anthropic:");
         if (!ANTHROPIC_API_KEY) throw geminiErr;
         reply = await callAnthropicForShipper(messages, systemPrompt);
       }
@@ -1124,7 +1125,7 @@ You represent Silk Route Logistics, a carrier-first freight brokerage based in K
 
     res.json({ reply, actions: [] });
   } catch (error: unknown) {
-    console.error("[ShipperChat] Error:", error);
+    log.error({ err: error }, "[ShipperChat] Error:");
     res.status(500).json({
       error: "Chat error",
       reply: "I'm having a bit of trouble right now. Please try again in a moment, or contact your account representative for immediate help.",

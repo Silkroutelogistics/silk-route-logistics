@@ -7,6 +7,7 @@
 import crypto from "crypto";
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
+import { log } from "../lib/logger";
 
 // ── Helpers ──
 
@@ -196,7 +197,7 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
   // Email admins on MEDIUM or HIGH risk chameleon matches
   if (riskLevel === "MEDIUM" || riskLevel === "HIGH") {
     sendChameleonAlertEmail(carrierId, riskLevel, matches).catch((e) =>
-      console.error("[Chameleon] Alert email error:", e.message)
+      log.error({ err: e }, "[Chameleon] Alert email error:")
     );
   }
 
@@ -229,7 +230,7 @@ export async function runFullChameleonScan(): Promise<{
       scanned++;
     } catch (err) {
       errors++;
-      console.error(`[Chameleon] Fingerprint build error for ${carrier.id}:`, err);
+      log.error({ err: err }, `[Chameleon] Fingerprint build error for ${carrier.id}:`);
     }
   }
 
@@ -240,11 +241,11 @@ export async function runFullChameleonScan(): Promise<{
       matchesFound += result.totalMatches;
     } catch (err) {
       errors++;
-      console.error(`[Chameleon] Check error for ${carrier.id}:`, err);
+      log.error({ err: err }, `[Chameleon] Check error for ${carrier.id}:`);
     }
   }
 
-  console.log(`[Chameleon] Full scan complete: ${scanned} scanned, ${matchesFound} matches, ${errors} errors`);
+  log.info(`[Chameleon] Full scan complete: ${scanned} scanned, ${matchesFound} matches, ${errors} errors`);
   return { scanned, matchesFound, errors };
 }
 
@@ -305,8 +306,8 @@ async function sendChameleonAlertEmail(
       admin.email,
       `[SRL FRAUD ALERT] Chameleon ${riskLevel} Risk: ${carrierName}`,
       wrap(body),
-    ).catch((e) => console.error(`[Chameleon] Email to ${admin.email} failed:`, e.message));
+    ).catch((e) => log.error({ err: e }, `[Chameleon] Email to ${admin.email} failed:`));
   }
 
-  console.log(`[Chameleon] Alert email sent to ${recipients.length} admins for ${carrierName} (${riskLevel})`);
+  log.info(`[Chameleon] Alert email sent to ${recipients.length} admins for ${carrierName} (${riskLevel})`);
 }

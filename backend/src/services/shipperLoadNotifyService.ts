@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
+import { log } from "../lib/logger";
 
 const PORTAL_BASE = "https://silkroutelogistics.ai";
 
@@ -90,7 +91,7 @@ export async function sendPickupNotification(loadId: string) {
   `);
 
   await sendEmail(to, `Load ${load.referenceNumber} — Picked Up`, html);
-  console.log(`[ShipperLoadNotify] Pickup sent to ${to} for ${load.referenceNumber}`);
+  log.info(`[ShipperLoadNotify] Pickup sent to ${to} for ${load.referenceNumber}`);
 }
 
 // ─── 2. In-Transit Update ──────────────────────────────────────
@@ -124,7 +125,7 @@ export async function sendInTransitUpdate(loadId: string) {
   `);
 
   await sendEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
-  console.log(`[ShipperLoadNotify] InTransit sent to ${to} for ${load.referenceNumber}`);
+  log.info(`[ShipperLoadNotify] InTransit sent to ${to} for ${load.referenceNumber}`);
 }
 
 // ─── 3. Delivery ETA Update (daily noon for IN_TRANSIT loads) ──
@@ -157,7 +158,7 @@ export async function sendDeliveryETAUpdate(loadId: string) {
   `);
 
   await sendEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
-  console.log(`[ShipperLoadNotify] ETA update sent to ${to} for ${load.referenceNumber}`);
+  log.info(`[ShipperLoadNotify] ETA update sent to ${to} for ${load.referenceNumber}`);
 }
 
 // ─── 4. Arrived at Delivery ────────────────────────────────────
@@ -180,7 +181,7 @@ export async function sendArrivedAtDelivery(loadId: string) {
   `);
 
   await sendEmail(to, `Load ${load.referenceNumber} — Arrived at Destination`, html);
-  console.log(`[ShipperLoadNotify] ArrivedAtDelivery sent to ${to} for ${load.referenceNumber}`);
+  log.info(`[ShipperLoadNotify] ArrivedAtDelivery sent to ${to} for ${load.referenceNumber}`);
 }
 
 // ─── 5. Delivered (with optional POD) ──────────────────────────
@@ -209,7 +210,7 @@ export async function sendDeliveredWithPOD(loadId: string, podUrl?: string) {
   `);
 
   await sendEmail(to, `Load ${load.referenceNumber} — Delivered ✓`, html);
-  console.log(`[ShipperLoadNotify] Delivered sent to ${to} for ${load.referenceNumber}`);
+  log.info(`[ShipperLoadNotify] Delivered sent to ${to} for ${load.referenceNumber}`);
 }
 
 // ─── 6. POD Uploaded Notification ──────────────────────────────
@@ -237,7 +238,7 @@ export async function sendPODToContact(loadId: string) {
   `);
 
   await sendEmail(to, `Load ${load.referenceNumber} — Proof of Delivery`, html);
-  console.log(`[ShipperLoadNotify] POD email sent to ${to} for ${load.referenceNumber}`);
+  log.info(`[ShipperLoadNotify] POD email sent to ${to} for ${load.referenceNumber}`);
 }
 
 // ─── Daily ETA Updates Cron Handler ────────────────────────────
@@ -251,7 +252,7 @@ export async function dailyETAUpdates() {
     select: { id: true, referenceNumber: true },
   });
 
-  console.log(`[ShipperLoadNotify] Daily ETA updates: ${inTransitLoads.length} in-transit loads`);
+  log.info(`[ShipperLoadNotify] Daily ETA updates: ${inTransitLoads.length} in-transit loads`);
 
   let sent = 0;
   let errors = 0;
@@ -261,9 +262,9 @@ export async function dailyETAUpdates() {
       sent++;
     } catch (err: any) {
       errors++;
-      console.error(`[ShipperLoadNotify] ETA update failed for ${load.referenceNumber}: ${err.message}`);
+      log.error(`[ShipperLoadNotify] ETA update failed for ${load.referenceNumber}: ${err.message}`);
     }
   }
 
-  console.log(`[ShipperLoadNotify] Daily ETA complete: ${sent} sent, ${errors} errors`);
+  log.info(`[ShipperLoadNotify] Daily ETA complete: ${sent} sent, ${errors} errors`);
 }

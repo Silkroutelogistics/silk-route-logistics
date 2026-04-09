@@ -11,6 +11,7 @@
 import { prisma } from "../config/database";
 import { TinMatchStatus } from "@prisma/client";
 import { creditCheck } from "./secEdgarService";
+import { log } from "../lib/logger";
 
 // ── Types ──
 
@@ -287,7 +288,7 @@ export async function verifyTinWithIRS(tin: string, legalName: string): Promise<
       });
 
       if (!response.ok) {
-        console.error(`[TIN Match] IRS API error: ${response.status} ${response.statusText}`);
+        log.error(`[TIN Match] IRS API error: ${response.status} ${response.statusText}`);
         // Fall through to enhanced validation
         const result = enhancedFormatValidation(tin, legalName);
         result.formatIssues.push("IRS API returned an error — used format validation only");
@@ -318,7 +319,7 @@ export async function verifyTinWithIRS(tin: string, legalName: string): Promise<
         confidence: "LOW",
       };
     } catch (err) {
-      console.error("[TIN Match] IRS API call failed:", err);
+      log.error({ err: err }, "[TIN Match] IRS API call failed:");
       const result = enhancedFormatValidation(tin, legalName);
       result.formatIssues.push("IRS API call failed — used format validation only");
       return result;
@@ -338,7 +339,7 @@ export async function verifyTinWithIRS(tin: string, legalName: string): Promise<
       }
     } catch (err) {
       // SEC cross-reference is optional — don't fail the whole check
-      console.warn("[TIN Match] SEC cross-reference failed:", err);
+      log.warn({ data: err }, "[TIN Match] SEC cross-reference failed:");
     }
   }
 
@@ -372,7 +373,7 @@ async function crossReferenceWithSec(companyName: string): Promise<SecCrossRefRe
       stateOfIncorporation: secData.stateOfIncorporation || undefined,
     };
   } catch (err) {
-    console.warn("[TIN Match] SEC EDGAR lookup failed:", err);
+    log.warn({ data: err }, "[TIN Match] SEC EDGAR lookup failed:");
     return { found: false };
   }
 }
@@ -421,7 +422,7 @@ async function callTinCheckApi(
     });
 
     if (!response.ok) {
-      console.error(
+      log.error(
         `[TIN Match] tin-check.com API error: ${response.status} ${response.statusText}`
       );
       return { matched: false, status: "IRS_ERROR" };
@@ -435,7 +436,7 @@ async function callTinCheckApi(
 
     return { matched: false, status: "MISMATCHED" };
   } catch (err) {
-    console.error("[TIN Match] tin-check.com API call failed:", err);
+    log.error({ err: err }, "[TIN Match] tin-check.com API call failed:");
     return { matched: false, status: "IRS_ERROR" };
   }
 }
@@ -465,7 +466,7 @@ export async function verifyTin(carrierId: string): Promise<EnhancedTinResult> {
     });
 
     if (!verification) {
-      console.error(
+      log.error(
         `[TIN Match] No identity verification record found for carrier ${carrierId}`
       );
       return {
@@ -480,7 +481,7 @@ export async function verifyTin(carrierId: string): Promise<EnhancedTinResult> {
     }
 
     if (!verification.w9TinFull) {
-      console.error(
+      log.error(
         `[TIN Match] No W-9 TIN on file for carrier ${carrierId}`
       );
       return {
@@ -495,7 +496,7 @@ export async function verifyTin(carrierId: string): Promise<EnhancedTinResult> {
     }
 
     if (!verification.w9CompanyName) {
-      console.error(
+      log.error(
         `[TIN Match] No W-9 company name on file for carrier ${carrierId}`
       );
       return {
@@ -547,7 +548,7 @@ export async function verifyTin(carrierId: string): Promise<EnhancedTinResult> {
       },
     });
 
-    console.log(
+    log.info(
       `[TIN Match] Carrier ${carrierId}: ${result.status} (confidence: ${result.confidence})${
         !process.env.IRS_TIN_MATCH_API_KEY ? " — no IRS API" : ""
       }${result.secCrossRef ? " — SEC cross-ref confirmed" : ""}`
@@ -555,7 +556,7 @@ export async function verifyTin(carrierId: string): Promise<EnhancedTinResult> {
 
     return result;
   } catch (err) {
-    console.error(`[TIN Match] Error verifying TIN for carrier ${carrierId}:`, err);
+    log.error({ err: err }, `[TIN Match] Error verifying TIN for carrier ${carrierId}:`);
 
     // Attempt to mark as error in the database
     try {
@@ -567,7 +568,7 @@ export async function verifyTin(carrierId: string): Promise<EnhancedTinResult> {
         },
       });
     } catch {
-      console.error(`[TIN Match] Could not update error status for carrier ${carrierId}`);
+      log.error(`[TIN Match] Could not update error status for carrier ${carrierId}`);
     }
 
     return {
@@ -601,7 +602,7 @@ export async function batchVerifyTins(): Promise<BatchVerifyStats> {
     errors: 0,
   };
 
-  console.log(`[TIN Match] Batch: ${stats.total} carriers to verify`);
+  log.info(`[TIN Match] Batch: ${stats.total} carriers to verify`);
 
   for (const record of unverified) {
     const result = await verifyTin(record.carrierId);
@@ -622,7 +623,7 @@ export async function batchVerifyTins(): Promise<BatchVerifyStats> {
     }
   }
 
-  console.log(
+  log.info(
     `[TIN Match] Batch complete: ${stats.matched} valid, ${stats.mismatched} invalid/suspicious, ${stats.errors} errors`
   );
 

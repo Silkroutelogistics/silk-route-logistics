@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import crypto from "crypto";
+import { log } from "../lib/logger";
 
 let rekognitionClient: any = null;
 let CompareFacesCommand: any = null;
@@ -12,7 +13,7 @@ try {
     });
   }
 } catch (err) {
-  console.warn("[Biometric] AWS Rekognition SDK not available, using hash-based verification:", (err as Error).message);
+  log.warn({ err }, "[Biometric] AWS Rekognition SDK not available, using hash-based verification:");
 }
 
 const MATCH_THRESHOLD = 80;

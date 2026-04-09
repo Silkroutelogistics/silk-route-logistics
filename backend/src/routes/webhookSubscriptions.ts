@@ -4,6 +4,7 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { isUrlSafe } from "../lib/urlSafety";
 import { z } from "zod";
+import { log } from "../lib/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -68,7 +69,7 @@ router.post(
       if (err.name === "ZodError") {
         res.status(400).json({ error: "Invalid input", details: err.errors });
       } else {
-        console.error("[Webhooks] Create error:", err);
+        log.error({ err: err }, "[Webhooks] Create error:");
         res.status(500).json({ error: "Failed to create webhook" });
       }
     }

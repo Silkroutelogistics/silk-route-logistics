@@ -7,6 +7,7 @@ import { env } from "../config/env";
 import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile, validateBufferSignature, isS3Url } from "../services/storageService";
 import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded } from "../services/integrationService";
+import { log } from "../lib/logger";
 
 // ─── POST /api/documents/upload ───────────────────────
 export async function uploadDocuments(req: AuthRequest, res: Response) {
@@ -53,10 +54,10 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
   // If POD uploaded for a load, trigger validation, shipper notification, and status advancement
   if (docType === "POD" && loadId) {
     for (const doc of documents) {
-      validateAndNotifyPOD(loadId, doc.id).catch((e) => console.error("[ShipperNotify] POD validation error:", e.message));
+      validateAndNotifyPOD(loadId, doc.id).catch((e) => log.error({ err: e }, "[ShipperNotify] POD validation error:"));
     }
     // Integration: advance load to POD_RECEIVED + invoice to SENT
-    onPODUploaded(loadId).catch((e) => console.error("[Integration] onPODUploaded error:", e.message));
+    onPODUploaded(loadId).catch((e) => log.error({ err: e }, "[Integration] onPODUploaded error:"));
   }
 
   res.status(201).json(documents);

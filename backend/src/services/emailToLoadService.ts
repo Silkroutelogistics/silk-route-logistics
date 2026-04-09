@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -524,7 +525,7 @@ export async function createLoadFromEmail(
     });
   }
 
-  console.log(`[EmailToLoad] Created load ${load.referenceNumber} (${lane}) — confidence ${parsed.confidence}`);
+  log.info(`[EmailToLoad] Created load ${load.referenceNumber} (${lane}) — confidence ${parsed.confidence}`);
   return load;
 }
 
@@ -552,7 +553,7 @@ export async function processInboundEmail(
 
   const fullText = `${subject}\n${plainBody}`;
 
-  console.log(`[EmailToLoad] Processing email from ${senderEmail}, subject: "${subject}"`);
+  log.info(`[EmailToLoad] Processing email from ${senderEmail}, subject: "${subject}"`);
 
   const parsed = parseShipperEmail(fullText, senderEmail);
 
@@ -618,6 +619,6 @@ export async function processInboundEmail(
     });
   }
 
-  console.log(`[EmailToLoad] LOW confidence for ${senderEmail} — notification only`);
+  log.info(`[EmailToLoad] LOW confidence for ${senderEmail} — notification only`);
   return { action: "NOTIFICATION_ONLY", confidence: "LOW", missingFields: parsed.missingFields };
 }

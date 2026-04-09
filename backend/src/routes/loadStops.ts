@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
+import { log } from "../lib/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -90,7 +91,7 @@ router.post(
 
       res.status(201).json({ stop });
     } catch (err) {
-      console.error("Create stop error:", err);
+      log.error({ err: err }, "Create stop error:");
       res.status(500).json({ error: "Failed to create stop" });
     }
   }
@@ -237,7 +238,7 @@ router.put(
 
       res.json({ stops });
     } catch (err) {
-      console.error("Reorder stops error:", err);
+      log.error({ err: err }, "Reorder stops error:");
       res.status(500).json({ error: "Failed to reorder stops" });
     }
   }

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { Prisma } from "@prisma/client";
+import { log } from "../lib/logger";
 
 /**
  * Shipment Monitor Service — AI-powered risk assessment for active loads.
@@ -168,7 +169,7 @@ export async function scanActiveShipments(): Promise<{
   critical: number;
   risks: ShipmentRisk[];
 }> {
-  console.log("[ShipmentMonitor] Scanning active shipments...");
+  log.info("[ShipmentMonitor] Scanning active shipments...");
 
   const activeLoads = await prisma.load.findMany({
     where: {
@@ -201,7 +202,7 @@ export async function scanActiveShipments(): Promise<{
   const highRisk = risks.filter((r) => r.riskLevel === "HIGH").length;
   const critical = risks.filter((r) => r.riskLevel === "CRITICAL").length;
 
-  console.log(`[ShipmentMonitor] Scanned ${activeLoads.length} loads: ${critical} critical, ${highRisk} high risk`);
+  log.info(`[ShipmentMonitor] Scanned ${activeLoads.length} loads: ${critical} critical, ${highRisk} high risk`);
 
   return { scanned: activeLoads.length, highRisk, critical, risks };
 }

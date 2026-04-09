@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 /**
  * Carrier Intelligence Engine — Self-Learning Carrier Performance Predictor
@@ -85,7 +86,7 @@ export async function runCarrierLearningCycle(): Promise<{
   alerts: any[];
 }> {
   const startTime = Date.now();
-  console.log("[CarrierIntelligence] Starting learning cycle...");
+  log.info("[CarrierIntelligence] Starting learning cycle...");
 
   const carriers = await prisma.carrierProfile.findMany({
     where: { onboardingStatus: "APPROVED" },
@@ -261,7 +262,7 @@ export async function runCarrierLearningCycle(): Promise<{
     },
   });
 
-  console.log(`[CarrierIntelligence] Cycle complete: ${carriers.length} carriers, ${totalDataPoints} loads, ${alerts.length} alerts`);
+  log.info(`[CarrierIntelligence] Cycle complete: ${carriers.length} carriers, ${totalDataPoints} loads, ${alerts.length} alerts`);
   return { carriersProcessed: carriers.length, dataPoints: totalDataPoints, alerts };
 }
 

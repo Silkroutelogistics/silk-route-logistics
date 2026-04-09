@@ -7,6 +7,7 @@ import {
   getModelById,
 } from "./providers";
 import { trackUsage } from "./costTracker";
+import { log } from "../../lib/logger";
 
 /**
  * AI Router — Intelligent multi-provider routing with automatic fallback.
@@ -237,10 +238,7 @@ export async function routeAIQuery(req: AIRouterRequest): Promise<AIRouterRespon
       lastError = err instanceof Error ? err : new Error(String(err));
       const latencyMs = Date.now() - startTime;
 
-      console.error(
-        `[AIRouter] ${model.provider}/${model.id} failed (attempt ${i + 1}/${models.length}):`,
-        lastError.message
-      );
+      log.error({ err: lastError }, `[AIRouter] ${model.provider}/${model.id} failed (attempt ${i + 1}/${models.length})`);
 
       // Track the failure
       await trackUsage({

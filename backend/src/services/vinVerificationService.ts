@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ export async function verifyTruckVin(truckId: string) {
   try {
     decoded = await decodeVin(truck.vin);
   } catch (error: any) {
-    console.error(`VIN decode failed for truck ${truckId}:`, error.message);
+    log.error({ err: error }, `VIN decode failed for truck ${truckId}:`);
     return prisma.truck.update({
       where: { id: truckId },
       data: { vinVerificationStatus: "NOT_FOUND" },
@@ -213,7 +214,7 @@ export async function verifyAllCarrierVins(carrierId?: string) {
           break;
       }
     } catch (error: any) {
-      console.error(`Error verifying truck ${truck.id}:`, error.message);
+      log.error({ err: error }, `Error verifying truck ${truck.id}:`);
       stats.errors++;
     }
   }

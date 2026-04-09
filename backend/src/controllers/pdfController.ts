@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { generateBOL, generateBOLFromLoad, generateRateConfirmation, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
+import { log } from "../lib/logger";
 
 export async function downloadBOL(req: AuthRequest, res: Response) {
   try {
@@ -19,7 +20,7 @@ export async function downloadBOL(req: AuthRequest, res: Response) {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] BOL generation error:", e.message);
+    log.error({ err: e }, "[PDF] BOL generation error:");
     res.status(500).json({ error: "Failed to generate BOL PDF" });
   }
 }
@@ -49,7 +50,7 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] Rate confirmation generation error:", e.message);
+    log.error({ err: e }, "[PDF] Rate confirmation generation error:");
     res.status(500).json({ error: "Failed to generate rate confirmation PDF" });
   }
 }
@@ -78,7 +79,7 @@ export async function downloadEnhancedRateConfirmation(req: AuthRequest, res: Re
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] Enhanced rate confirmation error:", e.message);
+    log.error({ err: e }, "[PDF] Enhanced rate confirmation error:");
     res.status(500).json({ error: "Failed to generate enhanced rate confirmation PDF" });
   }
 }
@@ -107,7 +108,7 @@ export async function downloadShipperLoadConfirmation(req: AuthRequest, res: Res
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] Shipper load confirmation error:", e.message);
+    log.error({ err: e }, "[PDF] Shipper load confirmation error:");
     res.status(500).json({ error: "Failed to generate load confirmation PDF" });
   }
 }
@@ -138,7 +139,7 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] Invoice generation error:", e.message);
+    log.error({ err: e }, "[PDF] Invoice generation error:");
     res.status(500).json({ error: "Failed to generate invoice PDF" });
   }
 }
@@ -164,7 +165,7 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] BOL from load generation error:", e.message);
+    log.error({ err: e }, "[PDF] BOL from load generation error:");
     res.status(500).json({ error: "Failed to generate BOL PDF" });
   }
 }
@@ -193,7 +194,7 @@ export async function downloadSettlementPDF(req: AuthRequest, res: Response) {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
   } catch (e: any) {
-    console.error("[PDF] Settlement generation error:", e.message);
+    log.error({ err: e }, "[PDF] Settlement generation error:");
     res.status(500).json({ error: "Failed to generate settlement PDF" });
   }
 }

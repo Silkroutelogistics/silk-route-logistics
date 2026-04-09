@@ -10,6 +10,7 @@ import { nextShipmentNumber } from "../controllers/shipmentController";
 import { sendPODToContact } from "../services/shipperLoadNotifyService";
 import { onLoadStatusChange as aiOnLoadStatusChange, onCarrierResponse } from "../services/aiLearningLoop/feedbackCollector";
 import { processGpsUpdate } from "../services/geofenceService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -247,10 +248,10 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
 
   // AI Learning Loop: record carrier acceptance
   aiOnLoadStatusChange(load.id, "POSTED", "BOOKED", new Date()).catch((e) =>
-    console.error("[AI Feedback]", e.message)
+    log.error({ err: e }, "[AI Feedback]")
   );
   onCarrierResponse(req.user!.id, load.id, "ACCEPTED", 0).catch((e) =>
-    console.error("[AI Feedback]", e.message)
+    log.error({ err: e }, "[AI Feedback]")
   );
 
   res.json(updated);
@@ -279,7 +280,7 @@ router.post("/:id/decline", async (req: AuthRequest, res: Response) => {
 
   // AI Learning Loop: record carrier decline
   onCarrierResponse(req.user!.id, load.id, "DECLINED", 0).catch((e) =>
-    console.error("[AI Feedback]", e.message)
+    log.error({ err: e }, "[AI Feedback]")
   );
 
   // Notify broker
@@ -360,7 +361,7 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
 
   // AI Learning Loop: record carrier status change
   aiOnLoadStatusChange(load.id, oldStatus, status, new Date()).catch((e) =>
-    console.error("[AI Feedback]", e.message)
+    log.error({ err: e }, "[AI Feedback]")
   );
 
   // Create check call for the status update
@@ -454,7 +455,7 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
     }
 
     // Notify shipper contact email about POD
-    sendPODToContact(load.id).catch((e) => console.error("[ShipperNotify] POD", e.message));
+    sendPODToContact(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] POD"));
   }
 
   res.json(doc);
@@ -546,7 +547,7 @@ router.post("/post-capacity", async (req: AuthRequest, res: Response) => {
 
     res.json({ ok: true, capacityPost });
   } catch (err) {
-    console.error("[Capacity] Post error:", err);
+    log.error({ err: err }, "[Capacity] Post error:");
     res.status(500).json({ error: "Failed to post capacity" });
   }
 });
@@ -565,7 +566,7 @@ router.post("/gps-update", async (req: AuthRequest, res: Response) => {
     await processGpsUpdate(carrierId, Number(latitude), Number(longitude));
     res.json({ ok: true });
   } catch (err) {
-    console.error("[GPS] Update error:", err);
+    log.error({ err: err }, "[GPS] Update error:");
     res.status(500).json({ error: "Failed to process GPS update" });
   }
 });

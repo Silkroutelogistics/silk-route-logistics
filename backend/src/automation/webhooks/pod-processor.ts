@@ -12,6 +12,7 @@ import { trackUsage } from "../../services/aiRouter/costTracker";
 import { checkLimits } from "../../security/circuitBreaker";
 import fs from "fs";
 import path from "path";
+import { log } from "../../lib/logger";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -181,7 +182,7 @@ export async function processDocument(opts: {
 
     return result;
   } catch (err) {
-    console.error("[PODProcessor] AI call failed, creating manual task:", err instanceof Error ? err.message : err);
+    log.error({ err }, "[PODProcessor] AI call failed, creating manual task:");
 
     await logAutomationEvent({
       type: "document_processed",

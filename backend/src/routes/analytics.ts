@@ -3,6 +3,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import * as ctrl from "../controllers/analyticsController";
 import { getTopLanes, getLaneDetail, getLaneHeatmap, getMarginAnalysis } from "../services/laneAnalyticsService";
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.get("/lane-heatmap", authorize("ADMIN", "CEO", "BROKER") as any, async (_
     const data = await getLaneHeatmap();
     res.json(data);
   } catch (err) {
-    console.error("[Analytics] Lane heatmap error:", err);
+    log.error({ err: err }, "[Analytics] Lane heatmap error:");
     res.status(500).json({ error: "Failed to fetch lane heatmap data" });
   }
 });
@@ -41,7 +42,7 @@ router.get("/margins", authorize("ADMIN", "CEO", "BROKER") as any, async (req: A
     const data = await getMarginAnalysis(period);
     res.json(data);
   } catch (err) {
-    console.error("[Analytics] Margin analysis error:", err);
+    log.error({ err: err }, "[Analytics] Margin analysis error:");
     res.status(500).json({ error: "Failed to fetch margin analysis" });
   }
 });
@@ -114,7 +115,7 @@ router.get("/lane-rate/:origin/:dest", async (req: AuthRequest, res: Response) =
       lastUpdated: null,
     });
   } catch (err) {
-    console.error("[Analytics] Lane rate error:", err);
+    log.error({ err: err }, "[Analytics] Lane rate error:");
     res.status(500).json({ error: "Failed to fetch lane rate data" });
   }
 });
@@ -127,7 +128,7 @@ router.get("/lanes/:origin/:dest", authorize("ADMIN", "CEO", "BROKER") as any, a
     const data = await getLaneDetail(origin.toUpperCase(), dest.toUpperCase(), period);
     res.json(data);
   } catch (err) {
-    console.error("[Analytics] Lane detail error:", err);
+    log.error({ err: err }, "[Analytics] Lane detail error:");
     res.status(500).json({ error: "Failed to fetch lane detail" });
   }
 });

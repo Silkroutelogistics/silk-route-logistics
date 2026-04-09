@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { broadcastSSE } from "./trackTraceSSE";
+import { log } from "../lib/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -227,7 +228,7 @@ router.post(
         event,
       });
     } catch (err) {
-      console.error("Status change error:", err);
+      log.error({ err: err }, "Status change error:");
       res.status(500).json({ error: "Failed to update load status" });
     }
   }
@@ -335,7 +336,7 @@ router.post(
         detentionCreated,
       });
     } catch (err) {
-      console.error("Confirm loaded error:", err);
+      log.error({ err: err }, "Confirm loaded error:");
       res.status(500).json({ error: "Failed to confirm loaded" });
     }
   }
@@ -448,7 +449,7 @@ router.post(
         onTime: delStop ? (delStop as any).onTime : null,
       });
     } catch (err) {
-      console.error("Confirm delivered error:", err);
+      log.error({ err: err }, "Confirm delivered error:");
       res.status(500).json({ error: "Failed to confirm delivered" });
     }
   }

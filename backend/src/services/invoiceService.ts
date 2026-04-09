@@ -1,11 +1,12 @@
 import { prisma } from "../config/database";
 import { sendAutoInvoiceEmail } from "./emailService";
+import { log } from "../lib/logger";
 
 export async function autoGenerateInvoice(loadId: string) {
   // Prevent duplicate invoices for the same load
   const existing = await prisma.invoice.findFirst({ where: { loadId } });
   if (existing) {
-    console.log(`[AutoInvoice] Invoice already exists for load ${loadId}: ${existing.invoiceNumber}`);
+    log.info(`[AutoInvoice] Invoice already exists for load ${loadId}: ${existing.invoiceNumber}`);
     return existing;
   }
 
@@ -21,7 +22,7 @@ export async function autoGenerateInvoice(loadId: string) {
     },
   });
   if (!load || !load.carrierId) {
-    console.log(`[AutoInvoice] No load or carrier found for ${loadId}`);
+    log.info(`[AutoInvoice] No load or carrier found for ${loadId}`);
     return null;
   }
 
@@ -29,7 +30,7 @@ export async function autoGenerateInvoice(loadId: string) {
   const rc = load.rateConfirmations[0];
   const effectiveRate = load.rate || rc?.totalCharges || 0;
   if (effectiveRate <= 0) {
-    console.warn(`[AutoInvoice] Skipping zero-rate load ${loadId} (rate=$${load.rate}, RC=${rc ? rc.totalCharges : "none"}) — no billable amount`);
+    log.warn(`[AutoInvoice] Skipping zero-rate load ${loadId} (rate=$${load.rate}, RC=${rc ? rc.totalCharges : "none"}) — no billable amount`);
     return null;
   }
 
@@ -113,7 +114,7 @@ export async function autoGenerateInvoice(loadId: string) {
     return inv;
   });
 
-  console.log(`[AutoInvoice] Created ${invoiceNumber} for load ${load.referenceNumber} — $${totalAmount}`);
+  log.info(`[AutoInvoice] Created ${invoiceNumber} for load ${load.referenceNumber} — $${totalAmount}`);
 
   // Notify carrier in-app
   await prisma.notification.create({
@@ -134,7 +135,7 @@ export async function autoGenerateInvoice(loadId: string) {
       load.referenceNumber,
       invoiceNumber,
       totalAmount,
-    ).catch((e) => console.error(`[AutoInvoice] Email failed for ${invoiceNumber}: ${e.message}`));
+    ).catch((e) => log.error(`[AutoInvoice] Email failed for ${invoiceNumber}: ${e.message}`));
   }
 
   return invoice;
