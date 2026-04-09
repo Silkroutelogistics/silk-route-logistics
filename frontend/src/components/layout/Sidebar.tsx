@@ -347,7 +347,7 @@ export function Sidebar() {
   /* ── Grouped AE nav ────────────────────────────────────── */
 
   const renderGroupedNav = () => (
-    <nav className="flex-1 px-2 py-3 overflow-y-auto">
+    <nav aria-label="Main navigation" className="flex-1 px-2 py-3 overflow-y-auto">
       {aeViewGroups.map((group) => {
         const isCollapsed = !!collapsedGroups[group.key];
         return (
@@ -380,7 +380,7 @@ export function Sidebar() {
   /* ── Flat nav (carrier / employee) ─────────────────────── */
 
   const renderFlatNav = () => (
-    <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+    <nav aria-label="Carrier navigation" className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
       {(flatNav || []).map(renderNavLink)}
     </nav>
   );
@@ -468,6 +468,7 @@ export function Sidebar() {
             collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
           )}
           title="Sign Out"
+          aria-label="Sign out"
         >
           <LogOut className="w-4 h-4" />
           {!collapsed && <span>Sign Out</span>}
@@ -523,6 +524,7 @@ export function Sidebar() {
           onClick={() => setCollapsed((p: boolean) => !p)}
           className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 items-center justify-center rounded-full bg-[#2A2F42] border border-[#2a3d57] text-slate-400 hover:text-white hover:bg-[#243a56] transition-all duration-200 shadow-lg cursor-pointer z-50"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronsRight className="w-3 h-3" /> : <ChevronsLeft className="w-3 h-3" />}
         </button>
