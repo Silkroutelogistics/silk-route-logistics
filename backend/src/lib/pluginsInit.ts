@@ -66,14 +66,18 @@ const s3Plugin: StoragePlugin = {
   name: "AWS S3",
   type: "storage",
   isConfigured: () => !!(env.AWS_ACCESS_KEY_ID && env.S3_BUCKET_NAME),
-  upload: async (_file, _filename, _contentType) => {
-    throw new Error("Use storageService.upload() directly — plugin adapter pending");
+  upload: async (file, filename, contentType) => {
+    const { uploadFile } = await import("../services/storageService");
+    const url = await uploadFile(file, filename, contentType);
+    return { url, key: filename };
   },
-  delete: async (_key) => {
-    throw new Error("Use storageService.delete() directly — plugin adapter pending");
+  delete: async (key) => {
+    const { deleteFile } = await import("../services/storageService");
+    await deleteFile(key);
   },
-  getSignedUrl: async (_key) => {
-    throw new Error("Use storageService.getSignedUrl() directly — plugin adapter pending");
+  getSignedUrl: async (key) => {
+    const { getDownloadUrl } = await import("../services/storageService");
+    return getDownloadUrl(key);
   },
 };
 
