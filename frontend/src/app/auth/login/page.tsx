@@ -7,6 +7,7 @@ import { Shield } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { VersionFooter } from "@/components/ui/VersionFooter";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { loginSchema, otpSchema, totpSchema } from "@/lib/schemas";
 
 const FEATURE_PILLS = [
   { icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7", label: "Load Management" },
@@ -79,7 +80,8 @@ export default function EmployeeLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { setLocalError("Please enter your email and password."); return; }
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) { setLocalError(parsed.error.errors[0].message); return; }
     setLocalError("");
     setLocalLoading(true);
     try {
@@ -109,7 +111,8 @@ export default function EmployeeLoginPage() {
 
   const handleOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp || otp.length < 6) { setLocalError("Please enter the verification code."); return; }
+    const parsed = otpSchema.safeParse({ otp });
+    if (!parsed.success) { setLocalError(parsed.error.errors[0].message); return; }
     setLocalError("");
     setLocalLoading(true);
     try {
@@ -175,7 +178,8 @@ export default function EmployeeLoginPage() {
 
   const handleTotpSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!totpCode || totpCode.length < 6) { setLocalError("Please enter the 6-digit code from your authenticator app."); return; }
+    const totpParsed = totpSchema.safeParse({ totpCode });
+    if (!totpParsed.success) { setLocalError(totpParsed.error.errors[0].message); return; }
     setLocalError("");
     setLocalLoading(true);
     try {
@@ -205,7 +209,8 @@ export default function EmployeeLoginPage() {
 
   const handleTotpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!totpCode || totpCode.length < 6) { setLocalError("Please enter the 6-digit code from your authenticator app."); return; }
+    const totpParsed = totpSchema.safeParse({ totpCode });
+    if (!totpParsed.success) { setLocalError(totpParsed.error.errors[0].message); return; }
     setLocalError("");
     setLocalLoading(true);
     try {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, Zap, Check, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { quoteRequestSchema } from "@/lib/schemas";
 
 /* ────── Google Maps loader (singleton) ────── */
 let gMapsLoaded = false;
@@ -164,13 +165,14 @@ export function QuoteForm() {
 
   const handleSubmit = async () => {
     setError("");
-    // Validate required fields
-    if (!origin.city || !origin.state) { setError("Origin address is required"); return; }
-    if (!dest.city || !dest.state) { setError("Destination address is required"); return; }
-    if (!form.qPickup) { setError("Pickup date is required"); return; }
-    if (!form.qEquip) { setError("Equipment type is required"); return; }
-    if (!form.qWeight) { setError("Weight is required"); return; }
-    if (!form.qCommodity) { setError("Commodity is required"); return; }
+    const parsed = quoteRequestSchema.safeParse({
+      originCity: origin.city, originState: origin.state,
+      destCity: dest.city, destState: dest.state,
+      equipmentType: form.qEquip, weight: form.qWeight ? Number(form.qWeight) : undefined,
+      pickupDate: form.qPickup, deliveryDate: form.qDelivery || undefined,
+      commodity: form.qCommodity,
+    });
+    if (!parsed.success) { setError(parsed.error.errors[0].message); return; }
 
     setSubmitting(true);
     try {

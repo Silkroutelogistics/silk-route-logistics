@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { X, ChevronRight, ChevronLeft, Check, MapPin, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { loadStep1Schema, loadStep2Schema, loadStep3Schema } from "@/lib/schemas";
 
 const EQUIPMENT_TYPES = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"];
 const FREIGHT_CLASSES = ["50", "55", "60", "65", "70", "77.5", "85", "92.5", "100", "110", "125", "150", "175", "200", "250", "300", "400", "500"];
@@ -209,26 +210,15 @@ export function CreateLoadModal({ open, onClose, cloneFrom }: Props) {
 
   // Validation
   const validateStep = (s: number): Record<string, string> => {
+    const schemas = { 1: loadStep1Schema, 2: loadStep2Schema, 3: loadStep3Schema } as const;
+    const schema = schemas[s as keyof typeof schemas];
+    if (!schema) return {};
+    const result = schema.safeParse(form);
+    if (result.success) return {};
     const errs: Record<string, string> = {};
-    if (s === 1) {
-      if (!form.originCity) errs.originCity = "Required";
-      if (!form.originState) errs.originState = "Required";
-      if (!form.originZip) errs.originZip = "Required";
-      if (!form.destCity) errs.destCity = "Required";
-      if (!form.destState) errs.destState = "Required";
-      if (!form.destZip) errs.destZip = "Required";
-      if (!form.pickupDate) errs.pickupDate = "Required";
-      else if (form.pickupDate < new Date().toISOString().split("T")[0]) errs.pickupDate = "Cannot be in the past";
-      if (!form.deliveryDate) errs.deliveryDate = "Required";
-      else if (form.deliveryDate < form.pickupDate) errs.deliveryDate = "Must be after pickup";
-    } else if (s === 2) {
-      if (!form.equipmentType) errs.equipmentType = "Required";
-      if (!form.commodity) errs.commodity = "Required";
-      if (!form.weight) errs.weight = "Required";
-    } else if (s === 3) {
-      if (!form.rate || parseFloat(form.rate) <= 0) errs.rate = "Required";
-      if (!form.contactName) errs.contactName = "Required";
-      if (!form.contactPhone) errs.contactPhone = "Required";
+    for (const issue of result.error.issues) {
+      const field = issue.path[0] as string;
+      if (field && !errs[field]) errs[field] = issue.message;
     }
     return errs;
   };
