@@ -65,21 +65,16 @@ class BrokerageProvider {
     return true;
   }
 
-  // TODO: Replace placeholder implementations with real API calls
-  async getAvailableLoads(filters: LoadFilters): Promise<BrokerageLoad[]> {
+  // Placeholder — returns empty until real provider APIs are integrated
+  async getAvailableLoads(_filters: LoadFilters): Promise<BrokerageLoad[]> {
     if (!this.isConfigured()) return [];
-    return [{
-      provider: this.cfg.name, externalId: `${this.cfg.prefix}-PLACEHOLDER`,
-      origin: filters.origin || "", destination: filters.destination || "",
-      equipment: filters.equipment || "VAN", weight: null, rate: null,
-      pickupDate: filters.pickupDateFrom || "", deliveryDate: null,
-      distance: null, postedAt: new Date().toISOString(),
-    }];
+    // Real API integration pending — return empty to avoid serving fake data
+    return [];
   }
 
   async postLoad(_loadData: LoadData): Promise<PostLoadResult> {
     if (!this.isConfigured()) return { provider: this.cfg.name, success: false, externalId: null, message: "Not configured" };
-    return { provider: this.cfg.name, success: true, externalId: `${this.cfg.prefix}-${Date.now()}`, message: "Load posted (placeholder)" };
+    return { provider: this.cfg.name, success: false, externalId: null, message: `${this.cfg.name} API integration pending` };
   }
 
   async getRate(origin: string, destination: string, equipment: string): Promise<RateQuote | null> {
