@@ -10,14 +10,7 @@ import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
 import { MarcoPolo } from "@/components/MarcoPolo";
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-}
+import type { Notification } from "@/types/entities";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();

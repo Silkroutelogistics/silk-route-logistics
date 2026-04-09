@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import type { Load, Invoice, CarrierProfile as Carrier } from "@/types/entities";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -45,35 +46,6 @@ const STATUS_TEXT_COLORS: Record<string, string> = {
   IN_TRANSIT: "text-amber-400",
   DELIVERED: "text-green-400",
 };
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-interface Load {
-  id: string;
-  status: string;
-  rate?: number;
-  pickupDate?: string;
-  deliveryDate?: string;
-  actualDeliveryDate?: string;
-  createdAt?: string;
-  carrierId?: string | null;
-}
-
-interface Invoice {
-  id: string;
-  status: string;
-  amount?: number;
-  totalAmount?: number;
-  dueDate?: string;
-  createdAt?: string;
-}
-
-interface Carrier {
-  id: string;
-  onboardingStatus?: string;
-  createdAt?: string;
-  insuranceExpiry?: string;
-}
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 

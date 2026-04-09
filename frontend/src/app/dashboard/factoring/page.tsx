@@ -4,25 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { DollarSign, ArrowRight, CheckCircle2, Clock, AlertCircle, Zap } from "lucide-react";
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  amount: number;
-  status: string;
-  factoringFee: number | null;
-  advanceRate: number | null;
-  advanceAmount: number | null;
-  createdAt: string;
-  paidAt: string | null;
-  load?: {
-    referenceNumber: string;
-    originCity: string;
-    originState: string;
-    destCity: string;
-    destState: string;
-  } | null;
-}
+import type { Invoice } from "@/types/entities";
 
 const FACTORING_FEE_PCT = 3;
 const ADVANCE_RATE_PCT = 97;

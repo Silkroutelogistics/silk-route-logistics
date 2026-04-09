@@ -8,30 +8,7 @@ import {
   Plus, Clock, DollarSign, AlertTriangle, CheckCircle2, X,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  loadId: string;
-  amount: number;
-  lineHaulAmount: number | null;
-  fuelSurchargeAmount: number | null;
-  accessorialsAmount: number | null;
-  status: string;
-  dueDate: string;
-  paidAt: string | null;
-  paidAmount: number | null;
-  createdAt: string;
-  load: {
-    referenceNumber: string;
-    originCity: string;
-    originState: string;
-    destCity: string;
-    destState: string;
-    customer?: { id: string; name: string } | null;
-  };
-  user?: { id: string; firstName: string; lastName: string; company?: string | null };
-}
+import type { Invoice } from "@/types/entities";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-500/20 text-slate-400",
@@ -135,16 +112,16 @@ export default function InvoicesPage() {
               ))
             ) : data?.invoices?.length ? (
               data.invoices.map((inv) => {
-                const isOverdue = inv.status !== "PAID" && inv.status !== "VOID" && new Date(inv.dueDate) < new Date();
+                const isOverdue = inv.status !== "PAID" && inv.status !== "VOID" && inv.dueDate && new Date(inv.dueDate) < new Date();
                 return (
                   <tr key={inv.id} className="hover:bg-[#0F1117] cursor-pointer" onClick={() => setSelectedInvoice(inv)}>
                     <td className="px-5 py-3 text-sm text-white font-medium">{inv.invoiceNumber}</td>
-                    <td className="px-5 py-3 text-sm text-slate-300">{inv.load.referenceNumber}</td>
-                    <td className="px-5 py-3 text-sm text-slate-300">{inv.load.customer?.name || inv.user?.company || `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() || "—"}</td>
+                    <td className="px-5 py-3 text-sm text-slate-300">{inv.load?.referenceNumber}</td>
+                    <td className="px-5 py-3 text-sm text-slate-300">{inv.load?.customer?.name || inv.user?.company || `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() || "—"}</td>
                     <td className="px-5 py-3 text-sm text-white font-medium">{fmt(inv.amount)}</td>
                     <td className="px-5 py-3 text-sm">
                       <span className={isOverdue ? "text-red-400" : "text-slate-300"}>
-                        {new Date(inv.dueDate).toLocaleDateString()}
+                        {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—"}
                       </span>
                       {isOverdue && <AlertTriangle className="inline w-3 h-3 text-red-400 ml-1" />}
                     </td>
@@ -252,15 +229,15 @@ export default function InvoicesPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Load</span>
-                  <span className="text-sm text-white">{selectedInvoice.load.referenceNumber}</span>
+                  <span className="text-sm text-white">{selectedInvoice.load?.referenceNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Customer</span>
-                  <span className="text-sm text-white">{selectedInvoice.load.customer?.name || selectedInvoice.user?.company || `${selectedInvoice.user?.firstName || ""} ${selectedInvoice.user?.lastName || ""}`.trim() || "—"}</span>
+                  <span className="text-sm text-white">{selectedInvoice.load?.customer?.name || selectedInvoice.user?.company || `${selectedInvoice.user?.firstName || ""} ${selectedInvoice.user?.lastName || ""}`.trim() || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Route</span>
-                  <span className="text-sm text-white">{selectedInvoice.load.originCity}, {selectedInvoice.load.originState} → {selectedInvoice.load.destCity}, {selectedInvoice.load.destState}</span>
+                  <span className="text-sm text-white">{selectedInvoice.load?.originCity}, {selectedInvoice.load?.originState} → {selectedInvoice.load?.destCity}, {selectedInvoice.load?.destState}</span>
                 </div>
               </div>
 
@@ -293,7 +270,7 @@ export default function InvoicesPage() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Due Date</span>
-                  <span className="text-sm text-white">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</span>
+                  <span className="text-sm text-white">{selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-xs text-slate-500">Created</span>
@@ -308,7 +285,7 @@ export default function InvoicesPage() {
                 {selectedInvoice.paidAmount !== null && (
                   <div className="flex justify-between">
                     <span className="text-xs text-slate-500">Paid Amount</span>
-                    <span className="text-sm text-green-400">{fmt(selectedInvoice.paidAmount)}</span>
+                    <span className="text-sm text-green-400">{fmt(selectedInvoice.paidAmount || 0)}</span>
                   </div>
                 )}
               </div>

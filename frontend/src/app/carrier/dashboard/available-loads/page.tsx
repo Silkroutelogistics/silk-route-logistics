@@ -5,25 +5,7 @@ import { MapPin, Calendar, Weight, Ruler, DollarSign, ChevronRight, Truck, Send,
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
-
-interface Load {
-  id: string;
-  referenceNumber: string;
-  originCity: string;
-  originState: string;
-  destCity: string;
-  destState: string;
-  equipmentType: string;
-  weight: number | null;
-  distance: number | null;
-  rate: number;
-  carrierRate: number | null;
-  pickupDate: string;
-  deliveryDate: string | null;
-  commodity: string | null;
-  specialInstructions: string | null;
-  poster?: { company: string | null; firstName: string; lastName: string };
-}
+import type { Load } from "@/types/entities";
 
 export default function AvailableLoadsPage() {
   const [page, setPage] = useState(1);

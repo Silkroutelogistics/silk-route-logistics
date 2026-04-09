@@ -32,12 +32,14 @@ export interface Load {
   distance: number | null;
   pickupDate: string;
   deliveryDate?: string;
+  actualDeliveryDate?: string;
   createdAt: string;
   pieces?: number;
   specialInstructions?: string;
   poster?: PersonRef | null;
   carrier?: PersonRef | null;
   customerId?: string;
+  carrierId?: string | null;
   driverId?: string;
   invoiceId?: string | null;
 }
@@ -72,6 +74,8 @@ export interface CarrierProfile {
   operatingRegions: string[];
   status: string;
   onboardingStatus: string;
+  createdAt?: string;
+  insuranceExpiry?: string;
   activeLoads?: number;
   score?: number;
   user?: PersonRef & { email?: string };
@@ -84,13 +88,26 @@ export type InvoiceStatus = "DRAFT" | "SUBMITTED" | "SENT" | "UNDER_REVIEW" | "A
 export interface Invoice {
   id: string;
   invoiceNumber: string;
-  loadId: string;
+  loadId?: string;
   amount: number;
+  totalAmount?: number;
   status: InvoiceStatus | string;
-  dueDate: string | null;
-  paidDate: string | null;
+  dueDate?: string | null;
+  paidDate?: string | null;
+  paidAt?: string | null;
   createdAt: string;
-  load?: Pick<Load, "referenceNumber" | "originCity" | "originState" | "destCity" | "destState">;
+  advanceAmount?: number | null;
+  advanceRate?: number | null;
+  factoringFee?: number | null;
+  lineHaulAmount?: number | null;
+  fuelSurchargeAmount?: number | null;
+  accessorialsAmount?: number | null;
+  paidAmount?: number | null;
+  load?: Pick<Load, "referenceNumber" | "originCity" | "originState" | "destCity" | "destState"> & {
+    customer?: { id: string; name: string } | null;
+  };
+  user?: PersonRef & { id?: string };
+  lineItems?: { id: string; description: string; quantity: number; rate: number; amount: number; type: string }[];
 }
 
 // ─── User ───────────────────────────────────────────────
@@ -112,12 +129,41 @@ export interface User {
 
 export interface Notification {
   id: string;
-  type: string;
+  type?: string;
   title: string;
   message: string;
   actionUrl?: string;
-  readAt: string | null;
+  read?: boolean;
+  readAt?: string | null;
   createdAt: string;
+}
+
+// ─── Carrier Detail (full profile for carriers page) ────
+
+export interface CarrierDetail extends CarrierProfile {
+  company?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string | null;
+  tier?: string;
+  safetyScore?: number | null;
+  numberOfTrucks?: number | null;
+  w9Uploaded?: boolean;
+  insuranceCertUploaded?: boolean;
+  authorityDocUploaded?: boolean;
+  approvedAt?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  completedLoads?: number;
+  totalRevenue?: number;
+  tendersAccepted?: number;
+  tendersDeclined?: number;
+  tendersTotal?: number;
+  acceptanceRate?: number;
+  lastVettingScore?: number | null;
+  lastVettingGrade?: string | null;
 }
 
 // ─── Shared ─────────────────────────────────────────────
