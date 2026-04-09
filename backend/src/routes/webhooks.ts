@@ -17,9 +17,13 @@ const router = Router();
 const webhookLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { error: "Too many webhook requests" } });
 router.use(webhookLimiter);
 
-// OpenPhone webhook — signature verification if secret is configured
+// OpenPhone webhook — signature verification required in production
 router.post("/openphone", (req, res, next) => {
-  if (env.OPENPHONE_WEBHOOK_SECRET) {
+  if (!env.OPENPHONE_WEBHOOK_SECRET) {
+    if (env.NODE_ENV === "production") { res.status(503).json({ error: "Webhook secret not configured" }); return; }
+    return next(); // Allow unsigned in dev
+  }
+  {
     const signature = req.headers["x-openphone-signature"] as string;
     if (!signature) {
       return res.status(401).json({ error: "Missing webhook signature" });
@@ -247,8 +251,10 @@ router.post("/inbound-email", async (req, res) => {
 // ─── Samsara ELD Webhook ───
 router.post("/samsara", async (req, res) => {
   try {
-    // Verify signature if secret is configured
-    if (env.SAMSARA_WEBHOOK_SECRET) {
+    // Verify signature — required in production
+    if (!env.SAMSARA_WEBHOOK_SECRET) {
+      if (env.NODE_ENV === "production") { res.status(503).json({ error: "Samsara webhook secret not configured" }); return; }
+    } else {
       const signature = req.headers["x-samsara-hmac-sha256"] as string;
       if (!signature) {
         res.status(401).json({ error: "Missing webhook signature" });
@@ -282,8 +288,10 @@ router.post("/samsara", async (req, res) => {
 // ─── Motive ELD Webhook ───
 router.post("/motive", async (req, res) => {
   try {
-    // Verify signature if secret is configured
-    if (env.MOTIVE_WEBHOOK_SECRET) {
+    // Verify signature — required in production
+    if (!env.MOTIVE_WEBHOOK_SECRET) {
+      if (env.NODE_ENV === "production") { res.status(503).json({ error: "Motive webhook secret not configured" }); return; }
+    } else {
       const signature = req.headers["x-motive-signature"] as string;
       if (!signature) {
         res.status(401).json({ error: "Missing webhook signature" });
