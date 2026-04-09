@@ -28,9 +28,9 @@ export async function measureRateAccuracy(): Promise<AccuracyReport> {
     where: {
       status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
       deliveryDate: { gte: thirtyDaysAgo },
-      customerRate: { not: null },
-      originState: { not: null },
-      destState: { not: null },
+      customerRate: { not: { equals: undefined } },
+      originState: { not: "" },
+      destState: { not: "" },
     },
     select: {
       originState: true,

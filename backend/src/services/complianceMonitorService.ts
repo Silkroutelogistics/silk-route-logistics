@@ -922,8 +922,8 @@ export async function dailyComplianceReminders() {
         carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
 
       let tier: string | null = null;
-      let subject: string;
-      let urgency: string;
+      let subject = `Reminder: ${carrierName} - Insurance renewal`;
+      let urgency = "Please check your insurance status.";
 
       if (daysUntilExpiry <= 0) {
         tier = "EXPIRED";

@@ -168,7 +168,7 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
 
     matches.push({
       matchedCarrierId: mfp.carrierId,
-      matchedCompany: mfp.carrier.companyName,
+      matchedCompany: mfp.carrier.companyName || "Unknown",
       matchedStatus: mfp.carrier.onboardingStatus,
       fields,
       riskScore,
@@ -253,7 +253,7 @@ export async function runFullChameleonScan(): Promise<{
 async function sendChameleonAlertEmail(
   carrierId: string,
   riskLevel: string,
-  matches: { matchedCarrierId: string; matchedCompany: string; fields: string[]; riskScore: number }[],
+  matches: { matchedCarrierId: string; matchedCompany: string | null; matchedStatus?: string; fields: (string | { field: string; similarity: number })[]; riskScore: number }[],
 ) {
   // Look up the flagged carrier
   const carrier = await prisma.carrierProfile.findUnique({

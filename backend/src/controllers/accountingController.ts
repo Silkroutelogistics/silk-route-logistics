@@ -299,7 +299,7 @@ export async function createInvoice(req: AuthRequest, res: Response) {
 
     // Generate invoice number atomically: INV-YYYYMMDD-XXXX
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    let invoiceNumber: string;
+    let invoiceNumber = "";
     for (let attempt = 0; attempt < 5; attempt++) {
       const existingCount = await prisma.invoice.count({
         where: { invoiceNumber: { startsWith: `INV-${todayStr}` } },
@@ -777,7 +777,7 @@ export async function preparePayment(req: AuthRequest, res: Response) {
 
     // Generate payment number with collision retry
     const todayStr2 = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    let paymentNumber: string;
+    let paymentNumber = "";
     for (let attempt = 0; attempt < 5; attempt++) {
       const existingCount = await prisma.carrierPay.count({
         where: { paymentNumber: { startsWith: `CP-${todayStr2}` } },
@@ -1151,10 +1151,10 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
     });
 
     // 2. Deduct factoring reserve (2% of gross for non-quickpay, covering credit risk)
-    const isQuickPay = payment.quickPayFeeAmount > 0;
-    if (!isQuickPay && payment.grossAmount > 0) {
+    const isQuickPay = (payment.quickPayFeeAmount ?? 0) > 0;
+    if (!isQuickPay && (payment.grossAmount ?? 0) > 0) {
       const FACTORING_RESERVE_PCT = 2;
-      const factoringReserve = Math.round(payment.grossAmount * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
+      const factoringReserve = Math.round((payment.grossAmount ?? 0) * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
       currentBalance -= factoringReserve;
       await prisma.factoringFund.create({
         data: {
@@ -1163,7 +1163,7 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
           runningBalance: currentBalance,
           referenceType: "CarrierPay",
           referenceId: payment.id,
-          description: `Factoring reserve (${FACTORING_RESERVE_PCT}% of $${payment.grossAmount}) on ${payment.paymentNumber} — held until shipper pays invoice`,
+          description: `Factoring reserve (${FACTORING_RESERVE_PCT}% of $${payment.grossAmount ?? 0}) on ${payment.paymentNumber} — held until shipper pays invoice`,
           createdById: req.user!.id,
         },
       });
@@ -1175,9 +1175,9 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
     });
     if (relatedInvoice) {
       // Release factoring reserve since shipper already paid
-      if (!isQuickPay && payment.grossAmount > 0) {
+      if (!isQuickPay && (payment.grossAmount ?? 0) > 0) {
         const FACTORING_RESERVE_PCT = 2;
-        const reserveRelease = Math.round(payment.grossAmount * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
+        const reserveRelease = Math.round((payment.grossAmount ?? 0) * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
         currentBalance += reserveRelease;
         await prisma.factoringFund.create({
           data: {

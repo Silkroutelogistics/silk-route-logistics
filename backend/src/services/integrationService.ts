@@ -363,14 +363,14 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
     const carrierPay = await prisma.carrierPay.findFirst({
       where: { loadId: invoice.load.id, status: "PAID" },
     });
-    if (carrierPay && carrierPay.quickPayFeeAmount === 0 && carrierPay.grossAmount > 0) {
+    if (carrierPay && carrierPay.quickPayFeeAmount === 0 && (carrierPay.grossAmount ?? 0) > 0) {
       // Check if reserve exists and hasn't been released yet
       const existingRelease = await prisma.factoringFund.findFirst({
         where: { referenceId: carrierPay.id, transactionType: "RESERVE_RELEASE" },
       });
       if (!existingRelease) {
         const FACTORING_RESERVE_PCT = 2;
-        const reserveRelease = Math.round(carrierPay.grossAmount * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
+        const reserveRelease = Math.round((carrierPay.grossAmount ?? 0) * (FACTORING_RESERVE_PCT / 100) * 100) / 100;
 
         const latestBalance = await prisma.factoringFund.findFirst({
           orderBy: { createdAt: "desc" },

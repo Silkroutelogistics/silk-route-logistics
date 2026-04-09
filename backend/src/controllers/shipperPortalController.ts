@@ -735,7 +735,7 @@ export async function generateTrackingLink(req: AuthRequest, res: Response) {
       data: {
         loadId: load.id,
         token,
-        shipperId: customer?.id || null,
+        shipperId: customer?.id || userId,
         accessLevel: "FULL",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
@@ -825,7 +825,7 @@ export async function createQuoteRequest(req: AuthRequest, res: Response) {
         destState,
         destZip: destZip || "",
         pickupDate: new Date(pickupDate),
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        deliveryDate: new Date(deliveryDate || pickupDate),
         equipmentType,
         commodity,
         weight: parseFloat(weight.toString().replace(/,/g, "")) || 0,
