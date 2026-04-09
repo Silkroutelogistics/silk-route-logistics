@@ -16,28 +16,29 @@ import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 
+import type { Load as BaseLoad, LoadTender } from "@/types/entities";
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface Load {
-  id: string; referenceNumber: string; status: string;
-  originCity: string; originState: string; originZip?: string;
-  destCity: string; destState: string; destZip?: string;
-  weight: number | null; equipmentType: string; commodity: string | null;
-  rate: number; distance: number | null; pickupDate: string; deliveryDate?: string; createdAt: string;
-  pieces?: number; freightClass?: string; hazmat?: boolean; tempMin?: number; tempMax?: number;
-  customsRequired?: boolean; bondType?: string; accessorials?: string[]; specialInstructions?: string;
-  contactName?: string; contactPhone?: string;
-  poster?: { company: string | null; firstName: string; lastName: string; phone?: string };
-  carrier?: { company: string | null; firstName: string; lastName: string; phone?: string } | null;
-  tenders?: {
-    id: string; status: string; offeredRate: number; counterRate: number | null; createdAt: string;
+interface Load extends BaseLoad {
+  freightClass?: string;
+  hazmat?: boolean;
+  tempMin?: number;
+  tempMax?: number;
+  customsRequired?: boolean;
+  bondType?: string;
+  accessorials?: string[];
+  contactName?: string;
+  contactPhone?: string;
+  tenders?: (LoadTender & {
     carrier: { user: { company: string | null; firstName: string; lastName: string } };
-  }[];
+  })[];
   documents?: { id: string; fileName: string; fileUrl: string }[];
-  datPostId?: string; datPostedAt?: string; datPostedFields?: any;
-  invoiceId?: string | null;
+  datPostId?: string;
+  datPostedAt?: string;
+  datPostedFields?: any;
 }
 
 /* ------------------------------------------------------------------ */

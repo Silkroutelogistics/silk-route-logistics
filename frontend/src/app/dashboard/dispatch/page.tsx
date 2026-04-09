@@ -10,41 +10,11 @@ import {
 } from "lucide-react";
 import { downloadCSV } from "@/lib/csvExport";
 
+import type { Load, CarrierProfile } from "@/types/entities";
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
-interface Load {
-  id: string;
-  referenceNumber: string;
-  status: string;
-  originCity: string;
-  originState: string;
-  destCity: string;
-  destState: string;
-  equipmentType: string;
-  rate: number;
-  pickupDate: string;
-  deliveryDate?: string;
-  weight: number | null;
-  distance: number | null;
-  commodity: string | null;
-  carrier?: { company: string | null; firstName: string; lastName: string } | null;
-}
-
-interface CarrierProfile {
-  id: string;
-  userId: string;
-  companyName: string;
-  mcNumber: string | null;
-  dotNumber: string | null;
-  equipmentTypes: string[];
-  serviceRegions: string[];
-  activeLoads?: number;
-  score?: number;
-  status: string;
-  user?: { firstName: string; lastName: string; email: string };
-}
 
 interface CarrierMatch {
   carrierId: string;
