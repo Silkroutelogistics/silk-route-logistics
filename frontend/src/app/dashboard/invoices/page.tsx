@@ -7,6 +7,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { CreateInvoiceModal } from "@/components/invoices/CreateInvoiceModal";
 import { BatchActionsBar } from "@/components/invoices/BatchActionsBar";
 import { cn } from "@/lib/utils";
+import type { Invoice } from "@/types/entities";
 import {
   Download, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
   ChevronDown, ChevronUp, Filter, TrendingUp, CreditCard, BarChart3, List, Printer,
@@ -22,21 +23,6 @@ interface LineItem {
   rate: number;
   amount: number;
   sortOrder: number;
-}
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  amount: number;
-  status: string;
-  advanceAmount: number | null;
-  advanceRate: number | null;
-  factoringFee: number | null;
-  paidAt: string | null;
-  createdAt: string;
-  load?: { originCity: string; originState: string; destCity: string; destState: string; referenceNumber?: string };
-  user?: { id: string; firstName: string; lastName: string; company: string | null };
-  lineItems?: LineItem[];
 }
 
 interface InvoiceStats {

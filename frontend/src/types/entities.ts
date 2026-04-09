@@ -123,6 +123,11 @@ export interface User {
   company: string | null;
   phone: string | null;
   isActive: boolean;
+  totpEnabled?: boolean;
+  lastLogin?: string | null;
+  createdAt?: string;
+  carrierProfile?: { safetyScore: number | null };
+  _count?: { loadsPosted: number };
 }
 
 // ─── Notification ───────────────────────────────────────

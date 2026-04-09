@@ -7,20 +7,7 @@ import {
   Search, UserCheck, UserX, KeyRound, Shield,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
-
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  isActive: boolean;
-  totpEnabled: boolean;
-  lastLogin: string | null;
-  createdAt: string;
-  carrierProfile?: { safetyScore: number | null };
-  _count?: { loadsPosted: number };
-}
+import type { User } from "@/types/entities";
 
 interface UsersResponse {
   users: User[];
@@ -197,7 +184,7 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">
-                      {formatDate(user.lastLogin)}
+                      {formatDate(user.lastLogin ?? null)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
