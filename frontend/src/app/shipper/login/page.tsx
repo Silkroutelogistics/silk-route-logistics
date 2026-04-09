@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Package, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { VersionFooter } from "@/components/ui/VersionFooter";
+import { loginSchema, otpSchema } from "@/lib/schemas";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
 const FEATURE_PILLS = [
@@ -62,7 +63,8 @@ export default function ShipperLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { setLocalError("Please enter your email and password."); return; }
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) { setLocalError(parsed.error.errors[0].message); return; }
     setLocalError("");
     setLocalLoading(true);
     try {
@@ -87,7 +89,8 @@ export default function ShipperLoginPage() {
 
   const handleOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp || otp.length < 6) { setLocalError("Please enter the verification code."); return; }
+    const otpParsed = otpSchema.safeParse({ otp });
+    if (!otpParsed.success) { setLocalError(otpParsed.error.errors[0].message); return; }
     setLocalError("");
     setLocalLoading(true);
     try {

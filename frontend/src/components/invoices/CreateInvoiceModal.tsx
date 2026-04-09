@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "@/lib/api";
 import { FileUpload } from "@/components/ui/FileUpload";
+import { createInvoiceSchema } from "@/lib/schemas";
 import { InvoiceLineItemsEditor, LineItem } from "./InvoiceLineItemsEditor";
 
 interface CreateInvoiceModalProps {
@@ -68,17 +69,10 @@ export function CreateInvoiceModal({ onClose }: CreateInvoiceModalProps) {
     e.preventDefault();
     setError(null);
 
-    if (!loadId.trim()) {
-      setError("Load ID is required");
-      return;
-    }
-    if (lineItems.length > 0) {
-      if (lineItemTotal <= 0) {
-        setError("Line item total must be greater than 0");
-        return;
-      }
-    } else if (!amount || parseFloat(amount) <= 0) {
-      setError("Amount must be greater than 0");
+    const finalAmount = lineItems.length > 0 ? lineItemTotal : parseFloat(amount || "0");
+    const parsed = createInvoiceSchema.safeParse({ loadId, amount: finalAmount });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0].message);
       return;
     }
 

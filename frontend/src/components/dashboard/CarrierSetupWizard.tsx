@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Truck, CheckCircle } from "lucide-react";
+import { carrierSetupSchema } from "@/lib/schemas";
 
 const EQUIPMENT_OPTIONS = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Tanker", "Lowboy", "Conestoga"];
 const US_REGION_OPTIONS = ["Great Lakes", "Upper Midwest", "Southeast", "Northeast", "South Central", "West"];
@@ -51,7 +52,7 @@ export function CarrierSetupWizard({ onComplete }: { onComplete: () => void }) {
     }));
   };
 
-  const isValid = form.dotNumber && form.mcNumber && form.equipmentTypes.length > 0;
+  const isValid = carrierSetupSchema.safeParse(form).success;
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">

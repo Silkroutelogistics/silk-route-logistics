@@ -6,6 +6,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { Logo } from "@/components/ui/Logo";
 import { Lock } from "lucide-react";
 import LoginSplash from "@/components/auth/LoginSplash";
+import { changePasswordSchema } from "@/lib/schemas";
 
 export default function ForcePasswordChangePage() {
   const { forceChangePassword, isLoading, error, tempToken, user } = useAuthStore();
@@ -29,12 +30,9 @@ export default function ForcePasswordChangePage() {
     e.preventDefault();
     setValidationError("");
 
-    if (newPassword.length < 8) {
-      setValidationError("Password must be at least 8 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setValidationError("Passwords do not match");
+    const parsed = changePasswordSchema.safeParse({ currentPassword: "force-change", newPassword, confirmPassword });
+    if (!parsed.success) {
+      setValidationError(parsed.error.errors[0].message);
       return;
     }
 
