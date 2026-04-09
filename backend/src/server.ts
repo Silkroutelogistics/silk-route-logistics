@@ -257,11 +257,13 @@ Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);
 
 // ─── Start Server ───────────────────────────────────────────
+import { log } from "./lib/logger";
+
 app.listen(env.PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
+  log.info({ port: env.PORT, env: env.NODE_ENV }, "Server started");
   startSchedulers();
   initCronJobs();
-  seedCronRegistry().catch((e) => console.error("[CronRegistry] Seed error:", e.message));
+  seedCronRegistry().catch((e) => log.error({ err: e }, "CronRegistry seed error"));
 });
 
 export default app;
