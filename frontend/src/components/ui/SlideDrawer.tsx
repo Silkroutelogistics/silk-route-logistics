@@ -75,11 +75,14 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl
       {/* Drawer panel */}
       <div
         ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drawer-title"
         className={`absolute top-0 bottom-0 ${slideClass} w-full ${width} bg-white shadow-2xl flex flex-col overflow-hidden`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <h2 id="drawer-title" className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-400 hover:text-gray-600"
