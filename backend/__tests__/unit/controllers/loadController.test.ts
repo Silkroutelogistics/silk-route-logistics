@@ -16,6 +16,7 @@ vi.mock("../../../src/services/shipperNotificationService", () => ({
 vi.mock("../../../src/services/integrationService", () => ({
   onLoadDelivered: vi.fn().mockResolvedValue(undefined),
   onLoadDispatched: vi.fn().mockResolvedValue(undefined),
+  onLoadCancelledOrTONU: vi.fn().mockResolvedValue(undefined),
   enforceShipperCredit: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 // Mock validators to passthrough
