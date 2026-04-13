@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  FileText, Plus, Search, ChevronDown, ChevronRight, X,
-  Edit2, Pause, Trash2, DollarSign, Clock, Users, TrendingUp,
+  FileText, Plus, Search, X, Edit2, Pause, Trash2,
+  DollarSign, Clock, Users, TrendingUp, ArrowRight,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,8 @@ const EMPTY_FORM: RateForm = {
 const EQUIPMENT_TYPES = ["DRY_VAN", "REEFER", "FLATBED", "STEP_DECK", "POWER_ONLY"];
 const STATUSES = ["ALL", "ACTIVE", "DRAFT", "EXPIRED", "SUSPENDED"] as const;
 
+type DetailTab = "details" | "history" | "notes";
+
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function ContractRatesPage() {
@@ -61,7 +63,8 @@ export default function ContractRatesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<RateForm>(EMPTY_FORM);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>("details");
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterEquipment, setFilterEquipment] = useState<string>("ALL");
@@ -88,7 +91,10 @@ export default function ContractRatesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/contract-rates/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contract-rates"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contract-rates"] });
+      if (selectedId === deleteMutation.variables) setSelectedId(null);
+    },
   });
 
   const suspendMutation = useMutation({
@@ -137,14 +143,16 @@ export default function ContractRatesPage() {
     });
   }
 
-  const rates = (data?.rates ?? []).filter((r) => {
+  const rates = useMemo(() => (data?.rates ?? []).filter((r) => {
     if (filterStatus !== "ALL" && r.status !== filterStatus) return false;
     if (filterEquipment !== "ALL" && r.equipmentType !== filterEquipment) return false;
     if (filterCustomer && !r.customerName.toLowerCase().includes(filterCustomer.toLowerCase())) return false;
     return true;
-  });
+  }), [data?.rates, filterStatus, filterEquipment, filterCustomer]);
 
   const stats = data?.stats;
+  const selectedRate = useMemo(() => rates.find((r) => r.id === selectedId) ?? null, [rates, selectedId]);
+  const panelOpen = selectedRate !== null;
 
   const statusColor: Record<string, string> = {
     ACTIVE: "bg-green-500/20 text-green-400",
@@ -154,19 +162,19 @@ export default function ContractRatesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-[#0a0e1a] min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <FileText className="w-7 h-7 text-gold" />
+            <FileText className="w-7 h-7 text-[#C9A84C]" />
             Contract Rate Management
           </h1>
           <p className="text-slate-400 text-sm mt-1">Manage negotiated rates with shippers</p>
         </div>
         <button
           onClick={() => { setEditId(null); setForm(EMPTY_FORM); setDrawerOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-[#0a0e1a] rounded-lg text-sm font-medium hover:bg-[#C9A84C]/90 transition"
         >
           <Plus className="w-4 h-4" /> New Rate
         </button>
@@ -188,62 +196,170 @@ export default function ContractRatesPage() {
             value={filterCustomer}
             onChange={(e) => setFilterCustomer(e.target.value)}
             placeholder="Search customer..."
-            className="bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-gold/50 focus:outline-none w-56"
+            className="bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none w-56"
           />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
           {STATUSES.map((s) => <option key={s} value={s} className="bg-[#0F1117]">{s === "ALL" ? "All Statuses" : s}</option>)}
         </select>
         <select value={filterEquipment} onChange={(e) => setFilterEquipment(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
           <option value="ALL" className="bg-[#0F1117]">All Equipment</option>
           {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0F1117]">{e.replace(/_/g, " ")}</option>)}
         </select>
       </div>
 
-      {/* Table */}
+      {/* Split Layout: List + Detail Panel */}
       {isLoading ? (
         <LoadingSpinner />
       ) : (
-        <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-slate-400 border-b border-white/10">
-                <th className="w-8" />
-                <th className="text-left px-4 py-3 font-medium">Customer</th>
-                <th className="text-left px-4 py-3 font-medium">Lane</th>
-                <th className="text-left px-4 py-3 font-medium">Equipment</th>
-                <th className="text-right px-4 py-3 font-medium">Rate/Mile</th>
-                <th className="text-right px-4 py-3 font-medium">Flat Rate</th>
-                <th className="text-left px-4 py-3 font-medium">Effective</th>
-                <th className="text-left px-4 py-3 font-medium">Expiry</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-right px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rates.map((r) => (
-                <RateRow
-                  key={r.id}
-                  rate={r}
-                  expanded={expandedId === r.id}
-                  onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                  statusColor={statusColor}
-                  onEdit={() => openEdit(r)}
-                  onSuspend={() => suspendMutation.mutate(r.id)}
-                  onDelete={() => { if (confirm("Delete this rate?")) deleteMutation.mutate(r.id); }}
-                />
-              ))}
-              {rates.length === 0 && (
-                <tr><td colSpan={10} className="px-6 py-12 text-center text-slate-500">No contract rates found</td></tr>
-              )}
-            </tbody>
-          </table>
+        <div className="flex gap-0 items-start">
+          {/* Left: Table */}
+          <div className={cn(
+            "transition-all duration-300 ease-in-out overflow-hidden",
+            panelOpen ? "w-[45%] min-w-0" : "w-full"
+          )}>
+            <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-slate-400 border-b border-white/5">
+                    <th className="text-left px-4 py-3 font-medium">Customer</th>
+                    <th className="text-left px-4 py-3 font-medium">Lane</th>
+                    <th className="text-left px-4 py-3 font-medium">Equipment</th>
+                    <th className="text-right px-4 py-3 font-medium">Rate/Mile</th>
+                    <th className="text-right px-4 py-3 font-medium">Flat Rate</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
+                    {!panelOpen && <th className="text-left px-4 py-3 font-medium">Effective</th>}
+                    {!panelOpen && <th className="text-left px-4 py-3 font-medium">Expiry</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rates.map((r) => (
+                    <tr
+                      key={r.id}
+                      onClick={() => { setSelectedId(r.id); setActiveTab("details"); }}
+                      className={cn(
+                        "border-b border-white/5 cursor-pointer transition-colors",
+                        selectedId === r.id
+                          ? "bg-[#C9A84C]/10 border-l-2 border-l-[#C9A84C]"
+                          : "hover:bg-white/[0.03]"
+                      )}
+                    >
+                      <td className="px-4 py-3 text-white text-xs font-medium truncate max-w-[140px]">{r.customerName}</td>
+                      <td className="px-4 py-3 text-slate-300 text-xs font-mono whitespace-nowrap">
+                        {r.originState} <ArrowRight className="w-3 h-3 inline text-slate-500" /> {r.destState}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300 text-xs">{r.equipmentType.replace(/_/g, " ")}</td>
+                      <td className="px-4 py-3 text-right text-white text-xs">{r.ratePerMile != null ? `$${r.ratePerMile.toFixed(2)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-white text-xs">{r.flatRate != null ? `$${r.flatRate.toLocaleString()}` : "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium", statusColor[r.status] ?? "bg-white/10 text-white")}>{r.status}</span>
+                      </td>
+                      {!panelOpen && <td className="px-4 py-3 text-slate-400 text-xs">{new Date(r.effectiveDate).toLocaleDateString()}</td>}
+                      {!panelOpen && <td className="px-4 py-3 text-slate-400 text-xs">{new Date(r.expiryDate).toLocaleDateString()}</td>}
+                    </tr>
+                  ))}
+                  {rates.length === 0 && (
+                    <tr><td colSpan={panelOpen ? 6 : 8} className="px-6 py-12 text-center text-slate-500">No contract rates found</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Right: Detail Panel */}
+          {panelOpen && selectedRate && (
+            <div className="w-[55%] min-w-0 ml-4 transition-all duration-300 ease-in-out">
+              <div className="bg-[#0c1021] rounded-xl border border-white/5 overflow-hidden">
+                {/* Panel Header */}
+                <div className="px-5 pt-5 pb-4 border-b border-white/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2 text-lg font-semibold text-white">
+                        <span className="font-mono">{selectedRate.originState}</span>
+                        <ArrowRight className="w-4 h-4 text-[#C9A84C]" />
+                        <span className="font-mono">{selectedRate.destState}</span>
+                      </div>
+                      <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium shrink-0", statusColor[selectedRate.status] ?? "bg-white/10 text-white")}>
+                        {selectedRate.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openEdit(selectedRate)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-[#C9A84C] hover:bg-white/5 transition"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => suspendMutation.mutate(selectedRate.id)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-yellow-400 hover:bg-white/5 transition"
+                        title="Suspend"
+                      >
+                        <Pause className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm("Delete this rate?")) deleteMutation.mutate(selectedRate.id); }}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-white/5 transition"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <div className="w-px h-5 bg-white/10 mx-1" />
+                      <button
+                        onClick={() => setSelectedId(null)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/5 transition"
+                        title="Close"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1 truncate">{selectedRate.customerName}</p>
+
+                  {/* Mini Tabs */}
+                  <div className="flex gap-5 mt-4 -mb-4 border-b border-white/5">
+                    {(["details", "history", "notes"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={cn(
+                          "pb-2.5 text-xs font-medium capitalize transition-colors relative",
+                          activeTab === tab
+                            ? "text-[#C9A84C]"
+                            : "text-slate-500 hover:text-slate-300"
+                        )}
+                      >
+                        {tab}
+                        {activeTab === tab && (
+                          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#C9A84C] rounded-full" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-5 max-h-[calc(100vh-420px)] overflow-y-auto">
+                  {activeTab === "details" && (
+                    <DetailsTab rate={selectedRate} />
+                  )}
+                  {activeTab === "history" && (
+                    <HistoryTab />
+                  )}
+                  {activeTab === "notes" && (
+                    <NotesTab notes={selectedRate.notes} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Slide Drawer */}
+      {/* Slide Drawer for Create/Edit */}
       {drawerOpen && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={closeDrawer} />
@@ -259,9 +375,9 @@ export default function ContractRatesPage() {
                 <label className="block text-xs text-slate-400 mb-1">Customer</label>
                 <input
                   value={form.customerSearch}
-                  onChange={(e) => setForm({ ...form, customerSearch: e.target.value })}
+                  onChange={(e) => setForm({ ...form, customerSearch: e.target.value, customerId: "" })}
                   placeholder="Search customer..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-gold/50 focus:outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none"
                 />
                 {customers?.customers?.length > 0 && form.customerSearch.length >= 2 && !form.customerId && (
                   <div className="mt-1 bg-[#2A2F42] rounded-lg border border-white/10 max-h-40 overflow-y-auto">
@@ -283,7 +399,7 @@ export default function ContractRatesPage() {
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Equipment Type</label>
                 <select value={form.equipmentType} onChange={(e) => setForm({ ...form, equipmentType: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none">
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
                   {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0F1117]">{e.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
@@ -299,12 +415,12 @@ export default function ContractRatesPage() {
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Effective Date</label>
                   <input type="date" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none" />
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Expiry Date</label>
                   <input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-gold/50 focus:outline-none" />
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none" />
                 </div>
               </div>
 
@@ -313,11 +429,11 @@ export default function ContractRatesPage() {
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Notes</label>
                 <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-gold/50 focus:outline-none resize-none" />
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none resize-none" />
               </div>
 
               <button onClick={handleSave} disabled={saveMutation.isPending}
-                className="w-full px-4 py-2.5 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
+                className="w-full px-4 py-2.5 bg-[#C9A84C] text-[#0a0e1a] rounded-lg text-sm font-medium hover:bg-[#C9A84C]/90 transition disabled:opacity-50">
                 {saveMutation.isPending ? "Saving..." : editId ? "Update Rate" : "Create Rate"}
               </button>
             </div>
@@ -328,61 +444,123 @@ export default function ContractRatesPage() {
   );
 }
 
-/* ── Sub-components ──────────────────────────────────────── */
+/* ── Detail Panel Tab Content ────────────────────────────── */
 
-function RateRow({ rate, expanded, onToggle, statusColor, onEdit, onSuspend, onDelete }: {
-  rate: ContractRate; expanded: boolean; onToggle: () => void;
-  statusColor: Record<string, string>; onEdit: () => void; onSuspend: () => void; onDelete: () => void;
-}) {
+function DetailsTab({ rate }: { rate: ContractRate }) {
+  const daysUntilExpiry = Math.ceil(
+    (new Date(rate.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  );
+
   return (
-    <>
-      <tr className="border-b border-white/5 hover:bg-[#0F1117] transition">
-        <td className="pl-3">
-          <button onClick={onToggle} className="text-slate-500 hover:text-white">
-            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </td>
-        <td className="px-4 py-3 text-white text-xs">{rate.customerName}</td>
-        <td className="px-4 py-3 text-slate-300 text-xs font-mono">{rate.originState} → {rate.destState}</td>
-        <td className="px-4 py-3 text-slate-300 text-xs">{rate.equipmentType.replace(/_/g, " ")}</td>
-        <td className="px-4 py-3 text-right text-white text-xs">{rate.ratePerMile != null ? `$${rate.ratePerMile.toFixed(2)}` : "—"}</td>
-        <td className="px-4 py-3 text-right text-white text-xs">{rate.flatRate != null ? `$${rate.flatRate.toLocaleString()}` : "—"}</td>
-        <td className="px-4 py-3 text-slate-400 text-xs">{new Date(rate.effectiveDate).toLocaleDateString()}</td>
-        <td className="px-4 py-3 text-slate-400 text-xs">{new Date(rate.expiryDate).toLocaleDateString()}</td>
-        <td className="px-4 py-3">
-          <span className={cn("px-2 py-0.5 rounded text-xs", statusColor[rate.status] ?? "bg-white/10 text-white")}>{rate.status}</span>
-        </td>
-        <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end gap-2">
-            <button onClick={onEdit} className="text-slate-400 hover:text-gold transition" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
-            <button onClick={onSuspend} className="text-slate-400 hover:text-yellow-400 transition" title="Suspend"><Pause className="w-3.5 h-3.5" /></button>
-            <button onClick={onDelete} className="text-slate-400 hover:text-red-400 transition" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+    <div className="space-y-4">
+      {/* Rate Info Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <InfoCard label="Rate per Mile" value={rate.ratePerMile != null ? `$${rate.ratePerMile.toFixed(2)}` : "N/A"} />
+        <InfoCard label="Flat Rate" value={rate.flatRate != null ? `$${rate.flatRate.toLocaleString()}` : "N/A"} />
+        <InfoCard label="Fuel Surcharge" value={rate.fuelSurchargePercent != null ? `${rate.fuelSurchargePercent}%` : "N/A"} />
+        <InfoCard label="Volume Commitment" value={rate.volumeCommitment != null ? `${rate.volumeCommitment} loads/mo` : "N/A"} />
+      </div>
+
+      {/* Lane & Equipment */}
+      <div className="rounded-lg bg-white/[0.03] border border-white/5 p-4 space-y-3">
+        <h4 className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Lane Details</h4>
+        <div className="grid grid-cols-2 gap-y-3 text-xs">
+          <div>
+            <span className="text-slate-500">Origin</span>
+            <p className="text-white mt-0.5 font-mono">{rate.originState}</p>
           </div>
-        </td>
-      </tr>
-      {expanded && (
-        <tr className="bg-[#0F1117]">
-          <td colSpan={10} className="px-8 py-4">
-            <div className="grid sm:grid-cols-4 gap-4 text-xs">
-              <div><span className="text-slate-500">Volume Commitment</span><p className="text-white mt-0.5">{rate.volumeCommitment ?? "—"} loads/month</p></div>
-              <div><span className="text-slate-500">Fuel Surcharge</span><p className="text-white mt-0.5">{rate.fuelSurchargePercent != null ? `${rate.fuelSurchargePercent}%` : "—"}</p></div>
-              <div><span className="text-slate-500">Created By</span><p className="text-white mt-0.5">{rate.createdBy ?? "—"}</p></div>
-              <div><span className="text-slate-500">Notes</span><p className="text-white mt-0.5">{rate.notes ?? "—"}</p></div>
-            </div>
-          </td>
-        </tr>
+          <div>
+            <span className="text-slate-500">Destination</span>
+            <p className="text-white mt-0.5 font-mono">{rate.destState}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Equipment</span>
+            <p className="text-white mt-0.5">{rate.equipmentType.replace(/_/g, " ")}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Customer</span>
+            <p className="text-white mt-0.5 truncate">{rate.customerName}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Dates */}
+      <div className="rounded-lg bg-white/[0.03] border border-white/5 p-4 space-y-3">
+        <h4 className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Contract Period</h4>
+        <div className="grid grid-cols-2 gap-y-3 text-xs">
+          <div>
+            <span className="text-slate-500">Effective Date</span>
+            <p className="text-white mt-0.5">{new Date(rate.effectiveDate).toLocaleDateString()}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Expiry Date</span>
+            <p className="text-white mt-0.5">{new Date(rate.expiryDate).toLocaleDateString()}</p>
+          </div>
+          <div className="col-span-2">
+            <span className="text-slate-500">Days Until Expiry</span>
+            <p className={cn("mt-0.5 font-medium", daysUntilExpiry <= 30 ? "text-yellow-400" : daysUntilExpiry <= 0 ? "text-red-400" : "text-green-400")}>
+              {daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : "Expired"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Created By */}
+      {rate.createdBy && (
+        <div className="text-xs text-slate-500 pt-1">
+          Created by: <span className="text-slate-400">{rate.createdBy}</span>
+        </div>
       )}
-    </>
+    </div>
+  );
+}
+
+function HistoryTab() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <Clock className="w-8 h-8 text-slate-600 mb-3" />
+      <p className="text-sm text-slate-400">Audit trail coming soon</p>
+      <p className="text-xs text-slate-600 mt-1">Rate changes, status transitions, and user actions will appear here.</p>
+    </div>
+  );
+}
+
+function NotesTab({ notes }: { notes: string | null }) {
+  if (!notes) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <FileText className="w-8 h-8 text-slate-600 mb-3" />
+        <p className="text-sm text-slate-400">No notes</p>
+        <p className="text-xs text-slate-600 mt-1">Add notes when editing this rate.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg bg-white/[0.03] border border-white/5 p-4">
+      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{notes}</p>
+    </div>
+  );
+}
+
+/* ── Shared Sub-components ───────────────────────────────── */
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-sm font-semibold text-white mt-1">{value}</p>
+    </div>
   );
 }
 
 function KpiCard({ icon: Icon, label, value, color }: { icon: typeof DollarSign; label: string; value: string | number; color: string }) {
   const colorMap: Record<string, string> = {
-    gold: "text-gold bg-gold/10", green: "text-green-400 bg-green-500/10",
+    gold: "text-[#C9A84C] bg-[#C9A84C]/10", green: "text-green-400 bg-green-500/10",
     yellow: "text-yellow-400 bg-yellow-500/10", blue: "text-blue-400 bg-blue-500/10",
   };
   return (
-    <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+    <div className="bg-white/5 rounded-xl border border-white/5 p-4">
       <div className="flex items-center gap-3">
         <div className={cn("p-2 rounded-lg", colorMap[color] ?? colorMap.gold)}><Icon className="w-5 h-5" /></div>
         <div>
@@ -401,7 +579,7 @@ function FormField({ label, value, onChange, placeholder, maxLength }: {
     <div>
       <label className="block text-xs text-slate-400 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength}
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-gold/50 focus:outline-none" />
+        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none" />
     </div>
   );
 }
@@ -409,7 +587,7 @@ function FormField({ label, value, onChange, placeholder, maxLength }: {
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin" />
     </div>
   );
 }
