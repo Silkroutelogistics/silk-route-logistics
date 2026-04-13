@@ -519,7 +519,7 @@ export default function CarrierPoolPage() {
       {/* Carrier List + Panel */}
       <div>
         {/* Carrier List — shrinks when panel open */}
-        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "lg:mr-[440px]" : ""}`}>
+        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "lg:mr-[580px]" : ""}`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
               className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-gray-200"}`}>
@@ -578,7 +578,7 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="fixed top-0 right-0 bottom-0 w-[480px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
+          <div className="fixed top-0 right-0 bottom-0 w-[620px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
             {/* Vertical Icon Tab Strip (Cerry-style) */}
             <div className="w-[52px] shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col items-center py-3 gap-1">
               {([
