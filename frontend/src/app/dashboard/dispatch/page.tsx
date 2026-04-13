@@ -332,7 +332,7 @@ export default function DispatchBoardPage() {
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[#0F1117]/90 backdrop-blur-sm">
+                <thead className="sticky top-0 bg-[#0F1117]/90 ">
                   <tr className="text-[10px] text-slate-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2 font-medium">Ref#</th>
                     <th className="text-left px-4 py-2 font-medium">Status</th>
@@ -508,7 +508,7 @@ export default function DispatchBoardPage() {
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[#0F1117]/90 backdrop-blur-sm">
+                <thead className="sticky top-0 bg-[#0F1117]/90 ">
                   <tr className="text-[10px] text-slate-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2 font-medium">Carrier</th>
                     <th className="text-left px-4 py-2 font-medium">MC#</th>

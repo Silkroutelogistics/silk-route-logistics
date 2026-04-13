@@ -408,7 +408,7 @@ function KpiCard({ icon: Icon, label, value, color }: { icon: typeof FileText; l
 
 function Modal({ onClose, title, children }: { onClose: () => void; title: string; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60  flex items-center justify-center z-50 p-4">
       <div className="bg-[#0F1117] rounded-xl border border-white/10 w-full max-w-xl max-h-[85vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-white">{title}</h2>

@@ -82,7 +82,7 @@ export default function ShipperLandingPage() {
           </div>
 
           {/* Stats */}
-          <div className="mt-16 bg-[#161921] border border-[#C9A84C]/12 rounded-lg p-10 backdrop-blur-sm">
+          <div className="mt-16 bg-[#161921] border border-[#C9A84C]/12 rounded-lg p-10 ">
             <div className="grid grid-cols-4 gap-6">
               {[
                 { val: "98%", label: "On-Time Delivery" },

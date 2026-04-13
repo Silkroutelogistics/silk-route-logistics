@@ -1178,7 +1178,7 @@ export default function LeadHunterPage() {
 
       {/* ═══════════════ ADD PROSPECT MODAL ═══════════════ */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 " onClick={() => setShowModal(false)}>
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-white">Add Prospect</h2>
@@ -1227,7 +1227,7 @@ export default function LeadHunterPage() {
 
       {/* ═══════════════ EMAIL CAMPAIGN MODAL ═══════════════ */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEmailModal(false)}>
+        <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4" onClick={() => setShowEmailModal(false)}>
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>
@@ -1380,7 +1380,7 @@ export default function LeadHunterPage() {
 
       {/* ═══════════════ CSV IMPORT MODAL ═══════════════ */}
       {showCsvPreview && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}>
+        <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4" onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}>
           <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>

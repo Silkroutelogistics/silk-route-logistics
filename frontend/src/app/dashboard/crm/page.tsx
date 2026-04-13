@@ -937,7 +937,7 @@ export default function CRMPage() {
 
       {/* Email Campaign Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4">
           <div className="rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" style={{ background: 'var(--srl-bg-surface)', border: '1px solid var(--srl-border)' }}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>
@@ -1105,7 +1105,7 @@ export default function CRMPage() {
 
       {/* CSV Import Preview Modal */}
       {showCsvPreview && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>

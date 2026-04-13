@@ -175,7 +175,7 @@ export default function ShipperInvoicesPage() {
 
       {/* File Dispute Modal */}
       {disputeInvoice && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40  flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
             {disputeSuccess ? (
               <div className="text-center py-4">

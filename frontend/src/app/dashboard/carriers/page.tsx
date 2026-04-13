@@ -519,7 +519,7 @@ export default function CarrierPoolPage() {
       {/* Carrier List + Slide Panel Layout */}
       <div className="flex gap-0 relative">
         {/* LEFT: Carrier List */}
-        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "w-full lg:w-[40%] lg:min-w-[340px]" : "w-full"}`}>
+        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "w-full lg:w-[45%] lg:min-w-[380px]" : "w-full"}`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
               className={`w-full text-left bg-white/5 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-white/10"}`}>
@@ -578,7 +578,7 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-full lg:w-[60%] border-l border-white/10 bg-[#161921] rounded-r-xl flex flex-col lg:flex-row fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 animate-slide-in-right">
+          <div className="w-full lg:w-[55%] border-l border-white/10 bg-[#0c1021] rounded-r-xl flex flex-col lg:flex-row lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 animate-slide-in-right">
             {/* Mobile close bar */}
             <button onClick={closePanel} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-white/10 text-slate-400 hover:text-white shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
@@ -1179,7 +1179,7 @@ export default function CarrierPoolPage() {
 
       {/* Confirm Approve/Reject Modal */}
       {confirmAction && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               {confirmAction.status === "APPROVED" ? "Approve Carrier" : "Reject Carrier"}

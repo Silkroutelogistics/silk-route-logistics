@@ -128,7 +128,7 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
 
       {/* Session timeout warning modal */}
       {showWarning && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/60  z-[99999] flex items-center justify-center">
           <div className="bg-[#121e30] border border-[rgba(200,150,62,0.2)] rounded-2xl p-9 max-w-[420px] w-[90%] text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[rgba(202,138,4,0.12)] flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

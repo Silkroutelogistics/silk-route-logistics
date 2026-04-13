@@ -520,7 +520,7 @@ export default function InvoicesPage() {
       {confirmPayId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 "
             onClick={() => setConfirmPayId(null)}
           />
           <div className="relative bg-[#0c1021] border border-white/10 rounded-2xl w-[420px] p-6 shadow-2xl">

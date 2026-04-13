@@ -162,7 +162,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 bg-black/50 z-40 "
           onClick={() => setMobileOpen(false)}
         />
       )}

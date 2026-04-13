@@ -70,7 +70,7 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop — click to close */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
       {/* Drawer panel */}
       <div

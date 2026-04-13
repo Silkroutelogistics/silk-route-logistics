@@ -256,7 +256,7 @@ export default function AdminUsersPage() {
 
       {/* Confirmation Modal */}
       {confirmAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 ">
           <div className="bg-[#1e293b] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-white mb-2">
               {confirmAction.type === "status"

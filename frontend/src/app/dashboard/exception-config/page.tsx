@@ -439,7 +439,7 @@ export default function ExceptionConfigPage() {
 
       {/* Note Modal */}
       {noteModalAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 ">
           <div className="bg-[#0f1629] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-slate-200">
