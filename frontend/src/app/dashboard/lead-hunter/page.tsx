@@ -26,7 +26,40 @@ interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: 
 
 interface CallLog { date: string; type: string; notes: string; by: string; }
 type PipelineStage = "LEAD" | "CONTACTED" | "QUALIFIED" | "PROPOSAL" | "WON";
-type Tab = "pipeline" | "activity" | "regions" | "lanes";
+type Tab = "pipeline" | "replies" | "activity" | "regions" | "lanes";
+
+interface Reply {
+  id: string;
+  type: string;
+  entityId: string;
+  from: string | null;
+  subject: string | null;
+  body: string | null;
+  metadata: { intent?: string; intentConfidence?: string; action?: string; gmailId?: string; source?: string } | null;
+  createdAt: string;
+  user?: { firstName: string; lastName: string };
+}
+
+interface ActiveSequence {
+  id: string;
+  prospectId: string;
+  prospectEmail: string;
+  prospectName: string;
+  currentStep: number;
+  totalSteps: number;
+  status: string;
+  metadata?: { engagementScore?: number; opens?: number; clicks?: number };
+  nextSendAt: string | null;
+  createdAt: string;
+}
+
+const INTENT_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  INTERESTED: { bg: "bg-green-500/20", text: "text-green-400", label: "Hot Lead" },
+  UNSUBSCRIBE: { bg: "bg-red-500/20", text: "text-red-400", label: "Unsubscribe" },
+  OBJECTION: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Objection" },
+  OUT_OF_OFFICE: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Out of Office" },
+  NEUTRAL: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Neutral" },
+};
 type TemplateType = "INTRO" | "FOLLOW_UP" | "CAPACITY" | "CUSTOM";
 
 const PIPELINE_STAGES: { key: PipelineStage; label: string; color: string; bg: string }[] = [
@@ -213,6 +246,19 @@ export default function LeadHunterPage() {
     queryKey: ["market-lanes", laneRegion],
     queryFn: () => api.get<{ lanes: Lane[] }>(`/market/lanes?region=${laneRegion}`).then((r) => r.data),
     enabled: tab === "lanes",
+  });
+
+  // Inbound replies from Gmail
+  const { data: repliesData } = useQuery({
+    queryKey: ["lead-hunter-replies"],
+    queryFn: () => api.get<{ communications: Reply[]; total: number }>("/communications?entity_type=SHIPPER&type=EMAIL_INBOUND&limit=50").then((r) => r.data),
+    refetchInterval: 60000, // poll every 60s
+  });
+
+  // Active email sequences
+  const { data: sequencesData } = useQuery({
+    queryKey: ["active-sequences"],
+    queryFn: () => api.get<{ sequences: ActiveSequence[] }>("/automation/sequences?status=ACTIVE&limit=50").then((r) => r.data),
   });
 
   /* ─── Mutations ─── */
@@ -527,8 +573,25 @@ export default function LeadHunterPage() {
 
   /* ─── Tabs Config ─── */
 
-  const tabs: { key: Tab; label: string; icon: typeof Target }[] = [
+  const replies: Reply[] = repliesData?.communications || [];
+  const activeSequences: ActiveSequence[] = sequencesData?.sequences || [];
+  const hotReplies = replies.filter((r) => r.metadata?.intent === "INTERESTED").length;
+
+  // Map prospect ID → active sequence
+  const sequenceByProspect = activeSequences.reduce((acc, seq) => {
+    acc[seq.prospectId] = seq;
+    return acc;
+  }, {} as Record<string, ActiveSequence>);
+
+  // Map prospect ID → latest reply
+  const replyByProspect = replies.reduce((acc, r) => {
+    if (!acc[r.entityId]) acc[r.entityId] = r;
+    return acc;
+  }, {} as Record<string, Reply>);
+
+  const tabs: { key: Tab; label: string; icon: typeof Target; badge?: number }[] = [
     { key: "pipeline", label: "Pipeline", icon: Crosshair },
+    { key: "replies", label: "Replies", icon: Mail, badge: hotReplies > 0 ? hotReplies : undefined },
     { key: "activity", label: "Activity Log", icon: MessageSquare },
     { key: "regions", label: "Regional Intelligence", icon: Map },
     { key: "lanes", label: "Lane Opportunities", icon: Route },
@@ -578,13 +641,15 @@ export default function LeadHunterPage() {
       </div>
 
       {/* ─── KPI Cards ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
           { label: "Total Leads", value: stageCounts.LEAD, icon: Users, color: "text-blue-400" },
           { label: "Contacted", value: stageCounts.CONTACTED, icon: PhoneCall, color: "text-amber-400" },
           { label: "Qualified", value: stageCounts.QUALIFIED, icon: CheckCircle2, color: "text-purple-400" },
           { label: "Proposals", value: stageCounts.PROPOSAL, icon: DollarSign, color: "text-cyan-400" },
           { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-green-400" },
+          { label: "Hot Replies", value: hotReplies, icon: Mail, color: "text-green-400" },
+          { label: "Active Sequences", value: activeSequences.length, icon: Send, color: "text-gold" },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between">
@@ -603,6 +668,7 @@ export default function LeadHunterPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
               tab === t.key ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}>
             <t.icon className="w-4 h-4" /> {t.label}
+            {t.badge && <span className="px-1.5 py-0.5 text-[10px] font-bold bg-green-500/20 text-green-400 rounded-full">{t.badge}</span>}
           </button>
         ))}
       </div>
@@ -700,9 +766,26 @@ export default function LeadHunterPage() {
                       </td>
                       <td className="px-3 py-3 text-slate-400 hidden md:table-cell">{c.industryType ?? "---"}</td>
                       <td className="px-3 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${stageInfo.bg} ${stageInfo.color}`}>
-                          {stageInfo.label}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${stageInfo.bg} ${stageInfo.color}`}>
+                            {stageInfo.label}
+                          </span>
+                          {sequenceByProspect[c.id] && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] bg-gold/20 text-gold flex items-center gap-0.5">
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              Seq {sequenceByProspect[c.id].currentStep + 1}/{sequenceByProspect[c.id].totalSteps}
+                            </span>
+                          )}
+                          {replyByProspect[c.id] && (() => {
+                            const intent = replyByProspect[c.id].metadata?.intent || "NEUTRAL";
+                            const style = INTENT_COLORS[intent] || INTENT_COLORS.NEUTRAL;
+                            return (
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${style.bg} ${style.text}`}>
+                                {style.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td className="px-3 py-3 hidden lg:table-cell">
                         {daysSince_ !== null ? (
@@ -847,6 +930,131 @@ export default function LeadHunterPage() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ TAB: REPLIES INBOX ═══════════════ */}
+      {tab === "replies" && (
+        <div className="space-y-4">
+          {/* Reply stats */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Total Replies", value: replies.length, color: "text-white" },
+              { label: "Hot Leads", value: replies.filter((r) => r.metadata?.intent === "INTERESTED").length, color: "text-green-400" },
+              { label: "Objections", value: replies.filter((r) => r.metadata?.intent === "OBJECTION").length, color: "text-amber-400" },
+              { label: "Unsubscribes", value: replies.filter((r) => r.metadata?.intent === "UNSUBSCRIBE").length, color: "text-red-400" },
+            ].map((s) => (
+              <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <p className="text-xs text-slate-500">{s.label}</p>
+                <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Active Sequences */}
+          {activeSequences.length > 0 && (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-gold animate-spin" /> Active Sequences
+                <span className="text-xs text-slate-500 font-normal ml-2">{activeSequences.length} running</span>
+              </h3>
+              <div className="space-y-2">
+                {activeSequences.map((seq) => (
+                  <div key={seq.id} className="flex items-center gap-4 py-2 px-3 bg-white/[0.02] rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium truncate">{seq.prospectName}</p>
+                      <p className="text-xs text-slate-500 font-mono">{seq.prospectEmail}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gold font-semibold">Step {seq.currentStep + 1}/{seq.totalSteps}</p>
+                      <div className="w-16 h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-gold rounded-full" style={{ width: `${((seq.currentStep + 1) / seq.totalSteps) * 100}%` }} />
+                      </div>
+                    </div>
+                    {seq.metadata?.engagementScore !== undefined && (
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        seq.metadata.engagementScore >= 60 ? "bg-green-500/20 text-green-400" :
+                        seq.metadata.engagementScore >= 30 ? "bg-amber-500/20 text-amber-400" :
+                        "bg-slate-500/20 text-slate-400"
+                      }`}>
+                        {seq.metadata.engagementScore}% engaged
+                      </span>
+                    )}
+                    {seq.nextSendAt && (
+                      <span className="text-[10px] text-slate-500">Next: {new Date(seq.nextSendAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Replies list */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <Mail className="w-4 h-4 text-gold" /> Inbound Replies
+              <span className="text-xs text-slate-500 font-normal ml-2">Auto-detected from Gmail every 30 min</span>
+            </h3>
+            {replies.length === 0 ? (
+              <div className="text-center py-12">
+                <Mail className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                <p className="text-slate-500 text-sm">No replies detected yet</p>
+                <p className="text-slate-600 text-xs mt-1">Gmail is polled every 30 minutes. Replies from prospects auto-stop their sequences and appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {replies.map((reply) => {
+                  const intent = reply.metadata?.intent || "NEUTRAL";
+                  const intentStyle = INTENT_COLORS[intent] || INTENT_COLORS.NEUTRAL;
+                  const prospect = allCustomers.find((c) => c.id === reply.entityId);
+                  return (
+                    <div key={reply.id} className="border border-white/5 rounded-lg p-4 hover:bg-white/[0.02] transition">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-sm font-medium text-white">{prospect?.name || reply.from || "Unknown"}</span>
+                            {prospect?.contactName && <span className="text-xs text-slate-500">({prospect.contactName})</span>}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${intentStyle.bg} ${intentStyle.text}`}>
+                              {intentStyle.label}
+                            </span>
+                          </div>
+                          {reply.subject && <p className="text-xs text-slate-400 mb-1">Re: {reply.subject}</p>}
+                          <p className="text-sm text-slate-300 line-clamp-2">{reply.body || "No body content"}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[10px] text-slate-500">{formatActivityDate(reply.createdAt)}</p>
+                          {reply.metadata?.action && (
+                            <p className="text-[10px] text-gold mt-1">{reply.metadata.action}</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Quick actions */}
+                      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/5">
+                        {intent === "INTERESTED" && (
+                          <button onClick={() => {
+                            if (prospect) updateStage(prospect.id, "QUALIFIED");
+                            toast("Marked as qualified — call them today!", "success");
+                          }} className="text-[10px] px-2 py-1 bg-green-500/10 text-green-400 rounded hover:bg-green-500/20 transition">
+                            Mark Qualified
+                          </button>
+                        )}
+                        <button onClick={() => {
+                          if (prospect?.email) { window.open(`mailto:${prospect.email}?subject=Re: ${reply.subject || ""}`); }
+                        }} className="text-[10px] px-2 py-1 bg-white/5 text-slate-400 rounded hover:bg-white/10 transition">
+                          Reply
+                        </button>
+                        <button onClick={() => {
+                          if (prospect?.phone) { window.open(`tel:${prospect.phone}`); }
+                        }} className="text-[10px] px-2 py-1 bg-white/5 text-slate-400 rounded hover:bg-white/10 transition">
+                          Call
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
