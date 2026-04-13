@@ -293,13 +293,18 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
 }
 
 /**
- * Send text via OpenPhone API (or log in mock mode)
+ * Send text via OpenPhone API (falls back to log-only if API key not configured)
  */
 async function sendCheckCallText(to: string, message: string) {
-  // For now, always log. When OpenPhone API is configured, send real text.
   log.info(`[CheckCall][SMS] To: ${to} | ${message}`);
 
-  // OpenPhone API integration would go here:
-  // POST https://api.openphone.com/v1/messages
-  // { from: OPENPHONE_NUMBER, to: to, content: message }
+  if (process.env.OPENPHONE_API_KEY && process.env.OPENPHONE_PHONE_NUMBER_ID) {
+    try {
+      const { sendSMS } = await import("./openPhoneService");
+      await sendSMS(to, message);
+      log.info(`[CheckCall][SMS] Sent via OpenPhone to ${to}`);
+    } catch (err) {
+      log.error({ err, to }, "[CheckCall][SMS] OpenPhone send failed, logged only");
+    }
+  }
 }

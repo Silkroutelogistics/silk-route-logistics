@@ -20,6 +20,8 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   ENCRYPTION_KEY: z.string().min(32, "ENCRYPTION_KEY must be at least 32 characters"),
   OPENPHONE_WEBHOOK_SECRET: z.string().optional(),
+  OPENPHONE_API_KEY: z.string().optional(),
+  OPENPHONE_PHONE_NUMBER_ID: z.string().optional(),
   DAT_API_KEY: z.string().optional(),
   DAT_API_SECRET: z.string().optional(),
   DAT_API_URL: z.string().optional().default("https://freight.dat.com/api/v2"),

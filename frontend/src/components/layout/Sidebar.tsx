@@ -150,6 +150,7 @@ const aeViewGroups: NavGroup[] = [
     items: [
       { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
       { href: "/dashboard/communications", label: "Communications", icon: Mail },
+      { href: "/dashboard/phone-console", label: "Phone Console", icon: Phone },
     ],
   },
   {

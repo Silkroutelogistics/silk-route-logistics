@@ -24,22 +24,54 @@ interface Contact {
 
 interface Communication {
   id: string;
-  type: "EMAIL" | "NOTE" | "CALL";
+  type: string;
+  direction?: string;
   subject: string | null;
-  body: string;
+  body: string | null;
+  from: string | null;
   to: string | null;
+  phoneNumber: string | null;
+  duration: number | null;
+  metadata: {
+    source?: string;
+    intent?: string;
+    recordingUrl?: string;
+    transcript?: string;
+    voicemailTranscript?: string;
+    openPhoneCallId?: string;
+    [key: string]: any;
+  } | null;
   createdAt: string;
   user?: { firstName: string; lastName: string };
 }
 
 const TYPE_BADGE: Record<string, string> = {
   EMAIL: "bg-blue-500/20 text-blue-400",
+  EMAIL_INBOUND: "bg-green-500/20 text-green-400",
+  EMAIL_OUTBOUND: "bg-blue-500/20 text-blue-400",
   NOTE: "bg-yellow-500/20 text-yellow-400",
   CALL: "bg-green-500/20 text-green-400",
+  CALL_INBOUND: "bg-green-500/20 text-green-400",
+  CALL_OUTBOUND: "bg-cyan-500/20 text-cyan-400",
+  TEXT_INBOUND: "bg-purple-500/20 text-purple-400",
+  TEXT_OUTBOUND: "bg-indigo-500/20 text-indigo-400",
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  EMAIL_INBOUND: "Email In",
+  EMAIL_OUTBOUND: "Email Out",
+  CALL_INBOUND: "Call In",
+  CALL_OUTBOUND: "Call Out",
+  TEXT_INBOUND: "SMS In",
+  TEXT_OUTBOUND: "SMS Out",
+  NOTE: "Note",
 };
 
 const TYPE_ICON: Record<string, typeof Mail> = {
-  EMAIL: Mail, NOTE: StickyNote, CALL: Phone,
+  EMAIL: Mail, EMAIL_INBOUND: Mail, EMAIL_OUTBOUND: Mail,
+  NOTE: StickyNote,
+  CALL: Phone, CALL_INBOUND: Phone, CALL_OUTBOUND: Phone,
+  TEXT_INBOUND: MessageSquare, TEXT_OUTBOUND: MessageSquare,
 };
 
 export default function CommunicationsPage() {

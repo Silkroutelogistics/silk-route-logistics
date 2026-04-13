@@ -72,6 +72,7 @@ import fuelSurchargeTableRoutes from "./fuelSurchargeTable";
 import tagRoutes from "./tags";
 import purchaseOrderRoutes from "./purchaseOrders";
 import shipperDefaultsRoutes from "./shipperDefaults";
+import openPhoneRoutes from "./openPhone";
 
 const router = Router();
 
@@ -236,5 +237,6 @@ router.use("/fuel-tables", fuelSurchargeTableRoutes);
 router.use("/tags", tagRoutes);
 router.use("/purchase-orders", purchaseOrderRoutes);
 router.use("/shipper-defaults", shipperDefaultsRoutes);
+router.use("/openphone", openPhoneRoutes);
 
 export default router;
