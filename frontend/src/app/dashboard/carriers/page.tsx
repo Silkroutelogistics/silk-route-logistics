@@ -516,10 +516,10 @@ export default function CarrierPoolPage() {
         </select>
       </div>
 
-      {/* Carrier List + Slide Panel Layout */}
-      <div className="flex gap-0 relative">
+      {/* Carrier List + Slide Panel Layout — full viewport height like Cerry */}
+      <div className="flex gap-0 relative h-[calc(100vh-280px)]">
         {/* LEFT: Carrier List */}
-        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "w-full lg:w-[45%] lg:min-w-[380px]" : "w-full"}`}>
+        <div className={`transition-all duration-300 space-y-3 overflow-y-auto pr-2 ${selectedCarrier ? "w-full lg:w-[55%]" : "w-full"}`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
               className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-gray-200"}`}>
@@ -578,42 +578,38 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-full lg:w-[55%] border-l border-gray-200 bg-white rounded-r-xl flex flex-col lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 shadow-xl overflow-hidden">
-            {/* Mobile close bar */}
-            <button onClick={closePanel} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-gray-500 hover:text-gray-900 shrink-0">
-              <X className="w-4 h-4" /> <span className="text-sm">Close</span>
-            </button>
-
-            {/* Panel Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-              <h2 className="text-lg font-semibold text-gray-900 truncate">{selectedCarrier.company}</h2>
-              <button onClick={closePanel} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Horizontal Tab Bar (Cerry-style) */}
-            <div className="flex border-b border-gray-200 px-2 shrink-0">
+          <div className="w-full lg:w-[45%] border-l border-gray-200 bg-white flex flex-row h-full overflow-hidden shadow-xl">
+            {/* Vertical Icon Tab Strip (Cerry-style) */}
+            <div className="w-[52px] shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col items-center py-3 gap-1">
               {([
-                { key: "profile", icon: User, label: "Profile" },
-                { key: "insurance", icon: Shield, label: "Insurance" },
-                { key: "compliance", icon: CheckSquare, label: "Compliance" },
-                { key: "compass", icon: Compass, label: "Compass" },
-                { key: "inspections", icon: ClipboardList, label: "Inspections" },
-                { key: "performance", icon: BarChart3, label: "Performance" },
-                { key: "history", icon: Clock, label: "History" },
-              ] as const).map(({ key, icon: Icon, label }) => (
+                { key: "profile", icon: User, label: "Profile", color: "text-blue-500 bg-blue-50" },
+                { key: "insurance", icon: Shield, label: "Insurance", color: "text-green-500 bg-green-50" },
+                { key: "compliance", icon: CheckSquare, label: "Compliance", color: "text-purple-500 bg-purple-50" },
+                { key: "compass", icon: Compass, label: "Compass", color: "text-orange-500 bg-orange-50" },
+                { key: "inspections", icon: ClipboardList, label: "Inspections", color: "text-teal-500 bg-teal-50" },
+                { key: "performance", icon: BarChart3, label: "Performance", color: "text-rose-500 bg-rose-50" },
+                { key: "history", icon: Clock, label: "History", color: "text-gray-500 bg-gray-100" },
+              ] as const).map(({ key, icon: Icon, label, color }) => (
                 <button key={key} onClick={() => setPanelTab(key)} title={label}
-                  className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium transition-all border-b-2 ${panelTab === key ? "border-[#C9A84C] text-[#C9A84C]" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden xl:inline">{label}</span>
+                  className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center transition-all ${panelTab === key ? color : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
+                  <Icon className="w-4 h-4" />
+                  <span className="text-[8px] mt-0.5 leading-none">{label.slice(0, 4)}</span>
                 </button>
               ))}
             </div>
 
-            <div className="flex flex-1 min-h-0">
-            {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Content Area */}
+            <div className="flex-1 flex flex-col min-w-0">
+              {/* Panel Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
+                <h2 className="text-base font-semibold text-gray-900 truncate">{selectedCarrier.company}</h2>
+                <button onClick={closePanel} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Tab Content */}
+              <div className="flex-1 overflow-y-auto">
 
               <div className="p-5 space-y-5">
 
