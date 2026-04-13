@@ -270,7 +270,7 @@ export default function PhoneConsolePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Phone Console</h1>
-              <p className="text-sm text-slate-400">OpenPhone call and SMS management</p>
+              <p className="text-sm text-gray-600">OpenPhone call and SMS management</p>
             </div>
           </div>
           <button
@@ -327,7 +327,7 @@ export default function PhoneConsolePage() {
                   "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition",
                   typeFilter === key
                     ? "bg-[#C9A84C]/20 text-[#C9A84C]"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    : "text-gray-600 hover:text-white hover:bg-gray-50"
                 )}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -346,7 +346,7 @@ export default function PhoneConsolePage() {
                   "px-3 py-1.5 text-xs font-medium rounded-md transition",
                   dateRange === key
                     ? "bg-white/10 text-white"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    : "text-gray-600 hover:text-white hover:bg-gray-50"
                 )}
               >
                 {label}
@@ -364,7 +364,7 @@ export default function PhoneConsolePage() {
                   "px-3 py-1.5 text-xs font-medium rounded-md transition",
                   entityFilter === key
                     ? "bg-white/10 text-white"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    : "text-gray-600 hover:text-white hover:bg-gray-50"
                 )}
               >
                 {label}
@@ -404,7 +404,7 @@ export default function PhoneConsolePage() {
         >
           {/* List header */}
           <div className="shrink-0 px-4 py-3 border-b border-white/5 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">
+            <span className="text-xs font-medium text-gray-600">
               {comms.length} communication{comms.length !== 1 ? "s" : ""}
             </span>
             <span className="text-xs text-slate-500">Sorted by latest</span>
@@ -458,7 +458,7 @@ export default function PhoneConsolePage() {
                 </div>
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition"
+                  className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-600 hover:text-white transition"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -503,7 +503,7 @@ export default function PhoneConsolePage() {
                     "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition",
                     detailTab === key
                       ? "bg-white/10 text-white"
-                      : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                      : "text-slate-500 hover:text-gray-700 hover:bg-gray-50"
                   )}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -530,22 +530,22 @@ export default function PhoneConsolePage() {
       <SlideDrawer open={smsDrawerOpen} onClose={() => setSmsDrawerOpen(false)} title="Send SMS">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">To</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">To</label>
             <input
               value={smsTo}
               onChange={(e) => setSmsTo(e.target.value)}
               placeholder="+1 (555) 000-0000"
-              className="w-full px-3 py-2.5 bg-[#0a0e1a] border border-white/10 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40"
+              className="w-full px-3 py-2.5 bg-[#0a0e1a] border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Message</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
             <textarea
               value={smsBody}
               onChange={(e) => setSmsBody(e.target.value)}
               rows={5}
               placeholder="Type your message..."
-              className="w-full px-3 py-2.5 bg-[#0a0e1a] border border-white/10 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
+              className="w-full px-3 py-2.5 bg-[#0a0e1a] border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
             />
             <p className="mt-1 text-xs text-slate-500">{smsBody.length}/160 characters</p>
           </div>
@@ -595,7 +595,7 @@ function StatsCard({
         <Icon className={cn("w-4.5 h-4.5", color)} />
       </div>
       <div>
-        <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+        <p className="text-xs text-gray-600 mb-0.5">{label}</p>
         <p className={cn("text-lg font-bold", highlight ? "text-red-400" : "text-white")}>{value}</p>
       </div>
     </div>
@@ -666,7 +666,7 @@ function CommRow({
       onClick={onClick}
       className={cn(
         "w-full text-left px-4 py-3 border-b border-white/[0.03] flex items-center gap-3 transition hover:bg-white/[0.03]",
-        isSelected && "bg-white/[0.05] border-l-2 border-l-[#C9A84C]"
+        isSelected && "bg-gray-50 border-l-2 border-l-[#C9A84C]"
       )}
     >
       {/* Direction indicator */}
@@ -694,7 +694,7 @@ function CommRow({
           )}
         </div>
         {isSmsType(comm.type) && comm.body && (
-          <p className="text-xs text-slate-400 mt-1 truncate">
+          <p className="text-xs text-gray-600 mt-1 truncate">
             {comm.body.length > 50 ? comm.body.slice(0, 50) + "..." : comm.body}
           </p>
         )}
@@ -704,7 +704,7 @@ function CommRow({
       <div className="shrink-0 flex flex-col items-end gap-1">
         <span className="text-[11px] text-slate-500">{relativeTime(comm.createdAt)}</span>
         {isCallType(comm.type) && comm.duration != null && comm.duration > 0 && (
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
+          <span className="text-[11px] text-gray-600 flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {formatDuration(comm.duration)}
           </span>
@@ -742,7 +742,7 @@ function DetailsTab({ comm }: { comm: OpenPhoneComm }) {
       {isSmsType(comm.type) && comm.body && (
         <div className="mt-4">
           <span className="text-xs text-slate-500 uppercase tracking-wide block mb-2">Message</span>
-          <div className="p-3 bg-white/[0.03] rounded-lg text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+          <div className="p-3 bg-white/[0.03] rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
             {comm.body}
           </div>
         </div>
@@ -771,7 +771,7 @@ function TranscriptTab({ comm }: { comm: OpenPhoneComm }) {
           {comm.metadata?.voicemailTranscript ? "Voicemail Transcript" : "Call Transcript"}
         </span>
       </div>
-      <div className="p-4 bg-white/[0.03] rounded-lg text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+      <div className="p-4 bg-white/[0.03] rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
         {transcript}
       </div>
     </div>
@@ -852,7 +852,7 @@ function SmsThreadTab({
               "max-w-[80%] px-3 py-2 rounded-xl text-sm",
               sms.direction === "OUTBOUND"
                 ? "ml-auto bg-[#C9A84C]/15 text-[#C9A84C] rounded-br-sm"
-                : "mr-auto bg-white/[0.05] text-slate-300 rounded-bl-sm"
+                : "mr-auto bg-gray-50 text-gray-700 rounded-bl-sm"
             )}
           >
             <p className="whitespace-pre-wrap">{sms.body}</p>

@@ -267,7 +267,7 @@ export default function PurchaseOrdersPage() {
                 "px-3 py-1 rounded-full text-xs font-medium border transition",
                 activeStatuses.has(s)
                   ? STATUS_COLORS[s]
-                  : "border-white/10 text-white/30 hover:text-white/50"
+                  : "border-gray-200 text-white/30 hover:text-white/50"
               )}
             >
               {s}
@@ -283,7 +283,7 @@ export default function PurchaseOrdersPage() {
             placeholder="Search PO#, partner, customer..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/50 w-64"
+            className="pl-9 pr-3 py-1.5 rounded-lg bg-white/[0.03] border border-gray-200 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400 w-64"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -359,7 +359,7 @@ export default function PurchaseOrdersPage() {
               </div>
               <button
                 onClick={() => setSelectedPO(null)}
-                className="p-1 rounded hover:bg-white/5 transition"
+                className="p-1 rounded hover:bg-gray-50 transition"
               >
                 <X className="w-4 h-4 text-white/40" />
               </button>
@@ -475,7 +475,7 @@ function SummaryTab({ po, formatDate }: { po: PurchaseOrder; formatDate: (d: str
           <span className="text-white/50">Fulfillment</span>
           <span className="text-[#C9A84C] font-medium">{fulfillmentPct}%</span>
         </div>
-        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-[#C9A84C] to-amber-500 rounded-full transition-all"
             style={{ width: `${fulfillmentPct}%` }}
@@ -610,7 +610,7 @@ function ItemsTab({
 
             {/* Progress bar */}
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
@@ -655,7 +655,7 @@ function LoadsTab({
           placeholder="Load ID to link..."
           value={linkLoadId}
           onChange={(e) => setLinkLoadId(e.target.value)}
-          className="flex-1 bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/50"
+          className="flex-1 bg-white/[0.03] border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
         />
         <button
           onClick={() => linkLoadId.trim() && onLink(linkLoadId.trim())}
@@ -710,13 +710,13 @@ function DocumentsTab() {
           "border-2 border-dashed rounded-xl p-8 text-center transition",
           isDragging
             ? "border-[#C9A84C] bg-[#C9A84C]/5"
-            : "border-white/10 hover:border-white/20"
+            : "border-gray-200 hover:border-white/20"
         )}
       >
         <Upload className="w-8 h-8 mx-auto mb-3 text-white/20" />
         <p className="text-sm text-white/40">Drag and drop files here</p>
         <p className="text-xs text-white/25 mt-1">PDF, images, or documents up to 10MB</p>
-        <button className="mt-3 px-4 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 text-xs text-white/50 hover:text-white/70 transition">
+        <button className="mt-3 px-4 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs text-white/50 hover:text-white/70 transition">
           Browse Files
         </button>
       </div>
@@ -797,7 +797,7 @@ function CreatePOForm({
   }
 
   const inputClass =
-    "w-full bg-[#0a0e1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/50";
+    "w-full bg-[#0a0e1a] border border-gray-200 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400";
   const labelClass = "block text-xs text-white/40 mb-1 font-medium";
 
   return (
@@ -899,14 +899,14 @@ function CreatePOForm({
                   placeholder="SKU"
                   value={li.sku}
                   onChange={(e) => updateLineItem(idx, "sku", e.target.value)}
-                  className="bg-[#0a0e1a] border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/50"
+                  className="bg-[#0a0e1a] border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={li.description}
                   onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-                  className="bg-[#0a0e1a] border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/50"
+                  className="bg-[#0a0e1a] border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
                 />
                 <input
                   type="number"
@@ -914,7 +914,7 @@ function CreatePOForm({
                   placeholder="Qty"
                   value={li.orderedQty}
                   onChange={(e) => updateLineItem(idx, "orderedQty", parseInt(e.target.value) || 1)}
-                  className="bg-[#0a0e1a] border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/50 text-right"
+                  className="bg-[#0a0e1a] border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400 text-right"
                 />
               </div>
               <button

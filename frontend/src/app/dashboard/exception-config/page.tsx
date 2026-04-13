@@ -105,7 +105,7 @@ const STATUS_BADGE: Record<string, string> = {
   OPEN:         "bg-red-500/15 text-red-400",
   ACKNOWLEDGED: "bg-amber-500/15 text-amber-400",
   RESOLVED:     "bg-green-500/15 text-green-400",
-  DISMISSED:    "bg-slate-500/15 text-slate-400",
+  DISMISSED:    "bg-slate-500/15 text-gray-600",
 };
 
 /* ─── Helpers ─── */
@@ -246,14 +246,14 @@ export default function ExceptionConfigPage() {
               <Settings2 className="h-7 w-7 text-[#C9A84C]" />
               <h1 className="text-2xl font-semibold tracking-tight">Exception Configuration</h1>
             </div>
-            <p className="text-sm text-slate-400 ml-10">
+            <p className="text-sm text-gray-600 ml-10">
               Configure exception monitoring rules and manage active alerts
             </p>
           </div>
           <button
             onClick={() => seedConfigs.mutate()}
             disabled={seedConfigs.isPending}
-            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/5 text-slate-300 hover:text-white transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/5 text-gray-700 hover:text-white transition-all disabled:opacity-50"
           >
             {seedConfigs.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -416,7 +416,7 @@ export default function ExceptionConfigPage() {
                   <button
                     onClick={() => setAlertPage((p) => Math.max(1, p - 1))}
                     disabled={alertPage <= 1}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
@@ -426,7 +426,7 @@ export default function ExceptionConfigPage() {
                   <button
                     onClick={() => setAlertPage((p) => Math.min(alertsData.totalPages, p + 1))}
                     disabled={alertPage >= alertsData.totalPages}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>
@@ -440,14 +440,14 @@ export default function ExceptionConfigPage() {
       {/* Note Modal */}
       {noteModalAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 ">
-          <div className="bg-[#0f1629] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+          <div className="bg-[#0f1629] border border-gray-200 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-slate-200">
                 {noteModalAlert.action === "resolve" ? "Resolve Alert" : "Dismiss Alert"}
               </h3>
               <button
                 onClick={() => setNoteModalAlert(null)}
-                className="p-1 rounded-lg hover:bg-white/[0.06] text-slate-500 hover:text-slate-300 transition-colors"
+                className="p-1 rounded-lg hover:bg-white/[0.06] text-slate-500 hover:text-gray-700 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -457,12 +457,12 @@ export default function ExceptionConfigPage() {
               onChange={(e) => setNoteText(e.target.value)}
               placeholder="Add a note (optional)..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-[#C9A84C]/40 focus:ring-1 focus:ring-[#C9A84C]/20 resize-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-gray-200 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-[#C9A84C]/40 focus:ring-1 focus:ring-[#C9A84C]/20 resize-none transition-colors"
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={() => setNoteModalAlert(null)}
-                className="px-4 py-2 text-sm rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 transition-colors"
+                className="px-4 py-2 text-sm rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-gray-600 transition-colors"
               >
                 Cancel
               </button>
@@ -473,7 +473,7 @@ export default function ExceptionConfigPage() {
                   "px-4 py-2 text-sm rounded-lg font-medium transition-all disabled:opacity-50",
                   noteModalAlert.action === "resolve"
                     ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                    : "bg-slate-500/20 text-slate-400 hover:bg-slate-500/30"
+                    : "bg-slate-500/20 text-gray-600 hover:bg-slate-500/30"
                 )}
               >
                 {(resolveAlert.isPending || dismissAlert.isPending) && (
@@ -533,7 +533,7 @@ function ConfigCard({
       className={cn(
         "relative rounded-xl border p-4 transition-all",
         config.isEnabled
-          ? "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.05]"
+          ? "border-white/[0.08] bg-white/[0.03] hover:bg-gray-50"
           : "border-white/[0.03] bg-white/[0.01] opacity-60"
       )}
     >
@@ -576,7 +576,7 @@ function ConfigCard({
           </button>
 
           {showSeverity && (
-            <div className="absolute top-full left-0 mt-1 z-10 bg-[#141a2e] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+            <div className="absolute top-full left-0 mt-1 z-10 bg-[#141a2e] border border-gray-200 rounded-lg shadow-xl overflow-hidden">
               {(["INFO", "WARNING", "CRITICAL"] as const).map((sev) => (
                 <button
                   key={sev}
@@ -586,7 +586,7 @@ function ConfigCard({
                   }}
                   className={cn(
                     "block w-full text-left px-4 py-2 text-xs hover:bg-white/[0.06] transition-colors",
-                    config.severity === sev ? "text-white font-medium" : "text-slate-400"
+                    config.severity === sev ? "text-white font-medium" : "text-gray-600"
                   )}
                 >
                   {sev}
@@ -671,7 +671,7 @@ function AlertRow({
           </button>
           <button
             onClick={onDismiss}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] text-slate-500 hover:bg-white/[0.08] hover:text-slate-300 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] text-slate-500 hover:bg-white/[0.08] hover:text-gray-700 transition-colors"
           >
             <XCircle className="h-3.5 w-3.5" />
             Dismiss

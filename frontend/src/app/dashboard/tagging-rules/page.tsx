@@ -77,7 +77,7 @@ const FIELD_OPTIONS = [
 ];
 
 const TYPE_BADGE: Record<string, string> = {
-  MANUAL:    "bg-slate-500/15 text-slate-400 border-slate-500/20",
+  MANUAL:    "bg-slate-500/15 text-gray-600 border-slate-500/20",
   AUTO:      "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
   SYSTEM:    "bg-blue-500/15 text-blue-400 border-blue-500/20",
 };
@@ -386,7 +386,7 @@ export default function TaggingRulesPage() {
                                 key={et}
                                 className={cn(
                                   "text-xs px-2 py-0.5 rounded-full border",
-                                  MODEL_BADGE[et] || "bg-white/5 text-white/60 border-white/10"
+                                  MODEL_BADGE[et] || "bg-gray-100 text-white/60 border-gray-200"
                                 )}
                               >
                                 {et}
@@ -402,7 +402,7 @@ export default function TaggingRulesPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span
-                            className="w-3 h-3 rounded-full shrink-0 border border-white/10"
+                            className="w-3 h-3 rounded-full shrink-0 border border-gray-200"
                             style={{ backgroundColor: tag.color }}
                           />
                           <span className="font-medium">{tag.name}</span>
@@ -451,7 +451,7 @@ export default function TaggingRulesPage() {
                               e.stopPropagation();
                               openEditDrawer(tag);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-[#C9A84C] transition"
+                            className="p-1.5 rounded-lg hover:bg-gray-50 text-white/40 hover:text-[#C9A84C] transition"
                             title="Edit tag"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -463,7 +463,7 @@ export default function TaggingRulesPage() {
                                 deleteTag.mutate(tag.id);
                               }
                             }}
-                            className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-red-400 transition"
+                            className="p-1.5 rounded-lg hover:bg-gray-50 text-white/40 hover:text-red-400 transition"
                             title="Delete tag"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -485,14 +485,14 @@ export default function TaggingRulesPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <span
-                  className="w-4 h-4 rounded-full border border-white/10"
+                  className="w-4 h-4 rounded-full border border-gray-200"
                   style={{ backgroundColor: activeTag.color }}
                 />
                 <h3 className="font-semibold text-sm">{activeTag.name}</h3>
               </div>
               <button
                 onClick={() => setSelectedTag(null)}
-                className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white transition"
+                className="p-1 rounded hover:bg-gray-50 text-white/40 hover:text-white transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -532,7 +532,7 @@ export default function TaggingRulesPage() {
                     <label className="text-xs text-white/40 uppercase tracking-wider">Color</label>
                     <div className="flex items-center gap-3 mt-1">
                       <span
-                        className="w-8 h-8 rounded-lg border border-white/10"
+                        className="w-8 h-8 rounded-lg border border-gray-200"
                         style={{ backgroundColor: activeTag.color }}
                       />
                       <span className="text-sm font-mono text-white/60">{activeTag.color}</span>
@@ -553,7 +553,7 @@ export default function TaggingRulesPage() {
                             key={et}
                             className={cn(
                               "text-xs px-2.5 py-1 rounded-full border",
-                              MODEL_BADGE[et] || "bg-white/5 text-white/60 border-white/10"
+                              MODEL_BADGE[et] || "bg-gray-100 text-white/60 border-gray-200"
                             )}
                           >
                             {et}
@@ -628,7 +628,7 @@ export default function TaggingRulesPage() {
                                 deleteRule.mutate(rule.id);
                               }
                             }}
-                            className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-red-400 transition shrink-0 ml-2"
+                            className="p-1 rounded hover:bg-gray-50 text-white/30 hover:text-red-400 transition shrink-0 ml-2"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -711,7 +711,7 @@ export default function TaggingRulesPage() {
                             key={et}
                             className={cn(
                               "text-xs px-2.5 py-1 rounded-full border",
-                              MODEL_BADGE[et] || "bg-white/5 text-white/60 border-white/10"
+                              MODEL_BADGE[et] || "bg-gray-100 text-white/60 border-gray-200"
                             )}
                           >
                             {et}
@@ -746,7 +746,7 @@ export default function TaggingRulesPage() {
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="e.g., High Priority, Reefer, West Coast"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
             />
           </div>
 
@@ -777,7 +777,7 @@ export default function TaggingRulesPage() {
                 value={formColor}
                 onChange={(e) => setFormColor(e.target.value)}
                 placeholder="#C9A84C"
-                className="w-32 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                className="w-32 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
               />
             </div>
           </div>
@@ -790,7 +790,7 @@ export default function TaggingRulesPage() {
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder="Describe what this tag represents..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C] resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C] resize-none"
             />
           </div>
 
@@ -806,7 +806,7 @@ export default function TaggingRulesPage() {
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition",
                     formEntityTypes.includes(et)
                       ? "bg-[#C9A84C]/10 border-[#C9A84C]/40 text-[#C9A84C]"
-                      : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
+                      : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-200"
                   )}
                 >
                   {et}

@@ -119,10 +119,10 @@ const GRADE_COLORS: Record<string, string> = {
 const TIER_COLORS: Record<string, string> = {
   PLATINUM: "bg-purple-500/20 text-purple-400 border-purple-500/30",
   GOLD: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  SILVER: "bg-slate-400/20 text-slate-300 border-slate-400/30",
+  SILVER: "bg-slate-400/20 text-gray-700 border-slate-400/30",
   BRONZE: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  GUEST: "bg-white/10 text-slate-400 border-white/20",
-  NONE: "bg-white/5 text-slate-500 border-white/10",
+  GUEST: "bg-white/10 text-gray-600 border-white/20",
+  NONE: "bg-gray-100 text-slate-500 border-gray-200",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -135,12 +135,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+    <div className="bg-gray-100 rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">{icon}</div>
         <div>
           <p className="text-2xl font-bold text-white">{value}</p>
-          <p className="text-xs text-slate-400">{label}</p>
+          <p className="text-xs text-gray-600">{label}</p>
           {sub && <p className="text-[10px] text-slate-500">{sub}</p>}
         </div>
       </div>
@@ -161,7 +161,7 @@ function PerformanceBar({ label, value, color }: { label: string; value: number;
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-slate-400">{label}</span>
+        <span className="text-gray-600">{label}</span>
         <span className="text-white font-medium">{value}%</span>
       </div>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -204,8 +204,8 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
   const days = daysUntil(expiry);
   const hasData = provider || policy || amount || expiry;
   return (
-    <div className="bg-white/5 rounded-lg p-4">
-      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{title}</h4>
+    <div className="bg-gray-100 rounded-lg p-4">
+      <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">{title}</h4>
       {hasData ? (
         <div className="space-y-0.5">
           <InfoRow label="Provider" value={provider || "—"} />
@@ -228,7 +228,7 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
 function ComplianceRow({ label, status }: { label: string; status: boolean }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
-      <span className="text-xs text-slate-400">{label}</span>
+      <span className="text-xs text-gray-600">{label}</span>
       <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${status ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
         {status ? "Active" : "Not Verified"}
       </span>
@@ -464,7 +464,7 @@ export default function CarrierPoolPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Carrier Pool</h1>
-          <p className="text-slate-400 text-sm mt-1">{carriers.length} carriers in network</p>
+          <p className="text-gray-600 text-sm mt-1">{carriers.length} carriers in network</p>
         </div>
       </div>
 
@@ -483,7 +483,7 @@ export default function CarrierPoolPage() {
       <div className="grid sm:grid-cols-5 gap-4">
         {(["PLATINUM", "GOLD", "SILVER", "BRONZE", "GUEST"] as const).map((tier) => (
           <button key={tier} onClick={() => setTierFilter(tierFilter === tier ? "" : tier)}
-            className={`bg-white/5 rounded-xl border p-4 text-left transition ${tierFilter === tier ? "border-gold" : "border-white/10 hover:border-white/20"}`}>
+            className={`bg-gray-100 rounded-xl border p-4 text-left transition ${tierFilter === tier ? "border-gold" : "border-gray-200 hover:border-white/20"}`}>
             <div className="flex items-center justify-between mb-1">
               <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[tier]}`}>{tier}</span>
               <span className="text-2xl font-bold text-white">{tierCounts[tier]}</span>
@@ -496,19 +496,19 @@ export default function CarrierPoolPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by company, MC#, DOT#, email..."
-            className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white">
           <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
           {["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((s) => (
             <option key={s} value={s} className="bg-[#0F1117] text-white">{s.replace(/_/g, " ")}</option>
           ))}
         </select>
         <select value={equipFilter} onChange={(e) => setEquipFilter(e.target.value)}
-          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white">
           <option value="" className="bg-[#0F1117] text-white">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"].map((t) => (
             <option key={t} value={t} className="bg-[#0F1117] text-white">{t}</option>
@@ -522,7 +522,7 @@ export default function CarrierPoolPage() {
         <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "w-full lg:w-[45%] lg:min-w-[380px]" : "w-full"}`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
-              className={`w-full text-left bg-white/5 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-white/10"}`}>
+              className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-gray-200"}`}>
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
                   <Truck className="w-5 h-5 text-gold" />
@@ -541,11 +541,11 @@ export default function CarrierPoolPage() {
                         <Compass className="w-2.5 h-2.5" /> {compassResult.score}
                       </span>
                     )}
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-slate-400"}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-gray-600"}`}>
                       {carrier.onboardingStatus.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-slate-400">
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-gray-600">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
                     {carrier.mcNumber && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{carrier.mcNumber}</span>}
                     {!selectedCarrier && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {carrier.operatingRegions.slice(0, 3).join(", ")}{carrier.operatingRegions.length > 3 ? ` +${carrier.operatingRegions.length - 3}` : ""}</span>}
@@ -568,9 +568,9 @@ export default function CarrierPoolPage() {
           ))}
           {filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Truck className="w-12 h-12 text-slate-300 mb-4" />
+              <Truck className="w-12 h-12 text-gray-700 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
-              <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
+              <p className="text-sm text-gray-600 mb-4 max-w-sm">Invite carriers to join your network</p>
               <a href="/onboarding" className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Invite Carriers</a>
             </div>
           )}
@@ -578,14 +578,14 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-full lg:w-[55%] border-l border-white/10 bg-[#0c1021] rounded-r-xl flex flex-col lg:flex-row lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 animate-slide-in-right">
+          <div className="w-full lg:w-[55%] border-l border-gray-200 bg-[#0c1021] rounded-r-xl flex flex-col lg:flex-row lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 animate-slide-in-right">
             {/* Mobile close bar */}
-            <button onClick={closePanel} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-white/10 text-slate-400 hover:text-white shrink-0">
+            <button onClick={closePanel} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-gray-600 hover:text-white shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
             </button>
             <div className="flex flex-1 min-h-0">
             {/* Vertical Tab Bar */}
-            <div className="w-[44px] shrink-0 border-r border-white/10 bg-[#0F1117] flex flex-col py-2">
+            <div className="w-[44px] shrink-0 border-r border-gray-200 bg-[#0F1117] flex flex-col py-2">
               {([
                 { key: "profile", icon: User, label: "Profile" },
                 { key: "insurance", icon: Shield, label: "Insurance" },
@@ -596,7 +596,7 @@ export default function CarrierPoolPage() {
                 { key: "history", icon: Clock, label: "History" },
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => setPanelTab(key)} title={label}
-                  className={`w-[44px] h-[40px] flex items-center justify-center relative transition ${panelTab === key ? "text-[#C9A84C]" : "text-slate-400 hover:text-slate-200"}`}>
+                  className={`w-[44px] h-[40px] flex items-center justify-center relative transition ${panelTab === key ? "text-[#C9A84C]" : "text-gray-600 hover:text-slate-200"}`}>
                   {panelTab === key && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#C9A84C] rounded-r" />}
                   <Icon className="w-[18px] h-[18px]" />
                 </button>
@@ -608,7 +608,7 @@ export default function CarrierPoolPage() {
               {/* Panel Header */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-[#2A2F42] shrink-0">
                 <h2 className="text-sm font-bold text-white truncate">{selectedCarrier.company}</h2>
-                <button onClick={closePanel} className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition">
+                <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 text-gray-600 hover:text-white transition">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -620,7 +620,7 @@ export default function CarrierPoolPage() {
                   <div className="space-y-5">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[selectedCarrier.tier] || ""}`}>{selectedCarrier.tier}</span>
-                      <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[selectedCarrier.onboardingStatus] || "bg-white/10 text-slate-400"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[selectedCarrier.onboardingStatus] || "bg-white/10 text-gray-600"}`}>
                         {selectedCarrier.onboardingStatus.replace(/_/g, " ")}
                       </span>
                       {(selectedCarrier.lastVettingScore != null || (compassCarrierId === selectedCarrier.id && compassResult)) && (
@@ -630,7 +630,7 @@ export default function CarrierPoolPage() {
                       )}
                     </div>
 
-                    <div className="bg-white/5 rounded-lg p-4 space-y-0.5">
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-0.5">
                       <InfoRow label="Contact" value={selectedCarrier.contactName} />
                       <InfoRow label="Email" value={<a href={`mailto:${selectedCarrier.email}`} className="text-gold hover:underline text-xs">{selectedCarrier.email}</a>} />
                       <InfoRow label="Phone" value={selectedCarrier.phone || "—"} />
@@ -639,12 +639,12 @@ export default function CarrierPoolPage() {
                       <InfoRow label="Location" value={selectedCarrier.city && selectedCarrier.state ? `${selectedCarrier.city}, ${selectedCarrier.state} ${selectedCarrier.zip || ""}` : "—"} />
                     </div>
 
-                    <div className="bg-white/5 rounded-lg p-4 space-y-3">
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-3">
                       <div>
                         <span className="text-[10px] text-slate-500 uppercase tracking-wider">Equipment</span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {selectedCarrier.equipmentTypes.map((eq) => (
-                            <span key={eq} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{eq}</span>
+                            <span key={eq} className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{eq}</span>
                           ))}
                         </div>
                       </div>
@@ -652,7 +652,7 @@ export default function CarrierPoolPage() {
                         <span className="text-[10px] text-slate-500 uppercase tracking-wider">Regions</span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {selectedCarrier.operatingRegions.map((r) => (
-                            <span key={r} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{r}</span>
+                            <span key={r} className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{r}</span>
                           ))}
                         </div>
                       </div>
@@ -661,7 +661,7 @@ export default function CarrierPoolPage() {
 
                     <InfoRow label="Member Since" value={new Date(selectedCarrier.createdAt).toLocaleDateString()} />
 
-                    <div className="flex flex-wrap gap-2 pt-3 border-t border-white/10">
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
                       <a href="/dashboard/messages" className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
                         <MessageSquare className="w-3.5 h-3.5" /> Message
                       </a>
@@ -698,7 +698,7 @@ export default function CarrierPoolPage() {
                     <InsuranceBlock title="GENERAL LIABILITY" provider={selectedCarrier.generalLiabilityProvider} policy={selectedCarrier.generalLiabilityPolicy} amount={selectedCarrier.generalLiabilityAmount} expiry={selectedCarrier.generalLiabilityExpiry} />
                     <InsuranceBlock title="WORKERS COMPENSATION" provider={selectedCarrier.workersCompProvider} policy={selectedCarrier.workersCompPolicy} amount={selectedCarrier.workersCompAmount} expiry={selectedCarrier.workersCompExpiry} />
 
-                    <div className="flex items-center gap-4 pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-4 pt-3 border-t border-gray-200">
                       <span className={`text-xs flex items-center gap-1 ${selectedCarrier.additionalInsuredSRL ? "text-green-400" : "text-slate-600"}`}>
                         {selectedCarrier.additionalInsuredSRL ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Additional Insured
                       </span>
@@ -712,13 +712,13 @@ export default function CarrierPoolPage() {
 
                     {/* Insurance Agent */}
                     {(selectedCarrier.insuranceAgentName || selectedCarrier.insuranceAgentEmail || selectedCarrier.insuranceAgencyName) && (
-                      <div className="bg-white/5 rounded-lg p-3 mt-2">
+                      <div className="bg-gray-100 rounded-lg p-3 mt-2">
                         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Insurance Agent</span>
                         <div className="flex flex-wrap gap-3 mt-1 text-xs">
                           {selectedCarrier.insuranceAgentName && <span className="text-white">{selectedCarrier.insuranceAgentName}</span>}
-                          {selectedCarrier.insuranceAgencyName && <span className="text-slate-400">({selectedCarrier.insuranceAgencyName})</span>}
+                          {selectedCarrier.insuranceAgencyName && <span className="text-gray-600">({selectedCarrier.insuranceAgencyName})</span>}
                           {selectedCarrier.insuranceAgentEmail && <a href={`mailto:${selectedCarrier.insuranceAgentEmail}`} className="text-gold hover:underline">{selectedCarrier.insuranceAgentEmail}</a>}
-                          {selectedCarrier.insuranceAgentPhone && <span className="text-slate-300">{selectedCarrier.insuranceAgentPhone}</span>}
+                          {selectedCarrier.insuranceAgentPhone && <span className="text-gray-700">{selectedCarrier.insuranceAgentPhone}</span>}
                         </div>
                       </div>
                     )}
@@ -735,8 +735,8 @@ export default function CarrierPoolPage() {
                 {/* ===== COMPLIANCE TAB ===== */}
                 {panelTab === "compliance" && (
                   <div className="space-y-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Compliance Status</h3>
-                    <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Compliance Status</h3>
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                       <ComplianceRow label="IRP Registration" status={selectedCarrier.onboardingStatus === "APPROVED"} />
                       <ComplianceRow label="IFTA Decal" status={selectedCarrier.onboardingStatus === "APPROVED"} />
                       <ComplianceRow label="BOC-3 Filing" status={selectedCarrier.onboardingStatus === "APPROVED"} />
@@ -744,22 +744,22 @@ export default function CarrierPoolPage() {
                       <ComplianceRow label="UCR Registration" status={selectedCarrier.onboardingStatus === "APPROVED"} />
                     </div>
 
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Document Completeness</h3>
-                    <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Document Completeness</h3>
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                       <div className="flex items-center justify-between py-1 border-b border-white/5">
-                        <span className="text-xs text-slate-400">W-9</span>
+                        <span className="text-xs text-gray-600">W-9</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.w9Uploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                           {selectedCarrier.w9Uploaded ? "Uploaded" : "Missing"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-1 border-b border-white/5">
-                        <span className="text-xs text-slate-400">Insurance Certificate</span>
+                        <span className="text-xs text-gray-600">Insurance Certificate</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.insuranceCertUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                           {selectedCarrier.insuranceCertUploaded ? "Uploaded" : "Missing"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-1">
-                        <span className="text-xs text-slate-400">Operating Authority</span>
+                        <span className="text-xs text-gray-600">Operating Authority</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.authorityDocUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                           {selectedCarrier.authorityDocUploaded ? "Uploaded" : "Missing"}
                         </span>
@@ -787,7 +787,7 @@ export default function CarrierPoolPage() {
 
                     {(compassCarrierId === selectedCarrier.id && compassResult) ? (
                       <div className="space-y-4">
-                        <div className="bg-white/5 rounded-lg p-4">
+                        <div className="bg-gray-100 rounded-lg p-4">
                           <div className="flex items-center gap-6 flex-wrap">
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Score</span>
@@ -824,7 +824,7 @@ export default function CarrierPoolPage() {
                               )}
                               <div className="flex-1">
                                 <span className={`font-medium ${
-                                  check.result === "PASS" ? "text-slate-300" :
+                                  check.result === "PASS" ? "text-gray-700" :
                                   check.result === "WARNING" ? "text-yellow-400" : "text-red-400"
                                 }`}>{check.name}</span>
                                 {check.detail && <span className="text-slate-500 ml-2">{check.detail}</span>}
@@ -843,16 +843,16 @@ export default function CarrierPoolPage() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                        <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
                           <button onClick={() => runCompass(selectedCarrier.id)} disabled={compassLoading === selectedCarrier.id}
-                            className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white transition">
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 hover:text-white transition">
                             <RefreshCw className={`w-3 h-3 ${compassLoading === selectedCarrier.id ? "animate-spin" : ""}`} /> Re-run
                           </button>
                           <span className="text-[10px] text-slate-600">Vetted: {new Date(compassResult.vettedAt).toLocaleString()}</span>
                         </div>
                       </div>
                     ) : selectedCarrier.lastVettingScore != null ? (
-                      <div className="bg-white/5 rounded-lg p-4">
+                      <div className="bg-gray-100 rounded-lg p-4">
                         <div className="flex items-center gap-4">
                           <div>
                             <span className="text-[10px] text-slate-500 uppercase">Last Score</span>
@@ -868,7 +868,7 @@ export default function CarrierPoolPage() {
                         <p className="text-xs text-slate-500 mt-2">Run Compass to see full check details.</p>
                       </div>
                     ) : (
-                      <div className="bg-white/5 rounded-lg p-6 text-center">
+                      <div className="bg-gray-100 rounded-lg p-6 text-center">
                         <Compass className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                         <p className="text-xs text-slate-500">No Compass report on file. Run Compass to vet this carrier.</p>
                       </div>
@@ -879,33 +879,33 @@ export default function CarrierPoolPage() {
                 {/* ===== INSPECTIONS TAB ===== */}
                 {panelTab === "inspections" && (
                   <div className="space-y-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">FMCSA Inspection Summary</h3>
-                    <div className="bg-white/5 rounded-lg p-4 space-y-3">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">FMCSA Inspection Summary</h3>
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                        <span className="text-xs text-slate-400">Driver Inspections</span>
+                        <span className="text-xs text-gray-600">Driver Inspections</span>
                         <span className="text-xs text-white font-medium">&mdash;</span>
                       </div>
                       <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                        <span className="text-xs text-slate-400">Driver OOS Rate</span>
+                        <span className="text-xs text-gray-600">Driver OOS Rate</span>
                         <span className="text-xs text-slate-500">&mdash; (Nat&apos;l avg: 5.51%)</span>
                       </div>
                       <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                        <span className="text-xs text-slate-400">Vehicle Inspections</span>
+                        <span className="text-xs text-gray-600">Vehicle Inspections</span>
                         <span className="text-xs text-white font-medium">&mdash;</span>
                       </div>
                       <div className="flex items-center justify-between py-1.5">
-                        <span className="text-xs text-slate-400">Vehicle OOS Rate</span>
+                        <span className="text-xs text-gray-600">Vehicle OOS Rate</span>
                         <span className="text-xs text-slate-500">&mdash; (Nat&apos;l avg: 20.72%)</span>
                       </div>
                     </div>
 
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Crash History</h3>
-                    <div className="bg-white/5 rounded-lg p-4">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Crash History</h3>
+                    <div className="bg-gray-100 rounded-lg p-4">
                       <div className="grid grid-cols-4 gap-3 text-center">
                         <div><p className="text-lg font-bold text-white">&mdash;</p><p className="text-[10px] text-slate-500">Total</p></div>
                         <div><p className="text-lg font-bold text-red-400">&mdash;</p><p className="text-[10px] text-slate-500">Fatal</p></div>
                         <div><p className="text-lg font-bold text-yellow-400">&mdash;</p><p className="text-[10px] text-slate-500">Injury</p></div>
-                        <div><p className="text-lg font-bold text-slate-300">&mdash;</p><p className="text-[10px] text-slate-500">Towaway</p></div>
+                        <div><p className="text-lg font-bold text-gray-700">&mdash;</p><p className="text-[10px] text-slate-500">Towaway</p></div>
                       </div>
                     </div>
                     <p className="text-[10px] text-slate-600">FMCSA data populated after Compass vetting with valid DOT number.</p>
@@ -915,19 +915,19 @@ export default function CarrierPoolPage() {
                 {/* ===== PERFORMANCE TAB ===== */}
                 {panelTab === "performance" && (
                   <div className="space-y-4">
-                    <div className="bg-white/5 rounded-lg p-4">
-                      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Caravan Tier</h3>
+                    <div className="bg-gray-100 rounded-lg p-4">
+                      <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Caravan Tier</h3>
                       <div className="flex items-center gap-3 mb-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[selectedCarrier.tier] || ""}`}>{selectedCarrier.tier}</span>
                         <span className="text-slate-500 text-xs">&rarr;</span>
-                        <span className="text-xs text-slate-300">
+                        <span className="text-xs text-gray-700">
                           {selectedCarrier.tier === "BRONZE" ? "SILVER (M3 needed)" :
                            selectedCarrier.tier === "SILVER" ? "GOLD (M5 needed)" :
                            selectedCarrier.tier === "GOLD" ? "PLATINUM (M7 needed)" :
                            selectedCarrier.tier === "PLATINUM" ? "Max tier reached" : "BRONZE (M1 needed)"}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-gray-600">
                         <span>Milestone: M{selectedCarrier.completedLoads >= 50 ? "7" : selectedCarrier.completedLoads >= 25 ? "5" : selectedCarrier.completedLoads >= 10 ? "3" : selectedCarrier.completedLoads >= 1 ? "1" : "0"}</span>
                         {selectedCarrier.completedLoads < 10 && (
                           <span className="ml-2 text-slate-500">Progress: {selectedCarrier.completedLoads}/{selectedCarrier.completedLoads < 1 ? "1 load to M1 (First Load)" : "10 loads to M2 (Proven)"}</span>
@@ -936,33 +936,33 @@ export default function CarrierPoolPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                      <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-white">{selectedCarrier.completedLoads}</p>
                         <p className="text-[10px] text-slate-500">Completed Loads</p>
                       </div>
-                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                      <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-blue-400">{selectedCarrier.activeLoads}</p>
                         <p className="text-[10px] text-slate-500">Active Loads</p>
                       </div>
-                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                      <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-green-400">${(selectedCarrier.totalRevenue / 1000).toFixed(1)}k</p>
                         <p className="text-[10px] text-slate-500">Revenue</p>
                       </div>
-                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                      <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-gold">{selectedCarrier.acceptanceRate}%</p>
                         <p className="text-[10px] text-slate-500">Accept Rate</p>
                       </div>
                     </div>
 
-                    <div className="bg-white/5 rounded-lg p-4 text-xs text-slate-400 space-y-1">
+                    <div className="bg-gray-100 rounded-lg p-4 text-xs text-gray-600 space-y-1">
                       <InfoRow label="Tenders Accepted" value={selectedCarrier.tendersAccepted} />
                       <InfoRow label="Tenders Declined" value={selectedCarrier.tendersDeclined} />
                       <InfoRow label="Total Tenders" value={selectedCarrier.tendersTotal} />
                     </div>
 
                     {selectedCarrier.performance ? (
-                      <div className="bg-white/5 rounded-lg p-4 space-y-3">
-                        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Performance Scores</h3>
+                      <div className="bg-gray-100 rounded-lg p-4 space-y-3">
+                        <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Performance Scores</h3>
                         <PerformanceBar label="On-Time Pickup" value={selectedCarrier.performance.onTimePickup} color="bg-green-500" />
                         <PerformanceBar label="On-Time Delivery" value={selectedCarrier.performance.onTimeDelivery} color="bg-blue-500" />
                         <PerformanceBar label="Communication" value={selectedCarrier.performance.communication} color="bg-purple-500" />
@@ -970,7 +970,7 @@ export default function CarrierPoolPage() {
                         <InfoRow label="Claim Ratio" value={`${selectedCarrier.performance.claimRatio}%`} />
                       </div>
                     ) : (
-                      <div className="bg-white/5 rounded-lg p-4 text-center">
+                      <div className="bg-gray-100 rounded-lg p-4 text-center">
                         <p className="text-xs text-slate-500">On-Time: —% | Avg Transit: — days</p>
                         <p className="text-[10px] text-slate-600 mt-1">Performance data available after completing loads.</p>
                       </div>
@@ -981,9 +981,9 @@ export default function CarrierPoolPage() {
                 {/* ===== HISTORY TAB ===== */}
                 {panelTab === "history" && (
                   <div className="space-y-4">
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Compass Reports</h3>
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Compass Reports</h3>
                     {compassCarrierId === selectedCarrier.id && compassResult ? (
-                      <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                      <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                         <div className="flex items-start gap-2 text-xs">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-1.5 shrink-0" />
                           <div>
@@ -993,20 +993,20 @@ export default function CarrierPoolPage() {
                         </div>
                       </div>
                     ) : selectedCarrier.lastVettingScore != null ? (
-                      <div className="bg-white/5 rounded-lg p-4">
+                      <div className="bg-gray-100 rounded-lg p-4">
                         <div className="flex items-start gap-2 text-xs">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-1.5 shrink-0" />
                           <span className="text-white">Last Score: {selectedCarrier.lastVettingScore}/100{selectedCarrier.lastVettingGrade ? `, Grade ${selectedCarrier.lastVettingGrade}` : ""}</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white/5 rounded-lg p-4 text-center">
+                      <div className="bg-gray-100 rounded-lg p-4 text-center">
                         <p className="text-xs text-slate-500">No Compass reports on file.</p>
                       </div>
                     )}
 
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Changes</h3>
-                    <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status Changes</h3>
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                       <div className="flex items-start gap-2 text-xs">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
                         <div>
@@ -1025,10 +1025,10 @@ export default function CarrierPoolPage() {
                       )}
                     </div>
 
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tender History</h3>
-                    <div className="bg-white/5 rounded-lg p-4">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tender History</h3>
+                    <div className="bg-gray-100 rounded-lg p-4">
                       {selectedCarrier.tendersTotal > 0 ? (
-                        <p className="text-xs text-slate-400">{selectedCarrier.tendersTotal} total tenders | {selectedCarrier.tendersAccepted} accepted | {selectedCarrier.tendersDeclined} declined</p>
+                        <p className="text-xs text-gray-600">{selectedCarrier.tendersTotal} total tenders | {selectedCarrier.tendersAccepted} accepted | {selectedCarrier.tendersDeclined} declined</p>
                       ) : (
                         <p className="text-xs text-slate-500 text-center">No tender history.</p>
                       )}
@@ -1049,7 +1049,7 @@ export default function CarrierPoolPage() {
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Tier</label>
                 <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                   {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
@@ -1059,19 +1059,19 @@ export default function CarrierPoolPage() {
                 <label className="text-xs text-gray-500 mb-1 block">Safety Score (%)</label>
                 <input type="number" min="0" max="100" value={editForm.safetyScore}
                   onChange={(e) => setEditForm({ ...editForm, safetyScore: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Number of Trucks</label>
                 <input type="number" min="1" value={editForm.numberOfTrucks}
                   onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Insurance Expiry</label>
                 <input type="date" value={editForm.insuranceExpiry}
                   onChange={(e) => setEditForm({ ...editForm, insuranceExpiry: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
               </div>
 
               {/* Insurance Details Section */}
@@ -1082,69 +1082,69 @@ export default function CarrierPoolPage() {
                 <p className="text-xs font-semibold text-gray-600 mb-1">Auto Liability</p>
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <input placeholder="Provider" value={editForm.autoLiabilityProvider} onChange={(e) => setEditForm({ ...editForm, autoLiabilityProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input placeholder="Policy #" value={editForm.autoLiabilityPolicy} onChange={(e) => setEditForm({ ...editForm, autoLiabilityPolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="number" placeholder="Amount $" value={editForm.autoLiabilityAmount} onChange={(e) => setEditForm({ ...editForm, autoLiabilityAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="date" value={editForm.autoLiabilityExpiry} onChange={(e) => setEditForm({ ...editForm, autoLiabilityExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 </div>
 
                 {/* Cargo Insurance */}
                 <p className="text-xs font-semibold text-gray-600 mb-1">Motor Cargo Insurance</p>
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <input placeholder="Provider" value={editForm.cargoInsuranceProvider} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input placeholder="Policy #" value={editForm.cargoInsurancePolicy} onChange={(e) => setEditForm({ ...editForm, cargoInsurancePolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="number" placeholder="Amount $" value={editForm.cargoInsuranceAmount} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="date" value={editForm.cargoInsuranceExpiry} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 </div>
 
                 {/* General Liability */}
                 <p className="text-xs font-semibold text-gray-600 mb-1">General Liability</p>
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <input placeholder="Provider" value={editForm.generalLiabilityProvider} onChange={(e) => setEditForm({ ...editForm, generalLiabilityProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input placeholder="Policy #" value={editForm.generalLiabilityPolicy} onChange={(e) => setEditForm({ ...editForm, generalLiabilityPolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="number" placeholder="Amount $" value={editForm.generalLiabilityAmount} onChange={(e) => setEditForm({ ...editForm, generalLiabilityAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="date" value={editForm.generalLiabilityExpiry} onChange={(e) => setEditForm({ ...editForm, generalLiabilityExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 </div>
 
                 {/* Workers Comp */}
                 <p className="text-xs font-semibold text-gray-600 mb-1">Workers&#39; Compensation</p>
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <input placeholder="Provider" value={editForm.workersCompProvider} onChange={(e) => setEditForm({ ...editForm, workersCompProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input placeholder="Policy #" value={editForm.workersCompPolicy} onChange={(e) => setEditForm({ ...editForm, workersCompPolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="number" placeholder="Amount $" value={editForm.workersCompAmount} onChange={(e) => setEditForm({ ...editForm, workersCompAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   <input type="date" value={editForm.workersCompExpiry} onChange={(e) => setEditForm({ ...editForm, workersCompExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 </div>
 
                 {/* Checkboxes */}
                 <div className="space-y-2 pt-2 border-t border-gray-100">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={editForm.additionalInsuredSRL} onChange={(e) => setEditForm({ ...editForm, additionalInsuredSRL: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
+                      className="w-3.5 h-3.5 rounded border-gray-200 text-amber-500 focus:ring-amber-500" />
                     <span className="text-xs text-gray-700">SRL listed as Additional Insured</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={editForm.waiverOfSubrogation} onChange={(e) => setEditForm({ ...editForm, waiverOfSubrogation: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
+                      className="w-3.5 h-3.5 rounded border-gray-200 text-amber-500 focus:ring-amber-500" />
                     <span className="text-xs text-gray-700">Waiver of Subrogation</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={editForm.thirtyDayCancellationNotice} onChange={(e) => setEditForm({ ...editForm, thirtyDayCancellationNotice: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
+                      className="w-3.5 h-3.5 rounded border-gray-200 text-amber-500 focus:ring-amber-500" />
                     <span className="text-xs text-gray-700">30-day cancellation notice</span>
                   </label>
                 </div>
@@ -1154,13 +1154,13 @@ export default function CarrierPoolPage() {
                   <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Insurance Agent Contact</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <input placeholder="Agent Name" value={editForm.insuranceAgentName} onChange={(e) => setEditForm({ ...editForm, insuranceAgentName: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                     <input placeholder="Agent Email" type="email" value={editForm.insuranceAgentEmail} onChange={(e) => setEditForm({ ...editForm, insuranceAgentEmail: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                     <input placeholder="Agent Phone" value={editForm.insuranceAgentPhone} onChange={(e) => setEditForm({ ...editForm, insuranceAgentPhone: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                     <input placeholder="Agency Name" value={editForm.insuranceAgencyName} onChange={(e) => setEditForm({ ...editForm, insuranceAgencyName: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                   </div>
                 </div>
               </div>
@@ -1181,13 +1181,13 @@ export default function CarrierPoolPage() {
       {confirmAction && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-white mb-2">
               {confirmAction.status === "APPROVED" ? "Approve Carrier" : "Reject Carrier"}
             </h3>
             <p className="text-sm text-gray-600 mb-6">
               Are you sure you want to <strong className={confirmAction.status === "APPROVED" ? "text-green-600" : "text-red-600"}>
                 {confirmAction.status === "APPROVED" ? "approve" : "reject"}
-              </strong> <strong className="text-gray-900">{confirmAction.company}</strong>?
+              </strong> <strong className="text-white">{confirmAction.company}</strong>?
               {confirmAction.status === "REJECTED" && " This carrier will be blocked from accepting loads."}
               {confirmAction.status === "APPROVED" && " This carrier will be able to accept loads and appear on the load board."}
             </p>

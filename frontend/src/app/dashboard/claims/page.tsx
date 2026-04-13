@@ -125,7 +125,7 @@ export default function ClaimsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Claims Management</h1>
-          <p className="text-sm text-slate-400 mt-1">Track and resolve freight claims across all shipments</p>
+          <p className="text-sm text-gray-600 mt-1">Track and resolve freight claims across all shipments</p>
         </div>
         <button onClick={() => setShowNewModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
@@ -136,14 +136,14 @@ export default function ClaimsPage() {
       {/* KPI Cards */}
       <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: "Total Claims", value: total, icon: <FileText className="w-5 h-5" />, color: "text-slate-300" },
+          { label: "Total Claims", value: total, icon: <FileText className="w-5 h-5" />, color: "text-gray-700" },
           { label: "Filed", value: filed, icon: <Clock className="w-5 h-5" />, color: "text-blue-400" },
           { label: "Under Review", value: underReview, icon: <Scale className="w-5 h-5" />, color: "text-purple-400" },
           { label: "Investigating", value: investigating, icon: <Search className="w-5 h-5" />, color: "text-yellow-400" },
           { label: "Resolved", value: resolved, icon: <CheckCircle2 className="w-5 h-5" />, color: "text-green-400" },
           { label: "Est. Value", value: fmt(totalValue), icon: <DollarSign className="w-5 h-5" />, color: "text-gold" },
         ].map(k => (
-          <div key={k.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <div key={k.label} className="bg-gray-100 border border-gray-200 rounded-xl p-4">
             <div className={`${k.color} mb-2`}>{k.icon}</div>
             <p className="text-xs text-slate-500">{k.label}</p>
             <p className="text-lg font-bold text-white">{k.value}</p>
@@ -154,14 +154,14 @@ export default function ClaimsPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="bg-white/5 border border-white/10 text-sm text-white rounded-lg px-3 py-2">
+          className="bg-gray-100 border border-gray-200 text-sm text-white rounded-lg px-3 py-2">
           <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
           {["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED", "DENIED"].map(s => (
             <option key={s} value={s} className="bg-[#0F1117] text-white">{formatType(s)}</option>
           ))}
         </select>
         <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
-          className="bg-white/5 border border-white/10 text-sm text-white rounded-lg px-3 py-2">
+          className="bg-gray-100 border border-gray-200 text-sm text-white rounded-lg px-3 py-2">
           <option value="" className="bg-[#0F1117] text-white">All Types</option>
           {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => (
             <option key={t} value={t} className="bg-[#0F1117] text-white">{formatType(t)}</option>
@@ -170,15 +170,15 @@ export default function ClaimsPage() {
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search load ref#..."
-            className="w-full bg-white/5 border border-white/10 text-sm text-white rounded-lg pl-9 pr-3 py-2" />
+            className="w-full bg-gray-100 border border-gray-200 text-sm text-white rounded-lg pl-9 pr-3 py-2" />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-gray-100 border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-slate-400">
+            <tr className="border-b border-gray-200 text-gray-600">
               <th className="text-left p-3">Date Filed</th>
               <th className="text-left p-3">Load Ref#</th>
               <th className="text-left p-3">Type</th>
@@ -194,20 +194,20 @@ export default function ClaimsPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={7}>
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <ShieldCheck className="w-12 h-12 text-slate-300 mb-4" />
+                  <ShieldCheck className="w-12 h-12 text-gray-700 mb-4" />
                   <h3 className="text-lg font-semibold text-white mb-1">No claims filed</h3>
-                  <p className="text-sm text-slate-400 mb-4 max-w-sm">All loads delivered without issues</p>
+                  <p className="text-sm text-gray-600 mb-4 max-w-sm">All loads delivered without issues</p>
                 </div>
               </td></tr>
             ) : filtered.map(c => (
               <tr key={c.id} className="border-b border-white/5 hover:bg-[#0F1117] group">
-                <td className="p-3 text-slate-300">{new Date(c.createdAt).toLocaleDateString()}</td>
+                <td className="p-3 text-gray-700">{new Date(c.createdAt).toLocaleDateString()}</td>
                 <td className="p-3 text-gold font-mono text-xs">{c.load?.referenceNumber || c.loadId.slice(0, 8)}</td>
-                <td className="p-3"><span className="flex items-center gap-1.5 text-slate-300">{TYPE_ICONS[c.type]}{formatType(c.type)}</span></td>
-                <td className="p-3 text-slate-300">{c.carrier?.name || "—"}</td>
+                <td className="p-3"><span className="flex items-center gap-1.5 text-gray-700">{TYPE_ICONS[c.type]}{formatType(c.type)}</span></td>
+                <td className="p-3 text-gray-700">{c.carrier?.name || "—"}</td>
                 <td className="p-3 text-right text-white font-medium">{fmt(c.estimatedValue)}</td>
                 <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || "bg-slate-500/20 text-slate-400"}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || "bg-slate-500/20 text-gray-600"}`}>
                     {formatType(c.status)}
                   </span>
                 </td>
@@ -221,7 +221,7 @@ export default function ClaimsPage() {
                       className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">Resolve</button>
                   )}
                   <button onClick={() => setExpanded(expanded === c.id ? null : c.id)}
-                    className="text-xs px-2 py-1 rounded bg-white/5 text-slate-400 hover:bg-white/10">
+                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-100">
                     {expanded === c.id ? <ChevronUp className="w-3 h-3 inline" /> : <ChevronDown className="w-3 h-3 inline" />}
                   </button>
                 </td>
@@ -231,9 +231,9 @@ export default function ClaimsPage() {
             {filtered.map(c => expanded === c.id && (
               <tr key={`${c.id}-detail`} className="bg-[#0F1117]">
                 <td colSpan={7} className="p-4 space-y-2 text-sm">
-                  <p className="text-slate-400"><span className="text-slate-500">Description:</span> {c.description}</p>
-                  {c.resolutionNotes && <p className="text-slate-400"><span className="text-slate-500">Resolution:</span> {c.resolutionNotes}</p>}
-                  {c.resolutionAmount != null && <p className="text-slate-400"><span className="text-slate-500">Resolution Amount:</span> {fmt(c.resolutionAmount)}</p>}
+                  <p className="text-gray-600"><span className="text-slate-500">Description:</span> {c.description}</p>
+                  {c.resolutionNotes && <p className="text-gray-600"><span className="text-slate-500">Resolution:</span> {c.resolutionNotes}</p>}
+                  {c.resolutionAmount != null && <p className="text-gray-600"><span className="text-slate-500">Resolution Amount:</span> {fmt(c.resolutionAmount)}</p>}
                   {c.filedBy && <p className="text-slate-500">Filed by: {c.filedBy.firstName} {c.filedBy.lastName}</p>}
                   <p className="text-slate-600 text-xs">Updated: {new Date(c.updatedAt).toLocaleString()}</p>
                 </td>
@@ -247,10 +247,10 @@ export default function ClaimsPage() {
       {total > 20 && (
         <div className="flex justify-center gap-2">
           <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-            className="px-3 py-1.5 text-sm rounded bg-white/5 text-slate-400 hover:bg-white/10 disabled:opacity-40">Prev</button>
+            className="px-3 py-1.5 text-sm rounded bg-gray-100 text-gray-600 hover:bg-gray-100 disabled:opacity-40">Prev</button>
           <span className="px-3 py-1.5 text-sm text-slate-500">Page {page}</span>
           <button disabled={page * 20 >= total} onClick={() => setPage(p => p + 1)}
-            className="px-3 py-1.5 text-sm rounded bg-white/5 text-slate-400 hover:bg-white/10 disabled:opacity-40">Next</button>
+            className="px-3 py-1.5 text-sm rounded bg-gray-100 text-gray-600 hover:bg-gray-100 disabled:opacity-40">Next</button>
         </div>
       )}
 
@@ -258,17 +258,17 @@ export default function ClaimsPage() {
       <SlideDrawer open={showNewModal} onClose={() => setShowNewModal(false)} title="File New Claim" width="max-w-md">
             <div className="space-y-4">
             <input placeholder="Load ID" value={newForm.loadId} onChange={e => setNewForm(p => ({ ...p, loadId: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white" />
             <select value={newForm.type} onChange={e => setNewForm(p => ({ ...p, type: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900">
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white">
               {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => <option key={t} value={t}>{formatType(t)}</option>)}
             </select>
             <input type="number" placeholder="Estimated Value ($)" value={newForm.estimatedValue}
               onChange={e => setNewForm(p => ({ ...p, estimatedValue: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white" />
             <textarea placeholder="Describe the claim..." rows={3} value={newForm.description}
               onChange={e => setNewForm(p => ({ ...p, description: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 resize-none" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white resize-none" />
             <button disabled={!newForm.loadId || !newForm.estimatedValue || createMutation.isPending}
               onClick={() => createMutation.mutate({ loadId: newForm.loadId, type: newForm.type, estimatedValue: Number(newForm.estimatedValue), description: newForm.description })}
               className="w-full py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
@@ -285,10 +285,10 @@ export default function ClaimsPage() {
             <p className="text-sm text-gray-500">Claim for load {resolveTarget.load?.referenceNumber || resolveTarget.loadId.slice(0, 8)} — Est. {fmt(resolveTarget.estimatedValue)}</p>
             <input type="number" placeholder="Resolution Amount ($)" value={resolveForm.resolutionAmount}
               onChange={e => setResolveForm(p => ({ ...p, resolutionAmount: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white" />
             <textarea placeholder="Resolution notes..." rows={3} value={resolveForm.resolutionNotes}
               onChange={e => setResolveForm(p => ({ ...p, resolutionNotes: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 resize-none" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white resize-none" />
             <button disabled={!resolveForm.resolutionAmount || updateMutation.isPending}
               onClick={() => updateMutation.mutate({ id: resolveTarget.id, body: { status: "RESOLVED", resolutionNotes: resolveForm.resolutionNotes, resolutionAmount: Number(resolveForm.resolutionAmount) } })}
               className="w-full py-2.5 bg-green-600 text-white font-medium rounded-lg text-sm hover:bg-green-500 disabled:opacity-50">

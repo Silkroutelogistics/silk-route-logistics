@@ -59,7 +59,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-slate-500/20 text-slate-400", POSTED: "bg-blue-500/20 text-blue-400",
+  DRAFT: "bg-slate-500/20 text-gray-600", POSTED: "bg-blue-500/20 text-blue-400",
   TENDERED: "bg-indigo-500/20 text-indigo-400", CONFIRMED: "bg-purple-500/20 text-purple-400",
   BOOKED: "bg-violet-500/20 text-violet-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
   AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-yellow-500/20 text-yellow-400",
@@ -175,7 +175,7 @@ export default function TrackingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Track & Trace</h1>
-          <p className="text-sm text-slate-400 mt-1">Monitor & deliver — dispatched loads, check calls, ELD & GPS</p>
+          <p className="text-sm text-gray-600 mt-1">Monitor & deliver — dispatched loads, check calls, ELD & GPS</p>
         </div>
         <div className="flex items-center gap-2">
           {trackedLoads.length > 0 && (
@@ -195,7 +195,7 @@ export default function TrackingPage() {
                 { key: "rate", label: "Rate ($)" },
               ],
               `srl-tracking-${new Date().toISOString().split("T")[0]}.csv`,
-            )} className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+            )} className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 transition cursor-pointer">
               <Download className="w-3.5 h-3.5" /> Export CSV
             </button>
           )}
@@ -206,13 +206,13 @@ export default function TrackingPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
         <button onClick={() => setTab("loads")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "loads" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "loads" ? "bg-gold text-navy" : "text-gray-600 hover:text-white"}`}>
           <Package className="w-3.5 h-3.5" /> Active Loads ({trackedLoads.length})
         </button>
         <button onClick={() => setTab("eld")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "eld" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "eld" ? "bg-gold text-navy" : "text-gray-600 hover:text-white"}`}>
           <Signal className="w-3.5 h-3.5" /> ELD Monitor
         </button>
       </div>
@@ -223,35 +223,35 @@ export default function TrackingPage() {
           {/* Filters */}
           <div className="flex gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by load ref #, city, or carrier..."
-                className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+                className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
             </div>
             <div className="relative">
               <button onClick={() => setShowStatusDropdown((p) => !p)}
-                className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white hover:bg-white/10 transition cursor-pointer min-w-[150px] justify-between">
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white hover:bg-gray-100 transition cursor-pointer min-w-[150px] justify-between">
                 <span>{statusFilter ? (STATUS_LABELS[statusFilter] || statusFilter) : "Active Loads"}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
               </button>
               {showStatusDropdown && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-[#0F1117] border border-white/10 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto py-1">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[#0F1117] border border-gray-200 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto py-1">
                   <button onClick={() => { setStatusFilter(""); setShowStatusDropdown(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm transition ${!statusFilter ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-white hover:bg-white/5"}`}>
+                    className={`w-full text-left px-3 py-2 text-sm transition ${!statusFilter ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-white hover:bg-gray-50"}`}>
                     Active Loads
                   </button>
                   {TRACKABLE_STATUSES.map(s => (
                     <button key={s} onClick={() => { setStatusFilter(s); setShowStatusDropdown(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === s ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+                      className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === s ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-gray-700 hover:bg-gray-50 hover:text-white"}`}>
                       {STATUS_LABELS[s]}
                     </button>
                   ))}
-                  <div className="border-t border-white/10 my-1" />
+                  <div className="border-t border-gray-200 my-1" />
                   <button onClick={() => { setStatusFilter("TONU"); setShowStatusDropdown(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === "TONU" ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-red-400 hover:bg-white/5"}`}>
+                    className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === "TONU" ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-red-400 hover:bg-gray-50"}`}>
                     TONU
                   </button>
                   <button onClick={() => { setStatusFilter("CANCELLED"); setShowStatusDropdown(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === "CANCELLED" ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-red-400 hover:bg-white/5"}`}>
+                    className={`w-full text-left px-3 py-2 text-sm transition ${statusFilter === "CANCELLED" ? "text-[#C9A84C] bg-[#C9A84C]/10" : "text-red-400 hover:bg-gray-50"}`}>
                     Cancelled
                   </button>
                 </div>
@@ -260,10 +260,10 @@ export default function TrackingPage() {
           </div>
 
           {/* Load Table */}
-          <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+          <div className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-slate-400 border-b border-white/10">
+                <tr className="text-gray-600 border-b border-gray-200">
                   <th className="text-left px-4 py-3 font-medium w-8"></th>
                   <th className="text-left px-4 py-3 font-medium">Load</th>
                   <th className="text-left px-4 py-3 font-medium">Route</th>
@@ -296,9 +296,9 @@ export default function TrackingPage() {
                 {trackedLoads.length === 0 && (
                   <tr><td colSpan={8}>
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <MapPin className="w-12 h-12 text-slate-300 mb-4" />
+                      <MapPin className="w-12 h-12 text-gray-700 mb-4" />
                       <h3 className="text-lg font-semibold text-white mb-1">No loads being tracked</h3>
-                      <p className="text-sm text-slate-400 mb-4 max-w-sm">Loads in transit will appear here automatically</p>
+                      <p className="text-sm text-gray-600 mb-4 max-w-sm">Loads in transit will appear here automatically</p>
                     </div>
                   </td></tr>
                 )}
@@ -313,14 +313,14 @@ export default function TrackingPage() {
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Status</label>
                     <select value={ccForm.status} onChange={(e) => setCcForm(f => ({ ...f, status: e.target.value }))}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                       {CHECK_CALL_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Method</label>
                     <select value={ccForm.method} onChange={(e) => setCcForm(f => ({ ...f, method: e.target.value }))}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                       {CHECK_CALL_METHODS.map(m => <option key={m} value={m}>{m.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
@@ -329,26 +329,26 @@ export default function TrackingPage() {
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Location</label>
                   <input value={ccForm.location} onChange={(e) => setCcForm(f => ({ ...f, location: e.target.value }))}
-                    placeholder="e.g. I-94 rest area, mile marker 42" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                    placeholder="e.g. I-94 rest area, mile marker 42" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">City</label>
                     <input value={ccForm.city} onChange={(e) => setCcForm(f => ({ ...f, city: e.target.value }))}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">State</label>
                     <input value={ccForm.state} onChange={(e) => setCcForm(f => ({ ...f, state: e.target.value }))} maxLength={2}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Notes</label>
                   <textarea value={ccForm.notes} onChange={(e) => setCcForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-                    placeholder="Driver confirmed on schedule..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+                    placeholder="Driver confirmed on schedule..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
                 </div>
 
                 <button
@@ -367,19 +367,19 @@ export default function TrackingPage() {
         <>
           {eldOverview && (
             <div className="grid sm:grid-cols-4 gap-4">
-              <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+              <div className="bg-gray-100 rounded-xl border border-gray-200 p-5">
                 <div className="flex items-center gap-2 text-gold mb-1"><Activity className="w-4 h-4" /><span className="text-xs text-slate-500">Active Drivers</span></div>
                 <p className="text-2xl font-bold text-white">{eldOverview.activeDrivers}</p>
               </div>
-              <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+              <div className="bg-gray-100 rounded-xl border border-gray-200 p-5">
                 <div className="flex items-center gap-2 text-gold mb-1"><Truck className="w-4 h-4" /><span className="text-xs text-slate-500">Active Vehicles</span></div>
                 <p className="text-2xl font-bold text-white">{eldOverview.activeVehicles}</p>
               </div>
-              <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+              <div className="bg-gray-100 rounded-xl border border-gray-200 p-5">
                 <div className="flex items-center gap-2 text-gold mb-1"><Signal className="w-4 h-4" /><span className="text-xs text-slate-500">Connected ELDs</span></div>
                 <p className="text-2xl font-bold text-white">{eldOverview.connectedDevices}</p>
               </div>
-              <div className={`bg-white/5 rounded-xl border p-5 ${eldOverview.hosViolations > 0 ? "border-red-500/30" : "border-white/10"}`}>
+              <div className={`bg-gray-100 rounded-xl border p-5 ${eldOverview.hosViolations > 0 ? "border-red-500/30" : "border-gray-200"}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <AlertTriangle className={`w-4 h-4 ${eldOverview.hosViolations > 0 ? "text-red-400" : "text-green-400"}`} />
                   <span className="text-xs text-slate-500">HOS Violations</span>
@@ -392,7 +392,7 @@ export default function TrackingPage() {
           {eldOverview?.providers && (
             <div className="grid sm:grid-cols-3 gap-3">
               {eldOverview.providers.map((p) => (
-                <div key={p.name} className="bg-white/5 rounded-xl border border-white/10 p-4 flex items-center justify-between">
+                <div key={p.name} className="bg-gray-100 rounded-xl border border-gray-200 p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white font-medium">{p.name}</p>
                     <p className="text-xs text-slate-500">{p.devices} device{p.devices !== 1 ? "s" : ""}</p>
@@ -405,8 +405,8 @@ export default function TrackingPage() {
             </div>
           )}
 
-          <div className="bg-white/5 rounded-xl border border-white/10">
-            <div className="px-5 py-4 border-b border-white/10">
+          <div className="bg-gray-100 rounded-xl border border-gray-200">
+            <div className="px-5 py-4 border-b border-gray-200">
               <h2 className="font-semibold text-white flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-gold" /> Live Driver Locations
               </h2>
@@ -415,7 +415,7 @@ export default function TrackingPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-slate-400 border-b border-white/10">
+                  <tr className="text-gray-600 border-b border-gray-200">
                     <th className="text-left px-5 py-3 font-medium">Driver</th>
                     <th className="text-left px-5 py-3 font-medium">Status</th>
                     <th className="text-left px-5 py-3 font-medium">Location</th>
@@ -433,9 +433,9 @@ export default function TrackingPage() {
                           {dl.status === "ON_ROUTE" ? "Driving" : "Available"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-300">{dl.location.address}</td>
-                      <td className="px-5 py-3 text-right text-slate-300">{dl.location.speed} mph</td>
-                      <td className="px-5 py-3 text-slate-300">{dl.location.heading}</td>
+                      <td className="px-5 py-3 text-gray-700">{dl.location.address}</td>
+                      <td className="px-5 py-3 text-right text-gray-700">{dl.location.speed} mph</td>
+                      <td className="px-5 py-3 text-gray-700">{dl.location.heading}</td>
                       <td className="px-5 py-3 text-right text-slate-500 font-mono text-xs">
                         {dl.location.latitude.toFixed(4)}, {dl.location.longitude.toFixed(4)}
                       </td>
@@ -451,7 +451,7 @@ export default function TrackingPage() {
 
           <div className="bg-gold/5 border border-gold/20 rounded-xl p-5">
             <h3 className="font-semibold text-gold text-sm mb-2">ELD Integration Status</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-gray-600 leading-relaxed">
               SRL&apos;s ELD monitoring system is pre-configured for Motive (KeepTruckin), Samsara, and Omnitracs.
               When API keys are added, the system will display real-time GPS tracking, HOS compliance data,
               DVIR reports, and fuel analytics from each provider. Currently showing simulated data for demonstration.
@@ -506,7 +506,7 @@ function LoadRow({
           {shipment && <p className="text-xs text-slate-500">{shipment.shipmentNumber}</p>}
         </td>
         <td className="px-4 py-3">
-          <div className="flex items-center gap-1.5 text-sm text-slate-300">
+          <div className="flex items-center gap-1.5 text-sm text-gray-700">
             <MapPin className="w-3 h-3 text-gold shrink-0" />
             <span>{load.originCity}, {load.originState}</span>
             <span className="text-slate-600">&rarr;</span>
@@ -540,8 +540,8 @@ function LoadRow({
             </p>
           )}
         </td>
-        <td className="px-4 py-3 text-sm text-slate-300">{new Date(load.pickupDate).toLocaleDateString()}</td>
-        <td className="px-4 py-3 text-sm text-slate-300">{new Date(load.deliveryDate).toLocaleDateString()}</td>
+        <td className="px-4 py-3 text-sm text-gray-700">{new Date(load.pickupDate).toLocaleDateString()}</td>
+        <td className="px-4 py-3 text-sm text-gray-700">{new Date(load.deliveryDate).toLocaleDateString()}</td>
         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
             {canUpdate && (
@@ -551,7 +551,7 @@ function LoadRow({
               </button>
             )}
             <button onClick={onDownloadBol} title="Download BOL"
-              className="p-1.5 text-slate-400 hover:bg-white/10 rounded">
+              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded">
               <Download className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -604,8 +604,8 @@ function LoadRow({
 
             <div className="grid lg:grid-cols-3 gap-4">
               {/* Status Pipeline */}
-              <div className="bg-white/5 rounded-lg p-4">
-                <h4 className="text-xs font-medium text-slate-400 mb-3">Load Pipeline</h4>
+              <div className="bg-gray-100 rounded-lg p-4">
+                <h4 className="text-xs font-medium text-gray-600 mb-3">Load Pipeline</h4>
                 {/* Progress Bar */}
                 <div className="w-full bg-slate-800 rounded-full h-1.5 mb-4">
                   <div className="bg-gold rounded-full h-1.5 transition-all" style={{ width: `${progressPct}%` }} />
@@ -627,9 +627,9 @@ function LoadRow({
               </div>
 
               {/* Check Call History */}
-              <div className="lg:col-span-2 bg-white/5 rounded-lg p-4">
+              <div className="lg:col-span-2 bg-gray-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-medium text-slate-400">Check Call Log</h4>
+                  <h4 className="text-xs font-medium text-gray-600">Check Call Log</h4>
                   {canUpdate && (
                     <button onClick={onAddCheckCall}
                       className="flex items-center gap-1 text-xs text-gold hover:text-gold/80">
@@ -642,13 +642,13 @@ function LoadRow({
                     {checkCalls.map((cc) => {
                       const MethodIcon = METHOD_ICONS[cc.method || "PHONE"] || PhoneCall;
                       return (
-                        <div key={cc.id} className="flex items-start gap-3 p-2 bg-white/5 rounded-lg">
+                        <div key={cc.id} className="flex items-start gap-3 p-2 bg-gray-100 rounded-lg">
                           <div className="mt-0.5">
-                            <MethodIcon className="w-3.5 h-3.5 text-slate-400" />
+                            <MethodIcon className="w-3.5 h-3.5 text-gray-600" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[cc.status] || "bg-slate-500/20 text-slate-400"}`}>
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[cc.status] || "bg-slate-500/20 text-gray-600"}`}>
                                 {cc.status.replace(/_/g, " ")}
                               </span>
                               <span className="text-[10px] text-slate-500">
@@ -659,12 +659,12 @@ function LoadRow({
                               </span>
                             </div>
                             {cc.location && (
-                              <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1">
+                              <p className="text-xs text-gray-700 mt-0.5 flex items-center gap-1">
                                 <MapPin className="w-2.5 h-2.5" /> {cc.location}
                                 {cc.city && ` — ${cc.city}, ${cc.state}`}
                               </p>
                             )}
-                            {cc.notes && <p className="text-xs text-slate-400 mt-0.5">{cc.notes}</p>}
+                            {cc.notes && <p className="text-xs text-gray-600 mt-0.5">{cc.notes}</p>}
                             {cc.calledBy && (
                               <p className="text-[10px] text-slate-500 mt-0.5">by {cc.calledBy.firstName} {cc.calledBy.lastName}</p>
                             )}
@@ -691,7 +691,7 @@ function LoadRow({
                   if (targetIdx > currentIdx + 2) return null; // Only show next 2 statuses
                   return (
                     <button key={s} onClick={() => onUpdateStatus(s)}
-                      className="px-3 py-1.5 text-xs bg-white/10 text-slate-300 rounded-lg hover:bg-white/20 hover:text-white transition">
+                      className="px-3 py-1.5 text-xs bg-white/10 text-gray-700 rounded-lg hover:bg-white/20 hover:text-white transition">
                       {STATUS_LABELS[s]}
                     </button>
                   );

@@ -15,10 +15,10 @@ interface SlideDrawerProps {
 }
 
 /**
- * Slide-out drawer with:
- * - Click-outside-to-close (backdrop click)
+ * Slide-out drawer — light panel on dark page (Cerry-style).
+ * - Click-outside-to-close (subtle overlay, NO blur)
  * - ESC key to close
- * - Browser Back button to close (pushes history state)
+ * - Browser Back button to close
  * - Smooth slide animation
  * - Scroll lock on body when open
  */
@@ -26,15 +26,12 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl
   const drawerRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
 
-  // ESC key handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
   }, [onClose]);
 
-  // Browser back button support
   useEffect(() => {
     if (open && !wasOpenRef.current) {
-      // Push a fake history entry when drawer opens
       window.history.pushState({ drawer: true }, "");
       const handlePopState = () => onClose();
       window.addEventListener("popstate", handlePopState);
@@ -49,7 +46,6 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl
     }
   }, [open, onClose]);
 
-  // ESC key + body scroll lock
   useEffect(() => {
     if (open) {
       document.addEventListener("keydown", handleKeyDown);
@@ -69,10 +65,10 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl
 
   return (
     <div className="fixed inset-0 z-50">
-      {/* Backdrop — click to close */}
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      {/* Backdrop — subtle dark overlay, NO blur */}
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
 
-      {/* Drawer panel */}
+      {/* Drawer panel — clean white, matches Cerry */}
       <div
         ref={drawerRef}
         role="dialog"

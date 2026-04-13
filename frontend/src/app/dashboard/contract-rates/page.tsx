@@ -347,7 +347,7 @@ export default function ContractRatesPage() {
                     <DetailsTab rate={selectedRate} />
                   )}
                   {activeTab === "history" && (
-                    <HistoryTab />
+                    <HistoryTab rateId={selectedRate.id} />
                   )}
                   {activeTab === "notes" && (
                     <NotesTab notes={selectedRate.notes} />
@@ -515,12 +515,34 @@ function DetailsTab({ rate }: { rate: ContractRate }) {
   );
 }
 
-function HistoryTab() {
+function HistoryTab({ rateId }: { rateId: string }) {
+  const { data } = useQuery({
+    queryKey: ["rate-history", rateId],
+    queryFn: () => api.get(`/audit?entityType=ContractRate&entityId=${rateId}&limit=20`).then((r) => r.data),
+    enabled: !!rateId,
+  });
+  const entries = data?.entries || [];
+  if (entries.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Clock className="w-8 h-8 text-slate-600 mb-3" />
+        <p className="text-sm text-slate-400">No changes recorded yet</p>
+        <p className="text-xs text-slate-600 mt-1">Rate changes, status transitions, and user actions will appear here.</p>
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Clock className="w-8 h-8 text-slate-600 mb-3" />
-      <p className="text-sm text-slate-400">Audit trail coming soon</p>
-      <p className="text-xs text-slate-600 mt-1">Rate changes, status transitions, and user actions will appear here.</p>
+    <div className="space-y-2">
+      {entries.map((e: any) => (
+        <div key={e.id} className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-2 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-white">{e.action} {e.field ? `— ${e.field}` : ""}</p>
+            {e.oldValue && <p className="text-[10px] text-slate-500">From: {e.oldValue} → {e.newValue}</p>}
+            <p className="text-[10px] text-slate-600">{new Date(e.performedAt).toLocaleString()} by {e.performedBy?.firstName} {e.performedBy?.lastName}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

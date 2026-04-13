@@ -57,7 +57,7 @@ interface DriverStats {
 const STATUS_COLORS: Record<string, string> = {
   AVAILABLE: "bg-green-500/20 text-green-400",
   ON_ROUTE: "bg-blue-500/20 text-blue-400",
-  OFF_DUTY: "bg-slate-500/20 text-slate-400",
+  OFF_DUTY: "bg-slate-500/20 text-gray-600",
   SLEEPER: "bg-purple-500/20 text-purple-400",
   INACTIVE: "bg-red-500/20 text-red-400",
 };
@@ -173,7 +173,7 @@ export default function DriversPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Driver Management</h1>
-          <p className="text-sm text-slate-400 mt-1">Compliance, HOS tracking, and fleet assignments</p>
+          <p className="text-sm text-gray-600 mt-1">Compliance, HOS tracking, and fleet assignments</p>
         </div>
         <button onClick={() => setShowAddDriver(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
@@ -186,7 +186,7 @@ export default function DriversPage() {
         <StatCard label="Total" value={stats?.totalDrivers || 0} />
         <StatCard label="On Route" value={stats?.onRoute || 0} color="text-blue-400" />
         <StatCard label="Available" value={stats?.available || 0} color="text-green-400" />
-        <StatCard label="Off Duty" value={stats?.offDuty || 0} color="text-slate-400" />
+        <StatCard label="Off Duty" value={stats?.offDuty || 0} color="text-gray-600" />
         <StatCard label="Safety Avg" value={`${stats?.avgSafetyScore || 0}%`} color="text-gold" />
         <StatCard label="License Exp" value={stats?.expiringLicenses || 0}
           color={stats?.expiringLicenses ? "text-red-400" : "text-green-400"}
@@ -199,14 +199,14 @@ export default function DriversPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, license..."
-            className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
-        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {["", "AVAILABLE", "ON_ROUTE", "OFF_DUTY", "SLEEPER"].map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition ${statusFilter === s ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+              className={`px-3 py-1.5 rounded text-xs font-medium transition ${statusFilter === s ? "bg-gold text-navy" : "text-gray-600 hover:text-white"}`}>
               {s ? STATUS_LABELS[s] : "All"}
             </button>
           ))}
@@ -218,7 +218,7 @@ export default function DriversPage() {
         {drivers.map((d) => {
           const isExpanded = expanded === d.id;
           return (
-            <div key={d.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+            <div key={d.id} className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
               <button onClick={() => setExpanded(isExpanded ? null : d.id)} className="w-full text-left p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start gap-3">
@@ -236,7 +236,7 @@ export default function DriversPage() {
                           <span key={e} className="px-1.5 py-0.5 rounded text-xs bg-cyan-500/20 text-cyan-400">{e}</span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-400 mt-1 flex-wrap">
+                      <div className="flex items-center gap-3 text-xs text-gray-600 mt-1 flex-wrap">
                         {d.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {d.phone}</span>}
                         {d.currentLocation && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {d.currentLocation}</span>}
                         <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> {d.licenseType}{d.licenseState ? ` (${d.licenseState})` : ""}</span>
@@ -251,7 +251,7 @@ export default function DriversPage() {
                       </div>
                       <p className="text-xs text-slate-500">Safety</p>
                     </div>
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                   </div>
                 </div>
 
@@ -282,7 +282,7 @@ export default function DriversPage() {
 
               {/* Expanded Detail */}
               {isExpanded && (
-                <div className="border-t border-white/10 p-5 bg-[#0F1117] space-y-4">
+                <div className="border-t border-gray-200 p-5 bg-[#0F1117] space-y-4">
                   <div className="grid sm:grid-cols-3 gap-4 text-sm">
                     <InfoRow label="License #" value={d.licenseNumber || "—"} />
                     <InfoRow label="License State" value={d.licenseState || "—"} />
@@ -308,21 +308,21 @@ export default function DriversPage() {
                     <h3 className="text-sm font-medium text-white flex items-center gap-1"><Link2 className="w-4 h-4 text-gold" /> Fleet Assignment</h3>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                    <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
                       <p className="text-xs text-slate-500 mb-1">Assigned Truck</p>
                       {d.assignedTruck ? (
                         <p className="text-sm text-white">{d.assignedTruck.unitNumber} — {d.assignedTruck.year} {d.assignedTruck.make} {d.assignedTruck.model}</p>
-                      ) : <p className="text-sm text-slate-400">None</p>}
+                      ) : <p className="text-sm text-gray-600">None</p>}
                       <button onClick={(e) => { e.stopPropagation(); setAssignModal({ driverId: d.id, type: "truck" }); }}
                         className="mt-2 text-xs text-gold hover:text-gold/80">
                         {d.assignedTruck ? "Change Truck" : "Assign Truck"}
                       </button>
                     </div>
-                    <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                    <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
                       <p className="text-xs text-slate-500 mb-1">Assigned Trailer</p>
                       {d.assignedTrailer ? (
                         <p className="text-sm text-white">{d.assignedTrailer.unitNumber} — {d.assignedTrailer.make} {d.assignedTrailer.model} ({d.assignedTrailer.type})</p>
-                      ) : <p className="text-sm text-slate-400">None</p>}
+                      ) : <p className="text-sm text-gray-600">None</p>}
                       <button onClick={(e) => { e.stopPropagation(); setAssignModal({ driverId: d.id, type: "trailer" }); }}
                         className="mt-2 text-xs text-gold hover:text-gold/80">
                         {d.assignedTrailer ? "Change Trailer" : "Assign Trailer"}
@@ -358,7 +358,7 @@ export default function DriversPage() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">License Type</label>
                 <select value={driverForm.licenseType} onChange={(e) => setDriverForm((f) => ({ ...f, licenseType: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                   {["CDL-A", "CDL-B", "CDL-C"].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
@@ -413,19 +413,19 @@ export default function DriversPage() {
               <button onClick={() => {
                 if (assignModal.type === "truck") assignTruck.mutate({ driverId: assignModal.driverId, truckId: null });
                 else assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: null });
-              }} className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 text-sm text-gray-500">
+              }} className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-200 text-sm text-gray-500">
                 Unassign (None)
               </button>
               {assignModal.type === "truck" && trucksData?.trucks?.map((t) => (
                 <button key={t.id} onClick={() => assignTruck.mutate({ driverId: assignModal.driverId, truckId: t.id })}
-                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-gray-900">
+                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-white">
                   <span className="font-medium">{t.unitNumber}</span>
                   <span className="text-gray-500 ml-2">{t.year} {t.make} {t.model}</span>
                 </button>
               ))}
               {assignModal.type === "trailer" && trailersData?.trailers?.map((t) => (
                 <button key={t.id} onClick={() => assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: t.id })}
-                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-gray-900">
+                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-white">
                   <span className="font-medium">{t.unitNumber}</span>
                   <span className="text-gray-500 ml-2">{t.make} {t.model} ({t.type})</span>
                 </button>
@@ -440,8 +440,8 @@ export default function DriversPage() {
 
 function StatCard({ label, value, color, alert }: { label: string; value: string | number; color?: string; alert?: boolean }) {
   return (
-    <div className={`bg-white/5 rounded-xl border p-4 ${alert ? "border-red-500/30" : "border-white/10"}`}>
-      <p className="text-xs text-slate-400">{label}</p>
+    <div className={`bg-gray-100 rounded-xl border p-4 ${alert ? "border-red-500/30" : "border-gray-200"}`}>
+      <p className="text-xs text-gray-600">{label}</p>
       <p className={`text-xl font-bold mt-0.5 ${color || "text-white"}`}>{value}</p>
     </div>
   );
@@ -453,10 +453,10 @@ function HOSBar({ label, used, max, warnAt, critAt }: { label: string; used: num
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-slate-400">{label}</span>
-        <span className="font-medium text-slate-300">{used}h / {max}h</span>
+        <span className="text-gray-600">{label}</span>
+        <span className="font-medium text-gray-700">{used}h / {max}h</span>
       </div>
-      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -479,7 +479,7 @@ function Input({ label, value, onChange, placeholder, type }: {
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || label.replace(" *", "")}
-        type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+        type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
     </div>
   );
 }

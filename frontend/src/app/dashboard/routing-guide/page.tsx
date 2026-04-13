@@ -249,14 +249,14 @@ export default function RoutingGuidePage() {
               <input
                 value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search lanes, cities..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C9A84C]/50 focus:outline-none transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-gray-200 rounded-lg text-sm text-white placeholder-gray-500 focus:border-blue-400 focus:outline-none transition"
               />
             </div>
-            <select value={filterEquipment} onChange={(e) => setFilterEquipment(e.target.value)} className="bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-300 focus:border-[#C9A84C]/50 focus:outline-none">
+            <select value={filterEquipment} onChange={(e) => setFilterEquipment(e.target.value)} className="bg-white/[0.03] border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-300 focus:border-blue-400 focus:outline-none">
               <option value="ALL">All Equipment</option>
               {EQUIPMENT_TYPES.map((t) => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
             </select>
-            <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)} className="bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-gray-300 focus:border-[#C9A84C]/50 focus:outline-none">
+            <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)} className="bg-white/[0.03] border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-300 focus:border-blue-400 focus:outline-none">
               <option value="ALL">All Status</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
@@ -309,7 +309,7 @@ export default function RoutingGuidePage() {
                   </div>
 
                   {/* Mode */}
-                  <span className="text-[10px] px-2 py-1 bg-white/5 text-gray-400 rounded">{g.mode}</span>
+                  <span className="text-[10px] px-2 py-1 bg-gray-100 text-gray-400 rounded">{g.mode}</span>
 
                   {/* Customer */}
                   {g.customer && (
@@ -339,12 +339,12 @@ export default function RoutingGuidePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => toggleMut.mutate({ id: selected.id, isActive: !selected.isActive })} className="p-1.5 rounded-lg hover:bg-white/5 transition" title={selected.isActive ? "Deactivate" : "Activate"}>
+              <button onClick={() => toggleMut.mutate({ id: selected.id, isActive: !selected.isActive })} className="p-1.5 rounded-lg hover:bg-gray-50 transition" title={selected.isActive ? "Deactivate" : "Activate"}>
                 {selected.isActive ? <ToggleRight className="w-5 h-5 text-green-400" /> : <ToggleLeft className="w-5 h-5 text-gray-500" />}
               </button>
-              <button onClick={() => openEdit(selected)} className="p-1.5 rounded-lg hover:bg-white/5 transition"><Edit2 className="w-4 h-4 text-gray-400" /></button>
-              <button onClick={() => { if (confirm("Delete this routing guide?")) deleteMut.mutate(selected.id); }} className="p-1.5 rounded-lg hover:bg-white/5 transition"><Trash2 className="w-4 h-4 text-gray-400" /></button>
-              <button onClick={() => setSelectedId(null)} className="p-1.5 rounded-lg hover:bg-white/5 transition"><X className="w-4 h-4 text-gray-400" /></button>
+              <button onClick={() => openEdit(selected)} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><Edit2 className="w-4 h-4 text-gray-400" /></button>
+              <button onClick={() => { if (confirm("Delete this routing guide?")) deleteMut.mutate(selected.id); }} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><Trash2 className="w-4 h-4 text-gray-400" /></button>
+              <button onClick={() => setSelectedId(null)} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><X className="w-4 h-4 text-gray-400" /></button>
             </div>
           </div>
 
@@ -409,7 +409,7 @@ export default function RoutingGuidePage() {
                       {/* Rank badge */}
                       <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                        i === 0 ? "bg-[#C9A84C]/20 text-[#C9A84C]" : i === 1 ? "bg-gray-400/20 text-gray-300" : "bg-white/5 text-gray-400"
+                        i === 0 ? "bg-[#C9A84C]/20 text-[#C9A84C]" : i === 1 ? "bg-gray-400/20 text-gray-300" : "bg-gray-100 text-gray-400"
                       )}>
                         {entry.rank}
                       </div>
@@ -418,7 +418,7 @@ export default function RoutingGuidePage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-white">{entry.carrier.companyName || "Unknown"}</span>
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded border", TIER_COLORS[entry.carrier.tier] || "bg-white/5 text-gray-400 border-white/10")}>{entry.carrier.tier}</span>
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded border", TIER_COLORS[entry.carrier.tier] || "bg-gray-100 text-gray-400 border-gray-200")}>{entry.carrier.tier}</span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                           {entry.carrier.mcNumber && <span>MC# {entry.carrier.mcNumber}</span>}
@@ -486,11 +486,30 @@ export default function RoutingGuidePage() {
             )}
 
             {panelTab === "history" && (
-              <div className="text-center py-8 text-gray-500 text-sm">
-                <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p>Audit trail will show here as changes are made</p>
-                <p className="text-xs mt-1 text-gray-600">Created by {selected.createdBy?.firstName} {selected.createdBy?.lastName}</p>
-                <p className="text-xs text-gray-600">{new Date(selected.createdAt).toLocaleString()}</p>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 py-2 border-b border-white/5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0" />
+                  <div>
+                    <p className="text-xs text-white">Created</p>
+                    <p className="text-[10px] text-gray-500">
+                      {new Date(selected.createdAt).toLocaleString()} by {selected.createdBy?.firstName} {selected.createdBy?.lastName}
+                    </p>
+                  </div>
+                </div>
+                {selected.updatedAt !== selected.createdAt && (
+                  <div className="flex items-start gap-3 py-2 border-b border-white/5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-2 shrink-0" />
+                    <div>
+                      <p className="text-xs text-white">Last Updated</p>
+                      <p className="text-[10px] text-gray-500">{new Date(selected.updatedAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 mt-4">
+                  <p className="text-[10px] text-gray-500">Carriers: {selected.entries?.length || 0} ranked</p>
+                  <p className="text-[10px] text-gray-500">Status: {selected.isActive ? "Active" : "Inactive"}</p>
+                  <p className="text-[10px] text-gray-500">Effective: {new Date(selected.effectiveDate).toLocaleDateString()}</p>
+                </div>
               </div>
             )}
 
@@ -587,7 +606,7 @@ export default function RoutingGuidePage() {
 
           {/* Save */}
           <div className="flex gap-3 pt-2">
-            <button onClick={() => { setDrawerOpen(false); setEditingId(null); }} className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+            <button onClick={() => { setDrawerOpen(false); setEditingId(null); }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
             <button onClick={handleSave} disabled={saveMut.isPending || !form.name || !form.originState || !form.destState} className="flex-1 px-4 py-2.5 bg-[#C9A84C] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition disabled:opacity-50">
               {saveMut.isPending ? "Saving..." : editingId ? "Update" : "Create"}
             </button>

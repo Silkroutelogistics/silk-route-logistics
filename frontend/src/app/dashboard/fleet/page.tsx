@@ -36,14 +36,14 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   ACTIVE: <CheckCircle2 className="w-4 h-4 text-green-400" />,
   IN_SHOP: <Wrench className="w-4 h-4 text-yellow-400" />,
   OUT_OF_SERVICE: <XCircle className="w-4 h-4 text-red-400" />,
-  SOLD: <AlertTriangle className="w-4 h-4 text-slate-400" />,
+  SOLD: <AlertTriangle className="w-4 h-4 text-gray-600" />,
 };
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: "bg-green-500/20 text-green-400",
   IN_SHOP: "bg-yellow-500/20 text-yellow-400",
   OUT_OF_SERVICE: "bg-red-500/20 text-red-400",
-  SOLD: "bg-slate-500/20 text-slate-400",
+  SOLD: "bg-slate-500/20 text-gray-600",
 };
 
 const TRUCK_TYPES = ["DAY_CAB", "SLEEPER", "STRAIGHT", "BOX_TRUCK"];
@@ -144,7 +144,7 @@ export default function FleetPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Fleet Management</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             {overview?.totalTrucks || 0} trucks &middot; {overview?.totalTrailers || 0} trailers
           </p>
         </div>
@@ -165,13 +165,13 @@ export default function FleetPage() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex gap-1 bg-white/5 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
         <button onClick={() => { setTab("trucks"); setSearch(""); setStatusFilter(""); setTypeFilter(""); }}
-          className={`px-5 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "trucks" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`px-5 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "trucks" ? "bg-gold text-navy" : "text-gray-600 hover:text-white"}`}>
           Trucks ({overview?.totalTrucks || 0})
         </button>
         <button onClick={() => { setTab("trailers"); setSearch(""); setStatusFilter(""); setTypeFilter(""); }}
-          className={`px-5 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "trailers" ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+          className={`px-5 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${tab === "trailers" ? "bg-gold text-navy" : "text-gray-600 hover:text-white"}`}>
           Trailers ({overview?.totalTrailers || 0})
         </button>
       </div>
@@ -179,19 +179,19 @@ export default function FleetPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${tab}...`}
-            className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white">
           <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
           <option value="ACTIVE" className="bg-[#0F1117] text-white">Active</option>
           <option value="IN_SHOP" className="bg-[#0F1117] text-white">In Shop</option>
           <option value="OUT_OF_SERVICE" className="bg-[#0F1117] text-white">Out of Service</option>
         </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white">
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white">
           <option value="" className="bg-[#0F1117] text-white">All Types</option>
           {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
             <option key={t} value={t} className="bg-[#0F1117] text-white">{t.replace(/_/g, " ")}</option>
@@ -202,7 +202,7 @@ export default function FleetPage() {
       {/* Asset List */}
       <div className="space-y-3">
         {tab === "trucks" && truckData?.trucks?.map((truck) => (
-          <div key={truck.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+          <div key={truck.id} className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
             <button onClick={() => setExpanded(expanded === truck.id ? null : truck.id)}
               className="w-full text-left p-5 hover:bg-[#161921] transition">
               <div className="flex items-start justify-between">
@@ -216,9 +216,9 @@ export default function FleetPage() {
                       <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${STATUS_COLORS[truck.status] || ""}`}>
                         {STATUS_ICON[truck.status]} {truck.status.replace(/_/g, " ")}
                       </span>
-                      <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{truck.ownershipType.replace(/_/g, " ")}</span>
+                      <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{truck.ownershipType.replace(/_/g, " ")}</span>
                     </div>
-                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-slate-400">
+                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-600">
                       {truck.year && truck.make && <span>{truck.year} {truck.make} {truck.model || ""}</span>}
                       <span>{truck.type.replace(/_/g, " ")}</span>
                       <span>{truck.mileage.toLocaleString()} mi</span>
@@ -232,12 +232,12 @@ export default function FleetPage() {
                 <div className="flex items-center gap-3">
                   {isExpired(truck.insuranceExpiry) && <AlertTriangle className="w-4 h-4 text-red-400" />}
                   {isExpiringSoon(truck.registrationExpiry) && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
-                  {expanded === truck.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  {expanded === truck.id ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                 </div>
               </div>
             </button>
             {expanded === truck.id && (
-              <div className="border-t border-white/10 p-5 bg-[#0F1117]">
+              <div className="border-t border-gray-200 p-5 bg-[#0F1117]">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <DetailItem icon={<Shield className="w-3.5 h-3.5" />} label="VIN" value={truck.vin || "—"} />
                   <DetailItem icon={<MapPin className="w-3.5 h-3.5" />} label="Plate" value={truck.licensePlate ? `${truck.licensePlate} (${truck.licensePlateState})` : "—"} />
@@ -254,7 +254,7 @@ export default function FleetPage() {
         ))}
 
         {tab === "trailers" && trailerData?.trailers?.map((trailer) => (
-          <div key={trailer.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+          <div key={trailer.id} className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
             <button onClick={() => setExpanded(expanded === trailer.id ? null : trailer.id)}
               className="w-full text-left p-5 hover:bg-[#161921] transition">
               <div className="flex items-start justify-between">
@@ -268,10 +268,10 @@ export default function FleetPage() {
                       <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${STATUS_COLORS[trailer.status] || ""}`}>
                         {STATUS_ICON[trailer.status]} {trailer.status.replace(/_/g, " ")}
                       </span>
-                      <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{trailer.type.replace(/_/g, " ")}</span>
+                      <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{trailer.type.replace(/_/g, " ")}</span>
                       {trailer.reeferUnit && <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-xs">Reefer</span>}
                     </div>
-                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-slate-400">
+                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-600">
                       {trailer.year && trailer.make && <span>{trailer.year} {trailer.make} {trailer.model || ""}</span>}
                       {trailer.length && <span>{trailer.length}ft</span>}
                       {trailer.capacity && <span>{trailer.capacity.toLocaleString()} lbs cap</span>}
@@ -281,11 +281,11 @@ export default function FleetPage() {
                     </div>
                   </div>
                 </div>
-                {expanded === trailer.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                {expanded === trailer.id ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
               </div>
             </button>
             {expanded === trailer.id && (
-              <div className="border-t border-white/10 p-5 bg-[#0F1117]">
+              <div className="border-t border-gray-200 p-5 bg-[#0F1117]">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <DetailItem label="Registration" value={trailer.registrationExpiry ? new Date(trailer.registrationExpiry).toLocaleDateString() : "—"} warn={isExpiringSoon(trailer.registrationExpiry)} />
                   <DetailItem label="Next Inspection" value={trailer.nextInspectionDate ? new Date(trailer.nextInspectionDate).toLocaleDateString() : "—"} warn={isExpiringSoon(trailer.nextInspectionDate)} />
@@ -315,7 +315,7 @@ export default function FleetPage() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Type</label>
                 <select value={form.type || ""} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                   {(tab === "trucks" ? TRUCK_TYPES : TRAILER_TYPES).map(t => (
                     <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
                   ))}
@@ -341,7 +341,7 @@ export default function FleetPage() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Ownership</label>
                 <select value={form.ownershipType || "COMPANY"} onChange={e => setForm(f => ({ ...f, ownershipType: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
                   <option value="COMPANY">Company</option>
                   <option value="LEASED">Leased</option>
                   <option value="OWNER_OPERATOR">Owner Operator</option>
@@ -360,8 +360,8 @@ export default function FleetPage() {
 
 function StatCard({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color: string }) {
   return (
-    <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-      <p className="text-sm text-slate-400">{label}</p>
+    <div className="bg-gray-100 rounded-xl border border-gray-200 p-5">
+      <p className="text-sm text-gray-600">{label}</p>
       <div className="flex items-baseline gap-2 mt-1">
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
         {sub && <span className="text-sm text-slate-500">{sub}</span>}
@@ -384,7 +384,7 @@ function FormField({ label, value, onChange, type = "text" }: { label: string; v
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
     </div>
   );
 }

@@ -46,7 +46,7 @@ interface Load extends BaseLoad {
 /* ------------------------------------------------------------------ */
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-slate-500/20 text-slate-400", POSTED: "bg-blue-500/20 text-blue-400",
+  DRAFT: "bg-slate-500/20 text-gray-600", POSTED: "bg-blue-500/20 text-blue-400",
   TENDERED: "bg-indigo-500/20 text-indigo-400", CONFIRMED: "bg-purple-500/20 text-purple-400",
   BOOKED: "bg-violet-500/20 text-violet-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
   AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-yellow-500/20 text-yellow-400",
@@ -60,7 +60,7 @@ const STATUS_COLORS: Record<string, string> = {
 const TENDER_COLORS: Record<string, string> = {
   OFFERED: "bg-blue-500/20 text-blue-400", ACCEPTED: "bg-green-500/20 text-green-400",
   COUNTERED: "bg-yellow-500/20 text-yellow-400", DECLINED: "bg-red-500/20 text-red-400",
-  EXPIRED: "bg-slate-500/20 text-slate-400",
+  EXPIRED: "bg-slate-500/20 text-gray-600",
 };
 
 const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
@@ -337,12 +337,12 @@ export default function LoadsPage() {
       className={`relative px-5 py-2.5 text-sm whitespace-nowrap transition-colors ${
         activeTab === key
           ? "text-[#C9A84C] font-bold"
-          : "text-slate-400 hover:text-slate-200"
+          : "text-gray-600 hover:text-slate-200"
       }`}
     >
       {label}
       <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-        activeTab === key ? "bg-[#C9A84C]/20 text-[#C9A84C]" : "bg-white/5 text-slate-500"
+        activeTab === key ? "bg-[#C9A84C]/20 text-[#C9A84C]" : "bg-gray-100 text-slate-500"
       }`}>
         {count}
       </span>
@@ -403,7 +403,7 @@ export default function LoadsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Load Board</h1>
-          <p className="text-slate-400 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
+          <p className="text-gray-600 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
         </div>
         {canCreate && (
           <button onClick={() => { setCloneData(null); setShowCreate(true); }}
@@ -413,7 +413,7 @@ export default function LoadsPage() {
         )}
         {load && canCreate && (
           <button onClick={() => { setCloneData(load as unknown as Record<string, unknown>); setShowCreate(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+            className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 transition cursor-pointer">
             Clone Load
           </button>
         )}
@@ -435,14 +435,14 @@ export default function LoadsPage() {
               { key: "weight", label: "Weight (lbs)" },
             ],
             `srl-loads-${activeTab}-${new Date().toISOString().split("T")[0]}.csv`,
-          )} className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 transition cursor-pointer">
+          )} className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 transition cursor-pointer">
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
         )}
       </div>
 
       {/* ---- UPGRADE 1: Status Tabs ---- */}
-      <div className="flex flex-wrap gap-0.5 overflow-x-auto border-b border-white/10 scrollbar-none">
+      <div className="flex flex-wrap gap-0.5 overflow-x-auto border-b border-gray-200 scrollbar-none">
         {tabBtn("attention", "Needs Attention", tabCounts.attention)}
         {tabBtn("DRAFT", "Drafts", tabCounts.DRAFT)}
         {tabBtn("POSTED", "Posted", tabCounts.POSTED)}
@@ -460,13 +460,13 @@ export default function LoadsPage() {
               onClick={() => setLaneFilter(laneFilter === lc.lane ? null : lc.lane)}
               className={`min-w-[180px] shrink-0 rounded-xl p-3 text-left transition-all ${
                 laneFilter === lc.lane
-                  ? "bg-white/5 border-2 border-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.15)]"
-                  : "bg-white/5 border border-white/10 hover:border-white/25"
+                  ? "bg-gray-100 border-2 border-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.15)]"
+                  : "bg-gray-100 border border-gray-200 hover:border-white/25"
               }`}
             >
               <p className="text-white font-bold text-base">{lc.lane}</p>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-slate-400 text-xs">{lc.count} load{lc.count !== 1 ? "s" : ""}</span>
+                <span className="text-gray-600 text-xs">{lc.count} load{lc.count !== 1 ? "s" : ""}</span>
                 <span className="text-[#C9A84C] text-sm font-semibold">${lc.avgRate.toLocaleString()}</span>
               </div>
             </button>
@@ -474,7 +474,7 @@ export default function LoadsPage() {
           {laneFilter && (
             <button
               onClick={() => setLaneFilter(null)}
-              className="shrink-0 self-center px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-white/5 rounded-lg border border-white/10"
+              className="shrink-0 self-center px-3 py-1.5 text-xs text-gray-600 hover:text-white bg-gray-100 rounded-lg border border-gray-200"
             >
               <X className="w-3 h-3 inline mr-1" />Clear Lane
             </button>
@@ -485,18 +485,18 @@ export default function LoadsPage() {
       {/* ---- Filters ---- */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
           <input
             placeholder="Search loads..."
             value={filters.search}
             onChange={(e) => { setFilters((f) => ({ ...f, search: e.target.value })); setPage(1); }}
-            className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50 focus:ring-1 focus:ring-[#C9A84C]/20"
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-[#C9A84C]/20"
           />
         </div>
         <select
           value={filters.equipmentType}
           onChange={(e) => { setFilters((f) => ({ ...f, equipmentType: e.target.value })); setPage(1); }}
-          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white"
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white"
         >
           <option value="" className="bg-[#0F1117] text-white">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler"].map((t) => (
@@ -516,13 +516,13 @@ export default function LoadsPage() {
               className={`block w-full text-left rounded-xl border p-4 hover:border-[#C9A84C]/30 transition ${
                 selectedLoadId === ld.id
                   ? "bg-white/10 border-[#C9A84C]/40"
-                  : "bg-white/5 border-white/10"
+                  : "bg-gray-100 border-gray-200"
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-sm text-slate-300 truncate">{ld.referenceNumber}</span>
+                    <span className="font-mono text-sm text-gray-700 truncate">{ld.referenceNumber}</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${STATUS_COLORS[ld.status] || "bg-white/10 text-white"}`}>
                       {ld.status.replace(/_/g, " ")}
                     </span>
@@ -536,7 +536,7 @@ export default function LoadsPage() {
                       {ld.originCity}, {ld.originState} &rarr; {ld.destCity}, {ld.destState}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
+                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {ld.equipmentType}</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> {new Date(ld.pickupDate).toLocaleDateString()}
@@ -561,7 +561,7 @@ export default function LoadsPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Package className="w-12 h-12 text-slate-600 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-1">No loads match your filters</h3>
-              <p className="text-sm text-slate-400 mb-4 max-w-sm">
+              <p className="text-sm text-gray-600 mb-4 max-w-sm">
                 Adjust your filters or create a new load to get started.
               </p>
             </div>
@@ -572,15 +572,15 @@ export default function LoadsPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-sm bg-white/5 rounded-lg text-slate-400 disabled:opacity-30"
+                className="px-3 py-1.5 text-sm bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30"
               >
                 Prev
               </button>
-              <span className="text-sm text-slate-400">Page {page} of {data.totalPages}</span>
+              <span className="text-sm text-gray-600">Page {page} of {data.totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page === data.totalPages}
-                className="px-3 py-1.5 text-sm bg-white/5 rounded-lg text-slate-400 disabled:opacity-30"
+                className="px-3 py-1.5 text-sm bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30"
               >
                 Next
               </button>
@@ -590,9 +590,9 @@ export default function LoadsPage() {
 
         {/* ---- UPGRADE 3: Slide-out Detail Panel ---- */}
         {selectedLoadId && load && (
-          <div className="w-full lg:w-[55%] shrink-0 lg:ml-4 fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto bg-[#161921] border border-white/10 rounded-xl flex flex-col overflow-hidden lg:sticky lg:top-0 h-full lg:h-[calc(100vh-4rem)]">
+          <div className="w-full lg:w-[55%] shrink-0 lg:ml-4 fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto bg-[#161921] border border-gray-200 rounded-xl flex flex-col overflow-hidden lg:sticky lg:top-0 h-full lg:h-[calc(100vh-4rem)]">
             {/* Mobile close bar */}
-            <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-white/10 text-slate-400 hover:text-white shrink-0">
+            <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-gray-600 hover:text-white shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
             </button>
             <div className="flex flex-1 min-h-0">
@@ -606,7 +606,7 @@ export default function LoadsPage() {
                   className={`w-9 h-9 flex items-center justify-center rounded-lg transition ${
                     panelTab === t.key
                       ? "bg-[#C9A84C] text-[#0F1117]"
-                      : "text-slate-400 hover:text-white hover:bg-white/10"
+                      : "text-gray-600 hover:text-white hover:bg-gray-100"
                   }`}
                 >
                   <t.icon className="w-4 h-4" />
@@ -617,7 +617,7 @@ export default function LoadsPage() {
             {/* Panel content */}
             <div className="flex-1 overflow-y-auto">
               {/* Panel header */}
-              <div className="sticky top-0 bg-[#0F1117]/95 backdrop-blur border-b border-white/10 p-4 z-10">
+              <div className="sticky top-0 bg-[#0F1117]/95 backdrop-blur border-b border-gray-200 p-4 z-10">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -626,7 +626,7 @@ export default function LoadsPage() {
                         {load.status.replace(/_/g, " ")}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-gray-600">
                       {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                     </p>
                     <p className="text-xs text-slate-500">{new Date(load.pickupDate).toLocaleDateString()}</p>
@@ -740,7 +740,7 @@ export default function LoadsPage() {
                     {/* Close */}
                     <button
                       onClick={() => setSelectedLoadId(null)}
-                      className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10"
+                      className="p-1.5 text-gray-600 hover:text-white rounded-lg hover:bg-gray-100"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -860,13 +860,13 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
   if (!data || data.sampleSize === 0) return null;
   const diff = currentRate - data.avgRate;
   const diffPct = ((diff / data.avgRate) * 100).toFixed(1);
-  const trendColor = data.trend === "RISING" ? "text-red-400" : data.trend === "FALLING" ? "text-green-400" : "text-slate-400";
+  const trendColor = data.trend === "RISING" ? "text-red-400" : data.trend === "FALLING" ? "text-green-400" : "text-gray-600";
   return (
     <section>
       <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Lane Rate Intelligence</h3>
-      <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
+      <div className="p-3 bg-gray-100 rounded-lg border border-gray-200 space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-400">{originState} → {destState} ({data.equipmentType || equipment})</span>
+          <span className="text-gray-600">{originState} → {destState} ({data.equipmentType || equipment})</span>
           <span className="text-slate-500">{data.sampleSize} loads</span>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -884,8 +884,8 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
           </div>
         </div>
         <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
-          <span className="text-slate-400">
-            Your rate: <span className={diff > 0 ? "text-green-400" : diff < 0 ? "text-red-400" : "text-slate-300"}>
+          <span className="text-gray-600">
+            Your rate: <span className={diff > 0 ? "text-green-400" : diff < 0 ? "text-red-400" : "text-gray-700"}>
               {diff > 0 ? "+" : ""}{diffPct}% vs avg
             </span>
           </span>
@@ -904,7 +904,7 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
 function Detail({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
   return (
     <div>
-      <div className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">{icon}{label}</div>
+      <div className="flex items-center gap-1 text-xs text-gray-600 mb-0.5">{icon}{label}</div>
       <p className="text-sm text-white">{value}</p>
     </div>
   );
@@ -916,11 +916,11 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
     <div className="space-y-5">
       {/* Reference chips */}
       <div className="flex flex-wrap gap-2">
-        <span className="px-2.5 py-1 bg-white/5 rounded-lg text-xs text-slate-300 border border-white/10">
+        <span className="px-2.5 py-1 bg-gray-100 rounded-lg text-xs text-gray-700 border border-gray-200">
           Ref: {load.referenceNumber}
         </span>
         {load.freightClass && (
-          <span className="px-2.5 py-1 bg-white/5 rounded-lg text-xs text-slate-300 border border-white/10">
+          <span className="px-2.5 py-1 bg-gray-100 rounded-lg text-xs text-gray-700 border border-gray-200">
             Class: {load.freightClass}
           </span>
         )}
@@ -930,7 +930,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           </span>
         )}
         {load.bondType && (
-          <span className="px-2.5 py-1 bg-white/5 rounded-lg text-xs text-slate-300 border border-white/10">
+          <span className="px-2.5 py-1 bg-gray-100 rounded-lg text-xs text-gray-700 border border-gray-200">
             Bond: {load.bondType}
           </span>
         )}
@@ -954,7 +954,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           <div className="pb-2">
             <p className="text-xs text-slate-500 uppercase tracking-wider">Pickup</p>
             <p className="text-white font-medium">{load.originCity}, {load.originState} {load.originZip || ""}</p>
-            <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
+            <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
               <span>Requested: {new Date(load.pickupDate).toLocaleDateString()}</span>
             </div>
           </div>
@@ -969,7 +969,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
             <p className="text-xs text-slate-500 uppercase tracking-wider">Delivery</p>
             <p className="text-white font-medium">{load.destCity}, {load.destState} {load.destZip || ""}</p>
             {load.deliveryDate && (
-              <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
+              <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
                 <span>Requested: {new Date(load.deliveryDate).toLocaleDateString()}</span>
               </div>
             )}
@@ -977,7 +977,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         </div>
 
         {load.distance && (
-          <p className="text-xs text-slate-400 pl-6 pt-1">Distance: {load.distance} miles</p>
+          <p className="text-xs text-gray-600 pl-6 pt-1">Distance: {load.distance} miles</p>
         )}
       </section>
 
@@ -1003,13 +1003,13 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         {load.accessorials && load.accessorials.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {load.accessorials.map((a) => (
-              <span key={a} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-300">{a}</span>
+              <span key={a} className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{a}</span>
             ))}
           </div>
         )}
         {load.specialInstructions && (
-          <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10">
-            <span className="text-xs text-slate-400">Special Instructions</span>
+          <div className="mt-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+            <span className="text-xs text-gray-600">Special Instructions</span>
             <p className="text-sm text-white mt-1">{load.specialInstructions}</p>
           </div>
         )}
@@ -1023,10 +1023,10 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           <span className="text-2xl font-bold">{load.rate.toLocaleString()}</span>
         </div>
         {load.distance && (
-          <p className="text-xs text-slate-400 mt-1">${(load.rate / load.distance).toFixed(2)}/mile</p>
+          <p className="text-xs text-gray-600 mt-1">${(load.rate / load.distance).toFixed(2)}/mile</p>
         )}
         {canSeeMargin && load.tenders && load.tenders.length > 0 && (
-          <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+          <div className="mt-2 p-2 bg-gray-100 rounded-lg border border-gray-200">
             {(() => {
               const accepted = load.tenders.find((t) => t.status === "ACCEPTED");
               if (!accepted) return <p className="text-xs text-slate-500">No accepted tender yet</p>;
@@ -1035,7 +1035,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
               const pct = load.rate > 0 ? ((margin / load.rate) * 100).toFixed(1) : "0";
               return (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Margin</span>
+                  <span className="text-xs text-gray-600">Margin</span>
                   <span className={`text-sm font-medium ${margin >= 0 ? "text-green-400" : "text-red-400"}`}>
                     ${margin.toLocaleString()} ({pct}%)
                   </span>
@@ -1059,7 +1059,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
             </p>
           )}
           {load.poster && (
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-gray-600 mt-1">
               Posted by {load.poster.company || `${load.poster.firstName} ${load.poster.lastName}`}
               {load.poster.phone ? ` | ${load.poster.phone}` : ""}
             </p>
@@ -1108,8 +1108,8 @@ function PanelTracking({ load }: { load: Load }) {
           );
         })}
       </div>
-      <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
-        <p className="text-xs text-slate-400">
+      <div className="mt-4 p-3 bg-gray-100 rounded-lg border border-gray-200">
+        <p className="text-xs text-gray-600">
           Check calls and ETA tracking details will appear here once GPS integration is active.
         </p>
       </div>
@@ -1166,7 +1166,7 @@ function PanelDocuments({ load }: { load: Load }) {
               href={doc.fileUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 text-sm text-slate-300 hover:text-[#C9A84C] p-2 bg-white/5 rounded-lg border border-white/10 transition"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#C9A84C] p-2 bg-gray-100 rounded-lg border border-gray-200 transition"
             >
               <FileText className="w-4 h-4" /> {doc.fileName}
             </a>
@@ -1185,23 +1185,23 @@ function PanelHistory({ load }: { load: Load }) {
     <div className="space-y-4">
       <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider">Audit Trail</h3>
       <div className="space-y-2">
-        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-          <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+          <Clock className="w-4 h-4 text-gray-600 shrink-0" />
           <div>
             <p className="text-sm text-white">Load created</p>
-            <p className="text-xs text-slate-400">{new Date(load.createdAt).toLocaleString()}</p>
+            <p className="text-xs text-gray-600">{new Date(load.createdAt).toLocaleString()}</p>
           </div>
         </div>
         {load.datPostedAt && (
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+          <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
             <Globe className="w-4 h-4 text-green-400 shrink-0" />
             <div>
               <p className="text-sm text-white">Posted to DAT</p>
-              <p className="text-xs text-slate-400">{new Date(load.datPostedAt).toLocaleString()}</p>
+              <p className="text-xs text-gray-600">{new Date(load.datPostedAt).toLocaleString()}</p>
             </div>
           </div>
         )}
-        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+        <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
           <div className={`w-3 h-3 rounded-full shrink-0 ${
             STATUS_COLORS[load.status]?.includes("green") ? "bg-green-500" : "bg-[#C9A84C]"
           }`} />
@@ -1213,13 +1213,13 @@ function PanelHistory({ load }: { load: Load }) {
           <>
             <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider pt-2">Tender Events</h4>
             {load.tenders.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+              <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
                 <Send className="w-4 h-4 text-blue-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white truncate">
                     Tender to {t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}
                   </p>
-                  <p className="text-xs text-slate-400">{new Date(t.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleString()}</p>
                 </div>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${TENDER_COLORS[t.status] || ""}`}>
                   {t.status}
@@ -1278,12 +1278,12 @@ function PanelCarrier({
       {load.carrier && (
         <section>
           <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Assigned Carrier</h3>
-          <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+          <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
             <p className="text-white font-medium">
               {load.carrier.company || `${load.carrier.firstName} ${load.carrier.lastName}`}
             </p>
             {load.carrier.phone && (
-              <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
+              <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
                 <Phone className="w-3.5 h-3.5" /> {load.carrier.phone}
               </p>
             )}
@@ -1303,7 +1303,7 @@ function PanelCarrier({
               const isRed = c.complianceStatus === "red";
               const isAmber = c.complianceStatus === "amber";
               return (
-                <div key={c.carrierId} className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/10">
+                <div key={c.carrierId} className="flex items-center justify-between p-2 bg-gray-100 rounded-lg border border-gray-200">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${isRed ? "bg-red-500" : isAmber ? "bg-amber-500" : "bg-green-500"}`} />
                     <div className="min-w-0">
@@ -1312,7 +1312,7 @@ function PanelCarrier({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-400">{c.matchScore}%</span>
+                    <span className="text-xs text-gray-600">{c.matchScore}%</span>
                     {isRed ? (
                       <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs">Non-Compliant</span>
                     ) : (
@@ -1340,7 +1340,7 @@ function PanelCarrier({
           </h3>
           <div className="space-y-2">
             {datResponses.responses.map((r) => (
-              <div key={r.id} className="p-2 bg-white/5 rounded-lg border border-white/10">
+              <div key={r.id} className="p-2 bg-gray-100 rounded-lg border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white">{r.carrierName}</p>
@@ -1374,7 +1374,7 @@ function PanelCarrier({
                 </button>
                 <button
                   onClick={onAdvancedDat}
-                  className="flex-1 px-3 py-2 bg-white/5 text-slate-300 rounded-lg text-xs hover:bg-white/10 border border-white/10"
+                  className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-100 border border-gray-200"
                 >
                   Advanced Post
                 </button>
@@ -1399,12 +1399,12 @@ function PanelCarrier({
           <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Tender History</h3>
           <div className="space-y-2">
             {tenders.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/10">
+              <div key={t.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-lg border border-gray-200">
                 <div className="min-w-0">
                   <p className="text-sm text-white truncate">
                     {t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}
                   </p>
-                  <p className="text-xs text-slate-400">{new Date(t.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {canSeeMargin ? (
@@ -1441,7 +1441,7 @@ function PanelExceptions({ load }: { load: Load }) {
           <p className="text-sm text-red-400 font-medium">
             {load.status === "TONU" ? "TONU \u2014 Truck Ordered Not Used" : "Load Cancelled"}
           </p>
-          <p className="text-xs text-slate-400 mt-1">Review claims or delays associated with this load.</p>
+          <p className="text-xs text-gray-600 mt-1">Review claims or delays associated with this load.</p>
         </div>
       ) : (
         <p className="text-sm text-slate-500">No exceptions or issues reported for this load.</p>
@@ -1513,7 +1513,7 @@ function TenderForm({
   isPending: boolean;
 }) {
   const inputCls =
-    "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
+    "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
@@ -1596,9 +1596,9 @@ function DatAdvancedForm({
   isError: boolean;
 }) {
   const inputCls =
-    "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
+    "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
   const selCls =
-    "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
+    "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
@@ -1660,7 +1660,7 @@ function DatAdvancedForm({
           value={form.comments}
           onChange={(e) => setForm((f) => ({ ...f, comments: e.target.value }))}
           rows={2}
-          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 resize-none"
+          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 resize-none"
         />
       </div>
       {isError && <p className="text-xs text-red-400">Failed to post. Please try again.</p>}

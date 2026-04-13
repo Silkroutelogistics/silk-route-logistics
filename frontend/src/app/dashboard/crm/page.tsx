@@ -36,7 +36,7 @@ interface CustomerStats { totalCustomers: number; activeCustomers: number; total
 
 const STATUS_COLORS: Record<string, string> = {
   Active: "bg-green-500/20 text-green-400",
-  Inactive: "bg-slate-500/20 text-slate-400",
+  Inactive: "bg-slate-500/20 text-gray-600",
   Prospect: "bg-blue-500/20 text-blue-400",
 };
 
@@ -45,7 +45,7 @@ const CREDIT_COLORS: Record<string, string> = {
   CONDITIONAL: "bg-yellow-500/20 text-yellow-400",
   DENIED: "bg-red-500/20 text-red-400",
   PENDING_REVIEW: "bg-blue-500/20 text-blue-400",
-  NOT_CHECKED: "bg-slate-500/20 text-slate-400",
+  NOT_CHECKED: "bg-slate-500/20 text-gray-600",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -55,7 +55,7 @@ const TYPE_COLORS: Record<string, string> = {
   DISTRIBUTOR: "bg-orange-500/20 text-orange-400",
   RETAILER: "bg-pink-500/20 text-pink-400",
   GOVERNMENT: "bg-emerald-500/20 text-emerald-400",
-  OTHER: "bg-slate-500/20 text-slate-400",
+  OTHER: "bg-slate-500/20 text-gray-600",
 };
 
 export default function CRMPage() {
@@ -432,7 +432,7 @@ export default function CRMPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Customer Relationship Management</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage shippers, contacts, credit, and relationships</p>
+          <p className="text-sm text-gray-600 mt-1">Manage shippers, contacts, credit, and relationships</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={openEmailModal} className="flex items-center gap-1.5 px-3 py-2 border border-gold text-gold font-medium rounded-lg text-xs hover:bg-gold/10">
@@ -466,14 +466,14 @@ export default function CRMPage() {
       {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customers..."
-            className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
-        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {["", "Active", "Prospect", "Inactive"].map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition ${statusFilter === s ? "bg-gold text-navy" : "text-slate-400 hover:text-white"}`}>
+              className={`px-3 py-1.5 rounded text-xs font-medium transition ${statusFilter === s ? "bg-gold text-navy" : "text-gray-600 hover:text-white"}`}>
               {s || "All"}
             </button>
           ))}
@@ -485,7 +485,7 @@ export default function CRMPage() {
         {data?.customers?.map((c) => {
           const isExp = expanded === c.id;
           return (
-            <div key={c.id} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+            <div key={c.id} className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
               <button onClick={() => setExpanded(isExp ? null : c.id)} className="w-full text-left p-5 transition" style={{ background: isExp ? 'var(--srl-bg-elevated)' : 'transparent' }}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
@@ -503,7 +503,7 @@ export default function CRMPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-slate-400 mt-1 flex-wrap">
+                      <div className="flex items-center gap-4 text-xs text-gray-600 mt-1 flex-wrap">
                         {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {c.email}</span>}
                         {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {c.phone}</span>}
                         {c.city && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {c.city}, {c.state}</span>}
@@ -522,7 +522,7 @@ export default function CRMPage() {
                         <Star key={i} className={`w-3 h-3 ${i < c.rating ? "text-gold fill-gold" : "text-slate-600"}`} />
                       ))}
                     </div>
-                    {isExp ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                    {isExp ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                   </div>
                 </div>
               </button>
@@ -541,10 +541,10 @@ export default function CRMPage() {
                     {c.type === "BROKER" && <InfoRow label="MC Number" value={c.mcNumber || "—"} />}
                   </div>
                   {c.billingAddress && (
-                    <div><span className="text-xs text-slate-500">Billing Address</span><p className="text-sm text-slate-300">{c.billingAddress}</p></div>
+                    <div><span className="text-xs text-slate-500">Billing Address</span><p className="text-sm text-gray-700">{c.billingAddress}</p></div>
                   )}
                   {c.notes && (
-                    <div><span className="text-xs text-slate-500">Notes</span><p className="text-sm text-slate-300 mt-1">{c.notes}</p></div>
+                    <div><span className="text-xs text-slate-500">Notes</span><p className="text-sm text-gray-700 mt-1">{c.notes}</p></div>
                   )}
 
                   {/* Contacts Section */}
@@ -559,14 +559,14 @@ export default function CRMPage() {
                     {contacts && contacts.length > 0 ? (
                       <div className="grid sm:grid-cols-2 gap-2">
                         {contacts.map((ct) => (
-                          <div key={ct.id} className="bg-white/5 rounded-lg border border-white/10 p-3 flex items-start justify-between">
+                          <div key={ct.id} className="bg-gray-100 rounded-lg border border-gray-200 p-3 flex items-start justify-between">
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className="text-sm text-white font-medium">{ct.name}</p>
                                 {ct.isPrimary && <span className="text-xs px-1.5 py-0.5 rounded bg-gold/20 text-gold">Primary</span>}
                               </div>
                               {ct.title && <p className="text-xs text-slate-500">{ct.title}</p>}
-                              <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                                 {ct.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {ct.email}</span>}
                                 {ct.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {ct.phone}</span>}
                               </div>
@@ -585,12 +585,12 @@ export default function CRMPage() {
                       </div>
                     ) : c.contactName ? (
                       <div className="grid sm:grid-cols-2 gap-2">
-                        <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                        <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
                           <div className="flex items-center gap-2">
                             <p className="text-sm text-white font-medium">{c.contactName}</p>
                             <span className="text-xs px-1.5 py-0.5 rounded bg-gold/20 text-gold">Primary</span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                             {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {c.email}</span>}
                             {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {c.phone}</span>}
                           </div>
@@ -612,21 +612,21 @@ export default function CRMPage() {
                     </div>
 
                     {showLogForm === c.id && (
-                      <div className="bg-white/5 rounded-lg border border-white/10 p-3 mb-3 space-y-2">
+                      <div className="bg-gray-100 rounded-lg border border-gray-200 p-3 mb-3 space-y-2">
                         <div className="flex items-center gap-2">
                           <select value={logForm.type} onChange={(e) => setLogForm((f) => ({ ...f, type: e.target.value }))}
-                            className="px-2.5 py-1.5 bg-white/10 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-gold/50">
+                            className="px-2.5 py-1.5 bg-white/10 border border-gray-200 rounded text-xs text-white focus:outline-none focus:border-gold/50">
                             {["Call", "Email", "Meeting", "Note"].map((t) => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
                           </select>
                         </div>
                         <textarea value={logForm.notes} onChange={(e) => setLogForm((f) => ({ ...f, notes: e.target.value }))}
                           rows={2} placeholder="Notes about this activity..."
-                          className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50 resize-none" />
+                          className="w-full px-3 py-2 bg-white/10 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50 resize-none" />
                         <div className="flex gap-2">
                           <button onClick={() => saveCallLog(c.id)} disabled={!logForm.notes.trim()}
                             className="px-3 py-1.5 bg-gold text-navy rounded text-xs font-medium hover:bg-gold/90 disabled:opacity-50">Save</button>
                           <button onClick={() => { setShowLogForm(null); setLogForm({ type: "Call", notes: "" }); }}
-                            className="px-3 py-1.5 text-slate-400 hover:text-white text-xs">Cancel</button>
+                            className="px-3 py-1.5 text-gray-600 hover:text-white text-xs">Cancel</button>
                         </div>
                       </div>
                     )}
@@ -647,8 +647,8 @@ export default function CRMPage() {
                               <div className="mt-0.5">{icons[log.type] || icons.Note}</div>
                               <div className="min-w-0">
                                 <span className="text-xs text-slate-500">{dateStr}</span>
-                                <span className="text-slate-400 mx-1.5">&mdash;</span>
-                                <span className="text-slate-300">{log.notes}</span>
+                                <span className="text-gray-600 mx-1.5">&mdash;</span>
+                                <span className="text-gray-700">{log.notes}</span>
                                 <span className="text-xs text-slate-600 ml-2">&mdash; {log.by}</span>
                               </div>
                             </div>
@@ -662,14 +662,14 @@ export default function CRMPage() {
 
                   {/* SEC EDGAR Credit Check Result */}
                   {secCredit[c.id] && !secCredit[c.id].error && (
-                    <div className="bg-white/5 rounded-lg border border-white/10 p-4 space-y-3">
+                    <div className="bg-gray-100 rounded-lg border border-gray-200 p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-medium text-white flex items-center gap-1.5">
                           <ShieldCheck className="w-4 h-4 text-gold" /> SEC EDGAR Credit Report
                         </h3>
                         {(() => {
                           const r = secCredit[c.id].riskAssessment as string;
-                          const colors: Record<string, string> = { LOW: "bg-green-500/20 text-green-400", MEDIUM: "bg-yellow-500/20 text-yellow-400", HIGH: "bg-red-500/20 text-red-400", UNKNOWN: "bg-slate-500/20 text-slate-400" };
+                          const colors: Record<string, string> = { LOW: "bg-green-500/20 text-green-400", MEDIUM: "bg-yellow-500/20 text-yellow-400", HIGH: "bg-red-500/20 text-red-400", UNKNOWN: "bg-slate-500/20 text-gray-600" };
                           return <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[r] || colors.UNKNOWN}`}>{r} RISK</span>;
                         })()}
                       </div>
@@ -678,7 +678,7 @@ export default function CRMPage() {
                           <div className="flex items-center gap-3 text-sm">
                             <span className="text-white font-medium">{secCredit[c.id].companyName}</span>
                             {secCredit[c.id].ticker && <span className="text-gold font-mono text-xs bg-gold/10 px-1.5 py-0.5 rounded">{secCredit[c.id].ticker}</span>}
-                            {secCredit[c.id].sicDescription && <span className="text-slate-400 text-xs">{secCredit[c.id].sicDescription}</span>}
+                            {secCredit[c.id].sicDescription && <span className="text-gray-600 text-xs">{secCredit[c.id].sicDescription}</span>}
                           </div>
                           {secCredit[c.id].financials ? (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -688,14 +688,14 @@ export default function CRMPage() {
                               <SecMetric label="Debt/Equity" value={secCredit[c.id].financials.debtToEquityRatio} isCurrency={false} />
                             </div>
                           ) : (
-                            <p className="text-xs text-slate-400">No XBRL financial data available for this company.</p>
+                            <p className="text-xs text-gray-600">No XBRL financial data available for this company.</p>
                           )}
                           {secCredit[c.id].latestAnnualFiling && (
                             <p className="text-xs text-slate-500">Latest 10-K filed: {secCredit[c.id].latestAnnualFiling}</p>
                           )}
                         </>
                       ) : (
-                        <p className="text-xs text-slate-400">No public filings found &mdash; company may be private.</p>
+                        <p className="text-xs text-gray-600">No public filings found &mdash; company may be private.</p>
                       )}
                     </div>
                   )}
@@ -724,7 +724,7 @@ export default function CRMPage() {
                     <button
                       onClick={() => handleSecCreditCheck(c.id, c.name)}
                       disabled={secLoading === c.id}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-slate-600 text-slate-300 rounded-lg text-xs hover:bg-white/10 disabled:opacity-50"
+                      className="flex items-center gap-1 px-3 py-1.5 border border-slate-600 text-gray-700 rounded-lg text-xs hover:bg-gray-100 disabled:opacity-50"
                     >
                       {secLoading === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
                       {secLoading === c.id ? "Checking..." : "Check Credit (SEC)"}
@@ -741,9 +741,9 @@ export default function CRMPage() {
         })}
         {(!data?.customers || data.customers.length === 0) && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Users className="w-12 h-12 text-slate-300 mb-4" />
+            <Users className="w-12 h-12 text-gray-700 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-1">No customers yet</h3>
-            <p className="text-sm text-slate-400 mb-4 max-w-sm">Add your first customer to start building your CRM</p>
+            <p className="text-sm text-gray-600 mb-4 max-w-sm">Add your first customer to start building your CRM</p>
             <button onClick={() => setShowCreate(true)} className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Add Customer</button>
           </div>
         )}
@@ -756,9 +756,9 @@ export default function CRMPage() {
             <div className="grid grid-cols-2 gap-3">
               <FInput label="Company Name *" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} />
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Customer Type</label>
+                <label className="block text-xs text-gray-600 mb-1">Customer Type</label>
                 <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
                   {["SHIPPER", "BROKER", "MANUFACTURER", "DISTRIBUTOR", "RETAILER", "GOVERNMENT", "OTHER"].map(t =>
                     <option key={t} value={t}>{t}</option>
                   )}
@@ -787,7 +787,7 @@ export default function CRMPage() {
                   if (addr.unit) setShowUnit(true);
                 }}
                 placeholder="Start typing an address..."
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50"
               />
               {(showUnit || form.unit) ? (
                 <div className="mt-2">
@@ -796,7 +796,7 @@ export default function CRMPage() {
                     value={form.unit}
                     onChange={(e) => setForm(f => ({ ...f, unit: e.target.value }))}
                     placeholder="e.g. Suite 200, Unit 4B, Apt 12"
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
                   />
                 </div>
               ) : (
@@ -830,7 +830,7 @@ export default function CRMPage() {
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Payment Terms</label>
                 <select value={form.paymentTerms} onChange={(e) => setForm((f) => ({ ...f, paymentTerms: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50">
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
                   {["Net 15", "Net 30", "Net 45", "Net 60", "COD", "Prepaid"].map(t =>
                     <option key={t} value={t}>{t}</option>
                   )}
@@ -846,7 +846,7 @@ export default function CRMPage() {
               <div className="space-y-2">
                 {createContacts.map((ct, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                    <div className="flex items-center gap-3 text-sm text-gray-900 min-w-0">
+                    <div className="flex items-center gap-3 text-sm text-white min-w-0">
                       <span className="font-medium truncate">{ct.name}</span>
                       {ct.title && <span className="text-gray-500 truncate">{ct.title}</span>}
                       {ct.email && <span className="text-gray-500 truncate">{ct.email}</span>}
@@ -862,13 +862,13 @@ export default function CRMPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <input value={createContactForm.name} onChange={(e) => setCreateContactForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Name *" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  placeholder="Name *" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 <input value={createContactForm.title} onChange={(e) => setCreateContactForm((f) => ({ ...f, title: e.target.value }))}
-                  placeholder="Title" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  placeholder="Title" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 <input value={createContactForm.email} onChange={(e) => setCreateContactForm((f) => ({ ...f, email: e.target.value }))}
-                  placeholder="Email" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  placeholder="Email" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
                 <input value={createContactForm.phone} onChange={(e) => setCreateContactForm((f) => ({ ...f, phone: e.target.value }))}
-                  placeholder="Phone" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
+                  placeholder="Phone" className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
               </div>
               <button type="button" onClick={() => {
                 if (!createContactForm.name.trim()) return;
@@ -921,7 +921,7 @@ export default function CRMPage() {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Credit Status</label>
               <select value={creditForm.creditStatus} onChange={(e) => setCreditForm((f) => ({ ...f, creditStatus: e.target.value }))}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-amber-500/50">
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
                 {["NOT_CHECKED", "PENDING_REVIEW", "APPROVED", "CONDITIONAL", "DENIED"].map(s =>
                   <option key={s} value={s}>{s.replace("_", " ")}</option>
                 )}
@@ -939,12 +939,12 @@ export default function CRMPage() {
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4">
           <div className="rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" style={{ background: 'var(--srl-bg-surface)', border: '1px solid var(--srl-border)' }}>
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <div>
                 <h2 className="text-lg font-bold text-white">Send Email Campaign</h2>
-                <p className="text-sm text-slate-400 mt-0.5">Send branded emails to your CRM contacts</p>
+                <p className="text-sm text-gray-600 mt-0.5">Send branded emails to your CRM contacts</p>
               </div>
-              <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowEmailModal(false)} className="text-gray-600 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -978,16 +978,16 @@ export default function CRMPage() {
                 <>
                   {/* Recipients */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Recipients</label>
-                    <div className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
-                      <label className="flex items-center gap-2 text-sm text-slate-300 pb-2 border-b border-white/5 cursor-pointer">
+                    <label className="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">Recipients</label>
+                    <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 pb-2 border-b border-white/5 cursor-pointer">
                         <input type="checkbox" checked={selectAllRecipients}
                           onChange={(e) => handleToggleAllRecipients(e.target.checked)}
                           className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20" />
                         <span className="font-medium">All Customers with Email ({(data?.customers || []).filter((c) => c.email).length})</span>
                       </label>
                       {(data?.customers || []).map((c) => (
-                        <label key={c.id} className={`flex items-center gap-2 text-sm cursor-pointer ${c.email ? "text-slate-300" : "text-slate-600"}`}>
+                        <label key={c.id} className={`flex items-center gap-2 text-sm cursor-pointer ${c.email ? "text-gray-700" : "text-slate-600"}`}>
                           <input type="checkbox" checked={selectedRecipients.has(c.id)}
                             onChange={() => handleToggleRecipient(c.id)}
                             disabled={!c.email}
@@ -1005,9 +1005,9 @@ export default function CRMPage() {
 
                   {/* Template */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Template</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">Template</label>
                     <select value={emailTemplate} onChange={(e) => handleTemplateChange(e.target.value as TemplateType)}
-                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
+                      className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50">
                       <option value="INTRO" className="bg-slate-900">Company Introduction</option>
                       <option value="FOLLOW_UP" className="bg-slate-900">Follow-Up</option>
                       <option value="CAPACITY" className="bg-slate-900">Capacity Pitch</option>
@@ -1017,30 +1017,30 @@ export default function CRMPage() {
 
                   {/* Subject */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Subject</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">Subject</label>
                     <input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50" />
+                      className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50" />
                   </div>
 
                   {/* Custom body textarea */}
                   {emailTemplate === "CUSTOM" && (
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                      <label className="block text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">
                         Message Body <span className="text-slate-600 normal-case">(HTML supported, use {"{contactName}"} for personalization)</span>
                       </label>
                       <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={8}
                         placeholder="<p>Hi {contactName},</p><p>Your message here...</p>"
-                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 font-mono" />
+                        className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 font-mono" />
                     </div>
                   )}
 
                   {/* Preview */}
                   {emailTemplate !== "CUSTOM" && (
                     <div>
-                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">
                         <Eye className="w-3.5 h-3.5" /> Preview
                       </label>
-                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
+                      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                         <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
                           <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
                         </div>
@@ -1057,10 +1057,10 @@ export default function CRMPage() {
 
                   {emailTemplate === "CUSTOM" && emailBody && (
                     <div>
-                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">
                         <Eye className="w-3.5 h-3.5" /> Preview
                       </label>
-                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
+                      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                         <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
                           <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
                         </div>
@@ -1077,8 +1077,8 @@ export default function CRMPage() {
             </div>
 
             {!emailResult && (
-              <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
-                <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm">
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200">
+                <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-gray-600 hover:text-white text-sm">
                   Cancel
                 </button>
                 <button onClick={handleSendCampaign}
@@ -1106,14 +1106,14 @@ export default function CRMPage() {
       {/* CSV Import Preview Modal */}
       {showCsvPreview && (
         <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
+          <div className="bg-[#0f172a] border border-gray-200 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <div>
                 <h2 className="text-lg font-bold text-white">CSV Import Preview</h2>
-                <p className="text-sm text-slate-400 mt-0.5">Found {csvRows.length} contact{csvRows.length !== 1 ? "s" : ""}. Ready to import?</p>
+                <p className="text-sm text-gray-600 mt-0.5">Found {csvRows.length} contact{csvRows.length !== 1 ? "s" : ""}. Ready to import?</p>
               </div>
               <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); setCsvResult(null); }}
-                className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                className="text-gray-600 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="flex-1 overflow-auto p-5">
@@ -1137,7 +1137,7 @@ export default function CRMPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-white/10">
+                        <tr className="border-b border-gray-200">
                           {Object.keys(csvRows[0] || {}).slice(0, 8).map((h) => (
                             <th key={h} className="text-left py-2 px-2 text-xs text-slate-500 font-medium">{h}</th>
                           ))}
@@ -1147,7 +1147,7 @@ export default function CRMPage() {
                         {csvRows.slice(0, 5).map((row, i) => (
                           <tr key={i} className="border-b border-white/5">
                             {Object.keys(csvRows[0] || {}).slice(0, 8).map((h) => (
-                              <td key={h} className="py-2 px-2 text-slate-300 text-xs truncate max-w-[150px]">{row[h] || "—"}</td>
+                              <td key={h} className="py-2 px-2 text-gray-700 text-xs truncate max-w-[150px]">{row[h] || "—"}</td>
                             ))}
                           </tr>
                         ))}
@@ -1160,9 +1160,9 @@ export default function CRMPage() {
             </div>
 
             {!csvResult && (
-              <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200">
                 <button onClick={() => { setShowCsvPreview(false); setCsvRows([]); }}
-                  className="px-4 py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
+                  className="px-4 py-2 text-gray-600 hover:text-white text-sm">Cancel</button>
                 <button onClick={handleCsvImport} disabled={csvImporting}
                   className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
                   {csvImporting ? (
@@ -1182,10 +1182,10 @@ export default function CRMPage() {
 
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color?: string }) {
   return (
-    <div className="bg-white/5 rounded-xl border border-white/10 p-5">
+    <div className="bg-gray-100 rounded-xl border border-gray-200 p-5">
       <div className="flex items-center gap-3 mb-2">
         <div className="text-gold">{icon}</div>
-        <span className="text-sm text-slate-400">{label}</span>
+        <span className="text-sm text-gray-600">{label}</span>
       </div>
       <p className={`text-2xl font-bold ${color || "text-white"}`}>{value}</p>
     </div>
@@ -1208,7 +1208,7 @@ function FInput({ label, value, onChange, placeholder, type }: {
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || label.replace(" *", "")}
-        type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
+        type={type || "text"} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
     </div>
   );
 }
@@ -1349,7 +1349,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setShowDropdown(true)}
           placeholder={placeholder}
-          className={className ? `pl-9 ${className}` : "w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"}
+          className={className ? `pl-9 ${className}` : "w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"}
           autoComplete="off"
         />
         {loading && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />}
@@ -1358,7 +1358,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
           {results.map((r) => (
             <button key={r.placeId} onClick={() => handleSelect(r)}
-              className="w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition truncate">
+              className="w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-white transition truncate">
               <MapPin className="w-3.5 h-3.5 inline mr-2 text-amber-500" />{r.description}
             </button>
           ))}

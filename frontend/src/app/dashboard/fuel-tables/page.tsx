@@ -217,7 +217,7 @@ export default function FuelTablesPage() {
         <div className="flex items-center gap-3 mb-2">
           <div className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center",
-            accent ? "bg-[#C9A84C]/10 text-[#C9A84C]" : "bg-white/5 text-white/50"
+            accent ? "bg-[#C9A84C]/10 text-[#C9A84C]" : "bg-gray-100 text-white/50"
           )}>
             <Icon className="w-4 h-4" />
           </div>
@@ -279,12 +279,12 @@ export default function FuelTablesPage() {
                 value={lookupPrice}
                 onChange={(e) => setLookupPrice(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                className="w-full pl-7 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/50"
+                className="w-full pl-7 pr-4 py-2 rounded-lg bg-gray-100 border border-gray-200 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-blue-400"
               />
             </div>
             <button
               onClick={handleLookup}
-              className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white/70 hover:bg-white/10 transition"
+              className="px-4 py-2 rounded-lg bg-gray-100 border border-gray-200 text-sm text-white/70 hover:bg-gray-100 transition"
             >
               Lookup
             </button>
@@ -310,7 +310,7 @@ export default function FuelTablesPage() {
                 placeholder="Search tables..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-gray-100 border border-gray-200 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-blue-400"
               />
             </div>
 
@@ -333,12 +333,12 @@ export default function FuelTablesPage() {
                       "rounded-xl border p-4 cursor-pointer transition group",
                       selectedId === table.id
                         ? "border-[#C9A84C]/30 bg-[#C9A84C]/5"
-                        : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]"
+                        : "border-white/5 bg-white/[0.03] hover:border-gray-200 hover:bg-gray-50"
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                        <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                           <Fuel className="w-4 h-4 text-white/40" />
                         </div>
                         <div className="min-w-0">
@@ -410,7 +410,7 @@ export default function FuelTablesPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => openCsvImport(detail.id)}
-                      className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition"
+                      className="p-2 rounded-lg hover:bg-gray-50 text-white/40 hover:text-white/70 transition"
                       title="Import CSV"
                     >
                       <Upload className="w-4 h-4" />
@@ -426,7 +426,7 @@ export default function FuelTablesPage() {
                     </button>
                     <button
                       onClick={() => setSelectedId(null)}
-                      className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition"
+                      className="p-2 rounded-lg hover:bg-gray-50 text-white/40 hover:text-white/70 transition"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -488,7 +488,7 @@ export default function FuelTablesPage() {
                                     {fmtRate(tier.surchargeRate, tier.type)}
                                   </td>
                                   <td className="py-2.5">
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 uppercase">
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-white/50 uppercase">
                                       {tier.type}
                                     </span>
                                   </td>

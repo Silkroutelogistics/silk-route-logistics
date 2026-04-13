@@ -510,26 +510,103 @@ export default function ScorecardPage() {
 
                   {/* Tenders Tab */}
                   {activeTab === "tenders" && (
-                    <PlaceholderTab
-                      title="Tender Acceptance Stats"
-                      icon={FileCheck}
-                    />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: "Acceptance Rate", value: `${(carriers.find((c) => c.id === selectedCarrierId) as any)?.acceptanceRate?.toFixed(1) || 0}%`, color: "text-green-400" },
+                          { label: "Tenders Offered", value: (carriers.find((c) => c.id === selectedCarrierId) as any)?.tendersTotal || 0, color: "text-white" },
+                          { label: "Declined", value: (carriers.find((c) => c.id === selectedCarrierId) as any)?.tendersDeclined || 0, color: "text-red-400" },
+                        ].map((s) => (
+                          <div key={s.label} className="bg-white/[0.03] border border-white/5 rounded-lg p-3 text-center">
+                            <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                            <p className="text-[10px] text-slate-500 mt-1">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
+                        <p className="text-xs text-slate-500 mb-2">Tender acceptance rate measures how often this carrier accepts load offers. Higher rates indicate reliability and strong lane commitment.</p>
+                        <p className="text-xs text-slate-600">Data from all tenders sent to this carrier.</p>
+                      </div>
+                    </div>
                   )}
 
                   {/* Load Updates Tab */}
                   {activeTab === "updates" && (
-                    <PlaceholderTab
-                      title="Missing Pickup/Dropoff Times & PODs"
-                      icon={Clock}
-                    />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: "Completed Loads", value: (carriers.find((c) => c.id === selectedCarrierId) as any)?.completedLoads || 0 },
+                          { label: "Active Loads", value: (carriers.find((c) => c.id === selectedCarrierId) as any)?.activeLoads || 0 },
+                        ].map((s) => (
+                          <div key={s.label} className="bg-white/[0.03] border border-white/5 rounded-lg p-3 text-center">
+                            <p className="text-xl font-bold text-white">{s.value}</p>
+                            <p className="text-[10px] text-slate-500 mt-1">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
+                        <h4 className="text-xs font-medium text-slate-400 mb-2">Load Update Compliance</h4>
+                        {latest && (
+                          <div className="space-y-2">
+                            {[
+                              { label: "On-Time Pickup", value: latest.onTimePickupPct, threshold: 95 },
+                              { label: "On-Time Delivery", value: latest.onTimeDeliveryPct, threshold: 95 },
+                              { label: "Doc Timeliness", value: latest.documentSubmissionTimeliness, threshold: 90 },
+                              { label: "GPS Compliance", value: latest.gpsCompliancePct, threshold: 90 },
+                            ].map((m) => (
+                              <div key={m.label} className="flex items-center gap-3">
+                                <span className="text-xs text-slate-500 w-32">{m.label}</span>
+                                <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${m.value >= m.threshold ? "bg-green-500" : m.value >= 80 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${Math.min(m.value, 100)}%` }} />
+                                </div>
+                                <span className={`text-xs font-medium ${m.value >= m.threshold ? "text-green-400" : "text-yellow-400"}`}>{m.value.toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
 
                   {/* Top Lanes Tab */}
                   {activeTab === "lanes" && (
-                    <PlaceholderTab
-                      title="Most-Used Lanes"
-                      icon={TrendingUp}
-                    />
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-500">Carrier's operating regions and equipment capabilities</p>
+                      {(() => {
+                        const carrier = carriers.find((c) => c.id === selectedCarrierId);
+                        return carrier ? (
+                          <>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
+                              <h4 className="text-xs font-medium text-slate-400 mb-2">Operating Regions</h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(carrier as any).regions?.length > 0
+                                  ? (carrier as any).regions.map((r: string) => (
+                                      <span key={r} className="px-2 py-1 bg-[#C9A84C]/10 text-[#C9A84C] text-[10px] rounded">{r}</span>
+                                    ))
+                                  : <span className="text-xs text-slate-600">No regions specified</span>
+                                }
+                              </div>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
+                              <h4 className="text-xs font-medium text-slate-400 mb-2">Equipment Types</h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(carrier as any).equipment?.length > 0
+                                  ? (carrier as any).equipment.map((e: string) => (
+                                      <span key={e} className="px-2 py-1 bg-blue-500/10 text-blue-400 text-[10px] rounded">{e.replace(/_/g, " ")}</span>
+                                    ))
+                                  : <span className="text-xs text-slate-600">No equipment specified</span>
+                                }
+                              </div>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
+                              <h4 className="text-xs font-medium text-slate-400 mb-2">Revenue</h4>
+                              <p className="text-lg font-bold text-white">${((carrier as any).revenue || 0).toLocaleString()}</p>
+                              <p className="text-[10px] text-slate-500">Total revenue from {(carrier as any).completedLoads || 0} completed loads</p>
+                            </div>
+                          </>
+                        ) : null;
+                      })()}
+                    </div>
                   )}
                 </>
               )}
