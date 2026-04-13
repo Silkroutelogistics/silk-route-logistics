@@ -247,6 +247,7 @@ export default function CarrierPoolPage() {
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
   const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
+  const [inlineEditing, setInlineEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "",
     autoLiabilityProvider: "", autoLiabilityAmount: "", autoLiabilityPolicy: "", autoLiabilityExpiry: "",
@@ -723,11 +724,77 @@ export default function CarrierPoolPage() {
                       </div>
                     )}
 
-                    {isAdmin && (
-                      <button onClick={() => openEdit(selectedCarrier)}
+                    {isAdmin && !inlineEditing && (
+                      <button onClick={() => { openEdit(selectedCarrier); setInlineEditing(true); }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition mt-2">
                         <BarChart3 className="w-3.5 h-3.5" /> Edit Insurance
                       </button>
+                    )}
+                    {inlineEditing && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-gray-900">Edit Insurance Details</h4>
+                          <button onClick={() => setInlineEditing(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Tier</label>
+                          <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
+                            {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        {[
+                          { label: "Auto Liability", prefix: "autoLiability" },
+                          { label: "Motor Cargo Insurance", prefix: "cargoInsurance" },
+                          { label: "General Liability", prefix: "generalLiability" },
+                          { label: "Workers' Compensation", prefix: "workersComp" },
+                        ].map(({ label, prefix }) => (
+                          <div key={prefix}>
+                            <p className="text-xs font-semibold text-gray-700 mb-1">{label}</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input placeholder="Provider" value={(editForm as any)[`${prefix}Provider`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}Provider`]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                              <input placeholder="Policy #" value={(editForm as any)[`${prefix}Policy`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}Policy`]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                              <input placeholder="Amount $" value={(editForm as any)[`${prefix}Amount`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}Amount`]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                              <input type="date" value={(editForm as any)[`${prefix}Expiry`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}Expiry`]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                            </div>
+                          </div>
+                        ))}
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 text-xs text-gray-700">
+                            <input type="checkbox" checked={editForm.additionalInsuredSRL as boolean} onChange={(e) => setEditForm({ ...editForm, additionalInsuredSRL: e.target.checked })} className="rounded" />
+                            SRL listed as Additional Insured
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-700">
+                            <input type="checkbox" checked={editForm.waiverOfSubrogation as boolean} onChange={(e) => setEditForm({ ...editForm, waiverOfSubrogation: e.target.checked })} className="rounded" />
+                            Waiver of Subrogation
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-700">
+                            <input type="checkbox" checked={editForm.thirtyDayCancellationNotice as boolean} onChange={(e) => setEditForm({ ...editForm, thirtyDayCancellationNotice: e.target.checked })} className="rounded" />
+                            30-day cancellation notice
+                          </label>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-gray-700 mb-1">Insurance Agent Contact</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input placeholder="Agent Name" value={editForm.insuranceAgentName} onChange={(e) => setEditForm({ ...editForm, insuranceAgentName: e.target.value })}
+                              className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                            <input placeholder="Agent Email" type="email" value={editForm.insuranceAgentEmail} onChange={(e) => setEditForm({ ...editForm, insuranceAgentEmail: e.target.value })}
+                              className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                            <input placeholder="Agent Phone" value={editForm.insuranceAgentPhone} onChange={(e) => setEditForm({ ...editForm, insuranceAgentPhone: e.target.value })}
+                              className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                            <input placeholder="Agency Name" value={editForm.insuranceAgencyName} onChange={(e) => setEditForm({ ...editForm, insuranceAgencyName: e.target.value })}
+                              className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                          </div>
+                        </div>
+                        <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setInlineEditing(false); }}
+                          className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition">
+                          Save Changes
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
