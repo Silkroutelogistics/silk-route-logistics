@@ -661,9 +661,9 @@ export default function DockSchedulingPage() {
           onChange={(e) => setFacilityFilter(e.target.value)}
           className="bg-white/[0.03] border border-white/5 text-sm text-white rounded-lg px-3 py-2"
         >
-          <option value="" className="bg-[#0a0e1a] text-white">All Facilities</option>
+          <option value="" className=" text-white">All Facilities</option>
           {facilities.map((f) => (
-            <option key={f} value={f} className="bg-[#0a0e1a] text-white">{f}</option>
+            <option key={f} value={f} className=" text-white">{f}</option>
           ))}
         </select>
 
@@ -673,9 +673,9 @@ export default function DockSchedulingPage() {
           onChange={(e) => setTypeFilter(e.target.value)}
           className="bg-white/[0.03] border border-white/5 text-sm text-white rounded-lg px-3 py-2"
         >
-          <option value="" className="bg-[#0a0e1a] text-white">All Types</option>
-          <option value="PICKUP" className="bg-[#0a0e1a] text-white">Pickup</option>
-          <option value="DELIVERY" className="bg-[#0a0e1a] text-white">Delivery</option>
+          <option value="" className=" text-white">All Types</option>
+          <option value="PICKUP" className=" text-white">Pickup</option>
+          <option value="DELIVERY" className=" text-white">Delivery</option>
         </select>
 
         {/* Status Filter */}
@@ -684,9 +684,9 @@ export default function DockSchedulingPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="bg-white/[0.03] border border-white/5 text-sm text-white rounded-lg px-3 py-2"
         >
-          <option value="" className="bg-[#0a0e1a] text-white">All Statuses</option>
+          <option value="" className=" text-white">All Statuses</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
-            <option key={k} value={k} className="bg-[#0a0e1a] text-white">{v}</option>
+            <option key={k} value={k} className=" text-white">{v}</option>
           ))}
         </select>
 

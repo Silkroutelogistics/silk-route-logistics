@@ -260,7 +260,7 @@ export default function PhoneConsolePage() {
   ];
 
   return (
-    <div className="h-[calc(100vh-5rem)] flex flex-col bg-[#0a0e1a] overflow-hidden">
+    <div className="h-[calc(100vh-5rem)] flex flex-col  overflow-hidden">
       {/* Header */}
       <div className="shrink-0 px-6 pt-5 pb-4">
         <div className="flex items-center justify-between mb-5">
@@ -535,7 +535,7 @@ export default function PhoneConsolePage() {
               value={smsTo}
               onChange={(e) => setSmsTo(e.target.value)}
               placeholder="+1 (555) 000-0000"
-              className="w-full px-3 py-2.5 bg-[#0a0e1a] border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40"
+              className="w-full px-3 py-2.5  border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40"
             />
           </div>
           <div>
@@ -545,7 +545,7 @@ export default function PhoneConsolePage() {
               onChange={(e) => setSmsBody(e.target.value)}
               rows={5}
               placeholder="Type your message..."
-              className="w-full px-3 py-2.5 bg-[#0a0e1a] border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
+              className="w-full px-3 py-2.5  border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
             />
             <p className="mt-1 text-xs text-slate-500">{smsBody.length}/160 characters</p>
           </div>

@@ -273,7 +273,7 @@ export default function TaggingRulesPage() {
   // ─── Render ───
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white">
+    <div className="space-y-6 text-white">
       <div className="flex h-[calc(100vh-4rem)]">
         {/* ─── Main Content ─── */}
         <div className={cn("flex-1 overflow-y-auto p-6 transition-all", activeTag && "pr-0")}>
@@ -648,7 +648,7 @@ export default function TaggingRulesPage() {
                         className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white focus:outline-none focus:border-[#C9A84C]/40 transition appearance-none"
                       >
                         {FIELD_OPTIONS.map((f) => (
-                          <option key={f} value={f} className="bg-[#0a0e1a]">
+                          <option key={f} value={f} className="">
                             {f}
                           </option>
                         ))}
@@ -660,7 +660,7 @@ export default function TaggingRulesPage() {
                         className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white focus:outline-none focus:border-[#C9A84C]/40 transition appearance-none"
                       >
                         {OPERATOR_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value} className="bg-[#0a0e1a]">
+                          <option key={o.value} value={o.value} className="">
                             {o.label}
                           </option>
                         ))}

@@ -578,14 +578,22 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-full lg:w-[55%] border-l border-gray-200 bg-[#0c1021] rounded-r-xl flex flex-col lg:flex-row lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 animate-slide-in-right">
+          <div className="w-full lg:w-[55%] border-l border-gray-200 bg-white rounded-r-xl flex flex-col lg:relative lg:inset-auto lg:z-auto lg:sticky lg:top-0 h-full lg:h-[calc(100vh-12rem)] lg:ml-3 shadow-xl overflow-hidden">
             {/* Mobile close bar */}
-            <button onClick={closePanel} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-gray-600 hover:text-white shrink-0">
+            <button onClick={closePanel} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-gray-500 hover:text-gray-900 shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
             </button>
-            <div className="flex flex-1 min-h-0">
-            {/* Vertical Tab Bar */}
-            <div className="w-[44px] shrink-0 border-r border-gray-200 bg-[#0F1117] flex flex-col py-2">
+
+            {/* Panel Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+              <h2 className="text-lg font-semibold text-gray-900 truncate">{selectedCarrier.company}</h2>
+              <button onClick={closePanel} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Horizontal Tab Bar (Cerry-style) */}
+            <div className="flex border-b border-gray-200 px-2 shrink-0">
               {([
                 { key: "profile", icon: User, label: "Profile" },
                 { key: "insurance", icon: Shield, label: "Insurance" },
@@ -596,22 +604,16 @@ export default function CarrierPoolPage() {
                 { key: "history", icon: Clock, label: "History" },
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => setPanelTab(key)} title={label}
-                  className={`w-[44px] h-[40px] flex items-center justify-center relative transition ${panelTab === key ? "text-[#C9A84C]" : "text-gray-600 hover:text-slate-200"}`}>
-                  {panelTab === key && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#C9A84C] rounded-r" />}
-                  <Icon className="w-[18px] h-[18px]" />
+                  className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium transition-all border-b-2 ${panelTab === key ? "border-[#C9A84C] text-[#C9A84C]" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">{label}</span>
                 </button>
               ))}
             </div>
 
+            <div className="flex flex-1 min-h-0">
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto">
-              {/* Panel Header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#2A2F42] shrink-0">
-                <h2 className="text-sm font-bold text-white truncate">{selectedCarrier.company}</h2>
-                <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 text-gray-600 hover:text-white transition">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
               <div className="p-5 space-y-5">
 
@@ -1038,7 +1040,7 @@ export default function CarrierPoolPage() {
 
               </div>
             </div>
-            </div>{/* end inner flex wrapper */}
+            </div>
           </div>
         )}
       </div>

@@ -162,7 +162,7 @@ export default function ContractRatesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-[#0a0e1a] min-h-screen">
+    <div className="p-6 space-y-6  min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -271,7 +271,7 @@ export default function ContractRatesPage() {
           {/* Right: Detail Panel */}
           {panelOpen && selectedRate && (
             <div className="w-[55%] min-w-0 ml-4 transition-all duration-300 ease-in-out">
-              <div className="bg-[#0c1021] rounded-xl border border-white/5 overflow-hidden">
+              <div className="bg-white rounded-xl border border-white/5 overflow-hidden">
                 {/* Panel Header */}
                 <div className="px-5 pt-5 pb-4 border-b border-white/5">
                   <div className="flex items-center justify-between">

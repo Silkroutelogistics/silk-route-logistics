@@ -64,7 +64,7 @@ export default function ShipperDefaultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] p-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

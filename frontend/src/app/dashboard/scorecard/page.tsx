@@ -179,7 +179,7 @@ export default function ScorecardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
+    <div className="space-y-6">
       {/* Header */}
       <div className="px-6 pt-6 pb-4 border-b border-white/5">
         <div className="flex items-center justify-between">
@@ -291,9 +291,9 @@ export default function ScorecardPage() {
 
         {/* Right Panel: Detail or Empty State */}
         {selectedCarrierId ? (
-          <div className="flex-1 bg-[#0c1021] overflow-y-auto">
+          <div className="flex-1 bg-white overflow-y-auto">
             {/* Panel Header */}
-            <div className="sticky top-0 z-10 bg-[#0c1021] border-b border-white/5 px-6 py-4">
+            <div className="sticky top-0 z-10 bg-white border-b border-white/5 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[#C9A84C]/20 flex items-center justify-center">
@@ -614,7 +614,7 @@ export default function ScorecardPage() {
           </div>
         ) : (
           /* Empty State - No Carrier Selected */
-          <div className="flex-1 flex items-center justify-center bg-[#0c1021]">
+          <div className="flex-1 flex items-center justify-center bg-white">
             <div className="text-center max-w-sm">
               <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
                 <Users className="w-10 h-10 text-slate-600" />

@@ -233,7 +233,7 @@ export default function FuelTablesPage() {
   /* ── Render ─────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white">
+    <div className="space-y-6 text-white">
       <div className="max-w-[1600px] mx-auto px-6 py-8">
 
         {/* Header */}

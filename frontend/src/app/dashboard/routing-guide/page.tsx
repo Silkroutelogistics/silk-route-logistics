@@ -206,7 +206,7 @@ export default function RoutingGuidePage() {
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-[#0a0e1a]">
+    <div className="flex h-[calc(100vh-64px)] ">
       {/* ── Left: List ──────────────────────────────────── */}
       <div className={cn("flex flex-col border-r border-white/5 transition-all duration-300", selectedId ? "w-[45%]" : "w-full")}>
         {/* Header */}
@@ -326,7 +326,7 @@ export default function RoutingGuidePage() {
 
       {/* ── Right: Detail Panel (Cerry-style) ──────────── */}
       {selectedId && selected && (
-        <div className="flex-1 flex flex-col bg-[#0c1021] overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white overflow-hidden">
           {/* Panel Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
             <div>

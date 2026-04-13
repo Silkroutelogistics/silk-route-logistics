@@ -213,7 +213,7 @@ export default function PurchaseOrdersPage() {
 
   /* ─── Render ─── */
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white">
+    <div className="space-y-6 text-white">
       {/* Header */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -797,7 +797,7 @@ function CreatePOForm({
   }
 
   const inputClass =
-    "w-full bg-[#0a0e1a] border border-gray-200 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400";
+    "w-full  border border-gray-200 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400";
   const labelClass = "block text-xs text-white/40 mb-1 font-medium";
 
   return (
@@ -899,14 +899,14 @@ function CreatePOForm({
                   placeholder="SKU"
                   value={li.sku}
                   onChange={(e) => updateLineItem(idx, "sku", e.target.value)}
-                  className="bg-[#0a0e1a] border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
+                  className=" border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={li.description}
                   onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-                  className="bg-[#0a0e1a] border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
+                  className=" border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400"
                 />
                 <input
                   type="number"
@@ -914,7 +914,7 @@ function CreatePOForm({
                   placeholder="Qty"
                   value={li.orderedQty}
                   onChange={(e) => updateLineItem(idx, "orderedQty", parseInt(e.target.value) || 1)}
-                  className="bg-[#0a0e1a] border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400 text-right"
+                  className=" border border-gray-200 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400 text-right"
                 />
               </div>
               <button
