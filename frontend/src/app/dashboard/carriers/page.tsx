@@ -579,21 +579,23 @@ export default function CarrierPoolPage() {
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
           <div className="fixed top-0 right-0 bottom-0 w-[620px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
-            {/* Vertical Icon Tab Strip (Cerry-style) */}
-            <div className="w-[52px] shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col items-center py-3 gap-1">
+            {/* Vertical Icon Tab Strip (Cerry-style — colored circles with labels) */}
+            <div className="w-[62px] shrink-0 border-r border-gray-100 bg-white flex flex-col items-center py-4 gap-2">
               {([
-                { key: "profile", icon: User, label: "Profile", color: "text-blue-500 bg-blue-50" },
-                { key: "insurance", icon: Shield, label: "Insurance", color: "text-green-500 bg-green-50" },
-                { key: "compliance", icon: CheckSquare, label: "Compliance", color: "text-purple-500 bg-purple-50" },
-                { key: "compass", icon: Compass, label: "Compass", color: "text-orange-500 bg-orange-50" },
-                { key: "inspections", icon: ClipboardList, label: "Inspections", color: "text-teal-500 bg-teal-50" },
-                { key: "performance", icon: BarChart3, label: "Performance", color: "text-rose-500 bg-rose-50" },
-                { key: "history", icon: Clock, label: "History", color: "text-gray-500 bg-gray-100" },
-              ] as const).map(({ key, icon: Icon, label, color }) => (
+                { key: "profile", icon: User, label: "Profile", activeBg: "bg-blue-500", activeText: "text-white", color: "text-blue-500" },
+                { key: "insurance", icon: Shield, label: "Insurance", activeBg: "bg-green-500", activeText: "text-white", color: "text-green-500" },
+                { key: "compliance", icon: CheckSquare, label: "Compliance", activeBg: "bg-purple-500", activeText: "text-white", color: "text-purple-500" },
+                { key: "compass", icon: Compass, label: "Compass", activeBg: "bg-orange-500", activeText: "text-white", color: "text-orange-500" },
+                { key: "inspections", icon: ClipboardList, label: "Inspect", activeBg: "bg-teal-500", activeText: "text-white", color: "text-teal-500" },
+                { key: "performance", icon: BarChart3, label: "Perform", activeBg: "bg-rose-500", activeText: "text-white", color: "text-rose-500" },
+                { key: "history", icon: Clock, label: "History", activeBg: "bg-gray-600", activeText: "text-white", color: "text-gray-500" },
+              ] as const).map(({ key, icon: Icon, label, activeBg, activeText, color }) => (
                 <button key={key} onClick={() => setPanelTab(key)} title={label}
-                  className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center transition-all ${panelTab === key ? color : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}>
-                  <Icon className="w-4 h-4" />
-                  <span className="text-[8px] mt-0.5 leading-none">{label.slice(0, 4)}</span>
+                  className="flex flex-col items-center gap-1 transition-all">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${panelTab === key ? `${activeBg} ${activeText} shadow-md` : `bg-gray-100 ${color} hover:bg-gray-200`}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className={`text-[9px] leading-none ${panelTab === key ? "text-gray-900 font-semibold" : "text-gray-400"}`}>{label}</span>
                 </button>
               ))}
             </div>
