@@ -571,7 +571,7 @@ export default function ScorecardPage() {
                   {/* Top Lanes Tab */}
                   {activeTab === "lanes" && (
                     <div className="space-y-3">
-                      <p className="text-xs text-slate-500">Carrier's operating regions and equipment capabilities</p>
+                      <p className="text-xs text-slate-500">Carrier&apos;s operating regions and equipment capabilities</p>
                       {(() => {
                         const carrier = carriers.find((c) => c.id === selectedCarrierId);
                         return carrier ? (
