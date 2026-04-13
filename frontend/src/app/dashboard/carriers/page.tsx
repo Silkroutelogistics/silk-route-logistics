@@ -460,7 +460,7 @@ export default function CarrierPoolPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Carrier Pool</h1>
@@ -516,10 +516,10 @@ export default function CarrierPoolPage() {
         </select>
       </div>
 
-      {/* Carrier List + Slide Panel Layout — full viewport height like Cerry */}
-      <div className="flex gap-0 relative h-[calc(100vh-280px)]">
-        {/* LEFT: Carrier List */}
-        <div className={`transition-all duration-300 space-y-3 overflow-y-auto pr-2 ${selectedCarrier ? "w-full lg:w-[55%]" : "w-full"}`}>
+      {/* Carrier List + Panel */}
+      <div>
+        {/* Carrier List — shrinks when panel open */}
+        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "lg:mr-[440px]" : ""}`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
               className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-gray-200"}`}>
@@ -578,7 +578,7 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="w-full lg:w-[45%] border-l border-gray-200 bg-white flex flex-row h-full overflow-hidden shadow-xl">
+          <div className="fixed top-0 right-0 bottom-0 w-[480px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
             {/* Vertical Icon Tab Strip (Cerry-style) */}
             <div className="w-[52px] shrink-0 border-r border-gray-100 bg-gray-50 flex flex-col items-center py-3 gap-1">
               {([
