@@ -215,14 +215,16 @@ export function EmployeeOverview() {
                     <CheckCheck className="w-3 h-3" /> Mark all read
                   </button>
                 )}
-                <Link href="/dashboard/audit" className="text-xs text-gold hover:text-gold/80">View all</Link>
+                <Link href="/dashboard/audit" className="text-xs text-gold hover:text-gold/80 no-underline">View all</Link>
               </div>
             </div>
             <div className="space-y-3">
               {notifications?.slice(0, 6).map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt?: string }) => (
                 <Link key={n.id} href={(() => {
-                    let url = n.actionUrl || "/dashboard/overview";
+                    let url = n.actionUrl || (n as any).link || "/dashboard/overview";
+                    if (!url || url === "#" || url === "null") url = "/dashboard/overview";
                     if (url.includes("/ae/") || url.includes(".html")) url = "/dashboard/overview";
+                    if (!url.startsWith("/dashboard") && !url.startsWith("/accounting") && !url.startsWith("/admin")) url = "/dashboard/overview";
                     const path = url.split("?")[0];
                     const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
                     if (hasEntityId) {

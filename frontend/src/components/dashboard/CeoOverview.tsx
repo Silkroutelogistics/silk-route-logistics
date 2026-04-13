@@ -735,7 +735,7 @@ function NotificationBell() {
             <div className="max-h-80 overflow-y-auto">
               {Array.isArray(notifs) && notifs.length > 0 ? notifs.map((n: { id: string; title: string; message: string; readAt: string | null; actionUrl?: string; createdAt: string }) => (
                 <button key={n.id} onClick={() => {
-                  // Mark as read
+                  // Mark as read (silently — never redirect on failure)
                   if (!n.readAt) {
                     api.patch(`/notifications/${n.id}/read`).then(() => {
                       queryClient.invalidateQueries({ queryKey: ["unread-count"] });
@@ -743,21 +743,29 @@ function NotificationBell() {
                     }).catch(() => {});
                   }
                   setOpen(false);
-                  if (n.actionUrl) {
-                    let url = n.actionUrl;
-                    // Normalize legacy paths
-                    if (url.includes("/ae/") || url.includes(".html")) {
-                      url = "/dashboard/overview";
-                    }
-                    // URLs with entity UUIDs may point to deleted records — strip to list page
-                    const path = url.split("?")[0];
-                    const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
-                    if (hasEntityId) {
-                      const listPath = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
-                      router.push(listPath.startsWith("/dashboard") ? listPath : "/dashboard/overview");
-                    } else {
-                      router.push(url);
-                    }
+
+                  // Navigate to the notification's target page
+                  let url = n.actionUrl || (n as any).link || "";
+                  if (!url || url === "#" || url === "null" || url === "undefined") {
+                    // No valid URL — stay on current page
+                    return;
+                  }
+                  // Normalize legacy paths
+                  if (url.includes("/ae/") || url.includes(".html")) {
+                    url = "/dashboard/overview";
+                  }
+                  // Ensure URL starts with /dashboard (safety — prevent external redirects)
+                  if (!url.startsWith("/dashboard") && !url.startsWith("/accounting") && !url.startsWith("/admin")) {
+                    url = "/dashboard/overview";
+                  }
+                  // URLs with entity UUIDs may point to deleted records — strip to list page
+                  const path = url.split("?")[0];
+                  const hasEntityId = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path);
+                  if (hasEntityId) {
+                    const listPath = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
+                    router.push(listPath.startsWith("/dashboard") ? listPath : "/dashboard/overview");
+                  } else {
+                    router.push(url);
                   }
                 }}
                   className="w-full text-left px-4 py-3 transition cursor-pointer"
