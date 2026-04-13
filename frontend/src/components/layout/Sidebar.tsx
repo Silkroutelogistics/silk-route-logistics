@@ -523,7 +523,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "flex flex-col min-h-screen shrink-0 transition-all duration-200 relative",
+          "flex flex-col h-screen shrink-0 transition-all duration-200 relative overflow-y-auto",
           "fixed lg:sticky top-0 z-50 lg:z-auto",
           collapsed ? "w-[60px]" : "w-[220px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"

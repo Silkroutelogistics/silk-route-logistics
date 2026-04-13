@@ -185,6 +185,11 @@ export default function SOPsPage() {
                   </a>
                 </div>
               )}
+              {/* Branded PDF Download — always available */}
+              <a href={`${baseUrl}/sops/${selectedSOP.id}/pdf`} download className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#C9A84C] text-[#0F1117] font-semibold rounded-lg text-sm hover:bg-[#d4b65c] cursor-pointer transition">
+                <Download className="w-4 h-4" /> Download Branded PDF
+              </a>
+
               <div className="flex items-center justify-between pt-2 border-t border-white/5">
                 <p className="text-[11px] text-slate-600">
                   Updated {new Date(selectedSOP.updatedAt).toLocaleDateString()}
