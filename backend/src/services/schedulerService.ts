@@ -532,6 +532,16 @@ export function startSchedulers() {
     });
   });
 
+  // Insurance verification reminders: daily at 6:30 AM ET (11:30 UTC)
+  cron.schedule("30 11 * * *", async () => {
+    log.info("[Scheduler] Running insurance verification reminders...");
+    await withLock("insurance-verify-reminders", 10 * 60 * 1000, async () => {
+      const { checkExpiringInsurance } = await import("./insuranceVerificationService");
+      const result = await checkExpiringInsurance();
+      log.info(`[Scheduler] Insurance verify: ${result.checked} checked, ${result.remindersSent} reminders sent`);
+    });
+  });
+
   // Document expiry alerts: daily at 7 AM ET (12:00 UTC)
   cron.schedule("0 12 * * *", async () => {
     log.info("[Scheduler] Running document expiry alerts...");

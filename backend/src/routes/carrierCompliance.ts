@@ -3,6 +3,8 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
+import { sendInsuranceVerificationEmail, validateInsuranceCoverage } from "../services/insuranceVerificationService";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -277,7 +279,17 @@ router.patch("/insurance", async (req: AuthRequest, res: Response) => {
     data,
   });
 
-  res.json({ message: "Insurance details updated", updated });
+  // Validate coverage against minimums
+  const validation = validateInsuranceCoverage(updated);
+
+  // Auto-send verification email to insurance agent if agent email exists
+  if (updated.insuranceAgentEmail) {
+    sendInsuranceVerificationEmail(updated.id).catch((err) => {
+      log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after insurance update");
+    });
+  }
+
+  res.json({ message: "Insurance details updated", updated, validation });
 });
 
 export default router;

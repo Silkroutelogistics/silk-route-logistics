@@ -8,6 +8,8 @@ import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { calculateTier, getBonusPercentage } from "../services/tierService";
+import { sendInsuranceVerificationEmail, validateInsuranceCoverage } from "../services/insuranceVerificationService";
+import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
 import { runFmcsaScan } from "../services/complianceMonitorService";
@@ -15,7 +17,6 @@ import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap } from "../services/emailService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
-import { log } from "../lib/logger";
 
 export async function registerCarrier(req: Request, res: Response) {
   try {
@@ -905,5 +906,19 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
     data,
   });
 
-  res.json(updated);
+  // If insurance fields were updated, validate and auto-send verification
+  const insuranceFieldsUpdated = [
+    "autoLiabilityProvider", "autoLiabilityAmount", "cargoInsuranceProvider",
+    "cargoInsuranceAmount", "generalLiabilityProvider", "generalLiabilityAmount",
+    "insuranceAgentEmail",
+  ].some((f) => data[f] !== undefined);
+
+  if (insuranceFieldsUpdated && updated.insuranceAgentEmail) {
+    sendInsuranceVerificationEmail(updated.id).catch((err) => {
+      log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after admin update");
+    });
+  }
+
+  const validation = validateInsuranceCoverage(updated);
+  res.json({ ...updated, insuranceValidation: validation });
 }
