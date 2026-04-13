@@ -865,13 +865,15 @@ export async function getCarrierDetail(req: AuthRequest, res: Response) {
 /** Update carrier profile (admin) */
 export async function updateCarrier(req: AuthRequest, res: Response) {
   const {
-    safetyScore, tier, numberOfTrucks, insuranceExpiry, onboardingStatus,
+    safetyScore, tier, numberOfTrucks, insuranceExpiry, onboardingStatus, status, notes,
     // Extended insurance fields
     autoLiabilityProvider, autoLiabilityAmount, autoLiabilityPolicy, autoLiabilityExpiry,
     cargoInsuranceProvider, cargoInsuranceAmount, cargoInsurancePolicy, cargoInsuranceExpiry,
     generalLiabilityProvider, generalLiabilityAmount, generalLiabilityPolicy, generalLiabilityExpiry,
     workersCompProvider, workersCompAmount, workersCompPolicy, workersCompExpiry,
     additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
+    // Insurance agent contact
+    insuranceAgentName, insuranceAgentEmail, insuranceAgentPhone, insuranceAgencyName,
   } = req.body;
   const data: Record<string, unknown> = {};
   if (safetyScore !== undefined) data.safetyScore = parseFloat(safetyScore);
@@ -900,6 +902,16 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
   if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
   if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";
   if (thirtyDayCancellationNotice !== undefined) data.thirtyDayCancellationNotice = thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true";
+
+  // Insurance agent contact
+  if (insuranceAgentName !== undefined) data.insuranceAgentName = insuranceAgentName || null;
+  if (insuranceAgentEmail !== undefined) data.insuranceAgentEmail = insuranceAgentEmail || null;
+  if (insuranceAgentPhone !== undefined) data.insuranceAgentPhone = insuranceAgentPhone || null;
+  if (insuranceAgencyName !== undefined) data.insuranceAgencyName = insuranceAgencyName || null;
+
+  // Other fields
+  if (status !== undefined) data.status = status;
+  if (notes !== undefined) data.notes = notes;
 
   const updated = await prisma.carrierProfile.update({
     where: { id: req.params.id },
