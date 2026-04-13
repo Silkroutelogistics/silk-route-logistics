@@ -10,7 +10,8 @@ import {
   Shield, Package, ClipboardList, Menu, X, ClipboardEdit, Brain, Cpu,
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
-  ScrollText, Gavel, Route, Crosshair,
+  ScrollText, Gavel, Route, Crosshair, Fuel, Calendar, Tag,
+  ShoppingCart, Compass, Clock, Phone, Map, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -102,6 +103,8 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/loads", label: "Load Board", icon: Package },
       { href: "/dashboard/dispatch", label: "Dispatch Board", icon: Crosshair },
       { href: "/dashboard/tracking", label: "Track & Trace", icon: MapPin },
+      { href: "/dashboard/dock-scheduling", label: "Dock Scheduling", icon: Clock },
+      { href: "/dashboard/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
     ],
   },
   {
@@ -121,6 +124,8 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/payables", label: "Payables", icon: CreditCard },
       { href: "/dashboard/settlements", label: "Settlements", icon: Landmark },
       { href: "/dashboard/contract-rates", label: "Contract Rates", icon: ScrollText },
+      { href: "/dashboard/routing-guide", label: "Routing Guide", icon: Compass },
+      { href: "/dashboard/fuel-tables", label: "Fuel Tables", icon: Fuel },
       { href: "/dashboard/rfp", label: "RFP Manager", icon: Gavel },
       { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
     ],
@@ -133,6 +138,10 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/ai-insights", label: "AI Insights", icon: Brain },
       { href: "/dashboard/lead-hunter", label: "Lead Hunter", icon: Target },
       { href: "/dashboard/lane-analytics", label: "Lane Analytics", icon: Route },
+      { href: "/dashboard/variance-reports", label: "Variance Reports", icon: Layers },
+      { href: "/dashboard/geo-spend", label: "Spend Heatmap", icon: Map },
+      { href: "/dashboard/backhaul-discovery", label: "Backhaul Discovery", icon: Compass },
+      { href: "/dashboard/loads-calendar", label: "Load Calendar", icon: Calendar },
     ],
   },
   {
@@ -152,6 +161,9 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/edi", label: "EDI", icon: Zap },
       { href: "/dashboard/audit", label: "Audit Log", icon: ClipboardList },
       { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
+      { href: "/dashboard/exception-config", label: "Exceptions", icon: AlertTriangle },
+      { href: "/dashboard/tagging-rules", label: "Tagging Rules", icon: Tag },
+      { href: "/dashboard/shipper-defaults", label: "Shipper Defaults", icon: Settings },
       { href: "/dashboard/settings", label: "Settings", icon: Settings },
     ],
   },

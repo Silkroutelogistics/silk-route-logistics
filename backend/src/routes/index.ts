@@ -64,6 +64,14 @@ import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
 import addressBookRoutes from "./addressBook";
+import routingGuideRoutes from "./routingGuide";
+import exceptionConfigRoutes from "./exceptionConfig";
+import dockScheduleRoutes from "./dockSchedule";
+import carrierCallLogRoutes from "./carrierCallLog";
+import fuelSurchargeTableRoutes from "./fuelSurchargeTable";
+import tagRoutes from "./tags";
+import purchaseOrderRoutes from "./purchaseOrders";
+import shipperDefaultsRoutes from "./shipperDefaults";
 
 const router = Router();
 
@@ -220,5 +228,13 @@ router.use("/external-integrations", externalIntegrations);
 router.use("/contract-rates", contractRateRoutes);
 router.use("/rfps", rfpRoutes);
 router.use("/address-book", addressBookRoutes);
+router.use("/routing-guides", routingGuideRoutes);
+router.use("/exceptions", exceptionConfigRoutes);
+router.use("/dock-schedules", dockScheduleRoutes);
+router.use("/carrier-calls", carrierCallLogRoutes);
+router.use("/fuel-tables", fuelSurchargeTableRoutes);
+router.use("/tags", tagRoutes);
+router.use("/purchase-orders", purchaseOrderRoutes);
+router.use("/shipper-defaults", shipperDefaultsRoutes);
 
 export default router;

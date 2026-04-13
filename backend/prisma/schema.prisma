@@ -698,6 +698,14 @@ model User {
   vettingReports      VettingReport[]      @relation("VettingReportUser")
   webhooks            WebhookEndpoint[]    @relation("UserWebhooks")
 
+  // Enterprise features
+  routingGuides       RoutingGuide[]       @relation("RoutingGuideCreator")
+  resolvedExceptions  ExceptionAlert[]     @relation("ExceptionResolver")
+  dockSchedules       DockSchedule[]       @relation("DockScheduleCreator")
+  carrierCallLogs     CarrierCallLog[]     @relation("CallLogCaller")
+  fuelTables          FuelSurchargeTable[] @relation("FuelTableCreator")
+  purchaseOrders      PurchaseOrder[]      @relation("POCreator")
+
   @@index([email])
   @@index([role])
   @@index([isActive, role])
@@ -903,6 +911,11 @@ model CarrierProfile {
   @@index([dotNumber])
   deletedAt   DateTime?
   deletedBy   String?
+
+  // Enterprise features
+  routingGuideEntries RoutingGuideEntry[]  @relation("RoutingGuideCarrier")
+  dockSchedules       DockSchedule[]       @relation("DockCarrier")
+  carrierCallLogs     CarrierCallLog[]     @relation("CallLogCarrier")
 
   @@index([status])
   @@index([cppTier])
@@ -1136,6 +1149,10 @@ model Load {
 
   // Shipper Tracking
   trackingToken   String?    @unique @default(uuid())
+
+  // GL Code Tracking (Finance integration)
+  glCode          String?
+  glDepartment    String?
 
   // DAT Load Board
   datPostId       String?
@@ -1670,6 +1687,8 @@ model Customer {
 
   contractRates   ContractRate[] @relation("CustomerContractRates")
   rfpBids         RfpBid[]       @relation("CustomerRfpBids")
+  routingGuides   RoutingGuide[] @relation("CustomerRoutingGuides")
+  purchaseOrders  PurchaseOrder[] @relation("CustomerPurchaseOrders")
 
   deletedAt   DateTime?
   deletedBy   String?
@@ -3529,6 +3548,322 @@ enum ContractRateStatus {
   ACTIVE
   EXPIRED
   SUSPENDED
+}
+
+// ─── Routing Guide ──────────────────────────────────────
+
+model RoutingGuide {
+  id              String              @id @default(cuid())
+  name            String              // e.g. "Dallas → LA Dry Van"
+  originState     String
+  originCity      String?
+  destState       String
+  destCity        String?
+  equipmentType   String
+  mode            String              @default("FTL")   // FTL, LTL, INTERMODAL
+  customerId      String?
+  customer        Customer?           @relation("CustomerRoutingGuides", fields: [customerId], references: [id], onDelete: SetNull)
+  isActive        Boolean             @default(true)
+  effectiveDate   DateTime            @default(now())
+  expirationDate  DateTime?
+  notes           String?
+  createdById     String
+  createdBy       User                @relation("RoutingGuideCreator", fields: [createdById], references: [id])
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?
+
+  entries         RoutingGuideEntry[]
+
+  @@index([originState, destState, equipmentType])
+  @@index([customerId])
+  @@index([isActive])
+  @@map("routing_guides")
+}
+
+model RoutingGuideEntry {
+  id              String         @id @default(cuid())
+  routingGuideId  String
+  routingGuide    RoutingGuide   @relation(fields: [routingGuideId], references: [id], onDelete: Cascade)
+  rank            Int            // 1 = first choice, 2 = fallback, etc.
+  carrierId       String
+  carrier         CarrierProfile @relation("RoutingGuideCarrier", fields: [carrierId], references: [id])
+  targetRate      Float?         // negotiated rate for this lane
+  rateType        RateType       @default(FLAT)
+  fuelSurcharge   Float          @default(0)
+  transitDays     Int?
+  acceptanceRate  Float?         // historical acceptance % (auto-updated)
+  onTimePct       Float?         // historical on-time % (auto-updated)
+  totalLoads      Int            @default(0)
+  lastUsedAt      DateTime?
+  isActive        Boolean        @default(true)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([routingGuideId, rank])
+  @@unique([routingGuideId, carrierId])
+  @@index([carrierId])
+  @@map("routing_guide_entries")
+}
+
+// ─── Exception Configuration ────────────────────────────
+
+enum ExceptionSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model ExceptionConfig {
+  id              String            @id @default(cuid())
+  code            String            @unique  // e.g. "UNCONFIRMED_APPOINTMENT"
+  name            String            // Display name
+  description     String?
+  category        String            // APPOINTMENT, STOP, ORDER, DOCUMENT, FINANCIAL, CARRIER
+  severity        ExceptionSeverity @default(WARNING)
+  isEnabled       Boolean           @default(true)
+  thresholdValue  Float?            // e.g. 7 days, $50 variance, etc.
+  thresholdUnit   String?           // "days", "hours", "dollars", "percent"
+  autoResolve     Boolean           @default(false)
+  notifyRoles     String[]          @default(["ADMIN", "OPERATIONS"])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  alerts          ExceptionAlert[]
+
+  @@index([category])
+  @@index([isEnabled])
+  @@map("exception_configs")
+}
+
+model ExceptionAlert {
+  id              String          @id @default(cuid())
+  configId        String
+  config          ExceptionConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  loadId          String?
+  invoiceId       String?
+  carrierId       String?
+  customerId      String?
+  entityType      String          // LOAD, INVOICE, CARRIER, ORDER
+  entityId        String
+  status          String          @default("OPEN") // OPEN, ACKNOWLEDGED, RESOLVED, DISMISSED
+  severity        ExceptionSeverity
+  message         String
+  details         Json?
+  resolvedAt      DateTime?
+  resolvedById    String?
+  resolvedBy      User?           @relation("ExceptionResolver", fields: [resolvedById], references: [id])
+  resolvedNote    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([configId])
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([loadId])
+  @@map("exception_alerts")
+}
+
+// ─── Dock Scheduling ────────────────────────────────────
+
+model DockSchedule {
+  id              String   @id @default(cuid())
+  facilityName    String
+  facilityAddress String?
+  facilityCity    String
+  facilityState   String
+  facilityZip     String?
+  dockNumber      String?           // e.g. "Dock A", "Bay 3"
+  appointmentDate DateTime
+  timeSlotStart   String            // "08:00"
+  timeSlotEnd     String            // "09:00"
+  loadId          String?
+  carrierId       String?
+  carrier         CarrierProfile?   @relation("DockCarrier", fields: [carrierId], references: [id])
+  driverName      String?
+  driverPhone     String?
+  truckNumber     String?
+  trailerNumber   String?
+  appointmentType String            @default("PICKUP") // PICKUP, DELIVERY
+  status          String            @default("SCHEDULED") // SCHEDULED, CHECKED_IN, IN_PROGRESS, COMPLETED, NO_SHOW, CANCELLED
+  checkedInAt     DateTime?
+  completedAt     DateTime?
+  dwellTimeMinutes Int?
+  notes           String?
+  createdById     String
+  createdBy       User              @relation("DockScheduleCreator", fields: [createdById], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([appointmentDate])
+  @@index([facilityName])
+  @@index([loadId])
+  @@index([status])
+  @@map("dock_schedules")
+}
+
+// ─── Carrier Call Log ───────────────────────────────────
+
+model CarrierCallLog {
+  id              String         @id @default(cuid())
+  loadId          String
+  carrierId       String
+  carrier         CarrierProfile @relation("CallLogCarrier", fields: [carrierId], references: [id])
+  calledById      String
+  calledBy        User           @relation("CallLogCaller", fields: [calledById], references: [id])
+  contactName     String?
+  contactPhone    String?
+  callType        String         @default("OUTBOUND") // OUTBOUND, INBOUND, VOICEMAIL
+  outcome         String         // INTERESTED, DECLINED_RATE, DECLINED_CAPACITY, DECLINED_LANE, NO_ANSWER, VOICEMAIL, BOOKED, CALLBACK_REQUESTED
+  offeredRate     Float?
+  counterRate     Float?
+  declineReason   String?
+  callDuration    Int?           // seconds
+  notes           String?
+  followUpDate    DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([loadId])
+  @@index([carrierId])
+  @@index([calledById])
+  @@map("carrier_call_logs")
+}
+
+// ─── Fuel Surcharge Tables ──────────────────────────────
+
+model FuelSurchargeTable {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @default("DOE_NATIONAL") // DOE_NATIONAL, DOE_REGIONAL, CUSTOM
+  currency        String   @default("USD")
+  effectiveDate   DateTime
+  expirationDate  DateTime?
+  isActive        Boolean  @default(true)
+  notes           String?
+  createdById     String
+  createdBy       User     @relation("FuelTableCreator", fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tiers           FuelSurchargeTier[]
+
+  @@index([isActive])
+  @@map("fuel_surcharge_tables")
+}
+
+model FuelSurchargeTier {
+  id              String             @id @default(cuid())
+  tableId         String
+  table           FuelSurchargeTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  fuelPriceMin    Float              // e.g. $3.00
+  fuelPriceMax    Float              // e.g. $3.25
+  surchargeRate   Float              // e.g. 0.15 (15%)
+  surchargeType   FuelSurchargeType  @default(PERCENTAGE) // FLAT or PERCENTAGE
+  createdAt       DateTime           @default(now())
+
+  @@index([tableId])
+  @@map("fuel_surcharge_tiers")
+}
+
+// ─── Tagging System ─────────────────────────────────────
+
+model Tag {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  color           String   @default("#6B7280") // hex color
+  description     String?
+  entityTypes     String[] @default(["LOAD"]) // LOAD, QUOTE, ORDER, INVOICE
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rules           TagRule[]
+  assignments     TagAssignment[]
+
+  @@map("tags")
+}
+
+model TagRule {
+  id              String   @id @default(cuid())
+  tagId           String
+  tag             Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  field           String   // e.g. "equipmentType", "originState", "rate"
+  operator        String   // "equals", "contains", "greaterThan", "lessThan", "in"
+  value           String   // the value to compare against
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([tagId])
+  @@map("tag_rules")
+}
+
+model TagAssignment {
+  id              String   @id @default(cuid())
+  tagId           String
+  tag             Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  entityType      String   // LOAD, QUOTE, ORDER, INVOICE
+  entityId        String
+  assignedBy      String?  // null = auto-assigned by rule
+  createdAt       DateTime @default(now())
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("tag_assignments")
+}
+
+// ─── Purchase Orders / SKU Tracking ─────────────────────
+
+model PurchaseOrder {
+  id              String          @id @default(cuid())
+  poNumber        String          @unique
+  customerId      String
+  customer        Customer        @relation("CustomerPurchaseOrders", fields: [customerId], references: [id], onDelete: Cascade)
+  tradingPartner  String?
+  status          String          @default("OPEN") // OPEN, PARTIAL, CLOSED, CANCELLED
+  orderDate       DateTime        @default(now())
+  expectedDate    DateTime?
+  notes           String?
+  createdById     String
+  createdBy       User            @relation("POCreator", fields: [createdById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  lineItems       POLineItem[]
+  loadLinks       POLoadLink[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model POLineItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  sku             String
+  description     String?
+  quantity        Int
+  unitWeight      Float?
+  dimensions      String?       // "40L x 48W x 44H in"
+  freightClass    String?
+  ordered         Int           @default(0)
+  shipped         Int           @default(0)
+  received        Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  @@index([purchaseOrderId])
+  @@map("po_line_items")
+}
+
+model POLoadLink {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  loadId          String
+  createdAt       DateTime      @default(now())
+
+  @@unique([purchaseOrderId, loadId])
+  @@map("po_load_links")
 }
 
 // ─── RFP / Bid Management ────────────────────────────────
