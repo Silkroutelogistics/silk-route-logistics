@@ -182,12 +182,36 @@ export async function processWebhookEvent(payload: any) {
   let transcript: string | null = null;
   let voicemailUrl: string | null = null;
 
-  if (eventType.startsWith("call")) {
+  if (eventType === "call.transcript.completed" || eventType === "call.summary.completed") {
+    // Update existing communication with transcript/summary — don't create a new record
+    const callId = data.callId || data.id;
+    if (callId) {
+      const existing = await prisma.communication.findFirst({
+        where: { metadata: { path: ["openPhoneCallId"], equals: callId } },
+      });
+      if (existing) {
+        const meta = (existing.metadata as any) || {};
+        if (eventType === "call.transcript.completed") meta.transcript = data.transcript || data.text;
+        if (eventType === "call.summary.completed") meta.callSummary = data.summary || data.text;
+        await prisma.communication.update({ where: { id: existing.id }, data: { metadata: meta } });
+        log.info({ eventType, callId, commId: existing.id }, "[OpenPhone] Updated call with transcript/summary");
+        return { processed: true, updated: true, communicationId: existing.id };
+      }
+    }
+    // If no existing record found, fall through to create new one
+    direction = data.direction === "incoming" || data.direction === "inbound" ? "INBOUND" : "OUTBOUND";
+    commType = direction === "INBOUND" ? "CALL_INBOUND" : "CALL_OUTBOUND";
+    transcript = data.transcript || data.summary || data.text || null;
+  } else if (eventType.startsWith("call")) {
     direction = data.direction === "incoming" || data.direction === "inbound" ? "INBOUND" : "OUTBOUND";
     commType = direction === "INBOUND" ? "CALL_INBOUND" : "CALL_OUTBOUND";
     recordingUrl = data.recordingUrl || data.recording?.url || null;
     transcript = data.transcript || data.voicemail?.transcription || null;
     voicemailUrl = data.voicemail?.url || null;
+  } else if (eventType === "contact.updated" || eventType === "contact.deleted") {
+    // Contact events — log but don't create communication record
+    log.info({ eventType, contactId: data.id }, "[OpenPhone] Contact event");
+    return { processed: true, reason: "Contact event logged" };
   } else if (eventType.startsWith("message")) {
     direction = data.direction === "incoming" || data.direction === "inbound" ? "INBOUND" : "OUTBOUND";
     commType = direction === "INBOUND" ? "TEXT_INBOUND" : "TEXT_OUTBOUND";
