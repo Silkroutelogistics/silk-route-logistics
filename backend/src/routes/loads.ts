@@ -1,9 +1,10 @@
-import { Router } from "express";
+import { Router, Response } from "express";
 import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, carrierUpdateStatus, getDistance, getLoadAudit } from "../controllers/loadController";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { validateBody, validateQuery } from "../middleware/validate";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
+import { prisma } from "../config/database";
 import { z } from "zod";
 
 const updateLoadSchema = createLoadSchema.partial();
@@ -11,6 +12,23 @@ const updateLoadSchema = createLoadSchema.partial();
 const router = Router();
 
 router.use(authenticate);
+
+// GET /api/loads/next-bol — preview the next sequential BOL number.
+// Client uses this for UI display; server still generates the final
+// BOL atomically on load create to avoid collisions.
+router.get("/next-bol", async (_req: AuthRequest, res: Response) => {
+  const latest = await prisma.load.findFirst({
+    where: { bolNumber: { startsWith: "BOL-" } },
+    orderBy: { createdAt: "desc" },
+    select: { bolNumber: true },
+  });
+  let next = 100001;
+  if (latest?.bolNumber) {
+    const n = parseInt(latest.bolNumber.replace(/\D/g, ""), 10);
+    if (!Number.isNaN(n)) next = n + 1;
+  }
+  res.json({ bolNumber: `BOL-${next}`, preview: true });
+});
 
 router.get("/distance", getDistance);
 router.post("/", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), validateBody(createLoadSchema), auditLog("CREATE", "Load"), createLoad);

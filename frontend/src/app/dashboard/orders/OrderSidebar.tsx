@@ -90,29 +90,35 @@ export function OrderSidebar({
     return l.origin?.includes(originState) && l.dest?.includes(destState);
   });
 
-  // Eligible carriers preview — piggybacks on the waterfall scoring
-  // endpoint, which is the single source of truth post-consolidation.
-  // Without a load ID we can't call it directly; fall back to a lane
-  // count from /carriers filtered by region.
-  const carriersPreviewQuery = useQuery<{ carriers: any[] }>({
-    queryKey: ["ob-eligible-carriers", originState, destState, equipmentType],
+  // Eligible carriers preview (v3.5.b) — calls the dedicated
+  // /waterfalls/preview-matches endpoint that runs the real 100pt
+  // waterfallScoringService without creating any DB records.
+  // Replaces the v3.5.a client-side /carriers filter.
+  const carriersPreviewQuery = useQuery<{
+    carriers: Array<{
+      carrierId: string;
+      userId: string;
+      companyName: string | null;
+      tier: string;
+      matchScore: number;
+      laneRunCount: number;
+      onTimePct: number;
+    }>;
+    total: number;
+  }>({
+    queryKey: ["ob-preview-matches", originState, destState, equipmentType],
     queryFn: async () => {
-      const res = await api.get("/carriers", {
-        params: { status: "APPROVED", limit: 20 },
+      const res = await api.get("/waterfalls/preview-matches", {
+        params: {
+          origin_state: originState,
+          dest_state: destState,
+          origin_city: originCity || undefined,
+          dest_city: destCity || undefined,
+          equipment: equipmentType,
+          limit: 5,
+        },
       });
-      const all = (res.data?.carriers ?? res.data ?? []) as any[];
-      // Heuristic: regions overlap or empty (nationwide) + equipment match
-      const filtered = all.filter((c: any) => {
-        const types: string[] = c.equipmentTypes ?? [];
-        const regions: string[] = c.operatingRegions ?? [];
-        const eqOk = types.length === 0 || types.some((t) => t.toUpperCase().includes(equipmentType.toUpperCase().replace(/\s/g, "")));
-        const rgOk = regions.length === 0 || regions.some((r) => {
-          const upper = r.toUpperCase();
-          return upper.includes(originState.toUpperCase()) || upper.includes(destState.toUpperCase());
-        });
-        return eqOk && rgOk;
-      });
-      return { carriers: filtered.slice(0, 3) };
+      return res.data;
     },
     enabled: matchReady,
     staleTime: 60_000,
@@ -257,17 +263,32 @@ export function OrderSidebar({
         {/* Eligible carriers */}
         {matchReady && (
           <Section
-            title={`Eligible carriers (${carriersPreviewQuery.data?.carriers?.length ?? "…"})`}
+            title={`Eligible carriers (${carriersPreviewQuery.data?.total ?? "…"})`}
             Icon={Users}
           >
             <div className="space-y-1.5">
-              {(carriersPreviewQuery.data?.carriers ?? []).map((c: any) => (
-                <div key={c.id} className="rounded-lg p-2 border border-white/10 bg-white/5 flex items-center justify-between">
-                  <div className="min-w-0">
-                    <div className="text-xs text-white truncate">{c.companyName ?? c.user?.company ?? "—"}</div>
-                    <div className="text-[9px] text-slate-500">{c.cppTier ?? c.tier ?? "NONE"}</div>
+              {(carriersPreviewQuery.data?.carriers ?? []).map((c) => (
+                <div key={c.carrierId} className="rounded-lg p-2 border border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-xs text-white truncate">{c.companyName ?? "—"}</div>
+                      <div className="text-[9px] text-slate-500">
+                        {c.tier} · {c.laneRunCount} lane runs · {Math.round(c.onTimePct)}% OT
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] font-semibold text-[#BA7517]">
+                        {Math.round(c.matchScore)}%
+                      </span>
+                      <Star className="w-3 h-3 text-[#BA7517]" />
+                    </div>
                   </div>
-                  <Star className="w-3 h-3 text-[#BA7517]" />
+                  <div className="mt-1 h-0.5 bg-white/10 rounded overflow-hidden">
+                    <div
+                      className="h-full bg-[#BA7517]"
+                      style={{ width: `${Math.min(100, c.matchScore)}%` }}
+                    />
+                  </div>
                 </div>
               ))}
               {(carriersPreviewQuery.data?.carriers?.length ?? 0) === 0 && !carriersPreviewQuery.isLoading && (

@@ -428,6 +428,62 @@ router.get(
   }
 );
 
+// ─── Preview matches for Order Builder (no load required) ──
+// Returns top N scored carriers for a prospective lane + equipment.
+// Used by the Order Builder sidebar before a Load exists. Builds a
+// synthetic LoadContext rather than creating any DB records.
+
+router.get(
+  "/preview-matches",
+  authorize(...AE_ROLES) as any,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const {
+        origin_city, origin_state, dest_city, dest_state, equipment,
+        customer_rate, carrier_rate, distance, pickup_date, delivery_date,
+        limit,
+      } = req.query as Record<string, string>;
+
+      if (!origin_state || !dest_state || !equipment) {
+        return res.status(400).json({ error: "origin_state, dest_state, equipment required" });
+      }
+
+      const ctx = {
+        loadId: "__preview__",
+        equipmentType: equipment,
+        originState: origin_state,
+        destState: dest_state,
+        pickupDate: pickup_date ? new Date(pickup_date) : new Date(),
+        deliveryDate: delivery_date ? new Date(delivery_date) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        distance: distance ? Number(distance) : null,
+        customerRate: customer_rate ? Number(customer_rate) : null,
+        carrierRate: carrier_rate ? Number(carrier_rate) : null,
+      };
+
+      const scored = await scoreCarriersForLoad(ctx);
+      const n = Math.max(1, Math.min(10, parseInt(limit || "5", 10)));
+      res.json({
+        carriers: scored.slice(0, n).map((c) => ({
+          carrierId: c.carrierId,
+          userId: c.userId,
+          companyName: c.companyName,
+          tier: c.tier,
+          matchScore: c.matchScore,
+          equipmentMatch: c.equipmentMatch,
+          laneRunCount: c.breakdown.laneRunCount,
+          onTimePct: c.breakdown.onTimePct,
+        })),
+        total: scored.length,
+        origin: { city: origin_city ?? null, state: origin_state },
+        destination: { city: dest_city ?? null, state: dest_state },
+      });
+    } catch (err) {
+      log.error({ err }, "[Waterfall] preview-matches error");
+      res.status(500).json({ error: "Failed to score carriers" });
+    }
+  }
+);
+
 // ─── Carrier match preview (drawer Match tab) ──────────────
 
 router.get(

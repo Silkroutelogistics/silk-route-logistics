@@ -189,3 +189,46 @@ export const FREIGHT_CLASSES = [
   "50", "55", "60", "65", "70", "77.5", "85", "92.5",
   "100", "110", "125", "150", "175", "200", "250", "300", "400", "500",
 ];
+
+/**
+ * Commodity → freight class heuristic. Order Builder auto-suggests a
+ * class when the user types a commodity name. Lookup is substring-match
+ * (first key that appears in the commodity string wins). AE can always
+ * override via the class dropdown.
+ */
+export const COMMODITY_CLASS_MAP: Record<string, string> = {
+  "auto parts":  "70",
+  "automotive":  "70",
+  "car parts":   "70",
+  "electronics": "70",
+  "computers":   "70",
+  "technology":  "70",
+  "furniture":   "100",
+  "household":   "100",
+  "home goods":  "100",
+  "machinery":   "85",
+  "equipment":   "85",
+  "food":        "55",
+  "produce":     "55",
+  "beverage":    "55",
+  "clothing":    "65",
+  "apparel":     "65",
+  "textile":     "65",
+  "paper":       "50",
+  "cardboard":   "50",
+  "steel":       "50",
+  "metal":       "50",
+  "plastic":     "77.5",
+  "chemical":    "85",
+  "building":    "77.5",
+  "lumber":      "55",
+};
+
+export function suggestFreightClass(commodity: string): string | null {
+  const q = commodity.trim().toLowerCase();
+  if (!q) return null;
+  for (const [keyword, cls] of Object.entries(COMMODITY_CLASS_MAP)) {
+    if (q.includes(keyword)) return cls;
+  }
+  return null;
+}

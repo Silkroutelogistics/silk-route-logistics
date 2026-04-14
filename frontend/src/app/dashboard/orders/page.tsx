@@ -1,22 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
-  Search, ClipboardEdit, AlertTriangle, CheckCircle, ChevronDown,
-  Plus, X, MapPin, DollarSign, FileText, Send, Save, Zap, Flame,
+  Search, ClipboardEdit, AlertTriangle, CheckCircle,
+  Plus, X, Send, Save, Flame, FileText,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
+import { DirectTenderPicker } from "@/components/ui/DirectTenderPicker";
 import { OrderSidebar } from "./OrderSidebar";
 import { FacilityPicker, type Facility } from "./FacilityPicker";
 import {
   emptyOrderForm,
   EQUIPMENT_OPTIONS,
   FREIGHT_CLASSES,
+  suggestFreightClass,
   type OrderForm,
-  type DispatchMethod,
   type Accessorial,
 } from "./types";
 
@@ -72,6 +73,49 @@ export default function OrderBuilderPage() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [manualOriginMode, setManualOriginMode] = useState(false);
   const [manualDestMode, setManualDestMode] = useState(false);
+  const [draftBannerDismissed, setDraftBannerDismissed] = useState(false);
+  const [commodityClassAutoSet, setCommodityClassAutoSet] = useState(false);
+
+  // ─── Draft list banner (v3.5.b) ───────────────────────────
+  const draftsQuery = useQuery<{ orders: any[] }>({
+    queryKey: ["ob-drafts"],
+    queryFn: async () => (await api.get("/orders", { params: { status: "draft" } })).data,
+    staleTime: 30_000,
+  });
+  const drafts = (draftsQuery.data?.orders ?? []).filter((d) => d.id !== orderId);
+  const showDraftBanner = !draftBannerDismissed && drafts.length > 0 && !selectedCustomer;
+
+  const resumeDraft = async (draftId: string) => {
+    try {
+      const res = await api.get<{ order: any }>(`/orders/${draftId}`);
+      const order = res.data?.order;
+      if (!order) return;
+      const formData = order.formData ?? {};
+      setOrderId(draftId);
+      setForm({ ...emptyOrderForm(), ...formData });
+      if (order.customerId && order.customer) {
+        setSelectedCustomer(order.customer as Customer);
+        setCustomerSearch(order.customer.name ?? "");
+        setAutoFillBanner(true);
+      }
+      setDraftBannerDismissed(true);
+    } catch {
+      // non-blocking
+    }
+  };
+
+  // ─── BOL preview on mount (v3.5.b) ────────────────────────
+  useQuery<{ bolNumber: string }>({
+    queryKey: ["ob-next-bol"],
+    queryFn: async () => {
+      const { data } = await api.get("/loads/next-bol");
+      if (data?.bolNumber && !form.bolNumber) {
+        setForm((f) => ({ ...f, bolNumber: data.bolNumber }));
+      }
+      return data;
+    },
+    staleTime: Infinity,
+  });
 
   // ─── Customer search + selection ───────────────────────────
   const customerQuery = useQuery<{ customers: Customer[] }>({
@@ -208,6 +252,50 @@ export default function OrderBuilderPage() {
       setForm((f) => ({ ...f, shipmentPriority: "hot", checkCallProtocol: "expedited" }));
     }
   }, [form.cargoValue, form.shipmentPriority]);
+
+  // ─── Distance auto-calc via /mileage (v3.5.b) ─────────────
+  // Fires when origin + destination cities/states are both populated.
+  // Keyed so the call fires exactly once per unique lane.
+  const [distanceKey, setDistanceKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!form.originCity || !form.originState || !form.destCity || !form.destState) return;
+    const key = `${form.originCity}|${form.originState}|${form.destCity}|${form.destState}`;
+    if (distanceKey === key) return;
+
+    let cancelled = false;
+    api.get<{ practical_miles?: number; shortest_miles?: number | null; miles?: number }>("/mileage/calculate", {
+      params: {
+        origin: `${form.originCity}, ${form.originState}`,
+        destination: `${form.destCity}, ${form.destState}`,
+        equipment: form.equipmentType,
+      },
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const miles = res.data?.practical_miles ?? res.data?.miles ?? res.data?.shortest_miles ?? null;
+        if (miles) {
+          setForm((f) => ({ ...f, distance: String(Math.round(miles)) }));
+        }
+        setDistanceKey(key);
+      })
+      .catch(() => setDistanceKey(key));
+    return () => { cancelled = true; };
+  }, [form.originCity, form.originState, form.destCity, form.destState, form.equipmentType, distanceKey]);
+
+  // ─── Commodity → freight class auto-suggest (v3.5.b) ─────
+  useEffect(() => {
+    if (!form.commodity) { setCommodityClassAutoSet(false); return; }
+    const suggested = suggestFreightClass(form.commodity);
+    if (!suggested) return;
+    // Only auto-apply when the class hasn't been set yet, or when the
+    // previous class was also auto-applied (so we don't stomp a manual
+    // override).
+    if (!form.freightClass || commodityClassAutoSet) {
+      setForm((f) => ({ ...f, freightClass: suggested }));
+      setCommodityClassAutoSet(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.commodity]);
 
   // ─── Draft autosave (30s) ─────────────────────────────────
   const saveDraft = useMutation({
@@ -376,6 +464,42 @@ export default function OrderBuilderPage() {
       {showErrors && !isValid && (
         <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" /> Missing: {requiredMissing.join(", ")}
+        </div>
+      )}
+      {showDraftBanner && (
+        <div className="mb-3 p-3 rounded-lg bg-[#FAEEDA]/10 border border-[#BA7517]/30">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs text-[#FAEEDA]">
+              <FileText className="w-3 h-3" />
+              You have {drafts.length} draft order{drafts.length === 1 ? "" : "s"}
+            </div>
+            <button
+              onClick={() => setDraftBannerDismissed(true)}
+              className="text-[10px] text-slate-400 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
+            {drafts.slice(0, 6).map((d) => {
+              const lane = [
+                d.originCity && d.originState ? `${d.originCity}, ${d.originState}` : null,
+                d.destCity && d.destState ? `${d.destCity}, ${d.destState}` : null,
+              ].filter(Boolean).join(" → ") || "No lane";
+              const edited = d.updatedAt ? new Date(d.updatedAt).toLocaleDateString() : "—";
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => resumeDraft(d.id)}
+                  className="text-left px-2 py-1.5 rounded bg-white/5 border border-white/10 hover:border-[#BA7517] transition"
+                >
+                  <div className="text-[11px] text-white truncate">{d.customer?.name ?? "No customer"}</div>
+                  <div className="text-[9px] text-slate-500 truncate">{lane}</div>
+                  <div className="text-[9px] text-slate-500">Edited {edited}</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -834,11 +958,9 @@ export default function OrderBuilderPage() {
             {form.dispatchMethod === "direct_tender" && (
               <div className="mt-2">
                 <Label>Carrier</Label>
-                <input
+                <DirectTenderPicker
                   value={form.directTenderCarrierId}
-                  onChange={(e) => setForm((f) => ({ ...f, directTenderCarrierId: e.target.value }))}
-                  placeholder="Carrier user ID (searchable dropdown in previous lane)"
-                  className={inp}
+                  onChange={(id) => setForm((f) => ({ ...f, directTenderCarrierId: id }))}
                 />
               </div>
             )}
