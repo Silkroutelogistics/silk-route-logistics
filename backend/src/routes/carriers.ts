@@ -1,4 +1,6 @@
 import { Router, Response } from "express";
+import path from "path";
+import { uploadFile } from "../services/storageService";
 import {
   getAllCarriers, getCarrierDetail, registerCarrier, updateCarrier, verifyCarrier,
   getCarrierScore,
@@ -306,6 +308,93 @@ router.put("/:id/restore", authorize("ADMIN", "CEO"), async (req: AuthRequest, r
     data: { deletedAt: null, deletedBy: null },
   });
   res.json({ success: true, message: "Carrier restored" });
+});
+
+// ─── Carrier Documents ─────────────────────────────────
+
+// GET /api/carriers/:carrierId/documents — list all documents for a carrier
+router.get("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  try {
+    const docs = await prisma.document.findMany({
+      where: { entityType: "CARRIER", entityId: req.params.carrierId },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
+    res.json({ documents: docs });
+  } catch (err) {
+    log.error({ err }, "[Carrier Docs] List error");
+    res.status(500).json({ error: "Failed to list documents" });
+  }
+});
+
+// POST /api/carriers/:carrierId/documents — upload document for a carrier (AE/admin)
+router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), upload.single("file"), async (req: AuthRequest, res: Response) => {
+  try {
+    const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.carrierId } });
+    if (!carrier) { res.status(404).json({ error: "Carrier not found" }); return; }
+
+    const file = req.file;
+    if (!file) { res.status(400).json({ error: "No file uploaded" }); return; }
+
+    const ext = path.extname(file.originalname).toLowerCase();
+    const storagePath = `carrier-docs/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    const fileUrl = await uploadFile(file.buffer, storagePath, file.mimetype);
+
+    const doc = await prisma.document.create({
+      data: {
+        fileName: file.originalname,
+        fileUrl,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        entityType: "CARRIER",
+        entityId: carrier.id,
+        docType: req.body.docType || "OTHER",
+        notes: req.body.notes || null,
+        status: "PENDING",
+        userId: req.user!.id,
+      },
+    });
+
+    // Update carrier boolean flags if applicable
+    const dt = (req.body.docType || "").toUpperCase();
+    if (dt === "W9") await prisma.carrierProfile.update({ where: { id: carrier.id }, data: { w9Uploaded: true } });
+    else if (dt === "COI") await prisma.carrierProfile.update({ where: { id: carrier.id }, data: { insuranceCertUploaded: true } });
+    else if (dt === "AUTHORITY") await prisma.carrierProfile.update({ where: { id: carrier.id }, data: { authorityDocUploaded: true } });
+
+    res.status(201).json({ document: doc });
+  } catch (err) {
+    log.error({ err }, "[Carrier Docs] Upload error");
+    res.status(500).json({ error: "Failed to upload document" });
+  }
+});
+
+// PATCH /api/carriers/:carrierId/documents/:docId — update document status
+router.patch("/:carrierId/documents/:docId", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  try {
+    const doc = await prisma.document.findFirst({
+      where: { id: req.params.docId, entityType: "CARRIER", entityId: req.params.carrierId },
+    });
+    if (!doc) { res.status(404).json({ error: "Document not found" }); return; }
+
+    const { status, notes } = req.body;
+    if (status && !["PENDING", "VERIFIED", "REJECTED"].includes(status)) {
+      res.status(400).json({ error: "Invalid status. Must be PENDING, VERIFIED, or REJECTED" });
+      return;
+    }
+
+    const updated = await prisma.document.update({
+      where: { id: doc.id },
+      data: {
+        ...(status && { status, reviewedAt: new Date(), reviewedBy: req.user!.id }),
+        ...(notes !== undefined && { notes }),
+      },
+    });
+
+    res.json({ document: updated });
+  } catch (err) {
+    log.error({ err }, "[Carrier Docs] Status update error");
+    res.status(500).json({ error: "Failed to update document" });
+  }
 });
 
 export default router;

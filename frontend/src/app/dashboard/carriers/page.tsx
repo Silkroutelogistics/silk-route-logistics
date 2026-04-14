@@ -9,7 +9,7 @@ import {
   MessageSquare, FileText, Users, Phone, Mail, Building2,
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
-  User, CheckSquare, ClipboardList,
+  User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
 } from "lucide-react";
 
 
@@ -82,6 +82,40 @@ interface Carrier {
   insuranceAgentPhone?: string | null;
   insuranceAgencyName?: string | null;
 }
+
+interface CarrierDoc {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  docType: string;
+  status: string;
+  notes: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string };
+}
+
+const DOC_CATEGORIES: { key: string; label: string }[] = [
+  { key: "W9", label: "W-9" },
+  { key: "COI", label: "Certificate of Insurance" },
+  { key: "AUTHORITY", label: "Operating Authority (MC)" },
+  { key: "BOC3", label: "BOC-3 Filing" },
+  { key: "CDL", label: "CDL" },
+  { key: "MEDICAL_CARD", label: "Medical Card" },
+  { key: "MVR", label: "Motor Vehicle Report" },
+  { key: "REGISTRATION", label: "Equipment Registration" },
+  { key: "INSPECTION", label: "Inspection Report" },
+  { key: "OTHER", label: "Other" },
+];
+
+const DOC_STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-yellow-100 text-yellow-700",
+  VERIFIED: "bg-green-100 text-green-700",
+  REJECTED: "bg-red-100 text-red-700",
+};
 
 interface CompassCheck {
   name: string;
@@ -245,7 +279,7 @@ export default function CarrierPoolPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history">("profile");
+  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -261,6 +295,11 @@ export default function CarrierPoolPage() {
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
   const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
   const [compassLoading, setCompassLoading] = useState<string | null>(null);
+  const [docView, setDocView] = useState<"list" | "upload" | "preview">("list");
+  const [previewDoc, setPreviewDoc] = useState<CarrierDoc | null>(null);
+  const [uploadDocType, setUploadDocType] = useState("OTHER");
+  const [uploadNotes, setUploadNotes] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const { data } = useQuery({
     queryKey: ["carrier-all"],
@@ -280,6 +319,25 @@ export default function CarrierPoolPage() {
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.post(`/carrier/verify/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["carrier-all"] }),
+  });
+
+  // Carrier documents
+  const { data: docsData, refetch: refetchDocs } = useQuery({
+    queryKey: ["carrier-docs", selectedCarrierId],
+    queryFn: () => api.get<{ documents: CarrierDoc[] }>(`/carriers/${selectedCarrierId}/documents`).then(r => r.data),
+    enabled: !!selectedCarrierId && panelTab === "documents",
+  });
+
+  const uploadDocMutation = useMutation({
+    mutationFn: ({ carrierId, formData }: { carrierId: string; formData: FormData }) =>
+      api.post(`/carriers/${carrierId}/documents`, formData, { headers: { "Content-Type": "multipart/form-data" } }),
+    onSuccess: () => { refetchDocs(); setDocView("list"); setUploadFile(null); setUploadNotes(""); setUploadDocType("OTHER"); },
+  });
+
+  const updateDocStatus = useMutation({
+    mutationFn: ({ carrierId, docId, status }: { carrierId: string; docId: string; status: string }) =>
+      api.patch(`/carriers/${carrierId}/documents/${docId}`, { status }),
+    onSuccess: () => refetchDocs(),
   });
 
   const carriers = data?.carriers || [];
@@ -590,8 +648,9 @@ export default function CarrierPoolPage() {
                 { key: "inspections", icon: ClipboardList, label: "Inspect" },
                 { key: "performance", icon: BarChart3, label: "Perform" },
                 { key: "history", icon: Clock, label: "History" },
+                { key: "documents", icon: FolderOpen, label: "Docs" },
               ] as const).map(({ key, icon: Icon, label }) => (
-                <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); }} title={label}
+                <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C9A84C] text-white shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
                     <Icon className={`w-[18px] h-[18px] transition-all duration-150 ${panelTab === key ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
@@ -1157,6 +1216,159 @@ export default function CarrierPoolPage() {
                     </div>
                   </div>
                 )}
+
+                {/* ===== DOCUMENTS TAB ===== */}
+                {panelTab === "documents" && selectedCarrier && (() => {
+                  const carrierDocs = docsData?.documents || [];
+                  const grouped = DOC_CATEGORIES.map(cat => ({
+                    ...cat,
+                    docs: carrierDocs.filter(d => d.docType === cat.key),
+                  })).filter(g => g.docs.length > 0);
+
+                  // Upload view
+                  if (docView === "upload") return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900">Upload Document</h3>
+                        <button onClick={() => setDocView("list")} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Category</label>
+                        <select value={uploadDocType} onChange={e => setUploadDocType(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
+                          {DOC_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">File</label>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                          onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#C9A84C]/10 file:text-[#C9A84C] hover:file:bg-[#C9A84C]/20" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
+                        <textarea value={uploadNotes} onChange={e => setUploadNotes(e.target.value)} rows={2}
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs resize-none" placeholder="e.g. Received via email from carrier" />
+                      </div>
+                      <button disabled={!uploadFile || uploadDocMutation.isPending}
+                        onClick={() => {
+                          if (!uploadFile) return;
+                          const fd = new FormData();
+                          fd.append("file", uploadFile);
+                          fd.append("docType", uploadDocType);
+                          if (uploadNotes) fd.append("notes", uploadNotes);
+                          uploadDocMutation.mutate({ carrierId: selectedCarrier.id, formData: fd });
+                        }}
+                        className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                        {uploadDocMutation.isPending ? "Uploading..." : "Upload Document"}
+                      </button>
+                    </div>
+                  );
+
+                  // Preview view
+                  if (docView === "preview" && previewDoc) return (
+                    <div className="space-y-4">
+                      <button onClick={() => { setDocView("list"); setPreviewDoc(null); }}
+                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
+                        <ArrowLeft className="w-3.5 h-3.5" /> Back to list
+                      </button>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-900 break-all">{previewDoc.fileName}</h3>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {DOC_CATEGORIES.find(c => c.key === previewDoc.docType)?.label || previewDoc.docType} &middot; {new Date(previewDoc.createdAt).toLocaleDateString()} &middot; {(previewDoc.fileSize / 1024).toFixed(0)} KB
+                          </p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${DOC_STATUS_COLORS[previewDoc.status] || ""}`}>{previewDoc.status}</span>
+                      </div>
+                      {previewDoc.notes && <p className="text-xs text-gray-500 italic">{previewDoc.notes}</p>}
+                      <div className="bg-gray-100 rounded-lg overflow-hidden border border-gray-200" style={{ minHeight: 300 }}>
+                        {previewDoc.fileType.startsWith("image/") ? (
+                          <img src={previewDoc.fileUrl} alt={previewDoc.fileName} className="w-full object-contain max-h-[500px]" />
+                        ) : previewDoc.fileType === "application/pdf" ? (
+                          <iframe src={previewDoc.fileUrl} className="w-full" style={{ height: 500 }} title={previewDoc.fileName} />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                            <FileText className="w-10 h-10 mb-2" />
+                            <p className="text-xs">Preview not available</p>
+                            <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-[#C9A84C] hover:underline mt-1">Download file</a>
+                          </div>
+                        )}
+                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-2">
+                          <button onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "VERIFIED" }); setPreviewDoc({ ...previewDoc, status: "VERIFIED" }); }}
+                            className="flex-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition">
+                            <CheckCircle2 className="w-3 h-3 inline mr-1" />Verify
+                          </button>
+                          <button onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "REJECTED" }); setPreviewDoc({ ...previewDoc, status: "REJECTED" }); }}
+                            className="flex-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition">
+                            <X className="w-3 h-3 inline mr-1" />Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+
+                  // List view (default)
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents ({carrierDocs.length})</h3>
+                        {isAdmin && (
+                          <button onClick={() => setDocView("upload")}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-[#C9A84C]/10 text-[#C9A84C] rounded-lg text-xs font-medium hover:bg-[#C9A84C]/20 transition">
+                            <Upload className="w-3 h-3" /> Upload
+                          </button>
+                        )}
+                      </div>
+
+                      {carrierDocs.length === 0 ? (
+                        <div className="bg-gray-100 rounded-lg p-8 text-center">
+                          <FolderOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-xs text-gray-400">No documents on file.</p>
+                          {isAdmin && <button onClick={() => setDocView("upload")} className="text-xs text-[#C9A84C] hover:underline mt-1">Upload the first document</button>}
+                        </div>
+                      ) : (
+                        grouped.map(group => (
+                          <div key={group.key}>
+                            <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{group.label}</h4>
+                            <div className="space-y-1.5">
+                              {group.docs.map(doc => (
+                                <div key={doc.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 hover:border-gray-200 transition group">
+                                  <div className="w-7 h-7 rounded bg-gray-200/80 flex items-center justify-center shrink-0">
+                                    <FileText className="w-3.5 h-3.5 text-gray-500" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }}
+                                      className="text-xs font-medium text-gray-800 hover:text-[#C9A84C] truncate block text-left w-full">
+                                      {doc.fileName}
+                                    </button>
+                                    <p className="text-[10px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>
+                                  </div>
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium shrink-0 ${DOC_STATUS_COLORS[doc.status] || ""}`}>{doc.status}</span>
+                                  <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
+                                    <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }} title="Preview"
+                                      className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"><Eye className="w-3 h-3" /></button>
+                                    {isAdmin && doc.status !== "VERIFIED" && (
+                                      <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "VERIFIED" })} title="Verify"
+                                        className="p-1 rounded hover:bg-green-100 text-gray-400 hover:text-green-600"><CheckCircle2 className="w-3 h-3" /></button>
+                                    )}
+                                    {isAdmin && doc.status !== "REJECTED" && (
+                                      <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "REJECTED" })} title="Reject"
+                                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600"><X className="w-3 h-3" /></button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()}
 
               </div>
             </div>

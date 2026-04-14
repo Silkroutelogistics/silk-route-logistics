@@ -1574,7 +1574,11 @@ model Document {
   fileSize    Int
   entityType  String?  // LOAD, CARRIER, SHIPPER, INVOICE
   entityId    String?
-  docType     String?  // BOL, POD, RATE_CON, W9, COI, AUTHORITY, OTHER
+  docType     String?  // BOL, POD, RATE_CON, W9, COI, AUTHORITY, BOC3, CDL, MEDICAL_CARD, MVR, REGISTRATION, INSPECTION, OTHER
+  status      String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  notes       String?
+  reviewedAt  DateTime?
+  reviewedBy  String?
   createdAt   DateTime @default(now())
 
   userId      String
