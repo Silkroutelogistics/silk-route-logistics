@@ -5,7 +5,8 @@
  */
 import { log } from "../lib/logger";
 
-const USER_AGENT = "SilkRouteLogistics support@silkroutelogistics.ai";
+// Karpathy Rule 13 — whaider@ is the single source of truth for SRL contact.
+const USER_AGENT = "SilkRouteLogistics/1.0 (whaider@silkroutelogistics.ai)";
 const TIMEOUT_MS = 10_000;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
@@ -324,5 +325,145 @@ export async function creditCheck(companyName: string): Promise<CompanyCredit> {
     latestAnnualFiling: filings?.latestAnnualFiling || "",
     financials,
     riskAssessment: assessRisk(financials),
+  };
+}
+
+// ─── Recent filings list (v3.4.n — CRM credit check UI) ────────────
+
+export interface RecentFiling {
+  form: string;
+  filedDate: string;
+  reportDate: string | null;
+  accessionNumber: string;
+  description: string | null;
+  url: string;
+}
+
+/**
+ * Parse the submissions.recent feed into a flat list of 10-K / 10-Q /
+ * 8-K filings. Used by the CRM Profile tab SEC credit check display.
+ */
+export async function getRecentFilings(cik: string, max = 20): Promise<RecentFiling[]> {
+  const paddedCik = cik.padStart(10, "0");
+  const cacheKey = `recent-filings:${paddedCik}:${max}`;
+  const cached = cacheGet<RecentFiling[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const data = await secFetch(`https://data.sec.gov/submissions/CIK${paddedCik}.json`);
+    const recent = data?.filings?.recent;
+    if (!recent) return [];
+
+    const forms: string[] = recent.form ?? [];
+    const filingDates: string[] = recent.filingDate ?? [];
+    const reportDates: string[] = recent.reportDate ?? [];
+    const accessionNumbers: string[] = recent.accessionNumber ?? [];
+    const primaryDocuments: string[] = recent.primaryDocument ?? [];
+    const descriptions: string[] = recent.primaryDocDescription ?? [];
+
+    const targetForms = new Set(["10-K", "10-K/A", "10-Q", "10-Q/A", "8-K", "8-K/A"]);
+    const result: RecentFiling[] = [];
+    for (let i = 0; i < forms.length && result.length < max; i++) {
+      if (!targetForms.has(forms[i])) continue;
+      const accessionDashed = accessionNumbers[i] ?? "";
+      const accessionPlain = accessionDashed.replace(/-/g, "");
+      const primaryDoc = primaryDocuments[i] ?? "";
+      const url = accessionPlain && primaryDoc
+        ? `https://www.sec.gov/Archives/edgar/data/${Number(paddedCik)}/${accessionPlain}/${primaryDoc}`
+        : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${paddedCik}&type=${forms[i]}&dateb=&owner=include&count=40`;
+      result.push({
+        form: forms[i],
+        filedDate: filingDates[i] ?? "",
+        reportDate: reportDates[i] ?? null,
+        accessionNumber: accessionDashed,
+        description: descriptions[i] ?? null,
+        url,
+      });
+    }
+
+    cacheSet(cacheKey, result);
+    return result;
+  } catch (err) {
+    log.error({ err, cik }, "[SEC] recent filings fetch failed");
+    return [];
+  }
+}
+
+export interface CustomerCreditCheckResult {
+  publiclyTraded: boolean;
+  legalName: string | null;
+  cik: string | null;
+  ticker: string | null;
+  sicCode: string | null;
+  sicDescription: string | null;
+  latestAnnualFiling: string | null;
+  filingsHealthy: boolean;
+  risk: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
+  recentFilings: RecentFiling[];
+  profileUrl: string | null;
+  /** Summary result code persisted on the customer row */
+  result: "approved" | "flagged" | "not_found";
+}
+
+/**
+ * High-level entry point used by /customers/:id/sec-credit-check.
+ *
+ * Returns a normalized result ready to persist on the Customer row and
+ * render in the Profile tab inline swap. On a non-public company it
+ * returns { publiclyTraded: false, result: "not_found" } so the caller
+ * falls back to manual review.
+ */
+export async function customerCreditCheck(companyName: string): Promise<CustomerCreditCheckResult> {
+  const check = await creditCheck(companyName);
+
+  if (!check.found) {
+    return {
+      publiclyTraded: false,
+      legalName: null,
+      cik: null,
+      ticker: null,
+      sicCode: null,
+      sicDescription: null,
+      latestAnnualFiling: null,
+      filingsHealthy: false,
+      risk: "UNKNOWN",
+      recentFilings: [],
+      profileUrl: null,
+      result: "not_found",
+    };
+  }
+
+  const recentFilings = await getRecentFilings(check.cik);
+
+  // Filings are "healthy" if a 10-K was filed within the last 15 months
+  const fifteenMonthsAgo = Date.now() - 15 * 30 * 24 * 60 * 60 * 1000;
+  const filingsHealthy = recentFilings.some(
+    (f) => (f.form === "10-K" || f.form === "10-K/A") &&
+           !!f.filedDate &&
+           new Date(f.filedDate).getTime() >= fifteenMonthsAgo
+  );
+
+  // Map to our 3-value persisted result:
+  //   LOW risk + healthy filings → approved
+  //   MEDIUM/HIGH risk OR stale filings → flagged (manual review)
+  //   Everything else → flagged
+  const result: "approved" | "flagged" =
+    check.riskAssessment === "LOW" && filingsHealthy ? "approved" : "flagged";
+
+  const paddedCik = check.cik.padStart(10, "0");
+
+  return {
+    publiclyTraded: true,
+    legalName: check.companyName,
+    cik: check.cik,
+    ticker: check.ticker,
+    sicCode: check.sicCode,
+    sicDescription: check.sicDescription,
+    latestAnnualFiling: check.latestAnnualFiling || null,
+    filingsHealthy,
+    risk: check.riskAssessment,
+    recentFilings,
+    profileUrl: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${paddedCik}&type=&dateb=&owner=include&count=40`,
+    result,
   };
 }

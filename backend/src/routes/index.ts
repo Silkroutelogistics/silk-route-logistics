@@ -64,6 +64,7 @@ import loadExceptionsRoutes from "./loadExceptions";
 import waterfallRoutes from "./waterfalls";
 import loadBidsRoutes from "./loadBids";
 import carrierTendersRoutes from "./carrierTenders";
+import crmCustomerRoutes from "./crmCustomer";
 import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
@@ -193,6 +194,7 @@ router.use("/messages", messageRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/integrations", integrationRoutes);
 router.use("/shipments", shipmentRoutes);
+router.use("/customers", crmCustomerRoutes); // CRM upgrade routes (tracking, facilities, notes, docs, activity)
 router.use("/customers", customerRoutes);
 router.use("/drivers", driverRoutes);
 router.use("/equipment", equipmentRoutes);

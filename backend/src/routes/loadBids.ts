@@ -224,6 +224,14 @@ router.patch(
           await createCheckCallSchedule(loadId);
         } catch {}
 
+        // CRM tracking-link fan-out (v3.4.p)
+        try {
+          const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
+          await sendTrackingLinkToCrmContacts(loadId);
+        } catch (err) {
+          log.error({ err }, "[Bids] tracking-link fan-out failed");
+        }
+
         return res.json({ bid: updated });
       }
 

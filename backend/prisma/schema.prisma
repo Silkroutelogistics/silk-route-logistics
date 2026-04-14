@@ -691,6 +691,9 @@ model User {
   // Shipper portal: link to Customer account
   customerAccount Customer? @relation("CustomerUser")
 
+  // CRM account rep — customers this user manages
+  accountOf Customer[] @relation("CustomerAccountRep")
+
   reportedDelays LoadDelay[]       @relation("DelayReporter")
   fraudReports   FraudReport[]     @relation("FraudReporter")
   contractRates  ContractRate[]    @relation("ContractRateCreator")
@@ -1784,6 +1787,16 @@ model Customer {
   taxId           String?
   annualRevenue   Float?
 
+  // SEC EDGAR credit check (v3.4.l)
+  creditCheckSource String? @map("credit_check_source") @db.VarChar(20) // sec | manual
+  creditCheckResult String? @map("credit_check_result") @db.VarChar(20) // approved | flagged | not_found
+  creditCheckNotes  String? @map("credit_check_notes")
+  secCikNumber      String? @map("sec_cik_number") @db.VarChar(20)
+
+  // CRM account rep
+  accountRepId String? @map("account_rep_id")
+  accountRep   User?   @relation("CustomerAccountRep", fields: [accountRepId], references: [id], onDelete: SetNull)
+
   // Business
   mcNumber           String?
   industryType       String?
@@ -1812,6 +1825,11 @@ model Customer {
   contacts      CustomerContact[]
   shipperCredit ShipperCredit?
 
+  // CRM upgrade (v3.4.l)
+  facilities       CustomerFacility[]
+  customerNotes    CustomerNote[]
+  customerActivity CustomerActivity[]
+
   // AI Learning
   aiIntelligence CustomerIntelligence? @relation("CustomerIntelligence")
 
@@ -1838,8 +1856,89 @@ model CustomerContact {
   isPrimary  Boolean  @default(false)
   createdAt  DateTime @default(now())
 
+  // CRM upgrade (v3.4.l)
+  receivesTrackingLink Boolean @default(false) @map("receives_tracking_link")
+  isBilling            Boolean @default(false) @map("is_billing")
+  role                 String? @db.VarChar(50) // primary | billing | logistics | executive | other
+
   @@index([customerId])
+  @@index([receivesTrackingLink])
   @@map("customer_contacts")
+}
+
+// ─── CRM Upgrade (v3.4.l) ──────────────────────────
+
+model CustomerFacility {
+  id                       String   @id @default(cuid())
+  customerId               String   @map("customer_id")
+  customer                 Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name                     String
+  address                  String?
+  city                     String?
+  state                    String?  @db.VarChar(50)
+  zip                      String?  @db.VarChar(20)
+  lat                      Decimal? @db.Decimal(10, 6)
+  lng                      Decimal? @db.Decimal(10, 6)
+  facilityType             String   @default("both") @map("facility_type") @db.VarChar(20) // pickup | delivery | both
+  isPrimary                Boolean  @default(false) @map("is_primary")
+  contactName              String?  @map("contact_name")
+  contactPhone             String?  @map("contact_phone")
+  contactEmail             String?  @map("contact_email")
+  operatingHours           Json?    @map("operating_hours") // { monday: { open, close }, ... }
+  dockInfo                 String?  @map("dock_info")
+  loadType                 String   @default("live") @map("load_type") @db.VarChar(20) // live | drop
+  estimatedLoadTimeMinutes Int?     @map("estimated_load_time_minutes")
+  appointmentRequired      Boolean  @default(false) @map("appointment_required")
+  appointmentInstructions  String?  @map("appointment_instructions")
+  lumperInfo               String?  @map("lumper_info")
+  specialInstructions      String?  @map("special_instructions")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  customerNotes CustomerNote[]
+
+  @@index([customerId])
+  @@map("customer_facilities")
+}
+
+model CustomerNote {
+  id            String            @id @default(cuid())
+  customerId    String            @map("customer_id")
+  customer      Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  noteType      String            @map("note_type") @db.VarChar(40)
+  // shipping_instruction | receiving_instruction | customer_preference | operational
+  facilityId    String?           @map("facility_id")
+  facility      CustomerFacility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  title         String?
+  content       String
+  followUpDate  DateTime?         @map("follow_up_date") @db.Date
+  source        String            @default("manual") @db.VarChar(20)
+  // manual | auto_generated | facility_profile
+  createdById   String?           @map("created_by_id")
+  createdByName String?           @map("created_by_name")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  @@index([customerId, noteType])
+  @@index([facilityId])
+  @@map("customer_notes")
+}
+
+model CustomerActivity {
+  id          String   @id @default(cuid())
+  customerId  String   @map("customer_id")
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  eventType   String   @map("event_type") @db.VarChar(64)
+  description String
+  actorType   String   @default("SYSTEM") @map("actor_type") @db.VarChar(20) // USER | SYSTEM
+  actorId     String?  @map("actor_id")
+  actorName   String?  @map("actor_name")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([customerId, createdAt])
+  @@index([eventType])
+  @@map("customer_activity")
 }
 
 // ─── Fleet / Asset Models ──────────────────────────

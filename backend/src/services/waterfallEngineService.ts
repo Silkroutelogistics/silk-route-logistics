@@ -387,6 +387,15 @@ export async function acceptPosition(positionId: string, actorId?: string | null
   } catch (err) {
     log.error({ err }, "[Waterfall] check-call schedule failed");
   }
+
+  // CRM tracking-link fan-out: email tracking URL to any customer
+  // contact flagged receivesTrackingLink=true. Non-blocking.
+  try {
+    const { sendTrackingLinkToCrmContacts } = await import("./shipperLoadNotifyService");
+    await sendTrackingLinkToCrmContacts(pos.waterfall.loadId);
+  } catch (err) {
+    log.error({ err }, "[Waterfall] tracking-link fan-out failed");
+  }
 }
 
 /**

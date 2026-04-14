@@ -268,3 +268,108 @@ export async function dailyETAUpdates() {
 
   log.info(`[ShipperLoadNotify] Daily ETA complete: ${sent} sent, ${errors} errors`);
 }
+
+// ─── CRM tracking-link fan-out on dispatch (v3.4.p) ─────────────
+//
+// When a load is dispatched (waterfall accept, loadboard bid accept,
+// direct tender accept), fan out the shipper tracking URL to every
+// customer contact flagged with receivesTrackingLink=true. Also logs
+// to customerActivity + loadActivity so the CRM and T&T timelines stay
+// in sync (Karpathy Rule 12).
+
+export async function sendTrackingLinkToCrmContacts(loadId: string) {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: {
+      id: true,
+      loadNumber: true,
+      referenceNumber: true,
+      bolNumber: true,
+      trackingToken: true,
+      shipperCode: true,
+      originCity: true,
+      originState: true,
+      destCity: true,
+      destState: true,
+      pickupDate: true,
+      deliveryDate: true,
+      customerId: true,
+      customer: { select: { id: true, name: true } },
+      carrier: { select: { company: true, firstName: true, lastName: true } },
+    },
+  });
+  if (!load || !load.customerId) return { sent: 0, skipped: "no_customer" };
+
+  const contacts = await prisma.customerContact.findMany({
+    where: { customerId: load.customerId, receivesTrackingLink: true },
+    select: { id: true, name: true, email: true },
+  });
+
+  const toSend = contacts.filter((c) => !!c.email);
+  if (toSend.length === 0) return { sent: 0, skipped: "no_recipients" };
+
+  // Use the existing trackingToken (shipper token seeded at load create)
+  // or fall back to the short shipperCode (added in Track & Trace module).
+  const token = load.trackingToken ?? load.shipperCode ?? null;
+  if (!token) return { sent: 0, skipped: "no_token" };
+
+  const trackingUrl = `${PORTAL_BASE}/tracking/${token}`;
+  const origin = `${load.originCity}, ${load.originState}`;
+  const dest = `${load.destCity}, ${load.destState}`;
+  const carrierName = carrierDisplayName(load.carrier);
+
+  const { logLoadActivity } = await import("./loadActivityService");
+  const { logCustomerActivity } = await import("./customerActivityService");
+
+  let sent = 0;
+  for (const contact of toSend) {
+    try {
+      const html = wrap(`
+        <h2 style="color:#0f172a">Load ${load.loadNumber ?? load.referenceNumber} — Dispatched</h2>
+        <p>Hello ${contact.name},</p>
+        <p>Your shipment with <strong>Silk Route Logistics</strong> has been dispatched. Use the link below to track it in real time.</p>
+        ${loadInfoTable(load, [
+          { label: "BOL", value: load.bolNumber || "—" },
+          { label: "Pickup", value: formatDate(load.pickupDate) },
+          { label: "Est. Delivery", value: formatDate(load.deliveryDate) },
+        ])}
+        <p>Carrier: <strong>${carrierName}</strong></p>
+        <p style="text-align:center;margin:24px 0">
+          <a href="${trackingUrl}" style="display:inline-block;padding:14px 32px;background:#BA7517;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Track Shipment</a>
+        </p>
+        <p style="color:#475569;font-size:13px">Tracking link: <a href="${trackingUrl}">${trackingUrl}</a></p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:24px">
+          You are receiving this email because you are tagged as a tracking contact for ${load.customer?.name ?? "this account"} in Silk Route Logistics CRM.
+          If this is incorrect, contact your SRL account rep.
+        </p>
+      `);
+
+      await sendEmail(contact.email!, `Tracking: Load ${load.loadNumber ?? load.referenceNumber} · ${origin} → ${dest}`, html);
+      sent++;
+
+      await logLoadActivity({
+        loadId: load.id,
+        eventType: "tracking_link_sent",
+        description: `Tracking link sent to ${contact.name}`,
+        actorType: "SYSTEM",
+        metadata: { contactId: contact.id, email: contact.email },
+      });
+      await logCustomerActivity({
+        customerId: load.customerId,
+        eventType: "tracking_link_sent",
+        description: `Tracking link sent to ${contact.name} for load ${load.loadNumber ?? load.referenceNumber}`,
+        actorType: "SYSTEM",
+        metadata: { loadId: load.id, contactId: contact.id },
+      });
+    } catch (err) {
+      log.error({ err, contactId: contact.id, loadId: load.id }, "[CRM TrackingLink] send failed");
+    }
+  }
+
+  // Flip the tracking_link_sent flag on the load so the UI knows
+  try {
+    await prisma.load.update({ where: { id: load.id }, data: { trackingLinkSent: sent > 0 } });
+  } catch {}
+
+  return { sent };
+}
