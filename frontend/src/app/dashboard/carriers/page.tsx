@@ -11,7 +11,7 @@ import {
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList,
 } from "lucide-react";
-import { SlideDrawer } from "@/components/ui/SlideDrawer";
+
 
 interface CarrierPerformance {
   overallScore: number;
@@ -247,7 +247,7 @@ export default function CarrierPoolPage() {
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
   const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
-  const [inlineEditing, setInlineEditing] = useState(false);
+  const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "",
     autoLiabilityProvider: "", autoLiabilityAmount: "", autoLiabilityPolicy: "", autoLiabilityExpiry: "",
@@ -520,7 +520,7 @@ export default function CarrierPoolPage() {
       {/* Carrier List + Panel */}
       <div>
         {/* Carrier List — shrinks when panel open */}
-        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "lg:mr-[580px]" : ""}`}>
+        <div className={`transition-all duration-300 space-y-3 ${selectedCarrier ? "lg:mr-[480px]" : ""}`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
               className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-gray-200"}`}>
@@ -579,7 +579,7 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="fixed top-0 right-0 bottom-0 w-[620px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
+          <div className="fixed top-0 right-0 bottom-0 w-[520px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
             {/* Vertical Icon Tab Strip (Cerry-style — colored circles with labels) */}
             <div className="w-[62px] shrink-0 border-r border-gray-100 bg-white flex flex-col items-center py-4 gap-2">
               {([
@@ -591,7 +591,7 @@ export default function CarrierPoolPage() {
                 { key: "performance", icon: BarChart3, label: "Perform", activeBg: "bg-rose-500", activeText: "text-white", color: "text-rose-500" },
                 { key: "history", icon: Clock, label: "History", activeBg: "bg-gray-600", activeText: "text-white", color: "text-gray-500" },
               ] as const).map(({ key, icon: Icon, label, activeBg, activeText, color }) => (
-                <button key={key} onClick={() => setPanelTab(key)} title={label}
+                <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); }} title={label}
                   className="flex flex-col items-center gap-1 transition-all">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${panelTab === key ? `${activeBg} ${activeText} shadow-md` : `bg-gray-100 ${color} hover:bg-gray-200`}`}>
                     <Icon className="w-4 h-4" />
@@ -681,13 +681,47 @@ export default function CarrierPoolPage() {
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
                         </button>
                       )}
-                      {isAdmin && (
-                        <button onClick={() => openEdit(selectedCarrier)}
+                      {isAdmin && editingTab !== "profile" && (
+                        <button onClick={() => { openEdit(selectedCarrier); setEditingTab("profile"); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
                           <BarChart3 className="w-3.5 h-3.5" /> Edit Profile
                         </button>
                       )}
                     </div>
+
+                    {/* Inline Profile Edit */}
+                    {editingTab === "profile" && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-gray-900">Edit Profile</h4>
+                          <button onClick={() => setEditingTab(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Tier</label>
+                          <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
+                            {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Safety Score (%)</label>
+                          <input type="number" min="0" max="100" value={editForm.safetyScore}
+                            onChange={(e) => setEditForm({ ...editForm, safetyScore: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Number of Trucks</label>
+                          <input type="number" min="1" value={editForm.numberOfTrucks}
+                            onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
+                          disabled={updateCarrier.isPending}
+                          className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                          {updateCarrier.isPending ? "Saving..." : "Save Changes"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -724,17 +758,17 @@ export default function CarrierPoolPage() {
                       </div>
                     )}
 
-                    {isAdmin && !inlineEditing && (
-                      <button onClick={() => { openEdit(selectedCarrier); setInlineEditing(true); }}
+                    {isAdmin && editingTab !== "insurance" && (
+                      <button onClick={() => { openEdit(selectedCarrier); setEditingTab("insurance"); }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition mt-2">
                         <BarChart3 className="w-3.5 h-3.5" /> Edit Insurance
                       </button>
                     )}
-                    {inlineEditing && (
+                    {editingTab === "insurance" && (
                       <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-gray-900">Edit Insurance Details</h4>
-                          <button onClick={() => setInlineEditing(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                          <button onClick={() => setEditingTab(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Tier</label>
@@ -742,6 +776,26 @@ export default function CarrierPoolPage() {
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
                             {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
                           </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Safety Score (%)</label>
+                            <input type="number" min="0" max="100" value={editForm.safetyScore}
+                              onChange={(e) => setEditForm({ ...editForm, safetyScore: e.target.value })}
+                              className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Number of Trucks</label>
+                            <input type="number" min="1" value={editForm.numberOfTrucks}
+                              onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
+                              className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Insurance Expiry</label>
+                          <input type="date" value={editForm.insuranceExpiry}
+                            onChange={(e) => setEditForm({ ...editForm, insuranceExpiry: e.target.value })}
+                            className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
                         </div>
                         {[
                           { label: "Auto Liability", prefix: "autoLiability" },
@@ -790,9 +844,10 @@ export default function CarrierPoolPage() {
                               className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
                           </div>
                         </div>
-                        <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setInlineEditing(false); }}
-                          className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition">
-                          Save Changes
+                        <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
+                          disabled={updateCarrier.isPending}
+                          className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                          {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
                     )}
@@ -1110,139 +1165,6 @@ export default function CarrierPoolPage() {
         )}
       </div>
 
-      {/* Edit Carrier Drawer */}
-      <SlideDrawer open={!!editingCarrier} onClose={() => setEditingCarrier(null)} title={`Edit Carrier — ${editingCarrier?.company || ""}`} width="max-w-lg">
-            <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Tier</label>
-                <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20">
-                  {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Safety Score (%)</label>
-                <input type="number" min="0" max="100" value={editForm.safetyScore}
-                  onChange={(e) => setEditForm({ ...editForm, safetyScore: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Number of Trucks</label>
-                <input type="number" min="1" value={editForm.numberOfTrucks}
-                  onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Insurance Expiry</label>
-                <input type="date" value={editForm.insuranceExpiry}
-                  onChange={(e) => setEditForm({ ...editForm, insuranceExpiry: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20" />
-              </div>
-
-              {/* Insurance Details Section */}
-              <div className="pt-3 border-t border-gray-200">
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3">Insurance Details</h4>
-
-                {/* Auto Liability */}
-                <p className="text-xs font-semibold text-gray-600 mb-1">Auto Liability</p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <input placeholder="Provider" value={editForm.autoLiabilityProvider} onChange={(e) => setEditForm({ ...editForm, autoLiabilityProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input placeholder="Policy #" value={editForm.autoLiabilityPolicy} onChange={(e) => setEditForm({ ...editForm, autoLiabilityPolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="number" placeholder="Amount $" value={editForm.autoLiabilityAmount} onChange={(e) => setEditForm({ ...editForm, autoLiabilityAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="date" value={editForm.autoLiabilityExpiry} onChange={(e) => setEditForm({ ...editForm, autoLiabilityExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                </div>
-
-                {/* Cargo Insurance */}
-                <p className="text-xs font-semibold text-gray-600 mb-1">Motor Cargo Insurance</p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <input placeholder="Provider" value={editForm.cargoInsuranceProvider} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input placeholder="Policy #" value={editForm.cargoInsurancePolicy} onChange={(e) => setEditForm({ ...editForm, cargoInsurancePolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="number" placeholder="Amount $" value={editForm.cargoInsuranceAmount} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="date" value={editForm.cargoInsuranceExpiry} onChange={(e) => setEditForm({ ...editForm, cargoInsuranceExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                </div>
-
-                {/* General Liability */}
-                <p className="text-xs font-semibold text-gray-600 mb-1">General Liability</p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <input placeholder="Provider" value={editForm.generalLiabilityProvider} onChange={(e) => setEditForm({ ...editForm, generalLiabilityProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input placeholder="Policy #" value={editForm.generalLiabilityPolicy} onChange={(e) => setEditForm({ ...editForm, generalLiabilityPolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="number" placeholder="Amount $" value={editForm.generalLiabilityAmount} onChange={(e) => setEditForm({ ...editForm, generalLiabilityAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="date" value={editForm.generalLiabilityExpiry} onChange={(e) => setEditForm({ ...editForm, generalLiabilityExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                </div>
-
-                {/* Workers Comp */}
-                <p className="text-xs font-semibold text-gray-600 mb-1">Workers&#39; Compensation</p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <input placeholder="Provider" value={editForm.workersCompProvider} onChange={(e) => setEditForm({ ...editForm, workersCompProvider: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input placeholder="Policy #" value={editForm.workersCompPolicy} onChange={(e) => setEditForm({ ...editForm, workersCompPolicy: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="number" placeholder="Amount $" value={editForm.workersCompAmount} onChange={(e) => setEditForm({ ...editForm, workersCompAmount: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  <input type="date" value={editForm.workersCompExpiry} onChange={(e) => setEditForm({ ...editForm, workersCompExpiry: e.target.value })}
-                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                </div>
-
-                {/* Checkboxes */}
-                <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editForm.additionalInsuredSRL} onChange={(e) => setEditForm({ ...editForm, additionalInsuredSRL: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded border-gray-200 text-amber-500 focus:ring-amber-500" />
-                    <span className="text-xs text-gray-700">SRL listed as Additional Insured</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editForm.waiverOfSubrogation} onChange={(e) => setEditForm({ ...editForm, waiverOfSubrogation: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded border-gray-200 text-amber-500 focus:ring-amber-500" />
-                    <span className="text-xs text-gray-700">Waiver of Subrogation</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editForm.thirtyDayCancellationNotice} onChange={(e) => setEditForm({ ...editForm, thirtyDayCancellationNotice: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded border-gray-200 text-amber-500 focus:ring-amber-500" />
-                    <span className="text-xs text-gray-700">30-day cancellation notice</span>
-                  </label>
-                </div>
-
-                {/* Insurance Agent Contact */}
-                <div className="pt-3 border-t border-gray-100 mt-2">
-                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Insurance Agent Contact</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input placeholder="Agent Name" value={editForm.insuranceAgentName} onChange={(e) => setEditForm({ ...editForm, insuranceAgentName: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                    <input placeholder="Agent Email" type="email" value={editForm.insuranceAgentEmail} onChange={(e) => setEditForm({ ...editForm, insuranceAgentEmail: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                    <input placeholder="Agent Phone" value={editForm.insuranceAgentPhone} onChange={(e) => setEditForm({ ...editForm, insuranceAgentPhone: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                    <input placeholder="Agency Name" value={editForm.insuranceAgencyName} onChange={(e) => setEditForm({ ...editForm, insuranceAgencyName: e.target.value })}
-                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50" />
-                  </div>
-                </div>
-              </div>
-
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => setEditingCarrier(null)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition">Cancel</button>
-              <button onClick={() => updateCarrier.mutate({ id: editingCarrier!.id, data: editForm as any })}
-                disabled={updateCarrier.isPending}
-                className="flex-1 px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium hover:bg-gold/90 transition disabled:opacity-50">
-                {updateCarrier.isPending ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-            </div>
-      </SlideDrawer>
 
       {/* Confirm Approve/Reject Modal */}
       {confirmAction && (
