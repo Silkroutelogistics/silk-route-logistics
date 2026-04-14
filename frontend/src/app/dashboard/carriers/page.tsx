@@ -579,24 +579,24 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="fixed top-0 right-0 bottom-0 w-[640px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
-            {/* Vertical Icon Tab Strip (Cerry-style — colored circles with labels) */}
-            <div className="w-[62px] shrink-0 border-r border-gray-100 bg-white flex flex-col items-center py-4 gap-2">
+          <div className="fixed top-0 right-0 bottom-0 w-[720px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
+            {/* Vertical Icon Tab Strip */}
+            <div className="w-[66px] shrink-0 border-r border-gray-100 bg-gray-50/80 flex flex-col items-center pt-5 gap-3">
               {([
-                { key: "profile", icon: User, label: "Profile", activeBg: "bg-blue-500", activeText: "text-white", color: "text-blue-500" },
-                { key: "insurance", icon: Shield, label: "Insurance", activeBg: "bg-green-500", activeText: "text-white", color: "text-green-500" },
-                { key: "compliance", icon: CheckSquare, label: "Compliance", activeBg: "bg-purple-500", activeText: "text-white", color: "text-purple-500" },
-                { key: "compass", icon: Compass, label: "Compass", activeBg: "bg-orange-500", activeText: "text-white", color: "text-orange-500" },
-                { key: "inspections", icon: ClipboardList, label: "Inspect", activeBg: "bg-teal-500", activeText: "text-white", color: "text-teal-500" },
-                { key: "performance", icon: BarChart3, label: "Perform", activeBg: "bg-rose-500", activeText: "text-white", color: "text-rose-500" },
-                { key: "history", icon: Clock, label: "History", activeBg: "bg-gray-600", activeText: "text-white", color: "text-gray-500" },
-              ] as const).map(({ key, icon: Icon, label, activeBg, activeText, color }) => (
+                { key: "profile", icon: User, label: "Profile" },
+                { key: "insurance", icon: Shield, label: "Insurance" },
+                { key: "compliance", icon: CheckSquare, label: "Compliance" },
+                { key: "compass", icon: Compass, label: "Compass" },
+                { key: "inspections", icon: ClipboardList, label: "Inspect" },
+                { key: "performance", icon: BarChart3, label: "Perform" },
+                { key: "history", icon: Clock, label: "History" },
+              ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); }} title={label}
-                  className="flex flex-col items-center gap-1 transition-all">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${panelTab === key ? `${activeBg} ${activeText} shadow-md` : `bg-gray-100 ${color} hover:bg-gray-200`}`}>
-                    <Icon className="w-4 h-4" />
+                  className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C9A84C] text-white shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
+                    <Icon className={`w-[18px] h-[18px] transition-all duration-150 ${panelTab === key ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
                   </div>
-                  <span className={`text-[9px] leading-none ${panelTab === key ? "text-gray-900 font-semibold" : "text-gray-400"}`}>{label}</span>
+                  <span className={`text-[10px] leading-none transition-all duration-150 ${panelTab === key ? "text-[#C9A84C] font-semibold" : "text-gray-400 font-medium"}`}>{label}</span>
                 </button>
               ))}
             </div>
