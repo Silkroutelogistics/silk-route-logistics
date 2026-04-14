@@ -59,9 +59,9 @@ enum InvoiceStatus {
 }
 
 enum CarrierTier {
-  BRONZE    // 1-4 trucks
-  SILVER    // 5-10 trucks
-  GOLD      // 11-15+ trucks
+  BRONZE // 1-4 trucks
+  SILVER // 5-10 trucks
+  GOLD // 11-15+ trucks
   // Legacy values (kept for DB compat, map to BRONZE in code)
   GUEST
   PLATINUM
@@ -70,11 +70,11 @@ enum CarrierTier {
 
 enum CarrierMilestone {
   M1_FIRST_LOAD
-  M2_PROVEN      // 30 days, 10+ loads, 95% on-time
-  M3_RELIABLE    // 90 days, 30+ loads, 96% on-time
-  M4_PARTNER     // 6 months, 75+ loads, 97% on-time
-  M5_CORE        // 12 months, 150+ loads, 98% on-time
-  M6_FOUNDING    // 24 months, 300+ loads, permanent
+  M2_PROVEN // 30 days, 10+ loads, 95% on-time
+  M3_RELIABLE // 90 days, 30+ loads, 96% on-time
+  M4_PARTNER // 6 months, 75+ loads, 97% on-time
+  M5_CORE // 12 months, 150+ loads, 98% on-time
+  M6_FOUNDING // 24 months, 300+ loads, permanent
 }
 
 enum QuickPayStatus {
@@ -627,84 +627,84 @@ enum DelayReasonCode {
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  company       String?
-  role          UserRole
-  phone         String?
-  isVerified    Boolean   @default(false)
-  isActive      Boolean   @default(true)
-  lastLogin     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  company      String?
+  role         UserRole
+  phone        String?
+  isVerified   Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  carrierProfile  CarrierProfile?
-  eldDevices      ELDDeviceMapping[]
-  loadsPosted     Load[]          @relation("LoadPoster")
-  loadsCarried    Load[]          @relation("LoadCarrier")
-  invoices        Invoice[]
-  documents       Document[]
-  sentMessages    Message[]       @relation("MessageSender")
-  receivedMessages Message[]      @relation("MessageReceiver")
-  notifications   Notification[]
-  auditLogs       AuditLog[]
-  preferredTheme       String    @default("silk-route-classic")
-  darkMode             Boolean   @default(false)
-  passwordChangedAt    DateTime?
-  totpSecret           String?
-  totpEnabled          Boolean   @default(false)
-  totpBackupCodes      String?
-  failedLoginAttempts  Int       @default(0)
-  lockedUntil          DateTime?
-  otpCodes             OtpCode[]
-  rateConfirmations    RateConfirmation[] @relation("RateConfCreator")
-  checkCalls           CheckCall[]        @relation("CheckCallUser")
-  carrierPays          CarrierPay[]       @relation("CarrierPayments")
-  settlements          Settlement[]       @relation("CarrierSettlements")
-  statusUpdates        Load[]             @relation("StatusUpdater")
-  tenderedLoads        Load[]             @relation("TenderCreator")
-  systemLogs           SystemLog[]
-  auditTrails          AuditTrail[]       @relation("AuditPerformer")
+  carrierProfile      CarrierProfile?
+  eldDevices          ELDDeviceMapping[]
+  loadsPosted         Load[]             @relation("LoadPoster")
+  loadsCarried        Load[]             @relation("LoadCarrier")
+  invoices            Invoice[]
+  documents           Document[]
+  sentMessages        Message[]          @relation("MessageSender")
+  receivedMessages    Message[]          @relation("MessageReceiver")
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  preferredTheme      String             @default("silk-route-classic")
+  darkMode            Boolean            @default(false)
+  passwordChangedAt   DateTime?
+  totpSecret          String?
+  totpEnabled         Boolean            @default(false)
+  totpBackupCodes     String?
+  failedLoginAttempts Int                @default(0)
+  lockedUntil         DateTime?
+  otpCodes            OtpCode[]
+  rateConfirmations   RateConfirmation[] @relation("RateConfCreator")
+  checkCalls          CheckCall[]        @relation("CheckCallUser")
+  carrierPays         CarrierPay[]       @relation("CarrierPayments")
+  settlements         Settlement[]       @relation("CarrierSettlements")
+  statusUpdates       Load[]             @relation("StatusUpdater")
+  tenderedLoads       Load[]             @relation("TenderCreator")
+  systemLogs          SystemLog[]
+  auditTrails         AuditTrail[]       @relation("AuditPerformer")
 
   // Accounting relations
-  preparedPayments   CarrierPay[]       @relation("PaymentPreparer")
-  approvedPayments   CarrierPay[]       @relation("PaymentApprover")
-  rejectedPayments   CarrierPay[]       @relation("PaymentRejecter")
-  createdInvoices    Invoice[]          @relation("InvoiceCreator")
-  filedDisputes      PaymentDispute[]   @relation("DisputeFiler")
-  resolvedDisputes   PaymentDispute[]   @relation("DisputeResolver")
-  factoringEntries   FactoringFund[]    @relation("FactoringCreator")
-  communications     Communication[]
-  filedClaims        Claim[]            @relation("ClaimFiler")
-  assignedClaims     Claim[]            @relation("ClaimAssignee")
-  requestedApprovals ApprovalQueue[]    @relation("ApprovalRequester")
-  reviewedApprovals  ApprovalQueue[]    @relation("ApprovalReviewer")
-  generatedReports   FinancialReport[]  @relation("ReportGenerator")
-  errorLogs          ErrorLog[]         @relation("ErrorLogUser")
-  marcoPoloChats     MarcoPoloConversation[]
-  complianceNotes     ComplianceNote[]     @relation("ComplianceNotes")
-  complianceOverrides ComplianceOverride[] @relation("ComplianceOverrides")
+  preparedPayments    CarrierPay[]            @relation("PaymentPreparer")
+  approvedPayments    CarrierPay[]            @relation("PaymentApprover")
+  rejectedPayments    CarrierPay[]            @relation("PaymentRejecter")
+  createdInvoices     Invoice[]               @relation("InvoiceCreator")
+  filedDisputes       PaymentDispute[]        @relation("DisputeFiler")
+  resolvedDisputes    PaymentDispute[]        @relation("DisputeResolver")
+  factoringEntries    FactoringFund[]         @relation("FactoringCreator")
+  communications      Communication[]
+  filedClaims         Claim[]                 @relation("ClaimFiler")
+  assignedClaims      Claim[]                 @relation("ClaimAssignee")
+  requestedApprovals  ApprovalQueue[]         @relation("ApprovalRequester")
+  reviewedApprovals   ApprovalQueue[]         @relation("ApprovalReviewer")
+  generatedReports    FinancialReport[]       @relation("ReportGenerator")
+  errorLogs           ErrorLog[]              @relation("ErrorLogUser")
+  marcoPoloChats      MarcoPoloConversation[]
+  complianceNotes     ComplianceNote[]        @relation("ComplianceNotes")
+  complianceOverrides ComplianceOverride[]    @relation("ComplianceOverrides")
 
   // Shipper portal: link to Customer account
-  customerAccount     Customer?            @relation("CustomerUser")
+  customerAccount Customer? @relation("CustomerUser")
 
-  reportedDelays      LoadDelay[]          @relation("DelayReporter")
-  fraudReports        FraudReport[]        @relation("FraudReporter")
-  contractRates       ContractRate[]       @relation("ContractRateCreator")
-  rfpBids             RfpBid[]             @relation("RfpCreator")
-  vettingReports      VettingReport[]      @relation("VettingReportUser")
-  webhooks            WebhookEndpoint[]    @relation("UserWebhooks")
+  reportedDelays LoadDelay[]       @relation("DelayReporter")
+  fraudReports   FraudReport[]     @relation("FraudReporter")
+  contractRates  ContractRate[]    @relation("ContractRateCreator")
+  rfpBids        RfpBid[]          @relation("RfpCreator")
+  vettingReports VettingReport[]   @relation("VettingReportUser")
+  webhooks       WebhookEndpoint[] @relation("UserWebhooks")
 
   // Enterprise features
-  routingGuides       RoutingGuide[]       @relation("RoutingGuideCreator")
-  resolvedExceptions  ExceptionAlert[]     @relation("ExceptionResolver")
-  dockSchedules       DockSchedule[]       @relation("DockScheduleCreator")
-  carrierCallLogs     CarrierCallLog[]     @relation("CallLogCaller")
-  fuelTables          FuelSurchargeTable[] @relation("FuelTableCreator")
-  purchaseOrders      PurchaseOrder[]      @relation("POCreator")
+  routingGuides      RoutingGuide[]       @relation("RoutingGuideCreator")
+  resolvedExceptions ExceptionAlert[]     @relation("ExceptionResolver")
+  dockSchedules      DockSchedule[]       @relation("DockScheduleCreator")
+  carrierCallLogs    CarrierCallLog[]     @relation("CallLogCaller")
+  fuelTables         FuelSurchargeTable[] @relation("FuelTableCreator")
+  purchaseOrders     PurchaseOrder[]      @relation("POCreator")
 
   @@index([email])
   @@index([role])
@@ -716,29 +716,29 @@ model User {
 // ─── Carrier Models ──────────────────────────────────────
 
 model CarrierProfile {
-  id                    String                  @id @default(cuid())
-  userId                String                  @unique
-  user                  User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  mcNumber              String?                 @unique
-  dotNumber             String?                 @unique
+  id                    String                   @id @default(cuid())
+  userId                String                   @unique
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  mcNumber              String?                  @unique
+  dotNumber             String?                  @unique
   companyName           String?
   contactName           String?
   contactPhone          String?
   contactEmail          String?
   insuranceExpiry       DateTime?
   safetyScore           Float?
-  tier                  CarrierTier             @default(BRONZE)
+  tier                  CarrierTier              @default(BRONZE)
   equipmentTypes        String[]
   operatingRegions      String[]
   preferredLanes        Json?
-  onboardingStatus      OnboardingStatus        @default(PENDING)
+  onboardingStatus      OnboardingStatus         @default(PENDING)
   status                CarrierApplicationStatus @default(NEW)
   approvedAt            DateTime?
-  w9Uploaded            Boolean                 @default(false)
+  w9Uploaded            Boolean                  @default(false)
   w9Url                 String?
-  insuranceCertUploaded Boolean                 @default(false)
+  insuranceCertUploaded Boolean                  @default(false)
   coiUrl                String?
-  authorityDocUploaded  Boolean                 @default(false)
+  authorityDocUploaded  Boolean                  @default(false)
   authorityLetterUrl    String?
   address               String?
   city                  String?
@@ -755,139 +755,139 @@ model CarrierProfile {
   generalLiabilityAmount Float?
 
   // Extended Insurance Details
-  autoLiabilityProvider    String?
-  autoLiabilityPolicy      String?
-  autoLiabilityExpiry      DateTime?
-  cargoInsuranceProvider   String?
-  cargoInsurancePolicy     String?
-  cargoInsuranceExpiry     DateTime?
-  generalLiabilityProvider String?
-  generalLiabilityPolicy   String?
-  generalLiabilityExpiry   DateTime?
-  workersCompProvider      String?
-  workersCompAmount        Float?
-  workersCompPolicy        String?
-  workersCompExpiry        DateTime?
-  additionalInsuredSRL     Boolean   @default(false)
-  waiverOfSubrogation      Boolean   @default(false)
-  thirtyDayCancellationNotice Boolean @default(false)
+  autoLiabilityProvider       String?
+  autoLiabilityPolicy         String?
+  autoLiabilityExpiry         DateTime?
+  cargoInsuranceProvider      String?
+  cargoInsurancePolicy        String?
+  cargoInsuranceExpiry        DateTime?
+  generalLiabilityProvider    String?
+  generalLiabilityPolicy      String?
+  generalLiabilityExpiry      DateTime?
+  workersCompProvider         String?
+  workersCompAmount           Float?
+  workersCompPolicy           String?
+  workersCompExpiry           DateTime?
+  additionalInsuredSRL        Boolean   @default(false)
+  waiverOfSubrogation         Boolean   @default(false)
+  thirtyDayCancellationNotice Boolean   @default(false)
 
   // Insurance Agent Contact
-  insuranceAgentName   String?
-  insuranceAgentEmail  String?
-  insuranceAgentPhone  String?
-  insuranceAgencyName  String?
+  insuranceAgentName  String?
+  insuranceAgentEmail String?
+  insuranceAgentPhone String?
+  insuranceAgencyName String?
 
   // Payment preferences
-  paymentPreference     PaymentTier?
-  eldProvider           String?
+  paymentPreference PaymentTier?
+  eldProvider       String?
 
   // CPP Loyalty
-  cppTier             CarrierTier             @default(NONE)
-  cppTotalLoads       Int                     @default(0)
-  cppTotalMiles       Float                   @default(0)
-  cppJoinedDate       DateTime?
+  cppTier       CarrierTier @default(NONE)
+  cppTotalLoads Int         @default(0)
+  cppTotalMiles Float       @default(0)
+  cppJoinedDate DateTime?
 
   // Carvan Program
-  milestone            CarrierMilestone        @default(M1_FIRST_LOAD)
-  quickPayFeeRate      Float                   @default(0.03)
-  quickPayAutoLimit    Float                   @default(2000)
-  quickPayMonthlyLimit Float                   @default(15000)
-  paymentTermsDays     Int                     @default(21)
-  loyaltyEscalator     Float                   @default(0)
-  referralCount        Int                     @default(0)
+  milestone            CarrierMilestone @default(M1_FIRST_LOAD)
+  quickPayFeeRate      Float            @default(0.03)
+  quickPayAutoLimit    Float            @default(2000)
+  quickPayMonthlyLimit Float            @default(15000)
+  paymentTermsDays     Int              @default(21)
+  loyaltyEscalator     Float            @default(0)
+  referralCount        Int              @default(0)
 
   // FMCSA
-  safetyRating          String?
-  fmcsaBasicScores      Json?
-  fmcsaAuthorityStatus  String?
-  fmcsaLastChecked      DateTime?
+  safetyRating         String?
+  fmcsaBasicScores     Json?
+  fmcsaAuthorityStatus String?
+  fmcsaLastChecked     DateTime?
 
-  notes                 String?
+  notes String?
 
   // Vetting
-  lastVettingScore      Int?
-  lastVettingRisk       String?                 // LOW|MEDIUM|HIGH|CRITICAL
-  lastVettedAt          DateTime?
+  lastVettingScore Int?
+  lastVettingRisk  String? // LOW|MEDIUM|HIGH|CRITICAL
+  lastVettedAt     DateTime?
 
   // Caravan / DAT source tracking
-  source                String?                 @default("caravan")   // 'caravan' | 'dat'
-  emergencyApproved     Boolean                 @default(false)
+  source                 String?   @default("caravan") // 'caravan' | 'dat'
+  emergencyApproved      Boolean   @default(false)
   emergencyApproveReason String?
-  emergencyApprovedById String?
-  emergencyApprovedAt   DateTime?
+  emergencyApprovedById  String?
+  emergencyApprovedAt    DateTime?
 
   // Insurance grace period
   insuranceGracePeriodEnd DateTime?
   insuranceGraceGrantedBy String?
 
   // Enhanced vetting
-  vettingGrade          VettingGrade?
-  autoSuspendedAt       DateTime?
-  autoSuspendReason     String?
+  vettingGrade      VettingGrade?
+  autoSuspendedAt   DateTime?
+  autoSuspendReason String?
 
   // Chameleon detection
-  lastChameleonCheckAt  DateTime?
-  chameleonRiskLevel    ChameleonRiskLevel      @default(NONE)
+  lastChameleonCheckAt DateTime?
+  chameleonRiskLevel   ChameleonRiskLevel @default(NONE)
 
   // Authority age tracking
-  authorityGrantedDate  DateTime?
-  authorityAgeDays      Int?
+  authorityGrantedDate DateTime?
+  authorityAgeDays     Int?
 
   // OFAC screening
-  ofacStatus            OfacStatus?
-  ofacScreenedAt        DateTime?
-  ofacMatchDetails      Json?
+  ofacStatus       OfacStatus?
+  ofacScreenedAt   DateTime?
+  ofacMatchDetails Json?
 
   // ELD verification
-  eldDeviceVerified     Boolean               @default(false)
-  eldOnFmcsaList        EldVerificationStatus  @default(UNVERIFIED)
-  eldVerifiedAt         DateTime?
+  eldDeviceVerified Boolean               @default(false)
+  eldOnFmcsaList    EldVerificationStatus @default(UNVERIFIED)
+  eldVerifiedAt     DateTime?
 
   // UCR registration
-  ucrStatus             UcrStatus             @default(UNVERIFIED)
-  ucrYear               Int?
-  ucrVerifiedAt         DateTime?
+  ucrStatus     UcrStatus @default(UNVERIFIED)
+  ucrYear       Int?
+  ucrVerifiedAt DateTime?
 
   // FMCSA contact snapshot (for change detection)
-  fmcsaPhone            String?
-  fmcsaEmail            String?
-  fmcsaAddress          String?
-  fmcsaContactLastSync  DateTime?
+  fmcsaPhone           String?
+  fmcsaEmail           String?
+  fmcsaAddress         String?
+  fmcsaContactLastSync DateTime?
 
   // Overbooking / capacity
-  overbookingRisk       OverbookingRisk       @default(NONE)
-  overbookingLastCheck  DateTime?
-  activeLoadCount       Int                   @default(0)
+  overbookingRisk      OverbookingRisk @default(NONE)
+  overbookingLastCheck DateTime?
+  activeLoadCount      Int             @default(0)
 
   // Suspension tracking
-  suspensionReason      String?
-  suspendedAt           DateTime?
+  suspensionReason String?
+  suspendedAt      DateTime?
 
   // Document expiry enforcement
-  coiExpiryDate         DateTime?               // Certificate of Insurance expiry
-  w9ExpiryDate          DateTime?               // W-9 annual expiry
-  authorityDocExpiryDate DateTime?              // Authority letter expiry
+  coiExpiryDate          DateTime? // Certificate of Insurance expiry
+  w9ExpiryDate           DateTime? // W-9 annual expiry
+  authorityDocExpiryDate DateTime? // Authority letter expiry
 
   // Registration metadata (for chameleon enhancement)
-  registrationIpHash    String?                 // SHA-256 of registration IP
-  registrationUserAgent String?                 // Browser user-agent at registration
+  registrationIpHash    String? // SHA-256 of registration IP
+  registrationUserAgent String? // Browser user-agent at registration
 
   // IRP / IFTA / BOC-3 / MCS-150
-  irpStatus             String?                 // VERIFIED, EXPIRED, NOT_VERIFIED
-  irpExpiryDate         DateTime?
-  iftaStatus            String?                 // VERIFIED, EXPIRED, NOT_VERIFIED
-  iftaExpiryDate        DateTime?
-  boc3Filed             Boolean                 @default(false)
-  mcs150Outdated        Boolean?
-  mcs150LastUpdate      DateTime?
+  irpStatus        String? // VERIFIED, EXPIRED, NOT_VERIFIED
+  irpExpiryDate    DateTime?
+  iftaStatus       String? // VERIFIED, EXPIRED, NOT_VERIFIED
+  iftaExpiryDate   DateTime?
+  boc3Filed        Boolean   @default(false)
+  mcs150Outdated   Boolean?
+  mcs150LastUpdate DateTime?
 
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  scorecards  CarrierScorecard[]
-  bonuses     CarrierBonus[]
-  tenders     LoadTender[]
+  scorecards CarrierScorecard[]
+  bonuses    CarrierBonus[]
+  tenders    LoadTender[]
 
   complianceScans     ComplianceScan[]
   complianceReminders ComplianceReminder[]
@@ -895,28 +895,27 @@ model CarrierProfile {
   complianceOverrides ComplianceOverride[]
 
   // AI Learning
-  aiIntelligence      CarrierIntelligence[] @relation("CarrierIntelligence")
-  complianceForecast  ComplianceForecast?   @relation("ComplianceForecast")
+  aiIntelligence     CarrierIntelligence[] @relation("CarrierIntelligence")
+  complianceForecast ComplianceForecast?   @relation("ComplianceForecast")
 
   // Vetting upgrade relations
   identityVerification CarrierIdentityVerification?
   fingerprint          CarrierFingerprint?
-  chameleonMatches     ChameleonMatch[]      @relation("ChameleonCarrier")
-  chameleonMatchedBy   ChameleonMatch[]      @relation("ChameleonMatched")
+  chameleonMatches     ChameleonMatch[]             @relation("ChameleonCarrier")
+  chameleonMatchedBy   ChameleonMatch[]             @relation("ChameleonMatched")
   vettingReports       VettingReport[]
   fraudReports         FraudReport[]
   agreements           CarrierAgreement[]
+  deletedAt            DateTime?
+  deletedBy            String?
+
+  // Enterprise features
+  routingGuideEntries RoutingGuideEntry[] @relation("RoutingGuideCarrier")
+  dockSchedules       DockSchedule[]      @relation("DockCarrier")
+  carrierCallLogs     CarrierCallLog[]    @relation("CallLogCarrier")
 
   @@index([mcNumber])
   @@index([dotNumber])
-  deletedAt   DateTime?
-  deletedBy   String?
-
-  // Enterprise features
-  routingGuideEntries RoutingGuideEntry[]  @relation("RoutingGuideCarrier")
-  dockSchedules       DockSchedule[]       @relation("DockCarrier")
-  carrierCallLogs     CarrierCallLog[]     @relation("CallLogCarrier")
-
   @@index([status])
   @@index([cppTier])
   @@index([source])
@@ -926,50 +925,50 @@ model CarrierProfile {
 }
 
 model CashPosition {
-  id              String   @id @default(cuid())
-  date            DateTime @default(now())
-  totalCapital    Float    @default(70000)
-  deployed        Float    @default(0)
-  available       Float    @default(70000)
-  pendingShipperAR Float   @default(0)
-  bronzePaused    Boolean  @default(false)
-  allQPPaused     Boolean  @default(false)
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  date             DateTime @default(now())
+  totalCapital     Float    @default(70000)
+  deployed         Float    @default(0)
+  available        Float    @default(70000)
+  pendingShipperAR Float    @default(0)
+  bronzePaused     Boolean  @default(false)
+  allQPPaused      Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
 
   @@map("cash_positions")
 }
 
 model CarrierScorecard {
-  id                          String          @id @default(cuid())
-  carrierId                   String
-  carrier                     CarrierProfile  @relation(fields: [carrierId], references: [id])
-  period                      ScorecardPeriod
-  onTimePickupPct             Float           @default(0)
-  onTimeDeliveryPct           Float           @default(0)
-  communicationScore          Float           @default(0)
-  claimRatio                  Float           @default(0)
-  documentSubmissionTimeliness Float          @default(0)
-  acceptanceRate              Float           @default(0)
-  gpsCompliancePct            Float           @default(0)
-  overallScore                Float           @default(0)
-  tierAtTime                  CarrierTier
-  bonusEarned                 Float           @default(0)
-  calculatedAt                DateTime        @default(now())
+  id                           String          @id @default(cuid())
+  carrierId                    String
+  carrier                      CarrierProfile  @relation(fields: [carrierId], references: [id])
+  period                       ScorecardPeriod
+  onTimePickupPct              Float           @default(0)
+  onTimeDeliveryPct            Float           @default(0)
+  communicationScore           Float           @default(0)
+  claimRatio                   Float           @default(0)
+  documentSubmissionTimeliness Float           @default(0)
+  acceptanceRate               Float           @default(0)
+  gpsCompliancePct             Float           @default(0)
+  overallScore                 Float           @default(0)
+  tierAtTime                   CarrierTier
+  bonusEarned                  Float           @default(0)
+  calculatedAt                 DateTime        @default(now())
 
   @@index([carrierId, period])
   @@map("carrier_scorecards")
 }
 
 model CarrierBonus {
-  id          String      @id @default(cuid())
+  id          String         @id @default(cuid())
   carrierId   String
   carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
   type        BonusType
   amount      Float
   period      String?
-  status      BonusStatus @default(PENDING)
+  status      BonusStatus    @default(PENDING)
   description String?
-  createdAt   DateTime    @default(now())
+  createdAt   DateTime       @default(now())
 
   @@index([carrierId])
   @@map("carrier_bonuses")
@@ -984,132 +983,142 @@ model Load {
   status          LoadStatus @default(POSTED)
 
   // Route
-  originCompany   String?
-  originAddress   String?
-  originCity      String
-  originState     String
-  originZip       String
+  originCompany      String?
+  originAddress      String?
+  originCity         String
+  originState        String
+  originZip          String
   originContactName  String?
   originContactPhone String?
-  destCompany     String?
-  destAddress     String?
-  destCity        String
-  destState       String
-  destZip         String
-  destContactName  String?
-  destContactPhone String?
-  shipperFacility  String?
-  consigneeFacility String?
-  distance        Float?
+  destCompany        String?
+  destAddress        String?
+  destCity           String
+  destState          String
+  destZip            String
+  destContactName    String?
+  destContactPhone   String?
+  shipperFacility    String?
+  consigneeFacility  String?
+  distance           Float?
 
   // Schedule
-  pickupDate      DateTime
-  pickupTimeStart String?
-  pickupTimeEnd   String?
-  deliveryDate    DateTime
-  deliveryTimeStart String?
-  deliveryTimeEnd String?
-  actualPickupDatetime  DateTime?
+  pickupDate             DateTime
+  pickupTimeStart        String?
+  pickupTimeEnd          String?
+  deliveryDate           DateTime
+  deliveryTimeStart      String?
+  deliveryTimeEnd        String?
+  actualPickupDatetime   DateTime?
   actualDeliveryDatetime DateTime?
 
   // Freight
-  weight          Float?
-  pieces          Int?
-  pallets         Int?
-  equipmentType   String
-  trailerLength   String?
-  commodity       String?
-  freightClass    String?
+  weight           Float?
+  pieces           Int?
+  pallets          Int?
+  equipmentType    String
+  trailerLength    String?
+  commodity        String?
+  freightClass     String?
   dimensionsLength Float?
   dimensionsWidth  Float?
   dimensionsHeight Float?
-  stackable       Boolean    @default(true)
+  stackable        Boolean @default(true)
 
   // Hazmat
-  hazmat          Boolean    @default(false)
-  hazmatUnNumber  String?
-  hazmatClass     String?
+  hazmat                 Boolean @default(false)
+  hazmatUnNumber         String?
+  hazmatClass            String?
   hazmatEmergencyContact String?
-  hazmatPlacardRequired Boolean @default(false)
+  hazmatPlacardRequired  Boolean @default(false)
 
   // Temperature
-  temperatureControlled Boolean @default(false)
-  tempMin         Float?
-  tempMax         Float?
+  temperatureControlled    Boolean @default(false)
+  tempMin                  Float?
+  tempMax                  Float?
   tempContinuousMonitoring Boolean @default(false)
 
   // Customs / Cross-border
-  customsRequired Boolean    @default(false)
-  shipmentType    ShipmentType @default(DOMESTIC)
+  customsRequired     Boolean      @default(false)
+  shipmentType        ShipmentType @default(DOMESTIC)
   borderCrossingPoint String?
   customsBrokerName   String?
   customsBrokerPhone  String?
-  bondType        String?
-  parsPapsNumber  String?
+  bondType            String?
+  parsPapsNumber      String?
 
   // Shipper info
-  shipperReference String?
-  shipperPoNumber  String?
-  pickupNumber     String?
-  pickupInstructions String?
-  pickupHours      String?
-  loadingType      String?
-  deliveryReference String?
-  deliveryAppointment String?
+  shipperReference     String?
+  shipperPoNumber      String?
+  pickupNumber         String?
+  pickupInstructions   String?
+  pickupHours          String?
+  loadingType          String?
+  deliveryReference    String?
+  deliveryAppointment  String?
   deliveryInstructions String?
-  deliveryHours    String?
-  unloadingType    String?
+  deliveryHours        String?
+  unloadingType        String?
 
   // Multi-stop
-  isMultiStop     Boolean    @default(false)
-  stops           Json?
-  extraStopPay    Float      @default(0)
+  isMultiStop  Boolean @default(false)
+  stops        Json?
+  extraStopPay Float   @default(0)
 
   // Assignment
-  assignmentType  AssignmentType?
-  carrierDispatcherName String?
+  assignmentType         AssignmentType?
+  carrierDispatcherName  String?
   carrierDispatcherPhone String?
-  driverName      String?
-  driverPhone     String?
-  truckNumber     String?
-  trailerNumber   String?
-  hookType        HookType?
+  driverName             String?
+  driverPhone            String?
+  truckNumber            String?
+  trailerNumber          String?
+  hookType               HookType?
 
   // Track & Trace fields
-  customerRef     String?   @map("customer_ref")
-  urgencyLevel    String    @default("STANDARD") @db.VarChar(20) @map("urgency_level")
+  customerRef  String? @map("customer_ref")
+  urgencyLevel String  @default("STANDARD") @map("urgency_level") @db.VarChar(20)
+
+  // Track & Trace — Board / paperwork gates (v3.3.u)
+  regionOrigin      String?   @map("region_origin") @db.VarChar(32)
+  regionDestination String?   @map("region_destination") @db.VarChar(32)
+  shipperCode       String?   @unique @map("shipper_code") @db.VarChar(10) // 6-char public lookup code
+  podVerified       Boolean   @default(false) @map("pod_verified")
+  customerInvoiced  Boolean   @default(false) @map("customer_invoiced")
+  carrierSettled    Boolean   @default(false) @map("carrier_settled")
+  closedAt          DateTime? @map("closed_at")
+  trackingLinkSent  Boolean   @default(false) @map("tracking_link_sent")
 
   // Financials
-  rate            Float
-  customerRate    Float?
-  carrierRate     Float?
-  rateType        RateType   @default(FLAT)
-  fuelSurcharge   Float      @default(0)
+  rate              Float
+  customerRate      Float?
+  carrierRate       Float?
+  rateType          RateType          @default(FLAT)
+  fuelSurcharge     Float             @default(0)
   fuelSurchargeType FuelSurchargeType @default(FLAT)
-  accessorials    Json?
-  totalCarrierPay Float?
-  grossMargin     Float?
-  marginPercent   Float?
-  revenuePerMile  Float?
-  costPerMile     Float?
-  marginPerMile   Float?
+  accessorials      Json?
+  totalCarrierPay   Float?
+  grossMargin       Float?
+  marginPercent     Float?
+  revenuePerMile    Float?
+  costPerMile       Float?
+  marginPerMile     Float?
 
   // Status tracking
-  statusUpdatedAt DateTime?
+  statusUpdatedAt   DateTime?
   statusUpdatedById String?
-  statusUpdatedBy User?      @relation("StatusUpdater", fields: [statusUpdatedById], references: [id])
+  statusUpdatedBy   User?     @relation("StatusUpdater", fields: [statusUpdatedById], references: [id])
 
   // Documents
   rateConfirmationPdfUrl String?
-  bolUrl          String?
-  podUrl          String?
-  podSigned       Boolean    @default(false)
-  podReceivedAt   DateTime?
+  bolUrl                 String?
+  podUrl                 String?
+  podSigned              Boolean   @default(false)
+  podReceivedAt          DateTime?
 
   // Tender
-  tenderedAt      DateTime?
-  tenderedById    String?
-  tenderedBy      User?      @relation("TenderCreator", fields: [tenderedById], references: [id])
+  tenderedAt         DateTime?
+  tenderedById       String?
+  tenderedBy         User?     @relation("TenderCreator", fields: [tenderedById], references: [id])
   carrierConfirmedAt DateTime?
 
   // Payment terms
@@ -1118,41 +1127,41 @@ model Load {
   quickPayFeePercent   Float?
 
   // Terms
-  termsConditions  String?
+  termsConditions     String?
   specialInstructions String?
-  checkCallFrequency String?  @default("4 hours")
-  noBrokerClause  Boolean    @default(true)
+  checkCallFrequency  String? @default("4 hours")
+  noBrokerClause      Boolean @default(true)
 
-  notes           String?
+  notes String?
 
   // TMW-level reference fields
-  poNumbers         String[]  @default([])
+  poNumbers         String[] @default([])
   bolNumber         String?
   sealNumber        String?
   appointmentNumber String?
   additionalRefs    Json?
 
   // Freight classification (TMW)
-  nmfcCode          String?
-  declaredValue     Float?
+  nmfcCode      String?
+  declaredValue Float?
 
   // Loading details (TMW)
-  turnable          Boolean   @default(false)
+  turnable Boolean @default(false)
 
   // Dock/Facility
-  dockAssignment    String?
+  dockAssignment     String?
   driverInstructions String?
 
   // Financial (TMW)
-  codAmount         Float?
-  paymentTermsLoad  String?
+  codAmount        Float?
+  paymentTermsLoad String?
 
   // Shipper Tracking
-  trackingToken   String?    @unique @default(uuid())
+  trackingToken String? @unique @default(uuid())
 
   // GL Code Tracking (Finance integration)
-  glCode          String?
-  glDepartment    String?
+  glCode       String?
+  glDepartment String?
 
   // DAT Load Board
   datPostId       String?
@@ -1160,62 +1169,65 @@ model Load {
   datPostedFields Json?
 
   // Legacy fields kept for compatibility
-  length          Float?
-  width           Float?
-  height          Float?
-  contactName     String?
-  contactPhone    String?
-  contactEmail    String?
+  length       Float?
+  width        Float?
+  height       Float?
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
 
   // Asset assignment
-  truckId         String?
-  truck           Truck?     @relation(fields: [truckId], references: [id])
-  trailerId       String?
-  trailer         Trailer?   @relation(fields: [trailerId], references: [id])
-  driverId        String?
-  driver          Driver?    @relation(fields: [driverId], references: [id])
-  customerId      String?
-  customer        Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  truckId    String?
+  truck      Truck?    @relation(fields: [truckId], references: [id])
+  trailerId  String?
+  trailer    Trailer?  @relation(fields: [trailerId], references: [id])
+  driverId   String?
+  driver     Driver?   @relation(fields: [driverId], references: [id])
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  posterId        String
-  poster          User       @relation("LoadPoster", fields: [posterId], references: [id], onDelete: Restrict)
-  carrierId       String?
-  carrier         User?      @relation("LoadCarrier", fields: [carrierId], references: [id])
+  posterId  String
+  poster    User    @relation("LoadPoster", fields: [posterId], references: [id], onDelete: Restrict)
+  carrierId String?
+  carrier   User?   @relation("LoadCarrier", fields: [carrierId], references: [id])
 
-  invoices        Invoice[]
-  documents       Document[]
-  tenders         LoadTender[]
-  messages        Message[]
-  ediTransactions EDITransaction[]
-  shipments       Shipment[]
+  invoices           Invoice[]
+  documents          Document[]
+  tenders            LoadTender[]
+  messages           Message[]
+  ediTransactions    EDITransaction[]
+  shipments          Shipment[]
   rateConfirmations  RateConfirmation[]
-  checkCalls      CheckCall[]
-  carrierPays     CarrierPay[]
-  matchResults    MatchResult[]
+  checkCalls         CheckCall[]
+  carrierPays        CarrierPay[]
+  matchResults       MatchResult[]
   checkCallSchedules CheckCallSchedule[]
-  riskLogs        RiskLog[]
-  fallOffEvents   FallOffEvent[]
-  claims          Claim[]
-  delays          LoadDelay[]
+  riskLogs           RiskLog[]
+  fallOffEvents      FallOffEvent[]
+  claims             Claim[]
+  delays             LoadDelay[]
 
   // Track & Trace relations
-  loadStops         LoadStop[]
-  trackingEvents    LoadTrackingEvent[]
-  loadAccessorials  LoadAccessorial[]
+  loadStops             LoadStop[]
+  trackingEvents        LoadTrackingEvent[]
+  loadAccessorials      LoadAccessorial[]
   shipperTrackingTokens ShipperTrackingToken[]
-  eldEvents         ELDEvent[]
+  eldEvents             ELDEvent[]
+  loadExceptions        LoadException[]
+  loadActivities        LoadActivity[]
+  geofenceEvents        GeofenceEvent[]
+  detentionRecords      DetentionRecord[]
+  deletedAt             DateTime?
+  deletedBy             String?
+  cancellationReason    String?
 
   @@index([status])
   @@index([loadNumber])
   @@index([originState])
   @@index([destState])
-  deletedAt          DateTime?
-  deletedBy          String?
-  cancellationReason String?
-
   @@index([customerId])
   @@index([carrierId])
   @@index([posterId])
@@ -1223,22 +1235,22 @@ model Load {
   @@index([deliveryDate])
   @@index([statusUpdatedAt])
   @@index([status, createdAt])
-    @@index([deletedAt])
+  @@index([deletedAt])
   @@map("loads")
 }
 
 model LoadTender {
-  id          String       @id @default(cuid())
+  id          String         @id @default(cuid())
   loadId      String
-  load        Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load        Load           @relation(fields: [loadId], references: [id], onDelete: Cascade)
   carrierId   String
   carrier     CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-  status      TenderStatus @default(OFFERED)
+  status      TenderStatus   @default(OFFERED)
   offeredRate Float
   counterRate Float?
   respondedAt DateTime?
   expiresAt   DateTime
-  createdAt   DateTime     @default(now())
+  createdAt   DateTime       @default(now())
   deletedAt   DateTime?
 
   @@index([loadId])
@@ -1249,32 +1261,32 @@ model LoadTender {
 // ─── Rate Confirmation ──────────────────────────────────
 
 model RateConfirmation {
-  id              String   @id @default(cuid())
-  loadId          String
-  load            Load     @relation(fields: [loadId], references: [id], onDelete: Restrict)
-  rateConNumber   String?  @unique
-  formData        Json
-  pdfUrl          String?
-  sentToEmail     String?
-  sentAt          DateTime?
-  signed          Boolean  @default(false)
-  signedAt        DateTime?
-  signedUrl       String?
-  status          String   @default("DRAFT")
+  id            String    @id @default(cuid())
+  loadId        String
+  load          Load      @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  rateConNumber String?   @unique
+  formData      Json
+  pdfUrl        String?
+  sentToEmail   String?
+  sentAt        DateTime?
+  signed        Boolean   @default(false)
+  signedAt      DateTime?
+  signedUrl     String?
+  status        String    @default("DRAFT")
 
   // Indexed financial columns
-  carrierRate     Float?
-  fuelSurcharge   Float?
+  carrierRate      Float?
+  fuelSurcharge    Float?
   accessorialTotal Float?
-  totalCharges    Float?
+  totalCharges     Float?
 
-  createdById     String
-  createdBy       User     @relation("RateConfCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String
+  createdBy   User   @relation("RateConfCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  carrierPays     CarrierPay[]
+  carrierPays CarrierPay[]
 
   @@index([loadId])
   @@index([status])
@@ -1285,22 +1297,22 @@ model RateConfirmation {
 // ─── Check Call (Track & Trace) ──────────────────────────
 
 model CheckCall {
-  id          String   @id @default(cuid())
-  loadId      String
-  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  status      String
+  id           String                 @id @default(cuid())
+  loadId       String
+  load         Load                   @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  status       String
   driverStatus CheckCallDriverStatus?
-  location    String?
-  city        String?
-  state       String?
-  notes       String?
-  etaUpdate   DateTime?
-  contactedBy String?
-  method      String?
-  calledById  String?
-  calledBy    User?    @relation("CheckCallUser", fields: [calledById], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  deletedAt   DateTime?
+  location     String?
+  city         String?
+  state        String?
+  notes        String?
+  etaUpdate    DateTime?
+  contactedBy  String?
+  method       String?
+  calledById   String?
+  calledBy     User?                  @relation("CheckCallUser", fields: [calledById], references: [id], onDelete: SetNull)
+  createdAt    DateTime               @default(now())
+  deletedAt    DateTime?
 
   @@index([loadId, createdAt])
   @@map("check_calls")
@@ -1309,50 +1321,50 @@ model CheckCall {
 // ─── Finance Models ──────────────────────────────────
 
 model Invoice {
-  id              String        @id @default(cuid())
-  invoiceNumber   String        @unique
-  loadId          String
-  load            Load          @relation(fields: [loadId], references: [id], onDelete: Restrict)
-  status          InvoiceStatus @default(DRAFT)
-  amount          Float
-  lineHaulAmount  Float?
+  id                  String         @id @default(cuid())
+  invoiceNumber       String         @unique
+  loadId              String
+  load                Load           @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  status              InvoiceStatus  @default(DRAFT)
+  amount              Float
+  lineHaulAmount      Float?
   fuelSurchargeAmount Float?
   accessorialsAmount  Float?
-  totalAmount     Float?
-  factoringFee    Float?
-  advanceRate     Float?
-  advanceAmount   Float?
-  dueDate         DateTime?
-  sentDate        DateTime?
-  paidAt          DateTime?
-  paidAmount      Float?
-  paymentReference String?
-  paymentMethod   PaymentMethod?
-  pdfUrl          String?
+  totalAmount         Float?
+  factoringFee        Float?
+  advanceRate         Float?
+  advanceAmount       Float?
+  dueDate             DateTime?
+  sentDate            DateTime?
+  paidAt              DateTime?
+  paidAmount          Float?
+  paymentReference    String?
+  paymentMethod       PaymentMethod?
+  pdfUrl              String?
 
   // Reminder tracking
-  reminderSent31  Boolean   @default(false)
-  reminderSent45  Boolean   @default(false)
-  reminderSent60  Boolean   @default(false)
-  reminderSentPre7  Boolean   @default(false)
-  reminderSentDue   Boolean   @default(false)
-  reminderSent7     Boolean   @default(false)
-  reminderSent90    Boolean   @default(false)
-  lastReminderAt    DateTime?
+  reminderSent31   Boolean   @default(false)
+  reminderSent45   Boolean   @default(false)
+  reminderSent60   Boolean   @default(false)
+  reminderSentPre7 Boolean   @default(false)
+  reminderSentDue  Boolean   @default(false)
+  reminderSent7    Boolean   @default(false)
+  reminderSent90   Boolean   @default(false)
+  lastReminderAt   DateTime?
 
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
-  createdById     String?
-  createdBy       User?         @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdById String?
+  createdBy   User?   @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
-  documents       Document[]
-  lineItems       InvoiceLineItem[]
+  documents Document[]
+  lineItems InvoiceLineItem[]
 
-  deletedAt   DateTime?
+  deletedAt DateTime?
 
   @@index([status])
   @@index([userId, status])
@@ -1380,72 +1392,72 @@ model InvoiceLineItem {
 // ─── Carrier Pay (Accounts Payable) ──────────────────────
 
 model CarrierPay {
-  id                String          @id @default(cuid())
-  paymentNumber     String?         @unique
-  carrierId         String
-  carrier           User            @relation("CarrierPayments", fields: [carrierId], references: [id])
-  loadId            String
-  load              Load            @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  id                 String            @id @default(cuid())
+  paymentNumber      String?           @unique
+  carrierId          String
+  carrier            User              @relation("CarrierPayments", fields: [carrierId], references: [id])
+  loadId             String
+  load               Load              @relation(fields: [loadId], references: [id], onDelete: Restrict)
   rateConfirmationId String?
-  rateConfirmation  RateConfirmation? @relation(fields: [rateConfirmationId], references: [id], onDelete: SetNull)
+  rateConfirmation   RateConfirmation? @relation(fields: [rateConfirmationId], references: [id], onDelete: SetNull)
 
   // Payment tier
-  paymentTier       PaymentTier     @default(STANDARD)
+  paymentTier PaymentTier @default(STANDARD)
 
   // Amounts
-  lineHaul          Float?
-  fuelSurcharge     Float?
-  accessorialsTotal Float?
-  amount            Float
-  grossAmount       Float?
-  quickPayDiscount  Float?
-  quickPayFeePercent Float?         @default(0)
-  quickPayFeeAmount Float?          @default(0)
-  netAmount         Float
+  lineHaul           Float?
+  fuelSurcharge      Float?
+  accessorialsTotal  Float?
+  amount             Float
+  grossAmount        Float?
+  quickPayDiscount   Float?
+  quickPayFeePercent Float? @default(0)
+  quickPayFeeAmount  Float? @default(0)
+  netAmount          Float
 
-  status            CarrierPayStatus @default(PENDING)
-  paymentMethod     PaymentMethod?
-  checkNumber       String?
-  referenceNumber   String?
-  scheduledDate     DateTime?
-  paidAt            DateTime?
-  dueDate           DateTime?
-  paymentDate       DateTime?
+  status          CarrierPayStatus @default(PENDING)
+  paymentMethod   PaymentMethod?
+  checkNumber     String?
+  referenceNumber String?
+  scheduledDate   DateTime?
+  paidAt          DateTime?
+  dueDate         DateTime?
+  paymentDate     DateTime?
 
   // Approval workflow
-  preparedById      String?
-  preparedBy        User?           @relation("PaymentPreparer", fields: [preparedById], references: [id])
-  preparedAt        DateTime?
-  submittedAt       DateTime?
-  approvedById      String?
-  approvedBy        User?           @relation("PaymentApprover", fields: [approvedById], references: [id])
-  approvedAt        DateTime?
-  rejectedById      String?
-  rejectedBy        User?           @relation("PaymentRejecter", fields: [rejectedById], references: [id])
-  rejectedAt        DateTime?
-  rejectionReason   String?
+  preparedById    String?
+  preparedBy      User?     @relation("PaymentPreparer", fields: [preparedById], references: [id])
+  preparedAt      DateTime?
+  submittedAt     DateTime?
+  approvedById    String?
+  approvedBy      User?     @relation("PaymentApprover", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  rejectedById    String?
+  rejectedBy      User?     @relation("PaymentRejecter", fields: [rejectedById], references: [id])
+  rejectedAt      DateTime?
+  rejectionReason String?
 
   // Remit-to info
-  remitToName       String?
-  remitToAddress    String?
+  remitToName    String?
+  remitToAddress String?
 
   // Document checklist
-  docSignedRateCon  Boolean         @default(false)
-  docSignedBol      Boolean         @default(false)
-  docPod            Boolean         @default(false)
-  docCarrierInvoice Boolean         @default(false)
-  docLumperReceipt  Boolean         @default(false)
-  docScaleTicket    Boolean         @default(false)
-  docTempLog        Boolean         @default(false)
-  allDocsVerified   Boolean         @default(false)
+  docSignedRateCon  Boolean @default(false)
+  docSignedBol      Boolean @default(false)
+  docPod            Boolean @default(false)
+  docCarrierInvoice Boolean @default(false)
+  docLumperReceipt  Boolean @default(false)
+  docScaleTicket    Boolean @default(false)
+  docTempLog        Boolean @default(false)
+  allDocsVerified   Boolean @default(false)
 
-  notes             String?
-  settlementId      String?
-  settlement        Settlement?     @relation(fields: [settlementId], references: [id])
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  notes        String?
+  settlementId String?
+  settlement   Settlement? @relation(fields: [settlementId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  disputes          PaymentDispute[]
+  disputes PaymentDispute[]
 
   @@index([carrierId, status])
   @@index([loadId])
@@ -1458,33 +1470,33 @@ model CarrierPay {
 // ─── Payment Disputes ──────────────────────────────────
 
 model PaymentDispute {
-  id                String          @id @default(cuid())
-  disputeNumber     String?         @unique
-  carrierPaymentId  String
-  carrierPayment    CarrierPay      @relation(fields: [carrierPaymentId], references: [id])
-  loadId            String?
-  carrierId         String?
+  id               String     @id @default(cuid())
+  disputeNumber    String?    @unique
+  carrierPaymentId String
+  carrierPayment   CarrierPay @relation(fields: [carrierPaymentId], references: [id])
+  loadId           String?
+  carrierId        String?
 
-  disputeType       DisputeType
-  disputedAmount    Float
-  description       String
-  status            DisputeStatus   @default(OPEN)
+  disputeType    DisputeType
+  disputedAmount Float
+  description    String
+  status         DisputeStatus @default(OPEN)
 
   investigationNotes String?
   proposedResolution String?
-  proposedAmount    Float?
-  resolutionNotes   String?
-  resolutionAmount  Float?
+  proposedAmount     Float?
+  resolutionNotes    String?
+  resolutionAmount   Float?
 
-  filedById         String
-  filedBy           User            @relation("DisputeFiler", fields: [filedById], references: [id])
-  resolvedById      String?
-  resolvedBy        User?           @relation("DisputeResolver", fields: [resolvedById], references: [id])
-  filedAt           DateTime        @default(now())
-  resolvedAt        DateTime?
+  filedById    String
+  filedBy      User      @relation("DisputeFiler", fields: [filedById], references: [id])
+  resolvedById String?
+  resolvedBy   User?     @relation("DisputeResolver", fields: [resolvedById], references: [id])
+  filedAt      DateTime  @default(now())
+  resolvedAt   DateTime?
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([carrierPaymentId])
@@ -1494,26 +1506,26 @@ model PaymentDispute {
 // ─── Shipper Credit ──────────────────────────────────
 
 model ShipperCredit {
-  id                String          @id @default(cuid())
-  customerId        String          @unique
-  customer          Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  customerId String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  creditGrade       CreditGrade     @default(B)
-  creditLimit       Float           @default(0)
-  currentUtilized   Float           @default(0)
-  paymentTerms      ShipperPaymentTerms @default(NET30)
-  avgDaysToPay      Float           @default(0)
-  totalInvoices     Int             @default(0)
-  onTimePayments    Int             @default(0)
-  latePayments      Int             @default(0)
-  lastCreditReview  DateTime?
-  autoBlocked       Boolean         @default(false)
-  blockedReason     String?
-  blockedAt         DateTime?
-  notes             String?
+  creditGrade      CreditGrade         @default(B)
+  creditLimit      Float               @default(0)
+  currentUtilized  Float               @default(0)
+  paymentTerms     ShipperPaymentTerms @default(NET30)
+  avgDaysToPay     Float               @default(0)
+  totalInvoices    Int                 @default(0)
+  onTimePayments   Int                 @default(0)
+  latePayments     Int                 @default(0)
+  lastCreditReview DateTime?
+  autoBlocked      Boolean             @default(false)
+  blockedReason    String?
+  blockedAt        DateTime?
+  notes            String?
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("shipper_credits")
 }
@@ -1521,16 +1533,16 @@ model ShipperCredit {
 // ─── Factoring Fund ──────────────────────────────────
 
 model FactoringFund {
-  id                String          @id @default(cuid())
-  transactionType   FactoringTransactionType
-  amount            Float
-  runningBalance    Float
-  referenceType     String?
-  referenceId       String?
-  description       String
-  createdById       String?
-  createdBy         User?           @relation("FactoringCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt         DateTime        @default(now())
+  id              String                   @id @default(cuid())
+  transactionType FactoringTransactionType
+  amount          Float
+  runningBalance  Float
+  referenceType   String?
+  referenceId     String?
+  description     String
+  createdById     String?
+  createdBy       User?                    @relation("FactoringCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime                 @default(now())
 
   @@index([createdAt])
   @@index([transactionType])
@@ -1557,7 +1569,7 @@ model Settlement {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  deletedAt   DateTime?
+  deletedAt DateTime?
 
   @@index([carrierId, status])
   @@index([periodStart, periodEnd])
@@ -1567,42 +1579,47 @@ model Settlement {
 // ─── Document & Communication Models ──────────────────
 
 model Document {
-  id          String   @id @default(cuid())
-  fileName    String
-  fileUrl     String
-  fileType    String
-  fileSize    Int
-  entityType  String?  // LOAD, CARRIER, SHIPPER, INVOICE
-  entityId    String?
-  docType     String?  // BOL, POD, RATE_CON, W9, COI, AUTHORITY, BOC3, CDL, MEDICAL_CARD, MVR, REGISTRATION, INSPECTION, OTHER
-  status      String   @default("PENDING") // PENDING, VERIFIED, REJECTED
-  notes       String?
-  reviewedAt  DateTime?
-  reviewedBy  String?
-  createdAt   DateTime @default(now())
+  id           String    @id @default(cuid())
+  fileName     String
+  fileUrl      String
+  fileType     String
+  fileSize     Int
+  entityType   String? // LOAD, CARRIER, SHIPPER, INVOICE
+  entityId     String?
+  docType      String? // BOL, POD, RATE_CON, SIGNED_BOL_PU, SIGNED_BOL_DEL, INVOICE, PHOTO_LOADED, PHOTO_SEAL, PHOTO_EMPTY, PHOTO_DAMAGE, RECEIPT_MECHANICAL, RECEIPT_LUMPER, RECEIPT_SCALE, W9, COI, AUTHORITY, BOC3, CDL, MEDICAL_CARD, MVR, REGISTRATION, INSPECTION, OTHER
+  category     String? // Track & Trace grouping: PRE_DISPATCH, IN_TRANSIT, POST_DELIVERY, PHOTO_PICKUP, PHOTO_DELIVERY, RECEIPT
+  status       String    @default("PENDING") // PENDING, VERIFIED, REJECTED
+  uploadSource String    @default("AE_CONSOLE") @map("upload_source") // AE_CONSOLE, CARRIER_PORTAL, SYSTEM
+  notes        String?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  createdAt    DateTime  @default(now())
 
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Restrict)
   loadId      String?
-  load        Load?    @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load        Load?          @relation(fields: [loadId], references: [id], onDelete: Cascade)
   invoiceId   String?
-  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+  invoice     Invoice?       @relation(fields: [invoiceId], references: [id])
+  exceptionId String?        @map("exception_id")
+  exception   LoadException? @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
+  @@index([loadId, docType])
   @@map("documents")
 }
 
 model Message {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   senderId   String
-  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
+  sender     User      @relation("MessageSender", fields: [senderId], references: [id])
   receiverId String
-  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiver   User      @relation("MessageReceiver", fields: [receiverId], references: [id])
   loadId     String?
-  load       Load?    @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load       Load?     @relation(fields: [loadId], references: [id], onDelete: Cascade)
   content    String
   readAt     DateTime?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   @@index([senderId, receiverId])
   @@index([receiverId, readAt])
@@ -1610,17 +1627,17 @@ model Message {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String
   title     String
   message   String
   link      String?
-  read      Boolean          @default(false)
+  read      Boolean   @default(false)
   readAt    DateTime?
   actionUrl String?
-  createdAt DateTime         @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId, read])
   @@index([userId, readAt])
@@ -1631,24 +1648,24 @@ model Notification {
 // ─── Customer / Shipper Models ──────────────────────────
 
 model Customer {
-  id              String       @id @default(cuid())
-  name            String
-  type            CustomerType @default(SHIPPER)
-  contactName     String?
-  email           String?
-  phone           String?
+  id          String       @id @default(cuid())
+  name        String
+  type        CustomerType @default(SHIPPER)
+  contactName String?
+  email       String?
+  phone       String?
 
   // Link to User account (shipper portal login)
-  userId          String?      @unique
-  user            User?        @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
-  address         String?
-  city            String?
-  state           String?
-  zip             String?
-  status          String       @default("Active")
-  rating          Int          @default(0)
-  notes           String?
-  industry        String?
+  userId   String? @unique
+  user     User?   @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
+  address  String?
+  city     String?
+  state    String?
+  zip      String?
+  status   String  @default("Active")
+  rating   Int     @default(0)
+  notes    String?
+  industry String?
 
   // Financial
   creditLimit     Float?
@@ -1659,43 +1676,43 @@ model Customer {
   annualRevenue   Float?
 
   // Business
-  mcNumber        String?
-  industryType    String?
-  avgLoadsPerMonth Int?
+  mcNumber           String?
+  industryType       String?
+  avgLoadsPerMonth   Int?
   preferredEquipment String[]
-  onboardingStatus OnboardingStatus @default(PENDING)
-  contractUrl     String?
-  origins         Json?
-  destinations    Json?
+  onboardingStatus   OnboardingStatus @default(PENDING)
+  contractUrl        String?
+  origins            Json?
+  destinations       Json?
 
   // Billing
   billingContactName  String?
   billingContactEmail String?
   billingContactPhone String?
-  billingAddress  String?
-  billingCity     String?
-  billingState    String?
-  billingZip      String?
-  billingEmail    String?
+  billingAddress      String?
+  billingCity         String?
+  billingState        String?
+  billingZip          String?
+  billingEmail        String?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shipments       Shipment[]
-  loads           Load[]
-  contacts        CustomerContact[]
-  shipperCredit   ShipperCredit?
+  shipments     Shipment[]
+  loads         Load[]
+  contacts      CustomerContact[]
+  shipperCredit ShipperCredit?
 
   // AI Learning
-  aiIntelligence  CustomerIntelligence? @relation("CustomerIntelligence")
+  aiIntelligence CustomerIntelligence? @relation("CustomerIntelligence")
 
-  contractRates   ContractRate[] @relation("CustomerContractRates")
-  rfpBids         RfpBid[]       @relation("CustomerRfpBids")
-  routingGuides   RoutingGuide[] @relation("CustomerRoutingGuides")
-  purchaseOrders  PurchaseOrder[] @relation("CustomerPurchaseOrders")
+  contractRates  ContractRate[]  @relation("CustomerContractRates")
+  rfpBids        RfpBid[]        @relation("CustomerRfpBids")
+  routingGuides  RoutingGuide[]  @relation("CustomerRoutingGuides")
+  purchaseOrders PurchaseOrder[] @relation("CustomerPurchaseOrders")
 
-  deletedAt   DateTime?
-  deletedBy   String?
+  deletedAt DateTime?
+  deletedBy String?
 
   @@index([status])
   @@map("customers")
@@ -1719,82 +1736,82 @@ model CustomerContact {
 // ─── Fleet / Asset Models ──────────────────────────
 
 model Truck {
-  id                  String        @id @default(cuid())
-  unitNumber          String        @unique
-  type                TruckType     @default(SLEEPER)
-  year                Int?
-  make                String?
-  model               String?
-  vin                 String?       @unique
-  licensePlate        String?
-  licensePlateState   String?
-  color               String?
-  fuelType            String?       @default("Diesel")
-  ownershipType       OwnershipType @default(COMPANY)
-  status              AssetStatus   @default(ACTIVE)
-  mileage             Int           @default(0)
+  id                String        @id @default(cuid())
+  unitNumber        String        @unique
+  type              TruckType     @default(SLEEPER)
+  year              Int?
+  make              String?
+  model             String?
+  vin               String?       @unique
+  licensePlate      String?
+  licensePlateState String?
+  color             String?
+  fuelType          String?       @default("Diesel")
+  ownershipType     OwnershipType @default(COMPANY)
+  status            AssetStatus   @default(ACTIVE)
+  mileage           Int           @default(0)
 
-  registrationExpiry  DateTime?
-  lastInspectionDate  DateTime?
-  nextInspectionDate  DateTime?
-  insuranceExpiry     DateTime?
-  ifta                Boolean       @default(false)
-  iftaExpiry          DateTime?
+  registrationExpiry DateTime?
+  lastInspectionDate DateTime?
+  nextInspectionDate DateTime?
+  insuranceExpiry    DateTime?
+  ifta               Boolean   @default(false)
+  iftaExpiry         DateTime?
 
   // VIN verification
   vinVerificationStatus VinVerificationStatus @default(UNVERIFIED)
-  vinVerifiedAt       DateTime?
-  vinDecodedMake      String?
-  vinDecodedModel     String?
-  vinDecodedYear      Int?
-  vinModelYear        String?
-  vinPlantCountry     String?
-  vinBodyClass        String?
-  vinGvwr             String?
+  vinVerifiedAt         DateTime?
+  vinDecodedMake        String?
+  vinDecodedModel       String?
+  vinDecodedYear        Int?
+  vinModelYear          String?
+  vinPlantCountry       String?
+  vinBodyClass          String?
+  vinGvwr               String?
 
-  lastServiceDate     DateTime?
-  nextServiceDate     DateTime?
-  nextServiceMileage  Int?
+  lastServiceDate    DateTime?
+  nextServiceDate    DateTime?
+  nextServiceMileage Int?
 
-  assignedDriverId    String?       @unique
-  assignedDriver      Driver?       @relation("TruckDriver")
+  assignedDriverId String? @unique
+  assignedDriver   Driver? @relation("TruckDriver")
 
-  loads               Load[]
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  loads     Load[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("trucks")
 }
 
 model Trailer {
-  id                  String        @id @default(cuid())
-  unitNumber          String        @unique
-  type                TrailerType   @default(DRY_VAN)
-  year                Int?
-  make                String?
-  model               String?
-  vin                 String?       @unique
-  licensePlate        String?
-  licensePlateState   String?
-  length              Int?
-  capacity            Int?
-  ownershipType       OwnershipType @default(COMPANY)
-  status              AssetStatus   @default(ACTIVE)
+  id                String        @id @default(cuid())
+  unitNumber        String        @unique
+  type              TrailerType   @default(DRY_VAN)
+  year              Int?
+  make              String?
+  model             String?
+  vin               String?       @unique
+  licensePlate      String?
+  licensePlateState String?
+  length            Int?
+  capacity          Int?
+  ownershipType     OwnershipType @default(COMPANY)
+  status            AssetStatus   @default(ACTIVE)
 
-  registrationExpiry  DateTime?
-  lastInspectionDate  DateTime?
-  nextInspectionDate  DateTime?
+  registrationExpiry DateTime?
+  lastInspectionDate DateTime?
+  nextInspectionDate DateTime?
 
-  reeferUnit          Boolean       @default(false)
-  reeferModel         String?
-  reeferHours         Int?
+  reeferUnit  Boolean @default(false)
+  reeferModel String?
+  reeferHours Int?
 
-  assignedDriverId    String?       @unique
-  assignedDriver      Driver?       @relation("TrailerDriver")
+  assignedDriverId String? @unique
+  assignedDriver   Driver? @relation("TrailerDriver")
 
-  loads               Load[]
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  loads     Load[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("trailers")
 }
@@ -1817,38 +1834,38 @@ model Driver {
   safetyScore     Float        @default(100)
   violations      Int          @default(0)
 
-  medicalCardExpiry DateTime?
-  drugTestDate      DateTime?
-  endorsements      String[]
-  twicCard          Boolean       @default(false)
-  twicExpiry        DateTime?
+  medicalCardExpiry   DateTime?
+  drugTestDate        DateTime?
+  endorsements        String[]
+  twicCard            Boolean   @default(false)
+  twicExpiry          DateTime?
   backgroundCheckDate DateTime?
-  mvrDate           DateTime?
+  mvrDate             DateTime?
 
   emergencyContactName  String?
   emergencyContactPhone String?
 
-  hosDrivingUsed  Float        @default(0)
-  hosOnDutyUsed   Float        @default(0)
-  hosCycleUsed    Float        @default(0)
-  hosCycleLimit   Float        @default(70)
+  hosDrivingUsed Float @default(0)
+  hosOnDutyUsed  Float @default(0)
+  hosCycleUsed   Float @default(0)
+  hosCycleLimit  Float @default(70)
 
   // CPP miles
-  cppMilesEarned Float       @default(0)
+  cppMilesEarned Float @default(0)
 
-  assignedTruckId     String?  @unique
-  assignedTruck       Truck?   @relation("TruckDriver", fields: [assignedTruckId], references: [id])
-  assignedTrailerId   String?  @unique
-  assignedTrailer     Trailer? @relation("TrailerDriver", fields: [assignedTrailerId], references: [id])
+  assignedTruckId   String?  @unique
+  assignedTruck     Truck?   @relation("TruckDriver", fields: [assignedTruckId], references: [id])
+  assignedTrailerId String?  @unique
+  assignedTrailer   Trailer? @relation("TrailerDriver", fields: [assignedTrailerId], references: [id])
 
-  assignedEquipmentId String?  @unique
+  assignedEquipmentId String?    @unique
   assignedEquipment   Equipment? @relation("DriverEquipment", fields: [assignedEquipmentId], references: [id])
 
-  shipments       Shipment[]
-  loads           Load[]
+  shipments Shipment[]
+  loads     Load[]
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("drivers")
 }
@@ -1856,48 +1873,48 @@ model Driver {
 // ─── Shipment (legacy/external) ──────────────────────────
 
 model Shipment {
-  id              String         @id @default(cuid())
-  shipmentNumber  String         @unique @default(cuid())
-  proNumber       String?        @unique
-  bolNumber       String?
-  status          ShipmentStatus @default(PENDING)
+  id             String         @id @default(cuid())
+  shipmentNumber String         @unique @default(cuid())
+  proNumber      String?        @unique
+  bolNumber      String?
+  status         ShipmentStatus @default(PENDING)
 
-  originCity      String
-  originState     String
-  originZip       String
-  destCity        String
-  destState       String
-  destZip         String
+  originCity  String
+  originState String
+  originZip   String
+  destCity    String
+  destState   String
+  destZip     String
 
-  weight          Float?
-  pieces          Int?
-  commodity       String?
-  equipmentType   String
-  rate            Float
-  distance        Float?
+  weight              Float?
+  pieces              Int?
+  commodity           String?
+  equipmentType       String
+  rate                Float
+  distance            Float?
   specialInstructions String?
 
-  pickupDate      DateTime
-  deliveryDate    DateTime
-  actualPickup    DateTime?
-  actualDelivery  DateTime?
+  pickupDate     DateTime
+  deliveryDate   DateTime
+  actualPickup   DateTime?
+  actualDelivery DateTime?
 
-  customerId      String?
-  customer        Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  driverId        String?
-  driver          Driver?    @relation(fields: [driverId], references: [id])
-  equipmentId     String?
-  equipment       Equipment? @relation(fields: [equipmentId], references: [id])
+  customerId  String?
+  customer    Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  driverId    String?
+  driver      Driver?    @relation(fields: [driverId], references: [id])
+  equipmentId String?
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
 
-  loadId          String?
-  load            Load?      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  loadId String?
+  load   Load?   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
-  lastLocation    String?
-  lastLocationAt  DateTime?
-  eta             DateTime?
+  lastLocation   String?
+  lastLocationAt DateTime?
+  eta            DateTime?
 
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([customerId])
@@ -1922,8 +1939,8 @@ model Equipment {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  assignedDriver  Driver?         @relation("DriverEquipment")
-  shipments       Shipment[]
+  assignedDriver Driver?    @relation("DriverEquipment")
+  shipments      Shipment[]
 
   @@map("equipment")
 }
@@ -1965,17 +1982,17 @@ model BrokerIntegration {
 }
 
 model EDITransaction {
-  id              String   @id @default(cuid())
-  transactionSet  String
-  direction       String
-  loadId          String?
-  load            Load?    @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  carrierId       String?
-  rawPayload      String
-  status          String   @default("PENDING")
-  errorMessage    String?
-  createdAt       DateTime @default(now())
-  processedAt     DateTime?
+  id             String    @id @default(cuid())
+  transactionSet String
+  direction      String
+  loadId         String?
+  load           Load?     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierId      String?
+  rawPayload     String
+  status         String    @default("PENDING")
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
 
   @@index([transactionSet, status])
   @@index([loadId])
@@ -1985,18 +2002,18 @@ model EDITransaction {
 // ─── System Monitoring ──────────────────────────────────
 
 model SystemLog {
-  id          String      @id @default(cuid())
-  logType     LogType
-  severity    LogSeverity @default(INFO)
-  source      String
-  endpoint    String?
-  userId      String?
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  message     String
-  details     Json?
-  ipAddress   String?
-  durationMs  Int?
-  createdAt   DateTime    @default(now())
+  id         String      @id @default(cuid())
+  logType    LogType
+  severity   LogSeverity @default(INFO)
+  source     String
+  endpoint   String?
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  message    String
+  details    Json?
+  ipAddress  String?
+  durationMs Int?
+  createdAt  DateTime    @default(now())
 
   @@index([logType])
   @@index([severity])
@@ -2023,16 +2040,16 @@ model AuditTrail {
 // ─── Audit & Compliance (legacy) ──────────────────────────
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-  action     String
-  entity     String
-  entityId   String?
-  changes    String?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action    String
+  entity    String
+  entityId  String?
+  changes   String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([entity, entityId])
@@ -2041,18 +2058,18 @@ model AuditLog {
 }
 
 model ComplianceAlert {
-  id          String   @id @default(cuid())
-  type        String
-  entityType  String
-  entityId    String
-  entityName  String
-  expiryDate  DateTime
-  status      String   @default("ACTIVE")
-  severity    String   @default("WARNING")
+  id           String    @id @default(cuid())
+  type         String
+  entityType   String
+  entityId     String
+  entityName   String
+  expiryDate   DateTime
+  status       String    @default("ACTIVE")
+  severity     String    @default("WARNING")
   notifiedAt   DateTime?
   resolvedAt   DateTime?
   snoozedUntil DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([status, severity])
   @@index([entityType, entityId])
@@ -2063,78 +2080,78 @@ model ComplianceAlert {
 // ─── Carrier Identity & Fraud Detection ──────────────────────
 
 model CarrierIdentityVerification {
-  id                    String   @id @default(cuid())
-  carrierId             String   @unique
-  carrier               CarrierProfile @relation(fields: [carrierId], references: [id])
+  id        String         @id @default(cuid())
+  carrierId String         @unique
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
 
   // Photo ID
-  photoIdUploaded       Boolean  @default(false)
-  photoIdUrl            String?
-  photoIdType           PhotoIdType?
-  photoIdStatus         PhotoIdStatus @default(PENDING)
-  photoIdVerifiedAt     DateTime?
-  photoIdVerifiedBy     String?
+  photoIdUploaded   Boolean       @default(false)
+  photoIdUrl        String?
+  photoIdType       PhotoIdType?
+  photoIdStatus     PhotoIdStatus @default(PENDING)
+  photoIdVerifiedAt DateTime?
+  photoIdVerifiedBy String?
 
   // Biometric facial match
-  selfieUploaded        Boolean  @default(false)
+  selfieUploaded        Boolean           @default(false)
   selfieUrl             String?
-  facialMatchScore      Float?    // 0-100 confidence
+  facialMatchScore      Float? // 0-100 confidence
   facialMatchStatus     FacialMatchStatus @default(PENDING)
   facialMatchVerifiedAt DateTime?
 
   // Secretary of State
-  sosVerified           Boolean  @default(false)
-  sosState              String?
-  sosEntityName         String?
-  sosFilingNumber       String?
-  sosStatus             SosStatus?
-  articlesOfIncUrl      String?
+  sosVerified      Boolean    @default(false)
+  sosState         String?
+  sosEntityName    String?
+  sosFilingNumber  String?
+  sosStatus        SosStatus?
+  articlesOfIncUrl String?
 
   // W-9 IRS TIN
-  w9TinVerified         Boolean  @default(false)
-  w9TinLastFour         String?
-  w9VerifiedAt          DateTime?
-  w9TinMatchStatus      TinMatchStatus @default(UNVERIFIED)
-  w9TinMatchVerifiedAt  DateTime?
-  w9CompanyName         String?
-  w9TinFull             String?   // Encrypted, used for IRS match only
+  w9TinVerified        Boolean        @default(false)
+  w9TinLastFour        String?
+  w9VerifiedAt         DateTime?
+  w9TinMatchStatus     TinMatchStatus @default(UNVERIFIED)
+  w9TinMatchVerifiedAt DateTime?
+  w9CompanyName        String?
+  w9TinFull            String? // Encrypted, used for IRS match only
 
   // Email domain analysis
-  emailDomainValid      Boolean?
-  emailDomainAge        Int?      // days since domain registration
-  emailIsDisposable     Boolean?
-  emailProvider         EmailProviderType?
+  emailDomainValid  Boolean?
+  emailDomainAge    Int? // days since domain registration
+  emailIsDisposable Boolean?
+  emailProvider     EmailProviderType?
 
   // Phone analysis
-  phoneType             PhoneLineType?
-  phoneCarrier          String?
-  phoneIsVoip           Boolean?
+  phoneType    PhoneLineType?
+  phoneCarrier String?
+  phoneIsVoip  Boolean?
 
   // Overall score
-  identityScore         Int       @default(0) // 0-100
-  identityStatus        IdentityStatus @default(UNVERIFIED)
+  identityScore  Int            @default(0) // 0-100
+  identityStatus IdentityStatus @default(UNVERIFIED)
 
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([identityStatus])
   @@map("carrier_identity_verifications")
 }
 
 model CarrierFingerprint {
-  id          String   @id @default(cuid())
-  carrierId   String   @unique
-  carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
+  id        String         @id @default(cuid())
+  carrierId String         @unique
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
 
-  phoneHash   String?  // SHA-256 of normalized phone
-  emailHash   String?  // SHA-256 of email domain
-  addressHash String?  // SHA-256 of normalized address
-  einHash     String?  // SHA-256 of EIN/TIN
-  ipHash      String?  // SHA-256 of registration IP address
-  dotHash     String?  // SHA-256 of DOT number (catches re-registered carriers)
+  phoneHash   String? // SHA-256 of normalized phone
+  emailHash   String? // SHA-256 of email domain
+  addressHash String? // SHA-256 of normalized address
+  einHash     String? // SHA-256 of EIN/TIN
+  ipHash      String? // SHA-256 of registration IP address
+  dotHash     String? // SHA-256 of DOT number (catches re-registered carriers)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([phoneHash])
   @@index([emailHash])
@@ -2146,22 +2163,22 @@ model CarrierFingerprint {
 }
 
 model ChameleonMatch {
-  id                String   @id @default(cuid())
-  carrierId         String
-  carrier           CarrierProfile @relation("ChameleonCarrier", fields: [carrierId], references: [id])
-  matchedCarrierId  String
-  matchedCarrier    CarrierProfile @relation("ChameleonMatched", fields: [matchedCarrierId], references: [id])
+  id               String         @id @default(cuid())
+  carrierId        String
+  carrier          CarrierProfile @relation("ChameleonCarrier", fields: [carrierId], references: [id])
+  matchedCarrierId String
+  matchedCarrier   CarrierProfile @relation("ChameleonMatched", fields: [matchedCarrierId], references: [id])
 
-  matchType         ChameleonMatchType
-  riskScore         Int       @default(0) // 0-100
-  status            ChameleonMatchStatus @default(OPEN)
+  matchType ChameleonMatchType
+  riskScore Int                  @default(0) // 0-100
+  status    ChameleonMatchStatus @default(OPEN)
 
-  reviewedById      String?
-  reviewedAt        DateTime?
-  reviewNotes       String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([carrierId])
   @@index([matchedCarrierId])
@@ -2170,30 +2187,30 @@ model ChameleonMatch {
 }
 
 model VettingReport {
-  id              String   @id @default(cuid())
-  carrierId       String
-  carrier         CarrierProfile @relation(fields: [carrierId], references: [id])
+  id        String         @id @default(cuid())
+  carrierId String
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
 
-  score           Int       @default(0)
-  grade           VettingGrade
-  riskLevel       String    // LOW, MEDIUM, HIGH, CRITICAL
-  recommendation  String    // APPROVE, REVIEW, REJECT
+  score          Int          @default(0)
+  grade          VettingGrade
+  riskLevel      String // LOW, MEDIUM, HIGH, CRITICAL
+  recommendation String // APPROVE, REVIEW, REJECT
 
-  checksJson      Json      // Array of check results
-  flagsJson       Json?     // Array of flag strings
-  fmcsaSnapshot   Json?     // FMCSA data at time of vetting
-  identityData    Json?     // Identity check data at time of vetting
+  checksJson    Json // Array of check results
+  flagsJson     Json? // Array of flag strings
+  fmcsaSnapshot Json? // FMCSA data at time of vetting
+  identityData  Json? // Identity check data at time of vetting
 
-  previousScore   Int?
-  scoreDelta      Int?
-  trendDirection  String?   // IMPROVING, STABLE, DECLINING
+  previousScore  Int?
+  scoreDelta     Int?
+  trendDirection String? // IMPROVING, STABLE, DECLINING
 
-  triggeredBy     String?   // USER, CRON, REGISTRATION
+  triggeredBy       String? // USER, CRON, REGISTRATION
   triggeredByUserId String?
   triggeredByUser   User?   @relation("VettingReportUser", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
-  vettingType     String    @default("FULL") // FULL, FMCSA_ONLY, IDENTITY_ONLY
+  vettingType       String  @default("FULL") // FULL, FMCSA_ONLY, IDENTITY_ONLY
 
-  createdAt       DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([carrierId])
   @@index([grade])
@@ -2202,14 +2219,14 @@ model VettingReport {
 }
 
 model ComplianceScan {
-  id              String   @id @default(cuid())
+  id              String         @id @default(cuid())
   carrierId       String
-  scanType        String   @default("FMCSA_AUTO")
+  scanType        String         @default("FMCSA_AUTO")
   fmcsaData       Json?
   previousData    Json?
   changesDetected Json?
-  status          String   @default("PASSED")
-  scannedAt       DateTime @default(now())
+  status          String         @default("PASSED")
+  scannedAt       DateTime       @default(now())
   carrier         CarrierProfile @relation(fields: [carrierId], references: [id])
 
   @@index([carrierId])
@@ -2218,12 +2235,12 @@ model ComplianceScan {
 }
 
 model ComplianceReminder {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   carrierId   String
   itemType    String
   tier        String
-  sentAt      DateTime @default(now())
-  emailStatus String   @default("SENT")
+  sentAt      DateTime       @default(now())
+  emailStatus String         @default("SENT")
   carrier     CarrierProfile @relation(fields: [carrierId], references: [id])
 
   @@index([carrierId])
@@ -2232,27 +2249,27 @@ model ComplianceReminder {
 }
 
 model ComplianceNote {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   carrierId String
   authorId  String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
+  content   String         @db.Text
+  createdAt DateTime       @default(now())
   carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
-  author    User     @relation("ComplianceNotes", fields: [authorId], references: [id])
+  author    User           @relation("ComplianceNotes", fields: [authorId], references: [id])
 
   @@index([carrierId])
   @@map("compliance_notes")
 }
 
 model ComplianceOverride {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   carrierId String
-  reason    String   @db.Text
+  reason    String         @db.Text
   adminId   String
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime       @default(now())
   carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
-  admin     User     @relation("ComplianceOverrides", fields: [adminId], references: [id])
+  admin     User           @relation("ComplianceOverrides", fields: [adminId], references: [id])
 
   @@index([carrierId])
   @@index([expiresAt])
@@ -2263,19 +2280,19 @@ model ComplianceOverride {
 
 model Communication {
   id          String   @id @default(cuid())
-  type        String   // CALL_INBOUND, CALL_OUTBOUND, TEXT_INBOUND, TEXT_OUTBOUND, EMAIL_INBOUND, EMAIL_OUTBOUND, NOTE
-  direction   String?  // INBOUND, OUTBOUND
-  entityType  String   // CARRIER, SHIPPER, LOAD
+  type        String // CALL_INBOUND, CALL_OUTBOUND, TEXT_INBOUND, TEXT_OUTBOUND, EMAIL_INBOUND, EMAIL_OUTBOUND, NOTE
+  direction   String? // INBOUND, OUTBOUND
+  entityType  String // CARRIER, SHIPPER, LOAD
   entityId    String
   loadId      String?
-  from        String?  // Phone number or email
+  from        String? // Phone number or email
   to          String?
   subject     String?
   body        String?  @db.Text
   phoneNumber String?
-  duration    Int?     // Call duration in seconds
+  duration    Int? // Call duration in seconds
   metadata    Json?
-  userId      String   // Who logged this
+  userId      String // Who logged this
   user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now())
 
@@ -2304,11 +2321,11 @@ model TokenBlacklist {
 // ─── OTP Codes ──────────────────────────────────────────
 
 model OtpCode {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code      String
-  expiresAt DateTime
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code           String
+  expiresAt      DateTime
   used           Boolean  @default(false)
   failedAttempts Int      @default(0)
   createdAt      DateTime @default(now())
@@ -2320,21 +2337,21 @@ model OtpCode {
 // ─── Smart Carrier Matching (C.1) ──────────────────────────
 
 model MatchResult {
-  id              String   @id @default(cuid())
-  loadId          String
-  load            Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  carrierId       String   // CarrierProfile id
-  userId          String   // User id of carrier
-  matchScore      Float
-  laneScore       Float    @default(0)
-  rateScore       Float    @default(0)
-  cppScore      Float    @default(0)
-  availabilityScore Float  @default(0)
-  breakdown       Json?
-  rank            Int      @default(0)
-  wasAssigned     Boolean  @default(false)
-  wasCompleted    Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  id                String   @id @default(cuid())
+  loadId            String
+  load              Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierId         String // CarrierProfile id
+  userId            String // User id of carrier
+  matchScore        Float
+  laneScore         Float    @default(0)
+  rateScore         Float    @default(0)
+  cppScore          Float    @default(0)
+  availabilityScore Float    @default(0)
+  breakdown         Json?
+  rank              Int      @default(0)
+  wasAssigned       Boolean  @default(false)
+  wasCompleted      Boolean  @default(false)
+  createdAt         DateTime @default(now())
 
   @@index([loadId])
   @@index([carrierId])
@@ -2344,20 +2361,20 @@ model MatchResult {
 // ─── Check-Call Schedule (C.2) ──────────────────────────
 
 model CheckCallSchedule {
-  id              String   @id @default(cuid())
-  loadId          String
-  load            Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  scheduledTime   DateTime
-  type            String   // PRE_PICKUP, AT_PICKUP, MIDPOINT, PRE_DELIVERY, AT_DELIVERY
-  status          String   @default("PENDING")  // PENDING, SENT, RESPONDED, MISSED, ESCALATED
-  sentAt          DateTime?
-  respondedAt     DateTime?
-  response        String?  // 1-5 carrier response
-  responseText    String?
-  retryCount      Int      @default(0)
-  carrierPhone    String?
-  escalatedAt     DateTime?
-  createdAt       DateTime @default(now())
+  id            String    @id @default(cuid())
+  loadId        String
+  load          Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  scheduledTime DateTime
+  type          String // PRE_PICKUP, AT_PICKUP, MIDPOINT, PRE_DELIVERY, AT_DELIVERY
+  status        String    @default("PENDING") // PENDING, SENT, RESPONDED, MISSED, ESCALATED
+  sentAt        DateTime?
+  respondedAt   DateTime?
+  response      String? // 1-5 carrier response
+  responseText  String?
+  retryCount    Int       @default(0)
+  carrierPhone  String?
+  escalatedAt   DateTime?
+  createdAt     DateTime  @default(now())
 
   @@index([loadId])
   @@index([status, scheduledTime])
@@ -2367,14 +2384,14 @@ model CheckCallSchedule {
 // ─── Risk Log (C.3) ──────────────────────────
 
 model RiskLog {
-  id          String   @id @default(cuid())
-  loadId      String
-  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  score       Int      @default(0)
-  level       String   // GREEN, AMBER, RED
-  factors     Json     // Array of {factor, points, description}
-  notified    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  loadId    String
+  load      Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  score     Int      @default(0)
+  level     String // GREEN, AMBER, RED
+  factors   Json // Array of {factor, points, description}
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@index([loadId])
   @@index([level])
@@ -2385,19 +2402,19 @@ model RiskLog {
 // ─── Fall-Off Event (C.4) ──────────────────────────
 
 model FallOffEvent {
-  id              String   @id @default(cuid())
-  loadId          String
-  load            Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  loadId            String
+  load              Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
   originalCarrierId String?
-  reason          String?
-  recoveryMethod  String?  // CARAVAN_MATCH, DAT, MANUAL
-  newCarrierId    String?
-  recoveryTimeMin Float?   // Minutes from fall-off to new assignment
-  backupsSent     Int      @default(0)
-  backupsAccepted Int      @default(0)
-  status          String   @default("ACTIVE")  // ACTIVE, RECOVERED, UNRESOLVED
-  resolvedAt      DateTime?
-  createdAt       DateTime @default(now())
+  reason            String?
+  recoveryMethod    String? // CARAVAN_MATCH, DAT, MANUAL
+  newCarrierId      String?
+  recoveryTimeMin   Float? // Minutes from fall-off to new assignment
+  backupsSent       Int       @default(0)
+  backupsAccepted   Int       @default(0)
+  status            String    @default("ACTIVE") // ACTIVE, RECOVERED, UNRESOLVED
+  resolvedAt        DateTime?
+  createdAt         DateTime  @default(now())
 
   @@index([loadId])
   @@index([status])
@@ -2407,21 +2424,21 @@ model FallOffEvent {
 // ─── Email Sequence (C.5) ──────────────────────────
 
 model EmailSequence {
-  id              String   @id @default(cuid())
-  prospectId      String   // Customer id (prospect)
-  prospectEmail   String
-  prospectName    String
-  templateName    String   @default("prospect_outreach")
-  currentStep     Int      @default(0)  // 0-based
-  totalSteps      Int      @default(4)
-  nextSendAt      DateTime?
-  status          String   @default("ACTIVE")  // ACTIVE, PAUSED, COMPLETED, STOPPED
-  stopReason      String?  // REPLIED, MANUAL, STAGE_CHANGE
-  schedule        Json     // [{day: 0, subject, template}, {day: 3, ...}, ...]
-  metadata        Json?    // Track opens, clicks, etc.
-  startedById     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String    @id @default(cuid())
+  prospectId    String // Customer id (prospect)
+  prospectEmail String
+  prospectName  String
+  templateName  String    @default("prospect_outreach")
+  currentStep   Int       @default(0) // 0-based
+  totalSteps    Int       @default(4)
+  nextSendAt    DateTime?
+  status        String    @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED, STOPPED
+  stopReason    String? // REPLIED, MANUAL, STAGE_CHANGE
+  schedule      Json // [{day: 0, subject, template}, {day: 3, ...}, ...]
+  metadata      Json? // Track opens, clicks, etc.
+  startedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([prospectId])
   @@index([status, nextSendAt])
@@ -2431,25 +2448,25 @@ model EmailSequence {
 // ─── Claims ───
 
 model Claim {
-  id              String      @id @default(cuid())
-  claimNumber     String      @unique
-  loadId          String
-  load            Load        @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  claimType       ClaimType
-  status          ClaimStatus @default(FILED)
-  description     String      @db.Text
-  estimatedValue  Float?
-  resolvedValue   Float?
-  photos          String[]
-  notes           Json?       // Array of {date, author, text}
-  filedById       String
-  filedBy         User        @relation("ClaimFiler", fields: [filedById], references: [id])
-  assignedToId    String?
-  assignedTo      User?       @relation("ClaimAssignee", fields: [assignedToId], references: [id])
-  resolvedAt      DateTime?
-  closedAt        DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  claimNumber    String      @unique
+  loadId         String
+  load           Load        @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  claimType      ClaimType
+  status         ClaimStatus @default(FILED)
+  description    String      @db.Text
+  estimatedValue Float?
+  resolvedValue  Float?
+  photos         String[]
+  notes          Json? // Array of {date, author, text}
+  filedById      String
+  filedBy        User        @relation("ClaimFiler", fields: [filedById], references: [id])
+  assignedToId   String?
+  assignedTo     User?       @relation("ClaimAssignee", fields: [assignedToId], references: [id])
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([loadId])
   @@index([status])
@@ -2460,27 +2477,27 @@ model Claim {
 // ─── Approval Queue ───
 
 model ApprovalQueue {
-  id              String         @id @default(cuid())
-  type            ApprovalType
-  status          ApprovalStatus @default(PENDING)
-  referenceId     String
-  referenceType   String         // CARRIER_PAY, INVOICE, CREDIT, FUND
-  amount          Float
-  description     String
-  priority        String         @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
-  requestedById   String
-  requestedBy     User           @relation("ApprovalRequester", fields: [requestedById], references: [id])
-  requestedAt     DateTime       @default(now())
-  reviewedById    String?
-  reviewedBy      User?          @relation("ApprovalReviewer", fields: [reviewedById], references: [id])
-  reviewedAt      DateTime?
-  reviewNotes     String?
-  escalatedToId   String?
-  escalatedAt     DateTime?
-  expiresAt       DateTime?
-  metadata        Json?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  type          ApprovalType
+  status        ApprovalStatus @default(PENDING)
+  referenceId   String
+  referenceType String // CARRIER_PAY, INVOICE, CREDIT, FUND
+  amount        Float
+  description   String
+  priority      String         @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  requestedById String
+  requestedBy   User           @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  requestedAt   DateTime       @default(now())
+  reviewedById  String?
+  reviewedBy    User?          @relation("ApprovalReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  escalatedToId String?
+  escalatedAt   DateTime?
+  expiresAt     DateTime?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([status])
   @@index([type])
@@ -2492,20 +2509,20 @@ model ApprovalQueue {
 // ─── Financial Reports ───
 
 model FinancialReport {
-  id              String       @id @default(cuid())
-  reportType      ReportType
-  status          ReportStatus @default(GENERATING)
-  title           String
-  periodStart     DateTime
-  periodEnd       DateTime
-  summary         Json?
-  pdfUrl          String?
-  csvUrl          String?
-  generatedById   String?
-  generatedBy     User?        @relation("ReportGenerator", fields: [generatedById], references: [id])
-  generatedAt     DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id            String       @id @default(cuid())
+  reportType    ReportType
+  status        ReportStatus @default(GENERATING)
+  title         String
+  periodStart   DateTime
+  periodEnd     DateTime
+  summary       Json?
+  pdfUrl        String?
+  csvUrl        String?
+  generatedById String?
+  generatedBy   User?        @relation("ReportGenerator", fields: [generatedById], references: [id])
+  generatedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([reportType])
   @@index([periodStart, periodEnd])
@@ -2526,20 +2543,20 @@ model SchedulerLock {
 // ─── Cron Registry ───
 
 model CronRegistry {
-  id          String   @id @default(cuid())
-  jobName     String   @unique
-  schedule    String
-  description String?
-  lastRun     DateTime?
-  lastStatus  String?  // SUCCESS, FAILED, RUNNING
-  lastError   String?
-  lastDuration Int?    // milliseconds
-  nextRun     DateTime?
-  enabled     Boolean  @default(true)
-  runCount    Int      @default(0)
-  failCount   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String    @id @default(cuid())
+  jobName      String    @unique
+  schedule     String
+  description  String?
+  lastRun      DateTime?
+  lastStatus   String? // SUCCESS, FAILED, RUNNING
+  lastError    String?
+  lastDuration Int? // milliseconds
+  nextRun      DateTime?
+  enabled      Boolean   @default(true)
+  runCount     Int       @default(0)
+  failCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("cron_registry")
 }
@@ -2552,7 +2569,7 @@ model MileageCache {
   destinationHash String   @map("destination_hash")
   originText      String   @map("origin_text")
   destinationText String   @map("destination_text")
-  provider        String   // google, milemaker, pcmiler
+  provider        String // google, milemaker, pcmiler
   practicalMiles  Float    @map("practical_miles")
   shortestMiles   Float?   @map("shortest_miles")
   driveTimeHours  Float    @map("drive_time_hours")
@@ -2596,37 +2613,37 @@ model RateIntelligence {
 }
 
 model CarrierIntelligence {
-  id                  String   @id @default(cuid())
-  carrierId           String   @map("carrier_id")
-  carrier             CarrierProfile @relation("CarrierIntelligence", fields: [carrierId], references: [id])
-  laneKey             String?  @map("lane_key")
-  reliabilityScore    Float    @default(50) @map("reliability_score") // 0-100
-  onTimeScore         Float    @default(50) @map("on_time_score")
-  communicationScore  Float    @default(50) @map("communication_score")
-  fallOffRisk         Float    @default(0.1) @map("fall_off_risk") // 0-1 probability
-  rateNegotiability   Float    @default(0.5) @map("rate_negotiability") // 0-1 how flexible on rates
-  preferredLanes      Json?    @map("preferred_lanes") // [{lane, score, loads}]
-  performanceTrend    String   @default("STABLE") @map("performance_trend") // IMPROVING, DECLINING, STABLE
-  predictedNextTier   String?  @map("predicted_next_tier")
-  churnRisk           Float    @default(0.1) @map("churn_risk") // 0-1 probability carrier leaves
-  totalDataPoints     Int      @default(0) @map("total_data_points")
-  lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+  id                 String         @id @default(cuid())
+  carrierId          String         @map("carrier_id")
+  carrier            CarrierProfile @relation("CarrierIntelligence", fields: [carrierId], references: [id])
+  laneKey            String?        @map("lane_key")
+  reliabilityScore   Float          @default(50) @map("reliability_score") // 0-100
+  onTimeScore        Float          @default(50) @map("on_time_score")
+  communicationScore Float          @default(50) @map("communication_score")
+  fallOffRisk        Float          @default(0.1) @map("fall_off_risk") // 0-1 probability
+  rateNegotiability  Float          @default(0.5) @map("rate_negotiability") // 0-1 how flexible on rates
+  preferredLanes     Json?          @map("preferred_lanes") // [{lane, score, loads}]
+  performanceTrend   String         @default("STABLE") @map("performance_trend") // IMPROVING, DECLINING, STABLE
+  predictedNextTier  String?        @map("predicted_next_tier")
+  churnRisk          Float          @default(0.1) @map("churn_risk") // 0-1 probability carrier leaves
+  totalDataPoints    Int            @default(0) @map("total_data_points")
+  lastTrainedAt      DateTime       @default(now()) @map("last_trained_at")
 
   // Merged: aggregate carrier scoring fields
-  compositeScore      Float    @default(50) @map("composite_score")
-  onTimeRate          Float    @default(0) @map("on_time_rate")
-  tenderAcceptRate    Float    @default(0) @map("tender_accept_rate")
-  avgResponseMinutes  Float    @default(0) @map("avg_response_minutes")
-  damageRate          Float    @default(0) @map("damage_rate")
-  claimRate           Float    @default(0) @map("claim_rate")
-  totalLoadsCompleted Int      @default(0) @map("total_loads_completed")
-  tier                String   @default("GOOD")
-  scoreHistoryJson    Json     @default("[]") @map("score_history_json")
-  weightConfigJson    Json     @default("{}") @map("weight_config_json")
+  compositeScore      Float     @default(50) @map("composite_score")
+  onTimeRate          Float     @default(0) @map("on_time_rate")
+  tenderAcceptRate    Float     @default(0) @map("tender_accept_rate")
+  avgResponseMinutes  Float     @default(0) @map("avg_response_minutes")
+  damageRate          Float     @default(0) @map("damage_rate")
+  claimRate           Float     @default(0) @map("claim_rate")
+  totalLoadsCompleted Int       @default(0) @map("total_loads_completed")
+  tier                String    @default("GOOD")
+  scoreHistoryJson    Json      @default("[]") @map("score_history_json")
+  weightConfigJson    Json      @default("{}") @map("weight_config_json")
   lastFullRecalc      DateTime? @map("last_full_recalc")
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([carrierId, laneKey])
   @@index([carrierId])
@@ -2656,7 +2673,7 @@ model LaneIntelligence {
   backhaulScore     Float    @default(0) @map("backhaul_score") // 0-100
   deadheadAvgMiles  Float    @default(0) @map("deadhead_avg_miles")
   competitorDensity String   @default("MEDIUM") @map("competitor_density") // HIGH, MEDIUM, LOW
-  seasonality       Json?    // {jan: 1.1, feb: 0.9, ...}
+  seasonality       Json? // {jan: 1.1, feb: 0.9, ...}
   lastTrainedAt     DateTime @default(now()) @map("last_trained_at")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -2667,35 +2684,35 @@ model LaneIntelligence {
 }
 
 model CustomerIntelligence {
-  id                  String   @id @default(cuid())
-  customerId          String   @unique @map("customer_id")
-  customer            Customer @relation("CustomerIntelligence", fields: [customerId], references: [id], onDelete: Cascade)
-  lifetimeValue       Float    @default(0) @map("lifetime_value")
-  avgLoadFrequency    Float    @default(0) @map("avg_load_frequency") // loads per month
-  avgLoadValue        Float    @default(0) @map("avg_load_value")
-  churnRisk           Float    @default(0.1) @map("churn_risk") // 0-1
-  churnReason         String?  @map("churn_reason")
-  growthPotential     Float    @default(0.5) @map("growth_potential") // 0-1
-  paymentReliability  Float    @default(1.0) @map("payment_reliability") // 0-1
-  avgPaymentDays      Float    @default(30) @map("avg_payment_days")
-  preferredLanes      Json?    @map("preferred_lanes")
-  preferredEquipment  Json?    @map("preferred_equipment")
-  seasonalPattern     Json?    @map("seasonal_pattern") // monthly shipping volumes
-  lastShipmentAt      DateTime? @map("last_shipment_at")
-  daysSinceLastLoad   Int      @default(0) @map("days_since_last_load")
-  engagementScore     Float    @default(50) @map("engagement_score") // 0-100
-  recommendedAction   String?  @map("recommended_action") // UPSELL, RETAIN, RE-ENGAGE, NURTURE
-  lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
+  id                 String    @id @default(cuid())
+  customerId         String    @unique @map("customer_id")
+  customer           Customer  @relation("CustomerIntelligence", fields: [customerId], references: [id], onDelete: Cascade)
+  lifetimeValue      Float     @default(0) @map("lifetime_value")
+  avgLoadFrequency   Float     @default(0) @map("avg_load_frequency") // loads per month
+  avgLoadValue       Float     @default(0) @map("avg_load_value")
+  churnRisk          Float     @default(0.1) @map("churn_risk") // 0-1
+  churnReason        String?   @map("churn_reason")
+  growthPotential    Float     @default(0.5) @map("growth_potential") // 0-1
+  paymentReliability Float     @default(1.0) @map("payment_reliability") // 0-1
+  avgPaymentDays     Float     @default(30) @map("avg_payment_days")
+  preferredLanes     Json?     @map("preferred_lanes")
+  preferredEquipment Json?     @map("preferred_equipment")
+  seasonalPattern    Json?     @map("seasonal_pattern") // monthly shipping volumes
+  lastShipmentAt     DateTime? @map("last_shipment_at")
+  daysSinceLastLoad  Int       @default(0) @map("days_since_last_load")
+  engagementScore    Float     @default(50) @map("engagement_score") // 0-100
+  recommendedAction  String?   @map("recommended_action") // UPSELL, RETAIN, RE-ENGAGE, NURTURE
+  lastTrainedAt      DateTime  @default(now()) @map("last_trained_at")
 
   // Merged: shipper intelligence fields
-  paymentScore        Float    @default(50) @map("payment_score")
-  disputeRate         Float    @default(0) @map("dispute_rate")
-  volumeTrend         String   @default("STABLE") @map("volume_trend")
-  creditScore         Float    @default(50) @map("credit_score")
-  totalLoads          Int      @default(0) @map("total_loads")
+  paymentScore Float  @default(50) @map("payment_score")
+  disputeRate  Float  @default(0) @map("dispute_rate")
+  volumeTrend  String @default("STABLE") @map("volume_trend")
+  creditScore  Float  @default(50) @map("credit_score")
+  totalLoads   Int    @default(0) @map("total_loads")
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([churnRisk])
   @@index([engagementScore])
@@ -2704,20 +2721,20 @@ model CustomerIntelligence {
 }
 
 model ComplianceForecast {
-  id                  String   @id @default(cuid())
-  carrierId           String   @map("carrier_id")
+  id                  String         @id @default(cuid())
+  carrierId           String         @map("carrier_id")
   carrier             CarrierProfile @relation("ComplianceForecast", fields: [carrierId], references: [id])
-  insuranceExpiryRisk Float    @default(0) @map("insurance_expiry_risk") // 0-1
-  authorityRisk       Float    @default(0) @map("authority_risk")
-  safetyRisk          Float    @default(0) @map("safety_risk")
-  overallRisk         Float    @default(0) @map("overall_risk")
-  predictedIssues     Json?    @map("predicted_issues") // [{type, probability, eta}]
-  daysUntilExpiry     Int?     @map("days_until_expiry") // nearest expiring doc
-  recommendedAction   String?  @map("recommended_action")
-  autoAlertSent       Boolean  @default(false) @map("auto_alert_sent")
-  lastTrainedAt       DateTime @default(now()) @map("last_trained_at")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  insuranceExpiryRisk Float          @default(0) @map("insurance_expiry_risk") // 0-1
+  authorityRisk       Float          @default(0) @map("authority_risk")
+  safetyRisk          Float          @default(0) @map("safety_risk")
+  overallRisk         Float          @default(0) @map("overall_risk")
+  predictedIssues     Json?          @map("predicted_issues") // [{type, probability, eta}]
+  daysUntilExpiry     Int?           @map("days_until_expiry") // nearest expiring doc
+  recommendedAction   String?        @map("recommended_action")
+  autoAlertSent       Boolean        @default(false) @map("auto_alert_sent")
+  lastTrainedAt       DateTime       @default(now()) @map("last_trained_at")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@unique([carrierId])
   @@index([overallRisk])
@@ -2725,18 +2742,18 @@ model ComplianceForecast {
 }
 
 model AILearningCycle {
-  id              String   @id @default(cuid())
-  serviceName     String   @map("service_name") // rate, carrier, lane, customer, compliance, system
-  cycleType       String   @map("cycle_type") // DAILY, WEEKLY, MONTHLY, ON_DEMAND
-  dataPointsProcessed Int  @default(0) @map("data_points_processed")
-  modelsUpdated   Int      @default(0) @map("models_updated")
-  accuracy        Float?   // Self-measured accuracy improvement
-  durationMs      Int      @default(0) @map("duration_ms")
-  improvements    Json?    // [{metric, before, after, delta}]
-  errors          Json?    // Any issues during learning
-  status          String   @default("COMPLETED") // RUNNING, COMPLETED, FAILED
-  startedAt       DateTime @default(now()) @map("started_at")
-  completedAt     DateTime? @map("completed_at")
+  id                  String    @id @default(cuid())
+  serviceName         String    @map("service_name") // rate, carrier, lane, customer, compliance, system
+  cycleType           String    @map("cycle_type") // DAILY, WEEKLY, MONTHLY, ON_DEMAND
+  dataPointsProcessed Int       @default(0) @map("data_points_processed")
+  modelsUpdated       Int       @default(0) @map("models_updated")
+  accuracy            Float? // Self-measured accuracy improvement
+  durationMs          Int       @default(0) @map("duration_ms")
+  improvements        Json? // [{metric, before, after, delta}]
+  errors              Json? // Any issues during learning
+  status              String    @default("COMPLETED") // RUNNING, COMPLETED, FAILED
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
 
   @@index([serviceName])
   @@index([startedAt])
@@ -2744,15 +2761,15 @@ model AILearningCycle {
 }
 
 model SystemMetric {
-  id              String   @id @default(cuid())
-  metricName      String   @map("metric_name")
-  metricValue     Float    @map("metric_value")
-  previousValue   Float?   @map("previous_value")
-  changePercent   Float?   @map("change_percent")
-  category        String   // PERFORMANCE, REVENUE, OPERATIONS, CARRIER, CUSTOMER
-  period          String   // DAILY, WEEKLY, MONTHLY
-  metadata        Json?
-  recordedAt      DateTime @default(now()) @map("recorded_at")
+  id            String   @id @default(cuid())
+  metricName    String   @map("metric_name")
+  metricValue   Float    @map("metric_value")
+  previousValue Float?   @map("previous_value")
+  changePercent Float?   @map("change_percent")
+  category      String // PERFORMANCE, REVENUE, OPERATIONS, CARRIER, CUSTOMER
+  period        String // DAILY, WEEKLY, MONTHLY
+  metadata      Json?
+  recordedAt    DateTime @default(now()) @map("recorded_at")
 
   @@index([metricName, recordedAt])
   @@index([category])
@@ -2762,19 +2779,19 @@ model SystemMetric {
 // ─── Error Log ───
 
 model ErrorLog {
-  id          String   @id @default(cuid())
-  errorType   String   // UNHANDLED, VALIDATION, DATABASE, INTEGRATION, CRON, AUTH
-  message     String
-  stackTrace  String?
-  endpoint    String?
-  method      String?
-  userId      String?
-  user        User?    @relation("ErrorLogUser", fields: [userId], references: [id])
-  ipAddress   String?
-  userAgent   String?
-  statusCode  Int?
-  metadata    Json?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  errorType  String // UNHANDLED, VALIDATION, DATABASE, INTEGRATION, CRON, AUTH
+  message    String
+  stackTrace String?
+  endpoint   String?
+  method     String?
+  userId     String?
+  user       User?    @relation("ErrorLogUser", fields: [userId], references: [id])
+  ipAddress  String?
+  userAgent  String?
+  statusCode Int?
+  metadata   Json?
+  createdAt  DateTime @default(now())
 
   @@index([errorType])
   @@index([createdAt])
@@ -2786,7 +2803,7 @@ model ErrorLog {
 
 model WebsiteLead {
   id          String   @id @default(cuid())
-  type        String   // "quote_request" or "contact"
+  type        String // "quote_request" or "contact"
   name        String
   company     String
   email       String
@@ -2821,7 +2838,7 @@ model WebsiteLead {
 model MarcoPoloConversation {
   id           String   @id @default(cuid())
   userId       String
-  role         String   // user role at time of conversation
+  role         String // user role at time of conversation
   messagesJson Json     @default("[]") // array of {role, content, timestamp, actions?}
   console      String   @default("ae") // ae, carrier, accounting, public
   createdAt    DateTime @default(now())
@@ -2837,20 +2854,20 @@ model MarcoPoloConversation {
 // ─── News Aggregation ──────────────────────────────────────────
 
 model NewsArticle {
-  id           String   @id @default(cuid())
-  title        String
-  slug         String   @unique
-  excerpt      String   @db.Text
-  content      String?  @db.Text
-  sourceUrl    String   @unique
-  sourceName   String
-  sourceIcon   String?
-  imageUrl     String?
-  category     String   @default("Industry")
-  tags         String[] @default([])
-  publishedAt  DateTime
-  fetchedAt    DateTime @default(now())
-  featured     Boolean  @default(false)
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String   @db.Text
+  content     String?  @db.Text
+  sourceUrl   String   @unique
+  sourceName  String
+  sourceIcon  String?
+  imageUrl    String?
+  category    String   @default("Industry")
+  tags        String[] @default([])
+  publishedAt DateTime
+  fetchedAt   DateTime @default(now())
+  featured    Boolean  @default(false)
 
   @@index([category])
   @@index([publishedAt])
@@ -2858,15 +2875,15 @@ model NewsArticle {
 }
 
 model NewsSource {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  feedUrl     String
-  iconUrl     String?
-  category    String   @default("Industry")
-  isActive    Boolean  @default(true)
-  lastFetched DateTime?
-  articleCount Int     @default(0)
-  createdAt   DateTime @default(now())
+  id           String    @id @default(cuid())
+  name         String    @unique
+  feedUrl      String
+  iconUrl      String?
+  category     String    @default("Industry")
+  isActive     Boolean   @default(true)
+  lastFetched  DateTime?
+  articleCount Int       @default(0)
+  createdAt    DateTime  @default(now())
 }
 
 // ─── Competitive Features & AI Learning Models ──────────────────────
@@ -2880,12 +2897,12 @@ model FacilityRating {
   facilityZip     String
   carrierId       String
   loadId          String
-  locationType    String   // PICKUP or DELIVERY
+  locationType    String // PICKUP or DELIVERY
   waitTimeMinutes Int?
-  dockAccess      Int      // 1-5
-  communication   Int      // 1-5
-  safety          Int      // 1-5
-  overall         Int      // 1-5
+  dockAccess      Int // 1-5
+  communication   Int // 1-5
+  safety          Int // 1-5
+  overall         Int // 1-5
   comments        String?
   createdAt       DateTime @default(now())
 
@@ -2919,26 +2936,26 @@ model FacilityProfile {
 
 // ─── Address Book (Shipper/Consignee saved locations for Order Builder) ────
 model AddressBook {
-  id           String   @id @default(cuid())
-  type         String   // SHIPPER, CONSIGNEE, BOTH
-  companyName  String
-  contactName  String?
-  contactPhone String?
-  contactEmail String?
-  address      String
-  address2     String?
-  city         String
-  state        String
-  zip          String
-  country      String   @default("US")
-  notes        String?
-  pickupHours  String?  // e.g. "Mon-Fri 7AM-5PM"
+  id            String    @id @default(cuid())
+  type          String // SHIPPER, CONSIGNEE, BOTH
+  companyName   String
+  contactName   String?
+  contactPhone  String?
+  contactEmail  String?
+  address       String
+  address2      String?
+  city          String
+  state         String
+  zip           String
+  country       String    @default("US")
+  notes         String?
+  pickupHours   String? // e.g. "Mon-Fri 7AM-5PM"
   deliveryHours String? // e.g. "Mon-Fri 8AM-4PM, appointment required"
-  usageCount   Int      @default(0)
-  lastUsedAt   DateTime?
-  createdBy    String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  usageCount    Int       @default(0)
+  lastUsedAt    DateTime?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([type])
   @@index([companyName])
@@ -3104,14 +3121,14 @@ model AIApiUsage {
 }
 
 model AutomationEvent {
-  id         String   @id @default(uuid())
-  type       String   // "fmcsa_check", "insurance_alert", "score_update", "email_classified", etc.
-  source     String   // "cron", "webhook", "tool", "agent", "manual"
-  entityType String   // "carrier", "load", "invoice"
-  entityId   String
-  data       Json     @default("{}")
-  actionTaken String  // "alert_sent", "carrier_suspended", "invoice_created", "no_action"
-  createdAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  type        String // "fmcsa_check", "insurance_alert", "score_update", "email_classified", etc.
+  source      String // "cron", "webhook", "tool", "agent", "manual"
+  entityType  String // "carrier", "load", "invoice"
+  entityId    String
+  data        Json     @default("{}")
+  actionTaken String // "alert_sent", "carrier_suspended", "invoice_created", "no_action"
+  createdAt   DateTime @default(now())
 
   @@index([type])
   @@index([source])
@@ -3121,17 +3138,17 @@ model AutomationEvent {
 }
 
 model EmailQuoteLog {
-  id                      String   @id @default(uuid())
-  emailSubject            String?
-  sender                  String?
-  classification          String?
+  id                       String   @id @default(uuid())
+  emailSubject             String?
+  sender                   String?
+  classification           String?
   classificationConfidence Float?
-  extractedDataJson       Json     @default("{}")
-  generatedRate           Float?
-  rateConfidence          String?
-  outcome                 String   @default("PENDING")
-  processingTimeMs        Int?
-  createdAt               DateTime @default(now())
+  extractedDataJson        Json     @default("{}")
+  generatedRate            Float?
+  rateConfidence           String?
+  outcome                  String   @default("PENDING")
+  processingTimeMs         Int?
+  createdAt                DateTime @default(now())
 
   @@index([outcome])
   @@index([createdAt])
@@ -3169,13 +3186,13 @@ model InstantBookLog {
 }
 
 model ShipmentRiskLog {
-  id             String   @id @default(uuid())
-  loadId         String
-  riskScore      Int
-  riskLevel      String   // GREEN, AMBER, RED
-  riskFactorsJson Json    @default("{}")
-  alertSent      Boolean  @default(false)
-  scannedAt      DateTime @default(now())
+  id              String   @id @default(uuid())
+  loadId          String
+  riskScore       Int
+  riskLevel       String // GREEN, AMBER, RED
+  riskFactorsJson Json     @default("{}")
+  alertSent       Boolean  @default(false)
+  scannedAt       DateTime @default(now())
 
   @@index([loadId])
   @@index([riskLevel])
@@ -3184,18 +3201,18 @@ model ShipmentRiskLog {
 }
 
 model LoadDelay {
-  id             String          @id @default(cuid())
-  loadId         String
-  load           Load            @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  reasonCode     DelayReasonCode
-  description    String?
-  delayMinutes   Int
-  reportedAt     DateTime        @default(now())
-  reportedById   String
-  reportedBy     User            @relation("DelayReporter", fields: [reportedById], references: [id])
-  resolvedAt     DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id           String          @id @default(cuid())
+  loadId       String
+  load         Load            @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  reasonCode   DelayReasonCode
+  description  String?
+  delayMinutes Int
+  reportedAt   DateTime        @default(now())
+  reportedById String
+  reportedBy   User            @relation("DelayReporter", fields: [reportedById], references: [id])
+  resolvedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@index([loadId])
   @@index([reasonCode])
@@ -3271,42 +3288,42 @@ enum AlertLevel {
 // ─── Track & Trace Models ──────────────────────────────────
 
 model LoadStop {
-  id              String    @id @default(cuid())
-  loadId          String    @map("load_id")
-  stopNumber      Int       @map("stop_number")
-  stopType        StopType  @map("stop_type")
-  facilityName    String    @map("facility_name")
-  address         String
-  city            String
-  state           String    @db.VarChar(2)
-  zip             String    @db.VarChar(10)
-  latitude        Decimal?  @db.Decimal(10, 7)
-  longitude       Decimal?  @db.Decimal(10, 7)
-  appointmentDate DateTime? @map("appointment_date") @db.Date
-  appointmentTime String?   @map("appointment_time")
-  appointmentRef  String?   @map("appointment_ref") @db.VarChar(100)
-  actualArrival   DateTime? @map("actual_arrival")
-  actualDeparture DateTime? @map("actual_departure")
-  detentionStart  DateTime? @map("detention_start")
-  detentionMinutes Int?     @map("detention_minutes")
-  hookType        HookType? @map("hook_type")
-  trailerNumber   String?   @map("trailer_number") @db.VarChar(50)
-  sealNumber      String?   @map("seal_number") @db.VarChar(50)
-  commodity       String?
-  weight          Float?
-  pieces          Int?
-  onTime          Boolean?  @map("on_time")
-  contactName     String?   @map("contact_name")
-  contactPhone    String?   @map("contact_phone")
-  dwellMinutes    Int?      @map("dwell_minutes")
-  isPayable       Boolean   @default(true) @map("is_payable")
-  notes           String?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(cuid())
+  loadId           String    @map("load_id")
+  stopNumber       Int       @map("stop_number")
+  stopType         StopType  @map("stop_type")
+  facilityName     String    @map("facility_name")
+  address          String
+  city             String
+  state            String    @db.VarChar(2)
+  zip              String    @db.VarChar(10)
+  latitude         Decimal?  @db.Decimal(10, 7)
+  longitude        Decimal?  @db.Decimal(10, 7)
+  appointmentDate  DateTime? @map("appointment_date") @db.Date
+  appointmentTime  String?   @map("appointment_time")
+  appointmentRef   String?   @map("appointment_ref") @db.VarChar(100)
+  actualArrival    DateTime? @map("actual_arrival")
+  actualDeparture  DateTime? @map("actual_departure")
+  detentionStart   DateTime? @map("detention_start")
+  detentionMinutes Int?      @map("detention_minutes")
+  hookType         HookType? @map("hook_type")
+  trailerNumber    String?   @map("trailer_number") @db.VarChar(50)
+  sealNumber       String?   @map("seal_number") @db.VarChar(50)
+  commodity        String?
+  weight           Float?
+  pieces           Int?
+  onTime           Boolean?  @map("on_time")
+  contactName      String?   @map("contact_name")
+  contactPhone     String?   @map("contact_phone")
+  dwellMinutes     Int?      @map("dwell_minutes")
+  isPayable        Boolean   @default(true) @map("is_payable")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  load            Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  trackingEvents  LoadTrackingEvent[]
-  accessorials    LoadAccessorial[]
+  load           Load                @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  trackingEvents LoadTrackingEvent[]
+  accessorials   LoadAccessorial[]
 
   @@index([loadId])
   @@index([loadId, stopNumber])
@@ -3314,26 +3331,26 @@ model LoadStop {
 }
 
 model LoadTrackingEvent {
-  id              String            @id @default(cuid())
-  loadId          String            @map("load_id")
-  stopId          String?           @map("stop_id")
-  eventType       TrackingEventType @map("event_type")
-  statusFrom      LoadStatus?       @map("status_from")
-  statusTo        LoadStatus?       @map("status_to")
-  latitude        Decimal?          @db.Decimal(10, 7)
-  longitude       Decimal?          @db.Decimal(10, 7)
-  locationCity    String?           @map("location_city") @db.VarChar(100)
-  locationState   String?           @map("location_state") @db.VarChar(2)
-  locationSource  LocationSource?   @map("location_source")
-  etaDestination  DateTime?         @map("eta_destination")
-  temperatureF    Decimal?          @map("temperature_f") @db.Decimal(5, 1)
-  alertLevel      AlertLevel?       @map("alert_level")
-  notes           String?
-  createdBy       String?           @map("created_by")
-  createdAt       DateTime          @default(now()) @map("created_at")
+  id             String            @id @default(cuid())
+  loadId         String            @map("load_id")
+  stopId         String?           @map("stop_id")
+  eventType      TrackingEventType @map("event_type")
+  statusFrom     LoadStatus?       @map("status_from")
+  statusTo       LoadStatus?       @map("status_to")
+  latitude       Decimal?          @db.Decimal(10, 7)
+  longitude      Decimal?          @db.Decimal(10, 7)
+  locationCity   String?           @map("location_city") @db.VarChar(100)
+  locationState  String?           @map("location_state") @db.VarChar(2)
+  locationSource LocationSource?   @map("location_source")
+  etaDestination DateTime?         @map("eta_destination")
+  temperatureF   Decimal?          @map("temperature_f") @db.Decimal(5, 1)
+  alertLevel     AlertLevel?       @map("alert_level")
+  notes          String?
+  createdBy      String?           @map("created_by")
+  createdAt      DateTime          @default(now()) @map("created_at")
 
-  load            Load              @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  stop            LoadStop?         @relation(fields: [stopId], references: [id])
+  load Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  stop LoadStop? @relation(fields: [stopId], references: [id])
 
   @@index([loadId])
   @@index([loadId, createdAt])
@@ -3364,8 +3381,8 @@ model LoadAccessorial {
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
 
-  load             Load              @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  stop             LoadStop?         @relation(fields: [stopId], references: [id])
+  load Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  stop LoadStop? @relation(fields: [stopId], references: [id])
 
   @@index([loadId])
   @@index([status])
@@ -3373,28 +3390,118 @@ model LoadAccessorial {
 }
 
 model ShipperTrackingToken {
-  id              String              @id @default(cuid())
-  loadId          String              @map("load_id")
-  token           String              @unique @db.VarChar(12)
-  shipperId       String              @map("shipper_id")
-  accessLevel     TrackingAccessLevel @map("access_level")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  expiresAt       DateTime            @map("expires_at")
-  lastAccessedAt  DateTime?           @map("last_accessed_at")
-  accessCount     Int                 @default(0) @map("access_count")
+  id             String              @id @default(cuid())
+  loadId         String              @map("load_id")
+  token          String              @unique @db.VarChar(12)
+  shipperId      String              @map("shipper_id")
+  accessLevel    TrackingAccessLevel @map("access_level")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  expiresAt      DateTime            @map("expires_at")
+  lastAccessedAt DateTime?           @map("last_accessed_at")
+  accessCount    Int                 @default(0) @map("access_count")
 
-  load            Load                @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load Load @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([loadId])
   @@map("shipper_tracking_tokens")
 }
 
+// ─── Track & Trace Module (v3.3.u) ───
+
+model LoadException {
+  id               String    @id @default(cuid())
+  loadId           String    @map("load_id")
+  load             Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  category         String    @db.VarChar(100) // engine_failure, flat_tire_trailer, weather_delay, shipper_detention, etc.
+  unitType         String?   @map("unit_type") @db.VarChar(20) // truck | trailer | na
+  description      String?
+  locationText     String?   @map("location_text")
+  locationLat      Decimal?  @map("location_lat") @db.Decimal(10, 6)
+  locationLng      Decimal?  @map("location_lng") @db.Decimal(10, 6)
+  reportedAt       DateTime  @default(now()) @map("reported_at")
+  reportedById     String?   @map("reported_by_id")
+  reportedByName   String?   @map("reported_by_name")
+  reportedSource   String    @default("AE_CONSOLE") @map("reported_source") @db.VarChar(20) // AE_CONSOLE | CARRIER_PORTAL
+  status           String    @default("OPEN") @db.VarChar(20) // OPEN | RESOLVED
+  resolvedAt       DateTime? @map("resolved_at")
+  resolvedById     String?   @map("resolved_by_id")
+  resolutionNotes  String?   @map("resolution_notes")
+  etaImpactMinutes Int?      @map("eta_impact_minutes")
+
+  // Repair tracking (mechanical)
+  repairShopName           String?   @map("repair_shop_name")
+  repairShopPhone          String?   @map("repair_shop_phone")
+  repairEta                DateTime? @map("repair_eta")
+  repairCost               Decimal?  @map("repair_cost") @db.Decimal(12, 2)
+  repairCostResponsibility String?   @map("repair_cost_responsibility") @db.VarChar(20) // carrier | broker
+  receiptStatus            String    @default("NONE") @map("receipt_status") @db.VarChar(20) // NONE | REQUESTED | UPLOADED | VERIFIED
+
+  shipperNotified   Boolean   @default(false) @map("shipper_notified")
+  shipperNotifiedAt DateTime? @map("shipper_notified_at")
+
+  documents Document[] @relation("ExceptionDocs")
+
+  @@index([loadId])
+  @@index([status])
+  @@index([category])
+  @@map("load_exceptions")
+}
+
+model LoadActivity {
+  id          String   @id @default(cuid())
+  loadId      String   @map("load_id")
+  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  eventType   String   @map("event_type") @db.VarChar(64) // load_created, tender_sent, status_change, check_call_done, exception_logged, doc_uploaded, ...
+  description String
+  actorType   String   @default("SYSTEM") @map("actor_type") @db.VarChar(20) // USER | SYSTEM | CARRIER | DRIVER | SHIPPER
+  actorId     String?  @map("actor_id")
+  actorName   String?  @map("actor_name")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([loadId, createdAt])
+  @@index([eventType])
+  @@map("load_activity")
+}
+
+model GeofenceEvent {
+  id           String   @id @default(cuid())
+  loadId       String   @map("load_id")
+  load         Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  eventType    String   @map("event_type") @db.VarChar(40) // entered_origin | departed_origin | entered_destination | departed_destination
+  facilityName String?  @map("facility_name")
+  lat          Decimal? @db.Decimal(10, 6)
+  lng          Decimal? @db.Decimal(10, 6)
+  occurredAt   DateTime @default(now()) @map("occurred_at")
+
+  @@index([loadId, occurredAt])
+  @@map("geofence_events")
+}
+
+model DetentionRecord {
+  id             String    @id @default(cuid())
+  loadId         String    @map("load_id")
+  load           Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  locationType   String    @map("location_type") @db.VarChar(20) // origin | destination
+  facilityName   String?   @map("facility_name")
+  enteredAt      DateTime  @map("entered_at")
+  departedAt     DateTime? @map("departed_at")
+  elapsedMinutes Int?      @map("elapsed_minutes")
+  billable       Boolean   @default(false)
+  ratePerHour    Decimal?  @map("rate_per_hour") @db.Decimal(10, 2)
+  totalCharge    Decimal   @default(0) @map("total_charge") @db.Decimal(10, 2)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([loadId])
+  @@map("detention_records")
+}
+
 // ─── ELD / Telematics Integration (Phase 5) ───
 
 model ELDEvent {
   id              String    @id @default(cuid())
-  provider        String    @db.VarChar(20)   // SAMSARA, MOTIVE, OMNITRACS
+  provider        String    @db.VarChar(20) // SAMSARA, MOTIVE, OMNITRACS
   externalId      String?   @map("external_id")
   eventType       String    @map("event_type") @db.VarChar(40) // GPS_PING, HOS_CHANGE, FAULT, GEOFENCE_ENTRY
   vehicleId       String?   @map("vehicle_id")
@@ -3419,7 +3526,7 @@ model ELDEvent {
   processedAt     DateTime? @map("processed_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  load            Load?     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load Load? @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([provider, vehicleId])
   @@index([loadId])
@@ -3429,22 +3536,22 @@ model ELDEvent {
 }
 
 model ELDDeviceMapping {
-  id              String    @id @default(cuid())
-  provider        String    @db.VarChar(20)
-  externalVehicleId String  @map("external_vehicle_id")
-  externalDriverId  String? @map("external_driver_id")
-  carrierId       String?   @map("carrier_id")
-  driverName      String?   @map("driver_name")
-  driverPhone     String?   @map("driver_phone")
-  vehicleName     String?   @map("vehicle_name")
-  isActive        Boolean   @default(true) @map("is_active")
-  lastSeenAt      DateTime? @map("last_seen_at")
-  lastLatitude    Decimal?  @map("last_latitude") @db.Decimal(10, 6)
-  lastLongitude   Decimal?  @map("last_longitude") @db.Decimal(10, 6)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  provider          String    @db.VarChar(20)
+  externalVehicleId String    @map("external_vehicle_id")
+  externalDriverId  String?   @map("external_driver_id")
+  carrierId         String?   @map("carrier_id")
+  driverName        String?   @map("driver_name")
+  driverPhone       String?   @map("driver_phone")
+  vehicleName       String?   @map("vehicle_name")
+  isActive          Boolean   @default(true) @map("is_active")
+  lastSeenAt        DateTime? @map("last_seen_at")
+  lastLatitude      Decimal?  @map("last_latitude") @db.Decimal(10, 6)
+  lastLongitude     Decimal?  @map("last_longitude") @db.Decimal(10, 6)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  carrier         User?     @relation(fields: [carrierId], references: [id])
+  carrier User? @relation(fields: [carrierId], references: [id])
 
   @@unique([provider, externalVehicleId])
   @@index([carrierId])
@@ -3453,28 +3560,28 @@ model ELDDeviceMapping {
 
 // ─── Fraud Reporting ──────────────────────────────────────
 model FraudReport {
-  id              String              @id @default(cuid())
-  carrierId       String
-  carrier         CarrierProfile      @relation(fields: [carrierId], references: [id])
+  id        String         @id @default(cuid())
+  carrierId String
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
 
-  reportedById    String
-  reportedBy      User                @relation("FraudReporter", fields: [reportedById], references: [id])
+  reportedById String
+  reportedBy   User   @relation("FraudReporter", fields: [reportedById], references: [id])
 
-  category        FraudReportCategory
-  description     String
-  evidence        String[]            // URLs to uploaded evidence files
-  loadId          String?             // Optional link to the load involved
+  category    FraudReportCategory
+  description String
+  evidence    String[] // URLs to uploaded evidence files
+  loadId      String? // Optional link to the load involved
 
-  status          FraudReportStatus   @default(PENDING)
-  permanentAt     DateTime?           // Becomes permanent 72h after creation
-  reviewedById    String?
-  reviewedAt      DateTime?
-  reviewNotes     String?
-  carrierResponse String?             // Carrier's rebuttal
+  status             FraudReportStatus @default(PENDING)
+  permanentAt        DateTime? // Becomes permanent 72h after creation
+  reviewedById       String?
+  reviewedAt         DateTime?
+  reviewNotes        String?
+  carrierResponse    String? // Carrier's rebuttal
   carrierRespondedAt DateTime?
 
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([carrierId])
   @@index([status])
@@ -3485,31 +3592,31 @@ model FraudReport {
 
 // ─── Carrier-Broker Agreement ─────────────────────────────
 model CarrierAgreement {
-  id              String            @id @default(cuid())
-  carrierId       String
-  carrier         CarrierProfile    @relation(fields: [carrierId], references: [id])
+  id        String         @id @default(cuid())
+  carrierId String
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
 
-  version         String            @default("1.0")
-  templateName    String            @default("standard")
-  documentUrl     String?           // URL to the agreement PDF
-  status          AgreementStatus   @default(DRAFT)
+  version      String          @default("1.0")
+  templateName String          @default("standard")
+  documentUrl  String? // URL to the agreement PDF
+  status       AgreementStatus @default(DRAFT)
 
   sentAt          DateTime?
   signedAt        DateTime?
-  signedByName    String?           // Full name as entered for e-signature
-  signedByTitle   String?           // Title (e.g. "Owner", "Manager")
-  signatureData   String?           // Base64 signature image or typed name
-  signerIp        String?           // IP address at time of signing
+  signedByName    String? // Full name as entered for e-signature
+  signedByTitle   String? // Title (e.g. "Owner", "Manager")
+  signatureData   String? // Base64 signature image or typed name
+  signerIp        String? // IP address at time of signing
   signerUserAgent String?
 
-  expiresAt       DateTime?
-  terminatedAt    DateTime?
-  terminatedBy    String?
+  expiresAt         DateTime?
+  terminatedAt      DateTime?
+  terminatedBy      String?
   terminationReason String?
 
-  createdById     String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([carrierId])
   @@index([status])
@@ -3519,27 +3626,27 @@ model CarrierAgreement {
 // ─── Contract Rate Management ────────────────────────────
 
 model ContractRate {
-  id              String   @id @default(cuid())
-  customerId      String
-  customer        Customer @relation("CustomerContractRates", fields: [customerId], references: [id], onDelete: Cascade)
-  originState     String
-  destState       String
-  equipmentType   String
-  rate            Float    // per mile
-  flatRate        Float?   // flat rate alternative
-  fuelSurcharge   Float    @default(0)
-  minWeight       Float?
-  maxWeight       Float?
-  effectiveDate   DateTime
-  expirationDate  DateTime
-  status          ContractRateStatus @default(ACTIVE)
-  volume          Int?     // expected monthly volume
-  notes           String?
-  createdById     String
-  createdBy       User     @relation("ContractRateCreator", fields: [createdById], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  deletedAt       DateTime?
+  id             String             @id @default(cuid())
+  customerId     String
+  customer       Customer           @relation("CustomerContractRates", fields: [customerId], references: [id], onDelete: Cascade)
+  originState    String
+  destState      String
+  equipmentType  String
+  rate           Float // per mile
+  flatRate       Float? // flat rate alternative
+  fuelSurcharge  Float              @default(0)
+  minWeight      Float?
+  maxWeight      Float?
+  effectiveDate  DateTime
+  expirationDate DateTime
+  status         ContractRateStatus @default(ACTIVE)
+  volume         Int? // expected monthly volume
+  notes          String?
+  createdById    String
+  createdBy      User               @relation("ContractRateCreator", fields: [createdById], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
 
   @@index([customerId])
   @@index([originState, destState, equipmentType])
@@ -3557,27 +3664,27 @@ enum ContractRateStatus {
 // ─── Routing Guide ──────────────────────────────────────
 
 model RoutingGuide {
-  id              String              @id @default(cuid())
-  name            String              // e.g. "Dallas → LA Dry Van"
-  originState     String
-  originCity      String?
-  destState       String
-  destCity        String?
-  equipmentType   String
-  mode            String              @default("FTL")   // FTL, LTL, INTERMODAL
-  customerId      String?
-  customer        Customer?           @relation("CustomerRoutingGuides", fields: [customerId], references: [id], onDelete: SetNull)
-  isActive        Boolean             @default(true)
-  effectiveDate   DateTime            @default(now())
-  expirationDate  DateTime?
-  notes           String?
-  createdById     String
-  createdBy       User                @relation("RoutingGuideCreator", fields: [createdById], references: [id])
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  deletedAt       DateTime?
+  id             String    @id @default(cuid())
+  name           String // e.g. "Dallas → LA Dry Van"
+  originState    String
+  originCity     String?
+  destState      String
+  destCity       String?
+  equipmentType  String
+  mode           String    @default("FTL") // FTL, LTL, INTERMODAL
+  customerId     String?
+  customer       Customer? @relation("CustomerRoutingGuides", fields: [customerId], references: [id], onDelete: SetNull)
+  isActive       Boolean   @default(true)
+  effectiveDate  DateTime  @default(now())
+  expirationDate DateTime?
+  notes          String?
+  createdById    String
+  createdBy      User      @relation("RoutingGuideCreator", fields: [createdById], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
-  entries         RoutingGuideEntry[]
+  entries RoutingGuideEntry[]
 
   @@index([originState, destState, equipmentType])
   @@index([customerId])
@@ -3586,24 +3693,24 @@ model RoutingGuide {
 }
 
 model RoutingGuideEntry {
-  id              String         @id @default(cuid())
-  routingGuideId  String
-  routingGuide    RoutingGuide   @relation(fields: [routingGuideId], references: [id], onDelete: Cascade)
-  rank            Int            // 1 = first choice, 2 = fallback, etc.
-  carrierId       String
-  carrier         CarrierProfile @relation("RoutingGuideCarrier", fields: [carrierId], references: [id])
-  targetRate      Float?         // negotiated rate for this lane
-  rateType        RateType       @default(FLAT)
-  fuelSurcharge   Float          @default(0)
-  transitDays     Int?
-  acceptanceRate  Float?         // historical acceptance % (auto-updated)
-  onTimePct       Float?         // historical on-time % (auto-updated)
-  totalLoads      Int            @default(0)
-  lastUsedAt      DateTime?
-  isActive        Boolean        @default(true)
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  routingGuideId String
+  routingGuide   RoutingGuide   @relation(fields: [routingGuideId], references: [id], onDelete: Cascade)
+  rank           Int // 1 = first choice, 2 = fallback, etc.
+  carrierId      String
+  carrier        CarrierProfile @relation("RoutingGuideCarrier", fields: [carrierId], references: [id])
+  targetRate     Float? // negotiated rate for this lane
+  rateType       RateType       @default(FLAT)
+  fuelSurcharge  Float          @default(0)
+  transitDays    Int?
+  acceptanceRate Float? // historical acceptance % (auto-updated)
+  onTimePct      Float? // historical on-time % (auto-updated)
+  totalLoads     Int            @default(0)
+  lastUsedAt     DateTime?
+  isActive       Boolean        @default(true)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@unique([routingGuideId, rank])
   @@unique([routingGuideId, carrierId])
@@ -3620,21 +3727,21 @@ enum ExceptionSeverity {
 }
 
 model ExceptionConfig {
-  id              String            @id @default(cuid())
-  code            String            @unique  // e.g. "UNCONFIRMED_APPOINTMENT"
-  name            String            // Display name
-  description     String?
-  category        String            // APPOINTMENT, STOP, ORDER, DOCUMENT, FINANCIAL, CARRIER
-  severity        ExceptionSeverity @default(WARNING)
-  isEnabled       Boolean           @default(true)
-  thresholdValue  Float?            // e.g. 7 days, $50 variance, etc.
-  thresholdUnit   String?           // "days", "hours", "dollars", "percent"
-  autoResolve     Boolean           @default(false)
-  notifyRoles     String[]          @default(["ADMIN", "OPERATIONS"])
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  code           String            @unique // e.g. "UNCONFIRMED_APPOINTMENT"
+  name           String // Display name
+  description    String?
+  category       String // APPOINTMENT, STOP, ORDER, DOCUMENT, FINANCIAL, CARRIER
+  severity       ExceptionSeverity @default(WARNING)
+  isEnabled      Boolean           @default(true)
+  thresholdValue Float? // e.g. 7 days, $50 variance, etc.
+  thresholdUnit  String? // "days", "hours", "dollars", "percent"
+  autoResolve    Boolean           @default(false)
+  notifyRoles    String[]          @default(["ADMIN", "OPERATIONS"])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  alerts          ExceptionAlert[]
+  alerts ExceptionAlert[]
 
   @@index([category])
   @@index([isEnabled])
@@ -3642,25 +3749,25 @@ model ExceptionConfig {
 }
 
 model ExceptionAlert {
-  id              String          @id @default(cuid())
-  configId        String
-  config          ExceptionConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-  loadId          String?
-  invoiceId       String?
-  carrierId       String?
-  customerId      String?
-  entityType      String          // LOAD, INVOICE, CARRIER, ORDER
-  entityId        String
-  status          String          @default("OPEN") // OPEN, ACKNOWLEDGED, RESOLVED, DISMISSED
-  severity        ExceptionSeverity
-  message         String
-  details         Json?
-  resolvedAt      DateTime?
-  resolvedById    String?
-  resolvedBy      User?           @relation("ExceptionResolver", fields: [resolvedById], references: [id])
-  resolvedNote    String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id           String            @id @default(cuid())
+  configId     String
+  config       ExceptionConfig   @relation(fields: [configId], references: [id], onDelete: Cascade)
+  loadId       String?
+  invoiceId    String?
+  carrierId    String?
+  customerId   String?
+  entityType   String // LOAD, INVOICE, CARRIER, ORDER
+  entityId     String
+  status       String            @default("OPEN") // OPEN, ACKNOWLEDGED, RESOLVED, DISMISSED
+  severity     ExceptionSeverity
+  message      String
+  details      Json?
+  resolvedAt   DateTime?
+  resolvedById String?
+  resolvedBy   User?             @relation("ExceptionResolver", fields: [resolvedById], references: [id])
+  resolvedNote String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([configId])
   @@index([entityType, entityId])
@@ -3672,33 +3779,33 @@ model ExceptionAlert {
 // ─── Dock Scheduling ────────────────────────────────────
 
 model DockSchedule {
-  id              String   @id @default(cuid())
-  facilityName    String
-  facilityAddress String?
-  facilityCity    String
-  facilityState   String
-  facilityZip     String?
-  dockNumber      String?           // e.g. "Dock A", "Bay 3"
-  appointmentDate DateTime
-  timeSlotStart   String            // "08:00"
-  timeSlotEnd     String            // "09:00"
-  loadId          String?
-  carrierId       String?
-  carrier         CarrierProfile?   @relation("DockCarrier", fields: [carrierId], references: [id])
-  driverName      String?
-  driverPhone     String?
-  truckNumber     String?
-  trailerNumber   String?
-  appointmentType String            @default("PICKUP") // PICKUP, DELIVERY
-  status          String            @default("SCHEDULED") // SCHEDULED, CHECKED_IN, IN_PROGRESS, COMPLETED, NO_SHOW, CANCELLED
-  checkedInAt     DateTime?
-  completedAt     DateTime?
+  id               String          @id @default(cuid())
+  facilityName     String
+  facilityAddress  String?
+  facilityCity     String
+  facilityState    String
+  facilityZip      String?
+  dockNumber       String? // e.g. "Dock A", "Bay 3"
+  appointmentDate  DateTime
+  timeSlotStart    String // "08:00"
+  timeSlotEnd      String // "09:00"
+  loadId           String?
+  carrierId        String?
+  carrier          CarrierProfile? @relation("DockCarrier", fields: [carrierId], references: [id])
+  driverName       String?
+  driverPhone      String?
+  truckNumber      String?
+  trailerNumber    String?
+  appointmentType  String          @default("PICKUP") // PICKUP, DELIVERY
+  status           String          @default("SCHEDULED") // SCHEDULED, CHECKED_IN, IN_PROGRESS, COMPLETED, NO_SHOW, CANCELLED
+  checkedInAt      DateTime?
+  completedAt      DateTime?
   dwellTimeMinutes Int?
-  notes           String?
-  createdById     String
-  createdBy       User              @relation("DockScheduleCreator", fields: [createdById], references: [id])
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  notes            String?
+  createdById      String
+  createdBy        User            @relation("DockScheduleCreator", fields: [createdById], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([appointmentDate])
   @@index([facilityName])
@@ -3710,23 +3817,23 @@ model DockSchedule {
 // ─── Carrier Call Log ───────────────────────────────────
 
 model CarrierCallLog {
-  id              String         @id @default(cuid())
-  loadId          String
-  carrierId       String
-  carrier         CarrierProfile @relation("CallLogCarrier", fields: [carrierId], references: [id])
-  calledById      String
-  calledBy        User           @relation("CallLogCaller", fields: [calledById], references: [id])
-  contactName     String?
-  contactPhone    String?
-  callType        String         @default("OUTBOUND") // OUTBOUND, INBOUND, VOICEMAIL
-  outcome         String         // INTERESTED, DECLINED_RATE, DECLINED_CAPACITY, DECLINED_LANE, NO_ANSWER, VOICEMAIL, BOOKED, CALLBACK_REQUESTED
-  offeredRate     Float?
-  counterRate     Float?
-  declineReason   String?
-  callDuration    Int?           // seconds
-  notes           String?
-  followUpDate    DateTime?
-  createdAt       DateTime       @default(now())
+  id            String         @id @default(cuid())
+  loadId        String
+  carrierId     String
+  carrier       CarrierProfile @relation("CallLogCarrier", fields: [carrierId], references: [id])
+  calledById    String
+  calledBy      User           @relation("CallLogCaller", fields: [calledById], references: [id])
+  contactName   String?
+  contactPhone  String?
+  callType      String         @default("OUTBOUND") // OUTBOUND, INBOUND, VOICEMAIL
+  outcome       String // INTERESTED, DECLINED_RATE, DECLINED_CAPACITY, DECLINED_LANE, NO_ANSWER, VOICEMAIL, BOOKED, CALLBACK_REQUESTED
+  offeredRate   Float?
+  counterRate   Float?
+  declineReason String?
+  callDuration  Int? // seconds
+  notes         String?
+  followUpDate  DateTime?
+  createdAt     DateTime       @default(now())
 
   @@index([loadId])
   @@index([carrierId])
@@ -3737,34 +3844,34 @@ model CarrierCallLog {
 // ─── Fuel Surcharge Tables ──────────────────────────────
 
 model FuelSurchargeTable {
-  id              String   @id @default(cuid())
-  name            String
-  type            String   @default("DOE_NATIONAL") // DOE_NATIONAL, DOE_REGIONAL, CUSTOM
-  currency        String   @default("USD")
-  effectiveDate   DateTime
-  expirationDate  DateTime?
-  isActive        Boolean  @default(true)
-  notes           String?
-  createdById     String
-  createdBy       User     @relation("FuelTableCreator", fields: [createdById], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(cuid())
+  name           String
+  type           String    @default("DOE_NATIONAL") // DOE_NATIONAL, DOE_REGIONAL, CUSTOM
+  currency       String    @default("USD")
+  effectiveDate  DateTime
+  expirationDate DateTime?
+  isActive       Boolean   @default(true)
+  notes          String?
+  createdById    String
+  createdBy      User      @relation("FuelTableCreator", fields: [createdById], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  tiers           FuelSurchargeTier[]
+  tiers FuelSurchargeTier[]
 
   @@index([isActive])
   @@map("fuel_surcharge_tables")
 }
 
 model FuelSurchargeTier {
-  id              String             @id @default(cuid())
-  tableId         String
-  table           FuelSurchargeTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  fuelPriceMin    Float              // e.g. $3.00
-  fuelPriceMax    Float              // e.g. $3.25
-  surchargeRate   Float              // e.g. 0.15 (15%)
-  surchargeType   FuelSurchargeType  @default(PERCENTAGE) // FLAT or PERCENTAGE
-  createdAt       DateTime           @default(now())
+  id            String             @id @default(cuid())
+  tableId       String
+  table         FuelSurchargeTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  fuelPriceMin  Float // e.g. $3.00
+  fuelPriceMax  Float // e.g. $3.25
+  surchargeRate Float // e.g. 0.15 (15%)
+  surchargeType FuelSurchargeType  @default(PERCENTAGE) // FLAT or PERCENTAGE
+  createdAt     DateTime           @default(now())
 
   @@index([tableId])
   @@map("fuel_surcharge_tiers")
@@ -3773,42 +3880,42 @@ model FuelSurchargeTier {
 // ─── Tagging System ─────────────────────────────────────
 
 model Tag {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  color           String   @default("#6B7280") // hex color
-  description     String?
-  entityTypes     String[] @default(["LOAD"]) // LOAD, QUOTE, ORDER, INVOICE
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @unique
+  color       String   @default("#6B7280") // hex color
+  description String?
+  entityTypes String[] @default(["LOAD"]) // LOAD, QUOTE, ORDER, INVOICE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  rules           TagRule[]
-  assignments     TagAssignment[]
+  rules       TagRule[]
+  assignments TagAssignment[]
 
   @@map("tags")
 }
 
 model TagRule {
-  id              String   @id @default(cuid())
-  tagId           String
-  tag             Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  field           String   // e.g. "equipmentType", "originState", "rate"
-  operator        String   // "equals", "contains", "greaterThan", "lessThan", "in"
-  value           String   // the value to compare against
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  field     String // e.g. "equipmentType", "originState", "rate"
+  operator  String // "equals", "contains", "greaterThan", "lessThan", "in"
+  value     String // the value to compare against
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   @@index([tagId])
   @@map("tag_rules")
 }
 
 model TagAssignment {
-  id              String   @id @default(cuid())
-  tagId           String
-  tag             Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  entityType      String   // LOAD, QUOTE, ORDER, INVOICE
-  entityId        String
-  assignedBy      String?  // null = auto-assigned by rule
-  createdAt       DateTime @default(now())
+  id         String   @id @default(cuid())
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  entityType String // LOAD, QUOTE, ORDER, INVOICE
+  entityId   String
+  assignedBy String? // null = auto-assigned by rule
+  createdAt  DateTime @default(now())
 
   @@unique([tagId, entityType, entityId])
   @@index([entityType, entityId])
@@ -3818,22 +3925,22 @@ model TagAssignment {
 // ─── Purchase Orders / SKU Tracking ─────────────────────
 
 model PurchaseOrder {
-  id              String          @id @default(cuid())
-  poNumber        String          @unique
-  customerId      String
-  customer        Customer        @relation("CustomerPurchaseOrders", fields: [customerId], references: [id], onDelete: Cascade)
-  tradingPartner  String?
-  status          String          @default("OPEN") // OPEN, PARTIAL, CLOSED, CANCELLED
-  orderDate       DateTime        @default(now())
-  expectedDate    DateTime?
-  notes           String?
-  createdById     String
-  createdBy       User            @relation("POCreator", fields: [createdById], references: [id])
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id             String    @id @default(cuid())
+  poNumber       String    @unique
+  customerId     String
+  customer       Customer  @relation("CustomerPurchaseOrders", fields: [customerId], references: [id], onDelete: Cascade)
+  tradingPartner String?
+  status         String    @default("OPEN") // OPEN, PARTIAL, CLOSED, CANCELLED
+  orderDate      DateTime  @default(now())
+  expectedDate   DateTime?
+  notes          String?
+  createdById    String
+  createdBy      User      @relation("POCreator", fields: [createdById], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  lineItems       POLineItem[]
-  loadLinks       POLoadLink[]
+  lineItems POLineItem[]
+  loadLinks POLoadLink[]
 
   @@index([customerId])
   @@index([status])
@@ -3848,7 +3955,7 @@ model POLineItem {
   description     String?
   quantity        Int
   unitWeight      Float?
-  dimensions      String?       // "40L x 48W x 44H in"
+  dimensions      String? // "40L x 48W x 44H in"
   freightClass    String?
   ordered         Int           @default(0)
   shipped         Int           @default(0)
@@ -3873,25 +3980,25 @@ model POLoadLink {
 // ─── RFP / Bid Management ────────────────────────────────
 
 model RfpBid {
-  id              String   @id @default(cuid())
-  customerId      String
-  customer        Customer @relation("CustomerRfpBids", fields: [customerId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  status          RfpStatus @default(OPEN)
-  dueDate         DateTime
-  lanes           Json     // array of { originState, destState, equipmentType, estimatedVolume }
-  totalLanes      Int
-  respondedLanes  Int      @default(0)
-  responses       Json?    // array of { laneIndex, rate, notes }
-  awardedAt       DateTime?
-  awardedById     String?
-  notes           String?
-  createdById     String
-  createdBy       User     @relation("RfpCreator", fields: [createdById], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  deletedAt       DateTime?
+  id             String    @id @default(cuid())
+  customerId     String
+  customer       Customer  @relation("CustomerRfpBids", fields: [customerId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  status         RfpStatus @default(OPEN)
+  dueDate        DateTime
+  lanes          Json // array of { originState, destState, equipmentType, estimatedVolume }
+  totalLanes     Int
+  respondedLanes Int       @default(0)
+  responses      Json? // array of { laneIndex, rate, notes }
+  awardedAt      DateTime?
+  awardedById    String?
+  notes          String?
+  createdById    String
+  createdBy      User      @relation("RfpCreator", fields: [createdById], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   @@index([customerId])
   @@index([status])
@@ -3910,20 +4017,20 @@ enum RfpStatus {
 // ─── Webhook Subscriptions ──────────────────────────────
 
 model WebhookEndpoint {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   url         String
-  secret      String                // HMAC signing secret
-  events      String[]              // e.g. ["LOAD_BOOKED", "LOAD_DELIVERED"]
-  headers     Json?                 // custom headers
-  isEnabled   Boolean  @default(true)
-  userId      String                // who created it
-  user        User     @relation("UserWebhooks", fields: [userId], references: [id], onDelete: Cascade)
-  failCount   Int      @default(0)  // consecutive failures
+  secret      String // HMAC signing secret
+  events      String[] // e.g. ["LOAD_BOOKED", "LOAD_DELIVERED"]
+  headers     Json? // custom headers
+  isEnabled   Boolean   @default(true)
+  userId      String // who created it
+  user        User      @relation("UserWebhooks", fields: [userId], references: [id], onDelete: Cascade)
+  failCount   Int       @default(0) // consecutive failures
   lastFiredAt DateTime?
-  lastStatus  Int?                  // last HTTP status
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  lastStatus  Int? // last HTTP status
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   @@index([userId])

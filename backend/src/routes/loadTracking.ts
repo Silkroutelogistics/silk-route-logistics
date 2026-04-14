@@ -8,6 +8,58 @@ import { log } from "../lib/logger";
 const router = Router();
 router.use(authenticate);
 
+const DETENTION_FREE_MINUTES = 120;      // 2h free time
+const DETENTION_RATE_PER_HOUR = 75;      // $/hr billable
+
+/**
+ * Close (or create+close) a DetentionRecord for a stop arrival→departure.
+ * Billable flag flips when elapsed >= 120 min, total_charge reflects the
+ * overage hours at the configured rate. Called from confirm-loaded /
+ * confirm-delivered so the new DetentionRecord table stays in sync with
+ * the existing LoadAccessorial DETENTION_PU/DETENTION_DEL logic.
+ */
+async function closeDetentionRecord(params: {
+  loadId: string;
+  locationType: "origin" | "destination";
+  facilityName: string | null;
+  enteredAt: Date;
+  departedAt: Date;
+}) {
+  const { loadId, locationType, facilityName, enteredAt, departedAt } = params;
+  const elapsedMinutes = Math.max(
+    0,
+    Math.round((departedAt.getTime() - enteredAt.getTime()) / 60000)
+  );
+  const billable = elapsedMinutes >= DETENTION_FREE_MINUTES;
+  const overageHours = billable ? (elapsedMinutes - DETENTION_FREE_MINUTES) / 60 : 0;
+  const totalCharge = Math.round(overageHours * DETENTION_RATE_PER_HOUR * 100) / 100;
+
+  const existing = await prisma.detentionRecord.findFirst({
+    where: { loadId, locationType, departedAt: null },
+    orderBy: { enteredAt: "desc" },
+  });
+
+  if (existing) {
+    await prisma.detentionRecord.update({
+      where: { id: existing.id },
+      data: {
+        departedAt, elapsedMinutes, billable,
+        ratePerHour: DETENTION_RATE_PER_HOUR,
+        totalCharge,
+      },
+    });
+  } else {
+    await prisma.detentionRecord.create({
+      data: {
+        loadId, locationType, facilityName,
+        enteredAt, departedAt, elapsedMinutes, billable,
+        ratePerHour: DETENTION_RATE_PER_HOUR,
+        totalCharge,
+      },
+    });
+  }
+}
+
 // GET /api/load-tracking/:loadId/events — Get all tracking events for a load (timeline)
 router.get(
   "/:loadId/events",
@@ -313,6 +365,16 @@ router.post(
           where: { id: pickupStop.id },
           data: updateData,
         });
+
+        if (pickupStop.actualArrival) {
+          await closeDetentionRecord({
+            loadId,
+            locationType: "origin",
+            facilityName: pickupStop.facilityName,
+            enteredAt: new Date(pickupStop.actualArrival),
+            departedAt: loadedTime,
+          });
+        }
       }
 
       // Record tracking event
@@ -411,6 +473,16 @@ router.post(
           where: { id: delStop.id },
           data: updateData,
         });
+
+        if (delStop.actualArrival) {
+          await closeDetentionRecord({
+            loadId,
+            locationType: "destination",
+            facilityName: delStop.facilityName,
+            enteredAt: new Date(delStop.actualArrival),
+            departedAt: deliveredTime,
+          });
+        }
       }
 
       // Update load

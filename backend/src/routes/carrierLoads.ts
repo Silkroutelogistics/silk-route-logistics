@@ -10,6 +10,9 @@ import { nextShipmentNumber } from "../controllers/shipmentController";
 import { sendPODToContact } from "../services/shipperLoadNotifyService";
 import { onLoadStatusChange as aiOnLoadStatusChange, onCarrierResponse } from "../services/aiLearningLoop/feedbackCollector";
 import { processGpsUpdate } from "../services/geofenceService";
+import { logLoadActivity } from "../services/loadActivityService";
+import { isValidExceptionCode, getExceptionReason } from "../services/exceptionTaxonomy";
+import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -359,6 +362,18 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   const oldStatus = load.status;
   const updated = await prisma.load.update({ where: { id: load.id }, data });
 
+  // T&T activity + real-time board push
+  await logLoadActivity({
+    loadId: load.id,
+    eventType: "status_change",
+    description: `Status ${oldStatus} → ${status}`,
+    actorType: "CARRIER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+    metadata: { from: oldStatus, to: status, source: "carrier_portal" },
+  });
+  broadcastSSE({ type: "status_change", loadId: load.id, data: { from: oldStatus, to: status } });
+
   // AI Learning Loop: record carrier status change
   aiOnLoadStatusChange(load.id, oldStatus, status, new Date()).catch((e) =>
     log.error({ err: e }, "[AI Feedback]")
@@ -427,8 +442,20 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
       entityType: "LOAD",
       entityId: load.id,
       userId: req.user!.id,
+      uploadSource: "CARRIER_PORTAL",
     },
   });
+
+  await logLoadActivity({
+    loadId: load.id,
+    eventType: "doc_uploaded",
+    description: `${docType} uploaded by carrier`,
+    actorType: "CARRIER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+    metadata: { documentId: doc.id, docType },
+  });
+  broadcastSSE({ type: "board_refresh", loadId: load.id, data: { reason: "doc_uploaded" } });
 
   // If it's a POD, update the load
   if (docType === "POD") {
@@ -569,6 +596,121 @@ router.post("/gps-update", async (req: AuthRequest, res: Response) => {
     log.error({ err: err }, "[GPS] Update error:");
     res.status(500).json({ error: "Failed to process GPS update" });
   }
+});
+
+// ─── Carrier-side exception reporting ──────────────────────────────
+// Mirrors AE-side /api/load-exceptions but scoped to the calling carrier.
+
+const carrierExceptionSchema = z.object({
+  category: z.string(),
+  unitType: z.string().optional(),
+  description: z.string().optional(),
+  locationText: z.string().optional(),
+  locationLat: z.number().optional(),
+  locationLng: z.number().optional(),
+});
+
+router.post("/:id/exceptions", validateBody(carrierExceptionSchema), async (req: AuthRequest, res: Response) => {
+  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+  if (load.carrierId !== req.user!.id) { res.status(403).json({ error: "Not your load" }); return; }
+
+  const { category, unitType, description, locationText, locationLat, locationLng } = req.body;
+  if (!isValidExceptionCode(category)) {
+    res.status(400).json({ error: "Invalid exception category" });
+    return;
+  }
+  const reason = getExceptionReason(category)!;
+
+  const exception = await prisma.loadException.create({
+    data: {
+      loadId: load.id,
+      category,
+      unitType: unitType ?? reason.unitType,
+      description: description ?? null,
+      locationText: locationText ?? null,
+      locationLat: locationLat ?? null,
+      locationLng: locationLng ?? null,
+      reportedById: req.user!.id,
+      reportedByName: req.user!.email,
+      reportedSource: "CARRIER_PORTAL",
+    },
+  });
+
+  await logLoadActivity({
+    loadId: load.id,
+    eventType: "exception_logged",
+    description: `Exception reported by carrier: ${reason.label}`,
+    actorType: "CARRIER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+    metadata: { exceptionId: exception.id, category, source: "carrier_portal" },
+  });
+  broadcastSSE({ type: "alert", loadId: load.id, data: { kind: "exception", exceptionId: exception.id, category, label: reason.label } });
+
+  if (load.posterId) {
+    await prisma.notification.create({
+      data: {
+        userId: load.posterId,
+        type: "LOAD",
+        title: "Exception reported",
+        message: `Carrier reported ${reason.label} on load ${load.referenceNumber}`,
+        actionUrl: "/dashboard/track-trace",
+      },
+    });
+  }
+
+  res.status(201).json({ exception });
+});
+
+// POST /:id/exceptions/:excId/receipt — upload repair receipt for a specific exception
+router.post("/:id/exceptions/:excId/receipt", upload.single("file"), async (req: AuthRequest, res: Response) => {
+  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+  if (load.carrierId !== req.user!.id) { res.status(403).json({ error: "Not your load" }); return; }
+  if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
+
+  const exc = await prisma.loadException.findUnique({ where: { id: req.params.excId } });
+  if (!exc || exc.loadId !== load.id) { res.status(404).json({ error: "Exception not found" }); return; }
+
+  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const key = `receipts/${uniqueSuffix}${ext}`;
+  const fileUrl = await uploadFile(req.file.buffer, key, req.file.mimetype);
+
+  const doc = await prisma.document.create({
+    data: {
+      loadId: load.id,
+      docType: "RECEIPT_MECHANICAL",
+      fileName: req.file.originalname,
+      fileUrl,
+      fileType: req.file.mimetype || "application/octet-stream",
+      fileSize: req.file.size,
+      entityType: "LOAD",
+      entityId: load.id,
+      userId: req.user!.id,
+      uploadSource: "CARRIER_PORTAL",
+      exceptionId: exc.id,
+    },
+  });
+
+  await prisma.loadException.update({
+    where: { id: exc.id },
+    data: { receiptStatus: "UPLOADED" },
+  });
+
+  await logLoadActivity({
+    loadId: load.id,
+    eventType: "exception_receipt_uploaded",
+    description: `Repair receipt uploaded by carrier`,
+    actorType: "CARRIER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+    metadata: { exceptionId: exc.id, documentId: doc.id },
+  });
+  broadcastSSE({ type: "alert", loadId: load.id, data: { kind: "exception_receipt", exceptionId: exc.id } });
+
+  res.status(201).json({ document: doc });
 });
 
 export default router;

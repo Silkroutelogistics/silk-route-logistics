@@ -60,13 +60,34 @@ export async function checkGeofence(
     if (distance <= GEOFENCE_RADIUS_MILES) {
       // Determine if this is an entry (arrival) or exit (departure) event
       const isArrival = !stop.actualArrival;
-      const isDeparture = stop.actualArrival && !stop.actualDeparture;
+      const _isDeparture = stop.actualArrival && !stop.actualDeparture;
 
       if (isArrival) {
         // Auto-set arrival
         await prisma.loadStop.update({
           where: { id: stop.id },
           data: { actualArrival: new Date() },
+        });
+
+        // Parallel write: new GeofenceEvent table (Lane 1 schema)
+        await prisma.geofenceEvent.create({
+          data: {
+            loadId,
+            eventType: stop.stopType === "PICKUP" ? "entered_origin" : "entered_destination",
+            facilityName: stop.facilityName,
+            lat: latitude,
+            lng: longitude,
+          },
+        });
+
+        // Open a detention record — timer starts the moment we enter the geofence
+        await prisma.detentionRecord.create({
+          data: {
+            loadId,
+            locationType: stop.stopType === "PICKUP" ? "origin" : "destination",
+            facilityName: stop.facilityName,
+            enteredAt: new Date(),
+          },
         });
 
         // Auto-advance load status
@@ -134,6 +155,48 @@ export async function checkGeofence(
           },
         });
       }
+    } else if (stop.actualArrival && !stop.actualDeparture) {
+      // Out-of-radius with prior arrival = departure event
+      await prisma.loadStop.update({
+        where: { id: stop.id },
+        data: { actualDeparture: new Date() },
+      });
+
+      await prisma.geofenceEvent.create({
+        data: {
+          loadId,
+          eventType: stop.stopType === "PICKUP" ? "departed_origin" : "departed_destination",
+          facilityName: stop.facilityName,
+          lat: latitude,
+          lng: longitude,
+        },
+      });
+
+      // Close any open detention record for this stop type
+      const openDetention = await prisma.detentionRecord.findFirst({
+        where: {
+          loadId,
+          locationType: stop.stopType === "PICKUP" ? "origin" : "destination",
+          departedAt: null,
+        },
+        orderBy: { enteredAt: "desc" },
+      });
+      if (openDetention) {
+        const now = new Date();
+        const elapsedMinutes = Math.round(
+          (now.getTime() - new Date(openDetention.enteredAt).getTime()) / 60000
+        );
+        await prisma.detentionRecord.update({
+          where: { id: openDetention.id },
+          data: { departedAt: now, elapsedMinutes },
+        });
+      }
+
+      broadcastSSE({
+        type: "geofence",
+        loadId,
+        data: { stopType: stop.stopType, facility: stop.facilityName, event: "departed" },
+      });
     }
   }
 

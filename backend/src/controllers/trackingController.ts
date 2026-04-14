@@ -78,8 +78,27 @@ export async function getPublicTracking(req: Request, res: Response) {
   if (loadId) {
     load = await prisma.load.findUnique({ where: { id: loadId }, select: loadSelect });
   } else {
-    // Fallback to legacy trackingToken field
+    // Fallback lookups: trackingToken (legacy uuid) → shipperCode (6-char) → BOL → reference
     load = await prisma.load.findUnique({ where: { trackingToken: token }, select: loadSelect });
+    if (!load) {
+      load = await prisma.load.findFirst({ where: { shipperCode: token }, select: loadSelect });
+    }
+    if (!load) {
+      const upper = token.toUpperCase().replace(/^BOL-/, "");
+      load = await prisma.load.findFirst({ where: { bolNumber: upper }, select: loadSelect });
+    }
+    if (!load) {
+      load = await prisma.load.findFirst({
+        where: {
+          OR: [
+            { referenceNumber: token },
+            { loadNumber: token },
+            { shipperPoNumber: token },
+          ],
+        },
+        select: loadSelect,
+      });
+    }
   }
 
   if (!load) {

@@ -14,6 +14,54 @@ function setTime(date: Date, hours: number, minutes: number): Date {
   return d;
 }
 
+/**
+ * Spec §6.3 — Expedited check-call protocol.
+ * Standard: pu_confirm, midway, pre_delivery, pod_followup (4 calls)
+ * Expedited: same 4 + hourly_expedited intervals between midway and pre_delivery
+ */
+async function createExpeditedSchedule(
+  loadId: string,
+  pickup: Date,
+  delivery: Date,
+  carrierPhone: string | null
+) {
+  const midway = new Date(pickup.getTime() + (delivery.getTime() - pickup.getTime()) / 2);
+  const preDelivery = new Date(delivery.getTime() - 2 * 60 * 60 * 1000);
+  const podFollowup = new Date(delivery.getTime() + 60 * 60 * 1000);
+
+  const base: { type: string; scheduledTime: Date }[] = [
+    { type: "PU_CONFIRM",   scheduledTime: pickup },
+    { type: "MIDWAY",       scheduledTime: midway },
+    { type: "PRE_DELIVERY", scheduledTime: preDelivery },
+    { type: "POD_FOLLOWUP", scheduledTime: podFollowup },
+  ];
+
+  // Hourly interval calls between midway and pre_delivery
+  const hourly: { type: string; scheduledTime: Date }[] = [];
+  const intervalMs = 60 * 60 * 1000;
+  for (let t = midway.getTime() + intervalMs; t < preDelivery.getTime(); t += intervalMs) {
+    hourly.push({ type: "HOURLY_EXPEDITED", scheduledTime: new Date(t) });
+  }
+
+  const all = [...base, ...hourly]
+    .filter((s) => s.scheduledTime > new Date())
+    .sort((a, b) => a.scheduledTime.getTime() - b.scheduledTime.getTime());
+
+  if (all.length === 0) return;
+
+  await prisma.checkCallSchedule.createMany({
+    data: all.map((s) => ({
+      loadId,
+      scheduledTime: s.scheduledTime,
+      type: s.type,
+      status: "PENDING",
+      carrierPhone,
+    })),
+  });
+
+  log.info(`[CheckCall] Created ${all.length} EXPEDITED (spec protocol) check calls for load ${loadId}`);
+}
+
 const RESPONSE_MAP: Record<string, { status: string; label: string }> = {
   "1": { status: "AT_PICKUP", label: "At Pickup" },
   "2": { status: "LOADED", label: "Loaded" },
@@ -42,12 +90,20 @@ export async function createCheckCallSchedule(loadId: string) {
   const transitMs = delivery.getTime() - pickup.getTime();
   const transitDays = Math.ceil(transitMs / (24 * 60 * 60 * 1000));
 
-  // Determine customer tier — Preferred/Cornerstone/Platinum = expedited
-  const customerRating = load.customer?.rating || 0;
-  const isExpedited = customerRating >= 3; // rating 3+ = Preferred or higher
-
   // Delete any existing schedule for this load
   await prisma.checkCallSchedule.deleteMany({ where: { loadId } });
+
+  // Primary branch: shipment urgency drives protocol.
+  // EXPEDITED urgency uses the spec's 4-call + hourly protocol; everything
+  // else falls back to the legacy tier-based schedule below.
+  if (load.urgencyLevel === "EXPEDITED") {
+    await createExpeditedSchedule(loadId, pickup, delivery, carrierPhone);
+    return;
+  }
+
+  // Legacy tier-based protocol — customer rating 3+ gets 4-check-per-day AM/PM
+  const customerRating = load.customer?.rating || 0;
+  const isExpedited = customerRating >= 3;
 
   const schedules: { type: string; scheduledTime: Date }[] = [];
 

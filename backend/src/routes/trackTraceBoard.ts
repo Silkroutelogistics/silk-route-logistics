@@ -1,11 +1,346 @@
 import { Router, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { calculatePredictiveETA } from "../services/predictiveEtaService";
+import { statesInRegion } from "../services/regionMap";
 import { log } from "../lib/logger";
 
 const router = Router();
 router.use(authenticate);
+
+// ─── v3.3.w Filtered board endpoints (spec sections 1 & 2) ─────────────
+
+const ACTIVE_STATUSES = [
+  "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY",
+] as const;
+const TENDERED_STATUSES = ["TENDERED", "CONFIRMED"] as const;
+const DELIVERED_STATUSES = ["DELIVERED", "POD_RECEIVED", "INVOICED"] as const;
+
+// GET /api/track-trace/summary — 5 top-row stat cards
+router.get(
+  "/summary",
+  authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE") as any,
+  async (_req: AuthRequest, res: Response) => {
+    try {
+      const stale = new Date(Date.now() - 30 * 60 * 1000);
+      const now = new Date();
+
+      const [active, openExceptions, overdueCalls, delivered24h, atRiskEvents] = await Promise.all([
+        prisma.load.count({ where: { status: { in: ACTIVE_STATUSES as any }, deletedAt: null } }),
+        prisma.loadException.count({ where: { status: "OPEN" } }),
+        prisma.checkCallSchedule.count({
+          where: { status: "PENDING", scheduledTime: { lt: now } },
+        }).catch(() => 0),
+        prisma.load.count({
+          where: {
+            status: { in: DELIVERED_STATUSES as any },
+            actualDeliveryDatetime: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+            deletedAt: null,
+          },
+        }),
+        prisma.loadTrackingEvent.count({
+          where: { alertLevel: { in: ["YELLOW", "RED", "CRITICAL"] }, createdAt: { gte: stale } },
+        }),
+      ]);
+
+      const onTimeCount = await prisma.loadStop.count({
+        where: {
+          stopType: "DELIVERY",
+          onTime: true,
+          updatedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+      });
+
+      res.json({
+        active,
+        onTime: onTimeCount,
+        atRisk: atRiskEvents,
+        exceptions: openExceptions,
+        checkCallsDue: overdueCalls,
+      });
+    } catch (err) {
+      log.error({ err }, "T&T summary error");
+      res.status(500).json({ error: "Failed to fetch summary" });
+    }
+  }
+);
+
+// GET /api/track-trace/loads — Filtered board list (spec §1.2–1.5)
+router.get(
+  "/loads",
+  authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE") as any,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const {
+        tab = "active",        // needs_attention | tendered | active | delivered | closed
+        search,
+        region,
+        equipment,
+        carrierId,
+        shipperId,
+        dateFrom,
+        dateTo,
+        quickFilter,           // all | calls_due | at_risk | exceptions | gps_stale | awaiting_pod
+      } = req.query as Record<string, string | undefined>;
+
+      const andClauses: Prisma.LoadWhereInput[] = [{ deletedAt: null }];
+
+      // Tab → status
+      if (tab === "tendered") {
+        andClauses.push({ status: { in: TENDERED_STATUSES as any } });
+      } else if (tab === "active" || tab === "needs_attention") {
+        andClauses.push({ status: { in: [...ACTIVE_STATUSES, ...TENDERED_STATUSES] as any } });
+      } else if (tab === "delivered") {
+        andClauses.push({ status: { in: DELIVERED_STATUSES as any } });
+        andClauses.push({
+          OR: [
+            { podVerified: false },
+            { customerInvoiced: false },
+            { carrierSettled: false },
+          ],
+        });
+      } else if (tab === "closed") {
+        andClauses.push({ status: "COMPLETED" });
+      }
+
+      // Filters
+      if (region) {
+        const states = statesInRegion(region);
+        if (states.length) {
+          andClauses.push({
+            OR: [
+              { originState: { in: states } },
+              { destState: { in: states } },
+            ],
+          });
+        }
+      }
+      if (equipment) andClauses.push({ equipmentType: equipment });
+      if (carrierId) andClauses.push({ carrierId });
+      if (shipperId) andClauses.push({ customerId: shipperId });
+      if (dateFrom || dateTo) {
+        const range: Prisma.DateTimeFilter = {};
+        if (dateFrom) range.gte = new Date(dateFrom);
+        if (dateTo) range.lte = new Date(dateTo);
+        andClauses.push({ pickupDate: range });
+      }
+      if (search) {
+        const s = search.trim();
+        andClauses.push({
+          OR: [
+            { loadNumber: { contains: s, mode: "insensitive" } },
+            { referenceNumber: { contains: s, mode: "insensitive" } },
+            { bolNumber: { contains: s, mode: "insensitive" } },
+            { customerRef: { contains: s, mode: "insensitive" } },
+            { driverName: { contains: s, mode: "insensitive" } },
+            { shipperPoNumber: { contains: s, mode: "insensitive" } },
+          ],
+        });
+      }
+
+      const where: Prisma.LoadWhereInput = { AND: andClauses };
+
+      const loads = await prisma.load.findMany({
+        where,
+        orderBy: [{ pickupDate: "desc" }],
+        take: 500,
+        include: {
+          carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
+          customer: { select: { id: true, name: true } },
+          loadStops: {
+            orderBy: { stopNumber: "asc" },
+            select: {
+              id: true, stopType: true, facilityName: true, city: true, state: true,
+              appointmentDate: true, appointmentTime: true, actualArrival: true,
+              actualDeparture: true, onTime: true,
+            },
+          },
+          trackingEvents: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              alertLevel: true, locationCity: true, locationState: true,
+              latitude: true, longitude: true, etaDestination: true, createdAt: true,
+            },
+          },
+          loadExceptions: {
+            where: { status: "OPEN" },
+            select: { id: true, category: true },
+          },
+          checkCalls: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { id: true, createdAt: true },
+          },
+          checkCallSchedules: {
+            where: { status: { in: ["PENDING", "SENT"] } },
+            orderBy: { scheduledTime: "asc" },
+            select: { id: true, scheduledTime: true, status: true },
+          },
+        },
+      });
+
+      const now = Date.now();
+      const staleCutoff = now - 30 * 60 * 1000;
+
+      const enriched = loads.map((load) => {
+        const pickup = load.loadStops.find((s) => s.stopType === "PICKUP");
+        const delivery = [...load.loadStops].reverse().find((s) => s.stopType === "DELIVERY");
+        const latestEvent = load.trackingEvents[0] ?? null;
+        const hasOpenException = load.loadExceptions.length > 0;
+
+        // 4-step progress: booked / picked / transit / delivered
+        const progress = (() => {
+          const step = (state: "complete" | "active" | "pending" | "exception") => state;
+          const s = load.status as string;
+          const r: any = {
+            booked: step("pending"),
+            pickedUp: step("pending"),
+            inTransit: step("pending"),
+            delivered: step("pending"),
+          };
+          if (["BOOKED", "DISPATCHED", "AT_PICKUP"].includes(s)) {
+            r.booked = "complete"; r.pickedUp = s === "AT_PICKUP" ? "active" : "pending";
+          }
+          if (["LOADED"].includes(s)) { r.booked = "complete"; r.pickedUp = "complete"; r.inTransit = "active"; }
+          if (["IN_TRANSIT"].includes(s)) { r.booked = "complete"; r.pickedUp = "complete"; r.inTransit = "active"; }
+          if (["AT_DELIVERY"].includes(s)) { r.booked = "complete"; r.pickedUp = "complete"; r.inTransit = "complete"; r.delivered = "active"; }
+          if (DELIVERED_STATUSES.includes(s as any) || s === "COMPLETED") {
+            r.booked = "complete"; r.pickedUp = "complete"; r.inTransit = "complete"; r.delivered = "complete";
+          }
+          if (hasOpenException) {
+            if (r.inTransit === "active") r.inTransit = "exception";
+            else if (r.delivered === "active") r.delivered = "exception";
+          }
+          return r;
+        })();
+
+        const gpsStatus = (() => {
+          if (!latestEvent?.latitude) return "none";
+          const age = now - new Date(latestEvent.createdAt).getTime();
+          if (DELIVERED_STATUSES.includes(load.status as any)) return "none";
+          return age > 30 * 60 * 1000 ? "stale" : "live";
+        })();
+
+        const nextCall = load.checkCallSchedules[0] ?? null;
+        const callsDue = nextCall ? new Date(nextCall.scheduledTime).getTime() < now : false;
+
+        const awaitingPod = DELIVERED_STATUSES.includes(load.status as any) && !load.podVerified;
+
+        // Stripe color by equipment/shipment type
+        const stripe = (() => {
+          if (load.temperatureControlled) return "amber";       // reefer
+          if (load.urgencyLevel === "EXPEDITED") return "red";  // expedited
+          if ((load.equipmentType || "").toUpperCase() === "LTL") return "purple";
+          return "gray";
+        })();
+
+        return {
+          id: load.id,
+          loadNumber: load.loadNumber,
+          referenceNumber: load.referenceNumber,
+          status: load.status,
+          stripe,
+          progress,
+          shipper: load.customer?.name ?? load.shipperFacility ?? null,
+          origin: pickup
+            ? { city: pickup.city, state: pickup.state, facility: pickup.facilityName }
+            : { city: load.originCity, state: load.originState },
+          destination: delivery
+            ? { city: delivery.city, state: delivery.state, facility: delivery.facilityName }
+            : { city: load.destCity, state: load.destState },
+          carrier: load.carrier
+            ? { id: load.carrier.id, name: load.carrier.company || `${load.carrier.firstName} ${load.carrier.lastName}`.trim() }
+            : null,
+          equipmentType: load.equipmentType,
+          eta: latestEvent?.etaDestination ?? null,
+          pickupDate: load.pickupDate,
+          deliveryDate: load.deliveryDate,
+          gpsStatus,
+          callsDue,
+          hasOpenException,
+          openExceptionCount: load.loadExceptions.length,
+          awaitingPod,
+          alertLevel: latestEvent?.alertLevel ?? "GREEN",
+          paperworkGates: {
+            podVerified: load.podVerified,
+            customerInvoiced: load.customerInvoiced,
+            carrierSettled: load.carrierSettled,
+          },
+        };
+      });
+
+      // Quick filter post-filter
+      let filtered = enriched;
+      switch (quickFilter) {
+        case "calls_due":   filtered = enriched.filter(l => l.callsDue); break;
+        case "at_risk":     filtered = enriched.filter(l => l.alertLevel === "YELLOW" || l.alertLevel === "RED" || l.alertLevel === "CRITICAL"); break;
+        case "exceptions":  filtered = enriched.filter(l => l.hasOpenException); break;
+        case "gps_stale":   filtered = enriched.filter(l => l.gpsStatus === "stale"); break;
+        case "awaiting_pod": filtered = enriched.filter(l => l.awaitingPod); break;
+      }
+
+      // needs_attention override — anything problematic
+      if (tab === "needs_attention") {
+        filtered = filtered.filter(l =>
+          l.hasOpenException || l.callsDue || l.gpsStatus === "stale" || l.awaitingPod ||
+          l.alertLevel === "RED" || l.alertLevel === "CRITICAL"
+        );
+      }
+
+      res.json({
+        loads: filtered,
+        total: filtered.length,
+        counts: {
+          all: enriched.length,
+          callsDue: enriched.filter(l => l.callsDue).length,
+          atRisk: enriched.filter(l => l.alertLevel === "YELLOW" || l.alertLevel === "RED" || l.alertLevel === "CRITICAL").length,
+          exceptions: enriched.filter(l => l.hasOpenException).length,
+          gpsStale: enriched.filter(l => l.gpsStatus === "stale").length,
+          awaitingPod: enriched.filter(l => l.awaitingPod).length,
+        },
+      });
+    } catch (err) {
+      log.error({ err }, "T&T filtered loads error");
+      res.status(500).json({ error: "Failed to fetch loads" });
+    }
+  }
+);
+
+// GET /api/track-trace/load/:loadId — full load detail for drawer
+router.get(
+  "/load/:loadId",
+  authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE") as any,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { loadId } = req.params;
+      const load = await prisma.load.findUnique({
+        where: { id: loadId },
+        include: {
+          carrier: { select: { id: true, firstName: true, lastName: true, company: true, phone: true, email: true } },
+          customer: { select: { id: true, name: true, billingEmail: true, phone: true } },
+          loadStops: { orderBy: { stopNumber: "asc" } },
+          trackingEvents: { orderBy: { createdAt: "desc" }, take: 50 },
+          loadExceptions: { orderBy: { reportedAt: "desc" }, include: { documents: true } },
+          documents: { orderBy: { createdAt: "desc" } },
+          checkCalls: { orderBy: { createdAt: "desc" } },
+          checkCallSchedules: { orderBy: { scheduledTime: "asc" } },
+          loadActivities: { orderBy: { createdAt: "desc" }, take: 200 },
+          geofenceEvents: { orderBy: { occurredAt: "asc" } },
+          detentionRecords: { orderBy: { enteredAt: "desc" } },
+          loadAccessorials: { orderBy: { createdAt: "desc" } },
+          shipperTrackingTokens: { orderBy: { createdAt: "desc" }, take: 1 },
+        },
+      });
+      if (!load) return res.status(404).json({ error: "Load not found" });
+      res.json({ load });
+    } catch (err) {
+      log.error({ err }, "T&T load detail error");
+      res.status(500).json({ error: "Failed to fetch load" });
+    }
+  }
+);
 
 // GET /api/track-trace/board — All active loads with latest location for dispatch table + map
 router.get(
