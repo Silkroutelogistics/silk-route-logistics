@@ -14,15 +14,17 @@ import { NotesTab } from "./tabs/NotesTab";
 import { DocsTab } from "./tabs/DocsTab";
 import { OrdersTab } from "./tabs/OrdersTab";
 import { ActivityTab } from "./tabs/ActivityTab";
+import { NewCustomerForm } from "./NewCustomerForm";
 import type { CrmTab, CrmCustomer } from "./types";
 
 interface Props {
   customerId: string | null;
   onClose: () => void;
   onCustomerChange: () => void;
+  onSelectCustomer?: (id: string) => void;
 }
 
-export function CustomerDrawer({ customerId, onClose, onCustomerChange }: Props) {
+export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelectCustomer }: Props) {
   const [tab, setTab] = useState<CrmTab>("profile");
 
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -41,7 +43,10 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange }: Props)
     };
   }, [customerId, handleKey]);
 
-  const query = useQuery<{ customer: CrmCustomer }>({
+  // Legacy /customers/:id returns the customer unwrapped (controller does
+  // res.json({ ...customer, totalShipments, totalRevenue, ... })), so we
+  // type the query against the customer shape directly.
+  const query = useQuery<CrmCustomer>({
     queryKey: ["crm-customer", customerId],
     queryFn: async () => (await api.get(`/customers/${customerId}`)).data,
     enabled: !!customerId && customerId !== "__new__",
@@ -49,7 +54,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange }: Props)
 
   if (!customerId) return null;
   const isNew = customerId === "__new__";
-  const customer = query.data?.customer;
+  const customer = query.data;
 
   const statusBadge = (s: string) => {
     const v = (s || "").toLowerCase();
@@ -119,9 +124,13 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange }: Props)
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
             {isNew && (
-              <div className="text-sm text-gray-500">
-                New customer inline form — coming in follow-up lane. For now, use the legacy Add Customer flow.
-              </div>
+              <NewCustomerForm
+                onCreated={(newId) => {
+                  onCustomerChange();
+                  if (onSelectCustomer) onSelectCustomer(newId);
+                }}
+                onCancel={onClose}
+              />
             )}
             {!isNew && !customer && <div className="text-sm text-gray-400">Loading…</div>}
             {!isNew && customer && (

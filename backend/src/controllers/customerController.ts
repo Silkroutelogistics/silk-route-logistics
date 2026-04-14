@@ -81,6 +81,7 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
     include: {
       shipments: { orderBy: { createdAt: "desc" }, take: 10, include: { driver: true } },
       contacts: { orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }] },
+      accountRep: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
@@ -117,7 +118,7 @@ export async function getCustomerStats(req: AuthRequest, res: Response) {
 
 export async function updateCustomer(req: AuthRequest, res: Response) {
   const data = updateCustomerSchema.parse(req.body);
-  const customer = await prisma.customer.update({ where: { id: req.params.id }, data });
+  const customer = await prisma.customer.update({ where: { id: req.params.id }, data: data as any });
   res.json(customer);
 }
 

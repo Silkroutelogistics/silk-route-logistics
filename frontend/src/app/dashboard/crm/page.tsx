@@ -193,6 +193,7 @@ export default function CrmPage() {
         customerId={selectedId}
         onClose={() => setSelectedId(null)}
         onCustomerChange={() => customersQuery.refetch()}
+        onSelectCustomer={(id) => setSelectedId(id)}
       />
     </div>
   );

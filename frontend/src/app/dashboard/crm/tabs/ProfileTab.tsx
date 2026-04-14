@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Star, Edit2, Shield, Search, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
+import { Star, Edit2, Shield, Search, ExternalLink, CheckCircle2, XCircle, User } from "lucide-react";
 import type { CrmCustomer } from "../types";
 
 interface Props {
@@ -68,6 +68,11 @@ export function ProfileTab({ customer, onChange }: Props) {
         <Field label="Customer type" value={customer.type} />
         <Field label="Industry"     value={customer.industry ?? customer.industryType} />
         <Field label="Status"       value={customer.status} />
+        <Field label="Account rep" value={
+          customer.accountRep
+            ? <span className="inline-flex items-center gap-1"><User className="w-3 h-3 text-gray-400" />{`${customer.accountRep.firstName ?? ""} ${customer.accountRep.lastName ?? ""}`.trim() || customer.accountRep.email}</span>
+            : "—"
+        } />
         <Field label="Rating" value={
           <span className="inline-flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -250,6 +255,14 @@ function SecLookupView({
   );
 }
 
+interface RepOption {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  role: string;
+}
+
 function EditProfileForm({
   customer, onCancel, onSaved,
 }: { customer: CrmCustomer; onCancel: () => void; onSaved: () => void }) {
@@ -265,11 +278,21 @@ function EditProfileForm({
     creditLimit: customer.creditLimit ?? 0,
     paymentTerms: customer.paymentTerms ?? "Net 30",
     taxId: customer.taxId ?? "",
+    accountRepId: customer.accountRepId ?? "",
+  });
+
+  const repOptions = useQuery<{ users: RepOption[] }>({
+    queryKey: ["crm-rep-options"],
+    queryFn: async () => (await api.get("/customers/account-rep-options")).data,
+    staleTime: 5 * 60_000,
   });
 
   const save = useMutation({
     mutationFn: async () =>
-      (await api.patch(`/customers/${customer.id}`, form)).data,
+      (await api.patch(`/customers/${customer.id}`, {
+        ...form,
+        accountRepId: form.accountRepId || null,
+      })).data,
     onSuccess: onSaved,
   });
 
@@ -278,6 +301,23 @@ function EditProfileForm({
       <Input label="Company"       value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <Input label="Status"        value={form.status} onChange={(v) => setForm({ ...form, status: v })} />
       <Input label="Industry"      value={form.industry} onChange={(v) => setForm({ ...form, industry: v })} />
+
+      <label className="block">
+        <span className="text-[11px] text-gray-500">Account rep</span>
+        <select
+          value={form.accountRepId}
+          onChange={(e) => setForm({ ...form, accountRepId: e.target.value })}
+          className="w-full mt-0.5 px-3 py-1.5 text-sm border border-gray-200 rounded bg-white"
+        >
+          <option value="">— Unassigned —</option>
+          {(repOptions.data?.users ?? []).map((u) => (
+            <option key={u.id} value={u.id}>
+              {`${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email} · {u.role}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <Input label="Address"       value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
       <div className="grid grid-cols-3 gap-2">
         <Input label="City"  value={form.city} onChange={(v) => setForm({ ...form, city: v })} />

@@ -31,6 +31,8 @@ export interface CrmCustomer {
   creditCheckResult: string | null;
   creditCheckNotes: string | null;
   secCikNumber: string | null;
+  accountRepId: string | null;
+  accountRep?: { id: string; firstName: string | null; lastName: string | null; email: string } | null;
   paymentTerms: string | null;
   taxId: string | null;
   address: string | null;

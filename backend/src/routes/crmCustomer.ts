@@ -20,6 +20,37 @@ router.use(authenticate);
 
 const CRM_ROLES = ["ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING", "DISPATCH", "AE"] as const;
 
+// ─── Account rep picker ───────────────────────────────────
+// Lightweight user dropdown scoped to roles that can own an account.
+// Admin-only /admin/users is too heavy and auth-gated. This stays in
+// CRM routes because it's only useful to CRM.
+
+router.get(
+  "/account-rep-options",
+  authorize(...CRM_ROLES) as any,
+  async (req: AuthRequest, res: Response) => {
+    const search = (req.query.search as string) || "";
+    const where: any = {
+      role: { in: ["BROKER", "OPERATIONS", "DISPATCH", "ADMIN", "CEO", "AE"] },
+      isActive: true,
+    };
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ];
+    }
+    const users = await prisma.user.findMany({
+      where,
+      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+      take: 100,
+    });
+    res.json({ users });
+  }
+);
+
 // ─── Tracking-link contact toggle ─────────────────────────
 
 router.patch(

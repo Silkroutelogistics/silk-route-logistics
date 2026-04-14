@@ -5,8 +5,11 @@
  */
 import { log } from "../lib/logger";
 
-// Karpathy Rule 13 — whaider@ is the single source of truth for SRL contact.
-const USER_AGENT = "SilkRouteLogistics/1.0 (whaider@silkroutelogistics.ai)";
+// SEC EDGAR fair-access policy requires a User-Agent identifying the
+// caller. Uses the compliance@ alias per the follow-up spec — this is
+// a technical machine identifier, not a reply-to, so it doesn't
+// conflict with Rule 13's outreach/transactional email guidance.
+const USER_AGENT = "SilkRouteLogistics/1.0 (compliance@silkroutelogistics.ai)";
 const TIMEOUT_MS = 10_000;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 

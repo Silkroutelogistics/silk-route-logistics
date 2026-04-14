@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { MapPin, Plus, X, Star } from "lucide-react";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import type { CrmFacility } from "../types";
 
 interface Props {
@@ -134,7 +135,20 @@ function AddFacilityForm({
         <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
       </div>
       <In placeholder="Facility name *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-      <In placeholder="Street address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
+      <AddressAutocomplete
+        label="Start typing an address…"
+        theme="light"
+        value={{ address: form.address, city: form.city, state: form.state, zip: form.zip }}
+        onSelect={(parts) =>
+          setForm({
+            ...form,
+            address: parts.address,
+            city: parts.city,
+            state: parts.state,
+            zip: parts.zip,
+          })
+        }
+      />
       <div className="grid grid-cols-3 gap-2">
         <In placeholder="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
         <In placeholder="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
