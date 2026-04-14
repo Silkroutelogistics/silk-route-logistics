@@ -44,7 +44,7 @@ export async function getCustomers(req: AuthRequest, res: Response) {
     prisma.customer.findMany({
       where,
       include: {
-        _count: { select: { shipments: true } },
+        _count: { select: { shipments: true, loads: true } },
         contacts: { orderBy: { isPrimary: "desc" }, take: 5 },
       },
       skip: (query.page - 1) * query.limit,
@@ -54,17 +54,27 @@ export async function getCustomers(req: AuthRequest, res: Response) {
     prisma.customer.count({ where }),
   ]);
 
-  // Compute total revenue per customer
+  // v3.5.c — Compute revenue and load count from the loads table. The
+  // legacy shipments table is almost always empty (loads is the canonical
+  // freight record). Prefer customerRate; fall back to rate.
   const enriched = await Promise.all(
     customers.map(async (c) => {
-      const agg = await prisma.shipment.aggregate({
+      const loadAgg = await prisma.load.aggregate({
+        where: { customerId: c.id, deletedAt: null },
+        _sum: { customerRate: true, rate: true },
+        _count: true,
+      });
+      const loadRevenue = (loadAgg._sum.customerRate ?? 0) || (loadAgg._sum.rate ?? 0);
+      const shipmentAgg = await prisma.shipment.aggregate({
         where: { customerId: c.id },
         _sum: { rate: true },
       });
+      const totalRevenue = loadRevenue + (shipmentAgg._sum.rate ?? 0);
       return {
         ...c,
         totalShipments: c._count.shipments,
-        totalRevenue: agg._sum.rate || 0,
+        totalLoads: loadAgg._count ?? c._count.loads ?? 0,
+        totalRevenue,
       };
     })
   );

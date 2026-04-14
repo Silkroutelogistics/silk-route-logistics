@@ -16,6 +16,7 @@ export interface CrmCustomer {
   name: string;
   type: string;
   status: string;
+  onboardingStatus?: string;
   industry: string | null;
   industryType: string | null;
   city: string | null;
@@ -44,6 +45,8 @@ export interface CrmCustomer {
   notes: string | null;
   createdAt: string;
   totalRevenue?: number;
+  totalLoads?: number;
+  totalShipments?: number;
   _count?: { shipments?: number; loads?: number };
 }
 

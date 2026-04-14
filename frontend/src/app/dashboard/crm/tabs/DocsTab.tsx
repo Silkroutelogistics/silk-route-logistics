@@ -5,13 +5,18 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { FileText, Upload, CheckCircle2, XCircle, Clock } from "lucide-react";
 
+// Shipper/customer document categories (v3.5.c). Carrier-side docs
+// (COI from carrier, broker-carrier agreement) live in the Carrier Pool
+// module and are intentionally excluded here.
 const CATEGORIES = [
-  { code: "W9",                       label: "W-9" },
-  { code: "CREDIT_APP",               label: "Credit application" },
-  { code: "RATE_CON",                 label: "Rate agreement (signed)" },
-  { code: "COI",                      label: "Insurance certificate" },
-  { code: "BROKER_CARRIER_AGREEMENT", label: "Broker-carrier agreement" },
-  { code: "OTHER",                    label: "Other" },
+  { code: "W9",                    label: "W-9" },
+  { code: "CREDIT_APP",            label: "Credit application" },
+  { code: "RATE_AGREEMENT",        label: "Rate agreement" },
+  { code: "CUSTOMER_CONTRACT",     label: "Customer contract" },
+  { code: "TAX_EXEMPTION",         label: "Tax exemption certificate" },
+  { code: "SRL_COI",               label: "COI (provided by SRL)" },
+  { code: "PAYMENT_AUTHORIZATION", label: "Payment authorization" },
+  { code: "OTHER",                 label: "Other" },
 ];
 
 export function DocsTab({ customerId, onChange }: { customerId: string; onChange: () => void }) {

@@ -19,10 +19,29 @@ interface CustomersResponse {
 }
 
 function statusOf(c: CrmCustomer): "active" | "prospect" | "inactive" {
+  // v3.5.c — onboardingStatus is the reliable signal. Customers with
+  // APPROVED onboarding are active regardless of the free-text status
+  // field (some legacy records stored "Prospect" there even after
+  // approval). REJECTED / SUSPENDED map to inactive.
+  const onb = (c.onboardingStatus || "").toUpperCase();
+  if (onb === "APPROVED") return "active";
+  if (onb === "REJECTED" || onb === "SUSPENDED") return "inactive";
+  if (onb === "PENDING" || onb === "UNDER_REVIEW" || onb === "DOCUMENTS_SUBMITTED") {
+    // Onboarding in progress — but if they already have loads, treat
+    // as active (they've been running freight even if the onboarding
+    // flag was never flipped).
+    if ((c.totalLoads ?? c._count?.loads ?? 0) > 0) return "active";
+    return "prospect";
+  }
+  // Fall back to the text field for records without onboardingStatus
   const s = (c.status || "").toLowerCase();
   if (s.includes("prospect")) return "prospect";
   if (s.includes("inactive")) return "inactive";
   return "active";
+}
+
+function loadCountOf(c: CrmCustomer): number {
+  return c.totalLoads ?? c._count?.loads ?? c._count?.shipments ?? 0;
 }
 
 function companyInitials(name: string): string {
@@ -62,7 +81,7 @@ export default function CrmPage() {
   }, [customers]);
 
   const totalRevenue = customers.reduce((s, c) => s + (c.totalRevenue ?? 0), 0);
-  const totalLoads = customers.reduce((s, c) => s + (c._count?.loads ?? c._count?.shipments ?? 0), 0);
+  const totalLoads = customers.reduce((s, c) => s + loadCountOf(c), 0);
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -175,11 +194,11 @@ export default function CrmPage() {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-semibold text-gray-900">
+                  <div className="text-sm font-bold text-gray-900">
                     ${Math.round(c.totalRevenue ?? 0).toLocaleString()}
                   </div>
                   <div className="text-[11px] text-gray-500">
-                    {c._count?.loads ?? c._count?.shipments ?? 0} loads
+                    {loadCountOf(c)} loads
                   </div>
                 </div>
               </button>
