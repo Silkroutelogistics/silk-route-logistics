@@ -337,6 +337,14 @@ export async function uploadCarrierDocuments(req: AuthRequest, res: Response) {
       const key = `carrier-docs/${uniqueSuffix}${ext}`;
       const fileUrl = await uploadFile(file.buffer, key, file.mimetype);
 
+      // Auto-detect docType from filename
+      const fname = file.originalname.toLowerCase();
+      let docType = "OTHER";
+      if (fname.includes("w9") || fname.includes("w-9")) docType = "W9";
+      else if (fname.includes("insurance") || fname.includes("cert") || fname.includes("coi")) docType = "COI";
+      else if (fname.includes("authority") || fname.includes("mc")) docType = "AUTHORITY";
+      else if (fname.includes("boc")) docType = "BOC3";
+
       return prisma.document.create({
         data: {
           fileName: file.originalname,
@@ -344,6 +352,10 @@ export async function uploadCarrierDocuments(req: AuthRequest, res: Response) {
           fileType: file.mimetype,
           fileSize: file.size,
           userId: req.user!.id,
+          entityType: "CARRIER",
+          entityId: profile.id,
+          docType,
+          status: "PENDING",
         },
       });
     })

@@ -25,7 +25,16 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
     }
   }
 
-  const { loadId, invoiceId, entityType, entityId, docType } = req.body;
+  let { loadId, invoiceId, entityType, entityId, docType } = req.body;
+
+  // Auto-link carrier-uploaded compliance docs to their carrier profile
+  if (!entityType && req.user!.role === "CARRIER") {
+    const carrierProfile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
+    if (carrierProfile) {
+      entityType = "CARRIER";
+      entityId = carrierProfile.id;
+    }
+  }
 
   const documents = await Promise.all(
     files.map(async (file) => {
@@ -46,6 +55,7 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
           entityType: entityType || null,
           entityId: entityId || null,
           docType: docType || null,
+          status: "PENDING",
         },
       });
     })
