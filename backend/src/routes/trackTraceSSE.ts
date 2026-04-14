@@ -93,7 +93,10 @@ export type SSEEventType =
   | "check_call"
   | "eta_update"
   | "accessorial"
-  | "board_refresh";
+  | "board_refresh"
+  | "waterfall_tendered"
+  | "waterfall_completed"
+  | "waterfall_fallback";
 
 export interface SSEEvent {
   type: SSEEventType;

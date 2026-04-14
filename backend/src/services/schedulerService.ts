@@ -18,6 +18,7 @@ import { scanGeofences } from "./geofenceService";
 import { processSamsaraLocations } from "./samsaraService";
 import { processMotiveLocations } from "./motiveService";
 import { processExpiredTenders } from "../controllers/tenderController";
+import { waterfallTick } from "./waterfallEngineService";
 import { dailyETAUpdates } from "./shipperLoadNotifyService";
 import {
   processInsuranceExpiryEnforcement,
@@ -520,6 +521,19 @@ export function startSchedulers() {
       log.info(`[Scheduler] Tender expiry: ${result.expired} expired, ${result.loadsReverted} loads reverted`);
     });
   });
+
+  // Waterfall engine tick — every 30 seconds. Expires stale waterfall
+  // positions, advances cascade, promotes stale open loads to DAT, and
+  // picks up new full-auto loads. setInterval instead of cron because
+  // node-cron syntax only goes down to minute granularity.
+  setInterval(() => {
+    withLock("waterfall-tick", 60 * 1000, async () => {
+      const result = await waterfallTick();
+      if (result.expired || result.started || result.promoted) {
+        log.info(`[Scheduler] Waterfall tick: ${result.expired} expired, ${result.started} started, ${result.promoted} → DAT`);
+      }
+    }).catch((err) => log.error({ err }, "[Scheduler] waterfall-tick error"));
+  }, 30 * 1000);
 
   // ─── Enterprise Carrier Compliance Crons ───────────────────────
 

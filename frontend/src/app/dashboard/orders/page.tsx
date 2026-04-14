@@ -111,6 +111,10 @@ const initialForm = {
   turnable: false,
   dockAssignment: "",
   driverInstructions: "",
+  // Waterfall Dispatch (v3.4.j)
+  dispatchMethod: "waterfall" as "waterfall" | "loadboard" | "direct_tender" | "dat",
+  waterfallMode: "full_auto" as "manual" | "semi_auto" | "full_auto",
+  directTenderCarrierId: "",
 };
 
 export default function OrderBuilderPage() {
@@ -431,6 +435,17 @@ export default function OrderBuilderPage() {
       if (form.turnable) payload.turnable = true;
       if (form.dockAssignment) payload.dockAssignment = form.dockAssignment;
       if (form.driverInstructions) payload.driverInstructions = form.driverInstructions;
+      // Dispatch method / visibility (Waterfall module)
+      payload.dispatchMethod = form.dispatchMethod;
+      payload.visibility =
+        form.dispatchMethod === "loadboard"     ? "open"
+      : form.dispatchMethod === "direct_tender" ? "reserved"
+      : form.dispatchMethod === "dat"           ? "dat"
+      :                                           "waterfall";
+      if (form.dispatchMethod === "waterfall") payload.waterfallMode = form.waterfallMode;
+      if (form.dispatchMethod === "direct_tender" && form.directTenderCarrierId) {
+        payload.directTenderCarrierId = form.directTenderCarrierId;
+      }
       // Multi-stop
       if (stops.length > 0) {
         payload.stops = stops.map((s, i) => ({
@@ -1146,11 +1161,103 @@ export default function OrderBuilderPage() {
                 placeholder="Internal notes..." rows={3}
                 className={`w-full ${inp} resize-none`} />
             </div>
+
+            {/* Waterfall Dispatch method (v3.4.j) */}
+            <div className="mt-3">
+              <div className={secHdr + " mb-2"}>Dispatch Method</div>
+              <div className="grid grid-cols-1 gap-2">
+                <DispatchMethodCard
+                  active={form.dispatchMethod === "waterfall"}
+                  onClick={() => setForm((f) => ({ ...f, dispatchMethod: "waterfall" }))}
+                  title="Waterfall (auto-tender)"
+                  desc="System ranks carriers and auto-tenders in priority sequence. 20-min acceptance window per carrier."
+                />
+                {form.dispatchMethod === "waterfall" && (
+                  <div className="ml-3 flex gap-1 border-l border-gold/30 pl-3">
+                    {(["manual", "semi_auto", "full_auto"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, waterfallMode: m }))}
+                        className={`px-2 py-1 text-[10px] rounded ${
+                          form.waterfallMode === m
+                            ? "bg-[#C9A84C] text-[#0F1117]"
+                            : "bg-white/5 text-slate-400"
+                        }`}
+                      >
+                        {m === "full_auto" ? "Full auto" : m === "semi_auto" ? "Semi-auto" : "Manual"}
+                      </button>
+                    ))}
+                    {form.waterfallMode === "full_auto" && (
+                      <span className="text-[10px] text-slate-400 self-center ml-2">
+                        Waterfall fires automatically after save
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <DispatchMethodCard
+                  active={form.dispatchMethod === "loadboard"}
+                  onClick={() => setForm((f) => ({ ...f, dispatchMethod: "loadboard" }))}
+                  title="Load board (The Caravan)"
+                  desc="Post to SRL internal load board. Approved carriers see and bid."
+                />
+
+                <DispatchMethodCard
+                  active={form.dispatchMethod === "dat"}
+                  onClick={() => setForm((f) => ({ ...f, dispatchMethod: "dat" }))}
+                  title="DAT load board"
+                  desc="Post to DAT open market. Any carrier can see it."
+                />
+
+                <DispatchMethodCard
+                  active={form.dispatchMethod === "direct_tender"}
+                  onClick={() => setForm((f) => ({ ...f, dispatchMethod: "direct_tender" }))}
+                  title="Direct tender"
+                  desc="Tender to one specific carrier through The Caravan."
+                />
+                {form.dispatchMethod === "direct_tender" && (
+                  <input
+                    type="text"
+                    value={form.directTenderCarrierId}
+                    onChange={(e) => setForm((f) => ({ ...f, directTenderCarrierId: e.target.value }))}
+                    placeholder="Carrier ID (user ID)"
+                    className={`ml-3 ${inp}`}
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
         </div>
       </div>
     </div>
+  );
+}
+
+function DispatchMethodCard({
+  active, onClick, title, desc,
+}: { active: boolean; onClick: () => void; title: string; desc: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left p-3 rounded-lg border transition ${
+        active
+          ? "border-[#C9A84C] bg-[#C9A84C]/10"
+          : "border-white/10 bg-white/[0.02] hover:border-white/20"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`w-3 h-3 rounded-full border ${
+            active ? "bg-[#C9A84C] border-[#C9A84C]" : "border-white/30"
+          }`}
+        />
+        <span className="text-xs font-semibold text-white">{title}</span>
+      </div>
+      <div className="text-[10px] text-slate-400 mt-1 ml-5">{desc}</div>
+    </button>
   );
 }
 

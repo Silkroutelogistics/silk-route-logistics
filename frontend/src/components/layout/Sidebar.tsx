@@ -101,7 +101,7 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/crm", label: "CRM", icon: Users },
       { href: "/dashboard/orders", label: "Order Builder", icon: ClipboardEdit },
       { href: "/dashboard/loads", label: "Load Board", icon: Package },
-      { href: "/dashboard/dispatch", label: "Dispatch Board", icon: Crosshair },
+      { href: "/dashboard/waterfall", label: "Waterfall Dispatch", icon: Crosshair },
       { href: "/dashboard/track-trace", label: "Track & Trace", icon: MapPin },
       { href: "/dashboard/dock-scheduling", label: "Dock Scheduling", icon: Clock },
       { href: "/dashboard/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },

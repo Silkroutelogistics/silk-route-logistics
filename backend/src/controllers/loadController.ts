@@ -149,6 +149,12 @@ export async function createLoad(req: AuthRequest, res: Response) {
 
     // Shipper contact email for load notifications
     contactEmail: raw.contactEmail || undefined,
+
+    // Waterfall Dispatch (v3.4.j)
+    dispatchMethod: raw.dispatchMethod || undefined,
+    visibility: raw.visibility || (raw.dispatchMethod ? undefined : "waterfall"),
+    waterfallMode: raw.waterfallMode || undefined,
+    directTenderCarrierId: raw.directTenderCarrierId || undefined,
   };
 
   // Remove undefined values

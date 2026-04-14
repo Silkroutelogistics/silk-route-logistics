@@ -1121,6 +1121,17 @@ model Load {
   tenderedBy         User?     @relation("TenderCreator", fields: [tenderedById], references: [id])
   carrierConfirmedAt DateTime?
 
+  // Waterfall Dispatch (v3.4.d) — Caravan-first routing
+  dispatchMethod              String?   @map("dispatch_method") @db.VarChar(20) // waterfall | loadboard | direct_tender | dat
+  visibility                  String    @default("waterfall") @db.VarChar(20) // waterfall | open | reserved | dat
+  waterfallMode               String?   @map("waterfall_mode") @db.VarChar(20) // manual | semi_auto | full_auto
+  directTenderCarrierId       String?   @map("direct_tender_carrier_id")
+  dispatchedAt                DateTime? @map("dispatched_at")
+  dispatchedCarrierId         String?   @map("dispatched_carrier_id")
+  fallbackChainStartedAt      DateTime? @map("fallback_chain_started_at")
+  fallbackPostedToLoadboardAt DateTime? @map("fallback_posted_to_loadboard_at")
+  fallbackPostedToDatAt       DateTime? @map("fallback_posted_to_dat_at")
+
   // Payment terms
   carrierPaymentMethod CarrierPaymentMethod?
   carrierPaymentTier   PaymentTier?
@@ -1220,9 +1231,14 @@ model Load {
   loadActivities        LoadActivity[]
   geofenceEvents        GeofenceEvent[]
   detentionRecords      DetentionRecord[]
-  deletedAt             DateTime?
-  deletedBy             String?
-  cancellationReason    String?
+
+  // Waterfall Dispatch relations
+  waterfalls         Waterfall[]
+  loadBids           LoadBid[]
+  loadNotes          LoadNote[]
+  deletedAt          DateTime?
+  deletedBy          String?
+  cancellationReason String?
 
   @@index([status])
   @@index([loadNumber])
@@ -1236,6 +1252,8 @@ model Load {
   @@index([statusUpdatedAt])
   @@index([status, createdAt])
   @@index([deletedAt])
+  @@index([dispatchMethod, waterfallMode, status])
+  @@index([visibility])
   @@map("loads")
 }
 
@@ -1253,9 +1271,100 @@ model LoadTender {
   createdAt   DateTime       @default(now())
   deletedAt   DateTime?
 
+  // Waterfall linkage (v3.4.d) — when a tender originated from a cascade position
+  waterfallPositionId String?            @map("waterfall_position_id")
+  waterfallPosition   WaterfallPosition? @relation(fields: [waterfallPositionId], references: [id], onDelete: SetNull)
+
   @@index([loadId])
   @@index([carrierId, status])
+  @@index([waterfallPositionId])
   @@map("load_tenders")
+}
+
+// ─── Waterfall Dispatch (v3.4.d) ───────────────────────────
+
+model Waterfall {
+  id                 String    @id @default(cuid())
+  loadId             String    @map("load_id")
+  load               Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  mode               String    @default("full_auto") @db.VarChar(20) // manual | semi_auto | full_auto
+  status             String    @default("building") @db.VarChar(20) // building | active | completed | exhausted | paused | cancelled
+  startedAt          DateTime? @map("started_at")
+  completedAt        DateTime? @map("completed_at")
+  completedCarrierId String?   @map("completed_carrier_id")
+  totalPositions     Int       @default(0) @map("total_positions")
+  currentPosition    Int       @default(0) @map("current_position")
+  createdById        String?   @map("created_by_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  positions WaterfallPosition[]
+
+  @@index([loadId])
+  @@index([status])
+  @@map("waterfalls")
+}
+
+model WaterfallPosition {
+  id                 String    @id @default(cuid())
+  waterfallId        String    @map("waterfall_id")
+  waterfall          Waterfall @relation(fields: [waterfallId], references: [id], onDelete: Cascade)
+  carrierId          String?   @map("carrier_id") // null for DAT fallback
+  position           Int
+  matchScore         Decimal?  @map("match_score") @db.Decimal(5, 2)
+  offeredRate        Decimal?  @map("offered_rate") @db.Decimal(10, 2)
+  offeredRatePerMile Decimal?  @map("offered_rate_per_mile") @db.Decimal(8, 2)
+  marginAmount       Decimal?  @map("margin_amount") @db.Decimal(10, 2)
+  marginPercent      Decimal?  @map("margin_percent") @db.Decimal(5, 2)
+  status             String    @default("queued") @db.VarChar(20) // queued | tendered | accepted | declined | expired | skipped
+  tenderSentAt       DateTime? @map("tender_sent_at")
+  tenderExpiresAt    DateTime? @map("tender_expires_at")
+  respondedAt        DateTime? @map("responded_at")
+  declineReason      String?   @map("decline_reason")
+  isFallback         Boolean   @default(false) @map("is_fallback")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  tenders LoadTender[]
+
+  @@index([waterfallId, position])
+  @@index([status, tenderExpiresAt])
+  @@index([carrierId])
+  @@map("waterfall_positions")
+}
+
+model LoadBid {
+  id             String    @id @default(cuid())
+  loadId         String    @map("load_id")
+  load           Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierId      String    @map("carrier_id")
+  bidRate        Decimal   @map("bid_rate") @db.Decimal(10, 2)
+  bidRatePerMile Decimal?  @map("bid_rate_per_mile") @db.Decimal(8, 2)
+  notes          String?
+  status         String    @default("pending") @db.VarChar(20) // pending | accepted | rejected | withdrawn
+  submittedAt    DateTime  @default(now()) @map("submitted_at")
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewedById   String?   @map("reviewed_by_id")
+
+  @@index([loadId, status])
+  @@index([carrierId])
+  @@map("load_bids")
+}
+
+model LoadNote {
+  id            String   @id @default(cuid())
+  loadId        String   @map("load_id")
+  load          Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  noteType      String   @default("internal") @map("note_type") @db.VarChar(32)
+  // internal | shipper_requirement | carrier_instruction | rate_note | pickup_instruction | delivery_instruction
+  content       String
+  source        String   @default("manual") @db.VarChar(20)
+  // manual | auto_generated | shipper_profile | facility_profile
+  createdById   String?  @map("created_by_id")
+  createdByName String?  @map("created_by_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([loadId, createdAt])
+  @@map("load_notes")
 }
 
 // ─── Rate Confirmation ──────────────────────────────────
