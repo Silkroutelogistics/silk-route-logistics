@@ -1281,12 +1281,9 @@ export default function OrderBuilderPage() {
                   desc="Tender to one specific carrier through The Caravan."
                 />
                 {form.dispatchMethod === "direct_tender" && (
-                  <input
-                    type="text"
+                  <DirectTenderPicker
                     value={form.directTenderCarrierId}
-                    onChange={(e) => setForm((f) => ({ ...f, directTenderCarrierId: e.target.value }))}
-                    placeholder="Carrier ID (user ID)"
-                    className={`ml-3 ${inp}`}
+                    onChange={(id) => setForm((f) => ({ ...f, directTenderCarrierId: id }))}
                   />
                 )}
               </div>
@@ -1295,6 +1292,116 @@ export default function OrderBuilderPage() {
 
         </div>
       </div>
+    </div>
+  );
+}
+
+interface DirectTenderCarrier {
+  id: string;              // CarrierProfile.id — not used directly, we send userId to the backend
+  userId: string;          // User.id — this is what Load.directTenderCarrierId references
+  companyName: string | null;
+  mcNumber: string | null;
+  cppTier: string;
+}
+
+/**
+ * Searchable dropdown for direct-tender carrier selection. Replaces
+ * the raw text-input that used to require pasting a user ID.
+ * Backed by /carriers?status=APPROVED.
+ */
+function DirectTenderPicker({
+  value, onChange,
+}: { value: string; onChange: (userId: string) => void }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const carriersQuery = useQuery<{ carriers: DirectTenderCarrier[]; total: number }>({
+    queryKey: ["direct-tender-carriers", search],
+    queryFn: async () => {
+      const res = await api.get("/carriers", {
+        params: { status: "APPROVED", search: search || undefined, limit: 50 },
+      });
+      // Normalize shape — the endpoint may wrap results under `carriers`
+      // or return them directly. Defensive map keeps this resilient.
+      const raw = (res.data?.carriers ?? res.data?.data ?? res.data ?? []) as any[];
+      const carriers: DirectTenderCarrier[] = raw.map((c) => ({
+        id: c.id,
+        userId: c.userId ?? c.user?.id ?? "",
+        companyName: c.companyName ?? c.user?.company ?? c.user?.firstName ?? null,
+        mcNumber: c.mcNumber ?? null,
+        cppTier: c.cppTier ?? c.tier ?? "NONE",
+      })).filter((c) => !!c.userId);
+      return { carriers, total: carriers.length };
+    },
+    staleTime: 60_000,
+  });
+
+  const selected = (carriersQuery.data?.carriers ?? []).find((c) => c.userId === value);
+
+  const tierStyle = (t: string) => {
+    switch (t) {
+      case "PLATINUM": return "bg-purple-500/20 text-purple-300";
+      case "GOLD":     return "bg-yellow-500/20 text-yellow-300";
+      case "SILVER":   return "bg-slate-400/20 text-slate-300";
+      case "BRONZE":   return "bg-amber-700/20 text-amber-400";
+      default:         return "bg-white/10 text-slate-400";
+    }
+  };
+
+  return (
+    <div className="ml-3 relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full text-left px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white flex items-center justify-between"
+      >
+        {selected ? (
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="truncate">{selected.companyName ?? "—"}</span>
+            {selected.mcNumber && <span className="text-[10px] text-slate-400">MC-{selected.mcNumber}</span>}
+            <span className={`px-1.5 py-0.5 text-[9px] rounded ${tierStyle(selected.cppTier)}`}>{selected.cppTier}</span>
+          </span>
+        ) : (
+          <span className="text-slate-500">Select approved carrier…</span>
+        )}
+        <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-[#161921] border border-white/10 rounded-lg shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-white/10">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search company or MC#…"
+              className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {(carriersQuery.data?.carriers ?? []).length === 0 && (
+              <div className="p-4 text-center text-xs text-slate-500">
+                {carriersQuery.isLoading ? "Loading…" : "No approved carriers match"}
+              </div>
+            )}
+            {(carriersQuery.data?.carriers ?? []).map((c) => (
+              <button
+                key={c.userId}
+                type="button"
+                onClick={() => { onChange(c.userId); setOpen(false); setSearch(""); }}
+                className="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm text-white truncate">{c.companyName ?? "—"}</div>
+                  {c.mcNumber && <div className="text-[10px] text-slate-500">MC-{c.mcNumber}</div>}
+                </div>
+                <span className={`px-1.5 py-0.5 text-[10px] rounded shrink-0 ${tierStyle(c.cppTier)}`}>{c.cppTier}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

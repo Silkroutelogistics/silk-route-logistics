@@ -5,10 +5,13 @@
  *   Lane history (30%) + SRCPP tier (25%) + Rate competitiveness (20%)
  *                      + On-time performance (15%) + Equipment match (10%)
  *
- * Kept deliberately separate from the legacy carrierMatch.ts scoring
- * (which uses a different ~95pt scale and is consumed by the standalone
- * /api/carrier-match endpoints + DAT promotion flows). Consolidation is
- * a post-launch cleanup lane.
+ * Single source of truth for carrier scoring (Rule 5 cleanup in v3.4.u).
+ * The legacy ~95pt scoring that lived in carrierMatch.ts has been
+ * retired. All consumers now flow through this service via
+ * /api/waterfalls/load/:loadId/carrier-matches. The old GET
+ * /api/carrier-match/:loadId endpoint was removed and its non-scoring
+ * provisioning routes (import-from-dat, emergency-approve,
+ * promote-to-bronze) moved to /api/carriers/.
  */
 
 import { prisma } from "../config/database";

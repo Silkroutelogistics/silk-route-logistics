@@ -41,6 +41,9 @@ const preferencesSchema = z.object({
     scorecard: z.boolean().optional(),
     announcements: z.boolean().optional(),
   }).optional(),
+  // Free-form preferences JSON (v3.4.u). Merged into User.preferences
+  // on the server so partial patches only touch the specified keys.
+  preferences: z.record(z.string(), z.any()).optional(),
 });
 
 // Public routes

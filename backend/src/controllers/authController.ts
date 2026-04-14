@@ -328,7 +328,7 @@ export async function getProfile(req: AuthRequest, res: Response) {
     select: {
       id: true, email: true, firstName: true, lastName: true,
       company: true, role: true, phone: true, isVerified: true, createdAt: true,
-      preferredTheme: true, darkMode: true,
+      preferredTheme: true, darkMode: true, preferences: true,
       carrierProfile: { select: { mcNumber: true, dotNumber: true, tier: true } },
     },
   });
@@ -354,15 +354,27 @@ export async function updateProfile(req: AuthRequest, res: Response) {
 }
 
 export async function updatePreferences(req: AuthRequest, res: Response) {
-  const { preferredTheme, darkMode } = req.body;
+  const { preferredTheme, darkMode, preferences } = req.body;
   const data: Record<string, any> = {};
   if (preferredTheme !== undefined) data.preferredTheme = preferredTheme;
   if (darkMode !== undefined) data.darkMode = darkMode;
 
+  // Free-form preferences JSON — merge into existing so partial patches
+  // don't wipe sibling keys (e.g. setting waterfall mode shouldn't
+  // erase a future theme-customization setting).
+  if (preferences !== undefined && typeof preferences === "object") {
+    const current = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { preferences: true },
+    });
+    const merged = { ...(current?.preferences as Record<string, any> | null ?? {}), ...preferences };
+    data.preferences = merged;
+  }
+
   const user = await prisma.user.update({
     where: { id: req.user!.id },
     data,
-    select: { id: true, preferredTheme: true, darkMode: true },
+    select: { id: true, preferredTheme: true, darkMode: true, preferences: true },
   });
   res.json(user);
 }

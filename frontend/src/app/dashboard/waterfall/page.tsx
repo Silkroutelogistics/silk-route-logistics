@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Activity, Zap, CheckCircle2, AlertTriangle, Clock, Circle } from "lucide-react";
@@ -16,21 +16,40 @@ const TABS: { id: BoardTab; label: string }[] = [
   { id: "exhausted",  label: "Exhausted" },
 ];
 
-function getSavedMode(): AutomationMode {
-  if (typeof window === "undefined") return "full_auto";
-  const saved = window.localStorage.getItem("srl-waterfall-mode") as AutomationMode | null;
-  return saved ?? "full_auto";
+// v3.4.u — automation mode now persists to User.preferences in the DB
+// (Karpathy Rule 9 — DB over localStorage). Loaded on mount via
+// /auth/profile, saved on toggle via PATCH /auth/preferences.
+
+interface UserProfileWithPrefs {
+  id: string;
+  preferences?: { waterfallMode?: AutomationMode } | null;
 }
 
 export default function WaterfallPage() {
   const [tab, setTab] = useState<BoardTab>("active");
-  const [mode, setMode] = useState<AutomationMode>(getSavedMode);
+  const [mode, setMode] = useState<AutomationMode>("full_auto");
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
+
+  // Load saved preference on mount
+  const profileQuery = useQuery<UserProfileWithPrefs>({
+    queryKey: ["auth-profile"],
+    queryFn: async () => (await api.get("/auth/profile")).data,
+    staleTime: 5 * 60_000,
+  });
+
+  useEffect(() => {
+    const saved = profileQuery.data?.preferences?.waterfallMode;
+    if (saved === "manual" || saved === "semi_auto" || saved === "full_auto") {
+      setMode(saved);
+    }
+  }, [profileQuery.data]);
 
   const setAndPersistMode = (m: AutomationMode) => {
     setMode(m);
-    if (typeof window !== "undefined") window.localStorage.setItem("srl-waterfall-mode", m);
-    // TODO: also persist to user preferences via API in a post-launch lane.
+    // Fire-and-forget; UI is already optimistic
+    api.patch("/auth/preferences", { preferences: { waterfallMode: m } }).catch(() => {
+      // Revert on failure would be overkill — next page load will sync
+    });
   };
 
   const summaryQuery = useQuery<BoardSummary>({

@@ -27,6 +27,7 @@ import { vetAndStoreReport, type CarrierVettingReport } from "../services/carrie
 import { generateCompassReport } from "../services/compassPdfService";
 import { getFullInspectionData } from "../services/fmcsaInspectionService";
 import { extractCOIData } from "../services/coiReaderService";
+import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -396,5 +397,226 @@ router.patch("/:carrierId/documents/:docId", authorize("ADMIN", "CEO", "BROKER",
     res.status(500).json({ error: "Failed to update document" });
   }
 });
+
+// ─── Carrier provisioning routes (migrated from carrierMatch.ts v3.4.u) ──
+// Rule 5 cleanup — the old /api/carrier-match module has been retired
+// and its scoring surface consolidated into waterfallScoringService.
+// These non-scoring provisioning endpoints moved here.
+
+const importFromDatSchema = z.object({
+  mcNumber: z.string().optional(),
+  dotNumber: z.string().optional(),
+  companyName: z.string(),
+  contactName: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+});
+
+// POST /api/carriers/import-from-dat — Import carrier from DAT response
+router.post(
+  "/import-from-dat",
+  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "AE"),
+  validateBody(importFromDatSchema),
+  async (req: AuthRequest, res: Response) => {
+    const data = req.body;
+
+    if (data.mcNumber) {
+      const existing = await prisma.carrierProfile.findFirst({ where: { mcNumber: data.mcNumber } });
+      if (existing) {
+        res.status(409).json({ error: "Carrier with this MC# already exists", carrierId: existing.id });
+        return;
+      }
+    }
+    if (data.dotNumber) {
+      const existing = await prisma.carrierProfile.findFirst({ where: { dotNumber: data.dotNumber } });
+      if (existing) {
+        res.status(409).json({ error: "Carrier with this DOT# already exists", carrierId: existing.id });
+        return;
+      }
+    }
+
+    const bcrypt = await import("bcryptjs");
+    const tempPassword = "CarrierTemp" + Math.random().toString(36).slice(2, 8) + "!";
+    const passwordHash = await bcrypt.default.hash(tempPassword, 12);
+
+    const nameParts = (data.contactName || data.companyName).split(" ");
+    const firstName = nameParts[0] || data.companyName;
+    const lastName = nameParts.slice(1).join(" ") || "Carrier";
+
+    const user = await prisma.user.create({
+      data: {
+        email: data.email || `dat-${Date.now()}@placeholder.silkroutelogistics.ai`,
+        passwordHash,
+        firstName,
+        lastName,
+        company: data.companyName,
+        phone: data.phone || null,
+        role: "CARRIER",
+        carrierProfile: {
+          create: {
+            mcNumber: data.mcNumber || null,
+            dotNumber: data.dotNumber || null,
+            companyName: data.companyName,
+            contactName: data.contactName || null,
+            contactPhone: data.phone || null,
+            contactEmail: data.email || null,
+            equipmentTypes: [],
+            operatingRegions: [],
+            onboardingStatus: "UNDER_REVIEW",
+            status: "REVIEW",
+            tier: "GUEST",
+            cppTier: "GUEST",
+            source: "dat",
+          },
+        },
+      },
+      include: { carrierProfile: true },
+    });
+
+    const profile = user.carrierProfile!;
+
+    let fmcsaResult = null;
+    if (data.dotNumber) {
+      try {
+        fmcsaResult = await verifyCarrierWithFMCSA(data.dotNumber);
+        if (fmcsaResult.verified) {
+          await prisma.carrierProfile.update({
+            where: { id: profile.id },
+            data: {
+              onboardingStatus: "APPROVED",
+              status: "APPROVED",
+              approvedAt: new Date(),
+              safetyRating: fmcsaResult.safetyRating,
+              fmcsaAuthorityStatus: fmcsaResult.operatingStatus,
+              fmcsaLastChecked: new Date(),
+              ...(fmcsaResult.legalName && { companyName: fmcsaResult.legalName }),
+            },
+          });
+        } else {
+          await prisma.carrierProfile.update({
+            where: { id: profile.id },
+            data: {
+              onboardingStatus: "REJECTED",
+              status: "REJECTED",
+              fmcsaAuthorityStatus: fmcsaResult.operatingStatus,
+              fmcsaLastChecked: new Date(),
+              notes: "FMCSA verification failed: " + (fmcsaResult.errors || []).join(", "),
+            },
+          });
+        }
+      } catch (err) {
+        log.error({ err }, "[FMCSA] Verification error during DAT import:");
+      }
+    }
+
+    const updated = await prisma.carrierProfile.findUnique({
+      where: { id: profile.id },
+      include: { user: { select: { id: true, firstName: true, lastName: true, company: true, email: true } } },
+    });
+
+    if (data.email && !data.email.includes("placeholder")) {
+      try {
+        const { startCarrierSequence } = await import("../services/emailSequenceService");
+        await startCarrierSequence(profile.id, data.email, data.contactName || data.companyName, req.user!.id);
+        log.info(`[DAT Import] Carrier recruitment sequence started for ${data.email}`);
+      } catch (err: any) {
+        log.info(`[DAT Import] Sequence not started: ${err.message}`);
+      }
+    }
+
+    res.status(201).json({
+      carrier: updated,
+      fmcsa: fmcsaResult,
+      tempPassword: data.email ? tempPassword : null,
+      sequenceStarted: !!(data.email && !data.email.includes("placeholder")),
+    });
+  }
+);
+
+// POST /api/carriers/:id/emergency-approve — Admin emergency approval
+router.post(
+  "/:id/emergency-approve",
+  authorize("ADMIN", "CEO"),
+  async (req: AuthRequest, res: Response) => {
+    const { reason } = req.body;
+    if (!reason) {
+      res.status(400).json({ error: "Reason required for emergency approval" });
+      return;
+    }
+
+    const profile = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+    if (!profile) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    const updated = await prisma.carrierProfile.update({
+      where: { id: profile.id },
+      data: {
+        onboardingStatus: "APPROVED",
+        status: "APPROVED",
+        approvedAt: new Date(),
+        emergencyApproved: true,
+        emergencyApproveReason: reason,
+        emergencyApprovedById: req.user!.id,
+        emergencyApprovedAt: new Date(),
+      },
+    });
+
+    try {
+      await prisma.auditTrail.create({
+        data: {
+          performedById: req.user!.id,
+          action: "CREATE",
+          entityType: "EMERGENCY_APPROVE",
+          entityId: profile.id,
+          changedFields: { reason, carrierId: profile.id } as any,
+          ipAddress: req.ip || null,
+        },
+      });
+    } catch { /* non-blocking */ }
+
+    res.json({ success: true, carrier: updated });
+  }
+);
+
+// POST /api/carriers/:id/promote-to-bronze — Manually promote Guest to Bronze
+router.post(
+  "/:id/promote-to-bronze",
+  authorize("ADMIN", "CEO", "BROKER"),
+  async (req: AuthRequest, res: Response) => {
+    const profile = await prisma.carrierProfile.findUnique({
+      where: { id: req.params.id },
+      include: { user: { select: { id: true } } },
+    });
+
+    if (!profile) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    if (profile.tier !== "GUEST" && profile.cppTier !== "GUEST") {
+      res.status(400).json({ error: "Carrier is not a Guest tier" });
+      return;
+    }
+
+    await prisma.carrierProfile.update({
+      where: { id: profile.id },
+      data: { tier: "BRONZE", cppTier: "BRONZE", source: "caravan" },
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: profile.userId,
+        type: "GENERAL",
+        title: "Welcome to The Caravan!",
+        message: "You have been promoted to Bronze tier in The Caravan by your account executive.",
+        actionUrl: "/carrier/dashboard",
+      },
+    });
+
+    res.json({ success: true });
+  }
+);
 
 export default router;

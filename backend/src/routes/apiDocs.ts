@@ -43,7 +43,7 @@ const endpoints: EndpointDoc[] = [
 
   // ─── Carriers ─────────────────────────────────────
   { method: "GET", path: "/api/carriers", description: "List all carriers (paginated)", auth: "JWT (ADMIN, CEO, BROKER)" },
-  { method: "GET", path: "/api/carrier-match/:loadId", description: "Smart-match carriers for a load", auth: "JWT (BROKER, ADMIN, CEO, DISPATCH, OPERATIONS, AE)" },
+  { method: "GET", path: "/api/waterfalls/load/:loadId/carrier-matches", description: "Smart-match carriers for a load (100pt scoring)", auth: "JWT (BROKER, ADMIN, CEO, DISPATCH, OPERATIONS, AE)" },
   { method: "GET", path: "/api/carrier/tenders", description: "Carrier's tender inbox", auth: "JWT (CARRIER)" },
 
   // ─── Invoices ─────────────────────────────────────

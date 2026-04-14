@@ -231,9 +231,7 @@ async function tenderPosition(waterfallId: string, position: number) {
     data: { waterfallId, position, tenderId: tender.id, expiresAt },
   });
 
-  // TODO: wire carrier push + email notification when the notification
-  // fan-out service is ready. The tender is already queryable via the
-  // carrier portal so the path is unblocked.
+  // In-app notification
   try {
     await prisma.notification.create({
       data: {
@@ -247,6 +245,100 @@ async function tenderPosition(waterfallId: string, position: number) {
   } catch {
     // non-blocking
   }
+
+  // Carrier email notification (v3.4.u). Non-blocking — a failed email
+  // must never roll back a successful tender write.
+  try {
+    await sendWaterfallTenderEmail(pos.waterfall.loadId, pos.carrierId, expiresAt);
+  } catch (err) {
+    log.error({ err, loadId: pos.waterfall.loadId, carrierUserId: pos.carrierId }, "[Waterfall] tender email failed");
+  }
+}
+
+/**
+ * Send the tender email to a carrier. Pulls load + carrier context and
+ * composes an HTML body with load details, offered rate, lane, expiry,
+ * and a deep link into the carrier portal tender page.
+ */
+async function sendWaterfallTenderEmail(loadId: string, carrierUserId: string, expiresAt: Date) {
+  const [load, carrierUser, emailMod] = await Promise.all([
+    prisma.load.findUnique({
+      where: { id: loadId },
+      select: {
+        id: true,
+        loadNumber: true,
+        referenceNumber: true,
+        originCity: true,
+        originState: true,
+        destCity: true,
+        destState: true,
+        equipmentType: true,
+        distance: true,
+        weight: true,
+        commodity: true,
+        pickupDate: true,
+        deliveryDate: true,
+        carrierRate: true,
+        rate: true,
+        customer: { select: { name: true } },
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: carrierUserId },
+      select: {
+        email: true,
+        firstName: true,
+        lastName: true,
+        carrierProfile: { select: { contactEmail: true, companyName: true } },
+      },
+    }),
+    import("./emailService"),
+  ]);
+  if (!load || !carrierUser) return;
+
+  const to = carrierUser.carrierProfile?.contactEmail || carrierUser.email;
+  if (!to) return;
+
+  const { sendEmail, wrap } = emailMod;
+  const rate = load.carrierRate ?? load.rate ?? 0;
+  const lane = `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`;
+  const portalUrl = "https://silkroutelogistics.ai/carrier/dashboard/tenders";
+  const minutesRemaining = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / 60000));
+
+  const carrierName = carrierUser.carrierProfile?.companyName
+    || `${carrierUser.firstName ?? ""} ${carrierUser.lastName ?? ""}`.trim()
+    || "Carrier";
+
+  const html = wrap(`
+    <h2 style="color:#0f172a;margin-top:0">New Tender — Load ${load.loadNumber ?? load.referenceNumber}</h2>
+    <p>${carrierName},</p>
+    <p>You have a new tender from <strong>Silk Route Logistics</strong>. Please accept or decline within the window below.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">Load #</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${load.loadNumber ?? load.referenceNumber}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Lane</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${lane}${load.distance ? ` · ${Math.round(load.distance).toLocaleString()} mi` : ""}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Equipment</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${load.equipmentType}</td></tr>
+      ${load.weight ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Weight</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${load.weight} lbs</td></tr>` : ""}
+      ${load.commodity ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Commodity</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${load.commodity}</td></tr>` : ""}
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Pickup</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${new Date(load.pickupDate).toLocaleDateString()}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Delivery</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${new Date(load.deliveryDate).toLocaleDateString()}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Offered rate</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0"><strong style="color:#BA7517">$${Number(rate).toLocaleString()}</strong></td></tr>
+    </table>
+    <p style="background:#FAEEDA;color:#854F0B;padding:10px 14px;border-radius:6px;margin:16px 0">
+      ⏱ <strong>${minutesRemaining} minutes to respond</strong> — tender expires ${new Date(expiresAt).toLocaleString()}.
+      If you do not respond, the load automatically cascades to the next carrier.
+    </p>
+    <p style="text-align:center;margin:24px 0">
+      <a href="${portalUrl}" style="display:inline-block;padding:14px 32px;background:#BA7517;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Open Carrier Portal</a>
+    </p>
+    <p style="color:#475569;font-size:13px">Or paste this into your browser: <a href="${portalUrl}">${portalUrl}</a></p>
+    <p style="color:#94a3b8;font-size:12px;margin-top:20px">
+      You are receiving this email because this load was offered to you through the SRL Waterfall dispatch system.
+      Please respond through the Carrier Portal; declining via email is not tracked.
+    </p>
+  `);
+
+  await sendEmail(to, `New Tender — Load ${load.loadNumber ?? load.referenceNumber} · ${lane} · $${Number(rate).toLocaleString()}`, html);
+  log.info(`[Waterfall] Tender email sent to ${to} for load ${load.referenceNumber}`);
 }
 
 /**

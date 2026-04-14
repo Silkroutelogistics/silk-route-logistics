@@ -653,6 +653,10 @@ model User {
   auditLogs           AuditLog[]
   preferredTheme      String             @default("silk-route-classic")
   darkMode            Boolean            @default(false)
+  // Free-form user preferences JSON (v3.4.u). First consumer: waterfall
+  // automation mode (manual | semi_auto | full_auto). Rule 9 — any DB
+  // preference goes here instead of localStorage.
+  preferences         Json?
   passwordChangedAt   DateTime?
   totpSecret          String?
   totpEnabled         Boolean            @default(false)

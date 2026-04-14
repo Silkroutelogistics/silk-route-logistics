@@ -183,19 +183,41 @@ export default function LoadsPage() {
     enabled: !!selectedLoadId,
   });
 
+  // v3.4.u — legacy /carrier-match/:loadId retired. Consolidated into
+  // waterfallScoringService via /waterfalls/load/:loadId/carrier-matches.
+  // The new endpoint returns the 100pt 30/25/20/15/10 scoring and a
+  // leaner payload (carrierId, companyName, tier, matchScore, breakdown).
   const { data: suggestedCarriers } = useQuery({
     queryKey: ["carrier-match", selectedLoadId],
     queryFn: () =>
       api
         .get<{
-          matches: {
-            carrierId: string; company: string; tier: string;
-            equipmentTypes: string[]; safetyScore: number | null;
-            complianceStatus: string; matchScore: number;
-          }[];
-          totalCandidates: number; suggestDAT: boolean;
-        }>(`/carrier-match/${selectedLoadId}`)
-        .then((r) => ({ carriers: r.data.matches, total: r.data.totalCandidates })),
+          carriers: Array<{
+            carrierId: string;
+            userId: string;
+            companyName: string | null;
+            tier: string;
+            matchScore: number;
+            equipmentMatch: "exact" | "compatible" | "none";
+            breakdown: {
+              laneRunCount: number;
+              onTimePct: number;
+              estimatedRate: number | null;
+            };
+          }>;
+        }>(`/waterfalls/load/${selectedLoadId}/carrier-matches`)
+        .then((r) => ({
+          carriers: r.data.carriers.map((c) => ({
+            carrierId: c.carrierId,
+            company: c.companyName ?? "—",
+            tier: c.tier,
+            equipmentTypes: [] as string[],
+            safetyScore: null as number | null,
+            complianceStatus: "green",
+            matchScore: c.matchScore,
+          })),
+          total: r.data.carriers.length,
+        })),
     enabled: !!selectedLoadId && !!loadDetail && loadDetail.status === "POSTED" && canCreate,
   });
 

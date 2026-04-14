@@ -398,6 +398,36 @@ router.post(
   }
 );
 
+// ─── Waterfall shortcut lookup (v3.4.u) ───────────────────
+// Returns the active/most-recent waterfall for a load so the drawer
+// can skip the "query board → find waterfallId → fetch detail" round
+// trip. Falls back to the most recent terminal waterfall if no active
+// one exists.
+
+router.get(
+  "/load/:loadId/current",
+  authorize(...AE_ROLES) as any,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { loadId } = req.params;
+      const wf = await prisma.waterfall.findFirst({
+        where: { loadId },
+        orderBy: [
+          // Active / paused / building sort first
+          { status: "desc" },
+          { createdAt: "desc" },
+        ],
+        select: { id: true, status: true, mode: true, createdAt: true, totalPositions: true, currentPosition: true },
+      });
+      if (!wf) return res.json({ waterfall: null });
+      res.json({ waterfall: wf });
+    } catch (err) {
+      log.error({ err }, "[Waterfall] load/:loadId/current error");
+      res.status(500).json({ error: "Failed to fetch waterfall" });
+    }
+  }
+);
+
 // ─── Carrier match preview (drawer Match tab) ──────────────
 
 router.get(

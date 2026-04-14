@@ -37,17 +37,16 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
     };
   }, [loadId, handleKey]);
 
-  // Find the active waterfall for this load via the board list, then
-  // fetch its full state. Simpler than adding a /loads/:id/waterfall
-  // shortcut endpoint.
-  const boardQuery = useQuery<{ loads: any[] }>({
-    queryKey: ["wf-board-lookup", loadId],
-    queryFn: async () => (await api.get("/waterfalls/loads", { params: { tab: "active" } })).data,
+  // v3.4.u — direct lookup via /waterfalls/load/:loadId/current.
+  // Previously we round-tripped through the board list to resolve the
+  // active waterfall for a load; the new shortcut returns it directly.
+  const lookupQuery = useQuery<{ waterfall: { id: string } | null }>({
+    queryKey: ["wf-load-lookup", loadId],
+    queryFn: async () => (await api.get(`/waterfalls/load/${loadId}/current`)).data,
     enabled: !!loadId,
   });
 
-  const waterfallId =
-    boardQuery.data?.loads.find((l) => l.id === loadId)?.waterfalls?.[0]?.id ?? null;
+  const waterfallId = lookupQuery.data?.waterfall?.id ?? null;
 
   const detail = useQuery<{ waterfall: any }>({
     queryKey: ["wf-detail", waterfallId],
@@ -59,7 +58,7 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
   const build = useMutation({
     mutationFn: async () =>
       (await api.post("/waterfalls", { loadId, mode: "semi_auto" })).data,
-    onSuccess: () => boardQuery.refetch(),
+    onSuccess: () => lookupQuery.refetch(),
   });
 
   const start = useMutation({
@@ -74,7 +73,7 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
 
   const wf = detail.data?.waterfall;
   const load = wf?.load;
-  const refetchAll = () => { detail.refetch(); boardQuery.refetch(); };
+  const refetchAll = () => { detail.refetch(); lookupQuery.refetch(); };
 
   const currentPos = wf?.positions?.find((p: any) => p.status === "tendered");
   const posLabel = wf ? `Pos ${wf.currentPosition || 0}/${wf.totalPositions}` : null;
@@ -139,7 +138,7 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
           </div>
 
           {/* Empty state: no waterfall yet */}
-          {!waterfallId && !boardQuery.isLoading && (
+          {!waterfallId && !lookupQuery.isLoading && (
             <div className="flex-1 flex items-center justify-center p-6">
               <div className="text-center max-w-xs space-y-3">
                 <p className="text-sm text-gray-600">No active waterfall for this load yet.</p>

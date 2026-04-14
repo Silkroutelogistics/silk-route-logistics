@@ -299,6 +299,10 @@ router.get("/market-rates", async (req: AuthRequest, res: Response) => {
     const { origin, destination, equipment } = req.query as {
       origin?: string; destination?: string; equipment?: string;
     };
+    if (!process.env.DAT_API_KEY) {
+      // eslint-disable-next-line no-console
+      console.log("DAT_API_KEY not set — using stub market rates. Set DAT_API_KEY in env for live data.");
+    }
     // TODO: wire real DAT IQ RateView API call when DAT_API_KEY is set.
     // For now, return deterministic stub data so the UI renders end-to-end.
     const base = 2.5;
