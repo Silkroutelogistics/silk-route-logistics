@@ -1139,6 +1139,29 @@ model Load {
   fallbackPostedToLoadboardAt DateTime? @map("fallback_posted_to_loadboard_at")
   fallbackPostedToDatAt       DateTime? @map("fallback_posted_to_dat_at")
 
+  // Order Builder v3.5 — extended dispatch/freight fields
+  mode                 String?  @map("mode") @db.VarChar(10) // FTL | LTL
+  driverMode           String?  @map("driver_mode") @db.VarChar(10) // solo | team
+  liveOrDrop           String?  @map("live_or_drop") @db.VarChar(10) // live | drop
+  cargoValue           Float?   @map("cargo_value")
+  tempMode             String?  @map("temp_mode") @db.VarChar(20) // continuous | cycling
+  fuelSurchargeAmount  Float?   @map("fuel_surcharge_amount")
+  targetCarrierCost    Float?   @map("target_carrier_cost")
+  customerRatePerMile  Float?   @map("customer_rate_per_mile")
+  lumperEstimate       Float?   @map("lumper_estimate")
+  originFacilityId     String?  @map("origin_facility_id")
+  destFacilityId       String?  @map("dest_facility_id")
+  originLat            Decimal? @map("origin_lat") @db.Decimal(10, 6)
+  originLng            Decimal? @map("origin_lng") @db.Decimal(10, 6)
+  destLat              Decimal? @map("dest_lat") @db.Decimal(10, 6)
+  destLng              Decimal? @map("dest_lng") @db.Decimal(10, 6)
+  checkCallProtocol    String   @default("standard") @map("check_call_protocol") @db.VarChar(20) // standard (4h) | expedited (2h)
+  shipmentPriority     String   @default("standard") @map("shipment_priority") @db.VarChar(20) // standard | hot
+  isHotLoad            Boolean  @default(false) @map("is_hot_load")
+  trackingLinkAutoSend Boolean  @default(true) @map("tracking_link_auto_send")
+  orderId              String?  @map("order_id")
+  order                Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
   // Payment terms
   carrierPaymentMethod CarrierPaymentMethod?
   carrierPaymentTier   PaymentTier?
@@ -1286,6 +1309,46 @@ model LoadTender {
   @@index([carrierId, status])
   @@index([waterfallPositionId])
   @@map("load_tenders")
+}
+
+// ─── Order Builder (v3.5) ──────────────────────────────────
+// Draft / quote / order lifecycle that precedes Load creation.
+// Form data is persisted as JSONB so partial drafts survive without
+// needing every load field to be nullable. status walks:
+//   draft → quote_sent → quote_approved → order_created → load_created
+//   cancelled (from any)
+
+model Order {
+  id              String    @id @default(cuid())
+  orderNumber     String    @unique @default(cuid()) @map("order_number")
+  customerId      String?   @map("customer_id")
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  status          String    @default("draft") @db.VarChar(30)
+  // draft | quote_sent | quote_approved | order_created | load_created | cancelled
+  formData        Json      @default("{}") @map("form_data")
+  customerRate    Float?    @map("customer_rate")
+  targetCost      Float?    @map("target_cost")
+  equipmentType   String?   @map("equipment_type") @db.VarChar(50)
+  originCity      String?   @map("origin_city") @db.VarChar(100)
+  originState     String?   @map("origin_state") @db.VarChar(50)
+  destCity        String?   @map("dest_city") @db.VarChar(100)
+  destState       String?   @map("dest_state") @db.VarChar(50)
+  pickupDate      DateTime? @map("pickup_date")
+  deliveryDate    DateTime? @map("delivery_date")
+  dispatchMethod  String?   @map("dispatch_method") @db.VarChar(20)
+  loadId          String?   @map("load_id")
+  quoteSentAt     DateTime? @map("quote_sent_at")
+  quoteApprovedAt DateTime? @map("quote_approved_at")
+  createdById     String?   @map("created_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  loads Load[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdById, status])
+  @@map("orders")
 }
 
 // ─── Waterfall Dispatch (v3.4.d) ───────────────────────────
@@ -1833,6 +1896,9 @@ model Customer {
   facilities       CustomerFacility[]
   customerNotes    CustomerNote[]
   customerActivity CustomerActivity[]
+
+  // Order Builder v3.5
+  orders Order[]
 
   // AI Learning
   aiIntelligence CustomerIntelligence? @relation("CustomerIntelligence")

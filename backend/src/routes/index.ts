@@ -64,6 +64,7 @@ import waterfallRoutes from "./waterfalls";
 import loadBidsRoutes from "./loadBids";
 import carrierTendersRoutes from "./carrierTenders";
 import crmCustomerRoutes from "./crmCustomer";
+import ordersRoutes from "./orders";
 import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
@@ -232,6 +233,7 @@ router.use("/track-trace", trackTraceSSERoutes);
 router.use("/load-exceptions", loadExceptionsRoutes);
 router.use("/waterfalls", waterfallRoutes);
 router.use("/carrier-tenders", carrierTendersRoutes);
+router.use("/orders", ordersRoutes);
 router.use("/", loadBidsRoutes); // /loadboard, /loads/:id/bids, /loads/:id/notes, /market-rates
 router.use("/external-integrations", externalIntegrations);
 router.use("/contract-rates", contractRateRoutes);
