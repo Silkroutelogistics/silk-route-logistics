@@ -318,6 +318,28 @@ async function main() {
     `type=stage_change filter returns only stage changes`,
   );
 
+  // ─── Test 12: per-customer activity feed scoping ───────────────────
+  console.log("\n12. getActivityFeed — ?customerId= scopes to one prospect");
+  const scoped = await call(getActivityFeed, {
+    ...reqBase,
+    query: { customerId: allIds[0], limit: "200" },
+  });
+  assert(Array.isArray(scoped.body.events), `scoped feed returns events array`);
+  assert(
+    scoped.body.events.every(
+      (e: any) => e.customerId === allIds[0] || e.customerId === null,
+    ),
+    `every event in scoped feed belongs to the target customer`,
+  );
+  assert(
+    scoped.body.events.some((e: any) => e.kind === "note"),
+    `scoped feed includes the note we seeded earlier`,
+  );
+  assert(
+    scoped.body.events.every((e: any) => e.kind !== "import"),
+    `scoped feed excludes org-wide import events`,
+  );
+
   console.log("\n✅ All Lead Hunter smoke tests passed\n");
 
   if (!keep) {

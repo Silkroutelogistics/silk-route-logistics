@@ -125,17 +125,38 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
 
 // Unified Lead Hunter activity feed: merges Communication events (calls/emails/notes)
 // with SystemLog entries (stage transitions, imports) into a single reverse-chron feed.
+// ?customerId= scopes to a single prospect (used by the drawer Activity tab).
 export async function getActivityFeed(req: AuthRequest, res: Response) {
   const limit = Math.min(200, parseInt((req.query.limit as string) || "100"));
   const type = req.query.type as string | undefined; // "call" | "email" | "note" | "stage_change" | "import"
+  const customerId = req.query.customerId as string | undefined;
 
   const wantComm = !type || ["call", "email", "note"].includes(type);
   const wantSys = !type || ["stage_change", "import"].includes(type);
 
+  const commWhere: Record<string, unknown> = { entityType: "SHIPPER" };
+  if (customerId) commWhere.entityId = customerId;
+
+  // Filter SystemLog by customerId via a raw JSON-path match on details.customerId.
+  // Prisma's Json filter syntax is limited, so for the scoped case we use a narrow
+  // `string_contains` on the serialized details field.
+  const sysWhere: Record<string, unknown> = {
+    source: {
+      in: [
+        "LeadHunter.bulkUpdateStage",
+        "LeadHunter.updateCustomer",
+        "LeadHunter.bulkImport",
+      ],
+    },
+  };
+  if (customerId) {
+    sysWhere.details = { path: ["customerId"], equals: customerId };
+  }
+
   const [comms, sysLogs, customers] = await Promise.all([
     wantComm
       ? prisma.communication.findMany({
-          where: { entityType: "SHIPPER" },
+          where: commWhere,
           orderBy: { createdAt: "desc" },
           take: limit,
           include: { user: { select: { firstName: true, lastName: true, email: true } } },
@@ -143,21 +164,13 @@ export async function getActivityFeed(req: AuthRequest, res: Response) {
       : Promise.resolve([]),
     wantSys
       ? prisma.systemLog.findMany({
-          where: {
-            source: {
-              in: [
-                "LeadHunter.bulkUpdateStage",
-                "LeadHunter.updateCustomer",
-                "LeadHunter.bulkImport",
-              ],
-            },
-          },
+          where: sysWhere as any,
           orderBy: { createdAt: "desc" },
           take: limit,
         })
       : Promise.resolve([]),
     prisma.customer.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...(customerId ? { id: customerId } : {}) },
       select: { id: true, name: true, contactName: true },
     }),
   ]);

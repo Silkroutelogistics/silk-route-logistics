@@ -5,11 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import {
-  Search, Plus, X, ChevronDown, ChevronUp, Target, Users, DollarSign,
-  TrendingUp, Building2, MapPin, Phone, Mail, Crosshair, Map, Route,
-  Upload, Send, Loader2, CheckCircle2, Eye, PhoneCall, MessageSquare,
-  Calendar, Clock, AlertTriangle, ArrowRight, Filter, BarChart3,
+  Search, Plus, X, Target, Users, DollarSign,
+  TrendingUp, Mail, Crosshair, Map, Route,
+  Upload, Send, Loader2, CheckCircle2, PhoneCall, MessageSquare,
+  AlertTriangle, ArrowRight, Filter, BarChart3, ChevronRight, Eye,
 } from "lucide-react";
+import { ProspectDrawer } from "./ProspectDrawer";
 
 /* ─── Types ─── */
 
@@ -69,11 +70,12 @@ const INTENT_COLORS: Record<string, { bg: string; text: string; label: string }>
 };
 type TemplateType = "INTRO" | "FOLLOW_UP" | "CAPACITY" | "CUSTOM";
 
+// Spec-aligned palette (gray/gold/blue/purple/green) — dark-panel variant
 const PIPELINE_STAGES: { key: PipelineStage; label: string; color: string; bg: string }[] = [
-  { key: "LEAD", label: "Lead", color: "text-blue-400", bg: "bg-blue-500/20 border-blue-500/30" },
-  { key: "CONTACTED", label: "Contacted", color: "text-amber-400", bg: "bg-amber-500/20 border-amber-500/30" },
-  { key: "QUALIFIED", label: "Qualified", color: "text-purple-400", bg: "bg-purple-500/20 border-purple-500/30" },
-  { key: "PROPOSAL", label: "Proposal", color: "text-cyan-400", bg: "bg-cyan-500/20 border-cyan-500/30" },
+  { key: "LEAD", label: "Lead", color: "text-slate-300", bg: "bg-slate-500/20 border-slate-500/30" },
+  { key: "CONTACTED", label: "Contacted", color: "text-gold", bg: "bg-gold/20 border-gold/30" },
+  { key: "QUALIFIED", label: "Qualified", color: "text-blue-400", bg: "bg-blue-500/20 border-blue-500/30" },
+  { key: "PROPOSAL", label: "Proposal", color: "text-purple-400", bg: "bg-purple-500/20 border-purple-500/30" },
   { key: "WON", label: "Won", color: "text-green-400", bg: "bg-green-500/20 border-green-500/30" },
 ];
 
@@ -206,14 +208,13 @@ export default function LeadHunterPage() {
   const [search, setSearch] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
   const [activityTypeFilter, setActivityTypeFilter] = useState("");
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [activityDateRange, setActivityDateRange] = useState<"today" | "7d" | "30d" | "all">("7d");
+  const [drawerProspectId, setDrawerProspectId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [laneRegion, setLaneRegion] = useState("");
 
   // Pipeline
-  const [showLogForm, setShowLogForm] = useState<string | null>(null);
-  const [logForm, setLogForm] = useState({ type: "Call", notes: "" });
   const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set());
   const [stageFilter, setStageFilter] = useState<PipelineStage | "">("");
 
@@ -395,46 +396,6 @@ export default function LeadHunterPage() {
       })
       .catch(() => toast("Failed to update stage", "error"));
   };
-
-  /* ─── Activity Log (persists to Communication table) ─── */
-
-  const saveCallLog = async (customerId: string) => {
-    if (!logForm.notes.trim()) return;
-
-    const typeMap: Record<string, string> = {
-      Call: "CALL_OUTBOUND",
-      Email: "EMAIL_OUTBOUND",
-      Meeting: "NOTE",
-      Note: "NOTE",
-    };
-
-    try {
-      await api.post("/communications", {
-        type: typeMap[logForm.type] || "NOTE",
-        direction: logForm.type === "Call" ? "OUTBOUND" : null,
-        entityType: "SHIPPER",
-        entityId: customerId,
-        body: logForm.notes.trim(),
-        subject: `${logForm.type}: ${logForm.notes.trim().substring(0, 60)}`,
-        metadata: { source: "LeadHunter", activityType: logForm.type },
-      });
-      queryClient.invalidateQueries({ queryKey: ["lead-hunter-communications"] });
-    } catch {
-      toast("Failed to save activity", "error");
-      return;
-    }
-
-    setLogForm({ type: "Call", notes: "" });
-    setShowLogForm(null);
-
-    // Auto-advance stage if still LEAD
-    const customer = allCustomers.find((c) => c.id === customerId);
-    if (customer && resolveStage(customer.status) === "LEAD") {
-      updateStage(customerId, "CONTACTED");
-    }
-    toast("Activity logged", "success");
-  };
-
 
   /* ─── CSV Import ─── */
 
@@ -754,24 +715,44 @@ export default function LeadHunterPage() {
         </div>
       </div>
 
-      {/* ─── KPI Cards ─── */}
+      {/* ─── KPI Cards — click to filter ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {[
-          { label: "Total Leads", value: stageCounts.LEAD, icon: Users, color: "text-blue-400" },
-          { label: "Contacted", value: stageCounts.CONTACTED, icon: PhoneCall, color: "text-amber-400" },
-          { label: "Qualified", value: stageCounts.QUALIFIED, icon: CheckCircle2, color: "text-purple-400" },
-          { label: "Proposals", value: stageCounts.PROPOSAL, icon: DollarSign, color: "text-cyan-400" },
-          { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-green-400" },
-          { label: "Hot Replies", value: hotReplies, icon: Mail, color: "text-green-400" },
-          { label: "Active Sequences", value: activeSequences.length, icon: Send, color: "text-gold" },
-        ].map((kpi) => (
-          <div key={kpi.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
+        {([
+          { label: "Total Leads", value: stageCounts.LEAD, icon: Users, color: "text-slate-300",
+            onClick: () => { setTab("pipeline"); setStageFilter(stageFilter === "LEAD" ? "" : "LEAD"); },
+            active: stageFilter === "LEAD" },
+          { label: "Contacted", value: stageCounts.CONTACTED, icon: PhoneCall, color: "text-gold",
+            onClick: () => { setTab("pipeline"); setStageFilter(stageFilter === "CONTACTED" ? "" : "CONTACTED"); },
+            active: stageFilter === "CONTACTED" },
+          { label: "Qualified", value: stageCounts.QUALIFIED, icon: CheckCircle2, color: "text-blue-400",
+            onClick: () => { setTab("pipeline"); setStageFilter(stageFilter === "QUALIFIED" ? "" : "QUALIFIED"); },
+            active: stageFilter === "QUALIFIED" },
+          { label: "Proposals", value: stageCounts.PROPOSAL, icon: DollarSign, color: "text-purple-400",
+            onClick: () => { setTab("pipeline"); setStageFilter(stageFilter === "PROPOSAL" ? "" : "PROPOSAL"); },
+            active: stageFilter === "PROPOSAL" },
+          { label: "Win Rate", value: `${winRate}%`, icon: TrendingUp, color: "text-green-400",
+            onClick: () => { setTab("pipeline"); setStageFilter(stageFilter === "WON" ? "" : "WON"); },
+            active: stageFilter === "WON" },
+          { label: "Hot Replies", value: hotReplies, icon: Mail, color: "text-green-400",
+            onClick: () => setTab("replies"),
+            active: tab === "replies" },
+          { label: "Active Sequences", value: activeSequences.length, icon: Send, color: "text-gold",
+            onClick: () => setTab("replies"),
+            active: false },
+        ] as const).map((kpi) => (
+          <button
+            key={kpi.label}
+            onClick={kpi.onClick}
+            className={`text-left bg-white/5 border rounded-xl p-4 hover:bg-white/10 hover:border-gold/40 transition ${
+              kpi.active ? "border-gold/60 ring-1 ring-gold/30" : "border-white/10"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-slate-500 text-xs">{kpi.label}</span>
               <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
             </div>
             <p className="text-xl font-bold text-white mt-1">{kpi.value}</p>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -866,20 +847,31 @@ export default function LeadHunterPage() {
                   const stage = getStage(c);
                   const stageInfo = PIPELINE_STAGES.find((s) => s.key === stage)!;
                   const daysSince_ = daysSinceContact(c.id);
-                  const isStale = daysSince_ !== null && daysSince_ > 7;
-                  const isExpanded = expanded === c.id;
+                  const isStale = daysSince_ !== null && daysSince_ > 7 && stage === "CONTACTED";
+                  const isActive = drawerProspectId === c.id;
+                  const initials = (c.contactName || c.name).split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                  const avatarCls = stage === "LEAD"
+                    ? "bg-slate-500/15 text-slate-300"
+                    : "bg-gold/15 text-gold";
 
                   return (
-                    <tr key={c.id} className={`border-b border-white/5 hover:bg-white/5 cursor-pointer ${isExpanded ? "bg-white/5" : ""}`}
-                      onClick={() => setExpanded(isExpanded ? null : c.id)}>
+                    <tr key={c.id} className={`border-b border-white/5 hover:bg-white/5 cursor-pointer ${isActive ? "bg-white/5" : ""}`}
+                      onClick={() => setDrawerProspectId(c.id)}>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedProspects.has(c.id)}
                           onChange={() => toggleSelectProspect(c.id)}
                           className="rounded border-slate-600 text-amber-500 focus:ring-amber-500/20" />
                       </td>
                       <td className="px-3 py-3">
-                        <p className="text-white font-medium">{c.name}</p>
-                        {c.annualRevenue && <p className="text-xs text-slate-500">${(c.annualRevenue / 1000).toFixed(0)}K rev</p>}
+                        <div className="flex items-center gap-2.5">
+                          <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold ${avatarCls}`}>
+                            {initials || "—"}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-white font-medium truncate">{c.name}</p>
+                            {c.annualRevenue && <p className="text-xs text-slate-500">${(c.annualRevenue / 1000).toFixed(0)}K rev</p>}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-3 py-3 text-slate-300 hidden md:table-cell">{c.contactName || c.name.split(/\s+/)[0]}</td>
                       <td className="px-3 py-3 text-slate-400 hidden lg:table-cell">
@@ -919,7 +911,7 @@ export default function LeadHunterPage() {
                         )}
                       </td>
                       <td className="px-3 py-3">
-                        {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
                       </td>
                     </tr>
                   );
@@ -930,127 +922,6 @@ export default function LeadHunterPage() {
               </tbody>
             </table>
 
-            {/* ─── Expanded Prospect Detail ─── */}
-            {expanded && (() => {
-              const c = filteredProspects.find((x) => x.id === expanded);
-              if (!c) return null;
-              const stage = getStage(c);
-              const logs = callLogs[c.id] || [];
-              const daysSince_ = daysSinceContact(c.id);
-              const isStale = daysSince_ !== null && daysSince_ > 7;
-
-              return (
-                <div className="border-t border-white/10 bg-[#0F1117] px-6 py-5 space-y-5">
-                  {/* Top row: info + actions */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {/* Contact Info */}
-                    <div className="space-y-2">
-                      <p className="text-slate-400 text-xs uppercase font-semibold tracking-wider">Contact Info</p>
-                      {c.contactName && <p className="text-white text-sm font-medium">{c.contactName}</p>}
-                      {c.email && <p className="text-slate-300 text-sm flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-slate-500" />{c.email}</p>}
-                      {c.phone && <p className="text-slate-300 text-sm flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-slate-500" />{c.phone}</p>}
-                      {(c.city || c.state) && <p className="text-slate-300 text-sm flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-slate-500" />{[c.city, c.state].filter(Boolean).join(", ")}</p>}
-                    </div>
-
-                    {/* Details */}
-                    <div className="space-y-2">
-                      <p className="text-slate-400 text-xs uppercase font-semibold tracking-wider">Details</p>
-                      <p className="text-slate-300 text-sm">Industry: {c.industryType ?? "---"}</p>
-                      <p className="text-slate-300 text-sm">Est. Revenue: {c.annualRevenue ? `$${(c.annualRevenue / 1000).toFixed(0)}K` : "---"}</p>
-                      <p className="text-slate-300 text-sm">Payment Terms: {c.paymentTerms ?? "---"}</p>
-                      {c.notes && <p className="text-slate-400 text-sm italic">{c.notes}</p>}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="space-y-3">
-                      <p className="text-slate-400 text-xs uppercase font-semibold tracking-wider">Actions</p>
-
-                      {/* Stage selector */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">Stage:</span>
-                        <select value={stage}
-                          onChange={(e) => { e.stopPropagation(); updateStage(c.id, e.target.value as PipelineStage); }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none">
-                          {PIPELINE_STAGES.map((s) => <option key={s.key} value={s.key} className="bg-[#0F1117]">{s.label}</option>)}
-                        </select>
-                      </div>
-
-                      {isStale && (
-                        <div className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          {daysSince_}d since last contact — follow up!
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); setShowLogForm(showLogForm === c.id ? null : c.id); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 hover:text-white">
-                          <PhoneCall className="w-3.5 h-3.5" /> Log Activity
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); openEmailModal([c.id]); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:bg-white/10 hover:text-white">
-                          <Mail className="w-3.5 h-3.5" /> Email
-                        </button>
-                        {(stage === "QUALIFIED" || stage === "PROPOSAL" || stage === "CONTACTED") && (
-                          <button onClick={(e) => { e.stopPropagation(); convertMutation.mutate(c.id); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-xs text-green-400 hover:bg-green-500/30 font-medium">
-                            <ArrowRight className="w-3.5 h-3.5" /> Convert to Customer
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Inline Log Activity Form */}
-                  {showLogForm === c.id && (
-                    <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
-                      <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Log Activity</p>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <select value={logForm.type} onChange={(e) => setLogForm({ ...logForm, type: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                          <option value="Call" className="bg-[#0F1117]">Phone Call</option>
-                          <option value="Email" className="bg-[#0F1117]">Email</option>
-                          <option value="Meeting" className="bg-[#0F1117]">Meeting</option>
-                          <option value="Note" className="bg-[#0F1117]">Note</option>
-                        </select>
-                        <input value={logForm.notes} onChange={(e) => setLogForm({ ...logForm, notes: e.target.value })}
-                          placeholder="What happened?"
-                          className="flex-1 min-w-[200px] px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-gold/50"
-                          onKeyDown={(e) => { if (e.key === "Enter") saveCallLog(c.id); }} />
-                        <button onClick={() => saveCallLog(c.id)} disabled={!logForm.notes.trim()}
-                          className="px-4 py-2 bg-gold/20 text-gold rounded-lg hover:bg-gold/30 text-sm font-medium disabled:opacity-50">
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Activity History */}
-                  {logs.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Activity History</p>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {logs.slice(0, 10).map((log, idx) => (
-                          <div key={idx} className="flex items-start gap-3 text-sm py-1.5">
-                            <span className="text-slate-500 shrink-0">
-                              {log.type === "Call" ? <PhoneCall className="w-3.5 h-3.5" /> :
-                               log.type === "Email" ? <Mail className="w-3.5 h-3.5" /> :
-                               log.type === "Meeting" ? <Calendar className="w-3.5 h-3.5" /> :
-                               <MessageSquare className="w-3.5 h-3.5" />}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-slate-300">{log.notes}</p>
-                              <p className="text-xs text-slate-600">{formatActivityDate(log.date)} — {log.by}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
           </div>
         </div>
       )}
@@ -1182,7 +1053,21 @@ export default function LeadHunterPage() {
 
       {/* ═══════════════ TAB 2: ACTIVITY LOG ═══════════════ */}
       {tab === "activity" && (() => {
-        const events = activityFeedData?.events ?? [];
+        const allEvents = activityFeedData?.events ?? [];
+
+        // Client-side date range filter: today / 7d / 30d / all
+        const now = Date.now();
+        const rangeMs: Record<string, number | null> = {
+          today: 24 * 60 * 60 * 1000,
+          "7d":  7  * 24 * 60 * 60 * 1000,
+          "30d": 30 * 24 * 60 * 60 * 1000,
+          all:   null,
+        };
+        const cutoff = rangeMs[activityDateRange];
+        const events = cutoff == null
+          ? allEvents
+          : allEvents.filter((e) => now - new Date(e.timestamp).getTime() <= cutoff);
+
         const iconFor = (kind: ActivityEvent["kind"]) => {
           switch (kind) {
             case "call": return <PhoneCall className="w-4 h-4" />;
@@ -1199,30 +1084,82 @@ export default function LeadHunterPage() {
           stage_change: "text-green-400",
           import: "text-gold",
         })[kind];
+
+        // Daily summary — counts in the selected range
+        const summary = {
+          emails: events.filter((e) => e.kind === "email").length,
+          calls: events.filter((e) => e.kind === "call").length,
+          stageChanges: events.filter((e) => e.kind === "stage_change").length,
+          notes: events.filter((e) => e.kind === "note").length,
+        };
+        const summaryCards = [
+          { label: "Emails",  value: summary.emails,       cls: "text-amber-400" },
+          { label: "Calls",   value: summary.calls,        cls: "text-blue-400" },
+          { label: "Stage Changes", value: summary.stageChanges, cls: "text-green-400" },
+          { label: "Notes",   value: summary.notes,        cls: "text-slate-300" },
+        ];
+        const rangeButtons: { key: typeof activityDateRange; label: string }[] = [
+          { key: "today", label: "Today" },
+          { key: "7d",    label: "7 days" },
+          { key: "30d",   label: "30 days" },
+          { key: "all",   label: "All" },
+        ];
+
         return (
           <div className="space-y-4">
+            {/* Daily summary cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {summaryCards.map((s) => (
+                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <p className="text-xs text-slate-500">{s.label}</p>
+                  <p className={`text-2xl font-bold mt-1 ${s.cls}`}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="bg-white/5 border border-white/10 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <h3 className="text-white font-semibold flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-gold" /> All Prospect Activity
                   <span className="text-xs text-slate-500 font-normal ml-2">{events.length} entries</span>
                 </h3>
-                <select value={activityTypeFilter} onChange={(e) => setActivityTypeFilter(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
-                  <option value="" className="bg-[#0F1117]">All Activity</option>
-                  <option value="call" className="bg-[#0F1117]">Calls</option>
-                  <option value="email" className="bg-[#0F1117]">Emails</option>
-                  <option value="note" className="bg-[#0F1117]">Notes</option>
-                  <option value="stage_change" className="bg-[#0F1117]">Stage Changes</option>
-                  <option value="import" className="bg-[#0F1117]">Imports</option>
-                </select>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex rounded-lg border border-white/10 overflow-hidden">
+                    {rangeButtons.map((r) => (
+                      <button
+                        key={r.key}
+                        onClick={() => setActivityDateRange(r.key)}
+                        className={`px-3 py-1.5 text-xs transition ${
+                          activityDateRange === r.key
+                            ? "bg-gold/20 text-gold"
+                            : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                  <select value={activityTypeFilter} onChange={(e) => setActivityTypeFilter(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                    <option value="" className="bg-[#0F1117]">All Activity</option>
+                    <option value="call" className="bg-[#0F1117]">Calls</option>
+                    <option value="email" className="bg-[#0F1117]">Emails</option>
+                    <option value="note" className="bg-[#0F1117]">Notes</option>
+                    <option value="stage_change" className="bg-[#0F1117]">Stage Changes</option>
+                    <option value="import" className="bg-[#0F1117]">Imports</option>
+                  </select>
+                </div>
               </div>
               {events.length === 0 ? (
-                <p className="text-slate-500 text-sm py-8 text-center">No activity yet. Log a call, send an email, or import prospects to see events here.</p>
+                <p className="text-slate-500 text-sm py-8 text-center">No activity in this range.</p>
               ) : (
                 <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                   {events.map((e) => (
-                    <div key={e.id} className="flex items-start gap-3 py-3 border-b border-white/5 last:border-0">
+                    <button
+                      key={e.id}
+                      onClick={() => e.customerId && setDrawerProspectId(e.customerId)}
+                      className="w-full flex items-start gap-3 py-3 border-b border-white/5 last:border-0 text-left hover:bg-white/[0.02] transition px-2 -mx-2 rounded"
+                    >
                       <span className={`mt-0.5 shrink-0 ${colorFor(e.kind)}`}>{iconFor(e.kind)}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1237,7 +1174,7 @@ export default function LeadHunterPage() {
                         </p>
                       </div>
                       <span className="text-xs text-slate-600 shrink-0">{e.actor}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -1593,6 +1530,12 @@ export default function LeadHunterPage() {
           </div>
         </div>
       )}
+
+      {/* ═══════════════ PROSPECT DRAWER (right-side, IconTabs) ═══════════════ */}
+      <ProspectDrawer
+        prospect={drawerProspectId ? allCustomers.find((c) => c.id === drawerProspectId) ?? null : null}
+        onClose={() => setDrawerProspectId(null)}
+      />
     </div>
   );
 }
