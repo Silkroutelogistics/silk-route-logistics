@@ -9,12 +9,19 @@ import { validateBody, validateQuery } from "../middleware/validate";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
 import { z } from "zod";
 
+const SALES_ROLES = ["DECISION_MAKER", "CHAMPION", "GATEKEEPER", "TECHNICAL", "BILLING", "OTHER"] as const;
+
 const contactSchema = z.object({
   name: z.string().min(1),
   title: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   isPrimary: z.boolean().optional(),
+  isBilling: z.boolean().optional(),
+  receivesTrackingLink: z.boolean().optional(),
+  salesRole: z.enum(SALES_ROLES).nullable().optional(),
+  introducedVia: z.string().max(120).nullable().optional(),
+  doNotContact: z.boolean().optional(),
 });
 
 const creditSchema = z.object({

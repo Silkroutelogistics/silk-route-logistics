@@ -525,12 +525,19 @@ export async function restoreCustomer(req: AuthRequest, res: Response) {
 
 // ─── Customer Contacts ──────────────────────────────────
 
+const CONTACT_SALES_ROLES = ["DECISION_MAKER", "CHAMPION", "GATEKEEPER", "TECHNICAL", "BILLING", "OTHER"] as const;
+
 const createContactSchema = z.object({
   name: z.string().min(1),
   title: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   isPrimary: z.boolean().optional(),
+  isBilling: z.boolean().optional(),
+  receivesTrackingLink: z.boolean().optional(),
+  salesRole: z.enum(CONTACT_SALES_ROLES).nullable().optional(),
+  introducedVia: z.string().max(120).nullable().optional(),
+  doNotContact: z.boolean().optional(),
 });
 
 const updateContactSchema = createContactSchema.partial();
@@ -547,9 +554,9 @@ export async function getCustomerContacts(req: AuthRequest, res: Response) {
 
   const contacts = await prisma.customerContact.findMany({
     where: { customerId: req.params.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
   });
-  res.json(contacts);
+  res.json({ contacts });
 }
 
 export async function addCustomerContact(req: AuthRequest, res: Response) {

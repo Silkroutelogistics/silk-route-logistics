@@ -1927,11 +1927,26 @@ model CustomerContact {
   // CRM upgrade (v3.4.l)
   receivesTrackingLink Boolean @default(false) @map("receives_tracking_link")
   isBilling            Boolean @default(false) @map("is_billing")
-  role                 String? @db.VarChar(50) // primary | billing | logistics | executive | other
+  role                 String? @db.VarChar(50) // legacy free-text role — unused in current UI
+
+  // Sales-pipeline fields (v3.6.b)
+  salesRole     ContactSalesRole? @map("sales_role")
+  introducedVia String?           @map("introduced_via") @db.VarChar(120)
+  doNotContact  Boolean           @default(false) @map("do_not_contact")
 
   @@index([customerId])
   @@index([receivesTrackingLink])
+  @@index([doNotContact])
   @@map("customer_contacts")
+}
+
+enum ContactSalesRole {
+  DECISION_MAKER
+  CHAMPION
+  GATEKEEPER
+  TECHNICAL
+  BILLING
+  OTHER
 }
 
 // ─── CRM Upgrade (v3.4.l) ──────────────────────────

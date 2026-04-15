@@ -1,21 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, User, Activity, MessageSquare, Settings } from "lucide-react";
+import { X, User, Activity, MessageSquare, Users, Settings } from "lucide-react";
 import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 import type { Customer } from "./types";
 import { STAGE_BADGE, resolveStage } from "./types";
 import { ProfileTab } from "./tabs/ProfileTab";
 import { ActivityTab } from "./tabs/ActivityTab";
 import { NotesTab } from "./tabs/NotesTab";
+import { ContactsTab } from "./tabs/ContactsTab";
 import { ActionsTab } from "./tabs/ActionsTab";
 
-type DrawerTab = "profile" | "activity" | "notes" | "actions";
+type DrawerTab = "profile" | "activity" | "notes" | "contacts" | "actions";
 
 const TABS: IconTabDef<DrawerTab>[] = [
   { id: "profile",  label: "Profile",  Icon: User },
   { id: "activity", label: "Activity", Icon: Activity },
   { id: "notes",    label: "Notes",    Icon: MessageSquare },
+  { id: "contacts", label: "Contacts", Icon: Users },
   { id: "actions",  label: "Actions",  Icon: Settings },
 ];
 
@@ -105,6 +107,7 @@ export function ProspectDrawer({ prospect, onClose }: Props) {
             {tab === "profile"  && <ProfileTab  prospect={prospect} onChange={() => { /* react-query handles refetch */ }} />}
             {tab === "activity" && <ActivityTab prospectId={prospect.id} />}
             {tab === "notes"    && <NotesTab    prospectId={prospect.id} />}
+            {tab === "contacts" && <ContactsTab prospectId={prospect.id} />}
             {tab === "actions"  && <ActionsTab  prospect={prospect} onClose={onClose} />}
           </div>
         </div>

@@ -50,6 +50,14 @@ export interface CrmCustomer {
   _count?: { shipments?: number; loads?: number };
 }
 
+export type ContactSalesRole =
+  | "DECISION_MAKER"
+  | "CHAMPION"
+  | "GATEKEEPER"
+  | "TECHNICAL"
+  | "BILLING"
+  | "OTHER";
+
 export interface CrmContact {
   id: string;
   name: string;
@@ -60,6 +68,9 @@ export interface CrmContact {
   isBilling: boolean;
   receivesTrackingLink: boolean;
   role: string | null;
+  salesRole: ContactSalesRole | null;
+  introducedVia: string | null;
+  doNotContact: boolean;
 }
 
 export interface CrmFacility {

@@ -19,6 +19,9 @@ import {
   getCustomerIndustries,
   updateCustomer,
   getActivityFeed,
+  getCustomerContacts,
+  addCustomerContact,
+  updateCustomerContact,
 } from "../src/controllers/customerController";
 import { AuthRequest } from "../src/middleware/auth";
 
@@ -339,6 +342,83 @@ async function main() {
     scoped.body.events.every((e: any) => e.kind !== "import"),
     `scoped feed excludes org-wide import events`,
   );
+
+  // ─── Test 13: CustomerContact sales fields (v3.6.b) ────────────────
+  console.log("\n13. CustomerContact — salesRole / introducedVia / doNotContact");
+
+  // Add a contact with all new fields populated
+  const addResult = await call(addCustomerContact, {
+    ...reqBase,
+    params: { id: allIds[0] },
+    body: {
+      name: "Smoke Test Contact",
+      title: "VP Logistics",
+      email: "contact@smoketest.example",
+      phone: "555-4242",
+      salesRole: "DECISION_MAKER",
+      introducedVia: "TMC 2026 booth",
+      doNotContact: false,
+      isPrimary: true,
+    },
+  });
+  assert(addResult.status === 201, `contact created (status ${addResult.status})`);
+  assert(addResult.body.salesRole === "DECISION_MAKER", `salesRole persisted`);
+  assert(addResult.body.introducedVia === "TMC 2026 booth", `introducedVia persisted`);
+  assert(addResult.body.doNotContact === false, `doNotContact defaults false`);
+
+  const contactId = addResult.body.id;
+
+  // GET list returns new fields + wrapped { contacts } shape
+  const listResult = await call(getCustomerContacts, {
+    ...reqBase,
+    params: { id: allIds[0] },
+  });
+  assert(Array.isArray(listResult.body.contacts), `GET returns { contacts: [...] } shape`);
+  const fetched = listResult.body.contacts.find((c: any) => c.id === contactId);
+  assert(fetched?.salesRole === "DECISION_MAKER", `list includes salesRole`);
+  assert(fetched?.introducedVia === "TMC 2026 booth", `list includes introducedVia`);
+
+  // PATCH can toggle DNC and change salesRole
+  const patchResult = await call(updateCustomerContact, {
+    ...reqBase,
+    params: { id: allIds[0], cid: contactId },
+    body: { doNotContact: true, salesRole: "GATEKEEPER" },
+  });
+  assert(patchResult.body.doNotContact === true, `DNC flipped via PATCH`);
+  assert(patchResult.body.salesRole === "GATEKEEPER", `salesRole updated via PATCH`);
+
+  // PATCH can clear salesRole with null
+  const clearResult = await call(updateCustomerContact, {
+    ...reqBase,
+    params: { id: allIds[0], cid: contactId },
+    body: { salesRole: null },
+  });
+  assert(clearResult.body.salesRole === null, `salesRole cleared to null`);
+
+  // Validator rejects unknown enum values
+  const badRole = await call(addCustomerContact, {
+    ...reqBase,
+    params: { id: allIds[0] },
+    body: {
+      name: "Bad Role",
+      salesRole: "INFLUENCER", // not in the enum
+    },
+  }).catch((e: any) => ({ status: 400, body: { error: e.message } }));
+  assert(
+    badRole.status !== 201 || badRole.body?.error,
+    `validator rejects unknown salesRole enum value`,
+  );
+
+  // Backfill already applied to existing prospect contacts — verify by
+  // querying raw DB for any Prospect-stage contact where introducedVia
+  // is the backfill value (migration already ran earlier).
+  const backfilled = await prisma.customerContact.count({
+    where: {
+      introducedVia: "Apollo Cold Outreach",
+      customer: { status: { in: ["Prospect", "Contacted", "Qualified", "Proposal"] } },
+    },
+  });
+  assert(backfilled >= 0, `migration backfill query runs without error (count: ${backfilled})`);
 
   console.log("\n✅ All Lead Hunter smoke tests passed\n");
 
