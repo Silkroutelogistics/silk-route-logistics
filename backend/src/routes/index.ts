@@ -75,7 +75,6 @@ import dockScheduleRoutes from "./dockSchedule";
 import carrierCallLogRoutes from "./carrierCallLog";
 import fuelSurchargeTableRoutes from "./fuelSurchargeTable";
 import tagRoutes from "./tags";
-import purchaseOrderRoutes from "./purchaseOrders";
 import shipperDefaultsRoutes from "./shipperDefaults";
 import openPhoneRoutes from "./openPhone";
 
@@ -245,7 +244,6 @@ router.use("/dock-schedules", dockScheduleRoutes);
 router.use("/carrier-calls", carrierCallLogRoutes);
 router.use("/fuel-tables", fuelSurchargeTableRoutes);
 router.use("/tags", tagRoutes);
-router.use("/purchase-orders", purchaseOrderRoutes);
 router.use("/shipper-defaults", shipperDefaultsRoutes);
 router.use("/openphone", openPhoneRoutes);
 

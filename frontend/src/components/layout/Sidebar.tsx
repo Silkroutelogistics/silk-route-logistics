@@ -11,7 +11,7 @@ import {
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
   ScrollText, Gavel, Route, Crosshair, Fuel, Calendar, Tag,
-  ShoppingCart, Compass, Clock, Phone, Map, Layers,
+  Compass, Clock, Phone, Map, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -104,7 +104,6 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/waterfall", label: "Waterfall Dispatch", icon: Crosshair },
       { href: "/dashboard/track-trace", label: "Track & Trace", icon: MapPin },
       { href: "/dashboard/dock-scheduling", label: "Dock Scheduling", icon: Clock },
-      { href: "/dashboard/purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
     ],
   },
   {

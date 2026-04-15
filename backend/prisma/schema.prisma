@@ -711,7 +711,6 @@ model User {
   dockSchedules      DockSchedule[]       @relation("DockScheduleCreator")
   carrierCallLogs    CarrierCallLog[]     @relation("CallLogCaller")
   fuelTables         FuelSurchargeTable[] @relation("FuelTableCreator")
-  purchaseOrders     PurchaseOrder[]      @relation("POCreator")
 
   @@index([email])
   @@index([role])
@@ -1903,10 +1902,9 @@ model Customer {
   // AI Learning
   aiIntelligence CustomerIntelligence? @relation("CustomerIntelligence")
 
-  contractRates  ContractRate[]  @relation("CustomerContractRates")
-  rfpBids        RfpBid[]        @relation("CustomerRfpBids")
-  routingGuides  RoutingGuide[]  @relation("CustomerRoutingGuides")
-  purchaseOrders PurchaseOrder[] @relation("CustomerPurchaseOrders")
+  contractRates ContractRate[] @relation("CustomerContractRates")
+  rfpBids       RfpBid[]       @relation("CustomerRfpBids")
+  routingGuides RoutingGuide[] @relation("CustomerRoutingGuides")
 
   deletedAt DateTime?
   deletedBy String?
@@ -4198,61 +4196,6 @@ model TagAssignment {
   @@unique([tagId, entityType, entityId])
   @@index([entityType, entityId])
   @@map("tag_assignments")
-}
-
-// ─── Purchase Orders / SKU Tracking ─────────────────────
-
-model PurchaseOrder {
-  id             String    @id @default(cuid())
-  poNumber       String    @unique
-  customerId     String
-  customer       Customer  @relation("CustomerPurchaseOrders", fields: [customerId], references: [id], onDelete: Cascade)
-  tradingPartner String?
-  status         String    @default("OPEN") // OPEN, PARTIAL, CLOSED, CANCELLED
-  orderDate      DateTime  @default(now())
-  expectedDate   DateTime?
-  notes          String?
-  createdById    String
-  createdBy      User      @relation("POCreator", fields: [createdById], references: [id])
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  lineItems POLineItem[]
-  loadLinks POLoadLink[]
-
-  @@index([customerId])
-  @@index([status])
-  @@map("purchase_orders")
-}
-
-model POLineItem {
-  id              String        @id @default(cuid())
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  sku             String
-  description     String?
-  quantity        Int
-  unitWeight      Float?
-  dimensions      String? // "40L x 48W x 44H in"
-  freightClass    String?
-  ordered         Int           @default(0)
-  shipped         Int           @default(0)
-  received        Int           @default(0)
-  createdAt       DateTime      @default(now())
-
-  @@index([purchaseOrderId])
-  @@map("po_line_items")
-}
-
-model POLoadLink {
-  id              String        @id @default(cuid())
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  loadId          String
-  createdAt       DateTime      @default(now())
-
-  @@unique([purchaseOrderId, loadId])
-  @@map("po_load_links")
 }
 
 // ─── RFP / Bid Management ────────────────────────────────
