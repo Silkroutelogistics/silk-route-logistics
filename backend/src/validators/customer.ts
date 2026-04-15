@@ -31,6 +31,8 @@ export const updateCustomerSchema = createCustomerSchema.partial().extend({
 export const customerQuerySchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),
+  industry: z.string().optional(),
+  city: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
 });

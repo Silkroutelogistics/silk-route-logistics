@@ -33,6 +33,8 @@ export async function getCustomers(req: AuthRequest, res: Response) {
   }
 
   if (query.status) where.status = query.status;
+  if (query.industry) where.industryType = { contains: query.industry, mode: "insensitive" };
+  if (query.city) where.city = { contains: query.city, mode: "insensitive" };
   if (query.search) {
     where.OR = [
       { name: { contains: query.search, mode: "insensitive" } },
@@ -96,18 +98,134 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
   });
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
 
-  const agg = await prisma.shipment.aggregate({
-    where: { customerId: customer.id },
-    _sum: { rate: true },
-    _count: true,
-  });
+  // Communication is linked via (entityType, entityId), not a Prisma relation,
+  // so we fetch it in parallel with the shipment rollup.
+  const [agg, communications] = await Promise.all([
+    prisma.shipment.aggregate({
+      where: { customerId: customer.id },
+      _sum: { rate: true },
+      _count: true,
+    }),
+    prisma.communication.findMany({
+      where: { entityType: "SHIPPER", entityId: customer.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    }),
+  ]);
 
   res.json({
     ...customer,
+    communications,
     totalShipments: agg._count,
     totalRevenue: agg._sum.rate || 0,
     avgShipmentValue: agg._count > 0 ? (agg._sum.rate || 0) / agg._count : 0,
   });
+}
+
+// Unified Lead Hunter activity feed: merges Communication events (calls/emails/notes)
+// with SystemLog entries (stage transitions, imports) into a single reverse-chron feed.
+export async function getActivityFeed(req: AuthRequest, res: Response) {
+  const limit = Math.min(200, parseInt((req.query.limit as string) || "100"));
+  const type = req.query.type as string | undefined; // "call" | "email" | "note" | "stage_change" | "import"
+
+  const wantComm = !type || ["call", "email", "note"].includes(type);
+  const wantSys = !type || ["stage_change", "import"].includes(type);
+
+  const [comms, sysLogs, customers] = await Promise.all([
+    wantComm
+      ? prisma.communication.findMany({
+          where: { entityType: "SHIPPER" },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          include: { user: { select: { firstName: true, lastName: true, email: true } } },
+        })
+      : Promise.resolve([]),
+    wantSys
+      ? prisma.systemLog.findMany({
+          where: {
+            source: {
+              in: [
+                "LeadHunter.bulkUpdateStage",
+                "LeadHunter.updateCustomer",
+                "LeadHunter.bulkImport",
+              ],
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+        })
+      : Promise.resolve([]),
+    prisma.customer.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, contactName: true },
+    }),
+  ]);
+
+  const nameById = new Map(customers.map((c) => [c.id, { name: c.name, contactName: c.contactName }]));
+
+  type FeedEvent = {
+    id: string;
+    kind: "call" | "email" | "note" | "stage_change" | "import";
+    timestamp: string;
+    customerId: string | null;
+    customerName: string | null;
+    actor: string;
+    summary: string;
+    detail: string | null;
+  };
+
+  const events: FeedEvent[] = [];
+
+  for (const c of comms) {
+    const kind: FeedEvent["kind"] =
+      c.type.startsWith("CALL") ? "call" :
+      c.type.startsWith("EMAIL") ? "email" : "note";
+    if (type && type !== kind) continue;
+    const person = nameById.get(c.entityId);
+    events.push({
+      id: `comm:${c.id}`,
+      kind,
+      timestamp: c.createdAt.toISOString(),
+      customerId: c.entityId,
+      customerName: person?.name ?? null,
+      actor: c.user ? `${c.user.firstName ?? ""} ${c.user.lastName ?? ""}`.trim() || c.user.email || "—" : "—",
+      summary: c.subject || c.body?.slice(0, 80) || `${kind} logged`,
+      detail: c.body,
+    });
+  }
+
+  for (const s of sysLogs) {
+    const details = (s.details as Record<string, unknown>) || {};
+    const kind: FeedEvent["kind"] =
+      s.source === "LeadHunter.bulkImport" ? "import" : "stage_change";
+    if (type && type !== kind) continue;
+    const customerId = (details.customerId as string) || null;
+    const person = customerId ? nameById.get(customerId) : null;
+    events.push({
+      id: `log:${s.id}`,
+      kind,
+      timestamp: s.createdAt.toISOString(),
+      customerId,
+      customerName: person?.name ?? null,
+      actor: (details.actor as string) || "—",
+      summary: s.message,
+      detail: details.from && details.to ? `${details.from} → ${details.to}` : null,
+    });
+  }
+
+  events.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  res.json({ events: events.slice(0, limit), total: events.length });
+}
+
+export async function getCustomerIndustries(_req: AuthRequest, res: Response) {
+  const rows = await prisma.customer.findMany({
+    where: { deletedAt: null, industryType: { not: null } },
+    select: { industryType: true },
+    distinct: ["industryType"],
+    orderBy: { industryType: "asc" },
+  });
+  res.json(rows.map((r) => r.industryType).filter((v): v is string => !!v));
 }
 
 export async function getCustomerStats(req: AuthRequest, res: Response) {
@@ -150,7 +268,31 @@ export async function getCustomerStats(req: AuthRequest, res: Response) {
 
 export async function updateCustomer(req: AuthRequest, res: Response) {
   const data = updateCustomerSchema.parse(req.body);
+
+  // Capture the pre-update status so we can log a transition if it changed.
+  const prior = data.status != null
+    ? await prisma.customer.findUnique({ where: { id: req.params.id }, select: { status: true } })
+    : null;
+
   const customer = await prisma.customer.update({ where: { id: req.params.id }, data: data as any });
+
+  if (prior && data.status && prior.status !== data.status) {
+    await prisma.systemLog.create({
+      data: {
+        logType: "STATUS_CHANGE",
+        severity: "INFO",
+        source: "LeadHunter.updateCustomer",
+        message: `Customer ${customer.id}: ${prior.status} → ${data.status}`,
+        details: {
+          customerId: customer.id,
+          from: prior.status,
+          to: data.status,
+          actor: req.user!.email || req.user!.id,
+        },
+      },
+    });
+  }
+
   res.json(customer);
 }
 
@@ -542,6 +684,24 @@ export async function bulkCreateCustomers(req: AuthRequest, res: Response) {
       errors.push(`Failed to upsert "${name}": ${err.message || "Unknown error"}`);
     }
   }
+
+  // One summary audit row per import batch — no per-prospect noise
+  await prisma.systemLog.create({
+    data: {
+      logType: "INTEGRATION",
+      severity: "INFO",
+      source: "LeadHunter.bulkImport",
+      message: `Imported ${created} new, updated ${updated} existing prospects from CSV`,
+      details: {
+        created,
+        updated,
+        skipped,
+        errorCount: errors.length,
+        total: customers.length,
+        actor: req.user!.email || req.user!.id,
+      },
+    },
+  });
 
   res.status(201).json({ created, updated, skipped, errors });
 }

@@ -61,11 +61,11 @@ interface ActiveSequence {
 }
 
 const INTENT_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  INTERESTED: { bg: "bg-green-500/20", text: "text-green-400", label: "Hot Lead" },
-  UNSUBSCRIBE: { bg: "bg-red-500/20", text: "text-red-400", label: "Unsubscribe" },
-  OBJECTION: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Objection" },
+  INTERESTED: { bg: "bg-green-500/20", text: "text-green-400", label: "Hot" },
+  NEUTRAL: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Warm" },
+  OBJECTION: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Cold" },
   OUT_OF_OFFICE: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Out of Office" },
-  NEUTRAL: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Neutral" },
+  UNSUBSCRIBE: { bg: "bg-red-500/20", text: "text-red-400", label: "Not Interested" },
 };
 type TemplateType = "INTRO" | "FOLLOW_UP" | "CAPACITY" | "CUSTOM";
 
@@ -139,6 +139,17 @@ function resolveStage(customerStatus: string): PipelineStage {
   return STATUS_TO_STAGE[customerStatus] || "LEAD";
 }
 
+interface ActivityEvent {
+  id: string;
+  kind: "call" | "email" | "note" | "stage_change" | "import";
+  timestamp: string;
+  customerId: string | null;
+  customerName: string | null;
+  actor: string;
+  summary: string;
+  detail: string | null;
+}
+
 interface CommunicationRow {
   id: string;
   type: string;
@@ -193,6 +204,8 @@ export default function LeadHunterPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("pipeline");
   const [search, setSearch] = useState("");
+  const [industryFilter, setIndustryFilter] = useState("");
+  const [activityTypeFilter, setActivityTypeFilter] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -232,14 +245,20 @@ export default function LeadHunterPage() {
   });
 
   const { data: customersData } = useQuery({
-    queryKey: ["customers-prospects", search],
+    queryKey: ["customers-prospects", search, industryFilter],
     queryFn: () => {
       const p = new URLSearchParams();
       if (search) p.set("search", search);
+      if (industryFilter) p.set("industry", industryFilter);
       p.set("page", "1");
       p.set("limit", "200");
       return api.get<{ customers: Customer[] }>(`/customers?${p}`).then((r) => r.data);
     },
+  });
+
+  const { data: industriesList } = useQuery({
+    queryKey: ["customer-industries"],
+    queryFn: () => api.get<string[]>("/customers/industries").then((r) => r.data),
   });
 
   const { data: regions } = useQuery({
@@ -266,6 +285,19 @@ export default function LeadHunterPage() {
     queryKey: ["lead-hunter-replies"],
     queryFn: () => api.get<{ communications: Reply[]; total: number }>("/communications?entity_type=SHIPPER&type=EMAIL_INBOUND&limit=50").then((r) => r.data),
     refetchInterval: 60000, // poll every 60s
+  });
+
+  // Merged activity feed (Communication + SystemLog) for Tab 3
+  const { data: activityFeedData } = useQuery({
+    queryKey: ["lead-hunter-activity-feed", activityTypeFilter],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("limit", "150");
+      if (activityTypeFilter) p.set("type", activityTypeFilter);
+      return api.get<{ events: ActivityEvent[]; total: number }>(`/customers/activity-feed?${p}`).then((r) => r.data);
+    },
+    enabled: tab === "activity",
+    refetchInterval: 60000,
   });
 
   // Active email sequences
@@ -403,13 +435,6 @@ export default function LeadHunterPage() {
     toast("Activity logged", "success");
   };
 
-  // All activities across prospects, sorted by date (server-sourced)
-  const allActivities = Object.entries(callLogs)
-    .flatMap(([custId, logs]) => {
-      const customer = allCustomers.find((c) => c.id === custId);
-      return logs.map((log) => ({ ...log, customerId: custId, customerName: customer?.name ?? "Unknown", contactName: customer?.contactName ?? "" }));
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   /* ─── CSV Import ─── */
 
@@ -547,6 +572,63 @@ export default function LeadHunterPage() {
       setEmailResult({ sent: 0, failed: ids.length, skipped: 0 });
     } finally {
       setEmailSending(false);
+    }
+  };
+
+  /* ─── Reply Quick Actions (Tab 2) ─── */
+
+  const handleReplyQuickAction = async (
+    prospect: Customer,
+    action: "schedule_call" | "send_follow_up" | "mark_not_interested",
+    replySubject?: string | null,
+  ) => {
+    if (action === "schedule_call") {
+      if (prospect.phone) window.open(`tel:${prospect.phone}`);
+      try {
+        await api.post("/communications", {
+          type: "CALL_OUTBOUND",
+          direction: "OUTBOUND",
+          entityType: "SHIPPER",
+          entityId: prospect.id,
+          subject: "Scheduled callback from Replies inbox",
+          body: `Call queued from reply — ${prospect.contactName || prospect.name}`,
+          metadata: { source: "LeadHunter.Replies", action: "schedule_call" },
+        });
+        queryClient.invalidateQueries({ queryKey: ["lead-hunter-communications"] });
+        queryClient.invalidateQueries({ queryKey: ["lead-hunter-activity-feed"] });
+      } catch { /* non-fatal */ }
+      toast(`Calling ${prospect.contactName || prospect.name}`, "success");
+      return;
+    }
+
+    if (action === "send_follow_up") {
+      setEmailPrefilter(prospect.id);
+      setSelectedRecipients(new Set([prospect.id]));
+      setSelectAllRecipients(false);
+      setEmailTemplate("FOLLOW_UP");
+      setEmailSubject(replySubject ? `Re: ${replySubject}` : EMAIL_TEMPLATES.FOLLOW_UP.subject);
+      setEmailBody("");
+      setEmailResult(null);
+      setShowEmailModal(true);
+      return;
+    }
+
+    if (action === "mark_not_interested") {
+      try {
+        await api.post("/communications", {
+          type: "NOTE",
+          entityType: "SHIPPER",
+          entityId: prospect.id,
+          subject: "Marked Not Interested from Replies inbox",
+          body: "Prospect marked not interested; sequences stopped.",
+          metadata: { source: "LeadHunter.Replies", action: "mark_not_interested", intent: "UNSUBSCRIBE" },
+        });
+        queryClient.invalidateQueries({ queryKey: ["lead-hunter-communications"] });
+        queryClient.invalidateQueries({ queryKey: ["lead-hunter-activity-feed"] });
+        toast(`${prospect.name} marked not interested`, "success");
+      } catch {
+        toast("Failed to mark prospect", "error");
+      }
     }
   };
 
@@ -721,6 +803,13 @@ export default function LeadHunterPage() {
                 className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none">
                 <option value="" className="bg-[#0F1117]">All Stages</option>
                 {PIPELINE_STAGES.map((s) => <option key={s.key} value={s.key} className="bg-[#0F1117]">{s.label} ({stageCounts[s.key]})</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none">
+                <option value="" className="bg-[#0F1117]">All Industries</option>
+                {(industriesList ?? []).map((ind) => <option key={ind} value={ind} className="bg-[#0F1117]">{ind}</option>)}
               </select>
             </div>
             {selectedProspects.size > 0 && (
@@ -1063,23 +1152,23 @@ export default function LeadHunterPage() {
                       </div>
                       {/* Quick actions */}
                       <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/5">
-                        {intent === "INTERESTED" && (
-                          <button onClick={() => {
-                            if (prospect) updateStage(prospect.id, "QUALIFIED");
-                            toast("Marked as qualified — call them today!", "success");
-                          }} className="text-[10px] px-2 py-1 bg-green-500/10 text-green-400 rounded hover:bg-green-500/20 transition">
-                            Mark Qualified
-                          </button>
-                        )}
-                        <button onClick={() => {
-                          if (prospect?.email) { window.open(`mailto:${prospect.email}?subject=Re: ${reply.subject || ""}`); }
-                        }} className="text-[10px] px-2 py-1 bg-white/5 text-slate-400 rounded hover:bg-white/10 transition">
-                          Reply
+                        <button
+                          disabled={!prospect}
+                          onClick={() => prospect && handleReplyQuickAction(prospect, "schedule_call")}
+                          className="text-[10px] px-2 py-1 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition disabled:opacity-40">
+                          Schedule Call
                         </button>
-                        <button onClick={() => {
-                          if (prospect?.phone) { window.open(`tel:${prospect.phone}`); }
-                        }} className="text-[10px] px-2 py-1 bg-white/5 text-slate-400 rounded hover:bg-white/10 transition">
-                          Call
+                        <button
+                          disabled={!prospect}
+                          onClick={() => prospect && handleReplyQuickAction(prospect, "send_follow_up", reply.subject)}
+                          className="text-[10px] px-2 py-1 bg-gold/10 text-gold rounded hover:bg-gold/20 transition disabled:opacity-40">
+                          Send Follow-up
+                        </button>
+                        <button
+                          disabled={!prospect}
+                          onClick={() => prospect && handleReplyQuickAction(prospect, "mark_not_interested")}
+                          className="text-[10px] px-2 py-1 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition disabled:opacity-40">
+                          Mark Not Interested
                         </button>
                       </div>
                     </div>
@@ -1092,50 +1181,70 @@ export default function LeadHunterPage() {
       )}
 
       {/* ═══════════════ TAB 2: ACTIVITY LOG ═══════════════ */}
-      {tab === "activity" && (
-        <div className="space-y-4">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-gold" /> All Prospect Activity
-              <span className="text-xs text-slate-500 font-normal ml-2">{allActivities.length} entries</span>
-            </h3>
-            {allActivities.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">No activity logged yet. Start by logging calls or sending emails to prospects.</p>
-            ) : (
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                {allActivities.map((log, idx) => (
-                  <div key={idx} className="flex items-start gap-3 py-3 border-b border-white/5 last:border-0">
-                    <span className={`mt-0.5 shrink-0 ${
-                      log.type === "Call" ? "text-blue-400" :
-                      log.type === "Email" ? "text-amber-400" :
-                      log.type === "Meeting" ? "text-purple-400" :
-                      "text-slate-400"
-                    }`}>
-                      {log.type === "Call" ? <PhoneCall className="w-4 h-4" /> :
-                       log.type === "Email" ? <Mail className="w-4 h-4" /> :
-                       log.type === "Meeting" ? <Calendar className="w-4 h-4" /> :
-                       <MessageSquare className="w-4 h-4" />}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-slate-500">{formatActivityDate(log.date)}</span>
-                        <span className="text-xs text-slate-600">|</span>
-                        <span className="text-xs font-medium text-white">{log.type}</span>
-                      </div>
-                      <p className="text-sm text-slate-300 mt-0.5">
-                        <span className="text-gold font-medium">{log.customerName}</span>
-                        {log.contactName && <span className="text-slate-500"> ({log.contactName})</span>}
-                        {" — "}{log.notes}
-                      </p>
-                    </div>
-                    <span className="text-xs text-slate-600 shrink-0">{log.by}</span>
-                  </div>
-                ))}
+      {tab === "activity" && (() => {
+        const events = activityFeedData?.events ?? [];
+        const iconFor = (kind: ActivityEvent["kind"]) => {
+          switch (kind) {
+            case "call": return <PhoneCall className="w-4 h-4" />;
+            case "email": return <Mail className="w-4 h-4" />;
+            case "note": return <MessageSquare className="w-4 h-4" />;
+            case "stage_change": return <ArrowRight className="w-4 h-4" />;
+            case "import": return <Upload className="w-4 h-4" />;
+          }
+        };
+        const colorFor = (kind: ActivityEvent["kind"]) => ({
+          call: "text-blue-400",
+          email: "text-amber-400",
+          note: "text-slate-400",
+          stage_change: "text-green-400",
+          import: "text-gold",
+        })[kind];
+        return (
+          <div className="space-y-4">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-gold" /> All Prospect Activity
+                  <span className="text-xs text-slate-500 font-normal ml-2">{events.length} entries</span>
+                </h3>
+                <select value={activityTypeFilter} onChange={(e) => setActivityTypeFilter(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
+                  <option value="" className="bg-[#0F1117]">All Activity</option>
+                  <option value="call" className="bg-[#0F1117]">Calls</option>
+                  <option value="email" className="bg-[#0F1117]">Emails</option>
+                  <option value="note" className="bg-[#0F1117]">Notes</option>
+                  <option value="stage_change" className="bg-[#0F1117]">Stage Changes</option>
+                  <option value="import" className="bg-[#0F1117]">Imports</option>
+                </select>
               </div>
-            )}
+              {events.length === 0 ? (
+                <p className="text-slate-500 text-sm py-8 text-center">No activity yet. Log a call, send an email, or import prospects to see events here.</p>
+              ) : (
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                  {events.map((e) => (
+                    <div key={e.id} className="flex items-start gap-3 py-3 border-b border-white/5 last:border-0">
+                      <span className={`mt-0.5 shrink-0 ${colorFor(e.kind)}`}>{iconFor(e.kind)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-slate-500">{formatActivityDate(e.timestamp)}</span>
+                          <span className="text-xs text-slate-600">|</span>
+                          <span className="text-xs font-medium text-white uppercase tracking-wider">{e.kind.replace("_", " ")}</span>
+                        </div>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                          {e.customerName && <span className="text-gold font-medium">{e.customerName} — </span>}
+                          {e.summary}
+                          {e.detail && e.kind === "stage_change" && <span className="text-slate-500"> ({e.detail})</span>}
+                        </p>
+                      </div>
+                      <span className="text-xs text-slate-600 shrink-0">{e.actor}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ═══════════════ TAB 3: REGIONAL INTELLIGENCE ═══════════════ */}
       {tab === "regions" && (
