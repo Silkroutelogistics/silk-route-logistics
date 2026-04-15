@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -20,7 +20,14 @@ interface Customer {
   industryType: string | null; onboardingStatus: string | null;
 }
 
-interface CustomerStats { totalCustomers: number; activeCustomers: number; totalRevenue: number; totalShipments: number; }
+interface CustomerStats {
+  totalCustomers: number;
+  activeCustomers: number;
+  totalRevenue: number;
+  totalShipments: number;
+  pipeline: { lead: number; contacted: number; qualified: number; proposal: number; won: number };
+  winRate: number;
+}
 interface RegionStat { region: string; states: string[]; loadCount: number; avgRate: number; avgRatePerMile: number; availableCarriers: number; }
 interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: number; loadCount: number; avgTransitDays: number; topEquipment: string; trend: string; }
 
@@ -120,41 +127,48 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 
 /* ─── Helpers ─── */
 
-function getCallLogs(): Record<string, CallLog[]> {
-  try {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("srl-call-logs") : null;
-    return saved ? JSON.parse(saved) : {};
-  } catch { return {}; }
+const STATUS_TO_STAGE: Record<string, PipelineStage> = {
+  Active: "WON",
+  Contacted: "CONTACTED",
+  Qualified: "QUALIFIED",
+  Proposal: "PROPOSAL",
+  Prospect: "LEAD",
+};
+
+function resolveStage(customerStatus: string): PipelineStage {
+  return STATUS_TO_STAGE[customerStatus] || "LEAD";
 }
 
-function getPipelineStages(): Record<string, PipelineStage> {
-  try {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("srl-pipeline-stages") : null;
-    return saved ? JSON.parse(saved) : {};
-  } catch { return {}; }
+interface CommunicationRow {
+  id: string;
+  type: string;
+  entityId: string;
+  subject: string | null;
+  body: string | null;
+  createdAt: string;
+  metadata: { activityType?: string; source?: string } | null;
+  user?: { firstName?: string; lastName?: string } | null;
 }
 
-function savePipelineStages(stages: Record<string, PipelineStage>) {
-  localStorage.setItem("srl-pipeline-stages", JSON.stringify(stages));
-}
+const COMM_TYPE_TO_ACTIVITY: Record<string, string> = {
+  CALL_OUTBOUND: "Call",
+  CALL_INBOUND: "Call",
+  EMAIL_OUTBOUND: "Email",
+  EMAIL_INBOUND: "Email",
+  NOTE: "Note",
+};
 
-function resolveStage(customerId: string, customerStatus: string, pipelineStages: Record<string, PipelineStage>, callLogs: Record<string, CallLog[]>): PipelineStage {
-  // DB-persisted status is the source of truth
-  const STATUS_TO_STAGE: Record<string, PipelineStage> = {
-    Active: "WON",
-    Contacted: "CONTACTED",
-    Qualified: "QUALIFIED",
-    Proposal: "PROPOSAL",
-    Prospect: "LEAD",
+function commToCallLog(c: CommunicationRow): CallLog {
+  const activityType = c.metadata?.activityType || COMM_TYPE_TO_ACTIVITY[c.type] || "Note";
+  const initials = c.user
+    ? `${c.user.firstName?.[0] || ""}${c.user.lastName?.[0] || ""}`.toUpperCase() || "—"
+    : "—";
+  return {
+    date: c.createdAt,
+    type: activityType,
+    notes: c.body || c.subject || "",
+    by: initials,
   };
-  const dbStage = STATUS_TO_STAGE[customerStatus];
-  if (dbStage) return dbStage;
-  // Fallback to localStorage override (legacy)
-  const explicit = pipelineStages[customerId];
-  if (explicit) return explicit;
-  const logs = callLogs[customerId];
-  if (logs && logs.length > 0) return "CONTACTED";
-  return "LEAD";
 }
 
 function daysSince(isoDate: string): number {
@@ -185,8 +199,6 @@ export default function LeadHunterPage() {
   const [laneRegion, setLaneRegion] = useState("");
 
   // Pipeline
-  const [pipelineStages, setPipelineStages] = useState<Record<string, PipelineStage>>({});
-  const [callLogs, setCallLogs] = useState<Record<string, CallLog[]>>({});
   const [showLogForm, setShowLogForm] = useState<string | null>(null);
   const [logForm, setLogForm] = useState({ type: "Call", notes: "" });
   const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set());
@@ -197,7 +209,7 @@ export default function LeadHunterPage() {
   const [showCsvPreview, setShowCsvPreview] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvProgress, setCsvProgress] = useState({ current: 0, total: 0 });
-  const [csvResult, setCsvResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const [csvResult, setCsvResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] } | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Mass Email
@@ -211,12 +223,6 @@ export default function LeadHunterPage() {
   const [emailProgress, setEmailProgress] = useState({ current: 0, total: 0 });
   const [emailResult, setEmailResult] = useState<{ sent: number; failed: number; skipped: number } | null>(null);
   const [emailPrefilter, setEmailPrefilter] = useState<string | null>(null);
-
-  // Load localStorage data
-  useEffect(() => {
-    setCallLogs(getCallLogs());
-    setPipelineStages(getPipelineStages());
-  }, []);
 
   /* ─── Queries ─── */
 
@@ -248,6 +254,13 @@ export default function LeadHunterPage() {
     enabled: tab === "lanes",
   });
 
+  // All SHIPPER activity (calls, emails, notes) — source of truth for Activity Log + Last Contact column
+  const { data: communicationsData } = useQuery({
+    queryKey: ["lead-hunter-communications"],
+    queryFn: () => api.get<{ communications: CommunicationRow[]; total: number }>("/communications?entity_type=SHIPPER&limit=100").then((r) => r.data),
+    refetchInterval: 60000,
+  });
+
   // Inbound replies from Gmail
   const { data: repliesData } = useQuery({
     queryKey: ["lead-hunter-replies"],
@@ -277,14 +290,10 @@ export default function LeadHunterPage() {
 
   const convertMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/customers/${id}`, { status: "Active" }),
-    onSuccess: (_data, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
-      // Update pipeline stage
-      const updated = { ...pipelineStages, [id]: "WON" as PipelineStage };
-      setPipelineStages(updated);
-      savePipelineStages(updated);
       toast("Prospect converted to active customer!", "success");
     },
     onError: () => toast("Failed to convert prospect", "error"),
@@ -296,21 +305,45 @@ export default function LeadHunterPage() {
   // All prospects in the pipeline — show everyone except won/Active customers
   const prospects = allCustomers.filter((c) => c.status !== "Active");
 
-  const getStage = useCallback((c: Customer) => resolveStage(c.id, c.status, pipelineStages, callLogs), [pipelineStages, callLogs]);
+  // Build { customerId: CallLog[] } from the Communication query (server is source of truth)
+  const callLogs = useMemo(() => {
+    const map: Record<string, CallLog[]> = {};
+    for (const c of communicationsData?.communications ?? []) {
+      if (!map[c.entityId]) map[c.entityId] = [];
+      map[c.entityId].push(commToCallLog(c));
+    }
+    return map;
+  }, [communicationsData]);
+
+  const getStage = useCallback((c: Customer) => resolveStage(c.status), []);
 
   const filteredProspects = stageFilter
     ? prospects.filter((c) => getStage(c) === stageFilter)
     : prospects;
 
-  const stageCounts = PIPELINE_STAGES.reduce((acc, s) => {
+  // Server-side pipeline counts (authoritative, not limited by page size).
+  // Fall back to local aggregation over the visible page while stats are loading.
+  const localStageCounts = PIPELINE_STAGES.reduce((acc, s) => {
     acc[s.key] = prospects.filter((c) => getStage(c) === s.key).length;
     return acc;
   }, {} as Record<PipelineStage, number>);
 
+  const stageCounts: Record<PipelineStage, number> = stats?.pipeline
+    ? {
+        LEAD: stats.pipeline.lead,
+        CONTACTED: stats.pipeline.contacted,
+        QUALIFIED: stats.pipeline.qualified,
+        PROPOSAL: stats.pipeline.proposal,
+        WON: stats.pipeline.won,
+      }
+    : localStageCounts;
+
   const contactedCount = stageCounts.CONTACTED + stageCounts.QUALIFIED + stageCounts.PROPOSAL;
-  const winRate = prospects.length > 0
-    ? ((stageCounts.WON / (prospects.length + stageCounts.WON)) * 100).toFixed(1)
-    : "0";
+  const winRate = stats?.winRate != null
+    ? stats.winRate.toFixed(1)
+    : (prospects.length > 0
+      ? ((localStageCounts.WON / (prospects.length + localStageCounts.WON)) * 100).toFixed(1)
+      : "0");
 
   /* ─── Pipeline Stage Update (persists to DB) ─── */
 
@@ -323,22 +356,17 @@ export default function LeadHunterPage() {
   };
 
   const updateStage = (customerId: string, stage: PipelineStage) => {
-    // Persist to DB via Customer.status
     api.patch(`/customers/${customerId}`, { status: STAGE_TO_STATUS[stage] })
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
         queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
       })
       .catch(() => toast("Failed to update stage", "error"));
-    // Also keep local cache for instant UI update
-    const updated = { ...pipelineStages, [customerId]: stage };
-    setPipelineStages(updated);
-    savePipelineStages(updated);
   };
 
   /* ─── Activity Log (persists to Communication table) ─── */
 
-  const saveCallLog = (customerId: string) => {
+  const saveCallLog = async (customerId: string) => {
     if (!logForm.notes.trim()) return;
 
     const typeMap: Record<string, string> = {
@@ -348,42 +376,34 @@ export default function LeadHunterPage() {
       Note: "NOTE",
     };
 
-    // Persist to DB via Communication table
-    api.post("/communications", {
-      type: typeMap[logForm.type] || "NOTE",
-      direction: logForm.type === "Call" ? "OUTBOUND" : null,
-      entityType: "SHIPPER",
-      entityId: customerId,
-      body: logForm.notes.trim(),
-      subject: `${logForm.type}: ${logForm.notes.trim().substring(0, 60)}`,
-      metadata: { source: "LeadHunter", activityType: logForm.type },
-    }).catch(() => toast("Failed to save activity to server", "error"));
+    try {
+      await api.post("/communications", {
+        type: typeMap[logForm.type] || "NOTE",
+        direction: logForm.type === "Call" ? "OUTBOUND" : null,
+        entityType: "SHIPPER",
+        entityId: customerId,
+        body: logForm.notes.trim(),
+        subject: `${logForm.type}: ${logForm.notes.trim().substring(0, 60)}`,
+        metadata: { source: "LeadHunter", activityType: logForm.type },
+      });
+      queryClient.invalidateQueries({ queryKey: ["lead-hunter-communications"] });
+    } catch {
+      toast("Failed to save activity", "error");
+      return;
+    }
 
-    // Also keep in localStorage for instant UI (legacy compat)
-    const newLog: CallLog = {
-      date: new Date().toISOString(),
-      type: logForm.type,
-      notes: logForm.notes.trim(),
-      by: "WH",
-    };
-    const updated = {
-      ...callLogs,
-      [customerId]: [newLog, ...(callLogs[customerId] || [])],
-    };
-    setCallLogs(updated);
-    localStorage.setItem("srl-call-logs", JSON.stringify(updated));
     setLogForm({ type: "Call", notes: "" });
     setShowLogForm(null);
 
     // Auto-advance stage if still LEAD
-    const currentStage = resolveStage(customerId, "Prospect", pipelineStages, updated);
-    if (currentStage === "LEAD" || !pipelineStages[customerId]) {
+    const customer = allCustomers.find((c) => c.id === customerId);
+    if (customer && resolveStage(customer.status) === "LEAD") {
       updateStage(customerId, "CONTACTED");
     }
     toast("Activity logged", "success");
   };
 
-  // All activities across prospects, sorted by date
+  // All activities across prospects, sorted by date (server-sourced)
   const allActivities = Object.entries(callLogs)
     .flatMap(([custId, logs]) => {
       const customer = allCustomers.find((c) => c.id === custId);
@@ -446,7 +466,7 @@ export default function LeadHunterPage() {
       queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
-      setCsvResult({ created: 0, skipped: 0, errors: [error?.response?.data?.error || "Import failed"] });
+      setCsvResult({ created: 0, updated: 0, skipped: 0, errors: [error?.response?.data?.error || "Import failed"] });
     } finally {
       setCsvImporting(false);
     }
@@ -512,12 +532,16 @@ export default function LeadHunterPage() {
       setEmailProgress({ current: ids.length, total: ids.length });
       setEmailResult(res.data);
 
-      // Auto-advance emailed prospects to CONTACTED
-      ids.forEach((id) => {
-        if (!pipelineStages[id] || pipelineStages[id] === "LEAD") {
-          updateStage(id, "CONTACTED");
-        }
+      // Auto-advance any prospect still in LEAD stage to CONTACTED
+      const leadIds = ids.filter((id) => {
+        const c = allCustomers.find((x) => x.id === id);
+        return c && resolveStage(c.status) === "LEAD";
       });
+      if (leadIds.length > 0) {
+        await api.patch("/customers/bulk-stage", { ids: leadIds, status: "Contacted" }).catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
+        queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+      }
       toast(`Email sent to ${res.data.sent} prospect${res.data.sent !== 1 ? "s" : ""}`, "success");
     } catch {
       setEmailResult({ sent: 0, failed: ids.length, skipped: 0 });
@@ -528,13 +552,21 @@ export default function LeadHunterPage() {
 
   /* ─── Bulk Actions ─── */
 
-  const handleBulkStageChange = (stage: PipelineStage) => {
-    const updated = { ...pipelineStages };
-    selectedProspects.forEach((id) => { updated[id] = stage; });
-    setPipelineStages(updated);
-    savePipelineStages(updated);
-    setSelectedProspects(new Set());
-    toast(`${selectedProspects.size} prospect${selectedProspects.size !== 1 ? "s" : ""} moved to ${stage}`, "success");
+  const handleBulkStageChange = async (stage: PipelineStage) => {
+    const ids = Array.from(selectedProspects);
+    if (ids.length === 0) return;
+    try {
+      const res = await api.patch<{ updated: number; changed: number }>("/customers/bulk-stage", {
+        ids,
+        status: STAGE_TO_STATUS[stage],
+      });
+      queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+      setSelectedProspects(new Set());
+      toast(`${res.data.updated} prospect${res.data.updated !== 1 ? "s" : ""} moved to ${stage}`, "success");
+    } catch {
+      toast("Failed to update stages", "error");
+    }
   };
 
   const handleBulkEmail = () => {
@@ -1395,8 +1427,9 @@ export default function LeadHunterPage() {
               {csvResult ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-sm">
-                    <span className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 font-medium">{csvResult.created} imported as prospects</span>
-                    {csvResult.skipped > 0 && <span className="px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 font-medium">{csvResult.skipped} skipped (duplicates)</span>}
+                    <span className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 font-medium">{csvResult.created} new prospects</span>
+                    {csvResult.updated > 0 && <span className="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-medium">{csvResult.updated} updated</span>}
+                    {csvResult.skipped > 0 && <span className="px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 font-medium">{csvResult.skipped} unchanged</span>}
                     {csvResult.errors.length > 0 && <span className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 font-medium">{csvResult.errors.length} failed</span>}
                   </div>
                   {csvResult.errors.length > 0 && (

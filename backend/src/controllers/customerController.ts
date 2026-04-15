@@ -111,18 +111,40 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
 }
 
 export async function getCustomerStats(req: AuthRequest, res: Response) {
-  const [total, active, revenue, shipments] = await Promise.all([
+  const [total, active, revenue, shipments, stageGroups] = await Promise.all([
     prisma.customer.count({ where: { deletedAt: null } }),
     prisma.customer.count({ where: { status: "Active", deletedAt: null } }),
     prisma.shipment.aggregate({ _sum: { rate: true } }),
     prisma.shipment.count(),
+    prisma.customer.groupBy({
+      by: ["status"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
   ]);
+
+  const pipeline = { lead: 0, contacted: 0, qualified: 0, proposal: 0, won: 0 };
+  for (const g of stageGroups) {
+    const n = g._count._all;
+    switch (g.status) {
+      case "Prospect": pipeline.lead += n; break;
+      case "Contacted": pipeline.contacted += n; break;
+      case "Qualified": pipeline.qualified += n; break;
+      case "Proposal": pipeline.proposal += n; break;
+      case "Active": pipeline.won += n; break;
+    }
+  }
+
+  const wonPlusLost = pipeline.won + pipeline.lead + pipeline.contacted + pipeline.qualified + pipeline.proposal;
+  const winRate = wonPlusLost > 0 ? (pipeline.won / wonPlusLost) * 100 : 0;
 
   res.json({
     totalCustomers: total,
     activeCustomers: active,
     totalRevenue: revenue._sum.rate || 0,
     totalShipments: shipments,
+    pipeline,
+    winRate,
   });
 }
 
@@ -130,6 +152,52 @@ export async function updateCustomer(req: AuthRequest, res: Response) {
   const data = updateCustomerSchema.parse(req.body);
   const customer = await prisma.customer.update({ where: { id: req.params.id }, data: data as any });
   res.json(customer);
+}
+
+const VALID_PIPELINE_STATUSES = ["Prospect", "Contacted", "Qualified", "Proposal", "Active"] as const;
+
+const bulkStageSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, "ids array is required"),
+  status: z.enum(VALID_PIPELINE_STATUSES),
+});
+
+export async function bulkUpdateStage(req: AuthRequest, res: Response) {
+  const { ids, status } = bulkStageSchema.parse(req.body);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.customer.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: { id: true, status: true },
+    });
+
+    if (existing.length === 0) return { updated: 0, transitions: [] as { id: string; from: string; to: string }[] };
+
+    const update = await tx.customer.updateMany({
+      where: { id: { in: existing.map((c) => c.id) } },
+      data: { status },
+    });
+
+    // Log transitions for audit trail (CLAUDE.md rule 12)
+    const transitions = existing
+      .filter((c) => c.status !== status)
+      .map((c) => ({ id: c.id, from: c.status, to: status }));
+
+    if (transitions.length > 0) {
+      await tx.systemLog.createMany({
+        data: transitions.map((t) => ({
+          logType: "STATUS_CHANGE" as const,
+          severity: "INFO" as const,
+          source: "LeadHunter.bulkUpdateStage",
+          message: `Customer ${t.id}: ${t.from} → ${t.to}`,
+          details: { customerId: t.id, from: t.from, to: t.to, actor: req.user!.email || req.user!.id },
+        })),
+      });
+    }
+
+    return { updated: update.count, transitions };
+  });
+
+  res.json({ updated: result.updated, changed: result.transitions.length });
 }
 
 export async function deleteCustomer(req: AuthRequest, res: Response) {
@@ -398,62 +466,84 @@ export async function bulkCreateCustomers(req: AuthRequest, res: Response) {
     return;
   }
 
-  // Get existing customer names for duplicate detection
-  const existingNames = new Set(
-    (await prisma.customer.findMany({
-      where: { deletedAt: null },
-      select: { name: true },
-    })).map((c) => c.name.toLowerCase().trim())
-  );
+  // Index existing customers by normalized email (primary key) and by name (fallback for rows with no email)
+  const existingRows = await prisma.customer.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true, email: true },
+  });
+  const byEmail = new Map<string, string>();
+  const byName = new Map<string, string>();
+  for (const row of existingRows) {
+    if (row.email) byEmail.set(row.email.toLowerCase().trim(), row.id);
+    byName.set(row.name.toLowerCase().trim(), row.id);
+  }
 
   let created = 0;
+  let updated = 0;
   let skipped = 0;
   const errors: string[] = [];
 
   for (const row of customers) {
-    if (!row.name || !row.name.trim()) {
+    const name = row.name?.trim();
+    if (!name) {
       errors.push("Skipped row with empty company name");
       continue;
     }
+    const email = row.email?.trim().toLowerCase() || null;
 
-    if (existingNames.has(row.name.toLowerCase().trim())) {
-      skipped++;
-      continue;
-    }
+    // Prefer email match; fall back to name match only when row has no email
+    const existingId = email ? byEmail.get(email) : byName.get(name.toLowerCase());
 
     try {
-      const customer = await prisma.customer.create({
-        data: {
-          name: row.name.trim(),
-          contactName: row.contactName || null,
-          email: row.email || null,
-          phone: row.phone || null,
-          city: row.city || null,
-          state: row.state || null,
-          type: row.type || "SHIPPER",
-          industryType: row.industryType || null,
-          status: "Prospect",
-        } as any,
-      });
+      if (existingId) {
+        // Update only non-empty fields so the import never erases existing data
+        const patch: Record<string, unknown> = {};
+        if (row.contactName) patch.contactName = row.contactName;
+        if (row.phone) patch.phone = row.phone;
+        if (row.city) patch.city = row.city;
+        if (row.state) patch.state = row.state;
+        if (row.industryType) patch.industryType = row.industryType;
+        if (email) patch.email = email;
+        if (Object.keys(patch).length === 0) {
+          skipped++;
+          continue;
+        }
+        await prisma.customer.update({ where: { id: existingId }, data: patch });
+        updated++;
+      } else {
+        const customer = await prisma.customer.create({
+          data: {
+            name,
+            contactName: row.contactName || null,
+            email: email,
+            phone: row.phone || null,
+            city: row.city || null,
+            state: row.state || null,
+            type: row.type || "SHIPPER",
+            industryType: row.industryType || null,
+            status: "Prospect",
+          } as any,
+        });
 
-      // Auto-initialize ShipperCredit
-      await prisma.shipperCredit.create({
-        data: {
-          customerId: customer.id,
-          creditLimit: 50000,
-          creditGrade: "B",
-          paymentTerms: "NET30",
-        },
-      }).catch(() => {});
+        await prisma.shipperCredit.create({
+          data: {
+            customerId: customer.id,
+            creditLimit: 50000,
+            creditGrade: "B",
+            paymentTerms: "NET30",
+          },
+        }).catch(() => {});
 
-      existingNames.add(row.name.toLowerCase().trim());
-      created++;
+        if (email) byEmail.set(email, customer.id);
+        byName.set(name.toLowerCase(), customer.id);
+        created++;
+      }
     } catch (err: any) {
-      errors.push(`Failed to create "${row.name}": ${err.message || "Unknown error"}`);
+      errors.push(`Failed to upsert "${name}": ${err.message || "Unknown error"}`);
     }
   }
 
-  res.status(201).json({ created, skipped, errors });
+  res.status(201).json({ created, updated, skipped, errors });
 }
 
 export async function updateCustomerCredit(req: AuthRequest, res: Response) {

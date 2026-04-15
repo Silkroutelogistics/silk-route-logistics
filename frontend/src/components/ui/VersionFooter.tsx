@@ -9,7 +9,7 @@
 //          Carrier Call Log, Shipper Defaults, Fuel Tables, Geo Heatmaps, Variance Reports,
 //          Tagging Engine, PO/SKU Tracking, Backhaul Discovery, Calendar View, GL Codes
 
-export const SRL_VERSION = "3.5.d";
+export const SRL_VERSION = "3.5.e";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
