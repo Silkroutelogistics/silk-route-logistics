@@ -194,12 +194,50 @@ export function calculateEngagementScore(metadata: any, currentStep: number, rep
 
 /**
  * Get engagement level label from score.
+ * Updated v3.6.c: factors in tracking signals from Communication metadata.
+ *
+ * HOT: Replied with positive intent OR opened 3+ times AND clicked 1+ link
+ * WARM: Opened 1-2 times, no reply, no click OR replied neutral
+ * COLD: Never opened after 48h OR replied negative/DNC
  */
 export function getEngagementLevel(score: number): string {
   if (score >= 60) return "HOT";
   if (score >= 30) return "WARM";
   if (score >= 10) return "COOL";
   return "COLD";
+}
+
+/**
+ * Classify intent from Communication metadata (v3.6.c tracking).
+ * Used by the Replies tab and Queue to show Hot/Warm/Cold badges.
+ */
+export function classifyIntent(params: {
+  hasReplied: boolean;
+  replyIntent?: string;
+  openCount: number;
+  clickCount: number;
+  hoursSinceSent: number;
+}): "HOT" | "WARM" | "COLD" {
+  const { hasReplied, replyIntent, openCount, clickCount, hoursSinceSent } = params;
+
+  // Positive reply = always hot
+  if (hasReplied && replyIntent === "INTERESTED") return "HOT";
+
+  // Opened 3+ times and clicked = hot (engaged but hasn't replied)
+  if (openCount >= 3 && clickCount >= 1 && !hasReplied) return "HOT";
+
+  // Neutral reply or some engagement = warm
+  if (hasReplied && replyIntent === "NEUTRAL") return "WARM";
+  if (openCount >= 1 && !hasReplied) return "WARM";
+
+  // Negative reply or DNC = cold
+  if (hasReplied && (replyIntent === "OBJECTION" || replyIntent === "UNSUBSCRIBE")) return "COLD";
+
+  // Never opened after 48h = cold
+  if (hoursSinceSent > 48 && openCount === 0) return "COLD";
+
+  // Default: warm (too early to tell)
+  return "WARM";
 }
 
 /**
@@ -384,25 +422,9 @@ export async function checkProspectStageChange(prospectId: string, newStatus: st
   }
 }
 
-/** Wasih's email signature — matches Gmail signature */
-const EMAIL_SIGNATURE = `
-<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px">
-  <tr>
-    <td style="padding-right:14px;vertical-align:top">
-      <img src="https://silkroutelogistics.ai/logo-penguin.gif" alt="SRL" width="48" height="48" style="border-radius:8px" />
-    </td>
-    <td style="vertical-align:top;font-size:13px;line-height:1.5">
-      <strong style="font-size:14px;color:#0f172a">Wasih Haider</strong><br>
-      Founder & CEO<br>
-      Silk Route Logistics Inc.<br>
-      <span style="color:#64748b">MC# 01794414 | DOT# 4526880</span><br>
-      <a href="tel:+12692206760" style="color:#C8963E;text-decoration:none">(269) 220-6760</a><br>
-      <a href="mailto:whaider@silkroutelogistics.ai" style="color:#C8963E;text-decoration:none">whaider@silkroutelogistics.ai</a>
-      &nbsp;|&nbsp;
-      <a href="https://silkroutelogistics.ai" style="color:#C8963E;text-decoration:none">silkroutelogistics.ai</a>
-    </td>
-  </tr>
-</table>`;
+/** Wasih's email signature — loaded from backend/src/config/signatures/whaider.html */
+import { GMAIL_SIGNATURE } from "../email/builder";
+const EMAIL_SIGNATURE = GMAIL_SIGNATURE;
 
 /**
  * Build personal-style email for prospect outreach.

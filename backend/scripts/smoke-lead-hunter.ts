@@ -420,7 +420,102 @@ async function main() {
   });
   assert(backfilled >= 0, `migration backfill query runs without error (count: ${backfilled})`);
 
-  console.log("\n✅ All Lead Hunter smoke tests passed\n");
+  // ═══════════════════════════════════════════════════════════════
+  // v3.6.c Tests — Email Builder, Sequences, Queue, Tracking
+  // ═══════════════════════════════════════════════════════════════
+
+  // ─── Test 14: Email builder produces plain-text body + Gmail signature ──
+  console.log("\n14. buildEmailSync — plain-text body + Gmail signature (no brand chrome)");
+  const { buildEmailSync, GMAIL_SIGNATURE } = require("../src/email/builder");
+
+  const built = buildEmailSync({
+    firstName: "Angel",
+    email: "angel@example.com",
+    touchNumber: 1,
+    hook: "e2open recently joining WiseTech Global",
+    relevance: "your roles in Holland involve physical freight coordination",
+    cluster: "General Manufacturing",
+  });
+  assert(built.subject === "Quick Intro from a Michigan Brokerage", `Touch 1 subject correct`);
+  assert(built.bodyPlainText.includes("Morning Angel"), `Body starts with first-name greeting`);
+  assert(built.bodyPlainText.includes("e2open recently joining WiseTech Global"), `Body includes personalized hook`);
+  assert(!built.bodyHtml.includes("Silk Route Logistics Inc.") || built.bodyHtml.includes("Where Trust Travels"), `HTML includes Gmail signature`);
+  assert(!built.bodyHtml.includes('background:#0f172a'), `No navy header bar in HTML`);
+  assert(!built.bodyHtml.includes('Silk Route Logistics &bull;'), `No marketing footer in HTML`);
+  assert(GMAIL_SIGNATURE.includes("SIG_START"), `Signature has SIG_START marker`);
+  assert(GMAIL_SIGNATURE.includes("SIG_END"), `Signature has SIG_END marker`);
+  assert(GMAIL_SIGNATURE.includes("Where Trust Travels"), `Real Gmail signature loaded`);
+
+  // Touch 2-6 templates
+  for (let t = 2; t <= 6; t++) {
+    const touchBuilt = buildEmailSync({ firstName: "Test", email: "test@example.com", touchNumber: t });
+    assert(touchBuilt.subject.length > 0, `Touch ${t} has a subject`);
+    assert(touchBuilt.bodyPlainText.length > 50, `Touch ${t} has body text`);
+    assert(touchBuilt.templateAngle.length > 0, `Touch ${t} has angle: ${touchBuilt.templateAngle}`);
+  }
+
+  // ─── Test 15: Customer sequence fields exist after migration ────────
+  console.log("\n15. Customer model — sequence fields exist");
+  const testCustomer = await prisma.customer.findFirst({ where: { id: allIds[0] } });
+  assert(testCustomer !== null, `test customer found`);
+  assert("sequenceStatus" in testCustomer!, `sequenceStatus field exists`);
+  assert("currentTouch" in testCustomer!, `currentTouch field exists`);
+  assert("nextTouchDueAt" in testCustomer!, `nextTouchDueAt field exists`);
+  assert("personalizedHook" in testCustomer!, `personalizedHook field exists`);
+  assert("personalizedRelevance" in testCustomer!, `personalizedRelevance field exists`);
+
+  // Set sequence state for queue test
+  await prisma.customer.update({
+    where: { id: allIds[0] },
+    data: {
+      sequenceStatus: "ACTIVE",
+      currentTouch: 1,
+      lastTouchSentAt: new Date(Date.now() - 5 * 86_400_000),
+      nextTouchDueAt: new Date(Date.now() - 86_400_000), // overdue
+      sequenceCluster: "General Manufacturing",
+    },
+  });
+  await prisma.customer.update({
+    where: { id: allIds[1] },
+    data: {
+      sequenceStatus: "ACTIVE",
+      currentTouch: 2,
+      lastTouchSentAt: new Date(Date.now() - 3 * 86_400_000),
+      nextTouchDueAt: new Date(), // today
+      sequenceCluster: "Food Manufacturing",
+    },
+  });
+
+  // ─── Test 16: Engagement scoring (v3.6.c) ─────────────────────────
+  console.log("\n16. classifyIntent — Hot/Warm/Cold based on tracking signals");
+  const { classifyIntent } = require("../src/services/emailSequenceService");
+
+  assert(
+    classifyIntent({ hasReplied: true, replyIntent: "INTERESTED", openCount: 2, clickCount: 0, hoursSinceSent: 24 }) === "HOT",
+    `Positive reply = HOT`,
+  );
+  assert(
+    classifyIntent({ hasReplied: false, openCount: 5, clickCount: 2, hoursSinceSent: 48 }) === "HOT",
+    `3+ opens + clicks = HOT`,
+  );
+  assert(
+    classifyIntent({ hasReplied: false, openCount: 1, clickCount: 0, hoursSinceSent: 24 }) === "WARM",
+    `1 open, no reply = WARM`,
+  );
+  assert(
+    classifyIntent({ hasReplied: true, replyIntent: "NEUTRAL", openCount: 1, clickCount: 0, hoursSinceSent: 48 }) === "WARM",
+    `Neutral reply = WARM`,
+  );
+  assert(
+    classifyIntent({ hasReplied: false, openCount: 0, clickCount: 0, hoursSinceSent: 72 }) === "COLD",
+    `No opens after 48h = COLD`,
+  );
+  assert(
+    classifyIntent({ hasReplied: true, replyIntent: "UNSUBSCRIBE", openCount: 1, clickCount: 0, hoursSinceSent: 48 }) === "COLD",
+    `Unsubscribe = COLD`,
+  );
+
+  console.log("\n✅ All Lead Hunter smoke tests passed (including v3.6.c)\n");
 
   if (!keep) {
     console.log("── cleanup ──");

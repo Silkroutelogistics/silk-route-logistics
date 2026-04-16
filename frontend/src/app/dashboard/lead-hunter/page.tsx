@@ -9,6 +9,7 @@ import {
   TrendingUp, Mail, Crosshair, Map, Route,
   Upload, Send, Loader2, CheckCircle2, PhoneCall, MessageSquare,
   AlertTriangle, ArrowRight, Filter, BarChart3, ChevronRight, Eye,
+  Inbox, Clock, SkipForward, Pause, Play, MousePointerClick,
 } from "lucide-react";
 import { ProspectDrawer } from "./ProspectDrawer";
 
@@ -34,7 +35,7 @@ interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: 
 
 interface CallLog { date: string; type: string; notes: string; by: string; }
 type PipelineStage = "LEAD" | "CONTACTED" | "QUALIFIED" | "PROPOSAL" | "WON";
-type Tab = "pipeline" | "replies" | "activity" | "regions" | "lanes";
+type Tab = "pipeline" | "replies" | "queue" | "activity" | "regions" | "lanes";
 
 interface Reply {
   id: string;
@@ -59,6 +60,20 @@ interface ActiveSequence {
   metadata?: { engagementScore?: number; opens?: number; clicks?: number };
   nextSendAt: string | null;
   createdAt: string;
+}
+
+interface QueueProspect {
+  id: string; name: string; contactName: string | null; email: string | null;
+  industryType: string | null; currentTouch: number | null; nextTouchDueAt: string | null;
+  lastTouchSentAt: string | null; sequenceStatus: string | null; sequenceCluster: string | null;
+  drafts: { id: string; subject: string | null; metadata: Record<string, unknown> | null; createdAt: string }[];
+}
+interface QueueData {
+  counts: { overdue: number; today: number; tomorrow: number; thisWeek: number };
+  overdue: QueueProspect[]; today: QueueProspect[]; tomorrow: QueueProspect[]; thisWeek: QueueProspect[];
+}
+interface EngagementStats {
+  totalSent: number; uniqueOpens: number; openRate: number; replyRate: number; totalClicks: number; replies: number;
 }
 
 const INTENT_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -307,6 +322,19 @@ export default function LeadHunterPage() {
     queryFn: () => api.get<{ sequences: ActiveSequence[] }>("/automation/sequences?status=ACTIVE&limit=50").then((r) => r.data),
   });
 
+  // Follow-up Queue (v3.6.c)
+  const { data: queueData } = useQuery({
+    queryKey: ["sequence-queue"],
+    queryFn: () => api.get<QueueData>("/sequences/queue").then((r) => r.data),
+    refetchInterval: 60000,
+  });
+
+  // Engagement stats (v3.6.c)
+  const { data: engagementStats } = useQuery({
+    queryKey: ["engagement-stats"],
+    queryFn: () => api.get<EngagementStats>("/email-tracking/engagement-stats").then((r) => r.data),
+  });
+
   /* ─── Mutations ─── */
 
   const createMutation = useMutation({
@@ -508,8 +536,14 @@ export default function LeadHunterPage() {
       const progressInterval = setInterval(() => {
         setEmailProgress((p) => ({ ...p, current: Math.min(p.current + 1, p.total - 1) }));
       }, 600);
+      // Map legacy template types to touch numbers for new builder
+      const touchMap: Record<string, number> = { INTRO: 1, FOLLOW_UP: 2, CAPACITY: 1, CUSTOM: 1 };
       const res = await api.post<{ sent: number; failed: number; skipped: number }>("/customers/mass-email", {
         customerIds: ids,
+        touchNumber: touchMap[emailTemplate] || 1,
+        subjectOverride: emailSubject,
+        bodyOverride: emailTemplate === "CUSTOM" ? emailBody : undefined,
+        // Legacy fields for backward compat
         subject: emailSubject,
         body: emailTemplate === "CUSTOM" ? emailBody : undefined,
         templateType: emailTemplate,
@@ -664,9 +698,12 @@ export default function LeadHunterPage() {
     return acc;
   }, {} as Record<string, Reply>);
 
+  const queueBadge = (queueData?.counts.overdue ?? 0) + (queueData?.counts.today ?? 0);
+
   const tabs: { key: Tab; label: string; icon: typeof Target; badge?: number }[] = [
     { key: "pipeline", label: "Pipeline", icon: Crosshair },
     { key: "replies", label: "Replies", icon: Mail, badge: hotReplies > 0 ? hotReplies : undefined },
+    { key: "queue", label: "Queue", icon: Inbox, badge: queueBadge > 0 ? queueBadge : undefined },
     { key: "activity", label: "Activity Log", icon: MessageSquare },
     { key: "regions", label: "Regional Intelligence", icon: Map },
     { key: "lanes", label: "Lane Opportunities", icon: Route },
@@ -716,7 +753,7 @@ export default function LeadHunterPage() {
       </div>
 
       {/* ─── KPI Cards — click to filter ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {([
           { label: "Total Leads", value: stageCounts.LEAD, icon: Users, color: "text-slate-300",
             onClick: () => { setTab("pipeline"); setStageFilter(stageFilter === "LEAD" ? "" : "LEAD"); },
@@ -736,7 +773,10 @@ export default function LeadHunterPage() {
           { label: "Hot Replies", value: hotReplies, icon: Mail, color: "text-green-400",
             onClick: () => setTab("replies"),
             active: tab === "replies" },
-          { label: "Active Sequences", value: activeSequences.length, icon: Send, color: "text-gold",
+          { label: "Open Rate", value: `${engagementStats?.openRate ?? 0}%`, icon: Eye, color: "text-blue-400",
+            onClick: () => { setTab("pipeline"); /* filter to opened no reply */ },
+            active: false },
+          { label: "Reply Rate", value: `${engagementStats?.replyRate ?? 0}%`, icon: MousePointerClick, color: "text-green-400",
             onClick: () => setTab("replies"),
             active: false },
         ] as const).map((kpi) => (
@@ -1051,6 +1091,135 @@ export default function LeadHunterPage() {
         </div>
       )}
 
+      {/* ═══════════════ TAB: FOLLOW-UP QUEUE (v3.6.c) ═══════════════ */}
+      {tab === "queue" && (
+        <div className="space-y-4">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {([
+              { label: "Overdue", count: queueData?.counts.overdue ?? 0, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+              { label: "Today", count: queueData?.counts.today ?? 0, color: "text-gold", bg: "bg-gold/10 border-gold/20" },
+              { label: "Tomorrow", count: queueData?.counts.tomorrow ?? 0, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+              { label: "This Week", count: queueData?.counts.thisWeek ?? 0, color: "text-slate-300", bg: "bg-white/5 border-white/10" },
+            ] as const).map((card) => (
+              <div key={card.label} className={`rounded-xl border p-4 ${card.bg}`}>
+                <p className="text-xs text-slate-500">{card.label}</p>
+                <p className={`text-2xl font-bold ${card.color} mt-1`}>{card.count}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Queue List */}
+          {(() => {
+            const allQueue = [
+              ...(queueData?.overdue ?? []).map((c) => ({ ...c, bucket: "overdue" as const })),
+              ...(queueData?.today ?? []).map((c) => ({ ...c, bucket: "today" as const })),
+              ...(queueData?.tomorrow ?? []).map((c) => ({ ...c, bucket: "tomorrow" as const })),
+              ...(queueData?.thisWeek ?? []).map((c) => ({ ...c, bucket: "thisWeek" as const })),
+            ];
+
+            if (allQueue.length === 0) {
+              return (
+                <div className="text-center py-16">
+                  <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-white font-medium">Inbox Zero</p>
+                  <p className="text-slate-500 text-sm mt-1">No follow-ups due today.{" "}
+                    <button onClick={() => setTab("pipeline")} className="text-gold hover:underline">Go to Pipeline</button>
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-500 text-xs uppercase border-b border-white/10">
+                      <th className="px-4 py-3">Prospect</th>
+                      <th className="px-4 py-3">Company</th>
+                      <th className="px-4 py-3">Current</th>
+                      <th className="px-4 py-3">Next Touch</th>
+                      <th className="px-4 py-3">Due</th>
+                      <th className="px-4 py-3">Days Silent</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allQueue.map((item) => {
+                      const nextTouch = (item.currentTouch ?? 0) + 1;
+                      const silentDays = item.lastTouchSentAt ? daysSince(item.lastTouchSentAt) : null;
+                      const bucketColors = { overdue: "text-red-400", today: "text-gold", tomorrow: "text-blue-400", thisWeek: "text-slate-400" };
+                      const hasDraft = item.drafts.length > 0;
+
+                      return (
+                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="px-4 py-3">
+                            <button onClick={() => setDrawerProspectId(item.id)} className="text-white hover:text-gold font-medium">
+                              {item.contactName || item.name}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-slate-400">{item.name}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gold/20 text-gold">
+                              Touch {item.currentTouch ?? 0}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+                              Touch {nextTouch}
+                            </span>
+                            {hasDraft && <span className="ml-1.5 text-[10px] text-green-400">(draft ready)</span>}
+                          </td>
+                          <td className={`px-4 py-3 font-medium ${bucketColors[item.bucket]}`}>
+                            {item.nextTouchDueAt ? new Date(item.nextTouchDueAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-400">
+                            {silentDays !== null ? `${silentDays}d` : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setDrawerProspectId(item.id)}
+                                className="px-2.5 py-1 text-xs font-medium text-gold bg-gold/10 rounded hover:bg-gold/20"
+                                title="Review & Send"
+                              >
+                                <Send className="w-3 h-3 inline mr-1" />Review
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  await api.post("/sequences/skip-touch", { customerId: item.id });
+                                  queryClient.invalidateQueries({ queryKey: ["sequence-queue"] });
+                                  toast(`Skipped touch ${item.currentTouch ?? 0} for ${item.name}`, "success");
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded"
+                                title="Skip this touch"
+                              >
+                                <SkipForward className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  await api.post("/sequences/pause", { customerId: item.id, action: "PAUSE" });
+                                  queryClient.invalidateQueries({ queryKey: ["sequence-queue"] });
+                                  toast(`Paused sequence for ${item.name}`, "success");
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 rounded"
+                                title="Pause sequence"
+                              >
+                                <Pause className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* ═══════════════ TAB 2: ACTIVITY LOG ═══════════════ */}
       {tab === "activity" && (() => {
         const allEvents = activityFeedData?.events ?? [];
@@ -1309,8 +1478,8 @@ export default function LeadHunterPage() {
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>
-                <h2 className="text-lg font-bold text-white">Send Email Campaign</h2>
-                <p className="text-sm text-slate-400 mt-0.5">Send branded emails to prospects</p>
+                <h2 className="text-lg font-bold text-white">Send Outreach</h2>
+                <p className="text-sm text-slate-400 mt-0.5">Send initial outreach to Lead-stage prospects. For follow-ups to contacted prospects, use the Queue view.</p>
               </div>
               <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -1396,23 +1565,17 @@ export default function LeadHunterPage() {
                     </div>
                   )}
 
-                  {/* Preview */}
+                  {/* Preview — Gmail-style (white bg, plain text, real signature, no brand chrome) */}
                   {emailTemplate !== "CUSTOM" && (
                     <div>
                       <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
-                        <Eye className="w-3.5 h-3.5" /> Preview
+                        <Eye className="w-3.5 h-3.5" /> Preview (as recipient sees it in Gmail)
                       </label>
-                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
-                        <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
-                          <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
-                        </div>
-                        <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
+                      <div className="bg-white rounded-lg border border-slate-200 p-5">
+                        <div className="text-sm text-gray-800 leading-relaxed [&_p]:mb-3"
                           dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATES[emailTemplate].preview(
                             (() => { const p = prospects.find((c) => selectedRecipients.has(c.id)); return (p?.contactName || p?.name || "").split(/\s+/)[0] || "there"; })()
                           ) }} />
-                        <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
-                          Silk Route Logistics &bull; silkroutelogistics.ai
-                        </div>
                       </div>
                     </div>
                   )}
@@ -1422,15 +1585,9 @@ export default function LeadHunterPage() {
                       <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
                         <Eye className="w-3.5 h-3.5" /> Preview
                       </label>
-                      <div className="bg-white rounded-lg border border-white/10 overflow-hidden">
-                        <div style={{ background: "#0f172a", padding: "16px", textAlign: "center", borderBottom: "3px solid #d4a574" }}>
-                          <h3 style={{ color: "#d4a574", margin: 0, fontFamily: "Georgia, serif", fontSize: "18px" }}>Silk Route Logistics</h3>
-                        </div>
-                        <div className="p-4 text-sm text-gray-700 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-3 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:pl-5 [&_li]:mb-1 [&_ul]:list-disc"
+                      <div className="bg-white rounded-lg border border-slate-200 p-5">
+                        <div className="text-sm text-gray-800 leading-relaxed [&_p]:mb-3"
                           dangerouslySetInnerHTML={{ __html: emailBody.replace(/\{contactName\}/g, "{contactName}") }} />
-                        <div style={{ background: "#1e293b", padding: "12px", textAlign: "center", fontSize: "11px", color: "#94a3b8" }}>
-                          Silk Route Logistics &bull; silkroutelogistics.ai
-                        </div>
                       </div>
                     </div>
                   )}

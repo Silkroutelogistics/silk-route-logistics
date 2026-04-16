@@ -1873,6 +1873,22 @@ model Customer {
   origins            Json?
   destinations       Json?
 
+  // Lead Hunter — Personalization (v3.6.c)
+  personalizedHook      String?   @map("personalized_hook")
+  personalizedRelevance String?   @map("personalized_relevance")
+  researchedAt          DateTime? @map("researched_at")
+  researchNotes         String?   @map("research_notes") @db.Text
+
+  // Lead Hunter — Sequence State (v3.6.c)
+  sequenceStatus  String?   @map("sequence_status")    // ACTIVE | PAUSED | STOPPED | COMPLETED
+  currentTouch    Int?      @map("current_touch")
+  lastTouchSentAt DateTime? @map("last_touch_sent_at")
+  nextTouchDueAt  DateTime? @map("next_touch_due_at")
+  sequenceCluster String?   @map("sequence_cluster")
+
+  // Lead Hunter — Tracking metadata (v3.6.c)
+  lastResendEmailId String? @map("last_resend_email_id")
+
   // Billing
   billingContactName  String?
   billingContactEmail String?

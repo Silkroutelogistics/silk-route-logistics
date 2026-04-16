@@ -77,6 +77,8 @@ import fuelSurchargeTableRoutes from "./fuelSurchargeTable";
 import tagRoutes from "./tags";
 import shipperDefaultsRoutes from "./shipperDefaults";
 import openPhoneRoutes from "./openPhone";
+import sequenceRoutes from "./sequences";
+import emailTrackingRoutes from "./emailTracking";
 
 const router = Router();
 
@@ -171,6 +173,7 @@ router.use("/tracking", trackingRoutes);
 router.use("/blog", blogRoutes);
 router.use("/webhooks", webhookRoutes);
 router.use("/webhook-subscriptions", webhookSubscriptionRoutes);
+router.use("/email-tracking", emailTrackingRoutes); // Resend webhook (public)
 router.use("/", websiteRoutes);
 
 // --- API Routes ---
@@ -246,5 +249,7 @@ router.use("/fuel-tables", fuelSurchargeTableRoutes);
 router.use("/tags", tagRoutes);
 router.use("/shipper-defaults", shipperDefaultsRoutes);
 router.use("/openphone", openPhoneRoutes);
+router.use("/sequences", sequenceRoutes);
+router.use("/email-tracking", emailTrackingRoutes);
 
 export default router;

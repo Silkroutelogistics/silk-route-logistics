@@ -71,6 +71,17 @@ export function initCronJobs() {
     }
   }));
 
+  // ─── Hourly: Sequence advance (Lead Hunter v3.6.c) ────────────
+  cron.schedule("15 * * * *", () => withGuard("sequence-advance", async () => {
+    try {
+      const { advanceSequences } = require("./sequenceAdvance");
+      const result = await advanceSequences();
+      log.info({ result }, "[Cron Hourly] Sequence advance complete");
+    } catch (err) {
+      log.error({ err }, "[Cron Hourly] Sequence advance error:");
+    }
+  }));
+
   // ─── Hourly: Invoice aging & overdue detection ───────────────
   cron.schedule("0 * * * *", () => withGuard("invoice-aging", async () => {
     try {

@@ -3,8 +3,8 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
-import { sendEmail, wrap } from "../services/emailService";
-import { EMAIL_SIGNATURE } from "../services/emailSequenceService";
+import { sendEmail } from "../services/emailService";
+import { buildEmailSync, GMAIL_SIGNATURE } from "../email/builder";
 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
@@ -740,67 +740,27 @@ export async function updateCustomerCredit(req: AuthRequest, res: Response) {
 
 // ─── Mass Email Campaign ──────────────────────────────────
 
-const MASS_EMAIL_TEMPLATES: Record<string, { subject: string; buildBody: (contactName: string, industryType: string) => string }> = {
-  INTRO: {
-    subject: "Introducing Silk Route Logistics — Your Freight Partner",
-    buildBody: (contactName: string) => `
-      <p>Hi ${contactName},</p>
-      <p>I hope this message finds you well. My name is Wasih Haider, and I'm the founder of <strong>Silk Route Logistics</strong> — a technology-driven freight brokerage based in Kalamazoo, Michigan.</p>
-      <p>Inspired by the ancient Silk Road that connected civilizations through trade, we built SRL to connect shippers and carriers across North America with the same principles: <strong>trust, transparency, and reliability</strong>.</p>
-      <p>What makes us different:</p>
-      <ul style="line-height:1.8">
-        <li><strong>AI-Powered Operations</strong> — Our proprietary platform uses artificial intelligence for rate predictions, carrier matching, and real-time tracking — giving you enterprise-grade visibility without the enterprise price tag</li>
-        <li><strong>Compass Compliance Engine</strong> — Every carrier in our network passes a 35-point safety and compliance vetting process before hauling a single load</li>
-        <li><strong>Self-Service Shipper Portal</strong> — Track shipments, view invoices, request quotes, and manage documents 24/7 from your own dashboard at silkroutelogistics.ai</li>
-        <li><strong>Dedicated Account Team</strong> — You'll always speak to someone who knows your business. No call centers, no ticket queues</li>
-      </ul>
-      <p>I'd genuinely love to learn about your shipping operations and explore whether we can add value. Even if the timing isn't right, I'm happy to provide a <strong>free, no-obligation freight audit</strong> on your top lanes.</p>
-      <p>Would you be open to a brief 10-minute call this week?</p>
-      <p>Best regards,</p>
-      ${EMAIL_SIGNATURE}`,
-  },
-  FOLLOW_UP: {
-    subject: "Following Up — Silk Route Logistics",
-    buildBody: (contactName: string, industryType: string) => `
-      <p>Hi ${contactName},</p>
-      <p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped ${industryType || "manufacturing"} companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
-      <p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
-      <p>Just reply to this email or book a call at your convenience.</p>
-      <p>Best regards,</p>
-      ${EMAIL_SIGNATURE}`,
-  },
-  CAPACITY: {
-    subject: "Freight capacity when you need it — Silk Route Logistics",
-    buildBody: (contactName: string, industryType: string) => `
-      <p>Hi ${contactName},</p>
-      <p>I know finding reliable freight capacity can be a headache — especially during peak seasons or when you need last-minute trucks${industryType ? ` for ${industryType} shipments` : ""}.</p>
-      <p>At Silk Route Logistics, we maintain a vetted carrier network across all 48 states with:</p>
-      <ul style="line-height:1.8">
-        <li><strong>Same-day truck coverage</strong> — Dry van, flatbed, reefer, and specialized</li>
-        <li><strong>98% pickup rate</strong> — When we commit to a load, it gets picked up</li>
-        <li><strong>Real-time GPS tracking</strong> — Full visibility from pickup to delivery, no check-call phone tag</li>
-        <li><strong>Dedicated point of contact</strong> — You deal with me directly, not a rotating desk</li>
-      </ul>
-      <p>If you ever find yourself short on capacity or want a backup option for critical loads, I'd love to be that call you make.</p>
-      <p>Happy to start with a single trial load so you can see how we operate — no long-term commitment required.</p>
-      <p>Best regards,</p>
-      ${EMAIL_SIGNATURE}`,
-  },
-};
-
 const massEmailSchema = z.object({
   customerIds: z.array(z.string()).min(1, "At least one customer is required"),
-  subject: z.string().min(1, "Subject is required"),
+  touchNumber: z.number().int().min(1).max(6).default(1),
+  subjectOverride: z.string().optional(),
+  bodyOverride: z.string().optional(),
+  // Legacy fields — still accepted for backward compat but builder handles templates now
+  subject: z.string().optional(),
   body: z.string().optional(),
-  templateType: z.enum(["INTRO", "CAPACITY", "FOLLOW_UP", "CUSTOM"]),
+  templateType: z.enum(["INTRO", "CAPACITY", "FOLLOW_UP", "CUSTOM"]).optional(),
 });
 
 export async function sendMassEmail(req: AuthRequest, res: Response) {
-  const { customerIds, subject, body, templateType } = massEmailSchema.parse(req.body);
+  const parsed = massEmailSchema.parse(req.body);
+  const { customerIds, touchNumber } = parsed;
 
   const customers = await prisma.customer.findMany({
     where: { id: { in: customerIds }, deletedAt: null },
-    select: { id: true, name: true, contactName: true, email: true, industryType: true },
+    select: {
+      id: true, name: true, contactName: true, email: true, industryType: true,
+      personalizedHook: true, personalizedRelevance: true, sequenceCluster: true, currentTouch: true,
+    },
   });
 
   let sent = 0;
@@ -815,36 +775,24 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
     }
 
     const fullName = c.contactName || c.name;
-    const firstName = fullName.split(/\s+/)[0]; // Extract first name only
-    let emailBody: string;
+    const firstName = fullName.split(/\s+/)[0] || fullName;
 
-    if (templateType === "CUSTOM") {
-      emailBody = (body || "")
-        .replace(/\{contactName\}/g, firstName)
-        .replace(/\{fullName\}/g, fullName);
-    } else {
-      const template = MASS_EMAIL_TEMPLATES[templateType];
-      emailBody = template.buildBody(firstName, c.industryType || "");
-    }
+    // Build email via the new builder — plain text body + real Gmail signature
+    const built = buildEmailSync({
+      firstName,
+      email: c.email,
+      touchNumber,
+      hook: c.personalizedHook || undefined,
+      relevance: c.personalizedRelevance || undefined,
+      cluster: c.sequenceCluster || c.industryType || undefined,
+      subjectOverride: parsed.subjectOverride || parsed.subject,
+      bodyOverride: parsed.bodyOverride || (parsed.templateType === "CUSTOM" ? parsed.body : undefined),
+    });
 
-    const html = wrap(emailBody);
-
+    // Create Communication record BEFORE send (so we have an ID for future tracking)
+    let commId: string | undefined;
     try {
-      await sendEmail(c.email, subject, html, undefined, { replyTo: "whaider@silkroutelogistics.ai", fromName: "Wasih Haider" });
-      sent++;
-
-      await prisma.systemLog.create({
-        data: {
-          logType: "INTEGRATION",
-          severity: "INFO",
-          source: "MassEmailCampaign",
-          message: `Campaign email sent to ${c.name} (${c.email}) — template: ${templateType}`,
-          details: { customerId: c.id, subject, templateType },
-        },
-      });
-
-      // Log as Communication for Lead Hunter conversation trail
-      await prisma.communication.create({
+      const comm = await prisma.communication.create({
         data: {
           type: "EMAIL_OUTBOUND",
           direction: "OUTBOUND",
@@ -852,28 +800,90 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
           entityId: c.id,
           from: "whaider@silkroutelogistics.ai",
           to: c.email,
-          subject,
-          body: `[Mass email — template: ${templateType}]`,
+          subject: built.subject,
+          body: built.bodyPlainText,
           userId: req.user!.id,
-          metadata: { templateType, source: "MassEmailCampaign" },
+          metadata: {
+            touchNumber,
+            templateAngle: built.templateAngle,
+            source: "MassEmailCampaign",
+          },
         },
       });
-    } catch (err: any) {
+      commId = comm.id;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
       failed++;
       await prisma.systemLog.create({
         data: {
           logType: "INTEGRATION",
           severity: "ERROR",
           source: "MassEmailCampaign",
-          message: `Failed to send campaign email to ${c.name} (${c.email}): ${err.message || "Unknown error"}`,
-          details: { customerId: c.id, subject, templateType },
+          message: `Failed to create comm record for ${c.name}: ${msg}`,
+          details: { customerId: c.id },
+        },
+      });
+      continue;
+    }
+
+    try {
+      const resendEmailId = await sendEmail(c.email, built.subject, built.bodyHtml, undefined, {
+        replyTo: "whaider@silkroutelogistics.ai",
+        fromName: "Wasih Haider",
+      });
+      sent++;
+
+      // Update comm with sent status + Resend email ID for webhook tracking
+      await prisma.communication.update({
+        where: { id: commId },
+        data: {
+          metadata: {
+            touchNumber, templateAngle: built.templateAngle, source: "MassEmailCampaign",
+            sentAt: new Date().toISOString(), resendEmailId: resendEmailId || null,
+          },
+        },
+      });
+
+      // Update customer sequence state
+      await prisma.customer.update({
+        where: { id: c.id },
+        data: {
+          currentTouch: touchNumber,
+          lastTouchSentAt: new Date(),
+          nextTouchDueAt: touchNumber < 6
+            ? new Date(Date.now() + [0, 3, 4, 7, 7, 9][touchNumber - 1] * 86_400_000) // days until next touch
+            : null,
+          sequenceStatus: touchNumber >= 6 ? "COMPLETED" : "ACTIVE",
+          sequenceCluster: c.sequenceCluster || c.industryType || "General Manufacturing",
+        },
+      });
+
+      await prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "INFO",
+          source: "MassEmailCampaign",
+          message: `Campaign email sent to ${c.name} (${c.email}) — touch ${touchNumber}`,
+          details: { customerId: c.id, subject: built.subject, touchNumber, commId },
+        },
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      failed++;
+      await prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "ERROR",
+          source: "MassEmailCampaign",
+          message: `Failed to send campaign email to ${c.name} (${c.email}): ${msg}`,
+          details: { customerId: c.id, subject: built.subject, touchNumber },
         },
       });
     }
 
-    // 500ms delay between sends to avoid rate limits
+    // 10s delay between sends (per spec — human-like spacing)
     if (i < customers.length - 1) {
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 10_000));
     }
   }
 

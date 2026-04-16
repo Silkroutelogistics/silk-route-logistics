@@ -13,7 +13,7 @@ interface EmailAttachment {
   contentType?: string;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[], options?: { replyTo?: string; fromName?: string }) {
+export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[], options?: { replyTo?: string; fromName?: string }): Promise<string | undefined> {
   if (resend) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -42,7 +42,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
           throw new Error(error.message);
         }
         log.info(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
-        return;
+        return data?.id; // Return Resend email ID for tracking
       } catch (err: any) {
         if (err.message?.includes("rate limit") && attempt < 2) {
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
@@ -55,6 +55,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
   } else {
     log.info(`[Email][NoAPI] To: ${to} | Subject: ${subject}${attachments ? ` | ${attachments.length} attachment(s)` : ""}`);
   }
+  return undefined;
 }
 
 const brandHeader = `

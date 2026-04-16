@@ -9,7 +9,9 @@
 //          Carrier Call Log, Shipper Defaults, Fuel Tables, Geo Heatmaps, Variance Reports,
 //          Tagging Engine, PO/SKU Tracking, Backhaul Discovery, Calendar View, GL Codes
 
-export const SRL_VERSION = "3.6.b";
+// v3.6.c — Mass email overhaul (plain-text + Gmail sig), stage-aware templates,
+//          Resend webhook tracking, follow-up sequencer + Queue, engagement scoring
+export const SRL_VERSION = "3.6.c";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
