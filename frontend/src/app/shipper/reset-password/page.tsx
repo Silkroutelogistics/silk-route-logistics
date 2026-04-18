@@ -6,7 +6,7 @@ export const metadata = { title: "Reset Password | Shipper Portal — Silk Route
 export default function ShipperResetPasswordPage() {
   return (
     <Suspense fallback={null}>
-      <ResetPasswordForm headline="Set a new shipper password" backToLoginHref="/shipper/login" />
+      <ResetPasswordForm variant="shipper" headline="Set a new shipper password" backToLoginHref="/shipper/login" />
     </Suspense>
   );
 }

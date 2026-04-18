@@ -6,7 +6,7 @@ export const metadata = { title: "Reset Password — Silk Route Logistics" };
 export default function AuthResetPasswordPage() {
   return (
     <Suspense fallback={null}>
-      <ResetPasswordForm headline="Set a new password" backToLoginHref="/auth/login" />
+      <ResetPasswordForm variant="ae" headline="Set a new password" backToLoginHref="/auth/login" />
     </Suspense>
   );
 }

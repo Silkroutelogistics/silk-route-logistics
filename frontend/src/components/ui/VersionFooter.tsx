@@ -22,7 +22,12 @@
 //          <SiteNav /> and a prebuild inject-chrome.mjs that templates partials
 //          into 13 marketing HTML pages. MC#/Kalamazoo/"Where Carriers Come
 //          First" drift collapsed through the single source.
-export const SRL_VERSION = "3.6.f";
+// v3.6.g — Forgot/reset-password pages now share the login split-screen brand
+//          aesthetic (navy left panel with map + feature pills + rotating
+//          slides + gold-accented insight; cream form panel on right). Shared
+//          <LoginBrandPanel variant="ae|carrier|shipper" /> component drives
+//          all 6 auth-flow pages across the three login types.
+export const SRL_VERSION = "3.6.g";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

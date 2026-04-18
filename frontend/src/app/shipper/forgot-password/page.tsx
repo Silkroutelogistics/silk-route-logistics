@@ -5,6 +5,7 @@ export const metadata = { title: "Forgot Password | Shipper Portal — Silk Rout
 export default function ShipperForgotPasswordPage() {
   return (
     <ForgotPasswordForm
+      variant="shipper"
       headline="Reset your shipper password"
       subhead="We'll email you a link to choose a new one."
       backToLoginHref="/shipper/login"
