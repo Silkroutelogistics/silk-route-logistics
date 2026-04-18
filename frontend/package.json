@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "inject-chrome": "node scripts/inject-chrome.mjs"
+    "inject-chrome": "node scripts/inject-chrome.mjs",
+    "verify-chrome": "node scripts/verify-chrome.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",

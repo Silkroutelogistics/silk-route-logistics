@@ -27,7 +27,15 @@
 //          slides + gold-accented insight; cream form panel on right). Shared
 //          <LoginBrandPanel variant="ae|carrier|shipper" /> component drives
 //          all 6 auth-flow pages across the three login types.
-export const SRL_VERSION = "3.6.g";
+// v3.6.h — HOTFIX for v3.6.f regression. Cleaned orphan HTML that the greedy
+//          migrator regex left behind (index, tracking, shippers). Reverted
+//          injected nav IDs to legacy names (mainNav, loginBtn, loginWrap,
+//          hamburger, mobileMenu, mobileOverlay) so each page's pre-existing
+//          inline wiring script resolves without null-deref. inject-chrome now
+//          refuses to write if content outside INCLUDE markers changed
+//          (SHA-256 integrity guard). New verify-chrome npm script for CI.
+//          Deleted buggy migrate-chrome-markers.mjs.
+export const SRL_VERSION = "3.6.h";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

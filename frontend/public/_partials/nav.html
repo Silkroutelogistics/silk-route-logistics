@@ -1,4 +1,4 @@
-<nav class="nav navbar" id="srl-site-nav" role="navigation" aria-label="Main">
+<nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
     <div class="nav-inner navbar-inner">
       <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Inc. Home">
         <img src="/logo.png" alt="SRL" class="srl-logo-img">
@@ -9,8 +9,8 @@
         <a href="/about.html" class="nav-link">About</a>
         <a href="/contact.html" class="nav-link">Contact</a>
         <a href="/tracking.html" class="nav-link">Track</a>
-        <div class="nav-login-wrap" id="srl-login-wrap">
-          <button type="button" class="nav-login-btn" id="srl-login-btn" aria-haspopup="true" aria-expanded="false">Sign In</button>
+        <div class="nav-login-wrap" id="loginWrap">
+          <button type="button" class="nav-login-btn" id="loginBtn" aria-haspopup="true" aria-expanded="false">Sign In</button>
           <div class="nav-login-dropdown" role="menu">
             <a href="/auth/login" role="menuitem">AE Login</a>
             <a href="/carrier/login" role="menuitem">Carrier Login</a>
@@ -18,55 +18,22 @@
           </div>
         </div>
       </div>
-      <button type="button" class="hamburger" id="srl-hamburger" aria-label="Toggle menu" aria-expanded="false">
+      <button type="button" class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
     </div>
   </nav>
-  <div class="mobile-overlay" id="srl-mobile-overlay"></div>
-  <div class="mobile-menu" id="srl-mobile-menu">
-      <a href="/shippers.html" class="mobile-nav-link">Shippers</a>
-      <a href="/carriers.html" class="mobile-nav-link">Carriers</a>
-      <a href="/about.html" class="mobile-nav-link">About</a>
-      <a href="/contact.html" class="mobile-nav-link">Contact</a>
-      <a href="/tracking.html" class="mobile-nav-link">Track</a>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/shippers.html" class="mobile-nav-link">Shippers</a>
+    <a href="/carriers.html" class="mobile-nav-link">Carriers</a>
+    <a href="/about.html" class="mobile-nav-link">About</a>
+    <a href="/contact.html" class="mobile-nav-link">Contact</a>
+    <a href="/tracking.html" class="mobile-nav-link">Track</a>
     <div class="mobile-login-section">
       <div class="label">Sign In</div>
-        <a href="/auth/login" class="mobile-nav-link">AE Login</a>
-        <a href="/carrier/login" class="mobile-nav-link">Carrier Login</a>
-        <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
+      <a href="/auth/login" class="mobile-nav-link">AE Login</a>
+      <a href="/carrier/login" class="mobile-nav-link">Carrier Login</a>
+      <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
     </div>
   </div>
-  <script>
-    (function () {
-      var btn = document.getElementById("srl-login-btn");
-      var wrap = document.getElementById("srl-login-wrap");
-      if (btn && wrap) {
-        btn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          var open = wrap.classList.toggle("open");
-          btn.setAttribute("aria-expanded", open ? "true" : "false");
-        });
-        document.addEventListener("click", function () {
-          wrap.classList.remove("open");
-          btn.setAttribute("aria-expanded", "false");
-        });
-      }
-      var hamburger = document.getElementById("srl-hamburger");
-      var menu = document.getElementById("srl-mobile-menu");
-      var overlay = document.getElementById("srl-mobile-overlay");
-      if (hamburger && menu && overlay) {
-        var close = function () {
-          menu.classList.remove("open");
-          overlay.classList.remove("open");
-          hamburger.setAttribute("aria-expanded", "false");
-        };
-        hamburger.addEventListener("click", function () {
-          var open = menu.classList.toggle("open");
-          overlay.classList.toggle("open", open);
-          hamburger.setAttribute("aria-expanded", open ? "true" : "false");
-        });
-        overlay.addEventListener("click", close);
-      }
-    })();
-  </script>
