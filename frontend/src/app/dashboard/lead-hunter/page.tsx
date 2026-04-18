@@ -12,30 +12,25 @@ import {
   Inbox, Clock, SkipForward, Pause, Play, MousePointerClick,
 } from "lucide-react";
 import { ProspectDrawer } from "./ProspectDrawer";
+import type { Customer, PipelineStage } from "./types";
+import { STAGE_TO_STATUS, resolveStage, NOT_INTERESTED_STATUS } from "./types";
 
 /* ─── Types ─── */
-
-interface Customer {
-  id: string; name: string; contactName: string | null; email: string | null; phone: string | null;
-  city: string | null; state: string | null; status: string; notes: string | null;
-  creditLimit: number | null; paymentTerms: string | null; annualRevenue: number | null;
-  industryType: string | null; onboardingStatus: string | null;
-}
 
 interface CustomerStats {
   totalCustomers: number;
   activeCustomers: number;
   totalRevenue: number;
   totalShipments: number;
-  pipeline: { lead: number; contacted: number; qualified: number; proposal: number; won: number };
+  pipeline: { lead: number; contacted: number; qualified: number; proposal: number; won: number; notInterested: number };
   winRate: number;
 }
 interface RegionStat { region: string; states: string[]; loadCount: number; avgRate: number; avgRatePerMile: number; availableCarriers: number; }
 interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: number; loadCount: number; avgTransitDays: number; topEquipment: string; trend: string; }
 
 interface CallLog { date: string; type: string; notes: string; by: string; }
-type PipelineStage = "LEAD" | "CONTACTED" | "QUALIFIED" | "PROPOSAL" | "WON";
 type Tab = "pipeline" | "replies" | "queue" | "activity" | "regions" | "lanes";
+type PipelineFilterMode = "active" | "all" | "not_interested";
 
 interface Reply {
   id: string;
@@ -144,18 +139,6 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 
 /* ─── Helpers ─── */
 
-const STATUS_TO_STAGE: Record<string, PipelineStage> = {
-  Active: "WON",
-  Contacted: "CONTACTED",
-  Qualified: "QUALIFIED",
-  Proposal: "PROPOSAL",
-  Prospect: "LEAD",
-};
-
-function resolveStage(customerStatus: string): PipelineStage {
-  return STATUS_TO_STAGE[customerStatus] || "LEAD";
-}
-
 interface ActivityEvent {
   id: string;
   kind: "call" | "email" | "note" | "stage_change" | "import";
@@ -232,6 +215,7 @@ export default function LeadHunterPage() {
   // Pipeline
   const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set());
   const [stageFilter, setStageFilter] = useState<PipelineStage | "">("");
+  const [pipelineMode, setPipelineMode] = useState<PipelineFilterMode>("active");
 
   // CSV Import
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
@@ -360,6 +344,37 @@ export default function LeadHunterPage() {
     onError: () => toast("Failed to convert prospect", "error"),
   });
 
+  // Tracks in-flight Mark-Not-Interested requests per prospect so the button
+  // stays locked until the server responds. Fixes the Lear 3x-duplicate bug.
+  const [pendingNotInterested, setPendingNotInterested] = useState<Set<string>>(new Set());
+
+  const markNotInterestedMutation = useMutation({
+    mutationFn: (prospect: Customer) =>
+      api.post(`/customers/${prospect.id}/mark-not-interested`, {}),
+    onMutate: (prospect) => {
+      setPendingNotInterested((prev) => {
+        const next = new Set(prev);
+        next.add(prospect.id);
+        return next;
+      });
+    },
+    onSuccess: (_data, prospect) => {
+      queryClient.invalidateQueries({ queryKey: ["lead-hunter-communications"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-hunter-activity-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-stats"] });
+      toast(`${prospect.name} marked not interested`, "success");
+    },
+    onError: () => toast("Failed to mark prospect", "error"),
+    onSettled: (_d, _e, prospect) => {
+      setPendingNotInterested((prev) => {
+        const next = new Set(prev);
+        next.delete(prospect.id);
+        return next;
+      });
+    },
+  });
+
   /* ─── Derived Data ─── */
 
   const allCustomers = customersData?.customers ?? [];
@@ -378,16 +393,22 @@ export default function LeadHunterPage() {
 
   const getStage = useCallback((c: Customer) => resolveStage(c.status), []);
 
+  // When a stage is explicitly chosen in the dropdown, it wins over the
+  // [Active]/[All]/[Not Interested] chip (chip is greyed out in that case).
   const filteredProspects = stageFilter
     ? prospects.filter((c) => getStage(c) === stageFilter)
-    : prospects;
+    : pipelineMode === "not_interested"
+      ? prospects.filter((c) => getStage(c) === "NOT_INTERESTED")
+      : pipelineMode === "all"
+        ? prospects
+        : prospects.filter((c) => getStage(c) !== "NOT_INTERESTED");
 
   // Server-side pipeline counts (authoritative, not limited by page size).
   // Fall back to local aggregation over the visible page while stats are loading.
-  const localStageCounts = PIPELINE_STAGES.reduce((acc, s) => {
-    acc[s.key] = prospects.filter((c) => getStage(c) === s.key).length;
-    return acc;
-  }, {} as Record<PipelineStage, number>);
+  const localStageCounts: Record<PipelineStage, number> = {
+    LEAD: 0, CONTACTED: 0, QUALIFIED: 0, PROPOSAL: 0, WON: 0, NOT_INTERESTED: 0,
+  };
+  for (const c of prospects) localStageCounts[getStage(c)] += 1;
 
   const stageCounts: Record<PipelineStage, number> = stats?.pipeline
     ? {
@@ -396,6 +417,7 @@ export default function LeadHunterPage() {
         QUALIFIED: stats.pipeline.qualified,
         PROPOSAL: stats.pipeline.proposal,
         WON: stats.pipeline.won,
+        NOT_INTERESTED: stats.pipeline.notInterested ?? 0,
       }
     : localStageCounts;
 
@@ -407,14 +429,6 @@ export default function LeadHunterPage() {
       : "0");
 
   /* ─── Pipeline Stage Update (persists to DB) ─── */
-
-  const STAGE_TO_STATUS: Record<PipelineStage, string> = {
-    LEAD: "Prospect",
-    CONTACTED: "Contacted",
-    QUALIFIED: "Qualified",
-    PROPOSAL: "Proposal",
-    WON: "Active",
-  };
 
   const updateStage = (customerId: string, stage: PipelineStage) => {
     api.patch(`/customers/${customerId}`, { status: STAGE_TO_STATUS[stage] })
@@ -609,21 +623,8 @@ export default function LeadHunterPage() {
     }
 
     if (action === "mark_not_interested") {
-      try {
-        await api.post("/communications", {
-          type: "NOTE",
-          entityType: "SHIPPER",
-          entityId: prospect.id,
-          subject: "Marked Not Interested from Replies inbox",
-          body: "Prospect marked not interested; sequences stopped.",
-          metadata: { source: "LeadHunter.Replies", action: "mark_not_interested", intent: "UNSUBSCRIBE" },
-        });
-        queryClient.invalidateQueries({ queryKey: ["lead-hunter-communications"] });
-        queryClient.invalidateQueries({ queryKey: ["lead-hunter-activity-feed"] });
-        toast(`${prospect.name} marked not interested`, "success");
-      } catch {
-        toast("Failed to mark prospect", "error");
-      }
+      if (pendingNotInterested.has(prospect.id)) return;
+      markNotInterestedMutation.mutate(prospect);
     }
   };
 
@@ -811,6 +812,41 @@ export default function LeadHunterPage() {
       {/* ═══════════════ TAB 1: PIPELINE ═══════════════ */}
       {tab === "pipeline" && (
         <div className="space-y-4">
+          {/* Pipeline Mode Chip (Active / All / Not Interested) — greyed out when a specific stage is selected */}
+          {(() => {
+            const stageOverride = stageFilter !== "";
+            const modes: { key: PipelineFilterMode; label: string }[] = [
+              { key: "active", label: "Active" },
+              { key: "all", label: "All" },
+              { key: "not_interested", label: `Not Interested (${stageCounts.NOT_INTERESTED})` },
+            ];
+            return (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">View:</span>
+                {modes.map((m) => {
+                  const isSelected = !stageOverride && pipelineMode === m.key;
+                  return (
+                    <button
+                      key={m.key}
+                      disabled={stageOverride}
+                      onClick={() => setPipelineMode(m.key)}
+                      title={stageOverride ? "Clear the stage filter to use view modes" : undefined}
+                      className={`text-xs px-3 py-1 rounded-full border transition ${
+                        stageOverride
+                          ? "bg-white/5 border-white/5 text-slate-600 cursor-not-allowed"
+                          : isSelected
+                            ? "bg-gold/20 border-gold/40 text-gold"
+                            : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Search + Filters + Bulk Actions */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[240px]">
@@ -931,6 +967,24 @@ export default function LeadHunterPage() {
                           )}
                           {replyByProspect[c.id] && (() => {
                             const intent = replyByProspect[c.id].metadata?.intent || "NEUTRAL";
+                            const currentStage = getStage(c);
+                            // Stage badge carries the signal once confirmed.
+                            if (currentStage === "NOT_INTERESTED") return null;
+                            // Amber "pending confirmation" chip for detected-but-not-confirmed UNSUBSCRIBE replies.
+                            if (intent === "UNSUBSCRIBE") {
+                              const isPending = pendingNotInterested.has(c.id);
+                              return (
+                                <button
+                                  disabled={isPending}
+                                  onClick={(e) => { e.stopPropagation(); markNotInterestedMutation.mutate(c); }}
+                                  title="Confirm and move prospect to Not Interested"
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-semibold border transition disabled:cursor-wait"
+                                  style={{ backgroundColor: "#FAEEDA", borderColor: "#BA7517", color: "#BA7517" }}
+                                >
+                                  {isPending ? "Moving…" : "Not Interested Reply"}
+                                </button>
+                              );
+                            }
                             const style = INTENT_COLORS[intent] || INTENT_COLORS.NEUTRAL;
                             return (
                               <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${style.bg} ${style.text}`}>
@@ -1040,6 +1094,11 @@ export default function LeadHunterPage() {
                   const intent = reply.metadata?.intent || "NEUTRAL";
                   const intentStyle = INTENT_COLORS[intent] || INTENT_COLORS.NEUTRAL;
                   const prospect = allCustomers.find((c) => c.id === reply.entityId);
+                  const prospectStage = prospect ? getStage(prospect) : null;
+                  const showAmberPending =
+                    intent === "UNSUBSCRIBE" && prospectStage !== "NOT_INTERESTED";
+                  const hideIntentChip =
+                    intent === "UNSUBSCRIBE" && prospectStage === "NOT_INTERESTED";
                   return (
                     <div key={reply.id} className="border border-white/5 rounded-lg p-4 hover:bg-white/[0.02] transition">
                       <div className="flex items-start justify-between gap-3">
@@ -1047,9 +1106,21 @@ export default function LeadHunterPage() {
                           <div className="flex items-center gap-2 flex-wrap mb-1">
                             <span className="text-sm font-medium text-white">{prospect?.name || reply.from || "Unknown"}</span>
                             {prospect?.contactName && <span className="text-xs text-slate-500">({prospect.contactName})</span>}
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${intentStyle.bg} ${intentStyle.text}`}>
-                              {intentStyle.label}
-                            </span>
+                            {!hideIntentChip && (showAmberPending ? (
+                              <button
+                                disabled={!prospect || pendingNotInterested.has(prospect.id)}
+                                onClick={() => prospect && markNotInterestedMutation.mutate(prospect)}
+                                title="Confirm and move prospect to Not Interested"
+                                className="text-[10px] px-2 py-0.5 rounded-full font-semibold border transition disabled:cursor-wait"
+                                style={{ backgroundColor: "#FAEEDA", borderColor: "#BA7517", color: "#BA7517" }}
+                              >
+                                {prospect && pendingNotInterested.has(prospect.id) ? "Moving…" : "Not Interested Reply"}
+                              </button>
+                            ) : (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${intentStyle.bg} ${intentStyle.text}`}>
+                                {intentStyle.label}
+                              </span>
+                            ))}
                           </div>
                           {reply.subject && <p className="text-xs text-slate-400 mb-1">Re: {reply.subject}</p>}
                           <p className="text-sm text-slate-300 line-clamp-2">{reply.body || "No body content"}</p>
@@ -1076,10 +1147,10 @@ export default function LeadHunterPage() {
                           Send Follow-up
                         </button>
                         <button
-                          disabled={!prospect}
+                          disabled={!prospect || (prospect ? pendingNotInterested.has(prospect.id) : false)}
                           onClick={() => prospect && handleReplyQuickAction(prospect, "mark_not_interested")}
-                          className="text-[10px] px-2 py-1 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition disabled:opacity-40">
-                          Mark Not Interested
+                          className="text-[10px] px-2 py-1 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition disabled:opacity-40 disabled:cursor-wait">
+                          {prospect && pendingNotInterested.has(prospect.id) ? "Marking…" : "Mark Not Interested"}
                         </button>
                       </div>
                     </div>

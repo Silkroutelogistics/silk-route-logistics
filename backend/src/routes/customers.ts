@@ -3,6 +3,7 @@ import {
   createCustomer, getCustomers, getCustomerById, getCustomerStats, updateCustomer, deleteCustomer, restoreCustomer,
   getCustomerContacts, addCustomerContact, updateCustomerContact, deleteCustomerContact, updateCustomerCredit,
   bulkCreateCustomers, sendMassEmail, bulkUpdateStage, getCustomerIndustries, getActivityFeed,
+  markNotInterested,
 } from "../controllers/customerController";
 import { authenticate, authorize } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -43,6 +44,7 @@ router.get("/industries", getCustomerIndustries);
 router.get("/activity-feed", getActivityFeed);
 router.get("/:id", getCustomerById);
 router.patch("/bulk-stage", authorize("ADMIN", "CEO", "BROKER"), bulkUpdateStage);
+router.post("/:id/mark-not-interested", markNotInterested);
 router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER"), deleteCustomer);
 router.put("/:id/restore", authorize("ADMIN", "CEO", "BROKER"), restoreCustomer);

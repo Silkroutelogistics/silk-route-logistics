@@ -39,12 +39,35 @@ export async function getCommunications(req: AuthRequest, res: Response) {
   res.json({ communications, total, page: p, totalPages: Math.ceil(total / l) });
 }
 
+// Actions whose NOTE creation must be idempotent within DEDUPE_WINDOW_MS.
+// Keyed on (entityType, entityId, metadata.action) — different actions on the
+// same prospect within the window are NOT deduped.
+const IDEMPOTENT_NOTE_ACTIONS = new Set(["mark_not_interested"]);
+const DEDUPE_WINDOW_MS = 30_000;
+
 // ─── POST /api/communications ─────────────────────────
 export async function createCommunication(req: AuthRequest, res: Response) {
   const { type, direction, entityType, entityId, loadId, from, to, subject, body, phoneNumber, duration, metadata } = req.body;
 
   if (!type || !entityType || !entityId) {
     return res.status(400).json({ error: "type, entityType, and entityId are required" });
+  }
+
+  const actionKey = metadata && typeof metadata === "object" ? (metadata as any).action : undefined;
+  if (typeof actionKey === "string" && IDEMPOTENT_NOTE_ACTIONS.has(actionKey)) {
+    const existing = await prisma.communication.findFirst({
+      where: {
+        entityType,
+        entityId,
+        createdAt: { gte: new Date(Date.now() - DEDUPE_WINDOW_MS) },
+        metadata: { path: ["action"], equals: actionKey },
+      },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    });
+    if (existing) {
+      return res.status(200).json(existing);
+    }
   }
 
   const comm = await prisma.communication.create({

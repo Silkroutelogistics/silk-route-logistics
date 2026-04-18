@@ -241,14 +241,25 @@ export async function checkForReplies(): Promise<{
     const { intent, confidence } = detectReplyIntent(subjectHeader, snippet);
     const action = getIntentAction(intent);
 
-    // Auto-stop active email sequence for this prospect
+    // Auto-stop active email sequence for this prospect. For UNSUBSCRIBE
+    // replies, also move the prospect to the Not Interested stage via the
+    // shared service so the manual button + auto-detect paths stay aligned.
+    // TODO(reclassification): Future work — allow manual reclassification from
+    // UNSUBSCRIBE → NEUTRAL if the user disputes the auto-classification.
+    // Requires override UI + audit log entry. Out of scope for this PR.
     let sequenceStopped = false;
     try {
-      const { stopSequenceByProspectEmail } = await import("./emailSequenceService");
-      const stopped = await stopSequenceByProspectEmail(senderEmail, "REPLIED");
-      sequenceStopped = !!stopped;
+      if (intent === "UNSUBSCRIBE") {
+        const { markProspectNotInterested } = await import("./prospectStatusService");
+        const result = await markProspectNotInterested(customer.id, "auto_detected");
+        sequenceStopped = result.sequencesStopped > 0;
+      } else {
+        const { stopSequenceByProspectEmail } = await import("./emailSequenceService");
+        const stopped = await stopSequenceByProspectEmail(senderEmail, "REPLIED");
+        sequenceStopped = !!stopped;
+      }
     } catch (err) {
-      log.error({ err: err }, `[Gmail] Failed to stop sequence for ${senderEmail}:`);
+      log.error({ err: err }, `[Gmail] Failed to process reply side-effects for ${senderEmail}:`);
     }
 
     // Log the reply as a SystemLog entry

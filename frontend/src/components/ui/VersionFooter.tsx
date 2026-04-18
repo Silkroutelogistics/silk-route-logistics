@@ -11,7 +11,10 @@
 
 // v3.6.c — Mass email overhaul (plain-text + Gmail sig), stage-aware templates,
 //          Resend webhook tracking, follow-up sequencer + Queue, engagement scoring
-export const SRL_VERSION = "3.6.c";
+// v3.6.d — Not Interested pipeline stage + idempotent mark flow (button lock,
+//          backend 30s dedupe, shared prospectStatusService), filter chip,
+//          amber "Not Interested Reply" confirmation chip, warm-badge suppression
+export const SRL_VERSION = "3.6.d";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

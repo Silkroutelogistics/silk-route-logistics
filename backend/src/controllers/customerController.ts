@@ -5,6 +5,8 @@ import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
 import { sendEmail } from "../services/emailService";
 import { buildEmailSync, GMAIL_SIGNATURE } from "../email/builder";
+import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatus";
+import { markProspectNotInterested } from "../services/prospectStatusService";
 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
@@ -254,7 +256,7 @@ export async function getCustomerStats(req: AuthRequest, res: Response) {
     }),
   ]);
 
-  const pipeline = { lead: 0, contacted: 0, qualified: 0, proposal: 0, won: 0 };
+  const pipeline = { lead: 0, contacted: 0, qualified: 0, proposal: 0, won: 0, notInterested: 0 };
   for (const g of stageGroups) {
     const n = g._count._all;
     switch (g.status) {
@@ -263,10 +265,12 @@ export async function getCustomerStats(req: AuthRequest, res: Response) {
       case "Qualified": pipeline.qualified += n; break;
       case "Proposal": pipeline.proposal += n; break;
       case "Active": pipeline.won += n; break;
+      case "Not Interested": pipeline.notInterested += n; break;
     }
   }
 
-  const wonPlusLost = pipeline.won + pipeline.lead + pipeline.contacted + pipeline.qualified + pipeline.proposal;
+  const wonPlusLost =
+    pipeline.won + pipeline.lead + pipeline.contacted + pipeline.qualified + pipeline.proposal + pipeline.notInterested;
   const winRate = wonPlusLost > 0 ? (pipeline.won / wonPlusLost) * 100 : 0;
 
   res.json({
@@ -308,8 +312,6 @@ export async function updateCustomer(req: AuthRequest, res: Response) {
 
   res.json(customer);
 }
-
-const VALID_PIPELINE_STATUSES = ["Prospect", "Contacted", "Qualified", "Proposal", "Active"] as const;
 
 const bulkStageSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, "ids array is required"),
@@ -353,6 +355,20 @@ export async function bulkUpdateStage(req: AuthRequest, res: Response) {
   });
 
   res.json({ updated: result.updated, changed: result.transitions.length });
+}
+
+export async function markNotInterested(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  try {
+    const result = await markProspectNotInterested(id, "manual", req.user!.id);
+    res.json(result);
+  } catch (err: any) {
+    if (err?.message?.includes("not found")) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function deleteCustomer(req: AuthRequest, res: Response) {

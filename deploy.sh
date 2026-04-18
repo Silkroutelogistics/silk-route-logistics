@@ -21,5 +21,5 @@ echo ">> Frontend built to out/ (static export)"
 
 cd ..
 echo "=== Build complete ==="
-echo "Backend: run 'node backend/dist/server.js'"
+echo "Backend: run 'node backend/dist/backend/src/server.js'"
 echo "Frontend: deploy frontend/out/ to Cloudflare Pages"
