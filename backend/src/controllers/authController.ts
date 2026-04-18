@@ -461,7 +461,10 @@ export async function forgotPassword(req: Request, res: Response) {
   if (user) {
     const token = await createPasswordResetToken(user.id);
     const frontendUrl = env.CORS_ORIGIN.split(",")[0].trim();
-    const resetUrl = `${frontendUrl}/auth/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
+    // Route the reset link back to the login surface that matches the user's role
+    // so the visual context stays consistent. Role is DB-derived — no client param.
+    const slug = user.role === "CARRIER" ? "carrier" : user.role === "SHIPPER" ? "shipper" : "auth";
+    const resetUrl = `${frontendUrl}/${slug}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
     sendPasswordResetEmail(user.email, user.firstName, resetUrl).catch((err) =>
       log.error({ err: err }, "[Password Reset Email] Failed:"),
     );

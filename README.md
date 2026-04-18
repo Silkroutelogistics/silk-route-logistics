@@ -86,21 +86,7 @@ This starts both servers concurrently:
 
 ## Demo Accounts
 
-All accounts use password: `password123`
-
-| Email | Role | Access |
-|-------|------|--------|
-| `admin@silkroutelogistics.ai` | ADMIN | Full platform access |
-| `ceo@silkroutelogistics.ai` | CEO | Executive dashboard + full access |
-| `whaider@silkroutelogistics.ai` | BROKER | Load board, carriers, CRM, finance |
-| `dispatch@silkroutelogistics.ai` | DISPATCH | Tracking, fleet, drivers, loads |
-| `ops@silkroutelogistics.ai` | OPERATIONS | Fleet, compliance, drivers |
-| `accounting@silkroutelogistics.ai` | ACCOUNTING | Invoices, finance, factoring |
-| `srl@silkroutelogistics.ai` | CARRIER (Platinum) | Load board, scorecard, revenue, invoices |
-| `gold@silkroutelogistics.ai` | CARRIER (Gold) | Same as above |
-| `silver@silkroutelogistics.ai` | CARRIER (Silver) | Same as above |
-| `bronze@silkroutelogistics.ai` | CARRIER (Bronze) | Same as above |
-| `flatbed@silkroutelogistics.ai` | CARRIER | Same as above |
+Local development uses seeded accounts created by `npx prisma db seed`. Seed emails and passwords are intentionally not documented here — pull them from `backend/prisma/seed.ts` in a controlled dev environment. Production uses real accounts only; the seed must never be run against a production database.
 
 ## Dashboard Pages (20)
 

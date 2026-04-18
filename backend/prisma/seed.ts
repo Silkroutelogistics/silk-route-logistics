@@ -46,7 +46,7 @@ async function main() {
   // Carrier account with profile
   const carrierUser = await prisma.user.create({
     data: {
-      email: "carrier@silkroutelogistics.ai",
+      email: "test-carrier@srl.invalid",
       passwordHash: hash,
       firstName: "SRL",
       lastName: "Carrier",
@@ -128,7 +128,7 @@ async function main() {
       companyName: "SRL Transport LLC",
       contactName: "SRL Carrier",
       contactPhone: "(269) 555-0200",
-      contactEmail: "carrier@silkroutelogistics.ai",
+      contactEmail: "test-carrier@srl.invalid",
       tier: "PLATINUM",
       cppTier: "PLATINUM",
       cppTotalLoads: 342,
@@ -1613,12 +1613,12 @@ Seed complete:
     - noor@silkroutelogistics.ai (BROKER / Account Executive)
     - dispatch@silkroutelogistics.ai (DISPATCH)
     - accounting@silkroutelogistics.ai (ACCOUNTING)
-    - carrier@silkroutelogistics.ai (CARRIER / SRL Transport LLC)
+    - test-carrier@srl.invalid (CARRIER / SRL Transport LLC)
     - jthompson@midwestfreight.com (CARRIER / Midwest Freight Lines)
     - maria@dixiehaulers.com (CARRIER / Dixie Haulers Inc)
     - kevin@pacificcoasttrucking.com (CARRIER / Pacific Coast Trucking)
     - carlos@sunbeltlogistics.com (CARRIER / Sunbelt Logistics - PENDING)
-    Password for all: Wasishah3089$
+    Password for all: [redacted — see SEED_PASSWORD env var]
   Carrier Profiles: 5
   Customers: 5
   Customer Contacts: 10

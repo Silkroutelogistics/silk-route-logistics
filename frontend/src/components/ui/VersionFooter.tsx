@@ -14,7 +14,11 @@
 // v3.6.d — Not Interested pipeline stage + idempotent mark flow (button lock,
 //          backend 30s dedupe, shared prospectStatusService), filter chip,
 //          amber "Not Interested Reply" confirmation chip, warm-badge suppression
-export const SRL_VERSION = "3.6.d";
+// v3.6.e — Forgot-password wired across carrier/shipper/AE Next.js logins
+//          (spans → Link, 3 forgot-password + 3 reset-password pages reusing
+//          the existing backend endpoint; reset URL routed by user.role).
+//          Seeded test carrier decommissioned, README credentials table redacted.
+export const SRL_VERSION = "3.6.e";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

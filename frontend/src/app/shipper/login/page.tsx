@@ -277,7 +277,7 @@ export default function ShipperLoginPage() {
                 <label className="flex items-center gap-2 text-[13px] text-gray-500 cursor-pointer">
                   <input type="checkbox" className="accent-[#C9A84C]" style={{ width: 15, height: 15 }} /> Remember me
                 </label>
-                <span className="text-[13px] text-[#C9A84C] font-medium cursor-pointer hover:opacity-80 transition-opacity">Forgot password?</span>
+                <Link href="/shipper/forgot-password" className="text-[13px] text-[#C9A84C] font-medium hover:opacity-80 transition-opacity">Forgot password?</Link>
               </div>
               <button type="submit" disabled={localLoading}
                 className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
