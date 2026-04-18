@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { Search, MapPin, Phone, Mail, CheckCircle2, Circle } from "lucide-react";
+import { SiteFooter } from "@/components/shell/SiteFooter";
 
 type SearchKind = "bol" | "code" | "reference";
 
@@ -212,9 +213,7 @@ export default function PublicTrackPage() {
         </section>
       )}
 
-      <footer className="border-t border-white/10 text-center py-6 text-xs text-gray-500">
-        © 2026 Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, MI 49053
-      </footer>
+      <SiteFooter compact theme="dark" />
     </div>
   );
 }

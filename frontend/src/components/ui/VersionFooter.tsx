@@ -18,7 +18,11 @@
 //          (spans → Link, 3 forgot-password + 3 reset-password pages reusing
 //          the existing backend endpoint; reset URL routed by user.role).
 //          Seeded test carrier decommissioned, README credentials table redacted.
-export const SRL_VERSION = "3.6.e";
+// v3.6.f — Shared site chrome: site-chrome.json drives one React <SiteFooter /> +
+//          <SiteNav /> and a prebuild inject-chrome.mjs that templates partials
+//          into 13 marketing HTML pages. MC#/Kalamazoo/"Where Carriers Come
+//          First" drift collapsed through the single source.
+export const SRL_VERSION = "3.6.f";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

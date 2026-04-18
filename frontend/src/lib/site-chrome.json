@@ -1,0 +1,58 @@
+{
+  "company": "Silk Route Logistics Inc.",
+  "tagline": "Where Trust Travels.",
+  "mcNumber": "01794414",
+  "dotNumber": "4526880",
+  "phone": "(269) 220-6760",
+  "phoneTel": "+12692206760",
+  "email": "sales@silkroutelogistics.ai",
+  "website": "silkroutelogistics.ai",
+  "addressCity": "Kalamazoo",
+  "addressState": "MI",
+  "copyrightYear": 2026,
+  "navItems": [
+    { "label": "Shippers", "href": "/shippers.html" },
+    { "label": "Carriers", "href": "/carriers.html" },
+    { "label": "About", "href": "/about.html" },
+    { "label": "Contact", "href": "/contact.html" },
+    { "label": "Track", "href": "/tracking.html" }
+  ],
+  "loginDropdown": [
+    { "label": "AE Login", "href": "/auth/login" },
+    { "label": "Carrier Login", "href": "/carrier/login" },
+    { "label": "Shipper Login", "href": "/shipper/login" }
+  ],
+  "footerCols": [
+    {
+      "heading": "Company",
+      "links": [
+        { "label": "About", "href": "/about.html" },
+        { "label": "Contact", "href": "/contact.html" },
+        { "label": "Industry Insights", "href": "/blog.html" },
+        { "label": "Careers", "href": "/careers.html" }
+      ]
+    },
+    {
+      "heading": "Shippers",
+      "links": [
+        { "label": "Services", "href": "/shippers.html" },
+        { "label": "Get a Quote", "href": "/shippers.html#quote" },
+        { "label": "Track Shipment", "href": "/tracking.html" },
+        { "label": "Shipper Portal", "href": "/shipper/login" }
+      ]
+    },
+    {
+      "heading": "Carriers",
+      "links": [
+        { "label": "Caravan Partner Program", "href": "/carriers.html" },
+        { "label": "Quick Pay", "href": "/carriers.html#quickpay" },
+        { "label": "Carrier Portal", "href": "/carrier/login" }
+      ]
+    }
+  ],
+  "legalLinks": [
+    { "label": "Privacy Policy", "href": "/privacy.html" },
+    { "label": "Terms of Service", "href": "/terms.html" },
+    { "label": "Security Policy", "href": "/security-policy.html" }
+  ]
+}

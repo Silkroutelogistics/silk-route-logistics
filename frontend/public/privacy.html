@@ -27,56 +27,80 @@
   <!-- ==========================================
        NAVIGATION
        ========================================== -->
-  <nav class="navbar" role="navigation" aria-label="Main navigation">
-    <div class="navbar-inner">
-      <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Home">
+  <!-- INCLUDE:nav -->
+  <nav class="nav navbar" id="srl-site-nav" role="navigation" aria-label="Main">
+    <div class="nav-inner navbar-inner">
+      <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Inc. Home">
         <img src="/logo.png" alt="SRL" class="srl-logo-img">
-        <div class="srl-penguin-zone">
-          <div class="srl-penguin">
-            <svg viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="12" cy="17" rx="7" ry="9" fill="#1a1a2e"/>
-              <ellipse cx="12" cy="18" rx="4.5" ry="6" fill="#e8e8e8"/>
-              <circle cx="12" cy="8" r="5.5" fill="#1a1a2e"/>
-              <circle cx="10" cy="7" r="1.1" fill="white"/><circle cx="14" cy="7" r="1.1" fill="white"/>
-              <circle cx="10.4" cy="7.2" r="0.5" fill="#111"/><circle cx="14.4" cy="7.2" r="0.5" fill="#111"/>
-              <polygon points="12,9.5 10.5,11.5 13.5,11.5" fill="#C8963E"/>
-              <ellipse cx="9" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
-              <ellipse cx="15" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
-            </svg>
+      </a>
+      <div class="nav-links navbar-links">
+        <a href="/shippers.html" class="nav-link">Shippers</a>
+        <a href="/carriers.html" class="nav-link">Carriers</a>
+        <a href="/about.html" class="nav-link">About</a>
+        <a href="/contact.html" class="nav-link">Contact</a>
+        <a href="/tracking.html" class="nav-link">Track</a>
+        <div class="nav-login-wrap" id="srl-login-wrap">
+          <button type="button" class="nav-login-btn" id="srl-login-btn" aria-haspopup="true" aria-expanded="false">Sign In</button>
+          <div class="nav-login-dropdown" role="menu">
+            <a href="/auth/login" role="menuitem">AE Login</a>
+            <a href="/carrier/login" role="menuitem">Carrier Login</a>
+            <a href="/shipper/login" role="menuitem">Shipper Login</a>
           </div>
         </div>
-      </a>
-
-      <div class="navbar-links">
-        <a href="/">Home</a>
-        <a href="/shippers.html">Shippers</a>
-        <a href="/carriers.html">Carriers</a>
-        <a href="/about.html">About</a>
-        <a href="/contact.html">Contact</a>
-        <a href="/tracking.html">Tracking</a>
       </div>
-
-      <a href="/shippers.html" class="navbar-cta navbar-cta-desktop">Get a Quote</a>
-
-      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
-        <span></span>
-        <span></span>
-        <span></span>
+      <button type="button" class="hamburger" id="srl-hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
       </button>
     </div>
-
-    <div class="mobile-menu" id="mobile-menu" role="menu">
-      <a href="/" role="menuitem">Home</a>
-      <a href="/shippers.html" role="menuitem">Shippers</a>
-      <a href="/carriers.html" role="menuitem">Carriers</a>
-      <a href="/about.html" role="menuitem">About</a>
-      <a href="/contact.html" role="menuitem">Contact</a>
-      <a href="/tracking.html" role="menuitem">Tracking</a>
-      <a href="/shippers.html" class="navbar-cta" role="menuitem">Get a Quote</a>
-    </div>
   </nav>
-
-  <!-- ==========================================
+  <div class="mobile-overlay" id="srl-mobile-overlay"></div>
+  <div class="mobile-menu" id="srl-mobile-menu">
+      <a href="/shippers.html" class="mobile-nav-link">Shippers</a>
+      <a href="/carriers.html" class="mobile-nav-link">Carriers</a>
+      <a href="/about.html" class="mobile-nav-link">About</a>
+      <a href="/contact.html" class="mobile-nav-link">Contact</a>
+      <a href="/tracking.html" class="mobile-nav-link">Track</a>
+    <div class="mobile-login-section">
+      <div class="label">Sign In</div>
+        <a href="/auth/login" class="mobile-nav-link">AE Login</a>
+        <a href="/carrier/login" class="mobile-nav-link">Carrier Login</a>
+        <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var btn = document.getElementById("srl-login-btn");
+      var wrap = document.getElementById("srl-login-wrap");
+      if (btn && wrap) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var open = wrap.classList.toggle("open");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        document.addEventListener("click", function () {
+          wrap.classList.remove("open");
+          btn.setAttribute("aria-expanded", "false");
+        });
+      }
+      var hamburger = document.getElementById("srl-hamburger");
+      var menu = document.getElementById("srl-mobile-menu");
+      var overlay = document.getElementById("srl-mobile-overlay");
+      if (hamburger && menu && overlay) {
+        var close = function () {
+          menu.classList.remove("open");
+          overlay.classList.remove("open");
+          hamburger.setAttribute("aria-expanded", "false");
+        };
+        hamburger.addEventListener("click", function () {
+          var open = menu.classList.toggle("open");
+          overlay.classList.toggle("open", open);
+          hamburger.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        overlay.addEventListener("click", close);
+      }
+    })();
+  </script>
+  <!-- END INCLUDE:nav --><!-- ==========================================
        MAIN CONTENT
        ========================================== -->
   <main id="main-content">
@@ -223,60 +247,53 @@
   <!-- ==========================================
        FOOTER
        ========================================== -->
-  <footer class="footer" role="contentinfo">
+  <!-- INCLUDE:footer -->
+  <footer class="footer" id="srl-site-footer" role="contentinfo">
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-logo">
-            <div class="footer-logo-bar" aria-hidden="true"></div>
-
+            <img src="/logo.png" alt="SRL" style="height:44px;width:auto;border-radius:6px;">
           </div>
-          <p>
-            A technology-driven freight brokerage connecting shippers and carriers
-            across North America with transparency, reliability, and innovation.
-          </p>
-          <p style="margin-top: 12px; color: #4A5568;">
-            Silk Route Logistics Inc.<br>
+          <p>Where Trust Travels.</p>
+          <p style="margin-top:12px">
             Kalamazoo, MI<br>
-            (269) 220-6760
+            <a href="tel:+12692206760">(269) 220-6760</a><br>
+            <a href="mailto:sales@silkroutelogistics.ai">sales@silkroutelogistics.ai</a>
           </p>
         </div>
-
         <div class="footer-col">
-          <h4>Company</h4>
-          <ul>
-            <li><a href="/about.html">About Us</a></li>
-            <li><a href="/contact.html">Contact</a></li>
-            <li><a href="/tracking.html">Track Shipment</a></li>
-          </ul>
+          <h5>Company</h5>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/blog.html">Industry Insights</a>
+          <a href="/careers.html">Careers</a>
         </div>
-
         <div class="footer-col">
-          <h4>Services</h4>
-          <ul>
-            <li><a href="/shippers.html">Shipper Solutions</a></li>
-            <li><a href="/carriers.html">Carrier Solutions</a></li>
-          </ul>
+          <h5>Shippers</h5>
+          <a href="/shippers.html">Services</a>
+          <a href="/shippers.html#quote">Get a Quote</a>
+          <a href="/tracking.html">Track Shipment</a>
+          <a href="/shipper/login">Shipper Portal</a>
         </div>
-
         <div class="footer-col">
-          <h4>Legal</h4>
-          <ul>
-            <li><a href="/privacy.html">Privacy Policy</a></li>
-            <li><a href="/terms.html">Terms of Service</a></li>
-          </ul>
+          <h5>Carriers</h5>
+          <a href="/carriers.html">Caravan Partner Program</a>
+          <a href="/carriers.html#quickpay">Quick Pay</a>
+          <a href="/carrier/login">Carrier Portal</a>
         </div>
       </div>
-
       <div class="footer-bottom">
-        <p>&copy; 2026 Silk Route Logistics Inc. All rights reserved.</p>
+        <p>&copy; 2026 Silk Route Logistics Inc. &nbsp;|&nbsp; MC# 01794414 &nbsp;|&nbsp; DOT# 4526880</p>
         <div class="footer-bottom-links">
           <a href="/privacy.html">Privacy Policy</a>
           <a href="/terms.html">Terms of Service</a>
+          <a href="/security-policy.html">Security Policy</a>
         </div>
       </div>
     </div>
   </footer>
+  <!-- END INCLUDE:footer -->
 
   <!-- ==========================================
        JAVASCRIPT

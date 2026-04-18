@@ -5,6 +5,7 @@ import {
   FileText, MapPin, BarChart3, DollarSign, File, MessageSquare,
   Code, Zap, Leaf, Check, X, ArrowRight,
 } from "lucide-react";
+import { SiteFooter } from "@/components/shell/SiteFooter";
 
 const features = [
   { icon: FileText, title: "Instant Freight Quoting & RFQ", desc: "Get competitive truckload and LTL freight rates in under 3 minutes. Compare carrier options, save shipping templates, and book loads with one click.", tag: "Phase 1" },
@@ -177,15 +178,7 @@ export default function ShipperLandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-[#0F1117] px-8 py-10 border-t border-[#C9A84C]/15">
-        <div className="max-w-[1280px] mx-auto flex justify-between items-center flex-wrap gap-4">
-          <div className="text-xs text-white/45">© 2026 Silk Route Logistics Inc. · Kalamazoo, MI · MC# 01794414 · Licensed &amp; Bonded (BMC-84)</div>
-          <div className="text-xs text-white/45">
-            <span className="text-[#C9A84C] font-semibold">Where Carriers Come First</span> · Midwest Freight Brokerage · silkroutelogistics.ai
-          </div>
-        </div>
-      </footer>
+      <SiteFooter compact theme="dark" />
     </div>
   );
 }
