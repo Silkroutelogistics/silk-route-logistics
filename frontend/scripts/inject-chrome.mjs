@@ -31,7 +31,22 @@ const chromeJsonPath = path.join(root, "src/lib/site-chrome.json");
 
 const chrome = JSON.parse(await readFile(chromeJsonPath, "utf8"));
 
-function renderNav() {
+// Penguin SVG copied verbatim from the pre-Phase-2 index.html
+// (commit 36e5636, frontend/public/index.html lines 47-56). Animated via
+// srl-logo.css (@keyframes penguin-north + waddle) which is already loaded
+// on every marketing page that opts into this variant.
+const PENGUIN_SVG = `<svg viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="12" cy="17" rx="7" ry="9" fill="#1a1a2e"/>
+              <ellipse cx="12" cy="18" rx="4.5" ry="6" fill="#e8e8e8"/>
+              <circle cx="12" cy="8" r="5.5" fill="#1a1a2e"/>
+              <circle cx="10" cy="7" r="1.1" fill="white"/><circle cx="14" cy="7" r="1.1" fill="white"/>
+              <circle cx="10.4" cy="7.2" r="0.5" fill="#111"/><circle cx="14.4" cy="7.2" r="0.5" fill="#111"/>
+              <polygon points="12,9.5 10.5,11.5 13.5,11.5" fill="#C8963E"/>
+              <ellipse cx="9" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+              <ellipse cx="15" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+            </svg>`;
+
+function renderNav(variant) {
   const navLinks = chrome.navItems
     .map((i) => `        <a href="${i.href}" class="nav-link">${escape(i.label)}</a>`)
     .join("\n");
@@ -44,6 +59,17 @@ function renderNav() {
   const mobileLogin = chrome.loginDropdown
     .map((i) => `      <a href="${i.href}" class="mobile-nav-link">${escape(i.label)}</a>`)
     .join("\n");
+
+  // Penguin variant: render the walking-penguin overlay inside the logo wrap
+  // (used only on index.html via `<!-- INCLUDE:nav logo="penguin" -->`).
+  const logoOverlay = variant === "penguin"
+    ? `
+        <div class="srl-penguin-zone">
+          <div class="srl-penguin">
+            ${PENGUIN_SVG}
+          </div>
+        </div>`
+    : "";
 
   // Dual class names ("nav navbar" / "nav-inner navbar-inner" etc.) so the
   // generated chrome picks up styles from either of the two page CSS files
@@ -59,7 +85,7 @@ function renderNav() {
   return `<nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
     <div class="nav-inner navbar-inner">
       <a href="/" class="srl-logo-wrap" aria-label="${escape(chrome.company)} Home">
-        <img src="/logo.png" alt="SRL" class="srl-logo-img">
+        <img src="/logo.png" alt="SRL" class="srl-logo-img">${logoOverlay}
       </a>
       <div class="nav-links navbar-links">
 ${navLinks}
@@ -104,7 +130,9 @@ ${col.links.map((l) => `          <a href="${l.href}">${escape(l.label)}</a>`).j
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-logo">
-            <img src="/logo.png" alt="SRL" style="height:44px;width:auto;border-radius:6px;">
+            <a href="/" aria-label="${escape(chrome.company)} home" style="display:inline-block;line-height:0;">
+              <img src="/logo.png" alt="SRL" style="height:44px;width:auto;border-radius:6px;">
+            </a>
           </div>
           <p>${escape(chrome.tagline)}</p>
           <p style="margin-top:12px">
@@ -138,17 +166,33 @@ function escape(s) {
 function hashOutsideMarkers(html) {
   let stripped = html;
   for (const tag of ["nav", "footer"]) {
-    const re = new RegExp(`<!-- INCLUDE:${tag} -->[\\s\\S]*?<!-- END INCLUDE:${tag} -->`, "g");
+    const re = new RegExp(`<!-- INCLUDE:${tag}(?:\\s+[^>]*?)?\\s*-->[\\s\\S]*?<!-- END INCLUDE:${tag} -->`, "g");
     stripped = stripped.replace(re, `__CHROME_${tag.toUpperCase()}__`);
   }
   return createHash("sha256").update(stripped).digest("hex");
 }
 
-function replaceMarked(html, tag, rendered) {
-  const re = new RegExp(`<!-- INCLUDE:${tag} -->[\\s\\S]*?<!-- END INCLUDE:${tag} -->`, "g");
-  const block = `<!-- INCLUDE:${tag} -->\n  ${rendered}\n  <!-- END INCLUDE:${tag} -->`;
+// Marker regex captures optional attributes (group 1) so callers can render
+// variant-specific content based on e.g. `logo="penguin"`. Attributes are
+// preserved verbatim on write so the marker survives re-injection.
+function replaceMarked(html, tag, renderer) {
+  const re = new RegExp(`<!-- INCLUDE:${tag}(?:\\s+([^>]*?))?\\s*-->[\\s\\S]*?<!-- END INCLUDE:${tag} -->`, "g");
   if (!re.test(html)) return { html, touched: false };
-  return { html: html.replace(re, block), touched: true };
+  const out = html.replace(re, (_match, attrs) => {
+    const attrStr = attrs ? ` ${attrs.trim()}` : "";
+    const rendered = renderer(parseAttrs(attrs));
+    return `<!-- INCLUDE:${tag}${attrStr} -->\n  ${rendered}\n  <!-- END INCLUDE:${tag} -->`;
+  });
+  return { html: out, touched: true };
+}
+
+function parseAttrs(s) {
+  const out = {};
+  if (!s) return out;
+  const re = /(\w+)="([^"]*)"/g;
+  let m;
+  while ((m = re.exec(s)) !== null) out[m[1]] = m[2];
+  return out;
 }
 
 // Marketing surface only. Portal (ae/**, carrier/**) + auth screens (auth/**)
@@ -169,12 +213,12 @@ async function walkHtml(dir) {
   return out;
 }
 
-const navRendered = renderNav();
-const footerRendered = renderFooter();
+// Partials preview: default (no-variant) render, for grep/preview only.
+await writeFile(path.join(publicDir, "_partials", "nav.html"), renderNav("default") + "\n", "utf8");
+await writeFile(path.join(publicDir, "_partials", "footer.html"), renderFooter() + "\n", "utf8");
 
-// Persist standalone partial files too — handy for grep + manual preview.
-await writeFile(path.join(publicDir, "_partials", "nav.html"), navRendered + "\n", "utf8");
-await writeFile(path.join(publicDir, "_partials", "footer.html"), footerRendered + "\n", "utf8");
+const navRenderer = (attrs) => renderNav(attrs?.logo || "default");
+const footerRenderer = () => renderFooter();
 
 const files = await walkHtml(publicDir);
 let navHits = 0;
@@ -185,8 +229,8 @@ for (const f of files) {
   const before = await readFile(f, "utf8");
   const preHash = hashOutsideMarkers(before);
 
-  const n = replaceMarked(before, "nav", navRendered);
-  const fr = replaceMarked(n.html, "footer", footerRendered);
+  const n = replaceMarked(before, "nav", navRenderer);
+  const fr = replaceMarked(n.html, "footer", footerRenderer);
   const after = fr.html;
 
   if (after === before) continue;

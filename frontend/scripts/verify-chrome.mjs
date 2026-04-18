@@ -44,9 +44,11 @@ for (const f of files) {
   const rel = path.relative(root, f);
   const html = await readFile(f, "utf8");
 
-  // 1. Balanced marker counts per tag.
+  // 1. Balanced marker counts per tag. INCLUDE markers may carry optional
+  //    attributes like `logo="penguin"`, so the regex accepts any content
+  //    between the tag name and the closing `-->`.
   for (const tag of ["nav", "footer"]) {
-    const open = (html.match(new RegExp(`<!-- INCLUDE:${tag} -->`, "g")) || []).length;
+    const open = (html.match(new RegExp(`<!-- INCLUDE:${tag}(?:\\s+[^>]*?)?\\s*-->`, "g")) || []).length;
     const close = (html.match(new RegExp(`<!-- END INCLUDE:${tag} -->`, "g")) || []).length;
     if (open !== close) {
       failures.push(`${rel}: ${tag} markers unbalanced — ${open} INCLUDE / ${close} END`);

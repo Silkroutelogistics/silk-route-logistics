@@ -35,7 +35,16 @@
 //          refuses to write if content outside INCLUDE markers changed
 //          (SHA-256 integrity guard). New verify-chrome npm script for CI.
 //          Deleted buggy migrate-chrome-markers.mjs.
-export const SRL_VERSION = "3.6.h";
+// v3.6.i — Restored pre-Phase-2 walking-penguin nav overlay on index.html via
+//          new INCLUDE marker attribute: <!-- INCLUDE:nav logo="penguin" -->.
+//          Penguin SVG copied verbatim from commit 36e5636; animation lives
+//          in already-loaded srl-logo.css. Marco Polo widget on public site
+//          re-skinned to match AE Console light-mode React component (white
+//          card + dark navy header + gold accents). Footer logo + 11 auth
+//          splash logos wrapped in <a href="/"> for clickability. Integrity
+//          guard + verify-chrome regex both updated to accept optional
+//          marker attributes.
+export const SRL_VERSION = "3.6.i";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

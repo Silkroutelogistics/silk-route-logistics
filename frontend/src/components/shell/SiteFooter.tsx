@@ -33,7 +33,9 @@ export function SiteFooter({ compact = false, showLegalColumn = true, theme = "d
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)] md:gap-8">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <img src="/logo.png" alt="Silk Route Logistics" style={{ height: 36, width: "auto", borderRadius: 6 }} />
+              <Link href="/" aria-label={`${siteChrome.company} home`} style={{ display: "inline-block", lineHeight: 0 }}>
+                <img src="/logo.png" alt="Silk Route Logistics" style={{ height: 36, width: "auto", borderRadius: 6 }} />
+              </Link>
             </div>
             <p className={`text-[13px] leading-relaxed ${baseText} max-w-sm`}>{siteChrome.tagline}</p>
             <p className={`text-[12px] mt-3 ${baseText}`}>

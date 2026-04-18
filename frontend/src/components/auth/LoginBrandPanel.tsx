@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { VersionFooter } from "@/components/ui/VersionFooter";
 
@@ -123,7 +124,9 @@ export function LoginBrandPanel({ variant }: { variant: LoginVariant }) {
 
       <div className="relative z-10 flex flex-col items-start w-full max-w-[480px] px-12">
         <div className="mb-8">
-          <Logo size="lg" />
+          <Link href="/" aria-label="Silk Route Logistics home" style={{ display: "inline-block", lineHeight: 0 }}>
+            <Logo size="lg" />
+          </Link>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-8 w-full max-w-[360px]">

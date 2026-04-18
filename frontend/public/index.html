@@ -38,11 +38,25 @@
   <!-- ============================================
        NAVIGATION
        ============================================ -->
-  <!-- INCLUDE:nav -->
+  <!-- INCLUDE:nav logo="penguin" -->
   <nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
     <div class="nav-inner navbar-inner">
       <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Inc. Home">
         <img src="/logo.png" alt="SRL" class="srl-logo-img">
+        <div class="srl-penguin-zone">
+          <div class="srl-penguin">
+            <svg viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="12" cy="17" rx="7" ry="9" fill="#1a1a2e"/>
+              <ellipse cx="12" cy="18" rx="4.5" ry="6" fill="#e8e8e8"/>
+              <circle cx="12" cy="8" r="5.5" fill="#1a1a2e"/>
+              <circle cx="10" cy="7" r="1.1" fill="white"/><circle cx="14" cy="7" r="1.1" fill="white"/>
+              <circle cx="10.4" cy="7.2" r="0.5" fill="#111"/><circle cx="14.4" cy="7.2" r="0.5" fill="#111"/>
+              <polygon points="12,9.5 10.5,11.5 13.5,11.5" fill="#C8963E"/>
+              <ellipse cx="9" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+              <ellipse cx="15" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+            </svg>
+          </div>
+        </div>
       </a>
       <div class="nav-links navbar-links">
         <a href="/shippers.html" class="nav-link">Shippers</a>
@@ -395,7 +409,9 @@
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-logo">
-            <img src="/logo.png" alt="SRL" style="height:44px;width:auto;border-radius:6px;">
+            <a href="/" aria-label="Silk Route Logistics Inc. home" style="display:inline-block;line-height:0;">
+              <img src="/logo.png" alt="SRL" style="height:44px;width:auto;border-radius:6px;">
+            </a>
           </div>
           <p>Where Trust Travels.</p>
           <p style="margin-top:12px">
