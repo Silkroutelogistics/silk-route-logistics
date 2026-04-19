@@ -58,13 +58,16 @@ enum InvoiceStatus {
   VOID
 }
 
+// Caravan Partner Program — 3 active tiers (v3.7.a).
+// SILVER is Day-1 entry (formerly BRONZE). GOLD is mid-tier (5-10 trucks or
+// M4 milestone). PLATINUM is top (11+ trucks or M5 milestone).
+// GUEST + NONE retained for rows outside the program (carriers we haven't
+// onboarded yet). BRONZE removed; pre-v3.7.a BRONZE rows migrated to SILVER.
 enum CarrierTier {
-  BRONZE // 1-4 trucks
-  SILVER // 5-10 trucks
-  GOLD // 11-15+ trucks
-  // Legacy values (kept for DB compat, map to BRONZE in code)
-  GUEST
+  SILVER
+  GOLD
   PLATINUM
+  GUEST
   NONE
 }
 
@@ -733,7 +736,7 @@ model CarrierProfile {
   contactEmail          String?
   insuranceExpiry       DateTime?
   safetyScore           Float?
-  tier                  CarrierTier              @default(BRONZE)
+  tier                  CarrierTier              @default(SILVER)
   equipmentTypes        String[]
   operatingRegions      String[]
   preferredLanes        Json?
@@ -1242,6 +1245,7 @@ model Load {
   shipments          Shipment[]
   rateConfirmations  RateConfirmation[]
   checkCalls         CheckCall[]
+  quickPayOverride   LoadQuickPayOverride?
   carrierPays        CarrierPay[]
   matchResults       MatchResult[]
   checkCallSchedules CheckCallSchedule[]
@@ -1470,6 +1474,34 @@ model RateConfirmation {
   @@index([status])
   @@index([totalCharges])
   @@map("rate_confirmations")
+}
+
+// ─── Per-Load Quick Pay Override (v3.7.a) ────────────────
+// Records every instance where an AE elects a QP rate different from the
+// carrier's tier default on a specific load. Audit-only — no hard gating.
+// Monthly variance cron aggregates these for CEO review.
+enum OverrideReason {
+  COMPETITIVE_MATCH
+  VOLUME_BONUS
+  STRATEGIC_LANE
+  OTHER
+}
+
+model LoadQuickPayOverride {
+  id              String         @id @default(cuid())
+  loadId          String         @unique
+  tierDefaultRate Decimal        @db.Decimal(5, 4)
+  appliedRate     Decimal        @db.Decimal(5, 4)
+  reason          OverrideReason
+  reasonNote      String?
+  overriddenBy    String
+  overriddenAt    DateTime       @default(now())
+
+  load Load @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([overriddenAt])
+  @@index([reason])
+  @@map("load_quickpay_overrides")
 }
 
 // ─── Check Call (Track & Trace) ──────────────────────────

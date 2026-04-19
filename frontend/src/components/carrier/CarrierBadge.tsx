@@ -23,11 +23,10 @@ const colors: Record<string, { bg: string; text: string; dot: string }> = {
   VALID: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
   EXPIRING_SOON: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
   EXPIRED: { bg: "bg-red-500/10", text: "text-red-600", dot: "bg-red-500" },
-  // Tier
+  // Caravan Partner Program tiers (v3.7.a — Silver/Gold/Platinum only)
   PLATINUM: { bg: "bg-violet-500/10", text: "text-violet-600", dot: "bg-violet-500" },
   GOLD: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
   SILVER: { bg: "bg-gray-500/10", text: "text-gray-600", dot: "bg-gray-500" },
-  BRONZE: { bg: "bg-orange-500/10", text: "text-orange-600", dot: "bg-orange-500" },
 };
 
 const fallback = { bg: "bg-gray-500/10", text: "text-gray-600", dot: "bg-gray-500" };

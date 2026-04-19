@@ -154,7 +154,6 @@ const TIER_COLORS: Record<string, string> = {
   PLATINUM: "bg-purple-500/20 text-purple-400 border-purple-500/30",
   GOLD: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   SILVER: "bg-slate-400/20 text-gray-700 border-slate-400/30",
-  BRONZE: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   GUEST: "bg-white/10 text-gray-600 border-white/20",
   NONE: "bg-gray-100 text-slate-500 border-gray-200",
 };
@@ -353,7 +352,7 @@ export default function CarrierPoolPage() {
     return true;
   });
 
-  const tierCounts = { PLATINUM: 0, GOLD: 0, SILVER: 0, BRONZE: 0, GUEST: 0 };
+  const tierCounts = { PLATINUM: 0, GOLD: 0, SILVER: 0, GUEST: 0 };
   carriers.forEach((c) => { if (c.tier in tierCounts) tierCounts[c.tier as keyof typeof tierCounts]++; });
   const caravanMembers = carriers.filter((c) => c.tier && c.tier !== "NONE" && c.tier !== "GUEST").length;
   const avgCppScore = carriers.filter((c) => c.safetyScore).length > 0
@@ -540,7 +539,7 @@ export default function CarrierPoolPage() {
 
       {/* Tier Cards */}
       <div className="grid sm:grid-cols-5 gap-4">
-        {(["PLATINUM", "GOLD", "SILVER", "BRONZE", "GUEST"] as const).map((tier) => (
+        {(["PLATINUM", "GOLD", "SILVER", "GUEST"] as const).map((tier) => (
           <button key={tier} onClick={() => setTierFilter(tierFilter === tier ? "" : tier)}
             className={`bg-gray-100 rounded-xl border p-4 text-left transition ${tierFilter === tier ? "border-gold" : "border-gray-200 hover:border-white/20"}`}>
             <div className="flex items-center justify-between mb-1">
@@ -759,7 +758,7 @@ export default function CarrierPoolPage() {
                           <label className="text-xs text-gray-500 mb-1 block">Tier</label>
                           <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
-                            {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
+                            {["SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
                         <div>
@@ -833,7 +832,7 @@ export default function CarrierPoolPage() {
                           <label className="text-xs text-gray-500 mb-1 block">Tier</label>
                           <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
-                            {["BRONZE", "SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
+                            {["SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -1102,10 +1101,9 @@ export default function CarrierPoolPage() {
                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[selectedCarrier.tier] || ""}`}>{selectedCarrier.tier}</span>
                         <span className="text-slate-500 text-xs">&rarr;</span>
                         <span className="text-xs text-gray-700">
-                          {selectedCarrier.tier === "BRONZE" ? "SILVER (M3 needed)" :
-                           selectedCarrier.tier === "SILVER" ? "GOLD (M5 needed)" :
-                           selectedCarrier.tier === "GOLD" ? "PLATINUM (M7 needed)" :
-                           selectedCarrier.tier === "PLATINUM" ? "Max tier reached" : "BRONZE (M1 needed)"}
+                          {selectedCarrier.tier === "SILVER" ? "GOLD (M4 needed)" :
+                           selectedCarrier.tier === "GOLD" ? "PLATINUM (M5 needed)" :
+                           selectedCarrier.tier === "PLATINUM" ? "Max tier reached" : "SILVER (onboarding needed)"}
                         </span>
                       </div>
                       <div className="text-xs text-gray-600">

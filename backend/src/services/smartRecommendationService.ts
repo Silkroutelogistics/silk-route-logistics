@@ -116,9 +116,8 @@ export async function getRecommendationsForLoad(
       PLATINUM: 15,
       GOLD: 12,
       SILVER: 8,
-      BRONZE: 4,
     };
-    factors.tierBonus = tierScores[carrier.cppTier || "BRONZE"] ?? 4;
+    factors.tierBonus = tierScores[carrier.cppTier || "SILVER"] ?? 8;
 
     // Factor 5: Fall-off risk penalty (0 to -10)
     const fallOffRisk = globalIntel?.fallOffRisk ?? 0.1;

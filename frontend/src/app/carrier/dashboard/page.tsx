@@ -8,27 +8,29 @@ import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
-// ─── Carvan Tier Mapping & Config ─────────────────────────────────────────────
+// ─── Caravan Partner Program — Tier Mapping & Config (v3.7.a) ─────────────────
 
-const CARVAN_TIER_MAP: Record<string, string> = {
-  GUEST: "BRONZE",
-  NONE: "BRONZE",
-  BRONZE: "BRONZE",
+// Map the raw CarrierProfile.tier enum (which still exposes GUEST/NONE for
+// pre-onboard rows) onto the 3 active display tiers.
+const CARAVAN_TIER_MAP: Record<string, string> = {
+  GUEST: "SILVER",
+  NONE: "SILVER",
   SILVER: "SILVER",
   GOLD: "GOLD",
-  PLATINUM: "GOLD",
+  PLATINUM: "PLATINUM",
 };
 
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string; badge: string }> = {
-  BRONZE: { bg: "bg-orange-500/10", text: "text-orange-700", border: "border-orange-300", badge: "bg-orange-100 text-orange-700 border-orange-300" },
   SILVER: { bg: "bg-slate-500/10", text: "text-slate-600", border: "border-slate-300", badge: "bg-slate-100 text-slate-600 border-slate-300" },
   GOLD: { bg: "bg-yellow-500/10", text: "text-yellow-700", border: "border-yellow-400", badge: "bg-yellow-100 text-yellow-700 border-yellow-400" },
+  PLATINUM: { bg: "bg-purple-500/10", text: "text-purple-700", border: "border-purple-400", badge: "bg-purple-100 text-purple-700 border-purple-400" },
 };
 
+// v3 Quick Pay pricing — 7-day rate shown as the headline (same-day = +2%).
 const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpFee: string; safetyBonus: string; detentionRate: string }> = {
-  BRONZE: { paymentTerms: "Net-21", qpSpeed: "48-hour", qpFee: "3.5%", safetyBonus: "$0", detentionRate: "$50/hr" },
-  SILVER: { paymentTerms: "Net-14", qpSpeed: "24-hour", qpFee: "2.5%", safetyBonus: "$150/mo", detentionRate: "$65/hr" },
-  GOLD: { paymentTerms: "Net-7", qpSpeed: "Same-day", qpFee: "1.5%", safetyBonus: "$300/mo", detentionRate: "$75/hr" },
+  SILVER:   { paymentTerms: "Net-30", qpSpeed: "7-day",  qpFee: "3.0%", safetyBonus: "—",         detentionRate: "$50/hr" },
+  GOLD:     { paymentTerms: "Net-21", qpSpeed: "7-day",  qpFee: "2.0%", safetyBonus: "$150/mo",   detentionRate: "$65/hr" },
+  PLATINUM: { paymentTerms: "Net-14", qpSpeed: "7-day",  qpFee: "1.0%", safetyBonus: "$300/mo",   detentionRate: "$75/hr" },
 };
 
 const MILESTONE_NAMES: Record<string, string> = {
@@ -45,9 +47,9 @@ export default function CarrierOverviewPage() {
   const profile = user?.carrierProfile;
 
   const rawTier = profile?.tier || "NONE";
-  const carvanTier = CARVAN_TIER_MAP[rawTier] || "BRONZE";
-  const tierStyle = TIER_COLORS[carvanTier];
-  const benefits = TIER_BENEFITS[carvanTier];
+  const caravanTier = CARAVAN_TIER_MAP[rawTier] || "SILVER";
+  const tierStyle = TIER_COLORS[caravanTier];
+  const benefits = TIER_BENEFITS[caravanTier];
 
   const { data: myLoads } = useQuery({
     queryKey: ["carrier-my-loads-dash"],
@@ -113,7 +115,7 @@ export default function CarrierOverviewPage() {
         </p>
       </div>
 
-      {/* Carvan Tier Badge + Milestone */}
+      {/* Caravan Tier Badge + Milestone */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         {/* Tier Badge */}
         <CarrierCard padding="p-5" className={`!border-2 ${tierStyle.border}`}>
@@ -122,9 +124,9 @@ export default function CarrierOverviewPage() {
               <Award size={24} className={tierStyle.text} />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Carvan Tier</div>
+              <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Caravan Tier</div>
               <span className={`inline-block mt-0.5 px-3 py-1 rounded-full text-sm font-bold border ${tierStyle.badge}`}>
-                {carvanTier}
+                {caravanTier}
               </span>
             </div>
           </div>

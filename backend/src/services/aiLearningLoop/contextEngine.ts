@@ -112,7 +112,7 @@ export async function buildCarrierContext(
     reliabilityScore: intel?.reliabilityScore ?? 50,
     fallOffRisk: intel?.fallOffRisk ?? 0.1,
     churnRisk: intel?.churnRisk ?? 0.1,
-    tier: carrier.cppTier || "BRONZE",
+    tier: carrier.cppTier || "SILVER",
     performanceTrend: intel?.performanceTrend ?? "STABLE",
     totalLoadsCompleted: carrier.cppTotalLoads || 0,
     preferredLanes,

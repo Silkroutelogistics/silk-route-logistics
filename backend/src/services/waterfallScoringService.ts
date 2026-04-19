@@ -18,7 +18,7 @@ import { prisma } from "../config/database";
 import type { Prisma } from "@prisma/client";
 
 const INSURANCE_SAFETY_DAYS = 30;
-const ELIGIBLE_TIERS = ["BRONZE", "SILVER", "GOLD", "PLATINUM"] as const;
+const ELIGIBLE_TIERS = ["SILVER", "GOLD", "PLATINUM"] as const;
 type EligibleTier = (typeof ELIGIBLE_TIERS)[number];
 
 export interface ScoringWeights {
@@ -272,7 +272,6 @@ function tierFactor(tier: EligibleTier): number {
     case "PLATINUM": return 100;
     case "GOLD":     return 75;
     case "SILVER":   return 50;
-    case "BRONZE":   return 25;
   }
 }
 

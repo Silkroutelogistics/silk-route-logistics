@@ -9,12 +9,15 @@ import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
 const statusFilters = ["All", "PENDING", "APPROVED", "PROCESSING", "SCHEDULED", "PAID"];
 
-const CARVAN_TIER_MAP: Record<string, string> = {
-  GUEST: "BRONZE", NONE: "BRONZE", BRONZE: "BRONZE", SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "GOLD",
+// Caravan Partner Program (v3.7.a) — 3 tiers. Silver is Day-1 entry.
+// v3 QP pricing: Silver 3%/7-day (5% same-day), Gold 2%/7-day (4% same-day),
+// Platinum 1%/7-day (3% same-day). Same-day is a +2% universal premium.
+const CARAVAN_TIER_MAP: Record<string, string> = {
+  GUEST: "SILVER", NONE: "SILVER", SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "PLATINUM",
 };
-const QP_FEES: Record<string, number> = { BRONZE: 3.5, SILVER: 2.5, GOLD: 1.5 };
-const QP_SPEEDS: Record<string, string> = { BRONZE: "48-hour", SILVER: "24-hour", GOLD: "Same-day" };
-const QP_DAYS: Record<string, number> = { BRONZE: 2, SILVER: 1, GOLD: 0 };
+const QP_FEES: Record<string, number> = { SILVER: 3.0, GOLD: 2.0, PLATINUM: 1.0 };
+const QP_SPEEDS: Record<string, string> = { SILVER: "7-day", GOLD: "7-day", PLATINUM: "7-day" };
+const QP_DAYS: Record<string, number> = { SILVER: 7, GOLD: 7, PLATINUM: 7 };
 const FACTORING_RATE = 4.5;
 
 export default function CarrierPaymentsPage() {
@@ -25,10 +28,10 @@ export default function CarrierPaymentsPage() {
   const queryClient = useQueryClient();
   const { user } = useCarrierAuth();
   const rawTier = user?.carrierProfile?.tier || "NONE";
-  const carvanTier = CARVAN_TIER_MAP[rawTier] || "BRONZE";
-  const tierFeeRate = QP_FEES[carvanTier];
-  const tierSpeed = QP_SPEEDS[carvanTier];
-  const tierDays = QP_DAYS[carvanTier];
+  const caravanTier = CARAVAN_TIER_MAP[rawTier] || "SILVER";
+  const tierFeeRate = QP_FEES[caravanTier];
+  const tierSpeed = QP_SPEEDS[caravanTier];
+  const tierDays = QP_DAYS[caravanTier];
 
   const query = new URLSearchParams();
   if (activeFilter !== "All") query.set("status", activeFilter);
@@ -290,7 +293,7 @@ export default function CarrierPaymentsPage() {
               <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-violet-50 rounded-lg">
                 <Zap size={14} className="text-violet-500" />
                 <span className="text-xs text-violet-700">
-                  <strong>{tierSpeed}</strong> payment ({carvanTier} tier)
+                  <strong>{tierSpeed}</strong> payment ({caravanTier} tier)
                 </span>
               </div>
 

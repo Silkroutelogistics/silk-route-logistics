@@ -114,11 +114,13 @@ export function initCronJobs() {
 
       for (const carrier of carriers) {
         const loads = carrier.cppTotalLoads || 0;
-        let newTier: "PLATINUM" | "GOLD" | "SILVER" | "BRONZE";
+        // 3-tier Caravan Partner Program (v3.7.a): every carrier starts at
+        // SILVER on day 1; volume-based fast-track to GOLD (50+ loads) and
+        // PLATINUM (100+).
+        let newTier: "PLATINUM" | "GOLD" | "SILVER";
         if (loads >= 100) newTier = "PLATINUM";
         else if (loads >= 50) newTier = "GOLD";
-        else if (loads >= 20) newTier = "SILVER";
-        else newTier = "BRONZE";
+        else newTier = "SILVER";
 
         if (newTier !== carrier.cppTier) {
           await prisma.carrierProfile.update({
@@ -245,6 +247,22 @@ export function initCronJobs() {
       ]);
     } catch (err) {
       log.error({ err }, "[Cron Monthly] Invoice reminder error:");
+    }
+  }));
+
+  // ─── Monthly (1st, 6:30 AM): Quick Pay override variance report (v3.7.a) ───
+  cron.schedule("30 6 1 * *", () => withGuard("monthly-qp-variance", async () => {
+    try {
+      const { summarizeVariance } = require("../services/quickPayOverrideService");
+      const { sendQpVarianceReport } = require("../services/emailService");
+      const now = new Date();
+      const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const periodEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+      const summary = await summarizeVariance(periodStart, periodEnd);
+      log.info({ summary }, "[Cron Monthly] QP override variance summary");
+      await sendQpVarianceReport(summary);
+    } catch (err) {
+      log.error({ err }, "[Cron Monthly] QP override variance error:");
     }
   }));
 

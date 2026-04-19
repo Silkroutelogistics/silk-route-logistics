@@ -578,7 +578,7 @@ export async function getScorecard(req: AuthRequest, res: Response) {
   const currentTier = profile.tier;
   const currentScore = scorecards[0]?.overallScore || 0;
   const nextTierThreshold =
-    currentTier === "BRONZE" ? 90 : currentTier === "SILVER" ? 95 : currentTier === "GOLD" ? 98 : 100;
+    currentTier === "SILVER" ? 90 : currentTier === "GOLD" ? 95 : 100;
   const bonusPct = getBonusPercentage(currentTier);
 
   res.json({
@@ -607,7 +607,7 @@ export async function getCarrierScore(req: AuthRequest, res: Response) {
   const currentTier = profile.tier;
   const currentScore = scorecards[0]?.overallScore || 0;
   const nextTierThreshold =
-    currentTier === "BRONZE" ? 90 : currentTier === "SILVER" ? 95 : currentTier === "GOLD" ? 98 : 100;
+    currentTier === "SILVER" ? 90 : currentTier === "GOLD" ? 95 : 100;
   const bonusPct = getBonusPercentage(currentTier);
 
   res.json({

@@ -6,18 +6,19 @@ import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-const TIERS = ["BRONZE", "SILVER", "GOLD"] as const;
-const TIER_THRESHOLDS: Record<string, number> = { BRONZE: 0, SILVER: 60, GOLD: 80 };
+// Caravan Partner Program 3-tier (v3.7.a). Silver is Day-1 entry tier.
+const TIERS = ["SILVER", "GOLD", "PLATINUM"] as const;
+const TIER_THRESHOLDS: Record<string, number> = { SILVER: 0, GOLD: 90, PLATINUM: 95 };
 const TIER_COLORS: Record<string, string> = {
+  PLATINUM: "bg-purple-100 text-purple-700 border-purple-300",
   GOLD: "bg-yellow-100 text-yellow-700 border-yellow-300",
   SILVER: "bg-gray-100 text-gray-600 border-gray-300",
-  BRONZE: "bg-orange-100 text-orange-700 border-orange-300",
 };
 
-// Legacy tier mapping
-const CARVAN_TIER_MAP: Record<string, string> = {
-  GUEST: "BRONZE", NONE: "BRONZE", BRONZE: "BRONZE",
-  SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "GOLD",
+// Map the raw enum value onto display tiers
+const CARAVAN_TIER_MAP: Record<string, string> = {
+  GUEST: "SILVER", NONE: "SILVER",
+  SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "PLATINUM",
 };
 
 const KPI_LABELS: Record<string, string> = {
@@ -43,12 +44,12 @@ interface MilestoneDef {
 }
 
 const MILESTONES: MilestoneDef[] = [
-  { id: "M1", name: "New Partner", description: "Welcome to the Carvan program", loadsRequired: 0, onTimePctRequired: 0, daysRequired: 0, reward: "Quick Pay access at 3.5% fee" },
-  { id: "M2", name: "Established", description: "Building trust with consistent loads", loadsRequired: 10, onTimePctRequired: 90, daysRequired: 30, reward: "Priority load board access" },
-  { id: "M3", name: "Reliable", description: "Proven track record of reliability", loadsRequired: 30, onTimePctRequired: 93, daysRequired: 60, reward: "QP fee drops 0.5%, detention rate +$5/hr" },
-  { id: "M4", name: "Preferred", description: "First-look freight on preferred lanes", loadsRequired: 60, onTimePctRequired: 95, daysRequired: 90, reward: "Eligible for Silver tier upgrade" },
-  { id: "M5", name: "Elite", description: "Top performer in the network", loadsRequired: 100, onTimePctRequired: 97, daysRequired: 180, reward: "Safety bonus unlocked, dedicated lanes" },
-  { id: "M6", name: "Legend", description: "The highest honor in the Carvan", loadsRequired: 200, onTimePctRequired: 98, daysRequired: 365, reward: "Gold tier, same-day QP at 1.5%, $300/mo safety bonus" },
+  { id: "M1", name: "New Partner",   description: "Welcome to the Caravan Partner Program",  loadsRequired: 0,   onTimePctRequired: 0,  daysRequired: 0,   reward: "Silver tier — Net-30, 7-day Quick Pay at 3%" },
+  { id: "M2", name: "Proven",        description: "30 days of consistent delivery",          loadsRequired: 10,  onTimePctRequired: 95, daysRequired: 30,  reward: "QP auto-approve expanded, priority loads" },
+  { id: "M3", name: "Reliable",      description: "90 days of proven reliability",           loadsRequired: 30,  onTimePctRequired: 96, daysRequired: 90,  reward: "QP fee eases 0.5%" },
+  { id: "M4", name: "Partner",       description: "180 days, Gold tier eligible",            loadsRequired: 75,  onTimePctRequired: 97, daysRequired: 180, reward: "Gold tier — Net-21, 7-day QP 2%, $150/mo safety" },
+  { id: "M5", name: "Core",          description: "360 days, Platinum tier eligible",        loadsRequired: 150, onTimePctRequired: 98, daysRequired: 360, reward: "Platinum tier — Net-14, 7-day QP 1%, $300/mo safety, priority freight" },
+  { id: "M6", name: "Founding",      description: "720 days — the highest honor",            loadsRequired: 300, onTimePctRequired: 98, daysRequired: 720, reward: "Permanent 1% QP rate, founding-carrier recognition" },
 ];
 
 function scoreColor(s: number) {
@@ -87,8 +88,8 @@ export default function ScorecardPage() {
   );
 
   const { currentScore, currentTier: rawTier, bonusPercentage, pointsToNextTier, nextTier: rawNextTier, metrics, history, bonuses } = data;
-  const currentTier = CARVAN_TIER_MAP[rawTier] || "BRONZE";
-  const nextTier = rawNextTier ? (CARVAN_TIER_MAP[rawNextTier] || rawNextTier) : null;
+  const currentTier = CARAVAN_TIER_MAP[rawTier] || "SILVER";
+  const nextTier = rawNextTier ? (CARAVAN_TIER_MAP[rawNextTier] || rawNextTier) : null;
 
   const currentThreshold = TIER_THRESHOLDS[currentTier] || 0;
   const nextThreshold = nextTier ? (TIER_THRESHOLDS[nextTier] || 100) : 100;
@@ -120,7 +121,7 @@ export default function ScorecardPage() {
           <h1 className="font-serif text-2xl text-[#0F1117]">Performance Scorecard</h1>
           <p className="text-[13px] text-gray-500">Track your metrics, tier status, milestones, and bonus earnings</p>
         </div>
-        <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[currentTier] || TIER_COLORS.BRONZE}`}>
+        <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>
           {currentTier}
         </span>
       </div>
@@ -177,7 +178,7 @@ export default function ScorecardPage() {
         <div className="flex items-center gap-2 mb-4">
           <Target className="w-5 h-5 text-[#C9A84C]" />
           <h2 className="font-semibold text-[#0F1117] text-sm">Milestones</h2>
-          <span className={`ml-auto px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${TIER_COLORS[currentTier] || TIER_COLORS.BRONZE}`}>
+          <span className={`ml-auto px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>
             {currentMilestone.id}: {currentMilestone.name}
           </span>
         </div>

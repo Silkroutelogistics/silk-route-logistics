@@ -48,9 +48,9 @@ export default function QuickPayRevenuePage() {
   };
 
   const tierColors: Record<string, { bg: string; text: string; border: string }> = {
-    BRONZE: { bg: "bg-orange-500/10", text: "text-orange-400", border: "border-orange-500/20" },
     SILVER: { bg: "bg-slate-400/10", text: "text-slate-300", border: "border-slate-400/20" },
     GOLD: { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/20" },
+    PLATINUM: { bg: "bg-purple-500/10", text: "text-purple-300", border: "border-purple-500/20" },
   };
 
   // Circular gauge SVG
@@ -216,7 +216,7 @@ export default function QuickPayRevenuePage() {
 
           {/* Tier Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {(["BRONZE", "SILVER", "GOLD"] as const).map((tier) => {
+            {(["SILVER", "GOLD", "PLATINUM"] as const).map((tier) => {
               const data = revenue?.byTier?.[tier];
               const style = tierColors[tier];
               return (

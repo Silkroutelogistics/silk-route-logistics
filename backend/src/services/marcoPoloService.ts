@@ -1402,19 +1402,17 @@ export async function getMyScore(ctx: UserContext) {
       }
     })();
 
-    // Next tier info
+    // Next tier info (v3.7.a: Silver → Gold → Platinum).
     const nextTierInfo = (() => {
       switch (currentTier) {
-        case "BRONZE":
-          return { nextTier: "SILVER", requirement: "Maintain overall score >= 90" };
         case "SILVER":
-          return { nextTier: "GOLD", requirement: "Maintain overall score >= 95" };
+          return { nextTier: "GOLD", requirement: "Maintain overall score >= 90" };
         case "GOLD":
-          return { nextTier: "PLATINUM", requirement: "Maintain overall score >= 98" };
+          return { nextTier: "PLATINUM", requirement: "Maintain overall score >= 95" };
         case "PLATINUM":
           return { nextTier: null, requirement: "You are at the highest tier!" };
         case "GUEST":
-          return { nextTier: "BRONZE", requirement: "Complete 3 loads with average score >= 70" };
+          return { nextTier: "SILVER", requirement: "Complete 3 loads with average score >= 70" };
         default:
           return { nextTier: "GUEST", requirement: "Complete onboarding to join The Caravan" };
       }
@@ -1506,11 +1504,10 @@ export async function getCarrierScore(ctx: UserContext, carrierId: string) {
 
     const nextTierInfo = (() => {
       switch (currentTier) {
-        case "BRONZE": return { nextTier: "SILVER", requirement: "Maintain overall score >= 90" };
-        case "SILVER": return { nextTier: "GOLD", requirement: "Maintain overall score >= 95" };
-        case "GOLD": return { nextTier: "PLATINUM", requirement: "Maintain overall score >= 98" };
+        case "SILVER": return { nextTier: "GOLD", requirement: "Maintain overall score >= 90" };
+        case "GOLD": return { nextTier: "PLATINUM", requirement: "Maintain overall score >= 95" };
         case "PLATINUM": return { nextTier: null, requirement: "Highest tier achieved" };
-        case "GUEST": return { nextTier: "BRONZE", requirement: "Complete 3 loads with average score >= 70" };
+        case "GUEST": return { nextTier: "SILVER", requirement: "Complete 3 loads with average score >= 70" };
         default: return { nextTier: "GUEST", requirement: "Complete onboarding" };
       }
     })();

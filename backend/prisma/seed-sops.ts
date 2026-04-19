@@ -496,55 +496,67 @@ Tell carriers:
 
 ---
 
-## Part 3: Caravan Partner Program (CPP) — Tier System
+## Part 3: Caravan Partner Program (CPP) — 3-Tier System (v3.7.a)
 
 ### Tier Structure
 
-| Tier | Score | Requirements | Benefits |
-|------|-------|-------------|----------|
-| **GUEST** | Baseline | New carrier, <3 loads | Standard rates, Net 30 pay |
-| **BRONZE** | 60+ | 3+ completed loads | 2% rate bonus, Net 25 pay |
-| **SILVER** | 70+ | 25+ loads, 90+ days | 5% rate bonus, Net 20 pay, QuickPay at 2% fee |
-| **GOLD** | 80+ | 100+ loads, 180+ days | 8% rate bonus, Net 15 pay, QuickPay at 1.5% fee, fuel discount |
-| **PLATINUM** | 90+ | 250+ loads, 365+ days | 12% rate bonus, Net 10 pay, QuickPay at 1% fee, max fuel discount, priority dispatch |
+| Tier         | Entry                                  | Payment Terms | 7-day QP | Same-day QP  | Detention           | Safety Bonus  | FSC pass-through | Referral | Priority Freight |
+|--------------|----------------------------------------|---------------|----------|--------------|---------------------|---------------|------------------|----------|------------------|
+| **SILVER**   | Day 1 on onboarding (1-4 trucks)       | Net-30 free   | 3.0%     | 5.0% (3+2%)  | $50/hr after 2hr    | —             | loaded miles     | $250     | No               |
+| **GOLD**     | 5-10 trucks OR M4 milestone            | Net-21 free   | 2.0%     | 4.0% (2+2%)  | $65/hr after 2hr    | $150/mo       | loaded + empty   | $500     | No               |
+| **PLATINUM** | 11+ trucks OR M5 milestone             | Net-14 free   | 1.0%     | 3.0% (1+2%)  | $75/hr after 1.5hr  | $300/mo       | all miles        | $750     | Yes              |
 
-### KPIs That Drive Tier Score (100-point scale)
+GUEST tier (not onboarded yet) and NONE are retained as non-program states.
+Same-day QP is a universal **+2% premium** over the tier's 7-day rate — every tier can elect same-day.
 
-1. **On-Time Pickup %** (15 points) — Picked up within 1 hour of appointment
-2. **On-Time Delivery %** (15 points) — Delivered within 2 hours of appointment
-3. **Communication Score** (15 points) — Responds to check calls, provides updates
-4. **Claim Ratio** (15 points) — Fewer claims = higher score (inverted)
-5. **Document Timeliness** (10 points) — POD submitted within 24 hours
-6. **Acceptance Rate** (10 points) — % of tendered loads accepted (higher = better)
-7. **GPS Compliance** (10 points) — ELD/GPS tracking enabled during transit
-8. **Overall Reliability** (10 points) — Composite of cancellation rate + TONU rate
+### Milestone Progression
 
-### Quarterly Bonus Structure
-- **PLATINUM**: 3% of quarterly revenue as cash bonus
-- **GOLD**: 2% of quarterly revenue
-- **SILVER**: 1% of quarterly revenue
-- **BRONZE/GUEST**: No bonus (but eligible for tier upgrade)
+| Milestone            | Requirement                                                         | Reward                                                               |
+|----------------------|---------------------------------------------------------------------|----------------------------------------------------------------------|
+| M1 First Load        | Complete first load                                                 | Silver tier confirmed                                                |
+| M2 Proven            | 30 days, 10 loads, 95% on-time                                      | QP auto-approve expanded, priority loads                             |
+| M3 Reliable          | 90 days, 30 loads, 96% on-time                                      | QP fee eases 0.5%                                                    |
+| M4 Partner           | 180 days, 75 loads, 97% on-time, 1 referral                         | Promotion to **Gold**                                                |
+| M5 Core              | 360 days, 150 loads, 98% on-time, 3 strategic lanes                 | Promotion to **Platinum**                                            |
+| M6 Founding          | 720 days, 300 loads                                                 | Permanent 1% QP rate, founding-carrier recognition                   |
+
+### 7-Factor Compass Score (Drives Tier Advancement)
+
+The Caravan tier is earned through performance, not fleet size. Every carrier's score
+is the weighted average of seven measurable factors. Fleet size can accelerate milestone
+thresholds but does not bypass earning the tier.
+
+1. **On-Time Pickup** — 20%
+2. **On-Time Delivery** — 20%
+3. **GPS Compliance** — 15%
+4. **Claims Ratio (inverted)** — 15%
+5. **Communication Score** — 10%
+6. **Document Timeliness** — 10%
+7. **Acceptance Rate** — 10%
 
 ### Tier Review Cadence
-- Scores recalculated after every completed load
-- Tier upgrades: Immediate when score threshold reached
-- Tier downgrades: 30-day grace period with warning notification
+- Scores recalculated weekly from delivered-load data
+- Tier upgrades: Automatic on milestone completion
+- Tier downgrades: 2 consecutive months below threshold = warning; 3rd month = demotion
 
 ---
 
-## Part 4: QuickPay Program
+## Part 4: QuickPay Program (v3 Pricing)
 
 ### How It Works
-Carriers don't have to wait Net 30 for payment. QuickPay gets them paid in 2-5 business days.
+Carriers don't have to wait for the free net terms. Quick Pay gets them paid in 7 days for a tier fee,
+or same-day for a +2% universal premium on top of the tier rate.
 
-### Fee Structure (By Tier)
-| Tier | QuickPay Fee | Net Pay After Fee |
-|------|-------------|-------------------|
-| GUEST | 3% | 97% of invoice |
-| BRONZE | 3% | 97% |
-| SILVER | 2% | 98% |
-| GOLD | 1.5% | 98.5% |
-| PLATINUM | 1% | 99% |
+### Fee Structure (v3.7.a locked)
+| Tier        | 7-day QP Fee | Same-day QP Fee | Auto-approve Limit | Monthly Cap |
+|-------------|--------------|-----------------|--------------------|-------------|
+| SILVER      | 3.0%         | 5.0% (3+2%)     | $2,000/load        | $15,000     |
+| GOLD        | 2.0%         | 4.0% (2+2%)     | $4,000/load        | $40,000     |
+| PLATINUM    | 1.0%         | 3.0% (1+2%)     | $6,000/load        | $80,000     |
+
+Per-load override: AEs can elect a non-default rate on specific loads (e.g. competitive match,
+volume bonus, strategic lane). Every override is recorded in `LoadQuickPayOverride` for audit;
+monthly variance reports flag anomalies to the CEO.
 
 ### Process
 1. Load delivered → CarrierPay record auto-created
@@ -568,7 +580,7 @@ SRL negotiates bulk fuel pricing and passes discounts to CPP carriers. This is a
 ### Discount Tiers
 | Tier | Fuel Discount |
 |------|--------------|
-| GUEST/BRONZE | Not eligible |
+| GUEST | Not eligible |
 | SILVER | $0.03/gallon off retail |
 | GOLD | $0.05/gallon off retail |
 | PLATINUM | $0.08/gallon off retail |
@@ -603,7 +615,7 @@ A truck averaging 6 MPG, driving 10,000 miles/month:
 - **PLATINUM**: Quarterly business review with Operations Director
 - **GOLD**: Monthly check-in call with dispatch
 - **SILVER**: Bi-monthly email with lane opportunities
-- **BRONZE/GUEST**: Monthly newsletter with tips + available freight
+- **GUEST**: Monthly newsletter with tips + available freight
 
 ### Carrier Churn Prevention
 Red flags to watch:

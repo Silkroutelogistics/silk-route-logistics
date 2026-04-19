@@ -3908,25 +3908,25 @@ export async function getQuickPayRevenue(req: AuthRequest, res: Response) {
       });
     }
 
-    // By tier — map PaymentTier to Carvan tiers for display
+    // By tier — map PaymentTier to Caravan Partner Program 3-tier system (v3.7.a)
     const tierMap: Record<string, string> = {
-      FLASH: "BRONZE",
-      EXPRESS: "BRONZE",
-      PRIORITY: "SILVER",
+      FLASH: "SILVER",
+      EXPRESS: "SILVER",
+      PRIORITY: "GOLD",
       PARTNER: "GOLD",
-      ELITE: "GOLD",
+      ELITE: "PLATINUM",
     };
     const byTierAccum: Record<string, { fees: number; volume: number; count: number; rates: number[] }> = {
-      BRONZE: { fees: 0, volume: 0, count: 0, rates: [] },
       SILVER: { fees: 0, volume: 0, count: 0, rates: [] },
       GOLD: { fees: 0, volume: 0, count: 0, rates: [] },
+      PLATINUM: { fees: 0, volume: 0, count: 0, rates: [] },
     };
     for (const p of allQPPaid) {
-      const carvanTier = tierMap[p.paymentTier] || "BRONZE";
-      byTierAccum[carvanTier].fees += p.quickPayFeeAmount ?? 0;
-      byTierAccum[carvanTier].volume += p.grossAmount ?? p.amount ?? 0;
-      byTierAccum[carvanTier].count++;
-      if (p.quickPayFeePercent) byTierAccum[carvanTier].rates.push(p.quickPayFeePercent);
+      const caravanTier = tierMap[p.paymentTier] || "SILVER";
+      byTierAccum[caravanTier].fees += p.quickPayFeeAmount ?? 0;
+      byTierAccum[caravanTier].volume += p.grossAmount ?? p.amount ?? 0;
+      byTierAccum[caravanTier].count++;
+      if (p.quickPayFeePercent) byTierAccum[caravanTier].rates.push(p.quickPayFeePercent);
     }
     const byTier: Record<string, { fees: number; volume: number; count: number; avgFee: number }> = {};
     for (const [tier, data] of Object.entries(byTierAccum)) {

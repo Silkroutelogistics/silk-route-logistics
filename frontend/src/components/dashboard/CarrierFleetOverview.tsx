@@ -10,11 +10,12 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import type { CarrierFleetSummary as Carrier } from "@/types/entities";
 
+// Caravan Partner Program 3-tier (v3.7.a). Silver is the fallback for
+// unknown/guest/none values.
 const TIER_COLORS: Record<string, { text: string; bg: string }> = {
   PLATINUM: { text: "text-purple-300", bg: "bg-purple-500/20" },
   GOLD: { text: "text-yellow-300", bg: "bg-yellow-500/20" },
   SILVER: { text: "text-slate-300", bg: "bg-slate-400/20" },
-  BRONZE: { text: "text-orange-300", bg: "bg-orange-500/20" },
 };
 
 export function CarrierFleetOverview() {
@@ -39,10 +40,10 @@ export function CarrierFleetOverview() {
   const totalCarriers = carrierData?.total || carriers.length;
   const activeCarriers = carriers.filter(c => c.isActive).length;
 
-  // Tier breakdown
-  const tierCounts: Record<string, number> = { PLATINUM: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
+  // Tier breakdown (Silver/Gold/Platinum — v3.7.a)
+  const tierCounts: Record<string, number> = { PLATINUM: 0, GOLD: 0, SILVER: 0 };
   carriers.forEach(c => {
-    const tier = c.tier || "BRONZE";
+    const tier = c.tier || "SILVER";
     if (tierCounts[tier] !== undefined) tierCounts[tier]++;
   });
 
@@ -112,7 +113,7 @@ export function CarrierFleetOverview() {
           <div className="space-y-3">
             {Object.entries(tierCounts).map(([tier, count]) => {
               const pct = totalCarriers > 0 ? (count / totalCarriers) * 100 : 0;
-              const colors = TIER_COLORS[tier] || TIER_COLORS.BRONZE;
+              const colors = TIER_COLORS[tier] || TIER_COLORS.SILVER;
               return (
                 <div key={tier} className="flex items-center gap-3">
                   <span className={`text-xs font-bold w-20 ${colors.text}`}>{tier}</span>
@@ -178,13 +179,13 @@ export function CarrierFleetOverview() {
           <tbody className="divide-y divide-white/5">
             {carriers.length > 0 ? (
               carriers.slice(0, 10).map(c => {
-                const tierColor = TIER_COLORS[c.tier || "BRONZE"] || TIER_COLORS.BRONZE;
+                const tierColor = TIER_COLORS[c.tier || "SILVER"] || TIER_COLORS.SILVER;
                 return (
                   <tr key={c.carrierId} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{c.company || "Unknown"}</td>
                     <td className="px-5 py-3">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tierColor.bg} ${tierColor.text}`}>
-                        {c.tier || "BRONZE"}
+                        {c.tier || "SILVER"}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-xs text-slate-400">{(c.equipmentTypes || []).join(", ") || "—"}</td>

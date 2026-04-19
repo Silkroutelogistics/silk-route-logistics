@@ -48,7 +48,7 @@ export async function canInstantBook(carrierId: string): Promise<{
 
   // Only GOLD and PLATINUM can instant book
   if (!["GOLD", "PLATINUM"].includes(carrier.cppTier || "")) {
-    reasons.push(`Tier ${carrier.cppTier || "BRONZE"} — GOLD or PLATINUM required`);
+    reasons.push(`Tier ${carrier.cppTier || "SILVER"} — GOLD or PLATINUM required`);
   }
 
   // Check insurance

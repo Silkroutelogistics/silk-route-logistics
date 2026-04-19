@@ -44,7 +44,7 @@ const carrierQuerySchema = z.object({
 
 const updateCarrierSchema = z.object({
   safetyScore: z.number().min(0).max(100).optional(),
-  tier: z.enum(["PLATINUM", "GOLD", "SILVER", "BRONZE", "NONE"]).optional(),
+  tier: z.enum(["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"]).optional(),
   status: z.enum(["NEW", "REVIEW", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
   onboardingStatus: z.enum(["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
   insuranceExpiry: z.string().optional(),
@@ -580,7 +580,9 @@ router.post(
   }
 );
 
-// POST /api/carriers/:id/promote-to-bronze — Manually promote Guest to Bronze
+// POST /api/carriers/:id/promote-to-silver — Manually promote Guest to Silver
+// (endpoint path kept as `/promote-to-bronze` for URL compat with any
+// long-lived links; the semantics are Guest → Silver (entry tier) in v3.7.a).
 router.post(
   "/:id/promote-to-bronze",
   authorize("ADMIN", "CEO", "BROKER"),
@@ -602,15 +604,15 @@ router.post(
 
     await prisma.carrierProfile.update({
       where: { id: profile.id },
-      data: { tier: "BRONZE", cppTier: "BRONZE", source: "caravan" },
+      data: { tier: "SILVER", cppTier: "SILVER", source: "caravan" },
     });
 
     await prisma.notification.create({
       data: {
         userId: profile.userId,
         type: "GENERAL",
-        title: "Welcome to The Caravan!",
-        message: "You have been promoted to Bronze tier in The Caravan by your account executive.",
+        title: "Welcome to the Caravan Partner Program!",
+        message: "You have been promoted to Silver tier in the Caravan Partner Program by your account executive.",
         actionUrl: "/carrier/dashboard",
       },
     });

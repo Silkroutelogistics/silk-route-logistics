@@ -15,9 +15,13 @@ These rules override all defaults. Follow them exactly.
 
 ## 3. Version Bump on Every Deploy
 - Version format: `MAJOR.MINOR.letter` (e.g., v3.2.j)
-- Bump the letter on EVERY deploy (a → b → c → ... → z, then bump minor).
-- Update `frontend/src/components/ui/VersionFooter.tsx` with every commit that deploys.
-- Never skip a letter.
+- **DEFAULT: bump the letter. Always. For every commit that deploys.**
+  Sequence: `a → b → c → ... → z → aa → ab → ...` — keep going past `z` with double-letters (never roll the minor just because you hit z).
+- **MINOR bump (v3.6.z → v3.7.a) only when the user explicitly says so.** A minor bump is a deliberate release boundary, not a judgment call. Do NOT promote a commit to a minor bump because it "feels semantic" or "feels bigger." Bug fixes, refactors, DB migrations, new features, content edits — all of these are letters.
+- **Never propose a minor bump unprompted.** If you think one is warranted, write the work as the next letter and mention in the report that you thought about it. Let the user promote it if they agree.
+- **Never skip a letter.** The sequence is continuous.
+- Update `frontend/src/components/ui/VersionFooter.tsx` with every commit that deploys — this file is the source of truth for what version is live.
+- If the user explicitly names a version in their instruction (e.g., "ship this as v3.7.a"), use exactly that — don't second-guess.
 
 ## 4. Root Cause Before Code
 - When something breaks, ask "why" 3 times before writing a fix.

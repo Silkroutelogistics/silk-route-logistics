@@ -44,7 +44,16 @@
 //          splash logos wrapped in <a href="/"> for clickability. Integrity
 //          guard + verify-chrome regex both updated to accept optional
 //          marker attributes.
-export const SRL_VERSION = "3.6.i";
+// v3.7.a — Caravan Partner Program rebrand + BRONZE→SILVER tier migration +
+//          v3 Quick Pay pricing (Silver 3%/5%, Gold 2%/4%, Platinum 1%/3% —
+//          same-day is universal +2% premium) + getEffectiveTier identity
+//          mapping fix (PLATINUM→PLATINUM, GUEST/NONE→SILVER) + new
+//          LoadQuickPayOverride Prisma model with per-load audit trail +
+//          monthly variance cron emailing CEO on 1st + 7-factor Compass
+//          Score block published on /carriers + SOP-012/SOP-013 rewritten
+//          with v3 values + carvanService.ts → caravanService.ts rename.
+//          BREAKING: CarrierTier enum no longer contains BRONZE.
+export const SRL_VERSION = "3.7.a";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

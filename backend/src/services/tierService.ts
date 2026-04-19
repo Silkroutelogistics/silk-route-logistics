@@ -2,10 +2,11 @@ import { CarrierTier } from "@prisma/client";
 import { prisma } from "../config/database";
 
 export function calculateTier(overallScore: number): CarrierTier {
-  if (overallScore >= 98) return "PLATINUM";
-  if (overallScore >= 95) return "GOLD";
-  if (overallScore >= 90) return "SILVER";
-  return "BRONZE";
+  // Caravan Partner Program 3-tier (v3.7.a): Silver is Day-1 entry.
+  // Score-based promotion: 90+ → GOLD, 95+ → PLATINUM.
+  if (overallScore >= 95) return "PLATINUM";
+  if (overallScore >= 90) return "GOLD";
+  return "SILVER";
 }
 
 export function getBonusPercentage(tier: CarrierTier): number {
@@ -13,14 +14,13 @@ export function getBonusPercentage(tier: CarrierTier): number {
     case "PLATINUM": return 3;
     case "GOLD": return 1.5;
     case "SILVER": return 0;
-    case "BRONZE": return 0;
     case "GUEST": return 0;
     case "NONE": return 0;
   }
 }
 
 /**
- * Check if a Guest carrier should be promoted to Bronze.
+ * Check if a Guest carrier should be promoted to Silver (Caravan Day-1 entry).
  * Requires 3 completed loads with average score >= 70.
  */
 export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
@@ -43,19 +43,18 @@ export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
   const latestScore = profile.scorecards[0]?.overallScore || 0;
   if (latestScore < 70) return false;
 
-  // Promote to Bronze
+  // Promote to Silver (entry tier)
   await prisma.carrierProfile.update({
     where: { id: carrierId },
-    data: { tier: "BRONZE", cppTier: "BRONZE", source: "caravan" },
+    data: { tier: "SILVER", cppTier: "SILVER", source: "caravan" },
   });
 
-  // Send notification
   await prisma.notification.create({
     data: {
       userId: profile.userId,
       type: "GENERAL",
-      title: "Welcome to The Caravan!",
-      message: "Congratulations! You've completed 3 loads with a qualifying score and earned Bronze tier in The Caravan.",
+      title: "Welcome to the Caravan Partner Program!",
+      message: "Congratulations! You've completed 3 loads with a qualifying score and earned Silver tier in the Caravan Partner Program.",
       actionUrl: "/carrier/dashboard",
     },
   });

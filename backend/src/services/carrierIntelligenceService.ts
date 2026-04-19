@@ -177,11 +177,10 @@ export async function runCarrierLearningCycle(): Promise<{
     const recentFallOffs = cancelledLoads.filter((l) => l.createdAt >= thirtyDaysAgo).length;
     const fallOffRisk = Math.min(1, fallOffRate * 2 + recentFallOffs * 0.15);
 
-    // Predicted next tier
+    // Predicted next tier (v3.7.a: Silver → Gold → Platinum).
     const totalLoads = carrier.cppTotalLoads || 0;
     let predictedNextTier: string | null = null;
-    if (carrier.cppTier === "BRONZE" && totalLoads >= 15) predictedNextTier = "SILVER";
-    else if (carrier.cppTier === "SILVER" && totalLoads >= 40) predictedNextTier = "GOLD";
+    if (carrier.cppTier === "SILVER" && totalLoads >= 40) predictedNextTier = "GOLD";
     else if (carrier.cppTier === "GOLD" && totalLoads >= 85) predictedNextTier = "PLATINUM";
 
     // Overall reliability score (0-100)

@@ -62,13 +62,11 @@ export function DirectTenderPicker({ value, onChange, theme = "dark" }: Props) {
       PLATINUM: "bg-purple-500/20 text-purple-300",
       GOLD:     "bg-yellow-500/20 text-yellow-300",
       SILVER:   "bg-slate-400/20 text-slate-300",
-      BRONZE:   "bg-amber-700/20 text-amber-400",
     };
     const light = {
       PLATINUM: "bg-purple-100 text-purple-700",
       GOLD:     "bg-yellow-100 text-yellow-700",
       SILVER:   "bg-slate-100 text-slate-700",
-      BRONZE:   "bg-amber-100 text-amber-700",
     };
     const palette = theme === "light" ? light : dark;
     return palette[t as keyof typeof palette] ?? (theme === "light" ? "bg-gray-100 text-gray-600" : "bg-white/10 text-slate-400");

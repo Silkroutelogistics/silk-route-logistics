@@ -72,9 +72,8 @@ export async function calculateLoadRisk(loadId: string): Promise<RiskResult> {
       factors.push({ factor: "LOW_OT_SCORE", points: 15, description: `On-time score: ${latestScore.toFixed(0)}%` });
     }
 
-    if (load.carrier.carrierProfile.tier === "BRONZE") {
-      factors.push({ factor: "BRONZE_TIER", points: 10, description: "Bronze tier carrier" });
-    }
+    // v3.7.a: Silver is Day-1 entry tier. No tier-based risk score —
+    // risk is driven by on-time score + margin + compliance, not tenure.
   }
 
   // --- Margin below 15% ---

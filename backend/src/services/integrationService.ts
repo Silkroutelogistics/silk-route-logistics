@@ -2,7 +2,7 @@ import { prisma } from "../config/database";
 import { calculateTier, calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
 import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
-import { checkMilestoneAdvancement, applyMilestoneRewards } from "./carvanService";
+import { checkMilestoneAdvancement, applyMilestoneRewards } from "./caravanService";
 import { log } from "../lib/logger";
 
 /**
@@ -40,7 +40,7 @@ export async function onCarrierApproved(carrierProfileId: string) {
     },
   });
 
-  // Set initial tier to GUEST (new carrier, needs 3 loads for BRONZE)
+  // Set initial tier to GUEST (new carrier, needs 3 loads for SILVER entry tier)
   await prisma.carrierProfile.update({
     where: { id: profile.id },
     data: {
@@ -161,7 +161,7 @@ async function createCarrierPayOnDelivery(load: any) {
 
   // Determine payment tier from carrier's CPP tier or preference
   const tierMap: Record<string, string> = {
-    PLATINUM: "ELITE", GOLD: "PARTNER", SILVER: "PRIORITY", BRONZE: "STANDARD", GUEST: "STANDARD", NONE: "STANDARD",
+    PLATINUM: "ELITE", GOLD: "PARTNER", SILVER: "PRIORITY", GUEST: "STANDARD", NONE: "STANDARD",
   };
   const paymentTier = profile.paymentPreference || tierMap[profile.tier] || "STANDARD";
 
@@ -588,10 +588,10 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
 
     // Create tier change notification
     const tierNames: Record<string, string> = {
-      PLATINUM: "Platinum", GOLD: "Gold", SILVER: "Silver", BRONZE: "Bronze", GUEST: "Guest",
+      PLATINUM: "Platinum", GOLD: "Gold", SILVER: "Silver", GUEST: "Guest",
     };
-    const direction = ["PLATINUM", "GOLD", "SILVER", "BRONZE", "GUEST", "NONE"].indexOf(newTier) <
-      ["PLATINUM", "GOLD", "SILVER", "BRONZE", "GUEST", "NONE"].indexOf(oldTier)
+    const direction = ["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"].indexOf(newTier) <
+      ["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"].indexOf(oldTier)
       ? "upgraded" : "adjusted";
 
     await prisma.notification.create({

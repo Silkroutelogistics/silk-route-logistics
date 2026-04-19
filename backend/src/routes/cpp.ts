@@ -26,15 +26,14 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   const currentScore = latestScore?.overallScore || 0;
   const currentTier = profile.cppTier !== "NONE" ? profile.cppTier : profile.tier;
 
-  // Tier thresholds
+  // Caravan Partner Program 3-tier thresholds (v3.7.a)
   const tiers = [
-    { name: "PLATINUM", min: 98, bonus: 3, perks: ["Priority load access", "3% bonus on all loads", "Dedicated account manager", "Instant QuickPay", "Annual awards eligibility"] },
-    { name: "GOLD", min: 95, bonus: 1.5, perks: ["Early load access", "1.5% bonus on loads", "Reduced QuickPay fees", "Priority support"] },
-    { name: "SILVER", min: 90, bonus: 0, perks: ["Standard load access", "Loyalty recognition", "Standard QuickPay rates"] },
-    { name: "BRONZE", min: 0, bonus: 0, perks: ["Standard load access", "QuickPay available"] },
+    { name: "PLATINUM", min: 95, bonus: 3, perks: ["Net-14 payment terms", "1% / 3% (same-day) Quick Pay", "$300/mo safety bonus", "Priority freight access", "$75/hr detention after 1.5hr"] },
+    { name: "GOLD",     min: 90, bonus: 1.5, perks: ["Net-21 payment terms", "2% / 4% (same-day) Quick Pay", "$150/mo safety bonus", "$65/hr detention after 2hr"] },
+    { name: "SILVER",   min: 0,  bonus: 0, perks: ["Net-30 payment terms", "3% / 5% (same-day) Quick Pay", "$50/hr detention after 2hr", "Day-1 entry tier"] },
   ];
 
-  const currentTierInfo = tiers.find(t => t.name === currentTier) || tiers[3];
+  const currentTierInfo = tiers.find(t => t.name === currentTier) || tiers[2];
   const nextTierIdx = tiers.findIndex(t => t.name === currentTier) - 1;
   const nextTier = nextTierIdx >= 0 ? tiers[nextTierIdx] : null;
 

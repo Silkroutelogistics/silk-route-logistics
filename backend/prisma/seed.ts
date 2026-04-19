@@ -929,7 +929,7 @@ async function main() {
         acceptanceRate: 87,
         gpsCompliancePct: 90,
         overallScore: 85.5,
-        tierAtTime: "BRONZE",
+        tierAtTime: "SILVER",
         claimRatio: 5.5,
         bonusEarned: 0,
       },

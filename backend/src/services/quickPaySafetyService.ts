@@ -1,5 +1,5 @@
 import { prisma } from "../config/database";
-import { getEffectiveTier, getTierConfig } from "./carvanService";
+import { getEffectiveTier, getTierConfig } from "./caravanService";
 import { sendRemittanceEmail } from "./emailService";
 import { log } from "../lib/logger";
 
@@ -7,7 +7,7 @@ import { log } from "../lib/logger";
 
 const QP_CAPITAL = 70000;
 const QP_MAX_DEPLOY = 56000; // 80% of capital
-const QP_PAUSE_BRONZE = 20000; // pause Bronze QP below this
+const QP_PAUSE_ENTRY_TIER = 20000; // pause entry-tier (Silver) QP below this cash level
 const QP_PAUSE_ALL = 15000; // pause ALL QP below this
 const QP_CARRIER_CAP = 0.25; // 25% of available capital per carrier
 
@@ -149,12 +149,12 @@ export async function validateQuickPay(
   checks.cashAvailable = cash.available > QP_PAUSE_ALL;
   if (!checks.cashAvailable) return failResult("Cash position too low — all QP paused", checks);
 
-  if (effectiveTier === "BRONZE" && cash.available <= QP_PAUSE_BRONZE) {
-    return failResult("Cash position too low — Bronze QP paused", checks);
+  if (effectiveTier === "SILVER" && cash.available <= QP_PAUSE_ENTRY_TIER) {
+    return failResult("Cash position too low — Silver (entry-tier) QP paused", checks);
   }
 
-  // Calculate payment amounts
-  const feeRate = profile.quickPayFeeRate || tierConfig.quickPayFee;
+  // Calculate payment amounts (7-day rate; same-day uses quickPayFeeSameDay)
+  const feeRate = profile.quickPayFeeRate || tierConfig.quickPayFee7Day;
   const grossAmount = carrierRate;
   const feeAmount = Math.round(grossAmount * feeRate * 100) / 100;
   const netPayment = Math.round((grossAmount - feeAmount) * 100) / 100;
@@ -367,7 +367,10 @@ export async function updateCashPosition(): Promise<void> {
     _sum: { amount: true },
   });
 
-  const bronzePaused = available <= QP_PAUSE_BRONZE;
+  // `bronzePaused` is a legacy DB column name — semantically it's now the
+  // entry-tier (Silver) pause flag. Column stays named for backward compat;
+  // API consumers still read `bronzePaused`.
+  const bronzePaused = available <= QP_PAUSE_ENTRY_TIER;
   const allQPPaused = available <= QP_PAUSE_ALL;
 
   await prisma.cashPosition.create({
@@ -382,7 +385,7 @@ export async function updateCashPosition(): Promise<void> {
   });
 
   log.info(
-    `[QuickPay] Cash position updated: deployed=$${deployed}, available=$${available}, bronzePaused=${bronzePaused}, allPaused=${allQPPaused}`
+    `[QuickPay] Cash position updated: deployed=$${deployed}, available=$${available}, entryTierPaused=${bronzePaused}, allPaused=${allQPPaused}`
   );
 }
 
@@ -397,7 +400,7 @@ export async function checkQpPauseStatus(): Promise<{
 }> {
   const cash = await getCashPosition();
   return {
-    bronzePaused: cash.available <= QP_PAUSE_BRONZE,
+    bronzePaused: cash.available <= QP_PAUSE_ENTRY_TIER,
     allPaused: cash.available <= QP_PAUSE_ALL,
     available: cash.available,
     deployed: cash.deployed,

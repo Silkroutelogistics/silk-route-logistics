@@ -194,7 +194,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
     // --- CPP Score (0-25) ---
     let cppScore = 0;
     const tierScores: Record<string, number> = {
-      PLATINUM: 25, GOLD: 20, SILVER: 15, BRONZE: 10, GUEST: 0, NONE: 0,
+      PLATINUM: 25, GOLD: 20, SILVER: 15, GUEST: 5, NONE: 0,
     };
     cppScore = tierScores[c.tier] || 0;
     breakdown.cpp = cppScore;

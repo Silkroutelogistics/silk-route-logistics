@@ -47,4 +47,43 @@ router.get("/:id/audit", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERAT
 import { runLoadComplianceCheck } from "../controllers/carrierVettingController";
 router.post("/:loadId/compliance-check", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), runLoadComplianceCheck);
 
+// Quick Pay tier default + per-load override (v3.7.a — Caravan Partner Program)
+import { getTierDefaultRate, recordOverride, getOverride } from "../services/quickPayOverrideService";
+
+// Returns the tier default QP rate for a carrier — used by AE Console load
+// creation UI to pre-populate the rate field.
+router.get("/quickpay/tier-default/:carrierUserId", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), async (req: AuthRequest, res: Response) => {
+  const rate = await getTierDefaultRate(req.params.carrierUserId);
+  res.json({ carrierUserId: req.params.carrierUserId, tierDefaultRate: rate });
+});
+
+// Creates or updates the per-load QP override audit row.
+const overrideBodySchema = z.object({
+  tierDefaultRate: z.number().min(0).max(0.2),
+  appliedRate: z.number().min(0).max(0.2),
+  reason: z.enum(["COMPETITIVE_MATCH", "VOLUME_BONUS", "STRATEGIC_LANE", "OTHER"]).optional(),
+  reasonNote: z.string().max(500).optional(),
+});
+router.post("/:id/quickpay-override", authorize("BROKER", "ADMIN", "CEO"), validateBody(overrideBodySchema), auditLog("CREATE", "LoadQuickPayOverride"), async (req: AuthRequest, res: Response) => {
+  try {
+    const body = req.body as z.infer<typeof overrideBodySchema>;
+    const result = await recordOverride({
+      loadId: req.params.id,
+      tierDefaultRate: body.tierDefaultRate,
+      appliedRate: body.appliedRate,
+      reason: body.reason,
+      reasonNote: body.reasonNote,
+      overriddenBy: req.user!.id,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || "Override failed" });
+  }
+});
+
+router.get("/:id/quickpay-override", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), async (req: AuthRequest, res: Response) => {
+  const row = await getOverride(req.params.id);
+  res.json({ override: row });
+});
+
 export default router;

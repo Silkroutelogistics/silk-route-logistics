@@ -55,7 +55,6 @@ const TIER_COLORS: Record<string, string> = {
   PLATINUM: "text-purple-300 bg-purple-500/20",
   GOLD: "text-gold bg-gold/20",
   SILVER: "text-slate-300 bg-slate-400/20",
-  BRONZE: "text-orange-300 bg-orange-500/20",
 };
 
 function ScoreGauge({ label, value, suffix = "%" }: { label: string; value: number | undefined; suffix?: string }) {

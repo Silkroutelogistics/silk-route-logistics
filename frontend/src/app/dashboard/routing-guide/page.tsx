@@ -88,7 +88,6 @@ const MODES = ["FTL", "LTL", "INTERMODAL"];
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
 const TIER_COLORS: Record<string, string> = {
-  BRONZE: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   SILVER: "bg-gray-400/10 text-gray-300 border-gray-400/20",
   GOLD: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
 };
