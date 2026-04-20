@@ -109,7 +109,24 @@
 //          using values verified identical across pages. No rule
 //          body changes. Deeper variable consolidation filed as
 //          Phase 5 tech-debt.
-export const SRL_VERSION = "3.7.f";
+// v3.7.g — Phase 4C positioning rewrite. Homepage hero reframed
+//          around carrier economics ("Freight brokerage built for
+//          the carrier's side of the bill."). /carriers full
+//          narrative rewrite: new hero ("The Caravan Partner
+//          Program. Three tiers, one principle — the rate you see
+//          is the rate you earn."), three commitments section
+//          (100% FSC pass-through, itemized quotes, Quick Pay
+//          without factoring contract), honest math box showing
+//          $2,200-load economics side-by-side with typical-broker
+//          figures (no named competitors; Option B disclaimer),
+//          Milestones M1–M6 advancement path, "What's coming"
+//          roadmap framing rate cards / fuel card / insurance
+//          referrals / equipment financing as aspirational not
+//          current, new closing CTA. All copy traces to Honest
+//          Claims Whitelist. Also fixed contact.html:247 FAQ
+//          (retired "Caravan Carrier Program" + v2 QP values →
+//          "Caravan Partner Program" + v3 values).
+export const SRL_VERSION = "3.7.g";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
