@@ -60,7 +60,13 @@
 //          v3.7.a PLATINUM→PLATINUM identity fix + Silver fallback for
 //          Guest/None/default. Fixed orphan "Guest → Bronze" string in
 //          MarcoPolo system prompt that v3.7.a missed.
-export const SRL_VERSION = "3.7.b";
+// v3.7.c — Public-site tier-copy hotfix. carriers.html tier cards rewritten
+//          from v2 Bronze/Silver/Gold (Net-21/14/7, 3.5%/2.5%/1.5%) to v3
+//          Silver/Gold/Platinum with locked pricing + FSC pass-through per
+//          tier + priority freight on Platinum. Milestone labels aligned
+//          to tierService names. index.html Caravan ladder + faq.html
+//          Caravan Loyalty Program answer all swept to v3 copy.
+export const SRL_VERSION = "3.7.c";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
