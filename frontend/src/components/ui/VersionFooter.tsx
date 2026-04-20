@@ -150,7 +150,23 @@
 //              attributes, out of scope for this hotfix.
 //          No HTML changes. No copy changes. No color changes. No
 //          JavaScript. Desktop (≥1101px) layout untouched.
-export const SRL_VERSION = "3.7.g.1";
+// v3.7.h — Phase 4D close. Added 5 Caravan Partner Program FAQ
+//          entries to /faq (3 in Carriers category: Compass Score
+//          calculation, tier advancement without growing fleet,
+//          double-brokering fraud protection; 2 in Billing:
+//          honest answer on 7-day QP working-capital reasoning,
+//          Quick Pay vs factoring company comparison). Supporting
+//          page sweep confirmed /about, /shippers, /contact, and
+//          Next.js /shipper landing are clean of prohibited
+//          claims post-4A/4C. Carrier onboarding welcome email
+//          at routes/carriers.ts:614 verified on v3 tier language
+//          ("Welcome to the Caravan Partner Program!" + Silver
+//          tier promotion); zero "Bronze" or stale QP strings
+//          anywhere in backend/src (closes Phase 3 Gap 3 by
+//          verification only, no code changes). MEMORY.md
+//          updated with 4 deferred items for Phase 5+.
+//          Phase 4 Content Truth-Up closes with this commit.
+export const SRL_VERSION = "3.7.h";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
