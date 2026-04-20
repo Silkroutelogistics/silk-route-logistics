@@ -126,7 +126,31 @@
 //          Claims Whitelist. Also fixed contact.html:247 FAQ
 //          (retired "Caravan Carrier Program" + v2 QP values →
 //          "Caravan Partner Program" + v3 values).
-export const SRL_VERSION = "3.7.g";
+// v3.7.g.1 — Mobile responsive hotfix for /carriers. Pre-existing
+//          bug from v3.7.a where .tiers-grid rendered 3-wide at
+//          mobile viewports, causing severe text truncation. Root
+//          cause: carriers.html line 307 has inline style
+//          grid-template-columns:repeat(3,1fr) (added when tier
+//          count went 4→3), blocking the @media breakpoint
+//          overrides at 1100px and 640px. Also fixed the new
+//          math box (v3.7.g) which had the same 4-column-at-mobile
+//          issue. CSS-only fix, no !important:
+//          (1) Base rule .tiers-grid: repeat(4,1fr) → repeat(3,1fr)
+//              — root-cause cleanup, Bronze retired since v3.7.a.
+//          (2) @media 1100px: switched .tiers-grid from display:grid
+//              to display:flex + flex-wrap. Inline grid-template-
+//              columns becomes a no-op in flex mode, letting the
+//              @media rule control wrapping via flex-basis on the
+//              child .tier-card (2-column at tablet, 100% at mobile).
+//          (3) Math box (Option B horizontal scroll) — attribute
+//              selector on .honest-math wrapper adds overflow-x:auto
+//              at ≤768px, with min-width:640px on grid rows so the
+//              4-column comparison stays intact via swipe. Option A
+//              (card-stack) would have required HTML data-label
+//              attributes, out of scope for this hotfix.
+//          No HTML changes. No copy changes. No color changes. No
+//          JavaScript. Desktop (≥1101px) layout untouched.
+export const SRL_VERSION = "3.7.g.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

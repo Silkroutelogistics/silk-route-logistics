@@ -722,10 +722,10 @@
       line-height: 1.7;
     }
 
-    /* Tier Cards */
+    /* Tier Cards — 3 tiers (Silver/Gold/Platinum) since v3.7.a. Was 4 (incl. Bronze) pre-v3.7.a. */
     .tiers-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 20px;
       position: relative;
       z-index: 1;
@@ -1242,8 +1242,17 @@
         grid-template-columns: repeat(2, 1fr);
       }
 
+      /* Switch layout mode from grid to flex. Inline style="grid-template-columns:repeat(3,1fr)"
+         on carriers.html becomes a no-op because display is no longer grid. This avoids needing
+         !important to beat the inline override (inline only locks grid-template-columns). */
       .tiers-grid {
-        grid-template-columns: repeat(2, 1fr);
+        display: flex;
+        flex-wrap: wrap;
+      }
+
+      .tiers-grid > .tier-card {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 0;
       }
 
       .hero h1 {
@@ -1328,8 +1337,10 @@
         grid-template-columns: 1fr;
       }
 
-      .tiers-grid {
-        grid-template-columns: 1fr;
+      /* Single-column stack at mobile. .tiers-grid stays display:flex from the 1100px
+         breakpoint; bumping flex-basis to 100% stacks cards vertically. */
+      .tiers-grid > .tier-card {
+        flex: 1 1 100%;
       }
 
       .coverage-highlights {
@@ -1361,6 +1372,23 @@
       .cta-banner-btns a {
         text-align: center;
         justify-content: center;
+      }
+    }
+
+    /* Honest math box (v3.7.g) — horizontal scroll at mobile.
+       Math box uses inline style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr" on each
+       row. Option A card-stack requires HTML data-labels which are out of scope for this hotfix.
+       Option B preserves the full 4-column comparison by making the inner table scroll
+       horizontally at mobile while the outer section stays pinned to viewport width.
+       Uses attribute selectors to target the wrapper + row grids without !important. */
+    @media (max-width: 768px) {
+      section.honest-math [style*="max-width:1000px"] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      section.honest-math [style*="max-width:1000px"] > [style*="display:grid"] {
+        min-width: 640px;
       }
     }
 
