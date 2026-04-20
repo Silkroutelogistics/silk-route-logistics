@@ -96,7 +96,20 @@
 //          complianceMonitorService, secEdgarService). Navy/gold
 //          brand treatment, not alarming red. Shield icon glyph,
 //          flex-wrap layout for mobile responsiveness.
-export const SRL_VERSION = "3.7.e";
+// v3.7.f — Chrome micro-fix. Migrated .nav-login-btn /
+//          .nav-login-wrap / .nav-login-dropdown CSS from
+//          pages/index.css (homepage-scoped) to shared/css/
+//          utilities.css (loaded on every marketing page). Fixes
+//          unstyled "Sign In" button artifact on /carriers, /about,
+//          /contact, /shippers, /faq, /blog, /careers, /privacy,
+//          /terms, /tracking, /register, /login — originally
+//          introduced in v3.6.f shared-nav migration but only
+//          wired on homepage. Option B: added 8 CSS variables
+//          these rules depend on to utilities.css :root block
+//          using values verified identical across pages. No rule
+//          body changes. Deeper variable consolidation filed as
+//          Phase 5 tech-debt.
+export const SRL_VERSION = "3.7.f";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1,6 +1,96 @@
 /* Silk Route Logistics — Shared Utility Classes
    Extracted from common inline style patterns across all pages */
 
+/* ── Shared CSS variables for nav-login chrome (v3.7.f) ──
+   Values verified identical across all page-local :root blocks
+   (index.css, carriers.css, about.css, blog.css, careers.css,
+   contact.css, faq.css, privacy.css, shippers.css). Enables
+   .nav-login-btn / .nav-login-wrap / .nav-login-dropdown rules
+   below to work on every page that loads utilities.css, not just
+   homepage (index.css). */
+:root {
+  --gold: #C8963E;
+  --gold-light: #D4A84E;
+  --white: #FFFFFF;
+  --light-gray: #F5F5F5;
+  --dark-text: #1A1A2E;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.15);
+  --radius-sm: 8px;
+}
+
+/* ── Nav login dropdown (migrated from pages/index.css in v3.7.f) ── */
+    .nav-login-wrap {
+      position: relative;
+    }
+
+    .nav-login-btn {
+      background: var(--gold);
+      color: var(--white);
+      padding: 9px 22px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .nav-login-btn:hover {
+      background: var(--gold-light);
+    }
+
+    .nav-login-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      min-width: 200px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px);
+      transition: var(--transition);
+      overflow: hidden;
+    }
+
+    .nav-login-wrap:hover .nav-login-dropdown,
+    .nav-login-wrap.active .nav-login-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .nav-login-dropdown a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      color: var(--dark-text);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: var(--transition);
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .nav-login-dropdown a:last-child {
+      border-bottom: none;
+    }
+
+    .nav-login-dropdown a:hover {
+      background: var(--light-gray);
+      color: var(--gold);
+    }
+
+    .nav-login-dropdown a .dropdown-icon {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+    }
+
 /* Display */
 .d-none { display: none }
 .d-block { display: block }
