@@ -67,7 +67,7 @@ What you can answer:
 - Coverage: All 48 contiguous US states, US-Mexico cross-border
 - How to get a freight quote (encourage them to fill out the quote form)
 - How carriers can register and join The Caravan (SRL's carrier loyalty program)
-- CPP (Caravan Partner Program) — tier system: Guest → Bronze → Silver → Gold → Platinum
+- Caravan Partner Program — 3-tier system: Guest → Silver → Gold → Platinum (v3.7.a)
 - Quick Pay program for carriers (faster payment at a small fee)
 - SRL's technology: real-time tracking, EDI integration, automated invoicing
 - Contact information: Kalamazoo, MI headquarters

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { QuickPayOverridePanel } from "./QuickPayOverridePanel";
 import {
   X,
   FileText,
@@ -685,7 +686,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
             {section === "stops" && <SectionStops form={form} set={set} />}
             {section === "carrier" && <SectionCarrier form={form} set={set} />}
             {section === "financials" && <SectionFinancials form={form} set={set} financials={financials} />}
-            {section === "payment" && <SectionPayment form={form} set={set} financials={financials} />}
+            {section === "payment" && <SectionPayment form={form} set={set} financials={financials} loadId={load?.id || null} />}
             {section === "terms" && <SectionTerms form={form} set={set} />}
             {section === "instructions" && <SectionInstructions form={form} set={set} />}
           </div>
@@ -1805,10 +1806,12 @@ function SectionPayment({
   form,
   set,
   financials,
+  loadId,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
   financials: any;
+  loadId: string | null;
 }) {
   const toggleDocCheck = (key: string) => {
     set(
@@ -1850,6 +1853,16 @@ function SectionPayment({
           ))}
         </div>
       </div>
+
+      {/* Caravan QP Override (v3.7.b) — AEs can elect a non-default applied
+          rate with audit trail. Carriers never see override mechanics. */}
+      {loadId && form.carrierId && (
+        <QuickPayOverridePanel
+          loadId={loadId}
+          carrierUserId={form.carrierId}
+          onAppliedRateChange={(pct) => set("quickPayFeePercent", String(pct))}
+        />
+      )}
 
       {/* Payment Summary */}
       <div className={sectionCardCls}>

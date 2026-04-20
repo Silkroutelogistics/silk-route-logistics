@@ -53,7 +53,14 @@
 //          Score block published on /carriers + SOP-012/SOP-013 rewritten
 //          with v3 values + carvanService.ts → caravanService.ts rename.
 //          BREAKING: CarrierTier enum no longer contains BRONZE.
-export const SRL_VERSION = "3.7.a";
+// v3.7.b — Phase 3 gap-close: QuickPayOverridePanel React component wired
+//          into RateConfirmationModal (tier-default fetch, editable applied
+//          rate, reason dropdown when Δ ≠ 0, note required on OTHER). New
+//          caravanService.test.ts with 9 regression tests guarding the
+//          v3.7.a PLATINUM→PLATINUM identity fix + Silver fallback for
+//          Guest/None/default. Fixed orphan "Guest → Bronze" string in
+//          MarcoPolo system prompt that v3.7.a missed.
+export const SRL_VERSION = "3.7.b";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
