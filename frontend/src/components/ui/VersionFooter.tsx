@@ -66,7 +66,27 @@
 //          tier + priority freight on Platinum. Milestone labels aligned
 //          to tierService names. index.html Caravan ladder + faq.html
 //          Caravan Loyalty Program answer all swept to v3 copy.
-export const SRL_VERSION = "3.7.c";
+// v3.7.d — Phase 4A Truth-Up Cleanup. Removed fabricated volume stats
+//          (500+, 12K+, 98%, 99.2%, 15,000+, $50M+, 15-Min, 99.2%) from
+//          /carriers hero + coverage, /, /about stats grid (kept only
+//          "48 States Covered"), /shipper landing. Deleted fabricated
+//          testimonials section on / (Michael Reeves, Petrovic, Chen).
+//          "Asset-based brokerage" → "Freight brokerage" / "Property
+//          broker" across /, /about, /auth/login, /auth/forgot-password,
+//          /auth/reset-password. Retired "$0 Commission" / "Zero
+//          Commission" / "Zero Factoring Fees" at 3 locations (/,
+//          /carriers Caravan section, / Caravan compact subhead) →
+//          replaced with "Full FSC pass-through" + "No factoring
+//          contract required" framing. Dropped human-support "24/7"
+//          claims at /, /about, /contact, /carriers, /shippers, /shipper
+//          landing (Marco Polo AI "24/7" retained — AI is genuinely
+//          always-on software). QP comparison table "1-3% flat" →
+//          "1% / 2% / 3% by tier". /contact Hours block consolidated to
+//          Honest Hours Copy (Mon–Fri 7am–7pm ET + after-hours
+//          emergency line). Index trust bar section deleted (1 real
+//          stat + 3 fabricated did not warrant the section after
+//          removals). Orphan #trust scroll anchor rewired to #shippers.
+export const SRL_VERSION = "3.7.d";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

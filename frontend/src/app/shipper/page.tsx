@@ -84,10 +84,9 @@ export default function ShipperLandingPage() {
 
           {/* Stats */}
           <div className="mt-16 bg-[#161921] border border-[#C9A84C]/12 rounded-lg p-10 ">
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               {[
-                { val: "98%", label: "On-Time Delivery" },
-                { val: "24/7", label: "Real-Time Tracking" },
+                { val: "Real-Time", label: "Tracking" },
                 { val: "< 3 min", label: "Quote Response" },
                 { val: "$0", label: "Platform Fees" },
               ].map((s, i) => (
