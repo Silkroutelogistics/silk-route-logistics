@@ -86,7 +86,17 @@
 //          emergency line). Index trust bar section deleted (1 real
 //          stat + 3 fabricated did not warrant the section after
 //          removals). Orphan #trust scroll anchor rewired to #shippers.
-export const SRL_VERSION = "3.7.d";
+// v3.7.e — Phase 4B CarrierFraudBanner. New section on /carriers
+//          between "Why Carriers" and the Caravan tier structure,
+//          communicating SRL's anti-fraud posture: FMCSA authority
+//          + insurance verification before dispatch, no re-brokering,
+//          BMC-84 bond on file with FMCSA. Fraud-report CTA links to
+//          mailto:compliance@silkroutelogistics.ai (email already
+//          operational — referenced across insuranceVerificationService,
+//          complianceMonitorService, secEdgarService). Navy/gold
+//          brand treatment, not alarming red. Shield icon glyph,
+//          flex-wrap layout for mobile responsiveness.
+export const SRL_VERSION = "3.7.e";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
