@@ -166,7 +166,37 @@
 //          verification only, no code changes). MEMORY.md
 //          updated with 4 deferred items for Phase 5+.
 //          Phase 4 Content Truth-Up closes with this commit.
-export const SRL_VERSION = "3.7.h";
+// v3.7.i — Principal-address correction. CLAUDE.md commit 57eb145
+//          (and the pre-consolidation CLAUDE.md before it) listed
+//          Kalamazoo as canonical principal city based on session-
+//          memory synthesis. The filed FMCSA address, BMC-84 bond
+//          paperwork, and BOL all show 2317 S 35th St, Galesburg,
+//          MI 49053. Corrected across: CLAUDE.md §1 (flip + full
+//          address + Kalamazoo County caveat), new §3.13 codifying
+//          the "verify legal-identity fields against primary sources"
+//          rule, site-chrome.json addressCity, _partials/footer.html
+//          (cascaded to 13 HTML pages via inject-chrome), auth /
+//          carrier login taglines + left-footers, about.html meta
+//          + body, careers.html meta, faq.html body, security-
+//          policy.html subtitle, privacy.html + terms.html contact
+//          blocks, contact.html HQ address block (replaced fabricated
+//          261 E Kalamazoo Ave with real 2317 S 35th St Galesburg)
+//          + Google Map embed (switched to query-based URL anchored
+//          on Galesburg address), backend pdfService COMPANY
+//          defaults, chatController + shipperPortalController AI
+//          prompts, carrierOutreachService email signature,
+//          emailSequenceService cold-email templates, BOLTemplate
+//          subheader, lead-hunter cold email template. LEFT as-is
+//          per §3.12 / user instruction: Kalamazoo County venue
+//          references in §14 and Caravan QP Agreement v2 Article 18
+//          (correct — Galesburg is in Kalamazoo County), terms.html
+//          arbitration clause (Kalamazoo County is the venue per QP
+//          Agreement v2 Article 18), onboarding arbitration clause,
+//          login splash map SVG dots (geographic reference),
+//          splashQuotes.ts Kalamazoo trivia (employee-audience
+//          geography), eldService.ts geo-coord lookup,
+//          compassPdfService.ts (already correct).
+export const SRL_VERSION = "3.7.i";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

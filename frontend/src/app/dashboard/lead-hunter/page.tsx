@@ -105,7 +105,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
     subject: "Introducing Silk Route Logistics — Your Freight Partner",
     preview: (name: string) => `<h2 style="color:#C9A84C;margin:0 0 16px">Silk Route Logistics Inc.</h2>
 <p>Hi ${name},</p>
-<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Kalamazoo, MI.</p>
+<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Galesburg, MI.</p>
 <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
 <ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
 <p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>

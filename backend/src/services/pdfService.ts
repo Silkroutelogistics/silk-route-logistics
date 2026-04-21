@@ -9,8 +9,8 @@ type PDFDoc = InstanceType<typeof PDFDocument>;
 
 const COMPANY = {
   name: "Silk Route Logistics Inc.",
-  address: "Kalamazoo, Michigan",
-  cityStateZip: "Kalamazoo, MI",
+  address: "2317 S 35th St, Galesburg, MI 49053",
+  cityStateZip: "Galesburg, MI 49053",
   phone: "+1 (269) 220-6760",
   email: "whaider@silkroutelogistics.ai",
   website: "silkroutelogistics.ai",

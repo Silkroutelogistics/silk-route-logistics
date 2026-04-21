@@ -107,7 +107,7 @@ export function generateOutreachEmail(
       <a href="https://silkroutelogistics.ai/carrier/dashboard/available-loads" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Accept This Load</a>
     </div>
     <p style="color:#64748b;font-size:13px">This load was matched to you based on your equipment type and operating regions.</p>
-    <p style="color:#94a3b8;font-size:12px;margin-top:16px">&mdash; Silk Route Logistics<br/>Kalamazoo, Michigan</p>
+    <p style="color:#94a3b8;font-size:12px;margin-top:16px">&mdash; Silk Route Logistics<br/>Galesburg, Michigan</p>
   `);
 }
 

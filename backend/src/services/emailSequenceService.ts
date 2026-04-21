@@ -437,7 +437,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
   const bodies: Record<string, string> = {
     introduction: `
       <p>Hi ${firstName},</p>
-      <p>I'm Wasih, founder of Silk Route Logistics here in Kalamazoo, Michigan. I came across your company and thought there might be a fit.</p>
+      <p>I'm Wasih, founder of Silk Route Logistics here in Galesburg, Michigan. I came across your company and thought there might be a fit.</p>
       <p>We're a freight brokerage that runs on technology — real-time tracking on every load, 98% pickup rate, and I personally manage every account. No call centers, no runaround.</p>
       <p>Would you have 10 minutes this week for a quick call? I'd love to hear about your shipping lanes and see if we can help.</p>
       <p>Best,</p>
@@ -466,7 +466,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
     // ── Carrier Recruitment Templates ──
     carrier_intro: `
       <p>Hi ${firstName},</p>
-      <p>I'm Wasih, founder of Silk Route Logistics in Kalamazoo, Michigan. I came across your authority and wanted to reach out.</p>
+      <p>I'm Wasih, founder of Silk Route Logistics in Galesburg, Michigan. I came across your authority and wanted to reach out.</p>
       <p>We're a freight brokerage that pays carriers in <strong>3 days, not 30</strong>. No factoring company needed. Our QuickPay program has zero contracts, zero hidden fees, and zero reserve holdback — just a flat 1.5-3% fee that saves our carriers <strong>$3,600+ per year</strong> compared to traditional factoring.</p>
       <p>If you're running lanes in the Midwest or cross-country, I'd love to get you set up on our load board. We have consistent freight and I personally work with every carrier in our network.</p>
       <p>Would you have 5 minutes for a quick call, or just reply to this email? I'll get you onboarded same day.</p>

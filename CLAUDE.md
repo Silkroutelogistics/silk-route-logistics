@@ -9,7 +9,7 @@ Last consolidated: Phase 4 close (v3.7.h, commit `3ea7539`).
 ## §1 PROJECT IDENTITY
 
 - **Legal entity:** Silk Route Logistics Inc. (Michigan C-Corp)
-- **Location:** Kalamazoo, Michigan — canonical. Older docs may reference Galesburg; that is outdated.
+- **Principal address:** 2317 S 35th St, Galesburg, MI 49053. Filed with FMCSA, listed on BMC-84 bond paperwork, and appears on the filed Bill of Lading. Galesburg is inside Kalamazoo County, so county-level venue references (§14 and Caravan Quick Pay Agreement v2 Article 18) remain correct as "Kalamazoo County". Correction history: earlier CLAUDE.md revisions listed Kalamazoo as principal city — that was a session-memory error corrected in v3.7.i; see §3.13 for the rule it codified.
 - **FMCSA authority:** USDOT 4526880, MC 01794414, active property broker
 - **BMC-84 surety bond:** $75,000, filed with FMCSA, surety PFA Protects (CA# 0M18074), completed February 19, 2026. BOC-3 process agent designation also on file.
 - **Domain:** silkroutelogistics.ai
@@ -158,6 +158,10 @@ Marketing claim rules (§4, §5) do **not** apply to the following contexts:
 - **User-input form enums** — e.g. shipper register page "500+" in a monthly-shipments dropdown is a form value, not a claim.
 - **Milestone threshold phrases** — "97% on-time", "98% on-time" as M4/M5 requirements are tier requirements, not volume claims.
 - **Historical changelog comments** — comments in code that factually record past decisions should NOT be edited to match present state (they are a record, not a claim).
+
+### §3.13 Address / legal-identity verification
+
+Never trust session memory or prior docs for legal-notice-critical identity fields (principal address, MC#, DOT#, bond surety). Verify against FMCSA SAFER, incorporation docs, or bond paperwork before asserting canonical. A session-memory error in this category propagated a wrong city into CLAUDE.md commit `57eb145`; v3.7.i corrected it. Lesson: legal identity fields need primary-source verification, not chat-memory synthesis.
 
 ---
 

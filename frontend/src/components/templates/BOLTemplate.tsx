@@ -186,7 +186,7 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
                 <CompassLogo />
                 <div className="bol-company-stack">
                   <div className="bol-company-name">SILK ROUTE LOGISTICS INC.</div>
-                  <div className="bol-company-sub">Kalamazoo, Michigan</div>
+                  <div className="bol-company-sub">2317 S 35th St, Galesburg, MI 49053</div>
                   <div className="bol-company-sub">(269) 220-6760 &nbsp;|&nbsp; whaider@silkroutelogistics.ai</div>
                   <div className="bol-company-sub">MC# 01794414 &nbsp;|&nbsp; DOT# 4526880</div>
                 </div>

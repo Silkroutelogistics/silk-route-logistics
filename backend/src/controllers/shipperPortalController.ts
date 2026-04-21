@@ -1083,7 +1083,7 @@ For quotes, use these base rates:
 - Flatbed: $3.25/mile + fuel
 
 Be helpful, concise, and professional. If you can't answer something, suggest they contact their account representative.
-You represent Silk Route Logistics, a carrier-first freight brokerage based in Kalamazoo, Michigan.`;
+You represent Silk Route Logistics, a carrier-first freight brokerage based in Galesburg, Michigan (Kalamazoo County).`;
 
     // Build messages array
     const messages: { role: "user" | "assistant"; content: string }[] = [];
