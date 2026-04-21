@@ -221,6 +221,11 @@ export default function EmployeeLoginPage() {
       });
       const data = await res.json();
       if (data.error) { setLocalError(data.error); setLocalLoading(false); return; }
+      if (data.passwordExpired) {
+        sessionStorage.setItem("srl_temp_token", data.tempToken);
+        window.location.href = "/auth/force-password-change";
+        return;
+      }
       if (data.user) {
         window.location.href = "/dashboard/overview";
       }

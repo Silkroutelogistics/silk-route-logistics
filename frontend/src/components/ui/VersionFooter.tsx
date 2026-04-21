@@ -268,7 +268,22 @@
 //          confirmed read-only, no writes to load_tracking_events.
 //          Token format matches shipperPortalController:731
 //          55-char confusable-excluded alphabet.
-export const SRL_VERSION = "3.7.k";
+// v3.7.l — Hotfix: AE Console login TOTP verify silent-swallow.
+//          handleTotpVerify was missing the passwordExpired branch
+//          that handleOtp already had, causing users whose
+//          passwords exceeded PASSWORD_EXPIRY_DAYS to get stuck
+//          on the 6-digit authenticator step with no error and
+//          no redirect. Backend handleTotpLoginVerify returns
+//          { passwordExpired, tempToken } after 2FA passes; the
+//          frontend handler only checked for data.error and
+//          data.user, so the response fell through to
+//          setLocalLoading(false) with no UI feedback.
+//          4-line insert matching the existing handleOtp pattern:
+//          stash tempToken in sessionStorage, redirect to
+//          /auth/force-password-change, early return. Production
+//          login blocker for any account past the password expiry
+//          window.
+export const SRL_VERSION = "3.7.l";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
