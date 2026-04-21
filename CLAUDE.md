@@ -38,8 +38,7 @@ Last consolidated: Phase 4 close (v3.7.h, commit `3ea7539`).
 - **Email delivery:** Resend. Google Workspace is the mailbox host.
 - **Testing:** Vitest — `backend/__tests__/unit/services/` convention
 - **CI:** GitHub Actions — lint + typecheck + build on push/PR
-- **Brand colors:** navy `#0A2540`, gold `#BA7517` (darker `#C8963E` used in existing marketing CSS), cream `#F5EFE1`
-- **Typography:** Playfair Display / DM Serif Display (headings), DM Sans / Plus Jakarta Sans (body), Georgia (legal docs)
+- **Brand colors + typography:** see §2.1 Design System below (single source of truth). Short form: gold `#BA7517`, navy resolves from `themes.css` (`#0D1B2A` in the default silk-route-classic light mode), canvas `#faf9f7`, gold tint `#FAEEDA`, dark gold `#854F0B`.
 - **Key Prisma models added Feb 2026:**
   - `RateConfirmation` — JSON formData + indexed financial columns, linked to Load
   - `CheckCall` — Track & Trace check-call log, linked to Load + User
@@ -62,6 +61,115 @@ POD_RECEIVED → INVOICED → COMPLETED
 ```
 
 Also: `TONU`, `CANCELLED`, `PICKED_UP` (legacy alias).
+
+### AE Console modules
+
+Served at `/dashboard/*`, `/accounting/*`, `/admin/*` via Next.js app router. Static HTML at `frontend/public/ae/*` is **legacy scaffolding**; React routes are authoritative.
+
+**Live React routes: 47 dashboard + 13 accounting + 4 admin = 64 live routes.** (Counts exclude Next.js convention files — `layout.tsx`, `error.tsx`, `loading.tsx`.) Grouped by function:
+
+- **Operations (daily-use):** `lead-hunter` · `crm` · `carriers` · `loads` · `orders` · `dispatch` · `track-trace` · `loads-calendar` · `dock-scheduling` · `tender` · `drivers` · `fleet`
+- **Financial operations:** `finance` · `invoices` · `payables` · `settlements` · `factoring` · `quick-pay` (dashboard) + `/accounting/*`: `aging` · `analytics` · `approvals` · `credit` · `disputes` · `export` · `fund` · `invoices` · `payments` · `pnl` · `quick-pay` · `quickpay-revenue` · `reports`
+- **Intelligence + analytics:** `overview` · `scorecard` · `revenue` · `waterfall` · `market` · `lane-analytics` · `geo-spend` · `backhaul-discovery` · `variance-reports` · `ai-costs` · `ai-insights`
+- **Compliance + documents:** `compliance` · `claims` · `documents` · `audit` · `violations` · `fuel-tables`
+- **Configuration + rules:** `rfp` · `routing-guide` · `exception-config` · `contract-rates` · `shipper-defaults` · `tagging-rules` · `sops` · `settings`
+- **Communication:** `messages` · `communications` · `phone-console`
+- **Integrations:** `edi` · `integrations` · `tracking`
+- **Admin (platform-level):** `/admin/*` — `users` · `system` · `monitoring` · `analytics`
+
+**Canonical Lead Hunter component:** `ProspectDrawer` (`frontend/src/app/dashboard/lead-hunter/ProspectDrawer.tsx`). Lead-hunter-specific; wraps `IconTabs` from `@/components/ui/IconTabs`. Originated in v3.6.a (`4668f67`), evolved through v3.6.b (`e8af6a1`) and v3.6.c (`8fe73b3`). The "SlideDrawer" name from prior session memory is synthesis error — no component by that name exists.
+
+---
+
+## §2.1 DESIGN SYSTEM
+
+### Color tokens (primary sources: themes.css + BOL v2.8 PDF)
+
+**Navy** (dominant surface, target 60%+ of any page):
+- Resolves from `themes.css` via `--navy` proxy:
+  - silk-route-classic light: `#0D1B2A` (default)
+  - silk-route-classic dark: `#0A1220`
+  - other dark surfaces in use: `#0F1117`, `#1a1a2e` (legacy `index.html` logo fill)
+- BOL v2.8 uses `#0D1B2A` hard-coded.
+- Phase 1 design-system-tokens-file (§13) should consolidate to a single navy token; until then, document both.
+- Memory value `#0A2540` from prior sessions was synthesis error; does not exist in codebase. Do NOT "fix" any navy reference to `#0A2540`.
+
+**Gold `#BA7517`:** RESTRICTED. CTAs, active states, hover/focus rings, tier badges (Gold/Platinum), milestone markers, section labels on legal documents. Confirmed across `IconTabs`, `ContactsPanel`, `WaterfallDrawer`, track module, and BOL v2.8. Never decorative, never large blocks, never body text.
+
+**Gold tint `#FAEEDA`:** background for gold-adjacent elements (active tab backgrounds, subtle highlight rows, BOL section-label pill backgrounds, MC/DOT pill). Sparingly.
+
+**Dark gold `#854F0B`:** text color on `#FAEEDA` backgrounds (active-state labels in `IconTabs` and `ContactsPanel`). Use exclusively paired with `#FAEEDA` — not for standalone body text.
+
+**Canvas** (page background):
+- Portal: `#faf9f7` (carriers section-pad, auth form panels)
+- BOL v2.8: similar pale cream
+- Memory value `#F5EFE1` from prior sessions was synthesis error; does not exist in codebase. Do NOT "fix" any canvas reference to `#F5EFE1`.
+
+**Enforcement:**
+- If gold (`#BA7517`) covers more than ~10% of a viewport, audit and reduce before shipping.
+- Cross-check against BOL v2.8 visual reference — the BOL is canonical expression of SRL brand tone. Portal surfaces that drift from the BOL should be corrected, not the reverse.
+
+### Typography
+
+- **Playfair Display:** display headings only. Max 3–4 Playfair moments per page. Not for subheads, not for UI labels, not for body.
+- **DM Sans:** body, UI labels, buttons, nav, forms, data tables.
+- **Georgia:** legal documents (BOL v2.8, QP Agreement v2, rate confirmation PDFs). Not for web pages.
+- Sizes and line heights defined in `utilities.css`. Do not inline `font-size` in `tsx`/`html`.
+
+### Legal document reference
+
+- **BOL v2.8** (current production Bill of Lading template) is the canonical expression of SRL brand identity in document form. All future PDF generators — rate confirmations, invoices, claim forms, carrier onboarding packets, Compass scorecards — must match BOL v2.8 visual grammar: Playfair serif headings, gold section labels on `#FAEEDA` pills, navy body, gold accent rules.
+- Before creating or modifying any PDF template, reference BOL v2.8 visually. Do NOT design PDFs from scratch against memory-based palette values. §3.13 applies to brand/visual identity, not only to legal-notice identity fields.
+
+### Motion rule
+
+- Max one signature motion interaction per page. Examples: subtle route line on homepage hero, slow ambient loop behind a section headline, one page transition on dashboard entry.
+- Forbidden: scroll-triggered parallax stacks, 3D hero animations, Three.js scenes, WebGL, autoplay video above the fold on marketing pages, cursor-following effects.
+- Rationale: B2B freight credibility over visual spectacle. Buyers evaluate MC#, insurance limits, coverage lanes, payment terms, carrier network. Not cinematic parallax.
+
+### Anti-patterns (forbidden on marketing pages)
+
+- Hero video above the fold
+- Heavy parallax / scroll-jacking
+- Dark mode toggle on marketing (internal tools allowed — `themes.css` supports it)
+- Chatbot widgets in bottom-right on marketing. Marco Polo lives inside authenticated shipper portal and AE Console only.
+- Ornamental Silk Route imagery (camels, silk swatches, ancient maps, compass roses as decoration). Brand story told through precision, not iconography.
+- Emojis anywhere in UI or marketing copy. SVG icons only, sitewide.
+- Agency-portfolio aesthetics. Target reference: Jeton, iCOMAT — precision and trust, not spectacle.
+
+### Component patterns (AE Console + internal tools)
+
+- **`ProspectDrawer`** (lead-hunter-specific): 720px right-side drawer wrapping `IconTabs`. Inline-editable field pattern (click to edit, blur or Enter to save, Esc to cancel). Origin v3.6.a (`4668f67`); evolved v3.6.b / v3.6.c. Do not extract as a shared `SlideDrawer` without explicit scope approval.
+- **`IconTabs`** (`@/components/ui/IconTabs`): horizontal tab bar with SVG icon + label; gold underline and gold icon tint on active state, `#FAEEDA` active-tab background, `#854F0B` active-label text. Used inside `ProspectDrawer` and across AE Console module headers.
+- **Inline edit:** text fields switch from read-mode to input on click. No separate "Edit" button. Save on blur or Enter. Toast confirmation on save.
+- **Shared CSS:** `frontend/public/shared/css/utilities.css` injected on all pages via `inject-chrome.mjs` (established v3.6.f). Component-specific CSS co-located with `tsx` file.
+
+### Login UX (canonical, do not redesign without explicit approval)
+
+- 55/45 split-panel. Left 55%: branding + daily rotating fun fact. Right 45%: form.
+- Daily fact rotation deterministic by day-of-year. Separate arrays: `aeFacts[]` for AE, `carrierFacts[]` for carrier.
+- 8-digit OTP (not 6).
+- Remember Me checkbox: `localStorage` when checked, `sessionStorage` when unchecked.
+- 15-minute inactivity auto-logout, domain-wide.
+- SVG icons only (no emojis).
+- Eyebrow copy: "North America's Freight" (NOT "America's Freight" — Canadian lanes).
+- Logo in every header/footer links to homepage.
+- Forgot/reset-password pages adopt login split-screen aesthetic (v3.6.g).
+
+### Structural rule — carrier-first content order
+
+- Homepage AND `/carriers`: carrier proof and value proposition appear BEFORE shipper content. Inverts conventional broker site structure.
+- Rationale: SRL's competitive moat is Caravan Partner Program + Compass Score + Quick Pay tiers. Carrier supply is the Year 1 bottleneck. Shippers read the carrier page as social proof.
+- Exception: dedicated `/shippers` page leads with shipper content (audience match).
+
+### Phased upgrade roadmap (informational, tracked in §13)
+
+- **Phase 0:** component audit
+- **Phase 1:** design system tokens file (consolidate navy + canvas variants per §13)
+- **Phase 2:** landing page rebuild (apply carrier-first structural rule)
+- **Phase 3:** motion / performance (LCP <1.5s, Lighthouse 95+)
+- **Phase 4:** WCAG AA accessibility audit
+- **Phase 5:** internal consistency sweep across AE Console modules
 
 ---
 
@@ -286,6 +394,17 @@ Same-day Quick Pay is UNIVERSAL +2% premium on tier fee. **Not tier-gated.** Eve
 
 | Version | Commit | Description |
 |---|---|---|
+| v3.5.e | `e85e3a6` | Lead Hunter: atomic bulk-stage + email-keyed import + server-side stats + drop localStorage |
+| v3.5.f | `a4c12a5` | Lead Hunter: audit gap closure + Replies quick actions + merged Activity feed |
+| v3.6.a | `4668f67` | Lead Hunter: right-side `ProspectDrawer` (720px) + row polish + activity enhancements (origin of the current drawer pattern) |
+| v3.6.b | `e8af6a1` | Contact taxonomy: `salesRole` enum, `introducedVia`, Do Not Contact flag, shared panel |
+| v3.6.c | `8fe73b3` | Mass email overhaul: plain-text + Gmail signature, stage-aware templates, Resend webhook tracking, follow-up sequencer + Queue, engagement scoring |
+| v3.6.d | `6eaa667` | "Not Interested" pipeline stage + idempotent mark flow |
+| v3.6.e | `36e5636` | Forgot-password wired across carrier/shipper/AE logins; seed test carrier decommissioned |
+| v3.6.f | `7c3dd81` | Shared site chrome (nav + footer) via `inject-chrome.mjs` |
+| v3.6.g | `7aefbde` | Forgot/reset-password pages adopt login split-screen brand aesthetic |
+| v3.6.h | `f304729` | Chrome hotfix: orphan HTML cleanup, legacy nav IDs, integrity guard + `verify-chrome` |
+| v3.6.i | `1924bf9` | Penguin nav variant + Marco Polo widget parity + 11 logos clickable |
 | v3.7.a | `cdf1f3b` | BRONZE→SILVER enum migration, Caravan Partner Program rebrand, v3 QP pricing, 7-factor Compass, QP override backend, `getEffectiveTier` PLATINUM identity fix |
 | v3.7.b | `c6744d1` | AE Console QP override UI, variance cron, `caravanService.test.ts`, rate-con PDF cleanup |
 | v3.7.c | `635aa46` + `ed3d321` | /carriers tier cards grid fix (v3.7.a miss — caught in visual audit) |
@@ -295,6 +414,10 @@ Same-day Quick Pay is UNIVERSAL +2% premium on tier fee. **Not tier-gated.** Eve
 | v3.7.g | `630219f` | **Phase 4C** — positioning rewrite: homepage hero, /carriers three commitments, honest math box, Milestones M1–M6, "What's coming" roadmap, closing CTA; `contact.html` FAQ v3 alignment |
 | v3.7.g.1 | `1ac3802` | Mobile responsive hotfix — tier cards + math box at ≤768px (bug since v3.7.a + new in 4C); pure CSS, no `!important`; also fixed pre-existing `repeat(4,1fr)` BRONZE-era stale grid |
 | v3.7.h | `3ea7539` | **Phase 4D close** — 5 FAQ entries, supporting page sweep, onboarding email verified on v3 (closes Phase 3 Gap 3), MEMORY.md deferred items logged |
+| v3.7.i | `e5def51` | Principal-address correction Kalamazoo → Galesburg across marketing + backend + CLAUDE.md §1; new §3.13 address/legal-identity verification rule |
+| v3.7.j | (this commit) | **Phase 5B documentation consolidation** — §2 AE Console inventory (64 live routes categorized), §2.1 Design System (hybrid color tokens per §3.13 + Legal document reference to BOL v2.8 as canonical brand expression), §11 historical backfill (v3.5.e through v3.6.i), §13 Phase 5E track-and-trace verification gaps |
+
+**Explicitly excluded from §11** (do not backfill, do not exist in git): v3.4.c, v3.4.k, v3.4.s, standalone v3.5, v3.5.d, standalone v3.6.
 
 ---
 
@@ -319,6 +442,12 @@ Marketing content rules (§4, §5) do **NOT** apply to these surfaces:
 - **Phase 5 visual rebalance** — /carriers and site-wide over-dark color palette; cream/off-white section backgrounds needed; typography audit for mobile readability. Includes BOL / rate confirmation visual redesign (design asset staged in Google Drive by Wasi, slots into Phase 5).
 - **README.md fix** — `README.md:3` uses "Asset-based carrier management and freight brokerage platform" — same mischaracterization removed from marketing in v3.7.d. README is dev-facing (internal), not marketing (external), so Phase 4 rules don't strictly apply. Fix as a separate micro-commit before Phase 6 external demos.
 - **MEMORY.md cleanup** — after CLAUDE.md §2 (Architecture) and §13 (Deferred Queue) ship, MEMORY.md has duplicated content. Trim MEMORY.md to only session-specific notes. Do NOT do in same commit as CLAUDE.md consolidation (atomic commits rule, §3.3).
+- **Phase 5E — BOL QR + `/track` + source-of-truth verification.** BOL v2.8 (`BOLTemplate.tsx`) renders a QR code labeled "TRACK" encoding a `/track/<bolId>` destination. Three verification gaps before a real dispatched BOL:
+  1. Confirm `pdfService.ts` / `BOLTemplate.tsx` QR generation actually encodes the correct production URL (not `localhost`, not a placeholder).
+  2. Confirm `/track/:bolId` route exists, renders publicly on `silkroutelogistics.ai`, and degrades gracefully for unknown IDs.
+  3. Confirm `/track` data source of truth is the Track & Trace AE Console module — specifically that public `/track` renders the most recent check-call note OR GPS ping from the T&T service, not a stale cache or fixture. Verify read-only projection is correctly scoped (no PII leak: driver names / phone numbers must NOT appear on public `/track`).
+
+  Execute as Phase 5E with its own audit-first command.
 
 ---
 

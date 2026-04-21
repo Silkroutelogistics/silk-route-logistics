@@ -196,7 +196,46 @@
 //          splashQuotes.ts Kalamazoo trivia (employee-audience
 //          geography), eldService.ts geo-coord lookup,
 //          compassPdfService.ts (already correct).
-export const SRL_VERSION = "3.7.i";
+// v3.7.j — Phase 5B documentation consolidation. Four additions
+//          to CLAUDE.md as it stands after e5def51 (v3.7.i):
+//          (1) §2 Architecture: categorized inventory of 64 live
+//              React routes (47 dashboard + 13 accounting + 4
+//              admin) grouped by function — Operations, Financial,
+//              Intelligence, Compliance, Configuration,
+//              Communication, Integrations, Admin. Clarifies
+//              legacy HTML at frontend/public/ae/* vs authoritative
+//              React routes. Canonical Lead Hunter drawer
+//              component is ProspectDrawer (not "SlideDrawer" —
+//              that name was prior-session synthesis error).
+//          (2) §2.1 Design System: hybrid color tokens per §3.13
+//              primary-source rule. Documents actual codebase
+//              values (navy via themes.css variants #0D1B2A /
+//              #0A1220 / #0F1117 / #1a1a2e; canvas #faf9f7; gold
+//              #BA7517; gold tint #FAEEDA; dark gold #854F0B) AND
+//              explicitly marks "#0A2540" / "#F5EFE1" from prior
+//              sessions as synthesis errors not to be "fixed".
+//              Legal document reference subsection establishes
+//              BOL v2.8 as canonical brand expression in document
+//              form for all future PDF generators (rate cons,
+//              invoices, claim forms, carrier onboarding packets,
+//              Compass scorecards). Plus typography, motion rule,
+//              anti-patterns, component patterns (ProspectDrawer
+//              v3.6.a / IconTabs / inline edit), login UX
+//              canonical decisions, carrier-first structural
+//              rule, Phase 0–5 upgrade roadmap.
+//          (3) §11 Phases Shipped: backfilled 11 historical
+//              entries (v3.5.e through v3.6.i), each SHA verified
+//              via git show, plus v3.7.i (e5def51). Non-existent
+//              versions v3.4.c/k/s, standalone v3.5, v3.5.d,
+//              standalone v3.6 correctly excluded per §3.13.
+//          (4) §13 Deferred Queue: added Phase 5E (BOL QR +
+//              /track + T&T source-of-truth verification with
+//              three gap items: QR URL generation, /track route
+//              existence + graceful degradation, T&T service
+//              projection with PII scope guard).
+//          MEMORY.md untouched per §13. CLAUDE.md only; no live
+//          code or content changes.
+export const SRL_VERSION = "3.7.j";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
