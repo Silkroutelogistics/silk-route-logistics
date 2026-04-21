@@ -448,6 +448,7 @@ Marketing content rules (§4, §5) do **NOT** apply to these surfaces:
   3. Confirm `/track` data source of truth is the Track & Trace AE Console module — specifically that public `/track` renders the most recent check-call note OR GPS ping from the T&T service, not a stale cache or fixture. Verify read-only projection is correctly scoped (no PII leak: driver names / phone numbers must NOT appear on public `/track`).
 
   Execute as Phase 5E with its own audit-first command.
+- **F5 — Marketing nav "Track" link flip.** `site-chrome.json` `navItems` currently points "Track" to `/tracking.html` (legacy static page). After Phase 5E.c confirms `/track` flat route is stable with real token-based lookups, flip the nav link to `/track`. Not in 5E scope strictly — marketing page edit requires its own smoke test (`inject-chrome.mjs` regeneration across 13 pages).
 
 ---
 
@@ -460,6 +461,7 @@ Marketing content rules (§4, §5) do **NOT** apply to these surfaces:
 - Non-solicitation 12 months post-termination, 15% liquidated damages (Flock pattern).
 - **Caravan Quick Pay Agreement v2:** DRAFTED. 22 articles, 3 exhibits, 513 paragraphs, 42.6 KB. Covers anti-assignment, re-brokering prohibition, non-solicitation with liquidated damages, 14 regulatory compliance covenants, full Carmack framework, minimum insurance ($1M auto / $100K cargo / $1M–$2M GL), indemnification, confidentiality, damages cap, Michigan governing law, arbitration election, jury trial waiver, BMC-84 provisions, force majeure. **REQUIRES** Michigan commercial attorney review before first carrier signs. Budget: $400–$800.
 - **Broker-Carrier Agreement (base):** Research complete (Cowtown, Flock, Seaton & Husk templates reviewed, FMCSA regulations cross-referenced). Draft not yet created as standalone document. Quick Pay Agreement v2 assumes this base exists — **first carrier onboarding blocker**.
+- **Public `/track` PII scope** (decision locked v3.7.k): `shipperName` is intentionally visible on public `/track` lookups. Rationale: the BOL document itself is the source of the scan and already prints shipper name adjacent to the QR; redacting on `/track` creates no privacy benefit for the recipient of the BOL while creating a confusing UX discrepancy between paper and digital. BOL v2.8 §14 confidentiality clause governs third-party disclosure (carrier cannot sell shipper list to competitor or post shipper identities on a job board) and does not require redaction from parties who already hold the BOL. Do NOT "fix" `shipperName` to be hidden on `/track` without explicit reversal of this decision.
 
 ---
 

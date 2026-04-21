@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { generateBOL, generateBOLFromLoad, generateRateConfirmation, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
+import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
 import { log } from "../lib/logger";
 
 export async function downloadBOL(req: AuthRequest, res: Response) {
@@ -158,7 +159,22 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
 
     if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
-    const doc = await generateBOLFromLoad(load);
+    // Phase 5E.a: auto-generate (or reuse) a STATUS_ONLY ShipperTrackingToken
+    // on every BOL-print event. Token is plumbed through generateBOLFromLoad
+    // context for 5E.b to encode into the QR. Idempotent per loadId — BOL
+    // re-prints return the existing token.
+    let trackingToken: string | undefined;
+    if (load.customerId) {
+      try {
+        const tok = await generateBOLPrintToken(load.id, load.customerId);
+        trackingToken = tok.token;
+      } catch (err) {
+        // Non-blocking: BOL download must succeed even if token gen fails.
+        log.error({ err, loadId: load.id }, "[PDF] BOL tracking token generation failed (non-blocking)");
+      }
+    }
+
+    const doc = await generateBOLFromLoad(load, { trackingToken });
     const filename = `BOL-${load.referenceNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");

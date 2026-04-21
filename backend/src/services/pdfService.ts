@@ -88,6 +88,21 @@ export async function generateBOL(shipment: ShipmentData): Promise<PDFDoc> {
   return await generateBOLFromLoad(loadData);
 }
 
+/**
+ * Context for BOL PDF generation. Added v3.7.k for the
+ * BOL-QR → /track system (Phase 5E.a).
+ *
+ * `trackingToken` is the 12-char STATUS_ONLY
+ * ShipperTrackingToken issued by
+ * shipperTrackingTokenService.generateBOLPrintToken()
+ * at the controller layer. Phase 5E.b will encode this
+ * into a QR printed on the BOL. Until then the parameter
+ * is plumbed through but visually unused.
+ */
+export interface BOLRenderContext {
+  trackingToken?: string;
+}
+
 interface LoadBOLData {
   referenceNumber: string;
   loadNumber?: string | null;
@@ -110,7 +125,14 @@ interface LoadBOLData {
   carrier?: { firstName: string; lastName: string; company?: string | null; phone?: string | null; carrierProfile?: { mcNumber?: string | null; dotNumber?: string | null } | null } | null;
 }
 
-export async function generateBOLFromLoad(load: LoadBOLData): Promise<PDFDoc> {
+export async function generateBOLFromLoad(
+  load: LoadBOLData,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  context?: BOLRenderContext,
+): Promise<PDFDoc> {
+  // context.trackingToken is plumbed through for 5E.b QR wiring. No visual
+  // effect in 5E.a — token is generated server-side on BOL-print requests
+  // but not yet encoded into the rendered PDF.
   const doc = new PDFDocument({ margins: { top: 34, bottom: 0, left: 34, right: 34 }, size: "LETTER" });
   const M = 34;
   const R = 612 - M;

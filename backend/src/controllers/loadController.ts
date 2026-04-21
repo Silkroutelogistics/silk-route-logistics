@@ -8,6 +8,7 @@ import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
+import { refreshBOLTrackingTokenExpiry } from "../services/shipperTrackingTokenService";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
 import { notifyMatchedCarriers } from "../services/carrierOutreachService";
@@ -364,6 +365,9 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     sendShipperDeliveryEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] delivery email error:"));
     // Integration: create AP, update shipper credit, recalc CPP
     onLoadDelivered(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDelivered error:"));
+    // Phase 5E.a: refresh ShipperTrackingToken expiry to actualDeliveryDatetime + 180d.
+    // Never shortens an existing longer expiry.
+    refreshBOLTrackingTokenExpiry(load.id).catch((e) => log.error({ err: e, loadId: load.id }, "[tracking-token] delivery refresh failed"));
 
     if (load.posterId) {
       await prisma.notification.create({

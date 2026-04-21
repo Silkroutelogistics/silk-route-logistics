@@ -235,7 +235,40 @@
 //              projection with PII scope guard).
 //          MEMORY.md untouched per §13. CLAUDE.md only; no live
 //          code or content changes.
-export const SRL_VERSION = "3.7.j";
+// v3.7.k — Phase 5E.a foundation (BOL QR + public /track + T&T
+//          source-of-truth system). No public-facing behavior
+//          changes — QR wiring lands in 5E.b, polish in 5E.c.
+//          (1) New service shipperTrackingTokenService.ts with
+//              generateBOLPrintToken() and
+//              refreshBOLTrackingTokenExpiry(). Expiry rule F3:
+//              actualDeliveryDatetime + 180d post-delivery,
+//              createdAt + 90d pre-delivery failsafe. Delivery
+//              refresh never shortens an existing longer expiry.
+//          (2) BOL-print hook (Path A only) auto-generates (or
+//              reuses) a STATUS_ONLY ShipperTrackingToken on
+//              server-side downloadBOLFromLoad. Token plumbed
+//              through generateBOLFromLoad via new optional
+//              BOLRenderContext parameter for 5E.b QR encoding.
+//              Path B client preview (BOLTemplate.tsx) stays
+//              token-less by design — preview tokens would
+//              abandon on un-dispatched loads.
+//          (3) Delivery event (loadController:362 DELIVERED
+//              block) fires refreshBOLTrackingTokenExpiry
+//              fire-and-forget alongside autoGenerateInvoice,
+//              sendShipperDeliveryEmail, onLoadDelivered.
+//          (4) CLAUDE.md §14: public /track PII scope decision
+//              documented — shipperName intentionally visible
+//              for BOL recipient; hiding is theater.
+//          (5) CLAUDE.md §13 (F5): marketing nav /tracking.html
+//              → /track flip deferred to post-5E.c stability.
+//          (6) Vitest suite: token expiry rules, idempotent
+//              generation, cross-shipper leak guard, delivery
+//              refresh never-shortens guard, STATUS_ONLY scope.
+//          ELD simulation guard skipped — eldService.ts audit
+//          confirmed read-only, no writes to load_tracking_events.
+//          Token format matches shipperPortalController:731
+//          55-char confusable-excluded alphabet.
+export const SRL_VERSION = "3.7.k";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
