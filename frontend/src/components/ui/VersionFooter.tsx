@@ -364,7 +364,28 @@
 //            updated directly in Render UI earlier
 //            today; this commit only aligns repo-side
 //            documentation)
-export const SRL_VERSION = "3.7.o-build-prep.1";
+// v3.7.n.1 — marketing nav Sign In dropdown visibility hotfix
+//          - Shipper Login + Carrier Login labels were
+//            rendering white-on-white in the Sign In
+//            dropdown on all marketing pages
+//          - Root cause: .nav-login-dropdown a in
+//            utilities.css (specificity 0,1,1) lost
+//            the cascade to .nav-links a in page CSS
+//            (same specificity, later source order)
+//            which set white/gray nav-link colors
+//          - Fix: bumped selector to .nav-login-wrap
+//            .nav-login-dropdown a (specificity 0,2,1)
+//            on 3 rules (default, :hover, :last-child).
+//            All three dropdown items now render dark
+//            navy at rest, gold on hover — peer
+//            treatment, no emphasis hierarchy
+//          - AE Login appearing gold in pre-fix
+//            screenshots was a :hover-state artifact
+//            during capture (cursor naturally lands
+//            on first item when dropdown opens), not
+//            intentional styling
+//          - Single file touched: utilities.css
+export const SRL_VERSION = "3.7.n.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

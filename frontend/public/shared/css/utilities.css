@@ -61,7 +61,13 @@
       transform: translateY(0);
     }
 
-    .nav-login-dropdown a {
+    /* Specificity bumped from .nav-login-dropdown a (0,1,1) to
+       .nav-login-wrap .nav-login-dropdown a (0,2,1) in v3.7.n.1
+       so dropdown text color wins over .nav-links a rules in
+       page-specific CSS (index.css, carriers.css, etc.) that set
+       white/gray nav-link colors and were cascading into dropdown
+       items at equal specificity + later source order. */
+    .nav-login-wrap .nav-login-dropdown a {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -73,11 +79,11 @@
       border-bottom: 1px solid #f0f0f0;
     }
 
-    .nav-login-dropdown a:last-child {
+    .nav-login-wrap .nav-login-dropdown a:last-child {
       border-bottom: none;
     }
 
-    .nav-login-dropdown a:hover {
+    .nav-login-wrap .nav-login-dropdown a:hover {
       background: var(--light-gray);
       color: var(--gold);
     }
