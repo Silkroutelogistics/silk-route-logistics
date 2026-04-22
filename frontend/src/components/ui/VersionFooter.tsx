@@ -328,7 +328,25 @@
 //          - Typography reconciliation deferred to
 //            v3.7.n.1 or v3.7.o
 //          - Docs-only commit, no code or style changes
-export const SRL_VERSION = "3.7.n";
+// v3.7.o-build-prep — Phase 5E.b prerequisite
+//          - Logo relocated: backend/assets/logo.png →
+//            backend/src/assets/logo.png
+//          - Three consumers updated to new path:
+//            pdfService.ts, compassPdfService.ts,
+//            generate-logo.ts
+//          - render.yaml buildCommand appended with
+//            cp -r src/assets dist/backend/src/assets
+//            so binary assets propagate to compiled
+//            dist/ in production
+//          - Fixes latent pre-existing bug: compass
+//            logo was silently missing from all BOLs
+//            and compassPdf output on prod since build
+//            pipeline setup
+//          - Prerequisite for v3.7.o font embedding
+//            (Playfair Display + DM Sans under
+//            backend/src/assets/fonts/bol-v2.9/)
+//          - No visual template changes in this commit
+export const SRL_VERSION = "3.7.o-build-prep";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -18,7 +18,7 @@ const COMPANY = {
   dot: "4526880",
 };
 
-const LOGO_PATH = path.resolve(__dirname, "../../assets/logo.png");
+const LOGO_PATH = path.resolve(__dirname, "../assets/logo.png");
 const hasLogo = fs.existsSync(LOGO_PATH);
 
 function addHeader(doc: PDFDoc, title: string) {

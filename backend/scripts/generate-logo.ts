@@ -107,7 +107,7 @@ const SVG = `<?xml version="1.0" encoding="utf-8"?>
 </svg>`;
 
 async function generate() {
-  const outputPath = path.resolve(__dirname, "../assets/logo.png");
+  const outputPath = path.resolve(__dirname, "../src/assets/logo.png");
 
   await sharp(Buffer.from(SVG))
     .resize(512, 512)
