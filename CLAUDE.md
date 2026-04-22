@@ -175,6 +175,31 @@ Motion:
 
 ---
 
+### §2.2 Render deployment authority (dashboard, not render.yaml)
+
+**The silk-route-backend Render service is not Blueprint-managed.** It was created manually in the Render dashboard. Render reads its buildCommand, startCommand, env vars, and runtime config from the dashboard UI — `render.yaml` in this repo is cosmetic / documentation-only. Edits to `render.yaml` alone will deploy without effect.
+
+**Dashboard URL:** https://dashboard.render.com/web/srv-d64iqtffte5s73894h8g
+
+**Current authoritative buildCommand** (as set in the dashboard on 2026-04-22, kept in sync with `render.yaml` for reference):
+
+```
+npm install && npx prisma generate && npx prisma migrate deploy && (npx tsc || true) && cp -r src/assets dist/backend/src/assets && cp -r src/config dist/backend/src/config
+```
+
+**Rule for any future session (human or AI):**
+If you need to change what runs during a Render build, make the edit in the dashboard UI, NOT by editing render.yaml. An edit to render.yaml alone will deploy without effect, then silently fail when the expected build behavior doesn't occur.
+
+This divergence was discovered on 2026-04-22 during v3.7.o-build-prep, after a 45-minute debugging session where a missing-asset bug (compass logo not rendering on production BOLs) was traced from "cp step in render.yaml didn't run" to "Render isn't reading render.yaml at all."
+
+Two specific assets require the cp step: `src/assets/` (logo.png, future font files for BOL v2.9) and `src/config/` (email signature templates). Any future `__dirname`-relative asset under `backend/src/` must either live under one of those two directories, or the dashboard buildCommand must be extended to cp it.
+
+If the service is ever recreated, reconfigured, or migrated, the dashboard buildCommand must be manually re-entered using the value quoted above.
+
+(Optional future cleanup: convert the service to Blueprint-managed so `render.yaml` becomes authoritative. Not scheduled — requires service recreation, downtime, and env var re-entry. Defer until there's explicit bandwidth for infrastructure cleanup.)
+
+---
+
 ## §3 BINDING RULES
 
 Organized by firing frequency — universal rules first, domain-specific last. All rules enforceable across sessions; a Claude Code session must respect these without re-explanation.

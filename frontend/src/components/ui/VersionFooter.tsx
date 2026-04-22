@@ -346,7 +346,25 @@
 //            (Playfair Display + DM Sans under
 //            backend/src/assets/fonts/bol-v2.9/)
 //          - No visual template changes in this commit
-export const SRL_VERSION = "3.7.o-build-prep";
+// v3.7.o-build-prep.1 — documentation alignment
+//          - render.yaml buildCommand updated to match
+//            current Render dashboard value (added
+//            cp -r src/config step)
+//          - YAML comment added above buildCommand
+//            noting file is cosmetic, dashboard is
+//            authoritative (service was created
+//            manually, not as a Blueprint)
+//          - CLAUDE.md §2.2 new subsection "Render
+//            deployment authority" documenting the
+//            dashboard-vs-render.yaml divergence
+//            discovered on 2026-04-22
+//          - No code changes, no runtime behavior
+//            changes, no deploy behavior changes (the
+//            dashboard buildCommand was already
+//            updated directly in Render UI earlier
+//            today; this commit only aligns repo-side
+//            documentation)
+export const SRL_VERSION = "3.7.o-build-prep.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

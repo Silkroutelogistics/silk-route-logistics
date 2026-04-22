@@ -4,7 +4,21 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy && (npx tsc || true) && cp -r src/assets dist/backend/src/assets
+    # NOTE: This render.yaml is NOT read by the live Render service.
+    # The silk-route-backend service (srv-d64iqtffte5s73894h8g) was
+    # created manually in the Render dashboard, not as a Blueprint.
+    # Render reads its buildCommand, startCommand, env vars, etc.
+    # from the dashboard UI — this file is cosmetic / documentation-
+    # only. Edits here will deploy without effect.
+    #
+    # To change build behavior, edit the dashboard directly:
+    #   https://dashboard.render.com/web/srv-d64iqtffte5s73894h8g
+    #
+    # The buildCommand below is kept in sync with the current
+    # dashboard value for reference and future migration to a
+    # Blueprint-managed setup. See CLAUDE.md §2.2 for the rule
+    # and the full history of this divergence.
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy && (npx tsc || true) && cp -r src/assets dist/backend/src/assets && cp -r src/config dist/backend/src/config
     startCommand: node dist/backend/src/server.js
     healthCheckPath: /api/health
     envVars:
