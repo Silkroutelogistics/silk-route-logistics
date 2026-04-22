@@ -81,95 +81,97 @@ Served at `/dashboard/*`, `/accounting/*`, `/admin/*` via Next.js app router. St
 
 ---
 
-## §2.1 DESIGN SYSTEM
+### §2.1 Design tokens (primary source: designer handoff at project/colors_and_type.css, confirmed 2026-04-22)
 
-### Color tokens (primary sources: themes.css + BOL v2.8 PDF)
+**CANONICAL — Color (use for all new work)**
 
-**Navy** (dominant surface, target 60%+ of any page):
-- Resolves from `themes.css` via `--navy` proxy:
-  - silk-route-classic light: `#0D1B2A` (default)
-  - silk-route-classic dark: `#0A1220`
-  - other dark surfaces in use: `#0F1117`, `#1a1a2e` (legacy `index.html` logo fill)
-- BOL v2.8 uses `#0D1B2A` hard-coded.
-- Phase 1 design-system-tokens-file (§13) should consolidate to a single navy token; until then, document both.
-- Memory value `#0A2540` from prior sessions was synthesis error; does not exist in codebase. Do NOT "fix" any navy reference to `#0A2540`.
+Navy scale:
+- `--navy: #0A2540` — primary structural; confirmed canonical 2026-04-22 via designer handoff + pixel verification against `project/screenshots/v29-full.png`. Supersedes prior §2.1 synthesis-error flag.
+- `--navy-900: #061629`
+- `--navy-800: #0A2540` (alias of `--navy`)
+- `--navy-700: #15365A`
+- `--navy-600: #234A73`
+- `--navy-500: #355E8A`
+- `--navy-400: #5B7EA3`
+- `--navy-300: #8AA5C0`
+- `--navy-200: #BECEDE`
+- `--navy-100: #E2EAF2`
 
-**Gold `#BA7517`:** RESTRICTED. CTAs, active states, hover/focus rings, tier badges (Gold/Platinum), milestone markers, section labels on legal documents. Confirmed across `IconTabs`, `ContactsPanel`, `WaterfallDrawer`, track module, and BOL v2.8. Never decorative, never large blocks, never body text.
+Gold scale:
+- `--gold: #C5A572` — primary accent (dividers, section labels, icons, wing). Role documented 2026-04-22 per designer handoff. Existing codebase usage of `#BA7517` as primary gold predates handoff; migration to role-correct usage tracked in future phases, not in v3.7.n.
+- `--gold-dark: #BA7517` — CTA fills, hover emphasis, outbound links
+- `--gold-light: #DAC39C`
+- `--gold-tint: #FAEEDA` — active/selected row, subtle highlight
 
-**Gold tint `#FAEEDA`:** background for gold-adjacent elements (active tab backgrounds, subtle highlight rows, BOL section-label pill backgrounds, MC/DOT pill). Sparingly.
+Cream / surface:
+- `--cream: #FBF7F0` — page background
+- `--cream-2: #F5EEE0` — alt row tint, sunken panels
+- `--cream-3: #EFE6D3`
+- `--white: #FFFFFF` — sparingly, card elevation only
+- `--black: #000000` — never as text
 
-**Dark gold `#854F0B`:** text color on `#FAEEDA` backgrounds (active-state labels in `IconTabs` and `ContactsPanel`). Use exclusively paired with `#FAEEDA` — not for standalone body text.
+Semantic foreground:
+- `--fg-1: #0A2540` (primary text on cream)
+- `--fg-2: #3A4A5F` (secondary, captions)
+- `--fg-3: #6B7685` (tertiary, muted)
+- `--fg-disabled: #A7AEB8`
+- `--fg-on-navy: #FBF7F0`
+- `--fg-on-navy-2: #C9D2DE`
 
-**Canvas** (page background):
-- Portal: `#faf9f7` (carriers section-pad, auth form panels)
-- BOL v2.8: similar pale cream
-- Memory value `#F5EFE1` from prior sessions was synthesis error; does not exist in codebase. Do NOT "fix" any canvas reference to `#F5EFE1`.
+Semantic background:
+- `--bg-page: #FBF7F0`
+- `--bg-surface: #FFFFFF`
+- `--bg-surface-2: #F5EEE0`
+- `--bg-navy: #0A2540`
+- `--bg-navy-2: #15365A`
 
-**Enforcement:**
-- If gold (`#BA7517`) covers more than ~10% of a viewport, audit and reduce before shipping.
-- Cross-check against BOL v2.8 visual reference — the BOL is canonical expression of SRL brand tone. Portal surfaces that drift from the BOL should be corrected, not the reverse.
+Borders + focus:
+- `--border-1: rgba(10,37,64,0.10)`
+- `--border-2: rgba(10,37,64,0.16)`
+- `--border-strong: rgba(10,37,64,0.32)`
+- `--border-on-navy: rgba(251,247,240,0.14)`
+- `--focus-ring: 0 0 0 3px rgba(197,165,114,0.40)`
 
-### Typography
+Status:
+- `--success: #2F7A4F` / `--success-bg: #E6F0E9`
+- `--warning: #B07A1A` / `--warning-bg: #FBEFD4`
+- `--danger: #9B2C2C` / `--danger-bg: #F6E3E3`
+- `--info: #2A5B8B` / `--info-bg: #E2EAF2`
 
-- **Playfair Display:** display headings only. Max 3–4 Playfair moments per page. Not for subheads, not for UI labels, not for body.
-- **DM Sans:** body, UI labels, buttons, nav, forms, data tables.
-- **Georgia:** legal documents (BOL v2.8, QP Agreement v2, rate confirmation PDFs). Not for web pages.
-- Sizes and line heights defined in `utilities.css`. Do not inline `font-size` in `tsx`/`html`.
+**CANONICAL — Layout / Spatial / Motion**
 
-### Legal document reference
+Spacing (8px grid): 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 96 / 128 px
 
-- **BOL v2.8** (current production Bill of Lading template) is the canonical expression of SRL brand identity in document form. All future PDF generators — rate confirmations, invoices, claim forms, carrier onboarding packets, Compass scorecards — must match BOL v2.8 visual grammar: Playfair serif headings, gold section labels on `#FAEEDA` pills, navy body, gold accent rules.
-- Before creating or modifying any PDF template, reference BOL v2.8 visually. Do NOT design PDFs from scratch against memory-based palette values. §3.13 applies to brand/visual identity, not only to legal-notice identity fields.
+Layout:
+- container-max: 1280px
+- container-console: 1440px
+- section-pad: 100px
+- section-pad-console: 56px
 
-### Motion rule
+Radii: 2 / 4 / 8 / 12 / 16 / 9999 px
 
-- Max one signature motion interaction per page. Examples: subtle route line on homepage hero, slow ambient loop behind a section headline, one page transition on dashboard entry.
-- Forbidden: scroll-triggered parallax stacks, 3D hero animations, Three.js scenes, WebGL, autoplay video above the fold on marketing pages, cursor-following effects.
-- Rationale: B2B freight credibility over visual spectacle. Buyers evaluate MC#, insurance limits, coverage lanes, payment terms, carrier network. Not cinematic parallax.
+Shadows (navy-tinted): Four-stop scale from `0 1px 2px rgba(10,37,64,0.06)` to `0 24px 48px rgba(10,37,64,0.18)`.
 
-### Anti-patterns (forbidden on marketing pages)
+Motion:
+- Ease: `cubic-bezier(0.2, 0.6, 0.2, 1)`
+- Durations: 120 / 180 / 280 / 480 ms
 
-- Hero video above the fold
-- Heavy parallax / scroll-jacking
-- Dark mode toggle on marketing (internal tools allowed — `themes.css` supports it)
-- Chatbot widgets in bottom-right on marketing. Marco Polo lives inside authenticated shipper portal and AE Console only.
-- Ornamental Silk Route imagery (camels, silk swatches, ancient maps, compass roses as decoration). Brand story told through precision, not iconography.
-- Emojis anywhere in UI or marketing copy. SVG icons only, sitewide.
-- Agency-portfolio aesthetics. Target reference: Jeton, iCOMAT — precision and trust, not spectacle.
+**LEGACY (live in codebase, retained as-is)**
 
-### Component patterns (AE Console + internal tools)
+- `#0D1B2A` — themes.css light-default navy. Currently rendering in production. Superseded conceptually by `#0A2540` for new work. Not migrated in v3.7.n — code migration tracked separately when themes.css reconciliation is scheduled.
+- `#854F0B` — dark gold used by `IconTabs` and `ContactsPanel`. Not in designer canonical set. Retained for existing surfaces. Do not introduce to new work; use `--gold-dark` (`#BA7517`) for emphasis or `--gold` (`#C5A572`) for accents per designer spec.
+- `#0F1117`, `#1a1a2e`, `#0A1220` — AE Console and dark-mode navy surfaces. Designer handoff does not enumerate a dark-mode variant; these values retained as-is.
+- `#faf9f7` — portal canvas. Superseded conceptually by `#FBF7F0` (`--cream`). Not migrated in v3.7.n.
 
-- **`ProspectDrawer`** (lead-hunter-specific): 720px right-side drawer wrapping `IconTabs`. Inline-editable field pattern (click to edit, blur or Enter to save, Esc to cancel). Origin v3.6.a (`4668f67`); evolved v3.6.b / v3.6.c. Do not extract as a shared `SlideDrawer` without explicit scope approval.
-- **`IconTabs`** (`@/components/ui/IconTabs`): horizontal tab bar with SVG icon + label; gold underline and gold icon tint on active state, `#FAEEDA` active-tab background, `#854F0B` active-label text. Used inside `ProspectDrawer` and across AE Console module headers.
-- **Inline edit:** text fields switch from read-mode to input on click. No separate "Edit" button. Save on blur or Enter. Toast confirmation on save.
-- **Shared CSS:** `frontend/public/shared/css/utilities.css` injected on all pages via `inject-chrome.mjs` (established v3.6.f). Component-specific CSS co-located with `tsx` file.
+**SUPERSEDED (prior synthesis errors — do not introduce)**
 
-### Login UX (canonical, do not redesign without explicit approval)
+- `#F5EFE1` — prior §2.1 flagged this as synthesis error; flag retained. Nearest designer value is `--cream-2 #F5EEE0`. If this hex appears in code review, correct to `#F5EEE0`.
+- Prior `#0A2540` synthesis-error flag removed — hex is now CANONICAL per designer handoff (above). Any future suggestion that `#0A2540` is incorrect should be treated as regression — verify against `project/colors_and_type.css` before changing.
 
-- 55/45 split-panel. Left 55%: branding + daily rotating fun fact. Right 45%: form.
-- Daily fact rotation deterministic by day-of-year. Separate arrays: `aeFacts[]` for AE, `carrierFacts[]` for carrier.
-- 8-digit OTP (not 6).
-- Remember Me checkbox: `localStorage` when checked, `sessionStorage` when unchecked.
-- 15-minute inactivity auto-logout, domain-wide.
-- SVG icons only (no emojis).
-- Eyebrow copy: "North America's Freight" (NOT "America's Freight" — Canadian lanes).
-- Logo in every header/footer links to homepage.
-- Forgot/reset-password pages adopt login split-screen aesthetic (v3.6.g).
+**DEFERRED (not reconciled in v3.7.n)**
 
-### Structural rule — carrier-first content order
-
-- Homepage AND `/carriers`: carrier proof and value proposition appear BEFORE shipper content. Inverts conventional broker site structure.
-- Rationale: SRL's competitive moat is Caravan Partner Program + Compass Score + Quick Pay tiers. Carrier supply is the Year 1 bottleneck. Shippers read the carrier page as social proof.
-- Exception: dedicated `/shippers` page leads with shipper content (audience match).
-
-### Phased upgrade roadmap (informational, tracked in §13)
-
-- **Phase 0:** component audit
-- **Phase 1:** design system tokens file (consolidate navy + canvas variants per §13)
-- **Phase 2:** landing page rebuild (apply carrier-first structural rule)
-- **Phase 3:** motion / performance (LCP <1.5s, Lighthouse 95+)
-- **Phase 4:** WCAG AA accessibility audit
-- **Phase 5:** internal consistency sweep across AE Console modules
+- **Typography** — designer handoff declares Playfair Display (display), DM Sans (body), Georgia (tagline-only: "Where Trust Travels."), and SF Mono (mono). Current §2.1 documented Georgia as primary for legal PDFs (BOL v2.8, QP Agreement v2, rate confirmation). Role reassignment deferred — will be reconciled in a dedicated commit, likely folded into v3.7.o when BOL PDF font embedding work begins (v3.7.o requires `*.ttf` assets from `project/fonts/` to be checked into the repo and loaded by PDFKit).
+- **Type scale, line-height, letter-spacing tokens** — deferred alongside typography reconciliation.
 
 ---
 

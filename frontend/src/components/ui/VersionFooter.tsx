@@ -310,7 +310,25 @@
 //          srl_temp_token in login flow untouched (out of scope).
 //          Together with v3.7.l this closes both expired-password
 //          traps — login-side and reset-side.
-export const SRL_VERSION = "3.7.m";
+// v3.7.n — Phase 5E.b-prep
+//          - CLAUDE.md §2.1 full rewrite: four-bucket
+//            structure (CANONICAL / LEGACY / SUPERSEDED
+//            / DEFERRED)
+//          - #0A2540 flipped from synthesis-error flag
+//            to canonical navy (designer handoff
+//            verified 2026-04-22)
+//          - Full designer token set documented:
+//            navy scale, gold scale with role-shift
+//            note, cream scale, semantic fg/bg/border,
+//            status colors, spacing, radii, shadows,
+//            motion
+//          - Legacy bucket documents live-but-non-
+//            canonical hex values (#0D1B2A, #854F0B,
+//            AE Console dark navies, #faf9f7)
+//          - Typography reconciliation deferred to
+//            v3.7.n.1 or v3.7.o
+//          - Docs-only commit, no code or style changes
+export const SRL_VERSION = "3.7.n";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
