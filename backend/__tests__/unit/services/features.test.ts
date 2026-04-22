@@ -12,13 +12,16 @@ describe("features config", () => {
     process.env = originalEnv;
   });
 
+  // 15s timeout: first dynamic import after vi.resetModules() pays the full
+  // module-graph walk cost (~5s observed on CI). Subsequent tests in this
+  // file are cheap once the harness is warm. See v3.7.n.2 for diagnosis.
   it("returns defaults when no env vars set", async () => {
     const { features } = await import("../../../src/config/features");
     expect(features.compassEngine).toBe(true);
     expect(features.fmcsaVetting).toBe(true);
     expect(features.emailSequences).toBe(false);
     expect(features.waterfallTendering).toBe(false);
-  });
+  }, 15000);
 
   it("respects SRL_FEATURE_* env overrides", async () => {
     process.env.SRL_FEATURE_EMAIL_SEQUENCES = "true";

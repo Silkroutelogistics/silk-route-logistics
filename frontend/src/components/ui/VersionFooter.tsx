@@ -385,7 +385,20 @@
 //            on first item when dropdown opens), not
 //            intentional styling
 //          - Single file touched: utilities.css
-export const SRL_VERSION = "3.7.n.1";
+// v3.7.n.2 — CI hotfix: features flag test timeout
+//          - First dynamic import after vi.resetModules()
+//            in features.test.ts ran >5s on CI
+//            (observed 5013ms), failing the 5s default
+//            timeout and blocking main CI after v3.7.n.1
+//          - Root cause: Vitest module-graph walk cost
+//            on first reset after full suite accumulation.
+//            features.ts itself has zero imports and zero
+//            side effects — module-level fix not
+//            possible. Isolated run: 5 tests / 20ms.
+//          - Fix: 15s timeout on that one test case.
+//            Other 4 tests in the file don't need it.
+//          - No production code changes.
+export const SRL_VERSION = "3.7.n.2";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
