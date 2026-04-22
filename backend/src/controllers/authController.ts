@@ -5,7 +5,7 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { registerSchema, loginSchema } from "../validators/auth";
 import { AuthRequest } from "../middleware/auth";
-import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt, createPasswordResetToken, verifyPasswordResetToken } from "../services/otpService";
+import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt, createPasswordResetToken, peekPasswordResetToken } from "../services/otpService";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/emailService";
 import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 import { blacklistToken } from "../utils/tokenBlacklist";
@@ -474,6 +474,10 @@ export async function forgotPassword(req: Request, res: Response) {
 }
 
 export async function resetPassword(req: Request, res: Response) {
+  // v3.7.m — peek-validate-transactional-consume order. Fixes the
+  // pre-v3.7.m bug where the reset token was consumed on the first
+  // POST even when validation later rejected (missing TOTP, etc.),
+  // trapping users in an unresettable state.
   const { token, email, newPassword, totpCode } = req.body;
   if (!token || !email || !newPassword) {
     res.status(400).json({ error: "Token, email, and new password are required" });
@@ -486,19 +490,21 @@ export async function resetPassword(req: Request, res: Response) {
     return;
   }
 
-  const userId = await verifyPasswordResetToken(token);
-  if (!userId) {
+  // (1) Peek — validate token WITHOUT consuming.
+  const peek = await peekPasswordResetToken(token);
+  if (!peek) {
     res.status(400).json({ error: "Invalid or expired reset link" });
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  // (2) Load user + email match. Token still not consumed.
+  const user = await prisma.user.findUnique({ where: { id: peek.userId } });
   if (!user || user.email !== email) {
     res.status(400).json({ error: "Invalid or expired reset link" });
     return;
   }
 
-  // If user has TOTP 2FA enabled, require TOTP code for password reset
+  // (3) TOTP gate. Token still not consumed on any failure here.
   if (user.totpEnabled) {
     if (!totpCode) {
       res.status(400).json({ error: "Two-factor authentication code is required", requires2FA: true });
@@ -511,11 +517,21 @@ export async function resetPassword(req: Request, res: Response) {
     }
   }
 
+  // (4) All gates passed — hash password and commit atomically.
+  // The $transaction array ensures password update + token consumption
+  // succeed together or roll back together. Rollback preserves the token
+  // so the user can retry.
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({
-    where: { id: userId },
-    data: { passwordHash, passwordChangedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: peek.userId },
+      data: { passwordHash, passwordChangedAt: new Date() },
+    }),
+    prisma.otpCode.update({
+      where: { id: peek.otpId },
+      data: { used: true },
+    }),
+  ]);
 
   res.json({ message: "Password has been reset successfully. You can now log in." });
 }

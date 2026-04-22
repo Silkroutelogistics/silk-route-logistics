@@ -283,7 +283,34 @@
 //          /auth/force-password-change, early return. Production
 //          login blocker for any account past the password expiry
 //          window.
-export const SRL_VERSION = "3.7.l";
+// v3.7.m — Hotfix: reset-password flow token-consumption ordering.
+//          verifyPasswordResetToken used to atomically validate AND
+//          consume the reset token in a single call, so any rejection
+//          AFTER the peek (missing TOTP, email mismatch, TOTP wrong)
+//          left the user unable to retry on the same token.
+//          Backend: split into peekPasswordResetToken (read-only
+//          validation) + consumePasswordResetToken (mutation).
+//          authController.resetPassword reordered to peek → validate
+//          email / TOTP / password → prisma.$transaction([
+//          user.update, otpCode.update ]). Token consumption and
+//          password update succeed or roll back atomically.
+//          Frontend (defense in depth): Reset Password button
+//          disabled until passwords valid + TOTP 6 digits when
+//          requires2FA is true. !requires2FA short-circuit keeps
+//          non-TOTP users from being locked out. requires2FA flip
+//          still reactive — TOTP field renders after first failed
+//          submit returns the flag, but the failed submit now
+//          preserves the token so retry is possible.
+//          Test coverage: 9-test suite in resetPassword.test.ts —
+//          T1 success, T2 expired, T3 already-used, T4 data-layer
+//          (bcrypt hash + passwordChangedAt freshness), T5 reuse-
+//          after-success, T6 concurrent double-submit, T6b $trans
+//          rollback (with mock-limitation note), T7 wrong-TOTP
+//          regression, T8 bad-password no-consume + retry.
+//          srl_temp_token in login flow untouched (out of scope).
+//          Together with v3.7.l this closes both expired-password
+//          traps — login-side and reset-side.
+export const SRL_VERSION = "3.7.m";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

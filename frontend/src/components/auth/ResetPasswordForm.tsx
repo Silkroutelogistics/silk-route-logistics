@@ -33,6 +33,16 @@ export function ResetPasswordForm({ variant, headline, backToLoginHref }: ResetP
 
   const missingParams = !token || !email;
 
+  // v3.7.m defense-in-depth gate. Short-circuit on `!requires2FA` so that:
+  //  - Non-TOTP users can submit with just passwords (TOTP field never renders).
+  //  - TOTP users submit first with passwords only to trigger the 2FA-required
+  //    response (which, post-v3.7.m, does NOT consume the reset token), then
+  //    the canSubmit gate requires 6 digits for the second submit.
+  const canSubmit =
+    password.length >= 12 &&
+    password === confirm &&
+    (!requires2FA || totpCode.length === 6);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -155,7 +165,7 @@ export function ResetPasswordForm({ variant, headline, backToLoginHref }: ResetP
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !canSubmit}
                 className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {loading ? "Resetting…" : "Reset Password"}

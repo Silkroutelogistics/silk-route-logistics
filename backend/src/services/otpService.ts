@@ -109,7 +109,23 @@ export async function createPasswordResetToken(userId: string): Promise<string> 
   return token;
 }
 
-export async function verifyPasswordResetToken(token: string): Promise<string | null> {
+/**
+ * Peek at a password reset token without consuming it.
+ *
+ * v3.7.m refactor: the previous `verifyPasswordResetToken`
+ * atomically validated AND consumed the token, which caused
+ * the reset flow to burn the token on the first POST even
+ * when validation later rejected the request (missing TOTP,
+ * email mismatch, etc.). Callers should peek first, validate
+ * all other requirements, then call `consumePasswordResetToken`
+ * inside the same `$transaction` as the password update.
+ *
+ * Returns `{ userId, otpId }` on a valid, unexpired, unused
+ * token row. Returns `null` otherwise. Never mutates.
+ */
+export async function peekPasswordResetToken(
+  token: string,
+): Promise<{ userId: string; otpId: string } | null> {
   const otp = await prisma.otpCode.findFirst({
     where: {
       code: `RESET:${token}`,
@@ -120,13 +136,27 @@ export async function verifyPasswordResetToken(token: string): Promise<string | 
   });
 
   if (!otp) return null;
+  return { userId: otp.userId, otpId: otp.id };
+}
 
+/**
+ * Mark a password reset token as consumed.
+ *
+ * Intended to be called inside the same `prisma.$transaction`
+ * that writes the new password hash so both succeed or both
+ * roll back atomically. Callers using `$transaction([...])`
+ * batched form can inline `prisma.otpCode.update({ where: {
+ * id: otpId }, data: { used: true } })` instead — this helper
+ * exists for symmetry with `peekPasswordResetToken` and for
+ * direct non-transactional use (e.g. admin force-invalidate).
+ */
+export async function consumePasswordResetToken(
+  otpId: string,
+): Promise<void> {
   await prisma.otpCode.update({
-    where: { id: otp.id },
+    where: { id: otpId },
     data: { used: true },
   });
-
-  return otp.userId;
 }
 
 export async function getLastOtpCreatedAt(userId: string): Promise<Date | null> {
