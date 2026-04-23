@@ -411,7 +411,22 @@
 //            .why-block elements below the hero
 //          - Pre-existing defect per v3.7.n-regression-
 //            audit Batch A; no in-range commit caused it
-export const SRL_VERSION = "3.7.n.3";
+// v3.7.n.4 — S2 Carrier page CTA visibility + email alias fix
+//          - carriers.html:920 inline color rgba(0,0,0,0.55)
+//            (black on navy-gradient .cta-banner = invisible)
+//            corrected to rgba(255,255,255,0.65) matching
+//            sibling .cta-sub treatment on the same bg
+//          - Onboarding-questions mailto target updated
+//            from accounting@silkroutelogistics.ai (AR only
+//            per CLAUDE.md §1) to carriers@silkroutelogistics.ai
+//            (new Google Workspace alias provisioned
+//            2026-04-23 for carrier-onboarding inquiries)
+//          - Both the mailto: href and the displayed link
+//            text swapped in one atomic edit
+//          - Pre-existing defect per v3.7.n-regression-
+//            audit Batch A; P0 — direct Apollo carrier-
+//            prospect landing surface
+export const SRL_VERSION = "3.7.n.4";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
