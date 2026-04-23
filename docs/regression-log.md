@@ -77,6 +77,9 @@ so it's searchable and never lost.
 - Candidates for trim: TBD (list tomorrow)
 - Scope: content editorial, separate from technical defects
 
+## P2 — UX content improvements (tradeoffs to decide during editorial pass)
+- Shippers page quote form: "Origin City/State" and "Destination City/State" fields — open question whether to require full address including street + ZIP (higher friction, richer data) or keep city/state (lower friction, faster lead capture). UX tradeoff to decide during editorial pass, not a bug.
+
 ---
 
 ## Fixed — recent
