@@ -453,7 +453,33 @@
 //            refactor loaded by all marketing pages
 //            (cleaner long-term; out of scope for
 //            this hotfix)
-export const SRL_VERSION = "3.7.n.5";
+// v3.7.n.6 — S3 Contact page: drop broken Google Maps iframe
+//          - Deprecated maps.google.com/maps?output=
+//            embed endpoint no longer renders (Google
+//            requires authenticated Maps Embed API
+//            key since deprecation)
+//          - Replaced with static location card:
+//            address + "Open in Google Maps" link.
+//            Launches native Maps on mobile (better
+//            UX for directions), opens google.com/
+//            maps in new tab on desktop
+//          - Zero API keys, zero build env changes,
+//            no ongoing cost exposure
+//          - Address, phone, hours already displayed
+//            above in the contact-section grid
+//            (info-blocks on lines 79-169), so the
+//            new card focuses on the primary
+//            directional purpose rather than
+//            re-surfacing full contact info
+//          - contact.css: dropped dead
+//            .map-wrapper iframe rule, added
+//            scoped .location-card / .location-
+//            address / .location-map-link rules
+//            (12 lines net)
+//          - Pre-existing defect per Batch A audit;
+//            external Google deprecation is root
+//            cause
+export const SRL_VERSION = "3.7.n.6";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -15,10 +15,6 @@ so it's searchable and never lost.
 
 ## Open — discovered 2026-04-22 evening
 
-### P1 — Contact page: Find Us map broken
-- silkroutelogistics.ai/contact — map widget not rendering
-- Iframe/embed issue likely
-
 ### P2 — "Get a Free Quote" information vague
 - Form / section — needs content rewrite
 - Unclear what info the prospect provides or what they get back
@@ -79,6 +75,7 @@ so it's searchable and never lost.
 - 2026-04-23 | Carrier page CTA "Questions?" line invisible (black text on navy-gradient bg) + onboarding email updated accounting@ → carriers@ | v3.7.n.4
 - 2026-04-23 | Track page logo rendering at intrinsic PNG dimensions (tracking.html missing srl-logo.css link) | v3.7.n.5
 - 2026-04-23 | Track page footer layout collapsed to centered text stack (tracking.css had 2-rule stub; ported full 4-column rules from carriers.css, adapted for navy bg) | v3.7.n.5
+- 2026-04-23 | Contact page "Find Us" map: deprecated Google Maps iframe endpoint no longer renders; replaced with static location card + "Open in Google Maps" link | v3.7.n.6
 
 ---
 
