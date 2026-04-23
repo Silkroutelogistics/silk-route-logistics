@@ -426,7 +426,34 @@
 //          - Pre-existing defect per v3.7.n-regression-
 //            audit Batch A; P0 — direct Apollo carrier-
 //            prospect landing surface
-export const SRL_VERSION = "3.7.n.4";
+// v3.7.n.5 — Track page missing shared assets (S4 + S5)
+//          - tracking.html: added missing srl-logo.css
+//            <link> between utilities.css and
+//            pages/tracking.css. Was the only marketing
+//            page besides security-policy.html without
+//            it; logo was rendering at intrinsic PNG
+//            dimensions and clipping to nav height
+//          - tracking.css: ported full 4-column footer
+//            CSS block from carriers.css, adapted for
+//            var(--navy) bg and tracking.html's actual
+//            selectors (h5 not h4, direct .footer-col a
+//            not li a, .footer-bottom-links not
+//            .footer-legal). Previous 2-rule stub caused
+//            the .footer-grid / .footer-brand /
+//            .footer-col HTML to collapse to unstyled
+//            centered text stack
+//          - security-policy.html intentionally NOT
+//            bundled: it has its own nav + .nav-logo img
+//            32px sizing rule (not .srl-logo-* classes),
+//            renders correctly as-is. Nav-unification
+//            flagged in regression log Deferred section
+//          - Pre-existing defects per Batch A audit;
+//            no in-range commit caused them
+//          - Deferred: /shared/css/footer.css partial
+//            refactor loaded by all marketing pages
+//            (cleaner long-term; out of scope for
+//            this hotfix)
+export const SRL_VERSION = "3.7.n.5";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

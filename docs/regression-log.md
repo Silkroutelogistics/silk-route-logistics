@@ -19,14 +19,6 @@ so it's searchable and never lost.
 - silkroutelogistics.ai/contact — map widget not rendering
 - Iframe/embed issue likely
 
-### P1 — Track page: logo is halved
-- silkroutelogistics.ai/track — logo partially clipped
-- CSS width/overflow issue
-
-### P1 — Track page: footer broken
-- silkroutelogistics.ai/track — footer layout issue
-- Possibly shared site-chrome footer not applying to /track
-
 ### P2 — "Get a Free Quote" information vague
 - Form / section — needs content rewrite
 - Unclear what info the prospect provides or what they get back
@@ -84,6 +76,8 @@ so it's searchable and never lost.
 - 2026-04-22 | CI feature flag test timeout flaky | v3.7.n.2
 - 2026-04-23 | Shippers page content invisible below hero (JS null-dereference on getElementById('hamburgerBtn') halted IIFE) | v3.7.n.3
 - 2026-04-23 | Carrier page CTA "Questions?" line invisible (black text on navy-gradient bg) + onboarding email updated accounting@ → carriers@ | v3.7.n.4
+- 2026-04-23 | Track page logo rendering at intrinsic PNG dimensions (tracking.html missing srl-logo.css link) | v3.7.n.5
+- 2026-04-23 | Track page footer layout collapsed to centered text stack (tracking.css had 2-rule stub; ported full 4-column rules from carriers.css, adapted for navy bg) | v3.7.n.5
 
 ---
 
@@ -92,3 +86,4 @@ so it's searchable and never lost.
 - Mobile menu dropdown — not verified post-v3.7.n.1, may share same bug
 - AWS Rekognition SDK fallback on prod — biometric verification using hash-based
 - BOLTemplate.tsx preview pane visual mismatch with downloaded PDF — honest-label banner shipped in v3.7.o
+- security-policy.html does NOT load srl-logo.css, but this is NOT the same bug as S4 on tracking.html. security-policy.html uses its own nav structure + its own 32px logo sizing rule (not the shared .srl-logo-* classes). Page renders correctly as-is. Adding srl-logo.css would be a no-op. Flagged here for future nav-unification phase consideration (converting security-policy.html to use the shared nav partial would be the right tidy-up, but is scope creep for hotfix commits).

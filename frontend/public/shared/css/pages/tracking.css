@@ -204,13 +204,80 @@
     .contact-section p { color: var(--muted); font-size: 0.85rem; }
     .contact-section a { color: var(--gold); font-weight: 600; }
 
-    /* FOOTER */
+    /* FOOTER — v3.7.n.5: ported 4-column layout rules from carriers.css,
+       adapted for navy page background. Previous stub had only the
+       .footer and .footer a rules, which left .footer-grid / .footer-brand /
+       .footer-col / .footer-bottom HTML descendants unstyled, collapsing the
+       4-col layout into a centered text stack. */
     .footer {
-      text-align: center; padding: 32px 24px; color: var(--dim);
-      font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); margin-top: 40px;
       background: var(--navy);
+      border-top: 1px solid rgba(200, 150, 62, 0.15);
+      padding: 64px 0 0;
+      margin-top: 40px;
     }
-    .footer a { color: var(--gold); }
+    .footer .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-brand { max-width: 280px; }
+    .footer-brand p {
+      font-size: 14px;
+      color: #6B7F99;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .footer-brand a { color: var(--gold); }
+    .footer-logo { margin-bottom: 16px; }
+    .footer-col h5 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #E0E7EE;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 20px;
+    }
+    .footer-col a {
+      display: block;
+      font-size: 14px;
+      color: #6B7F99;
+      text-decoration: none;
+      padding: 6px 0;
+      transition: color 0.2s ease;
+    }
+    .footer-col a:hover { color: var(--gold); }
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-bottom p {
+      font-size: 13px;
+      color: #4A5C73;
+      margin: 0;
+    }
+    .footer-bottom-links {
+      display: flex;
+      gap: 24px;
+    }
+    .footer-bottom-links a {
+      font-size: 13px;
+      color: #4A5C73;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .footer-bottom-links a:hover { color: var(--gold); }
 
     @media (max-width: 768px) {
       .nav-links { display: none; }
@@ -220,5 +287,7 @@
       .progress-bar-container { padding: 0 8px; }
       .step-label { font-size: 0.6rem; }
       .search-form { flex-direction: column; }
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      .footer-bottom { flex-direction: column; text-align: center; }
     }
   
