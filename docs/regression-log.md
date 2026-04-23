@@ -101,6 +101,18 @@ so it's searchable and never lost.
 - **CSV Import modal parallel fixes** (already flagged above) — resolve via the root theme cleanup, not per-class touch-ups.
 - **S6.a full fix** — theme root-cause resolves this; the partial v3.7.n.7 class swap is irrelevant in light mode and can be reverted or left as documentation only.
 
+## Phase 6 — Portal + Public Page Visual Alignment (observed 2026-04-23 post-v3.7.n.7.1 verify)
+
+- `/shipper` (singular, portal landing page at silkroutelogistics.ai/shipper) uses a distinct dark-theme visual system that diverges from the rest of the marketing site (/shippers.html, /carriers.html, /contact.html, /about.html, homepage). Specific divergences:
+  - Hero "Ship Smarter with Full Freight Visibility" uses different type and layout treatment than homepage hero
+  - "How Our Freight Brokerage Platform Stacks Up" comparison table has functional content but visual identity disconnected from marketing site
+  - Dark theme vs. cream/light elsewhere
+  - Gold accent application doesn't match canonical CANONICAL/LEGACY/SUPERSEDED bucket split from CLAUDE.md §2.1
+  - Verify: is `/shipper` intended as a prospect-facing landing OR as a post-authentication upsell view? If prospect-facing, it should match the marketing site design system. If authenticated-only, it should match the portal design system (which itself needs theme alignment per existing Phase 6 Theme System Cleanup entry above).
+- `/shippers.html` (plural, marketing-site page) vs `/shipper` (portal landing) — two separate pages with similar intent but different design systems. Evaluate whether both should exist; if yes, both should match the same canonical system.
+- Observed during manual portal verification after v3.7.n.7.1 login regression fix. Not a bug, not a blocker, purely visual/editorial debt. Route functions correctly.
+- Carrier Portal landing equivalent (`/carrier` vs `/carriers.html`) likely has same divergence — verify during Phase 6 portal visual refresh pass.
+
 ## Phase 6 — CI / Testing Gaps
 
 - **E2E smoke tests for SHIPPER/CARRIER portal login flows.** The 2026-02-23 → 2026-04-23 regression went undetected for 2 months because no such test exists. Candidates: Cypress or Playwright. Minimum coverage: (1) valid shipper credentials → OTP → reach /shipper/dashboard without bounce; (2) same for carrier (requires approved carrier fixture); (3) invalid credentials rejected; (4) OTP expiry.
