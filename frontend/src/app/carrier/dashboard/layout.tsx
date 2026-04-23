@@ -24,7 +24,7 @@ function timeAgo(dateStr: string): string {
 
 export default function CarrierDashboardLayout({ children }: { children: React.ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false);
-  const { token, user, loadUser, logout } = useCarrierAuth();
+  const { user, loadUser, logout } = useCarrierAuth();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
   const { showWarning, countdown, extendSession } = useSessionTimeout({
@@ -37,7 +37,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const { data: notifData } = useQuery({
     queryKey: ["carrier-notifications"],
     queryFn: () => api.get<{ notifications: Notification[] }>("/notifications").then((r) => r.data),
-    enabled: !!token,
+    enabled: !!user,
     refetchInterval: 120000,
   });
 
@@ -45,20 +45,21 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/carrier/login");
-      return;
-    }
-    // Set auth header for carrier token
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     if (!user) {
-      loadUser().finally(() => setChecking(false));
+      loadUser().then(() => {
+        const currentUser = useCarrierAuth.getState().user;
+        if (!currentUser) {
+          router.replace("/carrier/login");
+          return;
+        }
+        setChecking(false);
+      });
     } else {
       setChecking(false);
     }
-  }, [token, user, loadUser, router]);
+  }, [user, loadUser, router]);
 
-  if (!token || checking) {
+  if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
         <div className="text-center">
@@ -133,8 +134,8 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
       </div>
 
-      {/* Marco Polo AI Assistant */}
-      <MarcoPolo isAuthenticated={true} token={token} darkMode={false} />
+      {/* Marco Polo AI Assistant — token={null} is intentional; auth flows through httpOnly cookie */}
+      <MarcoPolo isAuthenticated={true} token={null} darkMode={false} />
 
       {/* Session Timeout Warning */}
       {showWarning && (

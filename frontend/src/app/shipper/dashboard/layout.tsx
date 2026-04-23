@@ -25,7 +25,7 @@ function timeAgo(dateStr: string): string {
 
 export default function ShipperDashboardLayout({ children }: { children: React.ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false);
-  const { token, user, loadUser } = useAuthStore();
+  const { user, loadUser } = useAuthStore();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
   const { showWarning, countdown, extendSession, forceLogout } = useSessionTimeout({
@@ -37,7 +37,7 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
   const { data: notifData } = useQuery({
     queryKey: ["shipper-notifications"],
     queryFn: () => api.get<{ notifications: Notification[] }>("/notifications").then((r) => r.data),
-    enabled: !!token,
+    enabled: !!user,
     refetchInterval: 120000,
   });
 
@@ -45,18 +45,21 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/shipper/login");
-      return;
-    }
     if (!user) {
-      loadUser().finally(() => setChecking(false));
+      loadUser().then(() => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) {
+          router.replace("/shipper/login");
+          return;
+        }
+        setChecking(false);
+      });
     } else {
       setChecking(false);
     }
-  }, [token, user, loadUser, router]);
+  }, [user, loadUser, router]);
 
-  if (!token || checking) {
+  if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
         <div className="text-center">

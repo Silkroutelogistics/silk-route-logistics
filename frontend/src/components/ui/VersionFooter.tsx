@@ -480,7 +480,7 @@
 //            external Google deprecation is root
 //            cause
 // v3.7.n.7 — S6.a Lead Hunter Send Outreach modal:
-//   dark-on-dark text readability fix
+//   dark-on-dark text readability fix (PARTIAL)
 //          - page.tsx line 1553 description paragraph
 //            and line 1671 Cancel button were both
 //            using text-slate-400 (#94A3B8) on
@@ -491,19 +491,58 @@
 //            existing readable-body convention already
 //            used by checkbox list rows in the same
 //            modal (lines 1585, 1592)
-//          - Two one-character className swaps. No
-//            structural, background, or layout
-//            changes. No new Tailwind tokens
-//            introduced
-//          - CSV Import modal (same file, lines 1694
-//            + 1697) has the same parallel pattern;
-//            flagged in regression log Deferred for
-//            a follow-up micro-commit per scope
-//            discipline
-//          - Pre-existing defect per Batch A audit;
-//            internal-only AE Console impact, no
-//            prospect-facing effect
-export const SRL_VERSION = "3.7.n.7";
+//          - SUPERSEDED: during the re-audit for
+//            v3.7.n.7.1, the root cause was traced
+//            to globals.css [data-mode="light"]
+//            .text-slate-* !important overrides that
+//            reverse expected colors on dark surfaces.
+//            Both 400 and 300 resolve to dark hex in
+//            light mode, so this partial fix had no
+//            visual effect. Full fix deferred to
+//            Phase 6 theme cleanup.
+// v3.7.n.7.1 — Portal auth-guard regression fix
+//   (Shipper + Carrier dashboards)
+//          - REGRESSION traced via git blame:
+//            - 2026-02-19 a4923743: portals built
+//              with localStorage auth, worked
+//              end-to-end
+//            - 2026-02-23 172d6f3b: security
+//              hardening eliminated localStorage
+//              tokens (httpOnly cookies only).
+//              Stores updated; two dashboard
+//              layouts NOT updated — still guarded
+//              on deprecated token field which
+//              became permanently null
+//            - ~2 months silent breakage. No real
+//              shippers/carriers approved during
+//              window; AE Console unaffected
+//              because it uses AuthGuard.tsx which
+//              correctly checks user/
+//              isAuthenticated
+//            - 2026-04-23: Apollo-readiness test
+//              surfaced the bounce loop
+//          - Fix forward: both portal dashboards
+//            now guard on user presence, call
+//            loadUser() to populate from httpOnly
+//            cookie via /{role}-auth/me. Matches
+//            AuthGuard pattern proven on AE Console
+//          - Security hardening from 172d6f3b
+//            preserved — no revert, no reintroduction
+//            of localStorage or JS-accessible tokens
+//          - Bundled: notifications useQuery
+//            `enabled: !!token` → `enabled: !!user`
+//            in both layouts. Notifications have
+//            been broken the same 2-month window
+//            (same token-null root cause)
+//          - Bundled: dropped noise line in carrier
+//            layout that set Authorization header
+//            to "Bearer null"; carrier MarcoPolo
+//            prop now explicit `token={null}`
+//          - Shipper approval gate (S-2) + AE
+//            approval UI (S-3) deferred to Phase 6
+//          - Theme system cleanup (S6.a root cause)
+//            deferred to Phase 6
+export const SRL_VERSION = "3.7.n.7.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
