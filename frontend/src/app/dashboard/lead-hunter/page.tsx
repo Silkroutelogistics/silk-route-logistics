@@ -1550,7 +1550,7 @@ export default function LeadHunterPage() {
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>
                 <h2 className="text-lg font-bold text-white">Send Outreach</h2>
-                <p className="text-sm text-slate-400 mt-0.5">Send initial outreach to Lead-stage prospects. For follow-ups to contacted prospects, use the Queue view.</p>
+                <p className="text-sm text-slate-300 mt-0.5">Send initial outreach to Lead-stage prospects. For follow-ups to contacted prospects, use the Queue view.</p>
               </div>
               <button onClick={() => setShowEmailModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -1668,7 +1668,7 @@ export default function LeadHunterPage() {
 
             {!emailResult && (
               <div className="flex items-center justify-end gap-3 p-5 border-t border-white/10">
-                <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
+                <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-slate-300 hover:text-white text-sm">Cancel</button>
                 <button onClick={handleSendCampaign}
                   disabled={emailSending || selectedRecipients.size === 0 || !emailSubject.trim() || (emailTemplate === "CUSTOM" && !emailBody.trim())}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gold/20 text-gold font-medium rounded-lg text-sm hover:bg-gold/30 disabled:opacity-50 disabled:cursor-not-allowed">

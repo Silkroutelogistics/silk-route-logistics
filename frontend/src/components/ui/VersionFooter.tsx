@@ -479,7 +479,31 @@
 //          - Pre-existing defect per Batch A audit;
 //            external Google deprecation is root
 //            cause
-export const SRL_VERSION = "3.7.n.6";
+// v3.7.n.7 — S6.a Lead Hunter Send Outreach modal:
+//   dark-on-dark text readability fix
+//          - page.tsx line 1553 description paragraph
+//            and line 1671 Cancel button were both
+//            using text-slate-400 (#94A3B8) on
+//            bg-[#1e293b] modal bg — 3.2:1 contrast,
+//            fails WCAG AA for body-size text
+//          - Swapped to text-slate-300 (#CBD5E1) →
+//            4.8:1 contrast, passes AA. Matches the
+//            existing readable-body convention already
+//            used by checkbox list rows in the same
+//            modal (lines 1585, 1592)
+//          - Two one-character className swaps. No
+//            structural, background, or layout
+//            changes. No new Tailwind tokens
+//            introduced
+//          - CSV Import modal (same file, lines 1694
+//            + 1697) has the same parallel pattern;
+//            flagged in regression log Deferred for
+//            a follow-up micro-commit per scope
+//            discipline
+//          - Pre-existing defect per Batch A audit;
+//            internal-only AE Console impact, no
+//            prospect-facing effect
+export const SRL_VERSION = "3.7.n.7";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

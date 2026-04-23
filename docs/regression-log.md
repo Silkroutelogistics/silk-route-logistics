@@ -30,13 +30,6 @@ so it's searchable and never lost.
 - Status: Open, parent-level audit deferred until specific tab labels are enumerated
 - Discovered: 2026-04-22
 
-### S6.a — Lead Hunter: email view dark/low-contrast
-- Location: AE Console → Lead Hunter tab → click on any email entry to expand/view
-- Symptom: Text renders dark-on-dark or very low contrast, hard to read
-- Severity: P1 visual defect; content is present but unreadable
-- Status: Open, will audit and fix in v3.7.n.7
-- Discovered: 2026-04-23
-
 ### S6.b — Load Board: "New Load" button non-functional
 - Location: AE Console → Load Board tab → "New Load" button
 - Symptom: Button click does nothing (silent failure or error — exact behavior TBD in audit)
@@ -76,6 +69,7 @@ so it's searchable and never lost.
 - 2026-04-23 | Track page logo rendering at intrinsic PNG dimensions (tracking.html missing srl-logo.css link) | v3.7.n.5
 - 2026-04-23 | Track page footer layout collapsed to centered text stack (tracking.css had 2-rule stub; ported full 4-column rules from carriers.css, adapted for navy bg) | v3.7.n.5
 - 2026-04-23 | Contact page "Find Us" map: deprecated Google Maps iframe endpoint no longer renders; replaced with static location card + "Open in Google Maps" link | v3.7.n.6
+- 2026-04-23 | Lead Hunter Send Outreach modal body text + Cancel button rendering text-slate-400 on dark navy bg (3.2:1 contrast, failed WCAG AA for body text); swapped to text-slate-300 (4.8:1) matching readable-sibling convention | v3.7.n.7
 
 ---
 
@@ -85,3 +79,4 @@ so it's searchable and never lost.
 - AWS Rekognition SDK fallback on prod — biometric verification using hash-based
 - BOLTemplate.tsx preview pane visual mismatch with downloaded PDF — honest-label banner shipped in v3.7.o
 - security-policy.html does NOT load srl-logo.css, but this is NOT the same bug as S4 on tracking.html. security-policy.html uses its own nav structure + its own 32px logo sizing rule (not the shared .srl-logo-* classes). Page renders correctly as-is. Adding srl-logo.css would be a no-op. Flagged here for future nav-unification phase consideration (converting security-policy.html to use the shared nav partial would be the right tidy-up, but is scope creep for hotfix commits).
+- 2026-04-23 | CSV Import modal in Lead Hunter tab: 2 parallel text-slate-400 → text-slate-300 contrast fixes needed (same pattern as S6.a Send Outreach modal, flagged during v3.7.n.7 audit). Defer to follow-up micro-commit; not prospect-blocking, internal AE Console only.
