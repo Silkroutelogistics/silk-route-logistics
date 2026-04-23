@@ -28,8 +28,46 @@ async function generateLoadNumber(): Promise<string> {
   return `SRL-${num}`;
 }
 
+const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
+type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
+
+function parseReleasedValueBasis(raw: unknown): ReleasedValueBasisLiteral | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === "") return null;
+  if (typeof raw === "string" && (RELEASED_VALUE_BASIS_VALUES as readonly string[]).includes(raw)) {
+    return raw as ReleasedValueBasisLiteral;
+  }
+  throw new Error(
+    `Invalid releasedValueBasis: expected one of ${RELEASED_VALUE_BASIS_VALUES.join(", ")} or null`,
+  );
+}
+
+function parseNonNegativeInt(raw: unknown, field: string): number | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === "") return null;
+  const n = typeof raw === "number" ? raw : parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+    throw new Error(`Invalid ${field}: must be a non-negative integer`);
+  }
+  return n;
+}
+
 export async function createLoad(req: AuthRequest, res: Response) {
   const raw = req.body; // Already validated by validateBody middleware
+
+  // v3.7.o — BOL v2.9 field validation (before credit check so 400s return
+  // fast without DB roundtrip).
+  let releasedValueBasis: ReleasedValueBasisLiteral | null | undefined;
+  let piecesTendered: number | null | undefined;
+  let piecesReceived: number | null | undefined;
+  try {
+    releasedValueBasis = parseReleasedValueBasis(raw.releasedValueBasis);
+    piecesTendered = parseNonNegativeInt(raw.piecesTendered, "piecesTendered");
+    piecesReceived = parseNonNegativeInt(raw.piecesReceived, "piecesReceived");
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+    return;
+  }
 
   // Enforce shipper credit limit if customer is specified
   if (raw.customerId) {
@@ -121,6 +159,7 @@ export async function createLoad(req: AuthRequest, res: Response) {
 
     // TMW-level reference fields
     poNumbers: raw.poNumbers || undefined,
+    proNumber: raw.proNumber || undefined,
     bolNumber: raw.bolNumber || undefined,
     sealNumber: raw.sealNumber || undefined,
     appointmentNumber: raw.appointmentNumber || undefined,
@@ -129,6 +168,13 @@ export async function createLoad(req: AuthRequest, res: Response) {
     // Freight classification (TMW)
     nmfcCode: raw.nmfcCode || undefined,
     declaredValue: raw.declaredValue || undefined,
+    releasedValueDeclared:
+      typeof raw.releasedValueDeclared === "boolean" ? raw.releasedValueDeclared : undefined,
+    releasedValueBasis,
+
+    // Pickup / delivery actuals (v3.7.o)
+    piecesTendered,
+    piecesReceived,
 
     // Loading details (TMW)
     loadingType: raw.loadingType || undefined,
@@ -594,7 +640,23 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     driverName, driverPhone, truckNumber, trailerNumber,
     dockAssignment, driverInstructions,
     codAmount, paymentTermsLoad, contactEmail,
+    // v3.7.o — BOL v2.9 fields
+    proNumber, releasedValueDeclared,
   } = req.body;
+
+  // v3.7.o — validate enum / int fields. Undefined means "not present in
+  // PATCH body" (skip update); null means "clear the column".
+  let releasedValueBasis: ReleasedValueBasisLiteral | null | undefined;
+  let piecesTendered: number | null | undefined;
+  let piecesReceived: number | null | undefined;
+  try {
+    releasedValueBasis = parseReleasedValueBasis(req.body.releasedValueBasis);
+    piecesTendered = parseNonNegativeInt(req.body.piecesTendered, "piecesTendered");
+    piecesReceived = parseNonNegativeInt(req.body.piecesReceived, "piecesReceived");
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+    return;
+  }
 
   const data: Record<string, unknown> = {};
   if (contactEmail !== undefined) data.contactEmail = contactEmail;
@@ -639,12 +701,17 @@ export async function updateLoad(req: AuthRequest, res: Response) {
 
   // TMW-level fields
   if (poNumbers !== undefined) data.poNumbers = poNumbers;
+  if (proNumber !== undefined) data.proNumber = proNumber;
   if (bolNumber !== undefined) data.bolNumber = bolNumber;
   if (sealNumber !== undefined) data.sealNumber = sealNumber;
   if (appointmentNumber !== undefined) data.appointmentNumber = appointmentNumber;
   if (additionalRefs !== undefined) data.additionalRefs = additionalRefs;
   if (nmfcCode !== undefined) data.nmfcCode = nmfcCode;
   if (declaredValue !== undefined) data.declaredValue = declaredValue;
+  if (typeof releasedValueDeclared === "boolean") data.releasedValueDeclared = releasedValueDeclared;
+  if (releasedValueBasis !== undefined) data.releasedValueBasis = releasedValueBasis;
+  if (piecesTendered !== undefined) data.piecesTendered = piecesTendered;
+  if (piecesReceived !== undefined) data.piecesReceived = piecesReceived;
   if (loadingType !== undefined) data.loadingType = loadingType;
   if (turnable !== undefined) data.turnable = turnable;
   if (driverName !== undefined) data.driverName = driverName;

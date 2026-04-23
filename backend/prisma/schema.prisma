@@ -627,6 +627,16 @@ enum DelayReasonCode {
   OTHER
 }
 
+// Released value basis for Carmack Amendment liability
+// (49 USC § 14706). NVD = "No Value Declared" — shipper
+// waives declared value.
+enum ReleasedValueBasis {
+  PER_POUND
+  PER_PIECE
+  TOTAL
+  NVD
+}
+
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
@@ -1019,6 +1029,8 @@ model Load {
   deliveryTimeEnd        String?
   actualPickupDatetime   DateTime?
   actualDeliveryDatetime DateTime?
+  piecesTendered         Int?
+  piecesReceived         Int?
 
   // Freight
   weight           Float?
@@ -1179,14 +1191,17 @@ model Load {
 
   // TMW-level reference fields
   poNumbers         String[] @default([])
+  proNumber         String?
   bolNumber         String?
   sealNumber        String?
   appointmentNumber String?
   additionalRefs    Json?
 
   // Freight classification (TMW)
-  nmfcCode      String?
-  declaredValue Float?
+  nmfcCode              String?
+  declaredValue         Float?
+  releasedValueDeclared Boolean             @default(false)
+  releasedValueBasis    ReleasedValueBasis?
 
   // Loading details (TMW)
   turnable Boolean @default(false)

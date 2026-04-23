@@ -123,6 +123,23 @@ interface LoadBOLData {
   driverName?: string | null; truckNumber?: string | null;
   customer?: { name: string; contactName?: string | null; address?: string | null; city?: string | null; state?: string | null; zip?: string | null; phone?: string | null } | null;
   carrier?: { firstName: string; lastName: string; company?: string | null; phone?: string | null; carrierProfile?: { mcNumber?: string | null; dotNumber?: string | null } | null } | null;
+
+  // v2.9 expansions (2026-04-23, v3.7.o). Previously-unsurfaced schema
+  // fields and derived carrier/driver identity values. Populated by
+  // downloadBOLFromLoad; drawing code does not yet consume these —
+  // template rendering lands in Commit 2 / v3.7.p.
+  shipperReference?: string | null;
+  trailerNumber?: string | null;
+  sealNumber?: string | null;
+  declaredValue?: number | null;
+  driverPhone?: string | null;
+  carrierLegalName?: string | null;
+  carrierContactName?: string | null;
+  proNumber?: string | null;
+  releasedValueDeclared?: boolean;
+  releasedValueBasis?: "PER_POUND" | "PER_PIECE" | "TOTAL" | "NVD" | null;
+  piecesTendered?: number | null;
+  piecesReceived?: number | null;
 }
 
 export async function generateBOLFromLoad(

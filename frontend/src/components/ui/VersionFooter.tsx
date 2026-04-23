@@ -615,7 +615,47 @@
 //            not fixed here
 //          - Pre-existing defect per Batch A
 //            audit; internal-only AE Console
-export const SRL_VERSION = "3.7.n.9";
+// v3.7.o — Phase 5E.b.1 — BOL v2.9 data model
+//          foundation (Commit 1 of 4 in the sequenced
+//          v2.9 rollout).
+//
+//          Schema: Load model expanded with proNumber,
+//          releasedValueDeclared, releasedValueBasis
+//          (new enum), piecesTendered, piecesReceived.
+//          Migration 20260423000000_add_bol_v29_fields
+//          adds columns additively — all nullable or
+//          defaulted, no backfill.
+//
+//          Interface: LoadBOLData expanded with 12 new
+//          optional fields covering the five new schema
+//          fields plus seven fields that were already
+//          in schema but not surfaced to BOL generation
+//          (shipperReference, trailerNumber, sealNumber,
+//          declaredValue, driverPhone, carrierLegalName,
+//          carrierContactName).
+//
+//          Controllers: createLoad + updateLoad accept
+//          the five new fields with inline validation
+//          (releasedValueBasis enum guard, piecesTendered
+//          / piecesReceived non-negative-integer guard).
+//          downloadBOLFromLoad expanded Prisma include
+//          to fetch carrierProfile.companyName/contactName
+//          + driver relation; identity fields derived
+//          from the load record before passing to the
+//          BOL renderer.
+//
+//          No template rendering changes in this commit
+//          (that's Commit 2 / v3.7.p). No UI capture
+//          (Commit 3 / v3.7.q). No /track frontend route
+//          (Commit 4 / v3.7.r). Existing BOLs render
+//          unchanged.
+//
+//          The Batch B work from the original single-
+//          commit v3.7.o plan (BOL v2.9 template, QR
+//          wiring, fonts, htmlEntities/qrGenerator
+//          helpers, BOLTemplate preview banner, I1-I4
+//          smoke-test fixes) lands in Commit 2 / v3.7.p.
+export const SRL_VERSION = "3.7.o";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

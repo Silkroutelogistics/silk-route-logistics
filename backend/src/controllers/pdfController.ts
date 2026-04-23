@@ -152,7 +152,24 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
       include: {
         customer: true,
         carrier: {
-          select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            company: true,
+            phone: true,
+            carrierProfile: {
+              select: {
+                mcNumber: true,
+                dotNumber: true,
+                companyName: true,
+                contactName: true,
+              },
+            },
+          },
+        },
+        driver: {
+          select: { firstName: true, lastName: true, phone: true },
         },
       },
     });
@@ -174,7 +191,22 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
       }
     }
 
-    const doc = await generateBOLFromLoad(load, { trackingToken });
+    // v3.7.o — derive identity fields for LoadBOLData. Drawing code doesn't
+    // consume these yet (Commit 2 / v3.7.p); controller populates them now
+    // so the data path is ready.
+    const driverFullName = load.driver
+      ? `${load.driver.firstName ?? ""} ${load.driver.lastName ?? ""}`.trim() || null
+      : null;
+    const bolData = {
+      ...load,
+      carrierLegalName:
+        load.carrier?.carrierProfile?.companyName ?? load.carrier?.company ?? null,
+      carrierContactName: load.carrier?.carrierProfile?.contactName ?? null,
+      driverName: load.driverName || driverFullName,
+      driverPhone: load.driverPhone || load.driver?.phone || null,
+    };
+
+    const doc = await generateBOLFromLoad(bolData, { trackingToken });
     const filename = `BOL-${load.referenceNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
