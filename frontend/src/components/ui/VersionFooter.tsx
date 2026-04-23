@@ -398,7 +398,20 @@
 //          - Fix: 15s timeout on that one test case.
 //            Other 4 tests in the file don't need it.
 //          - No production code changes.
-export const SRL_VERSION = "3.7.n.2";
+// v3.7.n.3 — S1 Shippers page content-invisibility defect fix
+//          - shippers.html:403 getElementById('hamburgerBtn')
+//            corrected to getElementById('hamburger')
+//            to match shared nav partial's actual id
+//          - Null-guard wrapper added to hamburger/
+//            mobileMenu activation block so future
+//            missing-element failures cannot terminate
+//            the IIFE mid-execution
+//          - Restores IntersectionObserver fade-in for
+//            all .fade-up / .service-card / .step-item /
+//            .why-block elements below the hero
+//          - Pre-existing defect per v3.7.n-regression-
+//            audit Batch A; no in-range commit caused it
+export const SRL_VERSION = "3.7.n.3";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

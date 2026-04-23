@@ -15,10 +15,6 @@ so it's searchable and never lost.
 
 ## Open — discovered 2026-04-22 evening
 
-### P0 — Shippers page broken
-- silkroutelogistics.ai/shippers — broken (symptom TBD via audit)
-- Blocks any shipper prospect clicking through from Apollo outreach
-
 ### P0 — Carrier page: wrong email in "Start your application"
 - silkroutelogistics.ai/carriers — "Start your application" section
 - Reads "accounting@silkroutelogistics.ai"
@@ -89,6 +85,7 @@ so it's searchable and never lost.
 - 2026-04-22 | Email signature file-not-found | v3.7.o-build-prep.1 + Render dashboard
 - 2026-04-22 | Sign In dropdown Shipper/Carrier labels invisible | v3.7.n.1
 - 2026-04-22 | CI feature flag test timeout flaky | v3.7.n.2
+- 2026-04-23 | Shippers page content invisible below hero (JS null-dereference on getElementById('hamburgerBtn') halted IIFE) | v3.7.n.3
 
 ---
 
