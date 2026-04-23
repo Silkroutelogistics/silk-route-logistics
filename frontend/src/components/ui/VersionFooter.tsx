@@ -570,7 +570,52 @@
 //            outside wrapper, modal placed inside)
 //          - Internal-only impact, no prospect-
 //            facing effect
-export const SRL_VERSION = "3.7.n.8";
+// v3.7.n.9 — S6.c Lane Analytics runtime crash fix
+//   (.toFixed on undefined)
+//          - Root cause was SHAPE MISMATCH
+//            between backend response and frontend
+//            interface declarations, NOT a null-
+//            guard gap. Backend /analytics/lanes
+//            returns { lanes, total } where each
+//            lane has marginPct/avgRatePerMile/
+//            loads. Frontend reads marginPercent/
+//            avgRate/volume. Similarly
+//            /analytics/margins returns
+//            byEquipmentType with avgMarginPercent;
+//            frontend reads byEquipment with
+//            avgMargin. Three unguarded .toFixed()
+//            calls (lines 269/272/329 pre-fix) all
+//            crashed on undefined fields whenever
+//            the backend returned non-empty data
+//          - Fix: Option (iv) frontend adapter at
+//            the useQuery boundary. Added typed
+//            BackendLaneResponse +
+//            BackendMarginResponse interfaces and
+//            two pure adapter functions
+//            (adaptLanesResponse /
+//            adaptMarginResponse) that map
+//            backend shape → frontend shape with
+//            safe defaults (trend="FLAT" since
+//            backend doesn't compute trend;
+//            stats derived locally from lanes[])
+//          - Null-guards at .toFixed() call sites
+//            (spec option i) would have rendered
+//            misleading zeros for real data —
+//            rejected
+//          - Full backend/frontend contract
+//            alignment catalogued as Phase 6
+//            architectural debt (rename backend
+//            OR update frontend interfaces OR
+//            shared types module)
+//          - S6.c secondary issue (error-boundary
+//            text renders white-on-white due to
+//            globals.css light-mode text-white
+//            override) consolidated under existing
+//            Phase 6 Theme System Cleanup entry;
+//            not fixed here
+//          - Pre-existing defect per Batch A
+//            audit; internal-only AE Console
+export const SRL_VERSION = "3.7.n.9";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

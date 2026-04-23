@@ -30,14 +30,6 @@ so it's searchable and never lost.
 - Status: Open, parent-level audit deferred until specific tab labels are enumerated
 - Discovered: 2026-04-22
 
-### S6.c — Lane Analytics: runtime crash on undefined .toFixed()
-- Location: AE Console → Lane Analytics tab
-- Symptom: Error boundary renders "Something went wrong" with stack trace "Cannot read properties of undefined (reading 'toFixed')"
-- Secondary issue: Error message text rendered white-on-white, barely visible
-- Severity: P1 functional crash + visual defect in error state
-- Status: Open, will audit and fix in v3.7.n.9
-- Discovered: 2026-04-23
-
 ---
 
 ## Open — content density concerns (not bugs, design debt)
@@ -65,6 +57,7 @@ so it's searchable and never lost.
 - 2026-04-23 | Lead Hunter Send Outreach modal body text + Cancel button rendering text-slate-400 on dark navy bg (3.2:1 contrast, failed WCAG AA for body text); swapped to text-slate-300 (4.8:1) matching readable-sibling convention | v3.7.n.7 — SUPERSEDED: root cause is globals.css [data-mode="light"] .text-slate-* !important overrides that reverse colors on dark surfaces; this partial fix had no visual effect in light mode. Full fix deferred to Phase 6 theme cleanup.
 - 2026-04-23 | Portal dashboard layouts (Shipper + Carrier) token-always-null auth guard — 2-month silent regression from 2026-02-23 commit 172d6f3b security hardening (localStorage → httpOnly cookie migration updated auth stores but missed the two downstream dashboard layouts). Bypassed AuthGuard.tsx pattern that kept AE Console working. Also broke the notifications useQuery (enabled: !!token) in both layouts during the same window. Fixed by matching the AuthGuard user-presence + loadUser() pattern. | v3.7.n.7.1
 - 2026-04-23 | S6.b Load Board "+ New Load" button non-functional when no load is selected — CreateLoadModal render was nested inside a {load && (...)} wrapper (introduced 2026-03-31) while the button was added outside it (2026-04-08 commit 10e0ea3d). Clicks toggled state correctly but the modal was unmounted when no load was selected (the typical Load Board open state). Fixed by moving the modal render out of the wrapper; added clarifying comment to prevent re-nesting during future cleanups. | v3.7.n.8
+- 2026-04-23 | S6.c Lane Analytics runtime crash ("Cannot read properties of undefined (reading 'toFixed')") — root cause was shape mismatch between backend response (marginPct/avgRatePerMile/loads, byEquipmentType with avgMarginPercent) and frontend interface declarations (marginPercent/avgRate/volume, byEquipment with avgMargin). Three unguarded .toFixed() calls crashed on the undefined fields whenever backend returned non-empty data. Fixed by adding typed BackendLaneResponse + BackendMarginResponse interfaces and adapter functions (adaptLanesResponse / adaptMarginResponse) that map backend shape → frontend shape at the useQuery boundary. Stats object also derived locally (backend doesn't return it). Trend defaults to "FLAT". Full backend/frontend contract alignment deferred to Phase 6 architectural debt. Secondary issue (error-boundary text white-on-white) consolidated under Phase 6 Theme System Cleanup. | v3.7.n.9
 
 ---
 
@@ -94,6 +87,7 @@ so it's searchable and never lost.
 - **14 candidate surfaces to re-audit after root fix ships** (from v3.7.n.7.1 audit): Send Outreach modal, CSV Import modal, MarcoPolo widget, `/onboarding/page.tsx`, `/admin/users/page.tsx`, `/shipper/dashboard/layout.tsx`, `/accounting/layout.tsx` (covers all 13 accounting routes), plus others flagged via `bg-[#1e293b]` / `bg-[#1a1f35]` / `bg-[#141a2e]` / `bg-[#1a2340]` / `bg-[#0A0B0F]` / `bg-[#0a1120]` / `bg-[#121e30]` hex usages that escape the globals.css bg-remap but still trigger the text-remap.
 - **CSV Import modal parallel fixes** (already flagged above) — resolve via the root theme cleanup, not per-class touch-ups.
 - **S6.a full fix** — theme root-cause resolves this; the partial v3.7.n.7 class swap is irrelevant in light mode and can be reverted or left as documentation only.
+- **S6.c secondary issue** — AE Console error boundary (`frontend/src/app/dashboard/error.tsx:18` and `frontend/src/app/error.tsx:18`) renders "Something went wrong" heading with `text-white`, which gets remapped to dark via globals.css `[data-mode="light"] .text-white !important`. Result: white-on-white fallback text on the cream/light page bg. Observed 2026-04-23 during S6.c Lane Analytics crash investigation; same root cause as S6.a Send Outreach modal dim-text. Fixed together with the root theme-remap cleanup — no separate commit.
 
 ## Phase 6 — Portal + Public Page Visual Alignment (observed 2026-04-23 post-v3.7.n.7.1 verify)
 

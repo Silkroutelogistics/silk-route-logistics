@@ -51,6 +51,104 @@ interface HeatmapCell {
   volume: number;
 }
 
+/* ── Backend response shapes ─────────────────────────────
+   The backend endpoints return data under different field
+   names than the frontend interfaces above expect. These
+   shapes are what /analytics/lanes and /analytics/margins
+   actually emit from analyticsService.getLaneProfitability
+   and laneAnalyticsService.getMarginAnalysis. The adapter
+   functions below map backend → frontend shape with safe
+   defaults so the rest of this file can continue reading
+   the frontend shape without knowing about the divergence.
+
+   Full contract alignment (rename backend OR update the
+   frontend interfaces OR introduce a shared types module)
+   is Phase 6 architectural debt — tracked in
+   docs/regression-log.md. */
+
+interface BackendLaneResponse {
+  lanes: Array<{
+    originState: string;
+    destState: string;
+    loads: number;
+    revenue: number;
+    cost: number;
+    totalMiles: number;
+    margin: number;
+    marginPct: number;
+    avgRatePerMile: number;
+  }>;
+  total: number;
+}
+
+interface BackendMarginResponse {
+  overall?: { totalRevenue: number; totalCost: number; totalMargin: number; avgMarginPercent: number; loadCount: number };
+  byEquipmentType: Array<{
+    equipmentType: string;
+    loadCount: number;
+    totalRevenue: number;
+    totalMargin: number;
+    avgMarginPercent: number;
+  }>;
+  byCustomer: Array<{
+    customerId: string;
+    customerName: string;
+    loadCount: number;
+    totalRevenue: number;
+    totalMargin: number;
+    avgMarginPercent: number;
+  }>;
+}
+
+interface AdaptedLaneData {
+  lanes: LaneSummary[];
+  stats: { totalLanes: number; avgMargin: number; topLaneVolume: number; revenuePerMileAvg: number };
+}
+
+interface AdaptedMarginData {
+  byEquipment: MarginByEquipment[];
+  byCustomer: MarginByCustomer[];
+}
+
+function adaptLanesResponse(r: BackendLaneResponse): AdaptedLaneData {
+  const lanes: LaneSummary[] = r.lanes.map((l) => ({
+    originState: l.originState,
+    destState: l.destState,
+    volume: l.loads,
+    revenue: l.revenue,
+    avgRate: l.avgRatePerMile,
+    marginPercent: l.marginPct,
+    // Backend does not yet compute trend direction — default FLAT so
+    // <TrendIcon trend="FLAT"/> renders a neutral glyph rather than crashing.
+    trend: "FLAT",
+  }));
+  const totalRevenue = r.lanes.reduce((s, l) => s + l.revenue, 0);
+  const totalMiles = r.lanes.reduce((s, l) => s + l.totalMiles, 0);
+  const avgMargin = lanes.length > 0 ? lanes.reduce((s, l) => s + l.marginPercent, 0) / lanes.length : 0;
+  const topLaneVolume = lanes.length > 0 ? Math.max(...lanes.map((l) => l.volume)) : 0;
+  const revenuePerMileAvg = totalMiles > 0 ? totalRevenue / totalMiles : 0;
+  return {
+    lanes,
+    stats: { totalLanes: lanes.length, avgMargin, topLaneVolume, revenuePerMileAvg },
+  };
+}
+
+function adaptMarginResponse(r: BackendMarginResponse): AdaptedMarginData {
+  return {
+    byEquipment: (r.byEquipmentType ?? []).map((e) => ({
+      equipmentType: e.equipmentType,
+      avgMargin: e.avgMarginPercent,
+      volume: e.loadCount,
+    })),
+    byCustomer: (r.byCustomer ?? []).map((c) => ({
+      customerName: c.customerName,
+      avgMargin: c.avgMarginPercent,
+      revenue: c.totalRevenue,
+      loads: c.loadCount,
+    })),
+  };
+}
+
 type Tab = "lanes" | "margins" | "heatmap";
 
 /* ── Page ────────────────────────────────────────────────── */
@@ -62,18 +160,14 @@ export default function LaneAnalyticsPage() {
 
   const { data: laneData, isLoading } = useQuery({
     queryKey: ["lane-analytics", period],
-    queryFn: () => api.get<{
-      lanes: LaneSummary[];
-      stats: { totalLanes: number; avgMargin: number; topLaneVolume: number; revenuePerMileAvg: number };
-    }>(`/analytics/lanes?period=${period}`).then((r) => r.data),
+    queryFn: () =>
+      api.get<BackendLaneResponse>(`/analytics/lanes?period=${period}`).then((r) => adaptLanesResponse(r.data)),
   });
 
   const { data: marginData } = useQuery({
     queryKey: ["lane-margins", period],
-    queryFn: () => api.get<{
-      byEquipment: MarginByEquipment[];
-      byCustomer: MarginByCustomer[];
-    }>(`/analytics/margins?period=${period}`).then((r) => r.data),
+    queryFn: () =>
+      api.get<BackendMarginResponse>(`/analytics/margins?period=${period}`).then((r) => adaptMarginResponse(r.data)),
     enabled: tab === "margins",
   });
 
