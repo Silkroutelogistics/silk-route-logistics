@@ -1,6 +1,6 @@
-# SRL Regression + Issue Log
+# SRL Defect + Issue Log
 
-Running catalog of known regressions, issues, and
+Running catalog of known defects, open issues, and
 quality concerns. Updated continuously. Lives in git
 so it's searchable and never lost.
 
@@ -37,18 +37,49 @@ so it's searchable and never lost.
 - silkroutelogistics.ai/track — footer layout issue
 - Possibly shared site-chrome footer not applying to /track
 
-### P1 — AE Console: some tabs render "super dark"
-- Affected tabs: TBD, list them tomorrow
-- Visual regression, usable but wrong
-
 ### P2 — "Get a Free Quote" information vague
 - Form / section — needs content rewrite
 - Unclear what info the prospect provides or what they get back
 
+---
+
+## S6 family — AE Console defects (all P1, pre-existing)
+
+### S6 (parent) — AE Console: some tabs render "super dark"
+- Location: Various AE Console tabs (specific labels TBD)
+- Symptom: Visual defect, usable but wrong — tabs render with very dark backgrounds that hurt readability
+- Severity: P1 visual
+- Status: Open, parent-level audit deferred until specific tab labels are enumerated
+- Discovered: 2026-04-22
+
+### S6.a — Lead Hunter: email view dark/low-contrast
+- Location: AE Console → Lead Hunter tab → click on any email entry to expand/view
+- Symptom: Text renders dark-on-dark or very low contrast, hard to read
+- Severity: P1 visual defect; content is present but unreadable
+- Status: Open, will audit and fix in v3.7.n.7
+- Discovered: 2026-04-23
+
+### S6.b — Load Board: "New Load" button non-functional
+- Location: AE Console → Load Board tab → "New Load" button
+- Symptom: Button click does nothing (silent failure or error — exact behavior TBD in audit)
+- Severity: P1 functional defect blocking load creation
+- Status: Open, will audit and fix in v3.7.n.8
+- Discovered: 2026-04-23
+
+### S6.c — Lane Analytics: runtime crash on undefined .toFixed()
+- Location: AE Console → Lane Analytics tab
+- Symptom: Error boundary renders "Something went wrong" with stack trace "Cannot read properties of undefined (reading 'toFixed')"
+- Secondary issue: Error message text rendered white-on-white, barely visible
+- Severity: P1 functional crash + visual defect in error state
+- Status: Open, will audit and fix in v3.7.n.9
+- Discovered: 2026-04-23
+
+---
+
 ## Open — content density concerns (not bugs, design debt)
 - Some pages feel long with too much info + extra pictures
 - Candidates for trim: TBD (list tomorrow)
-- Scope: content editorial, separate from technical regressions
+- Scope: content editorial, separate from technical defects
 
 ---
 
