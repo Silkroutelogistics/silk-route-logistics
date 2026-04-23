@@ -30,13 +30,6 @@ so it's searchable and never lost.
 - Status: Open, parent-level audit deferred until specific tab labels are enumerated
 - Discovered: 2026-04-22
 
-### S6.b — Load Board: "New Load" button non-functional
-- Location: AE Console → Load Board tab → "New Load" button
-- Symptom: Button click does nothing (silent failure or error — exact behavior TBD in audit)
-- Severity: P1 functional defect blocking load creation
-- Status: Open, will audit and fix in v3.7.n.8
-- Discovered: 2026-04-23
-
 ### S6.c — Lane Analytics: runtime crash on undefined .toFixed()
 - Location: AE Console → Lane Analytics tab
 - Symptom: Error boundary renders "Something went wrong" with stack trace "Cannot read properties of undefined (reading 'toFixed')"
@@ -71,6 +64,7 @@ so it's searchable and never lost.
 - 2026-04-23 | Contact page "Find Us" map: deprecated Google Maps iframe endpoint no longer renders; replaced with static location card + "Open in Google Maps" link | v3.7.n.6
 - 2026-04-23 | Lead Hunter Send Outreach modal body text + Cancel button rendering text-slate-400 on dark navy bg (3.2:1 contrast, failed WCAG AA for body text); swapped to text-slate-300 (4.8:1) matching readable-sibling convention | v3.7.n.7 — SUPERSEDED: root cause is globals.css [data-mode="light"] .text-slate-* !important overrides that reverse colors on dark surfaces; this partial fix had no visual effect in light mode. Full fix deferred to Phase 6 theme cleanup.
 - 2026-04-23 | Portal dashboard layouts (Shipper + Carrier) token-always-null auth guard — 2-month silent regression from 2026-02-23 commit 172d6f3b security hardening (localStorage → httpOnly cookie migration updated auth stores but missed the two downstream dashboard layouts). Bypassed AuthGuard.tsx pattern that kept AE Console working. Also broke the notifications useQuery (enabled: !!token) in both layouts during the same window. Fixed by matching the AuthGuard user-presence + loadUser() pattern. | v3.7.n.7.1
+- 2026-04-23 | S6.b Load Board "+ New Load" button non-functional when no load is selected — CreateLoadModal render was nested inside a {load && (...)} wrapper (introduced 2026-03-31) while the button was added outside it (2026-04-08 commit 10e0ea3d). Clicks toggled state correctly but the modal was unmounted when no load was selected (the typical Load Board open state). Fixed by moving the modal render out of the wrapper; added clarifying comment to prevent re-nesting during future cleanups. | v3.7.n.8
 
 ---
 

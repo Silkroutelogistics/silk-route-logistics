@@ -850,11 +850,13 @@ export default function LoadsPage() {
 
           {/* Rate confirmation modal */}
           <RateConfirmationModal open={showRateConf} onClose={() => setShowRateConf(false)} load={showRateConf ? load : null} />
-
-          {/* Create / Clone load modal */}
-          <CreateLoadModal open={showCreate} onClose={() => { setShowCreate(false); setCloneData(null); }} cloneFrom={cloneData} />
         </>
       )}
+
+      {/* CreateLoadModal rendered outside the {load && ...} block so it can
+          open for "new load" flows when no load is selected. Modal handles
+          its own open/closed state via props. */}
+      <CreateLoadModal open={showCreate} onClose={() => { setShowCreate(false); setCloneData(null); }} cloneFrom={cloneData} />
 
       {/* Invoice toast */}
       {invoiceToast && (

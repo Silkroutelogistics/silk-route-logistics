@@ -542,7 +542,35 @@
 //            approval UI (S-3) deferred to Phase 6
 //          - Theme system cleanup (S6.a root cause)
 //            deferred to Phase 6
-export const SRL_VERSION = "3.7.n.7.1";
+// v3.7.n.8 — S6.b Load Board "New Load" button
+//   non-functional fix
+//          - dashboard/loads/page.tsx: the "+ New
+//            Load" button at line 431 correctly
+//            toggled showCreate state, but the
+//            <CreateLoadModal> render at line 855
+//            was nested INSIDE a {load && (...)}
+//            wrapper (introduced 2026-03-31 for
+//            load-detail panels). When no load was
+//            selected (typical Load Board open
+//            state), the modal was unmounted, so
+//            clicks did nothing visibly
+//          - Fix: moved <CreateLoadModal> out of
+//            the {load && (...)} wrapper. Modal
+//            handles its own open/close via props
+//            and accepts cloneFrom=null for
+//            new-load mode. No dependency on a
+//            selected load. Zero behavior change
+//            when a load IS selected
+//          - Added clarifying comment above the
+//            relocated render to prevent future
+//            re-nesting during "cleanup" passes
+//          - Pre-existing defect introduced
+//            2026-04-08 commit 10e0ea3d; single-
+//            commit inconsistency (button placed
+//            outside wrapper, modal placed inside)
+//          - Internal-only impact, no prospect-
+//            facing effect
+export const SRL_VERSION = "3.7.n.8";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
