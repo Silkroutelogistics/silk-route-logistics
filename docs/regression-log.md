@@ -123,6 +123,13 @@ so it's searchable and never lost.
 - **Shared `/shared/css/footer.css` partial** — v3.7.n.5 ported footer rules from `carriers.css` to `tracking.css`. Cleaner long-term: extract shared footer rules into a partial loaded by all marketing pages. Scheduled for Phase 5 CSS variable consolidation per CLAUDE.md §13.
 - **Consolidate `carrierAuth.ts` duplication with shared `authController.ts`** — password-expiry, TOTP, session registration are duplicated between the two. Only the approval gate is carrier-specific. Refactor candidate once portal patterns stabilize.
 - **`CarrierProfile.onboardingStatus` vs. `status` enum redundancy** — two overlapping status enums on the same model. Only `onboardingStatus` gates login; `status: CarrierApplicationStatus` is tracked but unused for auth. Consolidate or document the divide.
+- **Load Board "New Load" modal vs. Order Builder overlap** — Load Board "+ New Load" (`dashboard/loads/page.tsx` → `CreateLoadModal`, 4-step wizard: Route/Freight/Pricing/Review, ~15 fields) duplicates the purpose of Order Builder (`/dashboard/orders`, ~40 fields with facility lookups, PU/DEL windows, dispatch method, pricing intelligence, tender configuration). Two surfaces for one task. Observed during v3.7.n.8 S6.b verification 2026-04-23.
+  - Decision required: consolidate on Order Builder as canonical order-entry, OR keep modal as a quick-capture surface with explicit "Finish in Order Builder" graduation path.
+  - Questions to resolve before acting:
+    1. Does Order Builder handle both pre-dispatch creation AND post-dispatch editing?
+    2. Do both surfaces create records via the same backend controller, or are there two fragmented data paths?
+    3. Which surface does Wasi actually use in daily ops?
+  - Not a bug — both flows currently work. Logged as architectural / UX consolidation debt for Phase 6 post-Apollo launch.
 
 ## Phase 6 — Content / Editorial
 
