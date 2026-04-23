@@ -65,6 +65,7 @@ so it's searchable and never lost.
 
 ## P2 — UX content improvements (tradeoffs to decide during editorial pass)
 - Shippers page quote form: "Origin City/State" and "Destination City/State" fields — open question whether to require full address including street + ZIP (higher friction, richer data) or keep city/state (lower friction, faster lead capture). UX tradeoff to decide during editorial pass, not a bug.
+- Shippers page "BY THE NUMBERS / Performance That Speaks" section — currently shows only "48 States Covered" with no other stats. Pre-launch, no real operational numbers to report. Editorial decision required: (a) delete section, (b) replace with capability block, (c) replace with credentials block. Do NOT fabricate performance metrics. Defer to Friday/weekend editorial pass.
 
 ---
 
