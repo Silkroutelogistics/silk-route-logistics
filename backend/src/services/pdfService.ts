@@ -4,6 +4,9 @@ import * as fs from "fs";
 import bwipjs from "bwip-js";
 import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
+import { generateBOLQRBuffer } from "../utils/qrGenerator";
+import { decodeHtmlEntities } from "../utils/htmlEntities";
+import { preserveLigatures } from "../utils/ligaturePreprocess";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -144,280 +147,666 @@ interface LoadBOLData {
 
 export async function generateBOLFromLoad(
   load: LoadBOLData,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   context?: BOLRenderContext,
 ): Promise<PDFDoc> {
-  // context.trackingToken is plumbed through for 5E.b QR wiring. No visual
-  // effect in 5E.a — token is generated server-side on BOL-print requests
-  // but not yet encoded into the rendered PDF.
   const doc = new PDFDocument({ margins: { top: 34, bottom: 0, left: 34, right: 34 }, size: "LETTER" });
   const M = 34;
   const R = 612 - M;
   const CW = R - M;
-  const INK = "#1A1A1A"; const GRAY1 = "#3D3D3D"; const GRAY2 = "#6E6E6E";
-  const GRAY3 = "#AAAAAA"; const RULE = "#C8C8C8"; const GOLD = "#B8972F";
-  const TINT = "#F8F7F4"; const HDR_BG = "#2A2A2A"; const TOT_BG = "#F0EDE6";
+
+  // Canonical v2.9 tokens (CLAUDE.md §2.1)
+  const NAVY = "#0A2540";
+  const FG_2 = "#3A4A5F";
+  const FG_3 = "#6B7685";
+  const FG_DISABLED = "#A7AEB8";
+  const GOLD = "#C5A572";       // structural: rules, dividers, QR frame
+  const GOLD_DARK = "#BA7517";  // emphasis: labels, placeholders, tagline
+  const CREAM = "#FBF7F0";
+  const CREAM_2 = "#F5EEE0";
+  const BORDER_1 = "#E5EAF0";
+  const BORDER_2 = "#D7DEE8";
+
+  // Register v2.9 fonts. TTFs ship via backend/src/assets/fonts/bol-v2.9/
+  // and propagate to Render prod through the dashboard src/assets cp step
+  // (CLAUDE.md §2.2).
+  const FONT_DIR = path.resolve(__dirname, "../assets/fonts/bol-v2.9");
+  doc.registerFont("Playfair-Regular", path.join(FONT_DIR, "PlayfairDisplay-Regular.ttf"));
+  doc.registerFont("Playfair-Italic", path.join(FONT_DIR, "PlayfairDisplay-Italic.ttf"));
+  doc.registerFont("Playfair-Bold", path.join(FONT_DIR, "PlayfairDisplay-Bold.ttf"));
+  doc.registerFont("Playfair-BoldItalic", path.join(FONT_DIR, "PlayfairDisplay-BoldItalic.ttf"));
+  doc.registerFont("DMSans-Regular", path.join(FONT_DIR, "DMSans-Regular.ttf"));
+  doc.registerFont("DMSans-Italic", path.join(FONT_DIR, "DMSans-Italic.ttf"));
+  doc.registerFont("DMSans-Medium", path.join(FONT_DIR, "DMSans-Medium.ttf"));
+  doc.registerFont("DMSans-SemiBold", path.join(FONT_DIR, "DMSans-SemiBold.ttf"));
+  doc.registerFont("DMSans-Bold", path.join(FONT_DIR, "DMSans-Bold.ttf"));
+
+  // Text-safety wrapper: decode HTML entities from form input, then insert
+  // ZWNJ between fi/fl pairs so fontkit's default `liga` substitution
+  // doesn't break glyph rendering on scale-down.
+  const safe = (s: string | null | undefined): string =>
+    preserveLigatures(decodeHtmlEntities(s ?? ""));
+
+  // Placeholder helper per v2.9 designer spec. Empty free-text fields render
+  // as bracketed italic GOLD_DARK labels; populated fields use the caller's
+  // styling.
+  interface FieldDisplay { text: string; isPlaceholder: boolean; }
+  const fieldOrPlaceholder = (val: string | null | undefined, placeholder: string): FieldDisplay => {
+    const trimmed = safe(val).trim();
+    return trimmed
+      ? { text: trimmed, isPlaceholder: false }
+      : { text: `[${placeholder}]`, isPlaceholder: true };
+  };
 
   const ref = load.loadNumber || load.referenceNumber;
   const bolNum = ref.startsWith("SRL-") ? `BOL-${ref}` : `BOL-SRL-${ref}`;
 
-  let barcodeBuffer: Buffer | null = null;
-  try { barcodeBuffer = await bwipjs.toBuffer({ bcid: "code128", text: bolNum, scale: 3, height: 10, includetext: false }); } catch (err) { log.warn({ err }, "[PDF] Barcode generation failed, continuing without barcode:"); }
-
-  const pickupDateFmt = load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : String(load.pickupDate);
-  const deliveryDateFmt = load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : String(load.deliveryDate);
-  const pickupWindow = (load.pickupTimeStart && load.pickupTimeEnd) ? `${load.pickupTimeStart} \u2013 ${load.pickupTimeEnd}` : (load.pickupTimeStart || "\u2014");
-  const deliveryWindow = (load.deliveryTimeStart && load.deliveryTimeEnd) ? `${load.deliveryTimeStart} \u2013 ${load.deliveryTimeEnd}` : (load.deliveryTimeStart || "\u2014");
-
-  // ════════════════ PAGE 1 ════════════════
-  // PDFKit: Y=0 is TOP, increases downward
-
-  // Gold accent bar
-  doc.rect(0, 0, 612, 4).fill(GOLD);
-  let y = 12;
-
-  // Logo
-  if (hasLogo) doc.image(LOGO_PATH, M, y, { width: 52, height: 52, fit: [52, 52] });
-
-  // Company info
-  const tx = M + 62;
-  doc.fontSize(14).fillColor(INK).text("SILK ROUTE LOGISTICS INC.", tx, y + 4);
-  doc.fontSize(7).fillColor(GRAY1).text(COMPANY.address, tx, y + 20);
-  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}`, tx, y + 29);
-  doc.text(COMPANY.website, tx, y + 38);
-  doc.fontSize(6).fillColor(GOLD).text("Where Trust Travels.", tx, y + 48);
-
-  // Title + barcode right
-  doc.fontSize(20).fillColor(INK).text("Bill of Lading", R - 200, y + 2, { width: 200, align: "right" });
-  doc.fontSize(7).fillColor(GOLD).text("Straight \u2014 Non Negotiable", R - 200, y + 24, { width: 200, align: "right" });
-  if (barcodeBuffer) {
-    doc.image(barcodeBuffer, R - 150, y + 34, { width: 150, height: 28 });
-    doc.fontSize(6.5).fillColor(INK).text(bolNum, R - 150, y + 63, { width: 150, align: "center" });
+  // QR generation for /track deep-link. Non-fatal on failure — frame
+  // renders empty to preserve layout spacing.
+  let qrBuffer: Buffer | null = null;
+  if (context?.trackingToken) {
+    try {
+      qrBuffer = await generateBOLQRBuffer(context.trackingToken);
+    } catch (err) {
+      log.warn({ err }, "[PDF] BOL QR generation failed");
+    }
   }
 
-  y += 72;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(INK).lineWidth(1.2).stroke();
-  doc.moveTo(M, y + 2).lineTo(R, y + 2).strokeColor(GOLD).lineWidth(0.5).stroke();
-  y += 6;
+  const pickupDateFmt = load.pickupDate instanceof Date
+    ? load.pickupDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    : String(load.pickupDate);
+  const deliveryDateFmt = load.deliveryDate instanceof Date
+    ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    : String(load.deliveryDate);
+  const EM = "—";
+  const MIDDOT = "·";
+  const TIMES = "×";
+  const pickupWin = (load.pickupTimeStart && load.pickupTimeEnd)
+    ? `${load.pickupTimeStart}–${load.pickupTimeEnd}`
+    : (load.pickupTimeStart || "");
+  const deliveryWin = (load.deliveryTimeStart && load.deliveryTimeEnd)
+    ? `${load.deliveryTimeStart}–${load.deliveryTimeEnd}`
+    : (load.deliveryTimeStart || "");
 
-  // Reference row
-  const rh = 30; const cw5 = CW / 5;
-  doc.rect(M, y, CW, rh).fill(TINT);
-  doc.rect(M, y, CW, rh).strokeColor(RULE).lineWidth(0.4).stroke();
-  const refs: [string, string][] = [["BOL #", bolNum], ["DATE", pickupDateFmt], ["LOAD REF", load.referenceNumber], ["EQUIPMENT", load.equipmentType], ["MC# / DOT#", `${COMPANY.mc} / ${COMPANY.dot}`]];
-  refs.forEach(([lbl, val], i) => {
-    const rx = M + i * cw5;
-    if (i) doc.moveTo(rx, y).lineTo(rx, y + rh).strokeColor(RULE).lineWidth(0.4).stroke();
-    doc.fontSize(5.5).fillColor(GRAY2).text(lbl, rx + 5, y + 3);
-    doc.fontSize(i < 4 ? 9 : 7.5).fillColor(INK).text(val, rx + 5, y + 14);
-  });
-  y += rh + 6;
+  // ========================= PAGE 1 =========================
+  // PDFKit: Y=0 is TOP, increases downward.
 
-  // Shipper / Consignee
-  const leftX = M; const rightX = M + CW * 0.52;
-  doc.fontSize(7).fillColor(GOLD).text("PICKUP FROM", leftX, y);
-  doc.text("DELIVER TO", rightX, y);
-  y += 9;
-  doc.moveTo(leftX, y).lineTo(leftX + CW * 0.48, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  doc.moveTo(rightX, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 5;
+  // Header region — cream band from top of page through bottom of QR+BOL#
+  const qrSize = 95;
+  const qrColX = R - 86;
+  const qrColW = 86;
+  const qrFrameX = qrColX + (qrColW - qrSize) / 2;
+  const qrFrameY = 12;
+  const headerBandH = qrFrameY + qrSize + 24; // QR + TRACK label + BOL# with breathing room
 
-  const shipperName = load.shipperFacility || load.customer?.name || "\u2014";
-  doc.fontSize(11).fillColor(INK).text(shipperName, leftX, y);
-  doc.fontSize(8).fillColor(GRAY1);
-  let sy = y + 14;
-  const shipperAddr = load.originAddress || load.customer?.address;
-  if (shipperAddr) { doc.text(shipperAddr, leftX, sy); sy += 10; }
-  doc.text(`${load.originCity}, ${load.originState} ${load.originZip}`, leftX, sy); sy += 12;
-  doc.fontSize(7).fillColor(GRAY2);
-  const sc = load.originContactName || load.customer?.contactName;
-  const sp = load.originContactPhone || load.customer?.phone;
-  if (sc || sp) { doc.text(`Contact:  ${sc || ""}  |  ${sp || ""}`, leftX, sy); sy += 10; }
+  doc.rect(0, 0, 612, headerBandH).fill(CREAM_2);
 
-  const consigneeName = load.consigneeFacility || "\u2014";
-  doc.fontSize(11).fillColor(INK).text(consigneeName, rightX, y);
-  doc.fontSize(8).fillColor(GRAY1);
-  let cy = y + 14;
-  if (load.destAddress) { doc.text(load.destAddress, rightX, cy); cy += 10; }
-  doc.text(`${load.destCity}, ${load.destState} ${load.destZip}`, rightX, cy); cy += 12;
-  doc.fontSize(7).fillColor(GRAY2);
-  if (load.destContactName || load.destContactPhone) { doc.text(`Contact:  ${load.destContactName || ""}  |  ${load.destContactPhone || ""}`, rightX, cy); cy += 10; }
+  // Gold accent bar at top (very thin)
+  doc.rect(0, 0, 612, 3).fill(GOLD);
 
-  y = Math.max(sy, cy) + 4;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 6;
+  // Logo
+  if (hasLogo) doc.image(LOGO_PATH, M, 12, { width: 72, height: 72, fit: [72, 72] });
 
-  // Third Party / Schedule
-  doc.fontSize(7).fillColor(GOLD).text("THIRD PARTY BILL TO", leftX, y);
-  doc.text("PICKUP & DELIVERY SCHEDULE", rightX, y);
-  y += 9;
-  doc.moveTo(leftX, y).lineTo(leftX + CW * 0.48, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  doc.moveTo(rightX, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 5;
+  // Company block at (M+78, 12) — 5 lines
+  const companyX = M + 78;
+  doc.font("Playfair-Bold").fontSize(14).fillColor(NAVY)
+    .text("SILK ROUTE LOGISTICS INC.", companyX, 12, { lineBreak: false });
+  doc.font("DMSans-Regular").fontSize(8).fillColor(FG_2)
+    .text(COMPANY.address, companyX, 31, { lineBreak: false });
+  doc.text(
+    `${COMPANY.phone}  |  operations@silkroutelogistics.ai  |  ${COMPANY.website}`,
+    companyX, 43, { lineBreak: false },
+  );
+  doc.font("DMSans-Medium").fontSize(8).fillColor(NAVY)
+    .text(`MC# ${COMPANY.mc} ${MIDDOT} DOT# ${COMPANY.dot}`, companyX, 55, { lineBreak: false });
+  doc.font("DMSans-Italic").fontSize(8).fillColor(GOLD_DARK)
+    .text("Where Trust Travels.", companyX, 67, { lineBreak: false });
 
-  const tpY = y;
-  doc.fontSize(9).fillColor(INK).text(COMPANY.name, leftX, y);
-  doc.fontSize(7.5).fillColor(GRAY1).text(COMPANY.address, leftX, y + 12);
-  doc.text(COMPANY.phone, leftX, y + 22);
+  // QR container — rounded cream rect, BORDER_2 stroke, QR image inside
+  doc.roundedRect(qrFrameX, qrFrameY, qrSize, qrSize, 3).fill(CREAM);
+  doc.lineWidth(0.75).strokeColor(BORDER_2)
+    .roundedRect(qrFrameX, qrFrameY, qrSize, qrSize, 3).stroke();
+  if (qrBuffer) {
+    doc.image(qrBuffer, qrFrameX + 3, qrFrameY + 3, { width: qrSize - 6, height: qrSize - 6 });
+  }
 
-  doc.fontSize(6).fillColor(GRAY2).text("PICKUP", rightX, tpY);
-  doc.fontSize(10).fillColor(INK).text(pickupDateFmt, rightX, tpY + 9);
-  doc.fontSize(7).fillColor(GRAY2).text(`Window:  ${pickupWindow}`, rightX, tpY + 21);
-  doc.fontSize(6).fillColor(GRAY2).text("DELIVERY", rightX, tpY + 34);
-  doc.fontSize(10).fillColor(INK).text(deliveryDateFmt, rightX, tpY + 43);
-  doc.fontSize(7).fillColor(GRAY2).text(`Window:  ${deliveryWindow}`, rightX, tpY + 55);
-
-  // Gold route dots
-  const dx = R - 14;
-  doc.circle(dx, tpY + 14, 3).fill(GOLD);
-  doc.circle(dx, tpY + 48, 3).fill(GOLD);
-  doc.moveTo(dx, tpY + 17).lineTo(dx, tpY + 45).strokeColor(GOLD).lineWidth(1).dash(3, { space: 3 }).stroke();
-  doc.undash();
-
-  y = tpY + 68;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 6;
-
-  // Additional References
-  doc.fontSize(7).fillColor(GOLD).text("ADDITIONAL REFERENCES", M, y);
-  y += 10;
-  doc.fontSize(6.5).fillColor(GRAY2).text("PO #:", M, y); doc.fillColor(INK).text("\u2014", M + 28, y);
-  doc.fillColor(GRAY2).text("Pickup Ref #:", M + 120, y); doc.fillColor(INK).text("\u2014", M + 178, y);
-  doc.fillColor(GRAY2).text("Delivery Ref #:", M + 280, y); doc.fillColor(INK).text("\u2014", M + 346, y);
-  y += 12;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 6;
-
-  // Shipment Details
-  doc.fontSize(7).fillColor(GOLD).text("SHIPMENT DETAILS", M, y);
-  y += 12;
-
-  // Grid table
-  const colDefs = [
-    { label: "Pieces", w: 50 }, { label: "Type", w: 40 }, { label: "Description", w: 150 },
-    { label: "Dims (L\u00D7W\u00D7H)", w: 80 }, { label: "Weight-lbs", w: 72 },
-    { label: "Class", w: 40 }, { label: "NMFC#", w: 50 },
-    { label: "HM", w: CW - 50 - 40 - 150 - 80 - 72 - 40 - 50 },
-  ];
-  const hdrH = 16; const dataRowH = 20; const TB = "#333333";
-
-  // Header
-  doc.rect(M, y, CW, hdrH).fill(HDR_BG);
-  let cx = M;
-  colDefs.forEach((c) => { doc.fontSize(6.5).fillColor("#FFFFFF").font("Helvetica-Bold").text(c.label, cx + 4, y + 4, { width: c.w - 8 }); cx += c.w; });
-  doc.font("Helvetica");
-  doc.rect(M, y, CW, hdrH).strokeColor(TB).lineWidth(0.8).stroke();
-  cx = M; colDefs.forEach((c) => { cx += c.w; if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y + hdrH).strokeColor(TB).lineWidth(0.8).stroke(); });
-  y += hdrH;
-
-  // Data row
-  const pcs = load.pieces ? String(load.pieces) : "\u2014";
-  const dims = (load.dimensionsLength && load.dimensionsWidth && load.dimensionsHeight) ? `${load.dimensionsLength}"\u00D7${load.dimensionsWidth}"\u00D7${load.dimensionsHeight}"` : "\u2014";
-  const rowData = [
-    { t: pcs, b: true, s: 9 }, { t: "PLT", b: true, s: 8 }, { t: load.commodity || "General Freight", b: false, s: 8 },
-    { t: dims, b: false, s: 7 }, { t: load.weight ? load.weight.toLocaleString() : "\u2014", b: true, s: 9 },
-    { t: load.freightClass || "\u2014", b: false, s: 8 }, { t: "\u2014", b: false, s: 8 }, { t: load.hazmat ? "Yes" : "No", b: false, s: 8 },
-  ];
-  doc.rect(M, y, CW, dataRowH).fill(TINT);
-  doc.rect(M, y, CW, dataRowH).strokeColor(TB).lineWidth(0.8).stroke();
-  cx = M;
-  rowData.forEach((cell, ci) => {
-    if (ci > 0) doc.moveTo(cx, y).lineTo(cx, y + dataRowH).strokeColor(TB).lineWidth(0.8).stroke();
-    doc.fontSize(cell.s).fillColor(INK);
-    if (cell.b) doc.font("Helvetica-Bold"); else doc.font("Helvetica");
-    doc.text(cell.t, cx + 4, y + 5, { width: colDefs[ci].w - 8 });
-    cx += colDefs[ci].w;
-  });
-  doc.font("Helvetica");
-  y += dataRowH;
-
-  // Totals row
-  doc.rect(M, y, CW, dataRowH).fill(TOT_BG);
-  doc.rect(M, y, CW, dataRowH).strokeColor(INK).lineWidth(1).stroke();
-  cx = M; colDefs.forEach((c) => { cx += c.w; if (cx < M + CW) doc.moveTo(cx, y).lineTo(cx, y + dataRowH).strokeColor(RULE).lineWidth(0.4).stroke(); });
-  doc.fontSize(8).fillColor(INK).font("Helvetica-Bold");
-  doc.text("TOTALS", M + 4, y + 5);
-  doc.text(pcs, M + 50 + 4, y + 5);
-  doc.text("PLT", M + 90 + 4, y + 5);
-  doc.text(load.weight ? load.weight.toLocaleString() : "\u2014", M + 50 + 40 + 150 + 80 + 4, y + 5);
-  doc.font("Helvetica");
-  y += dataRowH + 4;
-
-  doc.fontSize(7).fillColor(GRAY2).text("Declared Value:  NVD", M, y);
-  doc.text("Freight Charges:  PREPAID (Third Party)", R - 200, y, { width: 200, align: "right" });
-  y += 12;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 6;
-
-  // Special Instructions
-  const instructions = load.specialInstructions || load.notes;
-  doc.fontSize(7).fillColor(GOLD).text("SPECIAL INSTRUCTIONS", M, y);
-  doc.fontSize(7).fillColor(GRAY2).text(instructions || "None", M + 108, y);
-  y += 12;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 6;
-
-  // Signatures
-  doc.fontSize(7).fillColor(GOLD).text("SIGNATURES", M, y);
-  y += 10;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(RULE).lineWidth(0.3).stroke();
-  y += 4;
-
-  const tw = (CW - 24) / 3;
-  const sigs: [string, string[]][] = [
-    ["Shipper / Representative", ["Signature", "Print Name", "Date", "Pieces Tendered"]],
-    ["Carrier / Driver", ["Signature", "Driver Name", "Truck #", "Trailer #", "Seal #", "Date"]],
-    ["Consignee / Receiver", ["Signature", "Print Name", "Date", "Pieces Received"]],
-  ];
-  sigs.forEach(([title, fields], i) => {
-    const bx = M + i * (tw + 12);
-    let by = y;
-    doc.fontSize(7).fillColor(INK).font("Helvetica-Bold").text(title, bx, by);
-    doc.font("Helvetica");
-    by += 13;
-    fields.forEach((f) => {
-      doc.fontSize(6.5).fillColor(GRAY2).text(f, bx, by);
-      const lw = doc.widthOfString(f) + 5;
-      doc.moveTo(bx + lw, by + 8).lineTo(bx + tw, by + 8).strokeColor(GRAY3).lineWidth(0.3).stroke();
-      by += 13;
+  // TRACK label below QR
+  doc.font("DMSans-SemiBold").fontSize(6.5).fillColor(GOLD_DARK)
+    .text("TRACK", qrColX, qrFrameY + qrSize + 3, {
+      width: qrColW, align: "center", characterSpacing: 1.2, lineBreak: false,
     });
+  // BOL number — 8pt, drop to 7pt if too wide for the 86pt column
+  const bolWidth8 = doc.font("DMSans-Bold").fontSize(8).widthOfString(bolNum);
+  const bolFontSize = bolWidth8 > qrColW - 4 ? 7 : 8;
+  doc.font("DMSans-Bold").fontSize(bolFontSize).fillColor(NAVY)
+    .text(bolNum, qrColX, qrFrameY + qrSize + 12, {
+      width: qrColW, align: "center", lineBreak: false,
+    });
+
+  // Gold rule below header band
+  let y = headerBandH + 2;
+  doc.lineWidth(1.75).strokeColor(GOLD).moveTo(M, y).lineTo(R, y).stroke();
+  y += 14;
+
+  // Title row
+  doc.font("Playfair-Bold").fontSize(24).fillColor(NAVY)
+    .text("Bill of Lading", M, y, { lineBreak: false });
+  doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
+    .text(`STRAIGHT ${MIDDOT} NON-NEGOTIABLE`, R - 220, y + 10, {
+      width: 220, align: "right", characterSpacing: 1.4, lineBreak: false,
+    });
+  y += 38;
+
+  // Meta row — 6 cells
+  const metaTop = y;
+  const metaH = 34;
+  const cw6 = CW / 6;
+
+  interface MetaCell {
+    label: string;
+    raw: string | null | undefined;
+    placeholder: string | null; // null = em-dash if absent; string = bracketed italic placeholder
+  }
+  const metaCells: MetaCell[] = [
+    { label: "DATE ISSUED", raw: pickupDateFmt, placeholder: null },
+    { label: "LOAD REF", raw: load.referenceNumber, placeholder: null },
+    { label: "EQUIPMENT", raw: load.equipmentType, placeholder: "Equipment" },
+    { label: "PRO #", raw: load.proNumber, placeholder: null },
+    { label: "SHIPPER REF", raw: load.shipperReference, placeholder: "Shipper Ref" },
+    { label: "FREIGHT CHARGES", raw: "Prepaid · Third Party", placeholder: null },
+  ];
+
+  doc.lineWidth(1).strokeColor(BORDER_1).moveTo(M, metaTop).lineTo(R, metaTop).stroke();
+  metaCells.forEach((c, i) => {
+    const mx = M + i * cw6;
+    if (i > 0) {
+      doc.lineWidth(1).strokeColor(BORDER_1)
+        .moveTo(mx, metaTop).lineTo(mx, metaTop + metaH).stroke();
+    }
+    doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+      .text(c.label, mx + 6, metaTop + 6, {
+        width: cw6 - 10, characterSpacing: 0.8, lineBreak: false,
+      });
+
+    const trimmed = safe(c.raw).trim();
+    if (trimmed) {
+      doc.font("DMSans-Medium").fontSize(9.5).fillColor(NAVY)
+        .text(trimmed, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
+    } else if (c.placeholder) {
+      doc.font("DMSans-Italic").fontSize(9.5).fillColor(GOLD_DARK)
+        .text(`[${c.placeholder}]`, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
+    } else {
+      doc.font("DMSans-Medium").fontSize(9.5).fillColor(NAVY)
+        .text(EM, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
+    }
+  });
+  y = metaTop + metaH + 18;
+
+  // PARTIES section header + rounded cream container
+  doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
+    .text("PARTIES", M, y, { characterSpacing: 1.2, lineBreak: false });
+  y += 13;
+
+  const partiesPad = 12;
+  const partiesTop = y;
+  const partiesInnerW = (CW - partiesPad * 3) / 2;
+  const partiesH = 92;
+
+  doc.roundedRect(M, partiesTop, CW, partiesH, 4).fill(CREAM_2);
+  doc.lineWidth(0.5).strokeColor(BORDER_1)
+    .roundedRect(M, partiesTop, CW, partiesH, 4).stroke();
+
+  const shipperX = M + partiesPad;
+  const consigneeX = M + CW / 2 + partiesPad / 2;
+
+  // Side labels
+  doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+    .text(`SHIPPER ${MIDDOT} PICKUP FROM`, shipperX, partiesTop + partiesPad, {
+      characterSpacing: 1.0, lineBreak: false,
+    });
+  doc.text(`CONSIGNEE ${MIDDOT} DELIVER TO`, consigneeX, partiesTop + partiesPad, {
+    characterSpacing: 1.0, lineBreak: false,
   });
 
-  // Footer p1
-  const fy = 755;
-  doc.moveTo(M, fy).lineTo(R, fy).strokeColor(GOLD).lineWidth(1).stroke();
-  doc.fontSize(6).fillColor(GRAY2).text(`${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`, 0, fy + 6, { align: "center", width: 612 });
-  doc.fontSize(5.5).fillColor(GOLD).text("Where Trust Travels.", 0, fy + 16, { align: "center", width: 612 });
-  doc.fontSize(5).fillColor(GRAY3).text("Page 1 of 2", 0, fy + 16, { align: "right", width: R });
+  // Render party column — returns the final y cursor
+  const renderParty = (
+    side: "shipper" | "consignee",
+    cx: number,
+    cy: number,
+  ): void => {
+    const facility = side === "shipper"
+      ? fieldOrPlaceholder(load.shipperFacility || load.customer?.name, "Shipper Facility")
+      : fieldOrPlaceholder(load.consigneeFacility, "Consignee Facility");
+    const addr = side === "shipper"
+      ? fieldOrPlaceholder(load.originAddress || load.customer?.address, "Street Address")
+      : fieldOrPlaceholder(load.destAddress, "Street Address");
+    const city = side === "shipper" ? load.originCity : load.destCity;
+    const state = side === "shipper" ? load.originState : load.destState;
+    const zip = side === "shipper" ? load.originZip : load.destZip;
+    const cityLine = fieldOrPlaceholder(
+      city && state ? `${city}, ${state} ${zip ?? ""}` : "",
+      "City, ST ZIP",
+    );
+    const contactName = side === "shipper"
+      ? safe(load.originContactName || load.customer?.contactName).trim()
+      : safe(load.destContactName).trim();
+    const contactPhone = side === "shipper"
+      ? safe(load.originContactPhone || load.customer?.phone).trim()
+      : safe(load.destContactPhone).trim();
+    const contact: FieldDisplay = (contactName || contactPhone)
+      ? { text: `Contact: ${contactName || EM}  ${MIDDOT}  ${contactPhone || EM}`, isPlaceholder: false }
+      : { text: "[Contact · Phone]", isPlaceholder: true };
+    const dateFmt = side === "shipper" ? pickupDateFmt : deliveryDateFmt;
+    const win = side === "shipper" ? pickupWin : deliveryWin;
+    const windowText = win
+      ? `Window: ${dateFmt}  ${MIDDOT}  ${win}`
+      : `Window: ${dateFmt}  ${MIDDOT}  [HH:MM–HH:MM]`;
+    const windowIsPlaceholder = !win;
 
-  // ════════════════ PAGE 2 — T&C ════════════════
+    let ly = cy;
+    // Facility name — Playfair-Bold if present, italic GOLD_DARK if placeholder
+    doc.font(facility.isPlaceholder ? "DMSans-Italic" : "Playfair-Bold")
+      .fontSize(11).fillColor(facility.isPlaceholder ? GOLD_DARK : NAVY)
+      .text(facility.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    ly += 16;
+
+    doc.font(addr.isPlaceholder ? "DMSans-Italic" : "DMSans-Italic")
+      .fontSize(8.25).fillColor(addr.isPlaceholder ? GOLD_DARK : FG_2)
+      .text(addr.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    ly += 11;
+
+    doc.font(cityLine.isPlaceholder ? "DMSans-Italic" : "DMSans-Italic")
+      .fontSize(8.25).fillColor(cityLine.isPlaceholder ? GOLD_DARK : FG_2)
+      .text(cityLine.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    ly += 13;
+
+    doc.font(contact.isPlaceholder ? "DMSans-Italic" : "DMSans-Regular")
+      .fontSize(7.75).fillColor(contact.isPlaceholder ? GOLD_DARK : FG_3)
+      .text(contact.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    ly += 11;
+
+    doc.font(windowIsPlaceholder ? "DMSans-Italic" : "DMSans-Regular")
+      .fontSize(7.75).fillColor(windowIsPlaceholder ? GOLD_DARK : FG_3)
+      .text(windowText, cx, ly, { width: partiesInnerW, lineBreak: false });
+  };
+
+  renderParty("shipper", shipperX, partiesTop + partiesPad + 14);
+  renderParty("consignee", consigneeX, partiesTop + partiesPad + 14);
+  y = partiesTop + partiesH + 16;
+
+  // Shipment details table — rounded container, NAVY header, dashed body separators, CREAM_2 totals
+  doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
+    .text("SHIPMENT DETAILS", M, y, { characterSpacing: 1.2, lineBreak: false });
+  y += 13;
+
+  const tblTop = y;
+  const colDefs: Array<{ label: string; w: number }> = [
+    { label: "PCS", w: 38 },
+    { label: "TYPE", w: 44 },
+    { label: "DESCRIPTION", w: 160 },
+    { label: `DIMS (L${TIMES}W${TIMES}H)`, w: 90 },
+    { label: "WEIGHT", w: 70 },
+    { label: "CLASS", w: 42 },
+    { label: "NMFC#", w: 48 },
+  ];
+  const usedW = colDefs.reduce((s, c) => s + c.w, 0);
+  colDefs.push({ label: "HM", w: CW - usedW });
+  const hdrH = 18;
+  const rowH = 22;
+  const totH = 22;
+  const tblBodyH = rowH;
+  const tblH = hdrH + tblBodyH + totH;
+
+  // Container stroke
+  doc.lineWidth(0.5).strokeColor(BORDER_1)
+    .roundedRect(M, tblTop, CW, tblH, 4).stroke();
+
+  // Header row — NAVY fill inside rounded clip
+  doc.save();
+  doc.roundedRect(M, tblTop, CW, tblH, 4).clip();
+  doc.rect(M, tblTop, CW, hdrH).fill(NAVY);
+  doc.restore();
+
+  let cx = M;
+  colDefs.forEach((c) => {
+    doc.font("DMSans-SemiBold").fontSize(8).fillColor(CREAM)
+      .text(c.label, cx + 6, tblTop + 5, {
+        width: c.w - 8, characterSpacing: 0.8, lineBreak: false,
+      });
+    cx += c.w;
+  });
+
+  // Body row
+  const bodyY = tblTop + hdrH;
+  const pcsValue = load.pieces != null ? String(load.pieces) : EM;
+  const dims = (load.dimensionsLength && load.dimensionsWidth && load.dimensionsHeight)
+    ? `${load.dimensionsLength}"${TIMES}${load.dimensionsWidth}"${TIMES}${load.dimensionsHeight}"`
+    : EM;
+  const weightStr = load.weight ? `${load.weight.toLocaleString()} lb` : EM;
+  const descRaw = safe(load.commodity).trim();
+  const descCell: FieldDisplay = descRaw
+    ? { text: descRaw, isPlaceholder: false }
+    : { text: "[Description]", isPlaceholder: true };
+  const bodyCells: Array<{ text: string; placeholder: boolean; bold?: boolean }> = [
+    { text: pcsValue, placeholder: false, bold: true },
+    { text: "PLT", placeholder: false },
+    { text: descCell.text, placeholder: descCell.isPlaceholder },
+    { text: dims, placeholder: false },
+    { text: weightStr, placeholder: false, bold: true },
+    { text: safe(load.freightClass).trim() || EM, placeholder: false },
+    { text: EM, placeholder: false },
+    { text: load.hazmat ? "Yes" : "No", placeholder: false },
+  ];
+
+  cx = M;
+  colDefs.forEach((c, ci) => {
+    const cell = bodyCells[ci];
+    if (ci > 0) {
+      // Dashed vertical separator between body columns
+      doc.save();
+      doc.lineWidth(0.5).strokeColor(BORDER_1).dash(2, { space: 2 })
+        .moveTo(cx, bodyY + 2).lineTo(cx, bodyY + rowH - 2).stroke();
+      doc.undash();
+      doc.restore();
+    }
+    doc.font(cell.placeholder ? "DMSans-Italic" : cell.bold ? "DMSans-Bold" : "DMSans-Regular")
+      .fontSize(9).fillColor(cell.placeholder ? GOLD_DARK : NAVY)
+      .text(cell.text, cx + 6, bodyY + 6, { width: c.w - 10, lineBreak: false });
+    cx += c.w;
+  });
+
+  // Totals row — solid top border, CREAM_2 fill
+  const totY = bodyY + rowH;
+  doc.save();
+  doc.roundedRect(M, tblTop, CW, tblH, 4).clip();
+  doc.rect(M, totY, CW, totH).fill(CREAM_2);
+  doc.restore();
+  doc.lineWidth(1).strokeColor(BORDER_1).moveTo(M, totY).lineTo(R, totY).stroke();
+
+  doc.font("DMSans-Bold").fontSize(9).fillColor(NAVY);
+  let tcx = M + 6;
+  doc.text("TOTALS:", tcx, totY + 7, {
+    width: colDefs[0].w + colDefs[1].w - 8, characterSpacing: 0.6, lineBreak: false,
+  });
+  tcx = M + colDefs[0].w + colDefs[1].w + 6;
+  doc.text(pcsValue, tcx, totY + 7, { width: colDefs[2].w - 8, lineBreak: false });
+  tcx = M + colDefs[0].w + colDefs[1].w + colDefs[2].w + colDefs[3].w + 6;
+  doc.text(weightStr, tcx, totY + 7, { width: colDefs[4].w - 8, lineBreak: false });
+
+  y = tblTop + tblH + 14;
+
+  // Special Instructions — single row cream container
+  const siH = 28;
+  doc.roundedRect(M, y, CW, siH, 4).fill(CREAM_2);
+  doc.lineWidth(0.5).strokeColor(BORDER_1).roundedRect(M, y, CW, siH, 4).stroke();
+  doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+    .text("SPECIAL INSTRUCTIONS", M + 10, y + 10, {
+      characterSpacing: 1.0, lineBreak: false,
+    });
+  const siBodyRaw = safe(load.specialInstructions || load.notes).trim();
+  const siDisplay: FieldDisplay = siBodyRaw
+    ? { text: siBodyRaw, isPlaceholder: false }
+    : { text: "None  ·  [per-load notes]", isPlaceholder: true };
+  doc.font("DMSans-Italic").fontSize(8.25)
+    .fillColor(siDisplay.isPlaceholder ? GOLD_DARK : FG_2)
+    .text(siDisplay.text, M + 150, y + 9, {
+      width: CW - 160, height: siH - 14, ellipsis: true, lineBreak: false,
+    });
+  y += siH + 10;
+
+  // Released Value form row
+  const rvH = 36;
+  doc.roundedRect(M, y, CW, rvH, 4).fill(CREAM_2);
+  doc.lineWidth(1).strokeColor(NAVY).roundedRect(M, y, CW, rvH, 4).stroke();
+
+  const rvLabelX = M + 10;
+  const rvMidY = y + rvH / 2;
+
+  doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+    .text("RELEASED VALUE", rvLabelX, y + 6, {
+      characterSpacing: 1.0, lineBreak: false,
+    });
+
+  const declaredOn = load.releasedValueDeclared === true
+    && load.releasedValueBasis
+    && load.releasedValueBasis !== "NVD";
+  const nvdOn = load.releasedValueBasis === "NVD";
+
+  // Checkbox helper
+  const drawCheckbox = (cx2: number, cy2: number, size: number, checked: boolean): void => {
+    doc.lineWidth(0.75).strokeColor(NAVY)
+      .rect(cx2, cy2, size, size).stroke();
+    if (checked) {
+      doc.lineWidth(1.1).strokeColor(NAVY)
+        .moveTo(cx2 + 1.5, cy2 + 1.5).lineTo(cx2 + size - 1.5, cy2 + size - 1.5).stroke()
+        .moveTo(cx2 + size - 1.5, cy2 + 1.5).lineTo(cx2 + 1.5, cy2 + size - 1.5).stroke();
+    }
+  };
+
+  // Layout: "[ ] Declared $ ______ /lb    [ ] NVD (full Carmack)    Shipper initial: ______"
+  const rvBaseY = y + 20;
+  const cbSize = 10;
+  let rvCx = rvLabelX + 110;
+
+  drawCheckbox(rvCx, rvBaseY - 2, cbSize, !!declaredOn);
+  rvCx += cbSize + 6;
+  doc.font("DMSans-Regular").fontSize(8.25).fillColor(NAVY)
+    .text("Declared $", rvCx, rvBaseY, { lineBreak: false });
+  rvCx += 48;
+
+  // Amount line — rendered value if populated, else handwriting blank
+  const amountStr = load.declaredValue != null
+    ? load.declaredValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
+  const amountLineW = 52;
+  doc.lineWidth(0.5).strokeColor(NAVY)
+    .moveTo(rvCx, rvBaseY + 9).lineTo(rvCx + amountLineW, rvBaseY + 9).stroke();
+  if (amountStr) {
+    doc.font("DMSans-Medium").fontSize(8.25).fillColor(NAVY)
+      .text(amountStr, rvCx, rvBaseY, { width: amountLineW, align: "center", lineBreak: false });
+  }
+  rvCx += amountLineW + 4;
+
+  // Basis unit based on enum
+  const basisUnit = load.releasedValueBasis === "PER_POUND" ? "/lb"
+    : load.releasedValueBasis === "PER_PIECE" ? "/piece"
+    : load.releasedValueBasis === "TOTAL" ? "total"
+    : "/lb";
+  doc.font("DMSans-Regular").fontSize(8.25).fillColor(NAVY)
+    .text(basisUnit, rvCx, rvBaseY, { lineBreak: false });
+  rvCx += 28;
+
+  // NVD checkbox
+  drawCheckbox(rvCx, rvBaseY - 2, cbSize, !!nvdOn);
+  rvCx += cbSize + 6;
+  doc.font("DMSans-Regular").fontSize(8.25).fillColor(NAVY)
+    .text("NVD", rvCx, rvBaseY, { lineBreak: false });
+  rvCx += 24;
+  doc.font("DMSans-Italic").fontSize(7.75).fillColor(FG_2)
+    .text("(full Carmack liability applies)", rvCx, rvBaseY + 0.5, { lineBreak: false });
+
+  // Right-aligned shipper initial
+  const initLabelW = 72;
+  const initLineW = 40;
+  const initTotalW = initLabelW + initLineW + 6;
+  const initX = R - 10 - initTotalW;
+  doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+    .text("SHIPPER INITIAL:", initX, rvBaseY + 2, {
+      width: initLabelW, characterSpacing: 1.0, lineBreak: false,
+    });
+  doc.lineWidth(0.5).strokeColor(NAVY)
+    .moveTo(initX + initLabelW + 4, rvBaseY + 9)
+    .lineTo(initX + initLabelW + 4 + initLineW, rvBaseY + 9).stroke();
+
+  y += rvH + 4;
+
+  // Carmack citation below row
+  doc.font("DMSans-Italic").fontSize(7).fillColor(FG_3)
+    .text("Per 49 U.S.C. § 14706(c)", M, y, { lineBreak: false });
+  y += 14;
+
+  // Signature blocks — 3 columns
+  const sigColGap = 12;
+  const sigColW = (CW - sigColGap * 2) / 3;
+  const sigTop = y;
+
+  // Helper: draw a labeled blank line; optionally pre-populate with a value
+  const drawSigField = (
+    bx: number,
+    by: number,
+    fw: number,
+    label: string,
+    value: string,
+  ): void => {
+    doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+      .text(label, bx, by, {
+        width: fw, characterSpacing: 1.0, lineBreak: false,
+      });
+    if (value) {
+      doc.font("DMSans-Medium").fontSize(8.5).fillColor(NAVY)
+        .text(value, bx, by + 8, { width: fw, lineBreak: false });
+    }
+    doc.lineWidth(0.5).strokeColor(BORDER_2)
+      .moveTo(bx, by + 19).lineTo(bx + fw, by + 19).stroke();
+  };
+
+  const sigBlocks: Array<{
+    title: string;
+    cert: string;
+    render: (bx: number, cy: number) => number;
+  }> = [
+    {
+      title: "SHIPPER · REPRESENTATIVE",
+      cert: "Certifies contents are properly classified, packaged, marked, and labeled per DOT regulations (49 CFR 172).",
+      render: (bx, cy) => {
+        let by = cy;
+        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += 30;
+        drawSigField(bx, by, sigColW, "PRINT NAME", ""); by += 30;
+        const halfW = (sigColW - 8) / 2;
+        const ptValue = load.piecesTendered != null ? String(load.piecesTendered) : "";
+        drawSigField(bx, by, halfW, "PIECES TENDERED", ptValue);
+        drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
+        by += 30;
+        return by;
+      },
+    },
+    {
+      title: "CARRIER · DRIVER",
+      cert: "Acknowledges receipt of shipment in apparent good order, except as noted.",
+      render: (bx, cy) => {
+        let by = cy;
+        // carrierLegalName is pre-derived by pdfController.downloadBOLFromLoad
+        // from carrier.carrierProfile.companyName || carrier.company.
+        const carrierLegalName = safe(load.carrierLegalName ?? load.carrier?.company).trim();
+        drawSigField(bx, by, sigColW, "CARRIER LEGAL NAME", carrierLegalName); by += 30;
+        const halfW = (sigColW - 8) / 2;
+        const mcNo = safe(load.carrier?.carrierProfile?.mcNumber).trim();
+        const dotNo = safe(load.carrier?.carrierProfile?.dotNumber).trim();
+        drawSigField(bx, by, halfW, "MC #", mcNo);
+        drawSigField(bx + halfW + 8, by, halfW, "DOT #", dotNo);
+        by += 30;
+        const driverNm = safe(load.driverName).trim();
+        drawSigField(bx, by, sigColW, "DRIVER NAME", driverNm); by += 30;
+        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += 30;
+        const truckNo = safe(load.truckNumber).trim();
+        const trailerNo = safe(load.trailerNumber).trim();
+        drawSigField(bx, by, halfW, "TRUCK #", truckNo);
+        drawSigField(bx + halfW + 8, by, halfW, "TRAILER #", trailerNo);
+        by += 30;
+        const sealNo = safe(load.sealNumber).trim();
+        drawSigField(bx, by, halfW, "SEAL #", sealNo);
+        drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
+        by += 30;
+        return by;
+      },
+    },
+    {
+      title: "CONSIGNEE · RECEIVER",
+      cert: "Acknowledges delivery — any exceptions noted above.",
+      render: (bx, cy) => {
+        let by = cy;
+        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += 30;
+        drawSigField(bx, by, sigColW, "PRINT NAME", ""); by += 30;
+        const halfW = (sigColW - 8) / 2;
+        const prValue = load.piecesReceived != null ? String(load.piecesReceived) : "";
+        drawSigField(bx, by, halfW, "PIECES RECEIVED", prValue);
+        drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
+        by += 30;
+        return by;
+      },
+    },
+  ];
+
+  sigBlocks.forEach((blk, i) => {
+    const bx = M + i * (sigColW + sigColGap);
+    let by = sigTop;
+    doc.font("DMSans-SemiBold").fontSize(8.5).fillColor(GOLD_DARK)
+      .text(blk.title, bx, by, {
+        width: sigColW, characterSpacing: 1.2, lineBreak: false,
+      });
+    by += 12;
+    doc.lineWidth(1).strokeColor(GOLD).moveTo(bx, by).lineTo(bx + sigColW, by).stroke();
+    by += 6;
+    doc.font("DMSans-Italic").fontSize(7.75).fillColor(FG_2)
+      .text(blk.cert, bx, by, { width: sigColW, lineGap: 1.5 });
+    by = doc.y + 8;
+    blk.render(bx, by);
+  });
+
+  // Footer page 1
+  const fyLine = 755;
+  doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
+  const footerY = fyLine + 8;
+  const footerThirdW = CW / 3;
+  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
+    .text(
+      `MC# ${COMPANY.mc} ${MIDDOT} DOT# ${COMPANY.dot} ${MIDDOT} ${COMPANY.website}`,
+      M, footerY, { width: footerThirdW, lineBreak: false },
+    );
+  doc.font("DMSans-Italic").fontSize(7).fillColor(GOLD_DARK)
+    .text("Where Trust Travels.", M + footerThirdW, footerY, {
+      width: footerThirdW, align: "center", lineBreak: false,
+    });
+  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
+    .text("Page 1 of 2", M + 2 * footerThirdW, footerY, {
+      width: footerThirdW, align: "right", lineBreak: false,
+    });
+
+  // ========================= PAGE 2 =========================
   doc.addPage();
-  doc.rect(0, 0, 612, 4).fill(GOLD);
-  y = 14;
+  doc.rect(0, 0, 612, 3).fill(GOLD);
 
-  doc.fontSize(11).fillColor(INK).font("Helvetica-Bold").text("SILK ROUTE LOGISTICS INC.", M, y);
-  doc.font("Helvetica").fontSize(7).fillColor(GRAY2).text(`MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}  |  ${COMPANY.phone}`, M, y + 14);
-  doc.fontSize(9).fillColor(INK).font("Helvetica-Bold").text(bolNum, R - 200, y, { width: 200, align: "right" });
-  doc.font("Helvetica").fontSize(7).fillColor(GRAY2).text(`${pickupDateFmt}  |  ${load.referenceNumber}`, R - 200, y + 14, { width: 200, align: "right" });
+  // Condensed header (no QR column)
+  if (hasLogo) doc.image(LOGO_PATH, M, 12, { width: 28, height: 28, fit: [28, 28] });
+  doc.font("Playfair-Bold").fontSize(10).fillColor(NAVY)
+    .text("SILK ROUTE LOGISTICS INC.", M + 34, 13, { lineBreak: false });
+  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
+    .text(`${bolNum} ${MIDDOT} Terms and Conditions (continued)`, M + 34, 26, { lineBreak: false });
+  doc.font("DMSans-Bold").fontSize(8).fillColor(NAVY)
+    .text(bolNum, R - 220, 13, { width: 220, align: "right", lineBreak: false });
+  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
+    .text(`${pickupDateFmt} ${MIDDOT} ${load.referenceNumber}`, R - 220, 26, {
+      width: 220, align: "right", lineBreak: false,
+    });
 
-  y += 30;
-  doc.moveTo(M, y).lineTo(R, y).strokeColor(INK).lineWidth(0.8).stroke();
-  y += 10;
-  doc.fontSize(14).fillColor(INK).font("Helvetica-Bold").text("Terms and Conditions", M, y);
-  y += 18;
-  doc.moveTo(M, y).lineTo(M + 170, y).strokeColor(GOLD).lineWidth(1.5).stroke();
-  y += 8;
+  y = 50;
+  doc.lineWidth(1).strokeColor(GOLD).moveTo(M, y).lineTo(R, y).stroke();
+  y += 14;
 
-  const tclauses: [string, string][] = [
+  // T&C title
+  doc.font("Playfair-Bold").fontSize(16).fillColor(NAVY)
+    .text("Terms and Conditions", M, y, { lineBreak: false });
+  y += 24;
+
+  const tclauses: Array<[string, string]> = [
     ["1. ACCEPTANCE & CARRIAGE", "The goods described herein are accepted in apparent good order and condition (except as noted) for carriage subject to the Uniform Straight Bill of Lading and applicable U.S. DOT regulations. This BOL is non-negotiable and serves as receipt of goods only."],
-    ["2. LIABILITY (CARMACK AMENDMENT)", "Carrier is liable for loss, damage, or delay to cargo pursuant to 49 U.S.C. \u00A7 14706. Liability extends to the full actual value of the goods unless a written released-value agreement is executed per 49 CFR \u00A7 1035."],
-    ["3. INSURANCE REQUIREMENTS", "Carrier shall maintain: (a) Commercial General Liability and Automobile Liability min $1,000,000 per occurrence; (b) Cargo Liability min $100,000 per shipment; (c) Workers\u2019 Compensation as required by law."],
+    ["2. LIABILITY (CARMACK AMENDMENT)", "Carrier is liable for loss, damage, or delay to cargo pursuant to 49 U.S.C. § 14706. Liability extends to the full actual value of the goods unless a written released-value agreement is executed per 49 CFR § 1035."],
+    ["3. INSURANCE REQUIREMENTS", "Carrier shall maintain: (a) Commercial General Liability and Automobile Liability min $1,000,000 per occurrence; (b) Cargo Liability min $100,000 per shipment; (c) Workers’ Compensation as required by law."],
     ["4. CLAIMS", "Written claims must be filed within nine (9) months of delivery. Carrier shall note any damage, shortage, or discrepancy on this BOL at time of delivery."],
     ["5. INDEPENDENT CONTRACTOR", "Carrier operates as an independent contractor. Carrier is not an agent, employee, or partner of Silk Route Logistics Inc."],
     ["6. DOUBLE BROKERING PROHIBITION", "Carrier shall not re-broker, assign, interline, sub-contract, or transfer freight to any third party without prior written consent of SRL. Violation constitutes a material breach."],
     ["7. NON-SOLICITATION", "Carrier shall not solicit traffic from any shipper or customer of SRL for twelve (12) months following the last load. Violation entitles SRL to 35% commission on diverted revenue."],
     ["8. NON-BILLING", "Carrier shall not bill or accept payment from the shipper/consignee. Carrier waives any tariff or lien rights."],
-    ["9. INDEMNIFICATION", "Carrier shall defend, indemnify, and hold harmless SRL from all claims, damages, and expenses arising from Carrier\u2019s performance or breach."],
+    ["9. INDEMNIFICATION", "Carrier shall defend, indemnify, and hold harmless SRL from all claims, damages, and expenses arising from Carrier’s performance or breach."],
     ["10. DETENTION & ACCESSORIALS", "All accessorial charges must be pre-approved in writing by SRL. Unapproved charges will not be honored."],
     ["11. FORCE MAJEURE", "Neither party shall be liable for failure to perform due to causes beyond reasonable control including acts of God, war, epidemic, or natural disaster."],
     ["12. PROOF OF DELIVERY", "Carrier shall obtain a signed delivery receipt. Signed BOL/POD must accompany all invoices for payment processing."],
@@ -428,19 +817,50 @@ export async function generateBOLFromLoad(
     ["17. GOVERNING LAW", "Governed by Michigan law and applicable federal transportation law. Freight charges are prepaid unless otherwise noted."],
   ];
 
-  doc.font("Helvetica");
-  for (const [title, body] of tclauses) {
-    doc.fontSize(7).fillColor(INK).font("Helvetica-Bold").text(title, M, y);
-    y += 10;
-    doc.fontSize(6.5).fillColor(GRAY1).font("Helvetica").text(body, M, y, { width: CW, lineGap: 0.5 });
-    y = doc.y + 5;
+  // Two-column T&C. Split 9/8 — clauses 1-9 left, 10-17 right.
+  const tcGap = 14;
+  const tcColW = (CW - tcGap) / 2;
+  const tcLeftX = M;
+  const tcRightX = M + tcColW + tcGap;
+  const tcTop = y;
+
+  const renderClause = (title: string, body: string, cx: number, cy: number): number => {
+    doc.font("DMSans-Bold").fontSize(9).fillColor(NAVY)
+      .text(title, cx, cy, { width: tcColW, lineBreak: false });
+    let ny = cy + 11;
+    doc.font("DMSans-Regular").fontSize(8.5).fillColor(FG_2)
+      .text(body, cx, ny, { width: tcColW, lineGap: 1 });
+    return doc.y + 6;
+  };
+
+  let leftY = tcTop;
+  for (let i = 0; i < 9; i++) {
+    leftY = renderClause(tclauses[i][0], tclauses[i][1], tcLeftX, leftY);
+  }
+  let rightY = tcTop;
+  for (let i = 9; i < tclauses.length; i++) {
+    rightY = renderClause(tclauses[i][0], tclauses[i][1], tcRightX, rightY);
   }
 
-  // Footer p2
-  doc.moveTo(M, 755).lineTo(R, 755).strokeColor(GOLD).lineWidth(1).stroke();
-  doc.fontSize(6).fillColor(GRAY2).text(`${COMPANY.name}  |  ${COMPANY.address}  |  ${COMPANY.phone}  |  ${COMPANY.website}  |  MC# ${COMPANY.mc}  |  DOT# ${COMPANY.dot}`, 0, 761, { align: "center", width: 612 });
-  doc.fontSize(5.5).fillColor(GOLD).text("Where Trust Travels.", 0, 771, { align: "center", width: 612 });
-  doc.fontSize(5).fillColor(GRAY3).text("Page 2 of 2", 0, 771, { align: "right", width: R });
+  // Footer page 2 (matches page 1)
+  doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
+  const f2y = fyLine + 8;
+  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
+    .text(
+      `MC# ${COMPANY.mc} ${MIDDOT} DOT# ${COMPANY.dot} ${MIDDOT} ${COMPANY.website}`,
+      M, f2y, { width: footerThirdW, lineBreak: false },
+    );
+  doc.font("DMSans-Italic").fontSize(7).fillColor(GOLD_DARK)
+    .text("Where Trust Travels.", M + footerThirdW, f2y, {
+      width: footerThirdW, align: "center", lineBreak: false,
+    });
+  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
+    .text("Page 2 of 2", M + 2 * footerThirdW, f2y, {
+      width: footerThirdW, align: "right", lineBreak: false,
+    });
+
+  void FG_DISABLED; // reserved for future disabled-text rendering
+  void rightY; void leftY;
 
   doc.end();
   return doc;

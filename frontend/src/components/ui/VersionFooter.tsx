@@ -655,7 +655,84 @@
 //          wiring, fonts, htmlEntities/qrGenerator
 //          helpers, BOLTemplate preview banner, I1-I4
 //          smoke-test fixes) lands in Commit 2 / v3.7.p.
-export const SRL_VERSION = "3.7.o";
+// v3.7.p — Phase 5E.b.2 — BOL v2.9 template
+//          rendering (Commit 2 of 4).
+//
+//          Full v2.9-fidelity rebuild of the backend
+//          BOL PDFKit draw function. Consumes the
+//          LoadBOLData fields shipped in v3.7.o:
+//          proNumber, shipperReference, trailerNumber,
+//          sealNumber, declaredValue, carrierLegalName,
+//          driverPhone, releasedValueDeclared +
+//          releasedValueBasis, piecesTendered /
+//          piecesReceived.
+//
+//          Template additions per designer handoff
+//          Bill_of_Lading___SRL.pdf:
+//          - Cream-tinted header band with contact
+//            line (phone · operations@ · website)
+//          - Rounded QR container with TRACK label +
+//            BOL# (95pt QR, scan-reliable print size)
+//          - Meta row: 6 cells exactly — DATE ISSUED /
+//            LOAD REF / EQUIPMENT / PRO # / SHIPPER
+//            REF / FREIGHT CHARGES
+//          - PARTIES header + rounded cream container,
+//            2-col shipper/consignee with window lines
+//          - Shipment table: rounded container, NAVY
+//            header row with CREAM text, dashed body
+//            column separators, CREAM_2 totals row
+//          - Special Instructions cream pill row
+//          - Released Value FORM: two checkboxes
+//            (Declared $ _____ /lb, NVD), Shipper
+//            Initial line, Carmack § 14706(c)
+//            citation (replaces paragraph)
+//          - Full signature blocks: Shipper / Carrier
+//            (with MC#, DOT#, Carrier Legal Name,
+//            Truck#, Trailer#, Seal#) / Consignee
+//            with Pieces Tendered / Pieces Received
+//          - Page 2: condensed header, two-column
+//            T&C split 9/8, matching footer
+//          - Footer cleanup: no BOL# in footer, no
+//            street address
+//
+//          Text safety at PDFKit input boundary:
+//          - HTML entity decode (Dry Van 53&#x27; →
+//            Dry Van 53')
+//          - ZWNJ (U+200C) ligature preservation
+//            (classified → classif‌ied). The
+//            features: [] monkey-patch approach from
+//            initial Batch B was abandoned after it
+//            didn't suppress fontkit's default liga
+//            substitution.
+//
+//          Fonts embedded: Playfair Display
+//          (Regular/Italic/Bold/BoldItalic) + DM Sans
+//          (Regular/Italic/Medium/SemiBold/Bold) —
+//          9 TTFs, 1.03 MB at backend/src/assets/
+//          fonts/bol-v2.9/
+//
+//          Placeholder pattern per v2.9 spec: missing
+//          parties/shipment data renders "[Field
+//          Name]" italic GOLD_DARK; meta-row structural
+//          cells fall back to em-dash.
+//
+//          bwip-js import retained in pdfService.ts
+//          (unused after BOL migration). Full
+//          removal deferred to Phase 6 cleanup
+//          commit.
+//
+//          BOLTemplate.tsx preview pane: honest-label
+//          banner added noting the preview still shows
+//          pre-v2.9 design and the downloaded PDF is
+//          the authoritative v2.9 visual.
+//
+//          Next in sequence:
+//          - Commit 3 / v3.7.q — Order Builder UI
+//            capture for new BOL v2.9 fields
+//          - Commit 4 / v3.7.r — /track/[token]
+//            frontend dynamic route so QR scans
+//            resolve
+export const SRL_VERSION = "3.7.p";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
