@@ -709,7 +709,111 @@
 //          Preservation branch: preserve/v3.7.p-wip
 //          holds the earlier v3.7.p BOL-v2.9 template
 //          rewrite for v3.8.c to consume.
-export const SRL_VERSION = "3.8.a";
+// v3.8.b — BOL v2.9 template rendering (commit 1 of 5
+//          in today's final push sprint).
+//
+//          Restores the v2.9 designer-fidelity template
+//          from preserve/v3.7.p-wip, then iterates on
+//          ligature handling and header band based on
+//          smoke-test feedback.
+//
+//          Ligature handling — Option D (features-
+//          injection). Monkey-patch on doc.text at
+//          function entry injects `features: ["kern"]`
+//          into every text invocation's options object.
+//          fontkit applies user features only when
+//          explicitly passed, so enabling only kern
+//          leaves `liga` (ligature substitution) off
+//          at the layout-engine level. This eliminates
+//          the fi/fl glyph-drop bug in Playfair and
+//          DM Sans without inserting any characters
+//          into strings. Covers 5 direct + 49 fluent-
+//          chained .text() call sites in
+//          generateBOLFromLoad with one ~15-line patch.
+//
+//          The initial v3.8.b smoke test (ZWNJ U+200C
+//          insertion approach) visibly rendered the
+//          joiner as a narrow vertical glyph resembling
+//          lowercase l in Playfair-Italic and DM Sans-
+//          Italic — "classified" rendered as
+//          "classiflied", "filed" as "fliled", etc.
+//          Those fonts' cmap doesn't treat U+200C as
+//          zero-width invisible. Features-injection
+//          bypasses the issue entirely by preventing
+//          the ligature-substitution pass from running.
+//          Dropped ligaturePreprocess.ts and its test;
+//          pdfLigature.test.ts rewritten to verify
+//          features-injection (5 cases, both direct
+//          and chained).
+//
+//          Header background — white (page default).
+//          The cream CREAM_2 band from the initial
+//          v3.8.b restore was dropped because it
+//          created a visible boundary the logo asset
+//          didn't integrate into cleanly. White
+//          background keeps the compass mark visually
+//          unified with the company block. Gold accent
+//          bar at y=0 and gold rule below the header
+//          retained for separation.
+//
+//          Logo — transparent compass mark
+//          (logo-transparent.png, 256×256 RGBA from
+//          the design handoff build/compass-256.png).
+//          Scoped LOGO_TRANSPARENT_PATH constant;
+//          v2.9 BOL function uses it on both page-1
+//          (84pt) and page-2 condensed (28pt) headers.
+//          Rate conf / invoice / settlement PDFs
+//          continue to use the legacy LOGO_PATH (opaque
+//          RGB) over their white backgrounds.
+//          Company block shifted 3pt down to balance
+//          against the 84pt logo (was 72pt at y=12;
+//          now 84pt at y=12 with text starting at
+//          y=15).
+//
+//          Visual fidelity (from preserve/v3.7.p-wip):
+//          5-line company block (name / address /
+//          contact line / MC-DOT / tagline), QR cream
+//          container with TRACK label + BOL#, 6-cell
+//          meta row (DATE ISSUED / LOAD REF / EQUIPMENT
+//          / PRO # / SHIPPER REF / FREIGHT CHARGES),
+//          PARTIES section header + rounded cream
+//          container, rounded shipment table with NAVY
+//          header row and dashed body separators,
+//          Released Value as form (two checkboxes +
+//          declared amount + basis unit + NVD + Carmack
+//          citation + Shipper Initial line) replacing
+//          the prior paragraph, full signature blocks
+//          (MC / DOT / Truck / Trailer / Seal / Pieces
+//          Tendered / Pieces Received / Carrier Legal
+//          Name), two-column T&C on page 2 (9/8 split),
+//          clean 3-col footer (MC-DOT-website / tagline
+//          / page number — no BOL# or street address).
+//
+//          Fonts: 9 TTFs (Playfair Display Regular /
+//          Italic / Bold / BoldItalic + DM Sans
+//          Regular / Italic / Medium / SemiBold /
+//          Bold), 1.03 MB total. QR at 95pt with
+//          deep-link /track/<token>. Canonical v2.9
+//          color tokens.
+//
+//          Data compatibility: reads the v3.8.a
+//          schema foundation. LoadBOLData.lineItems
+//          field is in the interface but this commit
+//          still renders flat Load fields only.
+//          Multi-line rendering loop lands in v3.8.d.
+//
+//          Apollo launch: Monday 2026-04-27.
+//          Remaining sprint commits today:
+//            v3.8.c — Order Builder dynamic line-item
+//                     UI
+//            v3.8.d — BOL multi-line rendering loop
+//            v3.8.e — /track/[token] dynamic route +
+//                     marketing nav /tracking.html →
+//                     /track flip
+//
+//          Supersedes: v3.7.p (never merged;
+//          preserved on preserve/v3.7.p-wip).
+export const SRL_VERSION = "3.8.b";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

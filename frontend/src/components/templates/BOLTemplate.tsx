@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Printer, X } from "lucide-react";
+import { Printer, X, Info } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
    BILL OF LADING — Industry-Standard Printable Template
@@ -174,6 +174,11 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
               </button>
             )}
           </div>
+        </div>
+
+        <div className="no-print flex items-start gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs">
+          <Info size={14} className="mt-0.5 flex-shrink-0" />
+          <span>Preview reflects pre-v2.9 design. Downloaded PDF uses the current v2.9 visual.</span>
         </div>
 
         {/* Printable Content */}
