@@ -637,6 +637,23 @@ enum ReleasedValueBasis {
   NVD
 }
 
+// Freight package / unit-of-handling type (v3.8.a).
+// Industry-standard values from NMFTA / BOL conventions.
+// OTHER pairs with the line-level description for exotic
+// units (TOTE, CASE, BAG, etc.) until promoted to enum.
+enum PackageType {
+  PLT       // Pallet (GMA 48×40 or similar)
+  SKID      // One-way skid
+  CTN       // Carton
+  BOX       // Box (distinct from CTN in LTL usage)
+  DRUM      // 55-gal drum or fiber drum
+  BALE      // Compressed bale
+  BUNDLE    // Strapped bundle
+  CRATE     // Wooden crate
+  ROLL      // Roll (paper, carpet, coil)
+  OTHER     // Catch-all; see line description
+}
+
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
@@ -1268,6 +1285,9 @@ model Load {
   fallOffEvents      FallOffEvent[]
   claims             Claim[]
   delays             LoadDelay[]
+
+  // Freight structure relations (v3.8.a)
+  lineItems          LoadLineItem[]
 
   // Track & Trace relations
   loadStops             LoadStop[]
@@ -3741,6 +3761,47 @@ model LoadAccessorial {
   @@index([loadId])
   @@index([status])
   @@map("load_accessorials")
+}
+
+model LoadLineItem {
+  id                     String      @id @default(cuid())
+  loadId                 String      @map("load_id")
+  lineNumber             Int         @map("line_number")
+
+  // Required core fields (D10)
+  pieces                 Int
+  packageType            PackageType @map("package_type")
+  description            String
+  weight                 Float       // pounds
+
+  // Optional dimensions (inches)
+  dimensionsLength       Float?      @map("dimensions_length")
+  dimensionsWidth        Float?      @map("dimensions_width")
+  dimensionsHeight       Float?      @map("dimensions_height")
+
+  // Optional freight classification
+  freightClass           String?     @map("freight_class")
+  nmfcCode               String?     @map("nmfc_code")
+
+  // Per-line hazmat (D2)
+  hazmat                 Boolean     @default(false)
+  hazmatUnNumber         String?     @map("hazmat_un_number")
+  hazmatClass            String?     @map("hazmat_class")
+  hazmatEmergencyContact String?     @map("hazmat_emergency_contact")
+  hazmatPlacardRequired  Boolean?    @map("hazmat_placard_required")
+
+  // Per-line physical constraints (D9)
+  stackable              Boolean     @default(true)
+  turnable               Boolean     @default(true)
+
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt      @map("updated_at")
+
+  load                   Load        @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([loadId])
+  @@unique([loadId, lineNumber])
+  @@map("load_line_items")
 }
 
 model ShipperTrackingToken {

@@ -655,7 +655,61 @@
 //          wiring, fonts, htmlEntities/qrGenerator
 //          helpers, BOLTemplate preview banner, I1-I4
 //          smoke-test fixes) lands in Commit 2 / v3.7.p.
-export const SRL_VERSION = "3.7.o";
+// v3.8.a — Multi-line shipment foundation (Commit 1 of 4
+//          in the v3.8 epic).
+//
+//          Schema: new PackageType enum (10 values:
+//            PLT / SKID / CTN / BOX / DRUM / BALE /
+//            BUNDLE / CRATE / ROLL / OTHER). New
+//            LoadLineItem model with per-line pieces,
+//            package type, description, weight,
+//            optional dimensions, freight class, NMFC,
+//            per-line hazmat (D2: mixed hazmat loads
+//            supported), stackable, turnable. Load
+//            gains a lineItems relation. Migration is
+//            purely additive — new table + new enum +
+//            new FK with ON DELETE CASCADE. No
+//            modifications to existing Load rows, no
+//            backfill (D3).
+//
+//          Interface: LoadBOLData expanded with an
+//            optional lineItems array. Flat fields
+//            (pieces / commodity / weight / dimensions*
+//            / freightClass / nmfcCode / hazmat) stay
+//            and remain authoritative until v3.8.c
+//            ships hybrid rendering.
+//
+//          Controllers:
+//          - createLoad accepts optional lineItems
+//            array with inline validation (pieces > 0,
+//            packageType must be one of the enum
+//            values, description non-empty, weight > 0,
+//            optional fields type-checked)
+//          - updateLoad uses full-replace semantics
+//            (D8): if the lineItems key is present in
+//            the PATCH body, existing rows are
+//            deleteMany'd and the new set is created
+//            atomically within the same .update() call.
+//            Absent key leaves existing lineItems
+//            untouched.
+//          - pdfController.downloadBOLFromLoad include
+//            clause fetches lineItems ordered by
+//            lineNumber ASC.
+//
+//          Rendering: BOL template UNCHANGED. Existing
+//          loads render identically to v3.7.o — the new
+//          data path flows through but the PDFKit draw
+//          function still consumes only flat fields.
+//          Hybrid rendering with "lineItems first,
+//          flat fallback" is v3.8.c's scope.
+//
+//          UI: Order Builder UNCHANGED. Dynamic line-
+//          item form is v3.8.b's scope.
+//
+//          Preservation branch: preserve/v3.7.p-wip
+//          holds the earlier v3.7.p BOL-v2.9 template
+//          rewrite for v3.8.c to consume.
+export const SRL_VERSION = "3.8.a";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

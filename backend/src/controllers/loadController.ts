@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { z } from "zod";
+import { PackageType } from "@prisma/client";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
@@ -52,6 +53,100 @@ function parseNonNegativeInt(raw: unknown, field: string): number | null | undef
   return n;
 }
 
+// v3.8.a — LoadLineItem validation + Prisma-shape builder.
+// See LoadLineItem schema for field contracts. Throws on invalid input;
+// caller catches and returns 400.
+const PACKAGE_TYPE_VALUES: PackageType[] = [
+  "PLT", "SKID", "CTN", "BOX", "DRUM", "BALE", "BUNDLE", "CRATE", "ROLL", "OTHER",
+];
+
+interface LineItemCreateInput {
+  lineNumber: number;
+  pieces: number;
+  packageType: PackageType;
+  description: string;
+  weight: number;
+  dimensionsLength: number | null;
+  dimensionsWidth: number | null;
+  dimensionsHeight: number | null;
+  freightClass: string | null;
+  nmfcCode: string | null;
+  hazmat: boolean;
+  hazmatUnNumber: string | null;
+  hazmatClass: string | null;
+  hazmatEmergencyContact: string | null;
+  hazmatPlacardRequired: boolean | null;
+  stackable: boolean;
+  turnable: boolean;
+}
+
+function buildLineItems(raw: unknown): LineItemCreateInput[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid lineItems: must be an array");
+  }
+  if (raw.length === 0) return null;
+
+  return raw.map((item: Record<string, unknown>, idx: number) => {
+    const lineNumber = idx + 1;
+    const pieces = typeof item.pieces === "number" ? item.pieces : parseInt(String(item.pieces), 10);
+    if (!Number.isFinite(pieces) || !Number.isInteger(pieces) || pieces <= 0) {
+      throw new Error(`Invalid lineItems[${idx}].pieces: must be a positive integer`);
+    }
+    if (typeof item.packageType !== "string" || !(PACKAGE_TYPE_VALUES as readonly string[]).includes(item.packageType)) {
+      throw new Error(
+        `Invalid lineItems[${idx}].packageType: expected one of ${PACKAGE_TYPE_VALUES.join(", ")}`,
+      );
+    }
+    const description = typeof item.description === "string" ? item.description.trim() : "";
+    if (!description) {
+      throw new Error(`Invalid lineItems[${idx}].description: must be a non-empty string`);
+    }
+    const weight = typeof item.weight === "number" ? item.weight : parseFloat(String(item.weight));
+    if (!Number.isFinite(weight) || weight <= 0) {
+      throw new Error(`Invalid lineItems[${idx}].weight: must be a positive number`);
+    }
+
+    const optNumber = (v: unknown, field: string): number | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const n = typeof v === "number" ? v : parseFloat(String(v));
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`Invalid lineItems[${idx}].${field}: must be a non-negative number`);
+      }
+      return n;
+    };
+    const optStr = (v: unknown): string | null => {
+      if (v === undefined || v === null) return null;
+      const s = String(v).trim();
+      return s === "" ? null : s;
+    };
+    const optBool = (v: unknown): boolean | null => {
+      if (v === undefined || v === null) return null;
+      return Boolean(v);
+    };
+
+    return {
+      lineNumber,
+      pieces,
+      packageType: item.packageType as PackageType,
+      description,
+      weight,
+      dimensionsLength: optNumber(item.dimensionsLength, "dimensionsLength"),
+      dimensionsWidth: optNumber(item.dimensionsWidth, "dimensionsWidth"),
+      dimensionsHeight: optNumber(item.dimensionsHeight, "dimensionsHeight"),
+      freightClass: optStr(item.freightClass),
+      nmfcCode: optStr(item.nmfcCode),
+      hazmat: Boolean(item.hazmat ?? false),
+      hazmatUnNumber: optStr(item.hazmatUnNumber),
+      hazmatClass: optStr(item.hazmatClass),
+      hazmatEmergencyContact: optStr(item.hazmatEmergencyContact),
+      hazmatPlacardRequired: optBool(item.hazmatPlacardRequired),
+      stackable: item.stackable === undefined ? true : Boolean(item.stackable),
+      turnable: item.turnable === undefined ? true : Boolean(item.turnable),
+    };
+  });
+}
+
 export async function createLoad(req: AuthRequest, res: Response) {
   const raw = req.body; // Already validated by validateBody middleware
 
@@ -60,10 +155,12 @@ export async function createLoad(req: AuthRequest, res: Response) {
   let releasedValueBasis: ReleasedValueBasisLiteral | null | undefined;
   let piecesTendered: number | null | undefined;
   let piecesReceived: number | null | undefined;
+  let lineItems: LineItemCreateInput[] | null;
   try {
     releasedValueBasis = parseReleasedValueBasis(raw.releasedValueBasis);
     piecesTendered = parseNonNegativeInt(raw.piecesTendered, "piecesTendered");
     piecesReceived = parseNonNegativeInt(raw.piecesReceived, "piecesReceived");
+    lineItems = buildLineItems(raw.lineItems);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
     return;
@@ -216,6 +313,7 @@ export async function createLoad(req: AuthRequest, res: Response) {
       referenceNumber: refNumber,
       loadNumber: refNumber,
       posterId: req.user!.id,
+      ...(lineItems ? { lineItems: { create: lineItems } } : {}),
     } as any,
   });
 
@@ -649,10 +747,19 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   let releasedValueBasis: ReleasedValueBasisLiteral | null | undefined;
   let piecesTendered: number | null | undefined;
   let piecesReceived: number | null | undefined;
+  // v3.8.a — full-replace semantics (D8). Undefined means "lineItems key
+  // absent from PATCH body" (don't touch existing rows); a present array
+  // (even empty) triggers delete-all + recreate.
+  const lineItemsRaw = req.body.lineItems;
+  const lineItemsKeyPresent = lineItemsRaw !== undefined;
+  let lineItems: LineItemCreateInput[] | null = null;
   try {
     releasedValueBasis = parseReleasedValueBasis(req.body.releasedValueBasis);
     piecesTendered = parseNonNegativeInt(req.body.piecesTendered, "piecesTendered");
     piecesReceived = parseNonNegativeInt(req.body.piecesReceived, "piecesReceived");
+    if (lineItemsKeyPresent) {
+      lineItems = buildLineItems(lineItemsRaw);
+    }
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
     return;
@@ -774,6 +881,17 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     logLoadChanges(existing.id, req.user!.id, fieldChanges, "UPDATE").catch((e) =>
       log.error({ err: e }, "[LoadAudit] update diff log error:")
     );
+  }
+
+  // v3.8.a — full-replace lineItems when the key is present in the PATCH
+  // body. Atomic within the single .update() call: deleteMany runs before
+  // create, so any prior lineItems are wiped and replaced with the new
+  // set. Absent key → existing lineItems untouched (PATCH semantics).
+  if (lineItemsKeyPresent) {
+    (data as Record<string, unknown>).lineItems = {
+      deleteMany: {},
+      ...(lineItems && lineItems.length > 0 ? { create: lineItems } : {}),
+    };
   }
 
   const load = await prisma.load.update({ where: { id: req.params.id }, data });

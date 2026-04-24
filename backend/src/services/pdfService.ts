@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import * as path from "path";
 import * as fs from "fs";
 import bwipjs from "bwip-js";
+import { PackageType } from "@prisma/client";
 import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
 
@@ -140,6 +141,32 @@ interface LoadBOLData {
   releasedValueBasis?: "PER_POUND" | "PER_PIECE" | "TOTAL" | "NVD" | null;
   piecesTendered?: number | null;
   piecesReceived?: number | null;
+
+  // v3.8.a — Multi-line shipment support. When present and non-empty,
+  // v3.8.c rendering will consume the per-line breakdown; otherwise
+  // the flat fields above (pieces, commodity, weight, dimensions*,
+  // freightClass, nmfcCode, hazmat) remain authoritative. No backfill
+  // for existing Loads.
+  lineItems?: Array<{
+    id: string;
+    lineNumber: number;
+    pieces: number;
+    packageType: PackageType;
+    description: string;
+    weight: number;
+    dimensionsLength?: number | null;
+    dimensionsWidth?: number | null;
+    dimensionsHeight?: number | null;
+    freightClass?: string | null;
+    nmfcCode?: string | null;
+    hazmat: boolean;
+    hazmatUnNumber?: string | null;
+    hazmatClass?: string | null;
+    hazmatEmergencyContact?: string | null;
+    hazmatPlacardRequired?: boolean | null;
+    stackable: boolean;
+    turnable: boolean;
+  }>;
 }
 
 export async function generateBOLFromLoad(

@@ -171,6 +171,12 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
         driver: {
           select: { firstName: true, lastName: true, phone: true },
         },
+        // v3.8.a — multi-line shipment items, ordered for render.
+        // v3.8.c template will consume these; current template still
+        // uses flat fields so presence here is a no-op visually.
+        lineItems: {
+          orderBy: { lineNumber: "asc" },
+        },
       },
     });
 
