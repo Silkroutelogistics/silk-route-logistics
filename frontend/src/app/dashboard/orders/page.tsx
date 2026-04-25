@@ -12,11 +12,12 @@ import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { DirectTenderPicker } from "@/components/ui/DirectTenderPicker";
 import { OrderSidebar } from "./OrderSidebar";
 import { FacilityPicker, type Facility } from "./FacilityPicker";
+import { LineItemsSection } from "@/components/orders/LineItemsSection";
 import {
+  emptyLineItem,
   emptyOrderForm,
   EQUIPMENT_OPTIONS,
-  FREIGHT_CLASSES,
-  suggestFreightClass,
+  type LineItemFormData,
   type OrderForm,
   type Accessorial,
 } from "./types";
@@ -74,7 +75,9 @@ export default function OrderBuilderPage() {
   const [manualOriginMode, setManualOriginMode] = useState(false);
   const [manualDestMode, setManualDestMode] = useState(false);
   const [draftBannerDismissed, setDraftBannerDismissed] = useState(false);
-  const [commodityClassAutoSet, setCommodityClassAutoSet] = useState(false);
+  // v3.8.c — commodity→freight-class auto-suggest moved to per-line logic
+  // inside LineItemsSection. The old form.commodity → form.freightClass
+  // effect is gone with the flat fields.
 
   // ─── Draft list banner (v3.5.b) ───────────────────────────
   const draftsQuery = useQuery<{ orders: any[] }>({
@@ -92,7 +95,44 @@ export default function OrderBuilderPage() {
       if (!order) return;
       const formData = order.formData ?? {};
       setOrderId(draftId);
-      setForm({ ...emptyOrderForm(), ...formData });
+      // v3.8.c legacy-draft hydration: if formData has no lineItems (pre-
+      // v3.8.c draft captured flat fields only), synthesize 1 pre-filled
+      // line item so the user can edit + save without re-entering freight.
+      const hydrated: OrderForm = { ...emptyOrderForm(), ...formData };
+      if (!Array.isArray(formData.lineItems) || formData.lineItems.length === 0) {
+        const hasLegacyFreight =
+          !!formData.commodity ||
+          (formData.pieces && formData.pieces !== "") ||
+          (formData.pallets && formData.pallets !== "") ||
+          (formData.weight && formData.weight !== "");
+        if (hasLegacyFreight) {
+          const syn = emptyLineItem();
+          syn.pieces = String(
+            parseInt(formData.pieces ?? "", 10) ||
+            parseInt(formData.pallets ?? "", 10) ||
+            1,
+          );
+          syn.packageType = "PLT";
+          syn.description = formData.commodity ?? "General Freight";
+          syn.weight = formData.weight ?? "";
+          syn.dimensionsLength = formData.length ?? "";
+          syn.dimensionsWidth = formData.width ?? "";
+          syn.dimensionsHeight = formData.height ?? "";
+          syn.freightClass = formData.freightClass ?? "";
+          syn.nmfcCode = formData.nmfcCode ?? "";
+          syn.hazmat = !!formData.hazmat;
+          syn.hazmatUnNumber = formData.hazmatUnNumber ?? "";
+          syn.hazmatClass = formData.hazmatClass ?? "";
+          syn.hazmatEmergencyContact = formData.hazmatEmergencyContact ?? "";
+          syn.hazmatPlacardRequired = !!formData.hazmatPlacardRequired;
+          syn.stackable = formData.stackable == null ? true : !!formData.stackable;
+          syn.turnable = formData.turnable == null ? true : !!formData.turnable;
+          hydrated.lineItems = [syn];
+        } else {
+          hydrated.lineItems = [emptyLineItem()];
+        }
+      }
+      setForm(hydrated);
       if (order.customerId && order.customer) {
         setSelectedCustomer(order.customer as Customer);
         setCustomerSearch(order.customer.name ?? "");
@@ -282,21 +322,6 @@ export default function OrderBuilderPage() {
     return () => { cancelled = true; };
   }, [form.originCity, form.originState, form.destCity, form.destState, form.equipmentType, distanceKey]);
 
-  // ─── Commodity → freight class auto-suggest (v3.5.b) ─────
-  useEffect(() => {
-    if (!form.commodity) { setCommodityClassAutoSet(false); return; }
-    const suggested = suggestFreightClass(form.commodity);
-    if (!suggested) return;
-    // Only auto-apply when the class hasn't been set yet, or when the
-    // previous class was also auto-applied (so we don't stomp a manual
-    // override).
-    if (!form.freightClass || commodityClassAutoSet) {
-      setForm((f) => ({ ...f, freightClass: suggested }));
-      setCommodityClassAutoSet(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.commodity]);
-
   // ─── Draft autosave (30s) ─────────────────────────────────
   const saveDraft = useMutation({
     mutationFn: async () => {
@@ -342,12 +367,13 @@ export default function OrderBuilderPage() {
   const [quoteResult, setQuoteResult] = useState<string | null>(null);
   const sendQuote = useMutation({
     mutationFn: async () => {
-      // Ensure the order exists first
-      let targetId = orderId;
-      if (!targetId) {
-        const saveRes = await saveDraft.mutateAsync();
-        targetId = saveRes?.order?.id ?? null;
-      }
+      // v3.8.c — ALWAYS flush the latest form state before reading on the
+      // backend. The 30s autosave timer means client edits can drift ahead
+      // of the persisted draft. Without this, the quote email would render
+      // stale formData. Same race condition root cause as the createLoad
+      // freight-data-loss bug; same fix here.
+      const saveRes = await saveDraft.mutateAsync();
+      const targetId = orderId ?? saveRes?.order?.id ?? null;
       if (!targetId) throw new Error("Could not create order");
       return (await api.post(`/orders/${targetId}/send-quote`)).data;
     },
@@ -360,11 +386,15 @@ export default function OrderBuilderPage() {
   const [createResult, setCreateResult] = useState<{ loadNumber: string; dispatchMethod: string } | null>(null);
   const createLoad = useMutation({
     mutationFn: async () => {
-      let targetId = orderId;
-      if (!targetId) {
-        const saveRes = await saveDraft.mutateAsync();
-        targetId = saveRes?.order?.id ?? null;
-      }
+      // v3.8.c LAYER 1 — Force synchronous draft save BEFORE convert-to-load.
+      // The autosave timer fires at most every 30s; if user edits line items
+      // and clicks Create Load within the same window, the persisted draft is
+      // stale and the backend's convert-to-load reads outdated formData. By
+      // unconditionally awaiting saveDraft.mutateAsync() here, the latest
+      // form state (including all current line items) lands in the DB before
+      // we trigger the conversion read.
+      const saveRes = await saveDraft.mutateAsync();
+      const targetId = orderId ?? saveRes?.order?.id ?? null;
       if (!targetId) throw new Error("Could not create order");
       return (await api.post(`/orders/${targetId}/convert-to-load`)).data;
     },
@@ -395,6 +425,31 @@ export default function OrderBuilderPage() {
     if (!form.deliveryDate) missing.push("Delivery date");
     if (!form.equipmentType) missing.push("Equipment");
     if (!form.customerRate) missing.push("Customer rate");
+
+    // v3.8.c LAYER 2 — line-item completeness. At least one row must pass:
+    // pieces > 0, weight > 0, description non-empty, packageType valid.
+    // If any line has hazmat=true, that line additionally requires UN# and
+    // hazmat class. Empty/partial rows are tolerated in form state (user
+    // mid-entry); we only block submit until ≥ 1 line is complete.
+    const PACKAGE_TYPE_VALUES = ["PLT", "SKID", "CTN", "BOX", "DRUM", "BALE", "BUNDLE", "CRATE", "ROLL", "OTHER"] as const;
+    const hasValidLine = form.lineItems.some((l) => {
+      const piecesOk = (parseInt(l.pieces, 10) || 0) > 0;
+      const weightOk = (parseFloat(l.weight) || 0) > 0;
+      const descOk = l.description.trim().length > 0;
+      const packageOk = (PACKAGE_TYPE_VALUES as readonly string[]).includes(l.packageType);
+      return piecesOk && weightOk && descOk && packageOk;
+    });
+    if (!hasValidLine) {
+      missing.push("At least one complete line item (pieces, weight, description, package type)");
+    }
+    const incompleteHazmat = form.lineItems.find((l) =>
+      l.hazmat &&
+      (!l.hazmatUnNumber.trim() || !l.hazmatClass.trim())
+    );
+    if (incompleteHazmat) {
+      missing.push("Hazmat lines need UN # and hazmat class");
+    }
+
     return missing;
   }, [form]);
 
@@ -432,14 +487,16 @@ export default function OrderBuilderPage() {
           <button
             onClick={() => saveDraft.mutate()}
             disabled={saveDraft.isPending}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs rounded-lg disabled:opacity-50"
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
+            style={{ color: "var(--srl-text-secondary)" }}
           >
             <Save className="w-3 h-3" /> Save draft
           </button>
           <button
             onClick={() => sendQuote.mutate()}
             disabled={!form.customerId || sendQuote.isPending}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs rounded-lg disabled:opacity-50"
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
+            style={{ color: "var(--srl-text-secondary)" }}
           >
             <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
           </button>
@@ -448,8 +505,14 @@ export default function OrderBuilderPage() {
               if (!isValid) { setShowErrors(true); return; }
               createLoad.mutate();
             }}
-            disabled={createLoad.isPending}
-            className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-xs font-semibold rounded-lg disabled:opacity-50"
+            disabled={createLoad.isPending || !isValid}
+            title={
+              isValid
+                ? undefined
+                : `Cannot create load — missing: ${requiredMissing.join(", ")}`
+            }
+            className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ color: "#FFFFFF" }}
           >
             {createLoad.isPending ? "Creating…" : "Create load"}
           </button>
@@ -464,6 +527,39 @@ export default function OrderBuilderPage() {
       {showErrors && !isValid && (
         <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" /> Missing: {requiredMissing.join(", ")}
+        </div>
+      )}
+      {createLoad.isError && (
+        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <div>
+            <div className="font-semibold">Create load failed</div>
+            <div className="mt-0.5 opacity-90">
+              {(() => {
+                const err = createLoad.error as { response?: { data?: { error?: string; message?: string } }; message?: string } | null;
+                const apiData = err?.response?.data;
+                if (apiData?.error === "INVALID_LOAD_NO_FREIGHT") {
+                  return apiData.message ?? "No shipment line items provided. Add at least one line item with pieces, weight, and description.";
+                }
+                return apiData?.message ?? apiData?.error ?? err?.message ?? "Unknown error. Check browser console + backend logs.";
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+      {saveDraft.isError && (
+        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <div>
+            <div className="font-semibold">Draft save failed</div>
+            <div className="mt-0.5 opacity-90">
+              {(() => {
+                const err = saveDraft.error as { response?: { data?: { error?: string; message?: string } }; message?: string } | null;
+                const apiData = err?.response?.data;
+                return apiData?.message ?? apiData?.error ?? err?.message ?? "Unknown error.";
+              })()}
+            </div>
+          </div>
         </div>
       )}
       {showDraftBanner && (
@@ -567,7 +663,10 @@ export default function OrderBuilderPage() {
                           .filter(Boolean).join(" · ")}
                       </div>
                       {autoFillBanner && (
-                        <div className="mt-1 inline-block px-2 py-0.5 text-[9px] rounded bg-[#BA7517] text-white">
+                        <div
+                          className="mt-1 inline-block px-2 py-0.5 text-[9px] rounded bg-[#BA7517]"
+                          style={{ color: "#FFFFFF" }}
+                        >
                           Auto-filled: facilities, rates, contacts, instructions
                         </div>
                       )}
@@ -703,6 +802,10 @@ export default function OrderBuilderPage() {
 
           {/* SECTION 3 — Freight */}
           <Section number={3} title="Freight">
+            {/* Load-level fields: mode, equipment, driver config, load type,
+                cargo value, dock, temperature, customs. Per-line freight
+                detail (commodity/pieces/weight/dims/class/NMFC/hazmat/
+                stackable/turnable) lives in the LineItemsSection below. */}
             <div className="grid grid-cols-4 gap-2">
               <Field label="Mode *">
                 <select value={form.mode} onChange={(e) => setForm((f) => ({ ...f, mode: e.target.value as "FTL" | "LTL" }))} className={inp}>
@@ -715,40 +818,6 @@ export default function OrderBuilderPage() {
                   {EQUIPMENT_OPTIONS.map((e) => <option key={e}>{e}</option>)}
                 </select>
               </Field>
-              <Field label="Commodity">
-                <input value={form.commodity} onChange={(e) => setForm((f) => ({ ...f, commodity: e.target.value }))} className={inp} />
-              </Field>
-              <Field label="Freight class">
-                <select value={form.freightClass} onChange={(e) => setForm((f) => ({ ...f, freightClass: e.target.value }))} className={inp}>
-                  <option value="">—</option>
-                  {FREIGHT_CLASSES.map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              <Field label="Pallets / pieces">
-                <div className="flex gap-1">
-                  <input placeholder="Plt" value={form.pallets} onChange={(e) => setForm((f) => ({ ...f, pallets: e.target.value }))} className={inpSm} />
-                  <input placeholder="Pcs" value={form.pieces} onChange={(e) => setForm((f) => ({ ...f, pieces: e.target.value }))} className={inpSm} />
-                </div>
-              </Field>
-              <Field label="Dimensions L×W×H">
-                <div className="flex gap-1">
-                  <input placeholder="L" value={form.length} onChange={(e) => setForm((f) => ({ ...f, length: e.target.value }))} className={inpSm} />
-                  <input placeholder="W" value={form.width} onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))} className={inpSm} />
-                  <input placeholder="H" value={form.height} onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))} className={inpSm} />
-                </div>
-              </Field>
-              <Field label="Weight (lbs)">
-                <input value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))} className={inp} />
-              </Field>
-              <Field label="NMFC">
-                <input value={form.nmfcCode} onChange={(e) => setForm((f) => ({ ...f, nmfcCode: e.target.value }))} className={inp} />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2 mt-2">
               <Field label="Driver mode">
                 <select value={form.driverMode} onChange={(e) => setForm((f) => ({ ...f, driverMode: e.target.value as "solo" | "team" }))} className={inp}>
                   <option value="solo">Solo</option>
@@ -761,6 +830,9 @@ export default function OrderBuilderPage() {
                   <option value="drop">Drop</option>
                 </select>
               </Field>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 mt-2">
               <Field label="Cargo value ($)">
                 <input type="number" value={form.cargoValue} onChange={(e) => setForm((f) => ({ ...f, cargoValue: e.target.value }))} className={inp} />
               </Field>
@@ -769,11 +841,10 @@ export default function OrderBuilderPage() {
               </Field>
             </div>
 
-            {/* Checkboxes */}
+            {/* Load-level checkboxes (temp controlled + customs only — hazmat
+                and stackable moved to per-line in LineItemsSection). */}
             <div className="flex gap-4 mt-3 text-xs text-slate-300">
-              <Check label="Hazmat" checked={form.hazmat} onChange={(v) => setForm((f) => ({ ...f, hazmat: v }))} />
               <Check label="Temp controlled" checked={form.temperatureControlled} onChange={(v) => setForm((f) => ({ ...f, temperatureControlled: v }))} />
-              <Check label="Stackable" checked={form.stackable} onChange={(v) => setForm((f) => ({ ...f, stackable: v }))} />
               <Check label="Customs" checked={form.customsRequired} onChange={(v) => setForm((f) => ({ ...f, customsRequired: v }))} />
             </div>
 
@@ -793,6 +864,19 @@ export default function OrderBuilderPage() {
                 </Field>
               </div>
             )}
+
+            {/* Shipment line items (v3.8.c) — multi-commodity capture */}
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <div className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-2">
+                Shipment Line Items
+              </div>
+              <LineItemsSection
+                value={form.lineItems}
+                onChange={(items: LineItemFormData[]) =>
+                  setForm((f) => ({ ...f, lineItems: items }))
+                }
+              />
+            </div>
 
             {/* Fuel surcharge */}
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -993,8 +1077,15 @@ export default function OrderBuilderPage() {
               </div>
             </div>
 
-            {/* Info callout */}
-            <div className="mt-3 p-2 rounded-lg bg-[#FAEEDA]/10 border border-[#BA7517]/30 text-[11px] text-[#FAEEDA]">
+            {/* Info callout — theme-aware gold tint (readable in both light + dark) */}
+            <div
+              className="mt-3 p-2 rounded-lg border text-[11px]"
+              style={{
+                background: "var(--srl-gold-muted)",
+                borderColor: "rgba(186,117,23,0.4)",
+                color: "var(--srl-gold-text)",
+              }}
+            >
               Waterfall starts automatically. Eligible carriers matched for {form.originState || "—"} → {form.destState || "—"} ({form.equipmentType}).
             </div>
 

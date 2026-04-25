@@ -1,3 +1,79 @@
+/**
+ * PackageType — mirrors the Prisma enum added in v3.8.a (backend schema).
+ * Frontend carries a literal union rather than importing @prisma/client to
+ * keep this bundle tree-shake-friendly. Must stay in sync with
+ * `backend/prisma/schema.prisma` enum PackageType.
+ */
+export type PackageType =
+  | "PLT"
+  | "SKID"
+  | "CTN"
+  | "BOX"
+  | "DRUM"
+  | "BALE"
+  | "BUNDLE"
+  | "CRATE"
+  | "ROLL"
+  | "OTHER";
+
+export const PACKAGE_TYPE_OPTIONS: ReadonlyArray<{ value: PackageType; label: string }> = [
+  { value: "PLT", label: "PLT — Pallet" },
+  { value: "SKID", label: "SKID — Skid" },
+  { value: "CTN", label: "CTN — Carton" },
+  { value: "BOX", label: "BOX — Box" },
+  { value: "DRUM", label: "DRUM — Drum" },
+  { value: "BALE", label: "BALE — Bale" },
+  { value: "BUNDLE", label: "BUNDLE — Bundle" },
+  { value: "CRATE", label: "CRATE — Crate" },
+  { value: "ROLL", label: "ROLL — Roll" },
+  { value: "OTHER", label: "OTHER — Other" },
+];
+
+/**
+ * LineItemFormData — per-row state for the Order Builder's LineItemsSection.
+ * Numeric inputs carry `string` for the same reason every other numeric
+ * OrderForm field does: raw input capture, parse to number at submit.
+ * Maps 1:1 to backend LoadLineItem on submit (with numeric coercion + null
+ * substitution for empty strings).
+ */
+export interface LineItemFormData {
+  pieces: string;
+  packageType: PackageType;
+  description: string;
+  weight: string;
+  dimensionsLength: string;
+  dimensionsWidth: string;
+  dimensionsHeight: string;
+  freightClass: string;
+  nmfcCode: string;
+  hazmat: boolean;
+  hazmatUnNumber: string;
+  hazmatClass: string;
+  hazmatEmergencyContact: string;
+  hazmatPlacardRequired: boolean;
+  stackable: boolean;
+  turnable: boolean;
+}
+
+export const emptyLineItem = (): LineItemFormData => ({
+  pieces: "",
+  packageType: "PLT",
+  description: "",
+  weight: "",
+  dimensionsLength: "",
+  dimensionsWidth: "",
+  dimensionsHeight: "",
+  freightClass: "",
+  nmfcCode: "",
+  hazmat: false,
+  hazmatUnNumber: "",
+  hazmatClass: "",
+  hazmatEmergencyContact: "",
+  hazmatPlacardRequired: false,
+  stackable: true,
+  turnable: true,
+});
+
 export type DispatchMethod = "waterfall" | "loadboard" | "direct_tender" | "dat";
 export type WaterfallMode = "manual" | "semi_auto" | "full_auto";
 export type ShipmentPriority = "standard" | "hot";
@@ -57,20 +133,11 @@ export interface OrderForm {
   distance: string;
   lumperEstimate: string;
 
-  // Freight
+  // Freight — load-level fields only. Per-line details (commodity,
+  // pieces, weight, dimensions, freight class, NMFC, hazmat, stackable,
+  // turnable) moved to `lineItems` in v3.8.c.
   mode: "FTL" | "LTL";
   equipmentType: string;
-  commodity: string;
-  freightClass: string;
-  nmfcCode: string;
-  pallets: string;
-  pieces: string;
-  length: string;
-  width: string;
-  height: string;
-  weight: string;
-  stackable: boolean;
-  hazmat: boolean;
   temperatureControlled: boolean;
   tempMin: string;
   tempMax: string;
@@ -80,6 +147,10 @@ export interface OrderForm {
   liveOrDrop: "live" | "drop";
   cargoValue: string;
   dockAssignment: string;
+
+  // Shipment line items (v3.8.c). One-to-many commodity breakdown;
+  // maps 1:1 to LoadLineItem on submit. Always contains ≥ 1 row.
+  lineItems: LineItemFormData[];
 
   // Pricing
   customerRate: string;
@@ -141,17 +212,7 @@ export const emptyOrderForm = (): OrderForm => ({
   lumperEstimate: "",
   mode: "FTL",
   equipmentType: "Dry Van 53'",
-  commodity: "",
-  freightClass: "",
-  nmfcCode: "",
-  pallets: "",
-  pieces: "",
-  length: "",
-  width: "",
-  height: "",
-  weight: "",
-  stackable: true,
-  hazmat: false,
+  lineItems: [emptyLineItem()],
   temperatureControlled: false,
   tempMin: "",
   tempMax: "",

@@ -13,6 +13,7 @@ import { logCustomerActivity } from "../services/customerActivityService";
 import { logLoadActivity } from "../services/loadActivityService";
 import { buildWaterfall, startWaterfall } from "../services/waterfallEngineService";
 import { createCheckCallSchedule } from "../services/checkCallAutomation";
+import { buildLineItems, LineItemCreateInput } from "../controllers/loadController";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -236,8 +237,123 @@ router.post("/:id/convert-to-load", authorize(...AE_ROLES) as any, async (req: A
     :                                      "waterfall";
 
     const priority = form.shipmentPriority ?? "standard";
-    const isHot = priority === "hot" || (form.cargoValue && Number(form.cargoValue) > 100000);
+    // v3.8.c — explicit Boolean coercion. Prior code used
+    //   priority === "hot" || (form.cargoValue && Number(...) > 100000)
+    // which returned the empty-string `""` (not `false`) when cargoValue was
+    // blank and priority wasn't "hot". JavaScript's `||` propagates the
+    // falsy operand, not a coerced boolean. Prisma's isHotLoad column is
+    // Boolean, so the empty-string value crashed the load.create call.
+    const cargoValueNum = form.cargoValue ? Number(form.cargoValue) : 0;
+    const isHot = priority === "hot" || cargoValueNum > 100000;
     const checkCallProtocol = form.checkCallProtocol ?? (isHot ? "expedited" : "standard");
+
+    // v3.8.c — multi-line shipment items.
+    //
+    // Resolution order:
+    //   1. formData.lineItems present + non-empty → validate via
+    //      buildLineItems. Normal path.
+    //   2. formData.lineItems present + empty array → user explicitly
+    //      cleared. Zero line items (BOL will fall back per template).
+    //   3. formData.lineItems absent → legacy draft (pre-v3.8.c, captured
+    //      only flat fields). If flat fields have any freight data,
+    //      synthesize a single line; else zero lines.
+    //   4. buildLineItems throws → log and fall back to flat-field
+    //      synthesis (case 3). Don't crash the convert-to-load request.
+    let lineItems: LineItemCreateInput[] = [];
+    const rawLineItems = form.lineItems;
+    const lineItemsKeyPresent = rawLineItems !== undefined && rawLineItems !== null;
+
+    const synthesizeFromFlat = (): LineItemCreateInput[] => {
+      const hasFreight =
+        !!form.commodity ||
+        form.pieces != null && form.pieces !== "" ||
+        form.pallets != null && form.pallets !== "" ||
+        form.weight != null && form.weight !== "";
+      if (!hasFreight) return [];
+      const pieces =
+        parseInt(form.pieces ?? "", 10) ||
+        parseInt(form.pallets ?? "", 10) ||
+        1;
+      return [{
+        lineNumber: 1,
+        pieces,
+        packageType: "PLT",
+        description: (form.commodity && String(form.commodity).trim()) || "General Freight",
+        weight: Number(form.weight) || 0,
+        dimensionsLength: form.length ? Number(form.length) : null,
+        dimensionsWidth: form.width ? Number(form.width) : null,
+        dimensionsHeight: form.height ? Number(form.height) : null,
+        freightClass: form.freightClass ?? null,
+        nmfcCode: form.nmfcCode ?? null,
+        hazmat: !!form.hazmat,
+        hazmatUnNumber: form.hazmatUnNumber ?? null,
+        hazmatClass: form.hazmatClass ?? null,
+        hazmatEmergencyContact: form.hazmatEmergencyContact ?? null,
+        hazmatPlacardRequired:
+          form.hazmatPlacardRequired == null ? null : !!form.hazmatPlacardRequired,
+        stackable: form.stackable == null ? true : !!form.stackable,
+        turnable: form.turnable == null ? true : !!form.turnable,
+      }];
+    };
+
+    if (lineItemsKeyPresent) {
+      try {
+        const built = buildLineItems(rawLineItems);
+        lineItems = built ?? [];
+      } catch (err) {
+        log.warn({ err, orderId: order.id }, "[Orders] lineItems malformed in formData — falling back to flat-field synthesis");
+        lineItems = synthesizeFromFlat();
+      }
+    } else {
+      lineItems = synthesizeFromFlat();
+    }
+
+    // v3.8.c LAYER 3 — backend safety net. Reject empty conversions so the
+    // bug class "load created with zero freight data" can never ship,
+    // regardless of frontend state. Frontend (LAYER 2) disables the
+    // Create Load button until at least one line item is complete; this
+    // protects against non-UI clients (future shipper portal, API
+    // consumers, third-party integrations) that bypass the UI guard.
+    if (lineItems.length === 0) {
+      return res.status(400).json({
+        error: "INVALID_LOAD_NO_FREIGHT",
+        message:
+          "Cannot convert order to load: no shipment line items provided. " +
+          "Please add at least one line item with pieces, weight, and description before creating the load.",
+        orderId: order.id,
+      });
+    }
+
+    // Load-level aggregate + legacy-flat derivations (v3.8.c). Flat columns
+    // on Load stay populated for backward compat with any downstream reader
+    // (reports, carrier matching heuristics, EDI). Authoritative rendering
+    // source is lineItems once v3.8.d ships the multi-line BOL loop.
+    const totalPieces = lineItems.reduce((s, l) => s + (l.pieces || 0), 0) || null;
+    const totalWeight = lineItems.reduce((s, l) => s + (l.weight || 0), 0) || null;
+    const totalPalletPieces = lineItems
+      .filter((l) => l.packageType === "PLT")
+      .reduce((s, l) => s + (l.pieces || 0), 0) || null;
+    const firstLine = lineItems[0];
+    const legacyCommodity = firstLine ? firstLine.description : null;
+    const legacyFreightClass = firstLine?.freightClass ?? null;
+    const legacyNmfcCode = firstLine?.nmfcCode ?? null;
+    const legacyDimsLength = lineItems.reduce(
+      (max, l) => Math.max(max, l.dimensionsLength ?? 0),
+      0,
+    ) || null;
+    const legacyDimsWidth = lineItems.reduce(
+      (max, l) => Math.max(max, l.dimensionsWidth ?? 0),
+      0,
+    ) || null;
+    const legacyDimsHeight = lineItems.reduce(
+      (max, l) => Math.max(max, l.dimensionsHeight ?? 0),
+      0,
+    ) || null;
+    const legacyAllStackable = lineItems.length > 0
+      ? lineItems.every((l) => l.stackable)
+      : !!form.stackable;
+    const anyHazmat = lineItems.some((l) => l.hazmat);
+    const firstHazmatLine = lineItems.find((l) => l.hazmat);
 
     const load = await prisma.load.create({
       data: {
@@ -278,20 +394,25 @@ router.post("/:id/convert-to-load", authorize(...AE_ROLES) as any, async (req: A
         deliveryTimeStart: form.deliveryTimeStart ?? null,
         deliveryTimeEnd: form.deliveryTimeEnd ?? null,
 
-        // Freight
+        // Freight — load-level + legacy-flat derivations from lineItems.
+        // Per-line detail is in the `lineItems` nested write below.
         mode: form.mode ?? "FTL",
         equipmentType: form.equipmentType,
-        commodity: form.commodity ?? null,
-        freightClass: form.freightClass ?? null,
-        nmfcCode: form.nmfcCode ?? null,
-        weight: form.weight ? Number(form.weight) : null,
-        pieces: form.pieces ? parseInt(form.pieces) : null,
-        pallets: form.pallets ? parseInt(form.pallets) : null,
-        dimensionsLength: form.length ? Number(form.length) : null,
-        dimensionsWidth: form.width ? Number(form.width) : null,
-        dimensionsHeight: form.height ? Number(form.height) : null,
-        stackable: !!form.stackable,
-        hazmat: !!form.hazmat,
+        commodity: legacyCommodity,
+        freightClass: legacyFreightClass,
+        nmfcCode: legacyNmfcCode,
+        weight: totalWeight,
+        pieces: totalPieces,
+        pallets: totalPalletPieces,
+        dimensionsLength: legacyDimsLength,
+        dimensionsWidth: legacyDimsWidth,
+        dimensionsHeight: legacyDimsHeight,
+        stackable: legacyAllStackable,
+        hazmat: anyHazmat,
+        hazmatUnNumber: firstHazmatLine?.hazmatUnNumber ?? null,
+        hazmatClass: firstHazmatLine?.hazmatClass ?? null,
+        hazmatEmergencyContact: firstHazmatLine?.hazmatEmergencyContact ?? null,
+        hazmatPlacardRequired: firstHazmatLine?.hazmatPlacardRequired ?? false,
         temperatureControlled: !!form.temperatureControlled,
         tempMin: form.tempMin ? Number(form.tempMin) : null,
         tempMax: form.tempMax ? Number(form.tempMax) : null,
@@ -334,6 +455,9 @@ router.post("/:id/convert-to-load", authorize(...AE_ROLES) as any, async (req: A
         trackingLinkAutoSend: form.trackingLinkAutoSend !== false,
 
         status: "POSTED",
+
+        // v3.8.c — multi-line shipment items (nested create)
+        ...(lineItems.length > 0 ? { lineItems: { create: lineItems } } : {}),
       } as any,
     });
 

@@ -60,7 +60,7 @@ const PACKAGE_TYPE_VALUES: PackageType[] = [
   "PLT", "SKID", "CTN", "BOX", "DRUM", "BALE", "BUNDLE", "CRATE", "ROLL", "OTHER",
 ];
 
-interface LineItemCreateInput {
+export interface LineItemCreateInput {
   lineNumber: number;
   pieces: number;
   packageType: PackageType;
@@ -80,7 +80,7 @@ interface LineItemCreateInput {
   turnable: boolean;
 }
 
-function buildLineItems(raw: unknown): LineItemCreateInput[] | null {
+export function buildLineItems(raw: unknown): LineItemCreateInput[] | null {
   if (raw === undefined || raw === null) return null;
   if (!Array.isArray(raw)) {
     throw new Error("Invalid lineItems: must be an array");

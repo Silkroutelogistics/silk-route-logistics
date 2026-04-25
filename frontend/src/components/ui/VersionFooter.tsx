@@ -813,7 +813,152 @@
 //
 //          Supersedes: v3.7.p (never merged;
 //          preserved on preserve/v3.7.p-wip).
-export const SRL_VERSION = "3.8.b";
+// v3.8.c — Order Builder dynamic line-item UI
+//          (commit 2 of 5 in sprint)
+//
+//          Replaces single-set flat-field shipment capture
+//          in the Order Builder's Freight section with a
+//          dynamic line-item list matching the v3.8.a
+//          LoadLineItem schema. Multi-commodity loads,
+//          LTL consolidations, and per-item hazmat are
+//          now first-class.
+//
+//          Per-row fields: pieces (required), packageType
+//          dropdown (10 enum values PLT/SKID/CTN/BOX/DRUM/
+//          BALE/BUNDLE/CRATE/ROLL/OTHER), description
+//          (required), weight (required), optional
+//          dimensions / freight class / NMFC, per-line
+//          hazmat toggle with conditional UN#/class/
+//          emergency contact/placard sub-fields, stackable
+//          and turnable per-line toggles.
+//
+//          UX per product decisions D1-D11:
+//          - Default 1 row pre-added
+//          - "+ Add Line Item" expandable (no hard cap)
+//          - Remove button disabled at 1 row (minimum 1
+//            required)
+//          - Running aggregates row at top (total pieces
+//            / total weight / any-hazmat / all-stackable)
+//          - Per-line commodity→freightClass auto-suggest
+//            reimplemented (fires when description changes
+//            AND line's freightClass is empty, so user
+//            overrides aren't stomped)
+//          - "Show details" toggle collapses the less-
+//            common fields to keep rows compact
+//
+//          Legacy-draft hydration: opening a draft created
+//          pre-v3.8.c (flat freight fields, no lineItems
+//          in formData) synthesizes 1 pre-filled line
+//          item row on resume. User can edit and save
+//          without re-entering freight. Drafts with no
+//          freight data at all start with an empty row.
+//
+//          Backend wiring:
+//          - loadController.createLoad + updateLoad
+//            accepted lineItems array since v3.8.a
+//            (unchanged here)
+//          - routes/orders.ts convert-to-load bypasses
+//            the controller and writes Load directly via
+//            Prisma — updated to read formData.lineItems,
+//            validate via the same buildLineItems helper
+//            (now exported from loadController), and
+//            create LoadLineItem rows via nested create.
+//            Robust 4-case fallback: lineItems non-empty
+//            / lineItems empty array / lineItems absent
+//            (synthesize from flat) / lineItems malformed
+//            (log + fall back to synthesis).
+//          - Load.pallets derived at submit as sum of
+//            PLT-type line pieces (backward compat for
+//            any reader that indexes the flat column).
+//          - Legacy flat columns on Load (commodity /
+//            pieces / weight / dimensions* / freightClass
+//            / nmfcCode / stackable / hazmat) populated
+//            from lineItems aggregates (first-line values
+//            or sums/maxes where appropriate).
+//
+//          OrderSidebar unchanged — it reads only load-
+//          level fields (customerId / addresses / equipment
+//          / distance / rates), no freight-detail
+//          references.
+//
+//          docs/regression-log.md — new Phase 6 entry for
+//          the convert-to-load → loadController bypass
+//          pattern. Short-term fix in this commit exports
+//          buildLineItems for reuse; long-term refactor
+//          routes convert-to-load through the controller.
+//
+//          Phase 6 polish deferred: drag-to-reorder,
+//          package-type icon gallery, keyboard shortcuts,
+//          undo-remove, realtime total-weight validation
+//          against trailer capacity, legacy flat-field
+//          aggregation strategy review (currently first-
+//          line wins for freightClass/NMFC/hazmat-primary,
+//          max for dimensions, sum for weight/pieces).
+//
+//          Visual polish pass (approved 2026-04-24
+//          during v3.8.c pre-smoke-test review):
+//          - Line-items block restyled as one-line row
+//            (no expandable details) with checkboxes
+//            Stackable / Turnable / Hazmat below, and
+//            compact "+ Add Line Item" button right-
+//            aligned at the end. Row card uses theme-
+//            aware border-only styling (no hardcoded
+//            dark hex bg — globals.css light-mode
+//            override list doesn't cover #11141c, which
+//            was the earlier rendering bug).
+//          - Dispatch & Tracking "Waterfall starts…"
+//            callout switched from bg-[#FAEEDA]/10 +
+//            text-[#FAEEDA] (invisible in light mode) to
+//            var(--srl-gold-muted) bg + var(--srl-gold-
+//            text) color — readable in both modes.
+//          - Top bar buttons (Save draft / Send quote /
+//            Create load) + Customer card "Auto-filled"
+//            badge switched from text-white / text-
+//            slate-200 (both overridden to dark in light
+//            mode, creating dark-on-dark on gold bg) to
+//            explicit inline styles that bypass the
+//            globals.css override list.
+//
+//          Deferred (logged to regression-log.md under
+//          "Phase 6 — Order Builder UX Polish"): F) PU/
+//          DEL window time inline with dates, G) CRM
+//          facility operating-hours auto-populate, H)
+//          NMFC + density-based freight-class auto-
+//          suggest. All three need product decisions on
+//          edge cases before implementation.
+//
+//          Critical bug fix (caught during pre-commit
+//          smoke 2026-04-24) — three-layer defense
+//          against silent freight-data corruption:
+//
+//          L1 — createLoad and sendQuote mutations now
+//          ALWAYS run saveDraft.mutateAsync() before
+//          their respective backend calls (was: only
+//          when orderId was null). Root cause: the 30s
+//          autosave timer means client-side form edits
+//          drift ahead of the persisted draft; convert-
+//          to-load reads stale order.formData. Without
+//          this fix, every load created within the
+//          autosave debounce window after editing line
+//          items would carry empty/default freight
+//          data.
+//
+//          L2 — Create Load button disabled until at
+//          least one line item passes validation
+//          (pieces > 0, weight > 0, description non-
+//          empty, packageType ∈ enum). Hazmat lines
+//          additionally require UN # + hazmat class.
+//          Tooltip shows the missing-fields list.
+//          Surfaces the issue in the UI rather than
+//          silently failing.
+//
+//          L3 — Backend convert-to-load rejects empty
+//          lineItems with HTTP 400
+//          INVALID_LOAD_NO_FREIGHT. Protects against
+//          non-UI paths (future shipper portal, API
+//          consumers, third-party integrations) that
+//          bypass the UI guard.
+export const SRL_VERSION = "3.8.c";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
