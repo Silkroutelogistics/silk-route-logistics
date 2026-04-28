@@ -569,8 +569,81 @@ export async function generateBOLFromLoad(
   const hdrH = 18;
   const rowH = 22;
   const totH = 22;
-  const tblBodyH = rowH;
-  const tblH = hdrH + tblBodyH + totH;
+
+  // v3.8.d — Multi-line shipment rendering. When load.lineItems is present
+  // and non-empty, iterate per-row (cap at MAX_ROWS); otherwise fall back
+  // to the legacy single-row from flat Load fields. Totals always reflect
+  // the full lineItems array (not capped) so the BOL is mathematically
+  // honest even when overflow is hidden.
+  const MAX_ROWS = 10;
+  const allLineItems = load.lineItems ?? [];
+  const useMulti = allLineItems.length > 0;
+  const renderedItems = useMulti ? allLineItems.slice(0, MAX_ROWS) : [];
+  const overflowCount = useMulti ? Math.max(0, allLineItems.length - MAX_ROWS) : 0;
+
+  type Cell = { text: string; placeholder: boolean; bold?: boolean };
+  const dimsStr = (l?: number | null, w?: number | null, h?: number | null): string =>
+    (l && w && h) ? `${l}"${TIMES}${w}"${TIMES}${h}"` : EM;
+
+  const buildLineItemRow = (li: NonNullable<LoadBOLData["lineItems"]>[number]): Cell[] => {
+    const liDesc = safe(li.description).trim();
+    return [
+      { text: String(li.pieces), placeholder: false, bold: true },
+      { text: li.packageType, placeholder: false },
+      liDesc
+        ? { text: liDesc, placeholder: false }
+        : { text: "[Description]", placeholder: true },
+      { text: dimsStr(li.dimensionsLength, li.dimensionsWidth, li.dimensionsHeight), placeholder: false },
+      { text: `${li.weight.toLocaleString()} lb`, placeholder: false, bold: true },
+      { text: safe(li.freightClass).trim() || EM, placeholder: false },
+      { text: safe(li.nmfcCode).trim() || EM, placeholder: false },
+      { text: li.hazmat ? "Yes" : "No", placeholder: false },
+    ];
+  };
+
+  const buildFlatRow = (): Cell[] => {
+    const pcsValueLocal = load.pieces != null ? String(load.pieces) : EM;
+    const dimsLocal = dimsStr(load.dimensionsLength, load.dimensionsWidth, load.dimensionsHeight);
+    const weightStrLocal = load.weight ? `${load.weight.toLocaleString()} lb` : EM;
+    const descRawLocal = safe(load.commodity).trim();
+    const descCellLocal: Cell = descRawLocal
+      ? { text: descRawLocal, placeholder: false }
+      : { text: "[Description]", placeholder: true };
+    return [
+      { text: pcsValueLocal, placeholder: false, bold: true },
+      { text: "PLT", placeholder: false },
+      descCellLocal,
+      { text: dimsLocal, placeholder: false },
+      { text: weightStrLocal, placeholder: false, bold: true },
+      { text: safe(load.freightClass).trim() || EM, placeholder: false },
+      { text: EM, placeholder: false },
+      { text: load.hazmat ? "Yes" : "No", placeholder: false },
+    ];
+  };
+
+  const rows: Cell[][] = useMulti
+    ? renderedItems.map(buildLineItemRow)
+    : [buildFlatRow()];
+
+  // Totals aggregate the FULL lineItems array (including overflow) so the
+  // strip stays honest even when rendering is capped.
+  let totalPieces = 0;
+  let totalWeight = 0;
+  if (useMulti) {
+    for (const li of allLineItems) {
+      totalPieces += li.pieces;
+      totalWeight += li.weight;
+    }
+  } else {
+    totalPieces = load.pieces ?? 0;
+    totalWeight = load.weight ?? 0;
+  }
+  const totalPiecesStr = totalPieces > 0 ? String(totalPieces) : EM;
+  const totalWeightStr = totalWeight > 0 ? `${totalWeight.toLocaleString()} lb` : EM;
+
+  const overflowH = overflowCount > 0 ? 16 : 0;
+  const tblBodyH = rowH * rows.length;
+  const tblH = hdrH + tblBodyH + totH + overflowH;
 
   // Container stroke
   doc.lineWidth(0.5).strokeColor(BORDER_1)
@@ -591,47 +664,39 @@ export async function generateBOLFromLoad(
     cx += c.w;
   });
 
-  // Body row
-  const bodyY = tblTop + hdrH;
-  const pcsValue = load.pieces != null ? String(load.pieces) : EM;
-  const dims = (load.dimensionsLength && load.dimensionsWidth && load.dimensionsHeight)
-    ? `${load.dimensionsLength}"${TIMES}${load.dimensionsWidth}"${TIMES}${load.dimensionsHeight}"`
-    : EM;
-  const weightStr = load.weight ? `${load.weight.toLocaleString()} lb` : EM;
-  const descRaw = safe(load.commodity).trim();
-  const descCell: FieldDisplay = descRaw
-    ? { text: descRaw, isPlaceholder: false }
-    : { text: "[Description]", isPlaceholder: true };
-  const bodyCells: Array<{ text: string; placeholder: boolean; bold?: boolean }> = [
-    { text: pcsValue, placeholder: false, bold: true },
-    { text: "PLT", placeholder: false },
-    { text: descCell.text, placeholder: descCell.isPlaceholder },
-    { text: dims, placeholder: false },
-    { text: weightStr, placeholder: false, bold: true },
-    { text: safe(load.freightClass).trim() || EM, placeholder: false },
-    { text: EM, placeholder: false },
-    { text: load.hazmat ? "Yes" : "No", placeholder: false },
-  ];
+  // Body rows — one per LoadLineItem (or single fallback from flat fields)
+  const bodyTop = tblTop + hdrH;
+  rows.forEach((cells, ri) => {
+    const rowY = bodyTop + ri * rowH;
 
-  cx = M;
-  colDefs.forEach((c, ci) => {
-    const cell = bodyCells[ci];
-    if (ci > 0) {
-      // Dashed vertical separator between body columns
+    // Dashed horizontal separator between body rows (not above first row)
+    if (ri > 0) {
       doc.save();
       doc.lineWidth(0.5).strokeColor(BORDER_1).dash(2, { space: 2 })
-        .moveTo(cx, bodyY + 2).lineTo(cx, bodyY + rowH - 2).stroke();
+        .moveTo(M + 4, rowY).lineTo(R - 4, rowY).stroke();
       doc.undash();
       doc.restore();
     }
-    doc.font(cell.placeholder ? "DMSans-Italic" : cell.bold ? "DMSans-Bold" : "DMSans-Regular")
-      .fontSize(9).fillColor(cell.placeholder ? GOLD_DARK : NAVY)
-      .text(cell.text, cx + 6, bodyY + 6, { width: c.w - 10, lineBreak: false });
-    cx += c.w;
+
+    cx = M;
+    colDefs.forEach((c, ci) => {
+      const cell = cells[ci];
+      if (ci > 0) {
+        doc.save();
+        doc.lineWidth(0.5).strokeColor(BORDER_1).dash(2, { space: 2 })
+          .moveTo(cx, rowY + 2).lineTo(cx, rowY + rowH - 2).stroke();
+        doc.undash();
+        doc.restore();
+      }
+      doc.font(cell.placeholder ? "DMSans-Italic" : cell.bold ? "DMSans-Bold" : "DMSans-Regular")
+        .fontSize(9).fillColor(cell.placeholder ? GOLD_DARK : NAVY)
+        .text(cell.text, cx + 6, rowY + 6, { width: c.w - 10, lineBreak: false });
+      cx += c.w;
+    });
   });
 
   // Totals row — solid top border, CREAM_2 fill
-  const totY = bodyY + rowH;
+  const totY = bodyTop + tblBodyH;
   doc.save();
   doc.roundedRect(M, tblTop, CW, tblH, 4).clip();
   doc.rect(M, totY, CW, totH).fill(CREAM_2);
@@ -644,9 +709,25 @@ export async function generateBOLFromLoad(
     width: colDefs[0].w + colDefs[1].w - 8, characterSpacing: 0.6, lineBreak: false,
   });
   tcx = M + colDefs[0].w + colDefs[1].w + 6;
-  doc.text(pcsValue, tcx, totY + 7, { width: colDefs[2].w - 8, lineBreak: false });
+  doc.text(totalPiecesStr, tcx, totY + 7, { width: colDefs[2].w - 8, lineBreak: false });
   tcx = M + colDefs[0].w + colDefs[1].w + colDefs[2].w + colDefs[3].w + 6;
-  doc.text(weightStr, tcx, totY + 7, { width: colDefs[4].w - 8, lineBreak: false });
+  doc.text(totalWeightStr, tcx, totY + 7, { width: colDefs[4].w - 8, lineBreak: false });
+
+  // Overflow footer — only if line items exceeded MAX_ROWS cap
+  if (overflowCount > 0) {
+    const ovY = totY + totH;
+    doc.save();
+    doc.roundedRect(M, tblTop, CW, tblH, 4).clip();
+    doc.rect(M, ovY, CW, overflowH).fill(CREAM_2);
+    doc.restore();
+    doc.lineWidth(0.5).strokeColor(BORDER_1).moveTo(M, ovY).lineTo(R, ovY).stroke();
+    doc.font("DMSans-Italic").fontSize(8).fillColor(GOLD_DARK)
+      .text(
+        `+${overflowCount} additional line item${overflowCount === 1 ? "" : "s"} — full manifest attached`,
+        M + 8, ovY + 4,
+        { width: CW - 16, align: "center", lineBreak: false },
+      );
+  }
 
   y = tblTop + tblH + 14;
 

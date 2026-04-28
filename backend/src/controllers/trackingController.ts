@@ -1,6 +1,19 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/database";
 import { calculatePredictiveETA } from "../services/predictiveEtaService";
+import { decodeHtmlEntities } from "../utils/htmlEntities";
+
+// v3.8.d — Decode HTML entities at the public-tracking serialization
+// boundary. Upstream `sanitizeInput` middleware (server.ts) escapes
+// every string field on req.body for XSS defense, so values like
+// `Dry Van 53'` are stored as `Dry Van 53&#x27;`. PDFKit decodes at its
+// own boundary (pdfService.ts:295). React text nodes don't auto-decode,
+// so the public /tracking page would render the raw entities. Decode is
+// scoped to public-page output only — internal AE Console responses keep
+// the escaped form. Architectural fix at the middleware lives in the
+// Phase 6 backlog (regression-log).
+const decodeOpt = (s: string | null | undefined): string | null =>
+  s == null ? null : decodeHtmlEntities(s);
 
 /**
  * Public tracking endpoint — no auth required.
@@ -113,9 +126,9 @@ export async function getPublicTracking(req: Request, res: Response) {
   const latestEvent = load.trackingEvents?.[0] || null;
   const lastCheckCall = load.checkCalls[0] || null;
   const lastLocation = latestEvent?.locationCity
-    ? { city: latestEvent.locationCity, state: latestEvent.locationState, updatedAt: latestEvent.createdAt }
+    ? { city: decodeOpt(latestEvent.locationCity), state: decodeOpt(latestEvent.locationState), updatedAt: latestEvent.createdAt }
     : lastCheckCall?.city
-      ? { city: lastCheckCall.city, state: lastCheckCall.state, updatedAt: lastCheckCall.createdAt }
+      ? { city: decodeOpt(lastCheckCall.city), state: decodeOpt(lastCheckCall.state), updatedAt: lastCheckCall.createdAt }
       : null;
 
   // Predictive ETA
@@ -130,8 +143,8 @@ export async function getPublicTracking(req: Request, res: Response) {
   const stops = accessLevel === "FULL" ? load.loadStops.map((s: any) => ({
     stopNumber: s.stopNumber,
     type: s.stopType,
-    city: s.city,
-    state: s.state,
+    city: decodeOpt(s.city),
+    state: decodeOpt(s.state),
     appointmentDate: s.appointmentDate,
     appointmentTime: s.appointmentTime,
     arrived: !!s.actualArrival,
@@ -148,10 +161,10 @@ export async function getPublicTracking(req: Request, res: Response) {
     referenceNumber: load.referenceNumber,
     status: load.status,
     progressPct,
-    origin: { city: load.originCity, state: load.originState },
-    destination: { city: load.destCity, state: load.destState },
-    equipment: load.equipmentType,
-    commodity: load.commodity,
+    origin: { city: decodeOpt(load.originCity), state: decodeOpt(load.originState) },
+    destination: { city: decodeOpt(load.destCity), state: decodeOpt(load.destState) },
+    equipment: decodeOpt(load.equipmentType),
+    commodity: decodeOpt(load.commodity),
     weight: load.weight,
     temperatureControlled: load.temperatureControlled || false,
     tempRange: load.temperatureControlled ? { min: load.tempMin, max: load.tempMax } : undefined,
@@ -159,8 +172,8 @@ export async function getPublicTracking(req: Request, res: Response) {
     deliveryDate: load.deliveryDate,
     actualPickup: load.actualPickupDatetime,
     actualDelivery: load.actualDeliveryDatetime,
-    carrierFirstName: load.carrier?.firstName || null,
-    shipperName: load.customer?.name || null,
+    carrierFirstName: decodeOpt(load.carrier?.firstName) || null,
+    shipperName: decodeOpt(load.customer?.name) || null,
     lastLocation,
     estimatedDelivery: eta,
     predictiveEta: predictiveEta ? {
@@ -175,8 +188,8 @@ export async function getPublicTracking(req: Request, res: Response) {
     podUrl: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(load.status) ? load.podUrl : null,
     checkCalls: accessLevel === "FULL" ? load.checkCalls.map((cc: any) => ({
       status: cc.status,
-      city: cc.city,
-      state: cc.state,
+      city: decodeOpt(cc.city),
+      state: decodeOpt(cc.state),
       timestamp: cc.createdAt,
     })) : undefined,
   });

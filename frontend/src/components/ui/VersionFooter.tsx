@@ -958,7 +958,66 @@
 //          non-UI paths (future shipper portal, API
 //          consumers, third-party integrations) that
 //          bypass the UI guard.
-export const SRL_VERSION = "3.8.c";
+// v3.8.d — Multi-line BOL rendering + /tracking HTML
+//          entity decode (closes the v3.8 multi-line
+//          shipment epic).
+//
+//          BOL freight table (pdfService.ts:594-782)
+//          now iterates load.lineItems[] when present
+//          and renders one row per LoadLineItem with
+//          its own pieces / packageType / description /
+//          dimensions / weight / freightClass / NMFC /
+//          hazmat. Falls back to the legacy single-row-
+//          from-flat-fields path when lineItems is
+//          empty (preserves backward compatibility for
+//          any pre-v3.8.a load).
+//
+//          Cap of 10 rendered rows on page 1; if
+//          load.lineItems.length > 10 the table renders
+//          the first 10 with a cream-tinted footer note
+//          "+N additional line items — full manifest
+//          attached". Totals strip aggregates the FULL
+//          line-items array (not capped) so the BOL
+//          stays mathematically honest under overflow.
+//          Dynamic-page-2 rendering deferred — Apollo-
+//          shipped loads will be 1–3 lines in practice;
+//          the cap is defensive only.
+//
+//          Dashed-row separator added between adjacent
+//          body rows (vertical dashed col separators
+//          retained from single-row layout).
+//
+//          Public /tracking endpoint (trackingController.
+//          ts) now decodes HTML entities on every
+//          public-facing string field: equipment,
+//          commodity, origin/destination city/state,
+//          shipperName, carrierFirstName, lastLocation
+//          city/state, stops city/state, checkCalls
+//          city/state. Closes the "Dry Van 53&#x27;"
+//          rendering bug surfaced during L2228322560
+//          smoke test.
+//
+//          Root cause documented for Phase 6: the
+//          backend sanitizeInput middleware (server.
+//          ts:150) HTML-escapes every req.body string
+//          field for XSS defense, so values containing
+//          apostrophes / quotes / angle brackets are
+//          stored encoded in the DB. PDFKit decodes at
+//          its own boundary (pdfService.ts safe()),
+//          but the React /tracking page renders text
+//          nodes as-is. Decode at the public-page
+//          serialization boundary fixes the symptom
+//          without weakening XSS defense; the
+//          architectural rework of sanitizeInput stays
+//          on the Phase 6 backlog.
+//
+//          Out of scope (deferred to v3.8.c.1 / Phase
+//          6): BOL Shipper Ref → poNumbers[0] mapping,
+//          Order Builder ↔ Load Board "New Load" modal
+//          consolidation, sanitizeInput middleware
+//          rework, NMFC catalog auto-suggest, dynamic
+//          BOL page-2 generation.
+export const SRL_VERSION = "3.8.d";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
