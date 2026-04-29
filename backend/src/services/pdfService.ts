@@ -434,8 +434,21 @@ export async function generateBOLFromLoad(
   // Builder writes poNumbers[]; legacy/import paths populate one of
   // shipperReference / shipperPoNumber / customerRef. First non-empty
   // wins; falls through to em-dash if the load truly has no reference.
+  //
+  // v3.8.d.4 — render all PO numbers from poNumbers[], not just the
+  // first. Two-or-fewer POs are comma-joined in full. Three or more
+  // truncates to "first, second +N more" so the metaCell width
+  // doesn't overflow visually.
+  const formatPoList = (pos: string[]): string => {
+    const clean = pos.map((p) => safe(p).trim()).filter(Boolean);
+    if (clean.length === 0) return "";
+    if (clean.length <= 2) return clean.join(", ");
+    return `${clean[0]}, ${clean[1]} +${clean.length - 2} more`;
+  };
   const shipperRefValue =
-    (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : null)
+    (load.poNumbers && load.poNumbers.length > 0
+      ? formatPoList(load.poNumbers)
+      : null)
     || load.shipperReference
     || load.shipperPoNumber
     || load.customerRef

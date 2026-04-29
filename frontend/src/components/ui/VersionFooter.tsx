@@ -1192,7 +1192,45 @@
 //          when it surfaces in another way. The
 //          v3.8.d.2 middleware fix prevents new
 //          double-encodes regardless.
-export const SRL_VERSION = "3.8.d.3";
+// v3.8.d.4 — BOL SHIPPER REF renders all PO numbers
+//          from poNumbers[], not just the first.
+//
+//          User audit of BOL-SRL-L9437063285 confirmed
+//          all v3.8.d.x bindings working (originCompany
+//          / destCompany / equipment decoded / multi-
+//          line freight + totals) but flagged that
+//          two POs entered in Order Builder produced
+//          only one PO ("1472") on the printed BOL.
+//          v3.8.d.1 spec deferred multi-PO display
+//          ("rendering more than poNumbers[0] —
+//          separate feature"); shipping it now since
+//          a real shipper-side reconciliation issue
+//          exists when only one of two POs prints.
+//
+//          New formatPoList helper in pdfService:
+//          - 0 POs → empty (falls through to legacy
+//            fallback chain)
+//          - 1 PO → bare value
+//          - 2 POs → "1472, 5678"
+//          - 3+ POs → "1472, 5678 +N more" so the
+//            ~91pt SHIPPER REF cell at fontSize 9.5
+//            doesn't visually overflow with
+//            lineBreak: false
+//
+//          Other gaps surfaced during the audit
+//          (logged but not fixed in this commit):
+//          1. Contact line empty (— · —) — Order
+//             Builder doesn't capture origin /
+//             destContactName / Phone, so any pickup-
+//             site contact details are blank on the
+//             BOL. Phase 6 Order Builder polish.
+//          2. Page-1 footer collision: "SEAL # / DATE"
+//             labels overlap with the "Where Trust
+//             Travels." tagline at the page bottom.
+//             Flagged in v3.8.d.1 spec halt conditions
+//             as "v3.8.d.2 layout fix if persists" —
+//             persists. Separate sprint.
+export const SRL_VERSION = "3.8.d.4";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
