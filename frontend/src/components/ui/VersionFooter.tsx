@@ -1278,7 +1278,72 @@
 //          - Status reversal/rollback UI
 //          - Custom note/reason capture at transition
 //          - EditLoadModal (separate Phase 6 sprint)
-export const SRL_VERSION = "3.8.e";
+// v3.8.e.1 — Portal Approval gate for SHIPPER login
+//          (S-2 backend). Closes a real security gap:
+//          any registered SHIPPER could log in
+//          immediately after OTP because
+//          customer.onboardingStatus existed in the
+//          schema (default PENDING) but was not
+//          enforced anywhere on the auth path. Carrier
+//          auth has had the equivalent gate since
+//          v3.6.e (carrierAuth.ts:170-186); shipper
+//          auth never did.
+//
+//          Changes (backend only — authController.ts):
+//          - New checkShipperApproval(user, email,
+//            req) helper. Returns null when login may
+//            proceed, or a {error, onboardingStatus}
+//            payload when blocked. SHIPPER role only —
+//            AE Console roles bypass entirely.
+//          - Resolves the user → customer link via
+//            customer.userId @unique relation.
+//          - Status-specific friendly messages:
+//            PENDING / DOCUMENTS_SUBMITTED /
+//            UNDER_REVIEW → "application under review,
+//            we'll contact you within 24-48 hours";
+//            REJECTED / SUSPENDED → "contact
+//            compliance@".
+//          - Edge case: SHIPPER user with no linked
+//            customer record → 403 + WARN-level
+//            SystemLog ("login blocked, no customer
+//            record"). Should not happen in normal
+//            flow; logging surfaces it to ops.
+//          - Normal block → 403 + INFO-level
+//            SystemLog with onboardingStatus, for
+//            visibility on legitimately-pending
+//            applicants attempting login.
+//
+//          Gate is wired at TWO call sites for
+//          defense-in-depth:
+//          1. handleVerifyOtp — primary flow, fires
+//             after OTP success and before TOTP/JWT.
+//             An unapproved shipper never gets a
+//             totp temp token.
+//          2. handleTotpLoginVerify — TOTP step,
+//             fires before JWT issuance. Closes the
+//             theoretical stolen-token-replay vector
+//             AND covers the case where an approval
+//             is revoked between OTP and TOTP steps.
+//
+//          AE Console regression-safe: helper short-
+//          circuits with `if (user.role !== "SHIPPER")
+//          return null;` so BROKER/ADMIN/CEO/DISPATCH
+//          /OPERATIONS/ACCOUNTING flows are entirely
+//          untouched.
+//
+//          Out of scope (separate Phase 6 sprint):
+//          - S-3: AE Console approve UI at
+//            /dashboard/shippers (requires meaningful
+//            frontend work)
+//          - Credit check integration (Experian / D&B
+//            / manual SOP — needs vendor decision)
+//          - Shipper "application under review"
+//            full-screen UX (paired with S-3)
+//          - Email notifications on approval status
+//            changes
+//          - Auto-approval logic — explicitly out;
+//            manual approval only for now
+export const SRL_VERSION = "3.8.e.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

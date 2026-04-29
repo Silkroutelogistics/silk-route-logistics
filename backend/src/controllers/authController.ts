@@ -19,6 +19,82 @@ function signToken(userId: string): string {
   return jwt.sign({ userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
+/**
+ * v3.8.e.1 — SHIPPER approval gate. Mirrors the carrier-auth pattern at
+ * routes/carrierAuth.ts:170-186 but lives here because AE Console + Shipper
+ * Portal share `handleVerifyOtp` / `handleTotpLoginVerify`, while carriers
+ * have a dedicated route file.
+ *
+ * Returns a 403 payload when the shipper should be blocked, or null when
+ * login may proceed. Callers should `res.status(403).json(payload); return;`
+ * on a non-null result.
+ *
+ * Gated for SHIPPER role only. AE Console roles (BROKER/ADMIN/CEO/DISPATCH/
+ * OPERATIONS/ACCOUNTING) bypass this check entirely — they don't have a
+ * customer record to gate against.
+ *
+ * Called at BOTH `handleVerifyOtp` (pre-TOTP) and `handleTotpLoginVerify`
+ * (pre-JWT-issue) for defense-in-depth: the OTP-step gate prevents an
+ * unapproved shipper from getting a totp temp token in normal flow, but the
+ * TOTP-step gate also closes the theoretical stolen-token-replay vector
+ * if a temp token leaks or an approval is revoked between the two steps.
+ */
+type ShipperApprovalBlock = { error: string; onboardingStatus?: string };
+
+async function checkShipperApproval(
+  user: { id: string; role: string },
+  email: string,
+  req: Request,
+): Promise<ShipperApprovalBlock | null> {
+  if (user.role !== "SHIPPER") return null;
+
+  const customer = await prisma.customer.findUnique({
+    where: { userId: user.id },
+  });
+
+  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || null;
+
+  if (!customer) {
+    // SHIPPER user without a linked customer record. Should not happen in
+    // normal flow — log for ops visibility and reject login.
+    await prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "WARNING",
+        source: "authController",
+        message: `SHIPPER ${user.id} (${email}) has no linked customer record — login blocked`,
+        ipAddress: typeof ipAddress === "string" ? ipAddress : null,
+      },
+    }).catch(() => {});
+    return { error: "Your account is not fully set up. Please contact info@silkroutelogistics.ai." };
+  }
+
+  if (customer.onboardingStatus !== "APPROVED") {
+    const statusMessages: Record<string, string> = {
+      PENDING: "Your shipper application is under review. We'll contact you within 24-48 business hours.",
+      DOCUMENTS_SUBMITTED: "Your documents are being reviewed. You will be notified once approved.",
+      UNDER_REVIEW: "Your application is under review. You will be notified once approved.",
+      REJECTED: "Your shipper application has been rejected. Please contact compliance@silkroutelogistics.ai.",
+      SUSPENDED: "Your shipper account has been suspended. Please contact compliance@silkroutelogistics.ai.",
+    };
+    await prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "INFO",
+        source: "authController",
+        message: `SHIPPER ${user.id} (${email}) login blocked — onboardingStatus: ${customer.onboardingStatus}`,
+        ipAddress: typeof ipAddress === "string" ? ipAddress : null,
+      },
+    }).catch(() => {});
+    return {
+      error: statusMessages[customer.onboardingStatus] || "Your account is not yet approved for access.",
+      onboardingStatus: customer.onboardingStatus,
+    };
+  }
+
+  return null;
+}
+
 export async function register(req: Request, res: Response) {
   const data = registerSchema.parse(req.body);
 
@@ -177,6 +253,15 @@ export async function handleVerifyOtp(req: Request, res: Response) {
       ? `Invalid code. ${result.attemptsRemaining} attempt(s) remaining.`
       : "Invalid or expired code";
     res.status(401).json({ error: msg });
+    return;
+  }
+
+  // v3.8.e.1 — SHIPPER approval gate. Fires for SHIPPER role only;
+  // AE Console roles bypass. Placed before the TOTP/2FA branch so an
+  // unapproved shipper doesn't get a totp temp token in the first place.
+  const shipperBlock = await checkShipperApproval(user, email, req);
+  if (shipperBlock) {
+    res.status(403).json(shipperBlock);
     return;
   }
 
@@ -569,6 +654,17 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
 
   if (!user) {
     res.status(401).json({ error: "User not found" });
+    return;
+  }
+
+  // v3.8.e.1 — SHIPPER approval gate (defense-in-depth). The OTP-step gate
+  // in handleVerifyOtp prevents unapproved shippers from getting a totp
+  // temp token in normal flow, but re-checking here closes the theoretical
+  // stolen-token-replay vector AND covers the case where an approval is
+  // revoked between OTP step and TOTP step.
+  const shipperBlock = await checkShipperApproval(user, user.email, req);
+  if (shipperBlock) {
+    res.status(403).json(shipperBlock);
     return;
   }
 
