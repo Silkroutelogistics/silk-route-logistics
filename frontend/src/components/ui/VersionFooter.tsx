@@ -1230,7 +1230,55 @@
 //             Flagged in v3.8.d.1 spec halt conditions
 //             as "v3.8.d.2 layout fix if persists" —
 //             persists. Separate sprint.
-export const SRL_VERSION = "3.8.d.4";
+// v3.8.e — Track & Trace status advancement controls.
+//          First Phase 6 sprint. Closes the daily-
+//          friction gap surfaced 2026-04-29 during
+//          v3.8.d.4 BOL audit follow-up: dispatchers
+//          spend their day in T&T but had to bounce
+//          to Load Board for every status update
+//          because the T&T module had zero
+//          PATCH /loads/:id/status callers.
+//
+//          Changes:
+//          - New shared helper at lib/loadStatusActions
+//            .ts — extracted NEXT_STATUS + STATUS_ACTIONS
+//            maps + getNextStatusAction(currentStatus)
+//            helper that returns null for terminal
+//            statuses so callers can suppress the
+//            advance button cleanly.
+//          - Load Board imports both maps from the
+//            shared module (5-line refactor, no
+//            behavior change). Single source of truth
+//            for the client-side state-machine UX.
+//          - Track & Trace LoadDetailDrawer header
+//            renders the same advance button next to
+//            the close button, gated by
+//            getNextStatusAction(load.status). Uses
+//            the same PATCH /loads/:id/status backend
+//            endpoint, same gold-on-blue Load-Board
+//            visual idiom adapted for the light-mode
+//            T&T drawer.
+//          - Optimistic UI: success invalidates the
+//            tt-load-detail query AND the Load Board
+//            "loads" query so a dispatcher with both
+//            surfaces open sees the change in both.
+//          - Error state: inline red bar under header,
+//            preserves the user's place in the drawer.
+//
+//          Backend untouched: VALID_TRANSITIONS in
+//          loadController.ts:435 enforces the legal
+//          state machine; auth gates remain
+//          BROKER/ADMIN/CEO/DISPATCH; server-side
+//          side effects (logLoadActivity,
+//          createCheckCallSchedule, etc.) keep firing
+//          on every transition regardless of caller.
+//
+//          Out of scope (deferred):
+//          - Bulk status updates
+//          - Status reversal/rollback UI
+//          - Custom note/reason capture at transition
+//          - EditLoadModal (separate Phase 6 sprint)
+export const SRL_VERSION = "3.8.e";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

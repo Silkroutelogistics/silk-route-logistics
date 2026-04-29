@@ -15,6 +15,7 @@ import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal"
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
+import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
 
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
 
@@ -84,21 +85,9 @@ const STATUS_PIPELINE = [
   "POD_RECEIVED", "INVOICED", "COMPLETED",
 ];
 
-const NEXT_STATUS: Record<string, string> = {
-  POSTED: "TENDERED", TENDERED: "CONFIRMED", CONFIRMED: "BOOKED",
-  BOOKED: "DISPATCHED", DISPATCHED: "AT_PICKUP", AT_PICKUP: "LOADED",
-  LOADED: "IN_TRANSIT", PICKED_UP: "IN_TRANSIT", IN_TRANSIT: "AT_DELIVERY",
-  AT_DELIVERY: "DELIVERED", DELIVERED: "POD_RECEIVED",
-  POD_RECEIVED: "INVOICED", INVOICED: "COMPLETED",
-};
-
-const STATUS_ACTIONS: Record<string, string> = {
-  POSTED: "Tender", TENDERED: "Confirm", CONFIRMED: "Book Load",
-  BOOKED: "Dispatch", DISPATCHED: "At Pickup", AT_PICKUP: "Mark Loaded",
-  LOADED: "In Transit", PICKED_UP: "In Transit", IN_TRANSIT: "At Delivery",
-  AT_DELIVERY: "Mark Delivered", DELIVERED: "POD Received",
-  POD_RECEIVED: "Mark Invoiced", INVOICED: "Complete",
-};
+// v3.8.e — NEXT_STATUS + STATUS_ACTIONS moved to lib/loadStatusActions.ts
+// so the Track & Trace LoadDetailDrawer can reuse the same maps without
+// copy-paste drift. Imported above.
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */

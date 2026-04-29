@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { X, ChevronRight } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { getNextStatusAction } from "@/lib/loadStatusActions";
 import { IconTabs } from "./IconTabs";
 import { DetailsTab } from "./tabs/DetailsTab";
 import { TrackingTab } from "./tabs/TrackingTab";
@@ -22,6 +23,8 @@ interface Props {
 
 export function LoadDetailDrawer({ loadId, onClose }: Props) {
   const [tab, setTab] = useState<DrawerTab>("details");
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -46,8 +49,29 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
     refetchInterval: 30_000,
   });
 
+  // v3.8.e — Status advancement from inside the T&T drawer. Mirrors the
+  // Load Board's mutation (PATCH /loads/:id/status) so dispatchers don't
+  // have to bounce between surfaces. VALID_TRANSITIONS gating happens
+  // server-side; this mutation just trusts the next-status helper map.
+  const updateStatus = useMutation({
+    mutationFn: async (vars: { loadId: string; status: string }) =>
+      (await api.patch(`/loads/${vars.loadId}/status`, { status: vars.status })).data,
+    onSuccess: () => {
+      setStatusError(null);
+      // Refetch this drawer's load + invalidate the Load Board list query
+      // so a dispatcher who has both surfaces open sees the change reflected.
+      queryClient.invalidateQueries({ queryKey: ["tt-load-detail", loadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error ?? err?.message ?? "Failed to update status";
+      setStatusError(msg);
+    },
+  });
+
   if (!loadId) return null;
   const load = query.data?.load;
+  const statusAction = load ? getNextStatusAction(load.status) : null;
 
   const openExceptionCount = (load?.loadExceptions ?? []).filter((e: any) => e.status === "OPEN").length;
 
@@ -109,14 +133,37 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
                   </button>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* v3.8.e — status advancement button. Shown only when the
+                    current status has a next-status entry (i.e. not terminal).
+                    Same affordance as Load Board, same backend mutation. */}
+                {statusAction && (
+                  <button
+                    onClick={() =>
+                      updateStatus.mutate({ loadId: load!.id, status: statusAction.nextStatus })
+                    }
+                    disabled={updateStatus.isPending}
+                    className="px-3 py-1.5 bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    title={`Advance to ${statusAction.nextStatus.replace(/_/g, " ")}`}
+                  >
+                    <ChevronRight className="w-3 h-3" />
+                    {updateStatus.isPending ? "Updating…" : statusAction.label}
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+            {statusError && (
+              <div className="mt-2 px-2 py-1 rounded text-[11px] bg-red-50 text-red-700 border border-red-200">
+                {statusError}
+              </div>
+            )}
           </div>
 
           {/* Tab content */}
