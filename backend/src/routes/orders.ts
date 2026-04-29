@@ -26,10 +26,18 @@ const AE_ROLES = ["BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE"] as c
 // GET /orders?status=draft — list caller's orders
 router.get("/", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
   const status = req.query.status as string | undefined;
+  // v3.8.d.3 — when status=draft is requested, exclude already-
+  // converted orders (loadId !== null). The convert flow stamps
+  // status to "load_created", so they shouldn't appear here under
+  // normal flow, but the defensive filter prevents surprise re-
+  // entries from any future code path that PATCHes status without
+  // clearing loadId.
+  const draftFilter = status === "draft" ? { loadId: null } : {};
   const orders = await prisma.order.findMany({
     where: {
       createdById: req.user!.id,
       ...(status ? { status } : {}),
+      ...draftFilter,
     },
     orderBy: { updatedAt: "desc" },
     take: 50,
@@ -48,7 +56,21 @@ router.get("/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: 
     },
   });
   if (!order) return res.status(404).json({ error: "Order not found" });
-  res.json({ order });
+  // v3.8.d.3 — surface the converted load's reference number so the
+  // Order Builder can render a "View load" deep-link in its converted-
+  // banner gate. order.loadId is the FK; we need referenceNumber +
+  // loadNumber to render the public-facing identifier.
+  let loadReferenceNumber: string | null = null;
+  let loadNumber: string | null = null;
+  if (order.loadId) {
+    const load = await prisma.load.findUnique({
+      where: { id: order.loadId },
+      select: { referenceNumber: true, loadNumber: true },
+    });
+    loadReferenceNumber = load?.referenceNumber ?? null;
+    loadNumber = load?.loadNumber ?? null;
+  }
+  res.json({ order: { ...order, loadReferenceNumber, loadNumber } });
 });
 
 // ─── Create / update / auto-save ──────────────────────────

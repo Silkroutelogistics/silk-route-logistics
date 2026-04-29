@@ -1129,7 +1129,70 @@
 //          as belt-and-suspenders for one sprint cycle.
 //          Removal candidate in v3.8.e cleanup once
 //          fresh writes confirmed clean.
-export const SRL_VERSION = "3.8.d.2";
+// v3.8.d.3 — Order Builder converted-order gate +
+//          migration script multi-pass decode.
+//
+//          User reproduced the v3.8.d.2 deploy with a
+//          test draft and hit "Create load failed —
+//          Order already converted" (HTTP 409 from
+//          orders.ts:212). Diagnosis: the order had
+//          already been converted to a load earlier;
+//          the Order Builder UI never tracked
+//          order.loadId so users could re-attempt the
+//          convert flow on an already-converted order
+//          without warning.
+//
+//          Frontend gate (orders/page.tsx):
+//          - resumeDraft now reads order.loadId and
+//            order.loadReferenceNumber from the
+//            response and stores both in component
+//            state.
+//          - When convertedLoadId is set, an amber
+//            banner renders above the form with a
+//            "View loads →" deep-link.
+//          - Create load button is disabled when
+//            convertedLoadId is set; tooltip explains.
+//          - drafts list now defensive-filters out
+//            rows where d.loadId is set, so the resume
+//            picker never offers an already-converted
+//            order.
+//
+//          Backend (orders.ts):
+//          - GET /:id includes loadReferenceNumber +
+//            loadNumber by fetching the linked load
+//            when order.loadId is present. Read-only
+//            join so the frontend gate has a public-
+//            facing identifier, not just a CUID.
+//          - GET /?status=draft adds loadId: null to
+//            the where clause as a defense-in-depth
+//            against any future code path that
+//            PATCHes status without clearing loadId.
+//
+//          Migration script (decode-encoded-load-
+//          fields.ts):
+//          - decodeUntilStable() helper iterates
+//            decodeHtmlEntities up to 5 times, stops
+//            when output is unchanged. Handles double-
+//            encoded values like 'Dry Van 53&amp;
+//            #x27;' (one pass yields '&#x27;', a
+//            second yields "'"). The single-pass
+//            decode wasn't catching pre-v3.8.d.2 rows
+//            that had been written through the old
+//            middleware twice (e.g. via
+//            create-then-edit flows).
+//
+//          Symptom on user screenshot was
+//          'Dry Van 53&amp;#x27;' rendered in the
+//          Order Builder's eligibility banner — that
+//          double-encoded value lives in
+//          orders.formData (JSONB), not loads.
+//          equipmentType. The migration script still
+//          targets loads only; orders.formData
+//          cleanup is a separate sibling script if /
+//          when it surfaces in another way. The
+//          v3.8.d.2 middleware fix prevents new
+//          double-encodes regardless.
+export const SRL_VERSION = "3.8.d.3";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

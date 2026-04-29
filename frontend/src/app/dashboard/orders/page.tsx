@@ -70,6 +70,12 @@ export default function OrderBuilderPage() {
   const [autoFillBanner, setAutoFillBanner] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  // v3.8.d.3 — track loadId so resumed drafts that have already been
+  // converted gate the Create-load button instead of producing an HTTP
+  // 409 "Order already converted" surprise. Set by resumeDraft from
+  // the backend's order.loadId field.
+  const [convertedLoadId, setConvertedLoadId] = useState<string | null>(null);
+  const [convertedLoadRef, setConvertedLoadRef] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [manualOriginMode, setManualOriginMode] = useState(false);
@@ -85,7 +91,13 @@ export default function OrderBuilderPage() {
     queryFn: async () => (await api.get("/orders", { params: { status: "draft" } })).data,
     staleTime: 30_000,
   });
-  const drafts = (draftsQuery.data?.orders ?? []).filter((d) => d.id !== orderId);
+  // v3.8.d.3 — defensive client-side filter to drop already-converted
+  // orders. The backend GET /orders?status=draft adds the same filter,
+  // but this guard handles stale backend responses or any future code
+  // path that PATCHes status without clearing loadId.
+  const drafts = (draftsQuery.data?.orders ?? [])
+    .filter((d) => d.id !== orderId)
+    .filter((d) => !d.loadId);
   const showDraftBanner = !draftBannerDismissed && drafts.length > 0 && !selectedCustomer;
 
   const resumeDraft = async (draftId: string) => {
@@ -95,6 +107,11 @@ export default function OrderBuilderPage() {
       if (!order) return;
       const formData = order.formData ?? {};
       setOrderId(draftId);
+      // v3.8.d.3 — surface already-converted state so the UI can gate
+      // Create load instead of letting the user re-attempt and hit the
+      // backend's 409.
+      setConvertedLoadId(order.loadId ?? null);
+      setConvertedLoadRef(order.loadReferenceNumber ?? null);
       // v3.8.c legacy-draft hydration: if formData has no lineItems (pre-
       // v3.8.c draft captured flat fields only), synthesize 1 pre-filled
       // line item so the user can edit + save without re-entering freight.
@@ -505,11 +522,13 @@ export default function OrderBuilderPage() {
               if (!isValid) { setShowErrors(true); return; }
               createLoad.mutate();
             }}
-            disabled={createLoad.isPending || !isValid}
+            disabled={createLoad.isPending || !isValid || !!convertedLoadId}
             title={
-              isValid
-                ? undefined
-                : `Cannot create load — missing: ${requiredMissing.join(", ")}`
+              convertedLoadId
+                ? "This order has already been converted to a load"
+                : isValid
+                  ? undefined
+                  : `Cannot create load — missing: ${requiredMissing.join(", ")}`
             }
             className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "#FFFFFF" }}
@@ -518,6 +537,29 @@ export default function OrderBuilderPage() {
           </button>
         </div>
       </div>
+
+      {/* v3.8.d.3 — Already-converted gate. Resumed drafts whose order
+          already has a loadId surface a banner with a deep-link to the
+          load instead of letting the user re-attempt and hit the
+          backend's HTTP 409. */}
+      {convertedLoadId && (
+        <div className="mb-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2">
+          <CheckCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-300" />
+          <div className="flex-1">
+            <div className="font-semibold">This order has already been converted to a load</div>
+            <div className="mt-0.5 opacity-90">
+              Load {convertedLoadRef ?? convertedLoadId.slice(0, 8)} was created from this draft.
+              Editing here will not change the dispatched load.
+            </div>
+          </div>
+          <button
+            onClick={() => router.push("/dashboard/loads")}
+            className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-[11px] font-medium"
+          >
+            View loads →
+          </button>
+        </div>
+      )}
 
       {quoteResult && (
         <div className="mb-3 p-2 rounded-lg bg-green-500/10 border border-green-500/30 text-xs text-green-300">

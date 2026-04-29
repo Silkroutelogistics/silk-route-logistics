@@ -22,6 +22,27 @@
 import { prisma } from "../src/config/database";
 import { decodeHtmlEntities } from "../src/utils/htmlEntities";
 
+/**
+ * Iterate decode until stable. Handles double-encoded values like
+ * `Dry Van 53&amp;#x27;` which require two passes (`&amp;` → `&`,
+ * then `&#x27;` → `'`). decodeHtmlEntities does a single string-
+ * replace pass and does not re-scan replaced regions, so calling
+ * it once on `&amp;#x27;` yields `&#x27;`, not `'`.
+ *
+ * Caps at 5 passes — any chain longer than that is malformed input,
+ * not a legitimate multi-encode. Stops early when a pass produces
+ * no change.
+ */
+function decodeUntilStable(input: string): string {
+  let current = input;
+  for (let i = 0; i < 5; i++) {
+    const next = decodeHtmlEntities(current);
+    if (next === current) return current;
+    current = next;
+  }
+  return current;
+}
+
 const FIELDS_TO_DECODE = [
   "equipmentType",
   "commodity",
@@ -68,7 +89,7 @@ async function main() {
     for (const field of FIELDS_TO_DECODE) {
       const original = (load as Record<string, unknown>)[field];
       if (typeof original === "string") {
-        const decoded = decodeHtmlEntities(original);
+        const decoded = decodeUntilStable(original);
         if (decoded !== original) {
           data[field] = decoded;
           hasChange = true;
