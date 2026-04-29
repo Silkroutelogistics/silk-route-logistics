@@ -1017,7 +1017,51 @@
 //          consolidation, sanitizeInput middleware
 //          rework, NMFC catalog auto-suggest, dynamic
 //          BOL page-2 generation.
-export const SRL_VERSION = "3.8.d";
+// v3.8.d.1 — BOL template field bindings fix.
+//          Diagnosed via direct DB query of L2228322560:
+//          backend BOL renderer was reading from the
+//          master customer record for the Shipper
+//          section instead of from per-load physical-
+//          location fields, AND printing literal
+//          placeholder strings ("[Consignee Facility]",
+//          "[Shipper Ref]", "[Contact · Phone]", "None
+//          ·  [per-load notes]") into the BOL when
+//          binding logic was missing or fields were
+//          empty.
+//
+//          Fixes (pdfService.ts only — frontend
+//          BOLTemplate.tsx already reads load-level
+//          fields correctly):
+//          - Shipper section reads load.originCompany
+//            || load.shipperFacility || load.customer?
+//            .name (Order Builder writes originCompany;
+//            legacy paths populate shipperFacility per
+//            CLAUDE.md §3.9; customer is last-resort)
+//          - Consignee section reads load.destCompany
+//            || load.consigneeFacility — NO customer
+//            fallback (§3.9: billing customer is never
+//            the consignee)
+//          - SHIPPER REF metaCell walks the schema's
+//            4-field PO chain: poNumbers[0] →
+//            shipperReference → shipperPoNumber →
+//            customerRef. Em-dash if all empty. Closes
+//            v3.8.c.1 by merging into v3.8.d.1.
+//          - Empty contact line renders "Contact: —  ·
+//            —" instead of "[Contact · Phone]"
+//          - Empty Special Instructions renders "None"
+//            instead of "None  ·  [per-load notes]"
+//
+//          LoadBOLData interface extended with
+//          originCompany, destCompany, poNumbers,
+//          customerRef. bolData spread in
+//          downloadBOLFromLoad already includes them
+//          via {...load} so no controller change.
+//
+//          Architectural HTML-encoding bug surfaced
+//          alongside this work (equipmentType stored
+//          as 'Dry Van 53&#x27;' due to sanitizeInput
+//          middleware) lands separately in v3.8.d.2.
+export const SRL_VERSION = "3.8.d.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

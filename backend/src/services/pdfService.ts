@@ -118,11 +118,18 @@ export interface BOLRenderContext {
 interface LoadBOLData {
   referenceNumber: string;
   loadNumber?: string | null;
+  originCompany?: string | null;
   originAddress?: string | null; originCity: string; originState: string; originZip: string;
   originContactName?: string | null; originContactPhone?: string | null;
+  destCompany?: string | null;
   destAddress?: string | null; destCity: string; destState: string; destZip: string;
   destContactName?: string | null; destContactPhone?: string | null;
   shipperFacility?: string | null; consigneeFacility?: string | null;
+  // v3.8.d.1 — schema-honest PO/reference chain. Order Builder writes
+  // poNumbers[0]; legacy paths populate one of shipperReference /
+  // shipperPoNumber / customerRef. Render walks the chain.
+  poNumbers?: string[] | null;
+  customerRef?: string | null;
   weight?: number | null; pieces?: number | null; equipmentType: string; commodity?: string | null;
   freightClass?: string | null;
   dimensionsLength?: number | null; dimensionsWidth?: number | null; dimensionsHeight?: number | null;
@@ -141,6 +148,7 @@ interface LoadBOLData {
   // downloadBOLFromLoad; drawing code does not yet consume these —
   // template rendering lands in Commit 2 / v3.7.p.
   shipperReference?: string | null;
+  shipperPoNumber?: string | null;
   trailerNumber?: string | null;
   sealNumber?: string | null;
   declaredValue?: number | null;
@@ -422,12 +430,23 @@ export async function generateBOLFromLoad(
     raw: string | null | undefined;
     placeholder: string | null; // null = em-dash if absent; string = bracketed italic placeholder
   }
+  // v3.8.d.1 — SHIPPER REF walks the schema's 4-field PO chain. Order
+  // Builder writes poNumbers[]; legacy/import paths populate one of
+  // shipperReference / shipperPoNumber / customerRef. First non-empty
+  // wins; falls through to em-dash if the load truly has no reference.
+  const shipperRefValue =
+    (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : null)
+    || load.shipperReference
+    || load.shipperPoNumber
+    || load.customerRef
+    || null;
+
   const metaCells: MetaCell[] = [
     { label: "DATE ISSUED", raw: pickupDateFmt, placeholder: null },
     { label: "LOAD REF", raw: load.referenceNumber, placeholder: null },
     { label: "EQUIPMENT", raw: load.equipmentType, placeholder: "Equipment" },
     { label: "PRO #", raw: load.proNumber, placeholder: null },
-    { label: "SHIPPER REF", raw: load.shipperReference, placeholder: "Shipper Ref" },
+    { label: "SHIPPER REF", raw: shipperRefValue, placeholder: null },
     { label: "FREIGHT CHARGES", raw: "Prepaid · Third Party", placeholder: null },
   ];
 
@@ -489,9 +508,22 @@ export async function generateBOLFromLoad(
     cx: number,
     cy: number,
   ): void => {
+    // v3.8.d.1 — Shipper/Consignee read from the per-load physical-
+    // location fields (CLAUDE.md §3.9). Order Builder writes
+    // load.originCompany / load.destCompany; legacy paths may have
+    // populated shipperFacility / consigneeFacility instead. Customer
+    // record is the BILLING entity, never the consignee — fallback to
+    // load.customer is shipper-side defensive only (last resort when
+    // no load-level company is present).
     const facility = side === "shipper"
-      ? fieldOrPlaceholder(load.shipperFacility || load.customer?.name, "Shipper Facility")
-      : fieldOrPlaceholder(load.consigneeFacility, "Consignee Facility");
+      ? fieldOrPlaceholder(
+          load.originCompany || load.shipperFacility || load.customer?.name,
+          "Shipper Facility",
+        )
+      : fieldOrPlaceholder(
+          load.destCompany || load.consigneeFacility,
+          "Consignee Facility",
+        );
     const addr = side === "shipper"
       ? fieldOrPlaceholder(load.originAddress || load.customer?.address, "Street Address")
       : fieldOrPlaceholder(load.destAddress, "Street Address");
@@ -508,9 +540,13 @@ export async function generateBOLFromLoad(
     const contactPhone = side === "shipper"
       ? safe(load.originContactPhone || load.customer?.phone).trim()
       : safe(load.destContactPhone).trim();
+    // When both fields are empty, render as em-dash (factual absence)
+    // rather than a "[Contact · Phone]" placeholder that prints into
+    // the BOL as if it were content. Matches §2.1 placeholder-vs-empty
+    // convention — placeholders only when caller asks for one.
     const contact: FieldDisplay = (contactName || contactPhone)
       ? { text: `Contact: ${contactName || EM}  ${MIDDOT}  ${contactPhone || EM}`, isPlaceholder: false }
-      : { text: "[Contact · Phone]", isPlaceholder: true };
+      : { text: `Contact: ${EM}  ${MIDDOT}  ${EM}`, isPlaceholder: false };
     const dateFmt = side === "shipper" ? pickupDateFmt : deliveryDateFmt;
     const win = side === "shipper" ? pickupWin : deliveryWin;
     const windowText = win
@@ -739,10 +775,13 @@ export async function generateBOLFromLoad(
     .text("SPECIAL INSTRUCTIONS", M + 10, y + 10, {
       characterSpacing: 1.0, lineBreak: false,
     });
+  // v3.8.d.1 — empty Special Instructions renders factual "None" rather
+  // than the prior "None  ·  [per-load notes]" placeholder which leaked
+  // designer-tooling syntax into the printed BOL.
   const siBodyRaw = safe(load.specialInstructions || load.notes).trim();
   const siDisplay: FieldDisplay = siBodyRaw
     ? { text: siBodyRaw, isPlaceholder: false }
-    : { text: "None  ·  [per-load notes]", isPlaceholder: true };
+    : { text: "None", isPlaceholder: false };
   doc.font("DMSans-Italic").fontSize(8.25)
     .fillColor(siDisplay.isPlaceholder ? GOLD_DARK : FG_2)
     .text(siDisplay.text, M + 150, y + 9, {
