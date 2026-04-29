@@ -1061,7 +1061,75 @@
 //          alongside this work (equipmentType stored
 //          as 'Dry Van 53&#x27;' due to sanitizeInput
 //          middleware) lands separately in v3.8.d.2.
-export const SRL_VERSION = "3.8.d.1";
+// v3.8.d.2 — sanitizeInput middleware rework + data
+//          decode migration script.
+//
+//          Architectural fix for the HTML-encoding bug
+//          surfaced in v3.8.d / v3.8.d.1 diagnosis. The
+//          previous sanitizeInput middleware (security.
+//          ts) HTML-entity-escaped every req.body /
+//          req.query / req.params string at write time
+//          for XSS defense, causing values like
+//          `Dry Van 53'` to be stored as `Dry Van
+//          53&#x27;`. Every consumer then had to
+//          compensate with a decode pass — pdfService
+//          safe(), trackingController decodeOpt() —
+//          and any boundary that forgot to decode (the
+//          public /tracking page until v3.8.d) leaked
+//          raw entities into user-facing surfaces.
+//
+//          The rewrite removes the source of the
+//          encoding. Input hygiene now does:
+//          - trim whitespace
+//          - strip null bytes (PostgreSQL TEXT rejects
+//            them)
+//          - cap string length at 10,000 chars (DoS
+//            defense; specific fields enforce stricter
+//            limits at the validator layer)
+//          - depth-limited recursive walk (10 levels)
+//
+//          XSS defense moves to the OUTPUT layer per
+//          OWASP guidance: React auto-escapes JSX text
+//          nodes for HTML output, pdfService safe()
+//          handles PDF, JSON encoding handles its own
+//          char-set. Each context applies the right
+//          escape rules at the right time.
+//
+//          /api/webhooks remains exempt — external
+//          services send raw payloads (often with HTML,
+//          dollar signs, etc.) that should pass through
+//          for downstream parsing.
+//
+//          Spec correction: the v3.8.d.1 spec stated
+//          /api/orders is "currently exempted as v3.8.c
+//          bandaid." Audit of security.ts confirmed
+//          only /api/webhooks is exempted; /api/orders
+//          is unaffected. No re-enable needed.
+//
+//          Data hygiene: new one-time migration script
+//          backend/scripts/decode-encoded-load-fields.
+//          ts walks the loads table, finds rows with
+//          HTML entities in any of 19 tracked fields
+//          (equipmentType, commodity, origin/dest
+//          company / address / contact name, shipper /
+//          consignee facility, shipperReference,
+//          shipperPoNumber, customerRef, special
+//          instructions, notes, pickup / delivery
+//          instructions, driver name, carrier
+//          dispatcher name), and decodes in place.
+//          Idempotent. Scoped to loads only —
+//          extend or add sibling scripts when a real
+//          symptom surfaces in another table.
+//
+//          Run: cd backend && npx ts-node scripts/
+//          decode-encoded-load-fields.ts
+//
+//          Defense-in-depth: pdfService safe() and
+//          trackingController decodeOpt() both retained
+//          as belt-and-suspenders for one sprint cycle.
+//          Removal candidate in v3.8.e cleanup once
+//          fresh writes confirmed clean.
+export const SRL_VERSION = "3.8.d.2";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
