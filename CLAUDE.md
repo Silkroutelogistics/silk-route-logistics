@@ -521,7 +521,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 4. **Order Builder origin/destContactName + Phone capture.** Closes the `Contact: — · —` gap visible on every BOL printed this week. Order Builder doesn't capture facility-level contact info today; BOL template renders em-dash fallback. 4 new form fields, wire to existing schema fields, BOL renders correctly via existing v3.8.d.1 binding. Effort: ~30–50 lines.
 
-5. **BOL page-1 footer collision.** `SEAL #` / `DATE` labels overlap with `Where Trust Travels.` tagline at the bottom of the carrier signature block. Visible on every BOL but cosmetic. Coordinate fix in `pdfService.ts`. ~20 lines.
+5. ~~**BOL page-1 footer collision**~~ — **CLOSED 2026-04-30 in v3.8.h**. Single-line `fyLine` coordinate fix (755 → 770) in `pdfService.ts`. Page-2 footer shifted identically since both reuse the same constant. All 9 signature fields preserved at original column positions.
 
 **Security / Portal completeness:**
 

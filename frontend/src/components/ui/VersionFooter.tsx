@@ -1407,7 +1407,41 @@
 //          PII scope on public /tracking unchanged —
 //          contacts stay internal per T&T source-of-
 //          truth doc §2.
-export const SRL_VERSION = "3.8.g";
+// v3.8.h — BOL page-1 footer collision fix. The
+//          carrier signature column (column 2 of 3)
+//          has 6 rows × 30pt + cert/title overhead,
+//          making it the tallest column. With the
+//          hardcoded footer rule at fyLine=755, the
+//          SEAL # / DATE row's underline at y≈756 sat
+//          right on top of the footer rule, and the
+//          centered "Where Trust Travels." tagline at
+//          footerY=763 visually collided with the
+//          SEAL # / DATE labels in the carrier
+//          column. Visible on every BOL since v3.8.b
+//          BOL v2.9 template shipped.
+//
+//          Single-line minimum-effective fix in
+//          pdfService.ts: fyLine 755 → 770. Footer
+//          shifts down 15pt, gives the signature
+//          block 15pt of additional clearance.
+//          Letter page is 792pt; footer text now
+//          bottoms at ~785pt with 7pt to the page
+//          edge — within typical print-safe range,
+//          unaffected for digital viewing.
+//
+//          Page-2 footer uses the same fyLine
+//          constant so it shifts identically (T&C
+//          content area unaffected — auto-wraps and
+//          ends well above the footer regardless).
+//          All 9 carrier signature fields preserved
+//          at their original column positions; only
+//          the footer band moved.
+//
+//          Closes §13.3 Item 5. BOL template stays
+//          at v2.9; this is a coordinate fix within
+//          the existing template, not a template
+//          version bump.
+export const SRL_VERSION = "3.8.h";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

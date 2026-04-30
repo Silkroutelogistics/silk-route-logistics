@@ -1002,7 +1002,20 @@ export async function generateBOLFromLoad(
   });
 
   // Footer page 1
-  const fyLine = 755;
+  // v3.8.h — fyLine moved 755 → 770 (15pt down). The carrier signature
+  // column (column 2 of 3) is the tallest at 6 rows × 30pt + ~40pt of
+  // title/cert overhead. With fyLine=755 the SEAL # / DATE row's
+  // underline at y≈756 sat right on top of the footer rule, and the
+  // centered "Where Trust Travels." tagline at footerY=763 visually
+  // collided with the SEAL # / DATE labels in the carrier column.
+  // Moving fyLine to 770 (footerY=778) gives the signature block 15pt
+  // of additional clearance. Letter is 792pt; footer text bottom now
+  // ~785pt, which leaves 7pt to the page edge — within typical
+  // print-safe range for modern printers and unaffected for digital
+  // PDF viewing. Page-2 footer uses the same constant so it shifts
+  // identically (T&C content area unaffected — wraps and ends well
+  // above the footer regardless).
+  const fyLine = 770;
   doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
   const footerY = fyLine + 8;
   const footerThirdW = CW / 3;
