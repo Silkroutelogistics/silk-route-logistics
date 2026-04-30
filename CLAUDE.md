@@ -2,7 +2,7 @@
 
 This file is the single binding source of truth for any Claude Code session working in this repo. Read it at session start. Rules below override all defaults. Follow them exactly.
 
-Last consolidated: Phase 4 close (v3.7.h, commit `3ea7539`).
+Last consolidated: Phase 6.1 close (v3.8.e.2, commit `adefc84`).
 
 ---
 
@@ -212,6 +212,7 @@ Organized by firing frequency — universal rules first, domain-specific last. A
 - **Never skip a letter.** Sequence is continuous.
 - If the user names a specific version in their instruction (e.g. "ship this as v3.7.a"), use exactly that — don't second-guess.
 - **Source of truth:** `frontend/src/components/ui/VersionFooter.tsx` — update with every commit that deploys.
+- **Docs-only commits ship unversioned.** Letter bump fires on commits that change user-visible state (frontend, backend API, migrations, deploy artifacts). Does NOT fire on commits that only change developer-facing context (CLAUDE.md, MEMORY.md, READMEs, session handoffs, `docs/`). Confirmed at v3.7.j sign-off and reaffirmed at v3.8.e.2 docs catch-up.
 
 ### §3.2 Content sweeps verify rendered output
 
@@ -442,9 +443,42 @@ Same-day Quick Pay is UNIVERSAL +2% premium on tier fee. **Not tier-gated.** Eve
 | v3.7.g.1 | `1ac3802` | Mobile responsive hotfix — tier cards + math box at ≤768px (bug since v3.7.a + new in 4C); pure CSS, no `!important`; also fixed pre-existing `repeat(4,1fr)` BRONZE-era stale grid |
 | v3.7.h | `3ea7539` | **Phase 4D close** — 5 FAQ entries, supporting page sweep, onboarding email verified on v3 (closes Phase 3 Gap 3), MEMORY.md deferred items logged |
 | v3.7.i | `e5def51` | Principal-address correction Kalamazoo → Galesburg across marketing + backend + CLAUDE.md §1; new §3.13 address/legal-identity verification rule |
-| v3.7.j | (this commit) | **Phase 5B documentation consolidation** — §2 AE Console inventory (64 live routes categorized), §2.1 Design System (hybrid color tokens per §3.13 + Legal document reference to BOL v2.8 as canonical brand expression), §11 historical backfill (v3.5.e through v3.6.i), §13 Phase 5E track-and-trace verification gaps |
+| v3.7.j | `9418464` | **Phase 5B documentation consolidation** — §2 AE Console inventory (64 live routes categorized), §2.1 Design System (hybrid color tokens per §3.13 + Legal document reference to BOL v2.8 as canonical brand expression), §11 historical backfill (v3.5.e through v3.6.i), §13 Phase 5E track-and-trace verification gaps |
+| v3.7.k | `76d19a9` | **Phase 5E.a foundation** — public `/tracking?token=...` route scaffolded with token-based access (no auth required), token generation tied to Load record at dispatch, PII scope defined (carrier name + rate + internal refs stripped), 4-stage progress strip + 9-stage milestone timeline UI, manual-update integration with `Load.trackingEvents` via AE Console |
+| v3.7.l | `68d1c8b` | Hotfix: TOTP login verify race-condition + JWT-issue ordering fix (regression from v3.7.j) |
+| v3.7.m | `f95bb65` | Hotfix: reset-password flow token consumption ordering — peek/consume split + `prisma.$transaction` atomic update; 9-test resetPassword regression suite |
+| v3.7.n.1 – v3.7.n.9 | various | **Regression sweep** (9 commits): Sign-In dropdown visibility, Shippers nav regression, Track logo placement, Carrier home CTA, Maps iframe rendering, Portal access regression (2-month dashboard breakage from Feb security hardening — restored without weakening security headers), Lead Hunter modal close, Load Board button regression, Lane Analytics crash on empty data |
+| v3.7.o-build-prep | `c90170b` | Build environment cleanup staging the v3.8 multi-line BOL pivot. v3.7.p was preserved as wip ref but never merged (intentional pivot to v3.8 epic) |
+| v3.8.a | `d1dab7b` | **Multi-line BOL foundation** — new `LoadLineItem` Prisma model + `PackageType` enum (10 values) + per-line hazmat flag + `@@unique([loadId, lineNumber])`; full-replace update semantics; migration applied to Neon prod via `prisma migrate deploy` |
+| v3.8.b | `cf16609` | **BOL v2.9 template + ligature fix** — template rebuilt to v2.9 reference style; PDFKit ligature suppression via Option β monkey-patch (`features: { liga: false, clig: false, rlig: false, dlig: false, kern: true }`); 9 TTF fonts staged at `backend/src/assets/fonts/bol-v2.9/`; clean RGBA logo; new utilities `htmlEntities.ts` + `qrGenerator.ts`; +1,263 / −252 across 18 files |
+| v3.8.c | `b13eddd` | **Order Builder dynamic line-item UI + 3-layer freight fix** — new `LineItemsSection.tsx`; L1 sync save before convert-to-load, L2 button disable on incomplete lines, L3 backend `400 INVALID_LOAD_NO_FREIGHT`; `isHotLoad` Boolean coercion bug fixed; `/api/orders` exempted from sanitizeInput (bandaid for HTML encoding bug — full fix in v3.8.d.2); `buildLineItems` exported; verification load L2228322560 |
+| v3.8.d | `c2e49d7` | **Multi-line BOL rendering + /tracking decode** — pdfService freight table iterates `load.lineItems[]`, 10-row cap with overflow footer, totals strip aggregates full array, dashed-horizontal row separators; `/tracking` serializer applies `decodeHtmlEntities` at boundary on equipment/commodity/origin+dest city/state/shipperName/carrierFirstName/lastLocation/stops/checkCalls; closes `Dry Van 53&#x27;` rendering bug; 4 files / +206 / −49 |
+| v3.8.d.1 | `7e439b3` | **BOL template field bindings fix** — diagnosed via direct DB query of L2228322560: BOL was reading customer record for Shipper section instead of `load.originCompany`/`originContactName`, AND rendering literal placeholder strings. Fix: Shipper reads `originCompany`/`originContactName`/`originContactPhone` (customer fallback retained); Consignee reads `destCompany`/`destContactName`/`destContactPhone` (no placeholder fallback); Shipper Ref renders `poNumbers[0]` with cascading fallback to `shipperReference` → `shipperPoNumber` → `customerRef`; Special Instructions renders raw or empty (no placeholder). **Merges previously-specced v3.8.c.1** (poNumbers wiring) into this sprint — same diagnostic root cause |
+| v3.8.d.2 | `bed4ac7` | **sanitizeInput middleware rework + data decode script** — architectural fix for HTML encoding bug surfaced in v3.8.d. `middleware/security.ts` rewritten: no more `escapeHtml` on string inputs, replaced with trim + length-cap + null-byte strip; sanitizeInput re-enabled on `/api/orders` (v3.8.c bandaid removed); `scripts/decode-encoded-load-fields.ts` one-time idempotent migration for legacy encoded data; `/tracking decodeHtmlEntities` retained as defensive fallback for one sprint cycle |
+| v3.8.d.3 | `afecc43` | **Order Builder converted-order gate + multi-pass decode** — drafts list filters `loadId !== null`; direct-navigate to converted order URL renders amber "already converted" banner with View loads → button + disables Create load; auto-redirect to `/dashboard/waterfall` after 1.5s on successful convert (state machine + gate prevents double-conversion); decode script updated to be multi-pass-safe (handles double/triple-encoded values like `&amp;#x27;`) |
+| v3.8.d.4 | `8837263` | **Multi-PO BOL render** — Shipper Ref cell renders `poNumbers[]` as comma-joined list (e.g. `PO#1472, PO1476`); 3+ POs render first 2 + `+N more` suffix; em-dash fallback; maintains 4-field PO chain. Verified with L9756795914 (Kehe → Unfi). Closes the v3.8 multi-line BOL epic |
+| v3.8.e | `108e18e` | **Phase 6.1 — T&T status advancement controls** — new shared helper `frontend/src/lib/loadStatusActions.ts` (single source of truth for `NEXT_STATUS` + `STATUS_ACTIONS` + `getNextStatusAction()`); Load Board imports from shared module; T&T `LoadDetailDrawer` header gets advance button next to close button; cross-query invalidation refreshes both `tt-load-detail` and `loads`; inline error state on mutation failure; 5 files / +179 / −25 |
+| v3.8.e.1 | `ccfde90` | **Phase 6.1 — SHIPPER approval gate (S-2 backend)** — security gap closed: `Customer.onboardingStatus` now enforced on auth path. New `checkShipperApproval(user, email, req)` helper in `authController.ts`, SHIPPER role only, status-specific friendly messages, defense-in-depth gating at BOTH `handleVerifyOtp` (pre-TOTP) AND `handleTotpLoginVerify` (pre-JWT). AE Console + CARRIER flows unaffected. Build issue caught mid-session: `LogSeverity` enum is `WARNING` not `WARN`. Verified end-to-end with PENDING fixture (`shipper@acmemfg.com`) |
+| v3.8.e.2 | `adefc84` | **Phase 6.1 — ShipperSidebar Back-to-Website link** — repointed sidebar `href` from `/shipper` (divergent legacy prospect-landing page) to `/` (homepage), mirroring CarrierSidebar pattern. Surfaced during v3.8.e.1 smoke. The `/shipper` page itself remains untouched — visual alignment is a separate Phase 6 sprint |
+
+**Phase 6.1 closed** at v3.8.e.2 (T&T status controls + SHIPPER gate + sidebar link). Total Phase 6.1: 8 files / +342 / −26 across three commits.
 
 **Explicitly excluded from §11** (do not backfill, do not exist in git): v3.4.c, v3.4.k, v3.4.s, standalone v3.5, v3.5.d, standalone v3.6.
+
+### §11 — Architectural finding (cross-cutting, surfaced during v3.8.d sprint, 2026-04-28)
+
+`sanitizeInput` middleware at `backend/src/middleware/security.ts` (registered at `server.ts:150`) was HTML-escaping all `req.body` string values at write time, causing values to be stored encoded in the database (e.g., `equipmentType: 'Dry Van 53&#x27;'` instead of `'Dry Van 53''`). Every human-facing read path required compensating decode logic at the output boundary. Worse, repeated re-saves through the same middleware would multi-encode (`&amp;#x27;`, `&amp;amp;#x27;`, etc.) which one-pass decoders couldn't fully reverse.
+
+**Tactical fix at v3.8.d:** scoped `decodeHtmlEntities` at `/tracking` public serializer; PDFKit's `safe()` already handled PDF rendering.
+
+**Architectural fix at v3.8.d.2:** middleware rewritten to do proper INPUT hygiene only — trim, length-cap, null-byte strip — without OUTPUT encoding. Output-layer escaping moved to where it belongs:
+- HTML rendering → React's automatic JSX escaping
+- PDF rendering → PDFKit's `safe()` decode at the boundary
+- JSON APIs → JSON-encoding handles its own char-set; no HTML escaping needed
+
+**Pattern for new surfaces:** any new customer-facing surface that reads from the database must NOT assume strings are clean if any pre-v3.8.d.2 data may be present. Use `decodeHtmlEntities` defensively until a full data audit confirms clean. v3.8.d.2 included a one-time decode script at `backend/scripts/decode-encoded-load-fields.ts` (idempotent, multi-pass-safe per v3.8.d.3 update) for cleanup of legacy encoded data.
+
+**Lesson for future architectural decisions:** input-time HTML escaping is double-escape on output anyway (templating engines auto-escape). Defense-in-depth is good; doing the same defense twice in different layers is corruption.
 
 ---
 
@@ -463,21 +497,91 @@ Marketing content rules (§4, §5) do **NOT** apply to these surfaces:
 
 ## §13 DEFERRED POLISH / CLEANUP QUEUE (non-blocking)
 
-- **Internal AE dashboard fixture personas** — `ae/financials.html:137` contains "Michael Reeves" and possibly other fabricated persona names. Replace with generic labels (Customer #1, Customer #2) before any public demo, investor presentation, or external screen-share. Internal tooling only, not marketing surface.
-- **v3.6.j sidebar logo clickability** — 31 portal/AE sidebar logos to be made clickable to dashboards. Non-critical polish.
-- **Phase 5 CSS variable consolidation** — Option C from v3.7.f. Consolidate shared CSS variables into a proper variables file instead of `:root` injections in `utilities.css`.
-- **Phase 5 visual rebalance** — /carriers and site-wide over-dark color palette; cream/off-white section backgrounds needed; typography audit for mobile readability. Includes BOL / rate confirmation visual redesign (design asset staged in Google Drive by Wasi, slots into Phase 5).
-- **README.md fix** — `README.md:3` uses "Asset-based carrier management and freight brokerage platform" — same mischaracterization removed from marketing in v3.7.d. README is dev-facing (internal), not marketing (external), so Phase 4 rules don't strictly apply. Fix as a separate micro-commit before Phase 6 external demos.
-- **MEMORY.md cleanup** — after CLAUDE.md §2 (Architecture) and §13 (Deferred Queue) ship, MEMORY.md has duplicated content. Trim MEMORY.md to only session-specific notes. Do NOT do in same commit as CLAUDE.md consolidation (atomic commits rule, §3.3).
-- **Phase 5E — BOL QR + `/track` + source-of-truth verification.** BOL v2.8 (`BOLTemplate.tsx`) renders a QR code labeled "TRACK" encoding a `/track/<bolId>` destination. Three verification gaps before a real dispatched BOL:
-  1. Confirm `pdfService.ts` / `BOLTemplate.tsx` QR generation actually encodes the correct production URL (not `localhost`, not a placeholder).
-  2. Confirm `/track/:bolId` route exists, renders publicly on `silkroutelogistics.ai`, and degrades gracefully for unknown IDs.
-  3. Confirm `/track` data source of truth is the Track & Trace AE Console module — specifically that public `/track` renders the most recent check-call note OR GPS ping from the T&T service, not a stale cache or fixture. Verify read-only projection is correctly scoped (no PII leak: driver names / phone numbers must NOT appear on public `/track`).
+Sequenced backlog. Ordering is deliberate: items earlier in the list should be done before items later.
 
-  Execute as Phase 5E with its own audit-first command.
-- **F5 — Marketing nav "Track" link flip.** `site-chrome.json` `navItems` currently points "Track" to `/tracking.html` (legacy static page). After Phase 5E.c confirms `/track` flat route is stable with real token-based lookups, flip the nav link to `/track`. Not in 5E scope strictly — marketing page edit requires its own smoke test (`inject-chrome.mjs` regeneration across 13 pages).
-- **EditLoadModal — post-conversion load editing UI** — surfaced 2026-04-29 during v3.8.d.4 BOL audit. Backend has the capability via `PUT /loads/:id` (`updateLoad` controller, accepts `createLoadSchema.partial()`, authorized for BROKER/ADMIN/CEO/DISPATCH); frontend has zero callers. Today the only post-conversion UI is the Order Builder's amber banner which warns "Editing here will not change the dispatched load." Operations gap: when a customer changes a PO/weight/pickup-window after conversion, ops has no UI path to update the load — only cancel+recreate, dev-tools API call, or DB edit. Phase 6 sprint: build EditLoadModal mirroring Order Builder fields, gated by status (only fully editable up to LOADED — once IN_TRANSIT, fields like origin/dest shouldn't change because the carrier is executing), and write back to source `order.formData` so re-printed BOLs stay in sync. Effort: ~100-200 lines, single sprint. Full diagnostic in regression-log.md "Phase 6 — Architecture & Refactors" section.
-- **Track & Trace status-advancement controls** — surfaced 2026-04-29. The Load Board has row-level "advance to next status" buttons (e.g. PICKED_UP → "In Transit" button at [page.tsx:98](frontend/src/app/dashboard/loads/page.tsx#L98)). The Track & Trace module — meant to be the operational dispatcher's surface for in-flight loads — has zero status-advancement UI; dispatchers must bounce back to Load Board for every status update. Backend transitions are valid (VALID_TRANSITIONS table allows PICKED_UP → IN_TRANSIT, AT_DELIVERY → DELIVERED, etc.) and the wired endpoint (`PATCH /loads/:id/status`) is the same one the Load Board uses. Phase 6: add status-advancement control to the T&T LoadDetailDrawer header, reusing the same `updateStatus` mutation and `STATUS_ACTIONS` map from Load Board. Small change, big UX win.
+### §13.1 Active state
+
+Phase 6.1 closed at v3.8.e.2. No active sprint. Phase 6.2 awaiting scoping.
+
+### §13.2 Pre-Phase-6.2 housekeeping
+
+Should complete before next sprint kickoff:
+
+1. **Migration script run against prod** — `backend/scripts/decode-encoded-load-fields.ts`. Idempotent, multi-pass-safe. Walks 19 fields on loads table, decodes pre-v3.8.d.2 encoded values in place. Run once and confirmed clean (4 loads decoded incl. one 6-times-encoded outlier) on 2026-04-29; **rerun if any pre-v3.8.d.2 data is still suspected** in surfaces beyond the loads table.
+
+2. **Phase 5E.c — T&T source-of-truth scoping decision** (decision document, not code). Cover current state (manual AE Console updates per SOP cadence), future state (Samsara/Motive ELD integration scoped per Phase 5/Phase 6 boundary), customer-facing visibility rules (what shows on `/tracking` vs internal). Output: `docs/architecture/track-and-trace-source-of-truth.md`. ~30–60 min thinking + writing. Note: Phase 5E gaps #1 + #2 already closed via the live `/tracking` page discovered during v3.8.c verification.
+
+### §13.3 Phase 6.2 sprint candidates
+
+Each is a discrete sprint. Mix of operational, security, UX, and technical debt. Pick deliberately.
+
+**Operational (impacts daily AE workflow):**
+
+3. **EditLoadModal — post-conversion load edit UI.** Backend has the capability via `PUT /loads/:id` (authorized BROKER/ADMIN/CEO/DISPATCH); frontend has zero callers. The Order Builder's converted-order banner (v3.8.d.3) warns "Editing here will not change the dispatched load" — true, because the form writes to `order.formData`, never to the live Load. When customers change PO/weight/window/commodity post-conversion, ops staff has no UI path to update — only cancel+recreate, dev-tools API call, or DB edit. **Pre-sprint scoping required:** status-by-field permission matrix (e.g., can origin/dest change at BOOKED? can pickup time change at DISPATCHED? what's locked at IN_TRANSIT?). Effort: 100–200 lines, single sprint.
+
+4. **Order Builder origin/destContactName + Phone capture.** Closes the `Contact: — · —` gap visible on every BOL printed this week. Order Builder doesn't capture facility-level contact info today; BOL template renders em-dash fallback. 4 new form fields, wire to existing schema fields, BOL renders correctly via existing v3.8.d.1 binding. Effort: ~30–50 lines.
+
+5. **BOL page-1 footer collision.** `SEAL #` / `DATE` labels overlap with `Where Trust Travels.` tagline at the bottom of the carrier signature block. Visible on every BOL but cosmetic. Coordinate fix in `pdfService.ts`. ~20 lines.
+
+**Security / Portal completeness:**
+
+6. **Portal Approval UI S-3** — pairs with v3.8.e.1's gate. AE Console approve button at `/dashboard/shippers` (dedicated surface, mirror of `dashboard/carriers/page.tsx:730` pattern). Includes "Shipper application under review" UX page (paired requirement from v3.8.e.1 — the friendly message rendering when shipper hits the gate). Without this UI, the approval workflow is "manually flip onboardingStatus in Neon SQL editor." Effort: medium sprint, AE Console UI work.
+
+7. **Credit check integration** — service TBD (Experian Business, D&B, manual SOP). Once picked, wire into S-2 gate as prerequisite for APPROVED status. Decision needed before implementation.
+
+8. **Carrier self-service onboarding UI** — upload COI / W9 / Authority letter, view application status. Schema supports flags (`w9Uploaded`, `insuranceCertUploaded`, `authorityDocUploaded`) but no carrier-facing UI exists. Required to move from carrier "under review" dead-end to actionable workflow.
+
+**UX / Visual:**
+
+9. **`/shipper` landing page divergence** — page diverges from marketing-site visual system (dark theme vs cream, separate brand expression). Two options: redesign to match, OR delete entirely if homepage `/shippers.html` covers same intent. v3.8.e.2 fixed the sidebar link so authenticated shippers don't land here accidentally; this is the underlying page itself. Tracked in `regression-log.md` under "Phase 6 — Portal + Public Page Visual Alignment".
+
+10. **Theme system root fix** — `[data-mode="light"] .text-slate-*` `!important` overrides in `globals.css` (lines 162–173). Current scheme remaps dark-mode Tailwind text classes in light mode, which backfires on modals/panels with hardcoded dark backgrounds. Options: scope overrides to exclude dark-surface containers, OR remove global remap and theme components explicitly, OR adopt `.dark-surface` opt-in class. Affects 14+ surfaces.
+
+**Production reliability (added during v3.8.e.1 verification):**
+
+11. **CSP allowlist completeness** — multiple CSP violations observed: `script-src` blocks Sentry inline scripts; `worker-src` not explicitly set, blocking blob: workers; `connect-src` doesn't include `*.ingest.sentry.io` (errors in production SHIPPER sessions go uncaptured by Sentry). Phase 6 fix: audit and update CSP allowlist in `securityHeaders` config.
+
+12. **React #418 hydration mismatch on `/auth/login`** — observed in console: "Hydration failed because the initial UI does not match what was rendered on the server." Server/client render divergence. Production-reliability concern.
+
+**Architectural debt (defer until ops stable):**
+
+13. **Load Board "New Load" modal vs. Order Builder overlap** — Load Board `+ New Load` (`CreateLoadModal`, 4-step wizard, ~15 fields) duplicates Order Builder (~40 fields with facility lookups, PU/DEL windows, dispatch method, pricing intelligence, tender configuration). Two surfaces for one task. Flagged in regression-log.
+
+14. **Convert-to-load architectural refactor** — `routes/orders.ts:242-338` writes directly via `prisma.load.create` instead of calling controller. v3.8.c added `buildLineItems` export as bandaid; long-term refactor would route through `loadController.createLoad`. Also affects `shipperPortalController:816` and `emailToLoadService:470` (other Load write paths with same bypass pattern).
+
+15. **`carrierAuth.ts` duplication with shared `authController.ts`** — password-expiry, TOTP, session registration are duplicated. Only the approval gate is carrier-specific. Refactor candidate once portal patterns stabilize.
+
+16. **`CarrierProfile.onboardingStatus` vs. `status` enum redundancy** — two overlapping status enums on same model. Only `onboardingStatus` gates login. Consolidate or document the divide.
+
+17. **BOL multi-line page-2 dynamic rendering** — v3.8.d caps page-1 at 10 rows with overflow footer. For loads exceeding cap, page 2+ should render the overflow with proper pagination (header/footer carried, totals on final page). Apollo-shipped loads will be 1–3 lines in practice so cap is defensive only.
+
+**Smaller cleanups:**
+
+18. **NMFC catalog + density-based class auto-suggest** — Order Builder enhancement. Lookup table for NMFC numbers by commodity. Density calculation from L×W×H + weight → suggest freight class.
+
+19. **Order Builder F: PU/DEL window time inline with dates** — current Route section renders pickup-date + window across two rows; AE requested date + window on one row.
+
+20. **Order Builder G: CRM facility operating-hours auto-populate** — when origin/dest facility is picked via `FacilityPicker`, read `CustomerFacility.operatingHours` for the pickup/delivery weekday and auto-fill window times. Partial implementation observed during v3.8.c testing; needs full coverage + edge cases.
+
+21. **Load number sequence reformatting (start at L10012)** — Wasi-requested during v3.8 epic, deferred. Affects all existing references, purely cosmetic. Phase 6 cleanup if at all.
+
+22. **Working tree noise** — multiple `package-lock.json` modifications, `my-knowledge-base/**` mods, `.claude/settings.local.json`, IDE 0-byte placeholders. Pre-existing noise. `git stash` before each new feature commit. Add to `.gitignore` where appropriate.
+
+23. **AE Console "super dark" tabs (S6 family P1)** — UI track, separate from BOL/tracking. Open since pre-v3.7. Either resurrect and finish, or formally retire.
+
+24. **`/accounting/approvals` naming collision** — route is for carrier payment-settlement approvals (AR), but "approvals" reads as portal approval. Rename to `/accounting/payment-approvals` when next touched.
+
+25. **Orphan marketing pages in `frontend/public/`** — `login.html` + `register.html` at root alongside `auth/login.html` and `auth/register.html`. Decide canonical, redirect duplicates.
+
+26. **Dead `.login-dropdown` CSS block** in `utilities.css` (lines 191–238). Likely abandoned redesign remnant. Remove once confirmed unused.
+
+27. **MEMORY.md** — audit existence + currency, update or formally retire. Per §13 historical reference.
+
+**CI / Testing gaps:**
+
+28. **E2E smoke tests for SHIPPER/CARRIER portal login flows** — the 2026-02-23 → 2026-04-23 regression went undetected for 2 months because no such test exists. Cypress or Playwright. Min coverage: valid creds → OTP → reach dashboard; invalid creds rejected; OTP expiry. The v3.8.e.1 SHIPPER gate is now an additional case requiring coverage (PENDING blocked, APPROVED passes).
+
+29. **CI regression assertion on auth store usage** — unit test asserting `useAuthStore.token` and `useCarrierAuth.token` are never used as auth guards in dashboard layouts (grep-based lint). Would have caught the 172d6f3b regression at commit time.
 
 ---
 
@@ -502,6 +606,7 @@ Marketing content rules (§4, §5) do **NOT** apply to these surfaces:
 - **VS Code Claude Code extension** is the primary surface; commits via bash `git` in the integrated terminal.
 - **Shell working directory persists** between Bash calls (e.g. `cd backend` sticks). Use absolute paths (`git -C "c:/Users/..."`) or explicit `cd` at the start of each command if the state matters.
 - **Exit code 1 from `grep -c` returning zero matches** — this is expected and healthy (grep conventions). If a background Bash ends with a regression-grep that returns zero prohibited-string hits, the whole pipeline "fails" with exit 1 even though the result is a PASS. Read the output, not just the status.
+- **`LogSeverity` enum uses `WARNING`, not `WARN`** — non-standard naming. Caught during v3.8.e.1 build (TS2322 error: `'WARN' is not assignable to LogSeverity`). Most observability platforms (Datadog, Sentry, Pino, Winston) use `WARN`. If logging infrastructure is migrated, the enum mismatch will resurface — worth normalizing during any logging refactor. Today: always write `WARNING` when constructing SystemLog records.
 
 ---
 
@@ -513,6 +618,42 @@ Marketing content rules (§4, §5) do **NOT** apply to these surfaces:
 4. **Carrier onboarding welcome email final verification** before first real carrier touches it (v3 language confirmed at `routes/carriers.ts:614` in v3.7.h; re-verify before go-live)
 5. **`compliance@silkroutelogistics.ai` alias monitoring cadence** confirmed (published on CarrierFraudBanner since v3.7.e)
 6. **Insurance verification** — contingent broker coverage via PFA Protects + LOGISTIQ Broker Shield. Confirm policies active, not just in application state.
+
+---
+
+## §17 SECURITY GATE VERIFICATION METHODOLOGY
+
+Documents the smoke-verification pattern used for v3.8.e.1 (SHIPPER approval gate) so future security gates can be verified the same way.
+
+### When to apply
+
+Any sprint that adds or modifies role-based access controls, approval gates, status-based authorization, or session-issuance logic. Prevents shipping security features without empirical verification of the gate firing.
+
+### Permanent test fixtures
+
+Two SHIPPER users in production DB serve as permanent test fixtures:
+
+- **`shipper@acmemfg.com`** (Robert Mitchell / Acme Manufacturing) — kept at `onboardingStatus = PENDING` indefinitely. Use for verifying SHIPPER-gate behavior on PENDING users without disturbing real shipper accounts.
+- **`wasihaider3089@gmail.com`** (Wasi / Haider Logistics) — kept at `APPROVED`. Use for positive-path testing.
+
+Do not flip the Acme fixture to APPROVED. Do not delete it.
+
+### Verification methodology (from v3.8.e.1 smoke)
+
+1. Open incognito browser window (clean session state)
+2. Open DevTools → Network tab → check "Preserve log"
+3. Navigate to login flow
+4. Attempt login as PENDING user (Acme fixture, OR temporarily-flipped real account)
+5. Submit credentials and OTP
+6. Capture status code on the relevant verify-OTP request
+7. Expected: 403 status, user not redirected to dashboard, no session token issued
+8. If using a temporarily-flipped real account: revert via SQL after test
+
+**Important:** "Preserve log" only preserves request entries through navigation/redirect; response bodies may be GC'd. The 403 status alone is the security signal — message body verification is UX, not security.
+
+### Known limitation
+
+Response body inspection on auth-gate failures is unreliable in DevTools because the failure typically triggers a redirect that wipes response data from the network panel. UX message rendering should be verified separately — either via backend logs (Render dashboard) or as part of the proper "application under review" page when that ships in S-3.
 
 ---
 
