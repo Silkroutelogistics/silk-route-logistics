@@ -531,6 +531,13 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 8. **Carrier self-service onboarding UI** — upload COI / W9 / Authority letter, view application status. Schema supports flags (`w9Uploaded`, `insuranceCertUploaded`, `authorityDocUploaded`) but no carrier-facing UI exists. Required to move from carrier "under review" dead-end to actionable workflow.
 
+**Dispatch lifecycle controls — pairs with v3.8.j (post-conversion):**
+
+8.1. **v3.8.k — Dispatch method switching UI.** Surfaced 2026-04-30 alongside v3.8.j tender-workflow audit. Backend has the plumbing: `Load.dispatchMethod` is a writable field (`waterfall` / `loadboard` / `direct_tender` / `dat`), `PUT /loads/:id` accepts `createLoadSchema.partial()` so the field can be patched, and a `dispatch_method_changed` event type already exists in `waterfallEventService.ts:26`. Frontend has zero callers — once a load is created via Order Builder's 4-button picker, dispatch method is locked for the load's lifetime with no UI to change it. Operations gap: when the chosen method isn't producing results (e.g., waterfall has no eligible carriers, or a direct-tender carrier declined), AE has no UI path to switch dispatch method without DB edit or full cancel+recreate. **Sprint shape:** add a "Change dispatch" dropdown on Load Board row (or in load detail drawer) with confirmation dialog ("This will cancel 3 pending tenders. Continue?"); backend handles atomic side effects per direction:
+   - **Loadboard → Waterfall:** set `dispatchMethod='waterfall'` + `visibility='waterfall'` (hides from open loadboard) + `buildWaterfall(loadId, { mode: 'full_auto' })` + `startWaterfall(wf.id)`. Decision needed: cancel any OFFERED/COUNTERED tenders from the loadboard era OR leave them?
+   - **Waterfall → Loadboard:** set `dispatchMethod='loadboard'` + `visibility='open'` + halt active waterfall (mark WaterfallRun halted, cancel pending OFFERED tenders to stop their 20-min windows ticking). Now visible on open Load Board to all approved carriers.
+   - Same shape for direct_tender ↔ any, and dat ↔ any. ~150-200 lines, single sprint. Naturally pairs with v3.8.j (tender-workflow consolidation) since both are post-conversion dispatch lifecycle controls — could ship as a paired duo.
+
 **UX / Visual:**
 
 9. **`/shipper` landing page divergence** — page diverges from marketing-site visual system (dark theme vs cream, separate brand expression). Two options: redesign to match, OR delete entirely if homepage `/shippers.html` covers same intent. v3.8.e.2 fixed the sidebar link so authenticated shippers don't land here accidentally; this is the underlying page itself. Tracked in `regression-log.md` under "Phase 6 — Portal + Public Page Visual Alignment".
