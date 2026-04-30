@@ -751,6 +751,24 @@ export default function OrderBuilderPage() {
                     <button type="button" onClick={() => setManualOriginMode(false)} className="text-[10px] text-slate-400 hover:text-white">← Back to saved facilities</button>
                   </div>
                 )}
+                {/* v3.8.g — Contact fields. Auto-populated by FacilityPicker
+                    when a saved facility with contactName/contactPhone is
+                    selected; otherwise typed manually. Optional; BOL renders
+                    em-dash fallback per v3.8.d.1 binding when blank. */}
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <input
+                    placeholder="Contact name"
+                    value={form.originContactName}
+                    onChange={(e) => setForm((f) => ({ ...f, originContactName: e.target.value }))}
+                    className={inp}
+                  />
+                  <input
+                    placeholder="Contact phone"
+                    value={form.originContactPhone}
+                    onChange={(e) => setForm((f) => ({ ...f, originContactPhone: e.target.value }))}
+                    className={inp}
+                  />
+                </div>
               </div>
 
               {/* Destination */}
@@ -776,6 +794,21 @@ export default function OrderBuilderPage() {
                     <button type="button" onClick={() => setManualDestMode(false)} className="text-[10px] text-slate-400 hover:text-white">← Back to saved facilities</button>
                   </div>
                 )}
+                {/* v3.8.g — Contact fields. See origin block above. */}
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <input
+                    placeholder="Contact name"
+                    value={form.destContactName}
+                    onChange={(e) => setForm((f) => ({ ...f, destContactName: e.target.value }))}
+                    className={inp}
+                  />
+                  <input
+                    placeholder="Contact phone"
+                    value={form.destContactPhone}
+                    onChange={(e) => setForm((f) => ({ ...f, destContactPhone: e.target.value }))}
+                    className={inp}
+                  />
+                </div>
               </div>
             </div>
 

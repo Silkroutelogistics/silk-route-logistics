@@ -1360,7 +1360,54 @@
 //          site stays logged under Phase 6 —
 //          "Portal + Public Page Visual Alignment"
 //          for a separate cleanup pass.
-export const SRL_VERSION = "3.8.e.2";
+// v3.8.g — Order Builder origin/destination contact
+//          capture (Phase 6.2 sprint). Closes the
+//          Contact: — · — em-dash gap visible on
+//          every BOL since v3.8.d.1 (BOL template
+//          binding correctly reads from
+//          load.originContactName / destContactName
+//          + Phone but Order Builder had no UI inputs
+//          to capture these fields when a facility
+//          wasn't picked OR when a picked facility
+//          lacked contact info).
+//
+//          Audit found the entire data plumbing was
+//          already in place: schema fields exist on
+//          Load model, form types declare all 4,
+//          form state defaults to "", FacilityPicker
+//          auto-populates on facility selection,
+//          backend convert-to-load maps form→DB,
+//          BOL template renders correctly. The ONLY
+//          gap was UI inputs.
+//
+//          Single-file fix: 4 input fields added to
+//          Order Builder Section 2 (Route) — origin
+//          contact name + phone, dest contact name +
+//          phone — placed inside each side's grid
+//          column directly below the FacilityPicker /
+//          manual-address block. 2-column inner grid
+//          (name + phone side-by-side) per origin /
+//          destination side.
+//
+//          Per pre-sprint decisions: optional fields
+//          (no submission block; em-dash fallback
+//          stays graceful), free-text phone (freight
+//          contexts have extensions, "ask for Bob",
+//          international numbers — accept what's
+//          typed). Both reversible based on AE
+//          workflow feedback.
+//
+//          Out of scope (separate Phase 6 sprints):
+//          - CRM facility auto-populate (Item G)
+//          - Phone validation library
+//          - Contact directory autocomplete
+//          - Multi-contact per facility
+//          - Carrier-side contact fields
+//
+//          PII scope on public /tracking unchanged —
+//          contacts stay internal per T&T source-of-
+//          truth doc §2.
+export const SRL_VERSION = "3.8.g";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
