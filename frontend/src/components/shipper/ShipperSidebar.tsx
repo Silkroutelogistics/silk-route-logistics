@@ -73,8 +73,15 @@ export function ShipperSidebar() {
 
       {/* Bottom controls */}
       <div className="py-3 px-2 border-t border-[#C9A84C]/10">
+        {/* v3.8.e.2 — link target was /shipper (the divergent legacy
+            shipper-prospect landing) which surprised authenticated
+            shippers expecting to return to the public marketing site.
+            Mirroring the CarrierSidebar pattern: "Back to Website"
+            means the homepage. The /shipper page divergence itself
+            stays logged under Phase 6 — Portal + Public Page Visual
+            Alignment for separate cleanup. */}
         <Link
-          href="/shipper"
+          href="/"
           className="flex items-center gap-3 rounded-lg py-2 mt-0.5 px-3 justify-start hover:bg-white/5"
         >
           <ArrowLeft size={18} className="text-gray-400" />

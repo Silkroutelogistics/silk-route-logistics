@@ -1343,7 +1343,24 @@
 //            changes
 //          - Auto-approval logic — explicitly out;
 //            manual approval only for now
-export const SRL_VERSION = "3.8.e.1";
+// v3.8.e.2 — ShipperSidebar "Back to Website" link
+//          target. Surfaced 2026-04-30 during v3.8.e.1
+//          smoke test: clicking the bottom-left link
+//          on /shipper/dashboard dumped users on the
+//          divergent legacy /shipper prospect-landing
+//          page instead of the public marketing
+//          homepage. CarrierSidebar gets this right
+//          (links to /); ShipperSidebar was linking
+//          to /shipper.
+//
+//          One-line fix: ShipperSidebar.tsx href
+//          /shipper → /, mirroring the carrier
+//          pattern. The /shipper page's design
+//          divergence from the rest of the marketing
+//          site stays logged under Phase 6 —
+//          "Portal + Public Page Visual Alignment"
+//          for a separate cleanup pass.
+export const SRL_VERSION = "3.8.e.2";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
