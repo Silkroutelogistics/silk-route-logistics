@@ -1441,7 +1441,69 @@
 //          at v2.9; this is a coordinate fix within
 //          the existing template, not a template
 //          version bump.
-export const SRL_VERSION = "3.8.h";
+// v3.8.i.1 — Public /tracking PII hardening:
+//          strip carrierFirstName + type the
+//          loadSelect allowlist.
+//
+//          2026-04-30 read-only audit of
+//          trackingController.ts confirmed the public
+//          /tracking serializer is structurally
+//          secure (two-layer allowlist: Prisma select
+//          + explicit res.json construction). All 17
+//          listed sensitive fields confirmed stripped
+//          — carrierId, carrierRate, totalCarrierPay,
+//          driverName, driverPhone, internal notes,
+//          customer rate, margin %, target carrier
+//          cost, etc. checkCalls correctly gated on
+//          accessLevel === FULL. The audit produced
+//          one finding requiring remediation and one
+//          defensive improvement.
+//
+//          Finding #1 — carrierFirstName surfaced
+//          publicly when a load had a carrier
+//          assigned. Diverged from CLAUDE.md §2 / T&T
+//          source-of-truth doc §2 stated policy
+//          ("Carrier name — renders as '—'. Public
+//          should not see which carrier is hauling —
+//          carrier solicitation prevention"). Test
+//          loads rendered "—" only because they had
+//          no carrier assigned — the moment a real
+//          tendered+accepted load went public, first
+//          name would have leaked.
+//          Fix: removed `carrier: { select: {
+//          firstName: true } }` from loadSelect AND
+//          removed `carrierFirstName` from the
+//          response object. Two-layer strip.
+//
+//          Finding #6 — `loadSelect: any` meant
+//          TypeScript couldn't catch typo-level field
+//          additions at compile time. Belt-and-
+//          suspenders fix: changed to `loadSelect:
+//          Prisma.LoadSelect`. Compile-clean confirms
+//          no latent type mismatches in the file.
+//
+//          Frontend impact: zero. The legacy
+//          public/tracking.html consumer at line 300
+//          reads `d.carrierFirstName || '—'` with
+//          existing em-dash fallback, so absence
+//          renders cleanly. The React /track route
+//          (frontend/src/app/track/page.tsx) doesn't
+//          reference carrier or firstName at all.
+//          AE Console + Shipper Portal use separate
+//          authenticated endpoints — unaffected.
+//
+//          T&T source-of-truth doc §2 unchanged — it
+//          was already authoritative; this commit
+//          aligns code to it. Carrier solicitation
+//          prevention preserved at all load states.
+//
+//          Audit findings #2-#5 (defense-in-depth
+//          pattern, conditional accessLevel gating,
+//          lat/lon properly never selected, token
+//          enumeration as known acceptable risk per
+//          T&T doc §5.3) require no remediation —
+//          working as intended.
+export const SRL_VERSION = "3.8.i.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

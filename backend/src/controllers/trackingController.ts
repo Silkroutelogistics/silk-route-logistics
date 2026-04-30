@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 import { calculatePredictiveETA } from "../services/predictiveEtaService";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
@@ -45,7 +46,11 @@ export async function getPublicTracking(req: Request, res: Response) {
     accessLevel = shipperToken.accessLevel;
   }
 
-  const loadSelect: any = {
+  // v3.8.i.1 — Typed allowlist (was `any`). Prisma.LoadSelect catches
+  // typo-level field additions at compile time as a belt-and-suspenders
+  // gate alongside the explicit res.json() construction below. Per
+  // 2026-04-30 PII audit finding #6.
+  const loadSelect: Prisma.LoadSelect = {
     id: true,
     referenceNumber: true,
     status: true,
@@ -64,7 +69,11 @@ export async function getPublicTracking(req: Request, res: Response) {
     tempMin: true,
     tempMax: true,
     podUrl: true,
-    carrier: { select: { firstName: true } },
+    // v3.8.i.1 — `carrier` join removed. Per CLAUDE.md §2 / T&T source-of-
+    // truth doc §2: "Carrier name renders as '—'. Public should not see
+    // which carrier is hauling — carrier solicitation prevention." The
+    // pre-v3.8.i.1 select { firstName } was a quiet leak — only invisible
+    // because no test loads had carriers assigned. Code now matches doc.
     customer: { select: { name: true } },
     checkCalls: {
       select: { status: true, city: true, state: true, etaUpdate: true, createdAt: true },
@@ -172,7 +181,10 @@ export async function getPublicTracking(req: Request, res: Response) {
     deliveryDate: load.deliveryDate,
     actualPickup: load.actualPickupDatetime,
     actualDelivery: load.actualDeliveryDatetime,
-    carrierFirstName: decodeOpt(load.carrier?.firstName) || null,
+    // v3.8.i.1 — `carrierFirstName` field removed from response. Layer-2
+    // allowlist (this object) now matches Layer-1 (loadSelect above).
+    // Frontend consumer at public/tracking.html:300 reads
+    // `d.carrierFirstName || '—'` so absence renders em-dash gracefully.
     shipperName: decodeOpt(load.customer?.name) || null,
     lastLocation,
     estimatedDelivery: eta,
