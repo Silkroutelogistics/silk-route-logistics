@@ -59,9 +59,24 @@ export interface NextStatusAction {
  *
  * Callers render an advance button when this returns non-null; suppress it
  * when null. Same pattern Load Board has used since v3.4.x.
+ *
+ * v3.8.j — POSTED returns null. Pre-v3.8.j the helper returned
+ * { label: "Tender", nextStatus: "TENDERED" } for POSTED loads, which
+ * AE users mistook for the real carrier-tender action. The button just
+ * flipped the status flag without a carrier ever being assigned, walking
+ * the load through TENDERED → CONFIRMED → BOOKED purely as status changes.
+ * Bug surfaced on L6894191249 (2026-04-30). Real tendering must go
+ * through the Tender modal, which creates a LoadTender record + carrier
+ * assignment; on acceptance the load reaches BOOKED via
+ * tenderController.acceptTender automatically. The status-advance helper
+ * resumes at BOOKED ("Dispatch") onward. Backend has a matching
+ * carrier-required state-machine gate in updateLoadStatus as
+ * defense-in-depth — the helper here is the UX layer; the backend gate
+ * is the security layer.
  */
 export function getNextStatusAction(currentStatus: string | undefined | null): NextStatusAction | null {
   if (!currentStatus) return null;
+  if (currentStatus === "POSTED") return null;
   const nextStatus = NEXT_STATUS[currentStatus];
   const label = STATUS_ACTIONS[currentStatus];
   if (!nextStatus || !label) return null;

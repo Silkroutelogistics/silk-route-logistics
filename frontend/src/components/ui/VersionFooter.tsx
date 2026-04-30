@@ -1503,7 +1503,78 @@
 //          enumeration as known acceptable risk per
 //          T&T doc §5.3) require no remediation —
 //          working as intended.
-export const SRL_VERSION = "3.8.i.1";
+// v3.8.j — Tender-workflow correctness: 3-layer fix
+//          for the L6894191249 bug surfaced
+//          2026-04-30. The Load Board's blue
+//          status-advance button labeled "Tender"
+//          (POSTED → TENDERED transition) was being
+//          mistaken for the real carrier-tender
+//          action. Clicking it just flipped the
+//          status flag with no carrier involved,
+//          walking loads through TENDERED → CONFIRMED
+//          → BOOKED purely as status changes. On the
+//          BOOKED transition, a quiet auto-assign at
+//          loadController.ts:477 set carrierId =
+//          req.user!.id (the calling AE user, not a
+//          real carrier) — making the load show
+//          "Silk Route Logistics Inc." as carrier in
+//          internal views.
+//
+//          Layer 1 — Backend: removed the line-477
+//          carrier auto-assign clause from
+//          updateLoadStatus. The clause auto-assigned
+//          the calling user as carrier on BOOKED,
+//          which was correct only for the carrier-
+//          portal flow (where caller IS the carrier).
+//          Wrong for AE Console. carrier-portal
+//          status updates flow through
+//          carrierUpdateStatus which already requires
+//          carrierId === req.user.id (line 634), so
+//          it never relied on this auto-assign.
+//          Carrier assignment now exclusively goes
+//          through tenderController.acceptTender —
+//          the canonical path that atomically sets
+//          carrierId + status=BOOKED in one
+//          transaction with compliance check.
+//
+//          Layer 2 — Backend: added carrier-required
+//          state-machine gate in updateLoadStatus.
+//          Transitions INTO TENDERED / CONFIRMED /
+//          BOOKED via PATCH /loads/:id/status now
+//          require existing.carrierId !== null —
+//          returns friendly 400 if missing ("Cannot
+//          transition to <STATUS> without an
+//          assigned carrier. Use the Tender modal..."
+//          ). acceptTender is unaffected since it
+//          writes Load directly and never calls
+//          updateLoadStatus.
+//
+//          Layer 3 — Frontend: suppressed the
+//          status-advance button for POSTED loads in
+//          two surfaces:
+//          - Load Board page.tsx — JSX condition
+//            `load.status !== "POSTED"`
+//          - lib/loadStatusActions.ts —
+//            getNextStatusAction returns null for
+//            POSTED (T&T LoadDetailDrawer uses this)
+//          Both surfaces now force AE through the
+//          Tender modal for POSTED loads. Status-
+//          advance reappears at BOOKED ("Dispatch")
+//          onward, after acceptTender has set
+//          carrierId.
+//
+//          Recovery: existing test load L6894191249
+//          (status=BOOKED with carrierId pointing at
+//          Wasi/SRL) is left as a test artifact; not
+//          worth a manual DB fix. Future loads will
+//          flow through the corrected workflow.
+//
+//          Paired sprint v3.8.k logged separately to
+//          §13.3 Item 8.1 — dispatch method
+//          switching UI (waterfall ↔ loadboard). Both
+//          are post-conversion dispatch lifecycle
+//          controls.
+export const SRL_VERSION = "3.8.j";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

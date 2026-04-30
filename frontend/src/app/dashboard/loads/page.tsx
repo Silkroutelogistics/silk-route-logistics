@@ -652,8 +652,22 @@ export default function LoadsPage() {
                         <Send className="w-3 h-3 inline mr-1" />Tender
                       </button>
                     )}
-                    {/* Status advance */}
-                    {canCreate && NEXT_STATUS[load.status] && (
+                    {/* Status advance.
+                        v3.8.j Layer 3 — Suppressed for POSTED loads.
+                        Pre-v3.8.j the button was labeled "Tender" on POSTED
+                        loads, which AE users mistook for the real
+                        carrier-tender action. Clicking it just flipped the
+                        status flag with no carrier involved, walking the
+                        load through TENDERED → CONFIRMED → BOOKED purely as
+                        status changes (the L6894191249 bug, 2026-04-30).
+                        Real tendering goes through the Tender modal
+                        (setShowTender(true) below) which creates a
+                        LoadTender record + carrier assignment, after which
+                        the load reaches BOOKED via tenderController.
+                        acceptTender automatically. The status-advance
+                        button reappears at BOOKED ("Dispatch") and onward
+                        for the rest of the chain. */}
+                    {canCreate && NEXT_STATUS[load.status] && load.status !== "POSTED" && (
                       <button
                         onClick={() => updateStatus.mutate({ loadId: load.id, status: NEXT_STATUS[load.status] })}
                         disabled={updateStatus.isPending}

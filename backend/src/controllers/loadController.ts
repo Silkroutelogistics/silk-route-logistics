@@ -472,9 +472,36 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     return;
   }
 
+  // v3.8.j Layer 2 — Carrier-required state-machine gate. Transitions
+  // INTO TENDERED / CONFIRMED / BOOKED via this endpoint require an
+  // assigned carrier. The canonical carrier-assignment path is
+  // tenderController.acceptTender (which atomically sets carrierId +
+  // status=BOOKED in one transaction and is unaffected by this gate).
+  // This gate prevents the AE Console's status-advance button from
+  // walking a load into BOOKED without ever creating a real LoadTender
+  // — the bug surfaced on L6894191249 (2026-04-30) where the load
+  // advanced through TENDERED → CONFIRMED → BOOKED purely as status
+  // flags with no carrier ever assigned.
+  const requiresCarrier = ["TENDERED", "CONFIRMED", "BOOKED"];
+  if (requiresCarrier.includes(status) && !existing.carrierId) {
+    res.status(400).json({
+      error: `Cannot transition to ${status} without an assigned carrier. Use the Tender modal to offer the load to a carrier first; on acceptance the load will move to BOOKED automatically.`,
+    });
+    return;
+  }
+
+  // v3.8.j Layer 1 — Removed the line-477 carrier auto-assign clause:
+  //   ...(status === "BOOKED" ? { carrierId: req.user!.id } : {})
+  // The clause auto-assigned the CALLING USER as carrier on any BOOKED
+  // transition, which is wrong for the AE Console flow (broker is not
+  // the carrier). Correct for carrier-portal flow lived in
+  // carrierUpdateStatus, but that endpoint requires an already-assigned
+  // carrier (line 634) so it never relied on the auto-assign here.
+  // Carrier-assignment now exclusively flows through
+  // tenderController.acceptTender.
   const load = await prisma.load.update({
     where: { id: req.params.id },
-    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id, ...(status === "BOOKED" ? { carrierId: req.user!.id } : {}) },
+    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id },
   });
 
   // Field-level audit: log status transition
