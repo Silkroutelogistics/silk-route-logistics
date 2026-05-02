@@ -1574,7 +1574,56 @@
 //          switching UI (waterfall ↔ loadboard). Both
 //          are post-conversion dispatch lifecycle
 //          controls.
-export const SRL_VERSION = "3.8.j";
+// v3.8.m — Crawlability lockdown for AE/carrier
+//          internal HTML scaffolding (defense layer).
+//          Surfaced 2026-05-02 from public-pages
+//          audit: 24 /ae/*.html + 10 /carrier/*.html
+//          (34 files total) were publicly crawlable
+//          with no robots directives, AND
+//          /ae/financials.html contained 5 fabricated
+//          customer persona entries flagged in §13.3
+//          Item 1. Search engines may have indexed
+//          pages that misrepresent SRL.
+//
+//          Two-layer defense (this commit ships
+//          defense; v3.8.n ships content cleanup):
+//          - Layer 1 (robots.txt): added Disallow
+//            /ae/, broadened /carrier/dashboard/ →
+//            /carrier/. Compliant crawlers stop
+//            fetching the paths.
+//          - Layer 2 (per-file meta): injected
+//            <meta name="robots" content=
+//            "noindex,nofollow"> into all 34 files
+//            (recursive find — caught 12 nested under
+//            /ae/accounting, /ae/compliance,
+//            /ae/dashboard subdirs that the top-level
+//            ls had missed). Catches non-compliant
+//            crawlers + deep-link discovery.
+//
+//          Defense-in-depth: robots.txt is honored by
+//          major crawlers but not guaranteed; the
+//          per-page meta tag is a stronger signal
+//          that any crawler reaching the page must
+//          not index it.
+//
+//          Public marketing pages (index.html,
+//          carriers.html, contact.html) already had
+//          intentional robots meta tags — left
+//          unchanged.
+//
+//          Post-deploy action item (Wasi-driven):
+//          submit URL removal requests via Google
+//          Search Console for any /ae/* or /carrier/*
+//          URLs already indexed. Removal typically
+//          propagates within 1-2 weeks.
+//
+//          Persona content cleanup ships in v3.8.n
+//          (paired commit, this session): scrubs the
+//          5 fabricated customer contacts in
+//          /ae/financials.html and adds a sticky
+//          "DEMO DATA" banner to all 34 files using
+//          skill-canonical warning tokens.
+export const SRL_VERSION = "3.8.m";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1,9 +1,19 @@
 # Silk Route Logistics — robots.txt
+#
+# v3.8.m — broadened internal-scaffolding exclusions:
+#   - added /ae/  (24 static HTML files; AE Console legacy scaffolding,
+#                  not canonical product pages; some carry placeholder
+#                  data per CLAUDE.md §13.3 Item 1)
+#   - widened /carrier/dashboard/ → /carrier/ (covers all 10 static HTML
+#                  files in the carrier portal scaffolding directory)
+# Defense-in-depth: per-page <meta name="robots" content="noindex,nofollow">
+# also injected into every file under /ae/ and /carrier/.
 User-agent: *
 Allow: /
+Disallow: /ae/
 Disallow: /dashboard/
 Disallow: /accounting/
-Disallow: /carrier/dashboard/
+Disallow: /carrier/
 Disallow: /shipper/dashboard/
 Disallow: /auth/
 Disallow: /api/

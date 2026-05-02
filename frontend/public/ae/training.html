@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="robots" content="noindex,nofollow">
   <script>
 (function(){var A=window.API_URL||'https://api.silkroutelogistics.ai';fetch(A+'/api/build-version').then(function(r){return r.json()}).then(function(d){localStorage.setItem('srl_build_version',d.version)}).catch(function(){})})();
 </script>
@@ -843,7 +844,8 @@
         '</div>';
       }).join('');
 
-      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      var html = '<!DOCTYPE html><html><head>
+  <meta name="robots" content="noindex,nofollow"><meta charset="UTF-8">' +
         '<title>' + sop.id + ' - ' + sop.title + '</title>' +
   <script src="/js/sentry-init.js"></script>
 <link rel="stylesheet" href="/shared/css/utilities.css">
