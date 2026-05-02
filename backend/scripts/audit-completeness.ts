@@ -28,6 +28,17 @@
  * Heuristic, not AST. False positives expected. Read the report
  * critically — every finding is a CANDIDATE for backlog logging, not
  * a definitive bug.
+ *
+ * Triage note (added 2026-05-02 after Tier C reclassification):
+ * "No caller found" is a triage SIGNAL, not an auto-classification.
+ * It does NOT mean "internal-only fired" or "safe to ignore." Every
+ * orphan endpoint needs human verification of caller intent before
+ * bucketing — grep `backend/src/` AND `frontend/src/` for the route
+ * path AND for any service function the route delegates to. An HTTP
+ * endpoint can be dormant from a UI perspective while its underlying
+ * service function is alive and used internally (see tagService
+ * `assignTag` — called by `autoTagEntity` rule engine at line 80,
+ * but POST/DELETE /tags/assign endpoints have zero callers).
  */
 
 import * as fs from "fs";
