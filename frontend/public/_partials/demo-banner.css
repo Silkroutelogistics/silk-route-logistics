@@ -1,0 +1,68 @@
+/**
+ * SRL Demo Data Banner — v3.8.n
+ *
+ * Sticky-top banner injected into all /ae/**\/*.html and /carrier/*.html
+ * scaffolding files to make the "this is sample data, not live SRL
+ * operations" framing impossible to miss for anyone reaching these
+ * pages via deep link, search-result discovery, or screen-share.
+ *
+ * Token compliance per srl-brand-design v4.7 source of truth
+ * (.claude/skills/srl-brand-design/references/tokens.md):
+ *   §7 Status — uses --warning + --warning-bg (not navy + gold-dark)
+ *   §8 Typography — small-caps DEMO DATA label per skill spec
+ *   §9 Spacing — var(--space-3) / var(--space-4) on padding
+ *  §13 Iconography — Lucide AlertTriangle, stroke 1.75
+ *
+ * Tokens scoped to .srl-demo-banner element so they don't leak into
+ * or collide with any existing CSS variables on the host page (the
+ * AE/carrier scaffolding pages have their own :root variable sets).
+ */
+
+.srl-demo-banner {
+  /* skill v4.7 token values — element-scoped to avoid host-page CSS conflicts */
+  --warning-bg: #FBEFD4;
+  --warning: #B07A1A;
+  --fg-1: #0A2540;
+  --gold-dark: #BA7517;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--warning-bg);
+  border-bottom: 1px solid var(--warning);
+  padding: var(--space-3) var(--space-4);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  color: var(--fg-1);
+  font-size: 13px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Reset any inherited text-transform / font-style that some host pages set globally */
+  text-transform: none;
+  font-style: normal;
+}
+
+.srl-demo-banner__icon {
+  flex-shrink: 0;
+  color: var(--warning);
+  display: inline-flex;
+  align-items: center;
+}
+
+.srl-demo-banner__label {
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  color: var(--gold-dark);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.srl-demo-banner__separator {
+  color: var(--gold-dark);
+  margin: 0 2px;
+}

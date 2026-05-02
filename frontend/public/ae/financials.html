@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="/_partials/demo-banner.css">
   <script>
 (function(){var A=window.API_URL||'https://api.silkroutelogistics.ai';fetch(A+'/api/build-version').then(function(r){return r.json()}).then(function(d){localStorage.setItem('srl_build_version',d.version)}).catch(function(){})})();
 </script>
@@ -19,6 +20,12 @@
 <link rel="stylesheet" href="/shared/css/utilities.css">
 </head>
 <body>
+<aside class="srl-demo-banner" role="status" aria-label="Demo data warning">
+  <span class="srl-demo-banner__icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+  <span class="srl-demo-banner__label">DEMO DATA</span>
+  <span class="srl-demo-banner__separator">—</span>
+  <span>Sample values only. No live shipments, customers, or personnel.</span>
+</aside>
   <div class="page">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo"><img src="/logo.png" alt="SRL"><span>SRL Command</span></div>
@@ -135,7 +142,7 @@
           </thead>
           <tbody id="lh-tbody">
             <tr>
-              <td><span class="lh-company">Midwest Manufacturing Co.</span><br><span class="fs-11 text-muted">Michael Reeves, VP Supply Chain</span></td>
+              <td><span class="lh-company">Sample Manufacturing Co.</span><br><span class="fs-11 text-muted">Sample Contact 1, VP Supply Chain</span></td>
               <td>Manufacturing</td>
               <td>Chicago, IL</td>
               <td>40-60 loads/mo</td>
@@ -143,7 +150,7 @@
               <td><button class="lh-action-btn" onclick="addToOutreach(this)">+ Outreach</button></td>
             </tr>
             <tr>
-              <td><span class="lh-company">Great Lakes Automotive Parts</span><br><span class="fs-11 text-muted">Jennifer Walsh, Logistics Director</span></td>
+              <td><span class="lh-company">Sample Auto Parts Co.</span><br><span class="fs-11 text-muted">Sample Contact 2, Logistics Director</span></td>
               <td>Automotive</td>
               <td>Detroit, MI</td>
               <td>25-40 loads/mo</td>
@@ -151,7 +158,7 @@
               <td><button class="lh-action-btn" onclick="addToOutreach(this)">+ Outreach</button></td>
             </tr>
             <tr>
-              <td><span class="lh-company">Southeast Food Distributors</span><br><span class="fs-11 text-muted">Carlos Mendez, Shipping Manager</span></td>
+              <td><span class="lh-company">Sample Food Distributor</span><br><span class="fs-11 text-muted">Sample Contact 3, Shipping Manager</span></td>
               <td>Food & Beverage</td>
               <td>Atlanta, GA</td>
               <td>30-50 loads/mo</td>
@@ -159,7 +166,7 @@
               <td><button class="lh-action-btn" onclick="addToOutreach(this)">+ Outreach</button></td>
             </tr>
             <tr>
-              <td><span class="lh-company">Pacific Chemicals Inc.</span><br><span class="fs-11 text-muted">David Kim, Procurement Lead</span></td>
+              <td><span class="lh-company">Sample Chemicals Co.</span><br><span class="fs-11 text-muted">Sample Contact 4, Procurement Lead</span></td>
               <td>Chemicals</td>
               <td>Los Angeles, CA</td>
               <td>15-25 loads/mo</td>
@@ -167,7 +174,7 @@
               <td><button class="lh-action-btn" onclick="addToOutreach(this)">+ Outreach</button></td>
             </tr>
             <tr>
-              <td><span class="lh-company">Texas Building Supply LLC</span><br><span class="fs-11 text-muted">Sarah Johnson, Operations</span></td>
+              <td><span class="lh-company">Sample Building Supply Co.</span><br><span class="fs-11 text-muted">Sample Contact 5, Operations</span></td>
               <td>Construction</td>
               <td>Dallas, TX</td>
               <td>10-20 loads/mo</td>

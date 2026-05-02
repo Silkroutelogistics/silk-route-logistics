@@ -1623,7 +1623,101 @@
 //          /ae/financials.html and adds a sticky
 //          "DEMO DATA" banner to all 34 files using
 //          skill-canonical warning tokens.
-export const SRL_VERSION = "3.8.m";
+// v3.8.n — Fabricated persona scrub + DEMO DATA
+//          banner (paired with v3.8.m crawlability
+//          lockdown). Closes §13.3 Item 1.
+//
+//          Two changes:
+//
+//          1. Scrubbed 5 fabricated customer contacts
+//             in /ae/financials.html (per-row
+//             company + contact name pairs):
+//             - "Midwest Manufacturing Co. / Michael
+//               Reeves, VP Supply Chain"
+//             - "Great Lakes Automotive Parts /
+//               Jennifer Walsh, Logistics Director"
+//             - "Southeast Food Distributors / Carlos
+//               Mendez, Shipping Manager"
+//             - "Pacific Chemicals Inc. / David Kim,
+//               Procurement Lead"
+//             - "Texas Building Supply LLC / Sarah
+//               Johnson, Operations"
+//             →
+//             - "Sample Manufacturing Co. / Sample
+//               Contact 1, VP Supply Chain"
+//             - "Sample Auto Parts Co. / Sample
+//               Contact 2, Logistics Director"
+//             - "Sample Food Distributor / Sample
+//               Contact 3, Shipping Manager"
+//             - "Sample Chemicals Co. / Sample
+//               Contact 4, Procurement Lead"
+//             - "Sample Building Supply Co. / Sample
+//               Contact 5, Operations"
+//             Industry-real role titles preserved
+//             (per directive — not fabrications).
+//             Cities also preserved (geographic
+//             references not persona-shaped).
+//
+//          2. Sticky-top "DEMO DATA" banner
+//             injected into all 34 internal HTML
+//             files (24 /ae/**/*.html + 10
+//             /carrier/*.html) so anyone reaching
+//             these surfaces via deep link cannot
+//             miss the framing. Banner specs per
+//             srl-brand-design v4.7 source of truth:
+//             - Background: var(--warning-bg)
+//               #FBEFD4
+//             - Border-bottom: 1px solid var(
+//               --warning) #B07A1A
+//             - Body text: var(--fg-1) #0A2540,
+//               DM Sans, 13px
+//             - "DEMO DATA" label: DM Sans 500,
+//               var(--gold-dark) #BA7517,
+//               letter-spacing 0.08em, uppercase,
+//               11px (small-caps per skill §8)
+//             - Icon: Lucide AlertTriangle, stroke
+//               1.75, color var(--warning)
+//             - Padding: var(--space-3)
+//               var(--space-4) (12px / 16px per
+//               skill §9)
+//             - Position: sticky top, z-index 50
+//             - Copy: "DEMO DATA — Sample values
+//               only. No live shipments, customers,
+//               or personnel."
+//
+//             Banner styles in new
+//             frontend/public/_partials/demo-banner
+//             .css; tokens scoped to
+//             .srl-demo-banner element to avoid
+//             collision with any existing
+//             :root variables on the host pages.
+//             CSS link injected into each file's
+//             <head> right after the v3.8.m meta
+//             robots tag. Banner HTML injected
+//             right after <body>.
+//
+//          Token compliance: §7 status (warning,
+//          not navy+gold-dark per directive
+//          correction), §8 typography (small-caps
+//          DEMO DATA), §9 spacing, §13 Lucide icon.
+//
+//          Combined v3.8.m + v3.8.n effect: even
+//          if a crawler bypasses noindex via
+//          deep-link, OR a screenshare lands on
+//          one of these pages, viewers see honest
+//          "demo data" framing rather than fake
+//          employees of fake companies.
+//
+//          §13.3 Item 1 marked CLOSED.
+//
+//          sales@silkroutelogistics.ai alias
+//          surfaced in /ae/communications.html:71
+//          during Phase A audit — explicitly
+//          deferred per directive to a separate
+//          Phase 6 docs sprint (CLAUDE.md §1
+//          update parallel to operations@), not
+//          rolled into this commit.
+export const SRL_VERSION = "3.8.n";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
