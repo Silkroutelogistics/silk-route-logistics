@@ -45,3 +45,6 @@ my-knowledge-base/raw/assets/*.zip
 # Python bytecode cache
 .claude/skills/**/__pycache__/
 **/__pycache__/
+
+# Audit-completeness reports (regenerated on each script run; tracked outside git)
+docs/audit-reports/audit-*.md
