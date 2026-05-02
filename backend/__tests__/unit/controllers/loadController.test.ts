@@ -117,17 +117,22 @@ describe("loadController", () => {
   });
 
   // ── updateLoadStatus ───────────────────────────────────
-  it("updateLoadStatus — valid transition succeeds", async () => {
+  it("updateLoadStatus — valid transition with assigned carrier succeeds", async () => {
+    // v3.8.j Layer 2 — transitions to TENDERED/CONFIRMED/BOOKED require
+    // an assigned carrier. This happy-path test now provides carrierId
+    // so the gate passes; the gate's rejection-when-null is covered in
+    // a separate test below.
     mockPrisma.load.findUnique.mockResolvedValue({
       id: "load-1",
       status: "POSTED",
       posterId: "user-1",
-      carrierId: null,
+      carrierId: "carrier-user-1",
     } as any);
     mockPrisma.load.update.mockResolvedValue({
       id: "load-1",
       status: "BOOKED",
       posterId: "user-1",
+      carrierId: "carrier-user-1",
     } as any);
     mockPrisma.shipment.findFirst.mockResolvedValue(null);
 
@@ -140,6 +145,40 @@ describe("loadController", () => {
     await updateLoadStatus(req, res);
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: "BOOKED" }));
+  });
+
+  it("updateLoadStatus — v3.8.j gate: BOOKED transition without carrier returns 400", async () => {
+    // Regression guard for v3.8.j Layer 2 carrier-required state-machine
+    // gate. Pre-v3.8.j, this transition succeeded AND silently auto-
+    // assigned the calling user as carrier (loadController.ts:477) —
+    // which produced the L6894191249 incident where SRL employees ended
+    // up listed as carriers on bookings. The gate now rejects with a
+    // friendly 400 directing AE to use the Tender modal instead.
+    mockPrisma.load.findUnique.mockResolvedValue({
+      id: "load-1",
+      status: "POSTED",
+      posterId: "user-1",
+      carrierId: null,
+    } as any);
+
+    const { req, res } = mockReqRes(
+      { status: "BOOKED" },
+      { id: "user-1", role: "BROKER" },
+      { id: "load-1" }
+    );
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.stringContaining("without an assigned carrier"),
+      })
+    );
+    // Layer 1 verification: load.update must NOT be called when the gate fires
+    // (the auto-assign clause that pre-v3.8.j would have written carrierId
+    // on this transition has been removed).
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
   });
 
   it("updateLoadStatus — invalid transition returns 400", async () => {

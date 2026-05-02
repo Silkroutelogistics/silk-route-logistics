@@ -1717,7 +1717,56 @@
 //          Phase 6 docs sprint (CLAUDE.md §1
 //          update parallel to operations@), not
 //          rolled into this commit.
-export const SRL_VERSION = "3.8.n";
+// v3.8.o — CI test alignment for v3.8.j gate.
+//          Six consecutive CI runs failed since
+//          v3.8.j shipped (April 30) — the
+//          loadController.test.ts case at line
+//          120 ("updateLoadStatus — valid
+//          transition succeeds") was set up
+//          assuming the OLD pre-v3.8.j contract:
+//          POSTED→BOOKED with carrierId=null
+//          would succeed. v3.8.j Layer 2 added
+//          the carrier-required state-machine
+//          gate which now correctly returns 400
+//          for that case. Test was right;
+//          contract changed under it.
+//
+//          Missed at v3.8.j ship time because
+//          the §3.3 atomic-commits pre-commit
+//          checklist runs `npx tsc --noEmit`
+//          (typecheck only) and `npx next
+//          build` (frontend), not the backend
+//          test suite. The failing test was
+//          discovered when CI failure
+//          notifications surfaced today.
+//
+//          Fix:
+//          - Updated existing happy-path test:
+//            mock load now has carrierId set so
+//            the gate passes; verifies the actual
+//            valid-transition behavior post-v3.8.j
+//          - Added new gate-firing test case:
+//            POSTED→BOOKED with carrierId=null →
+//            400 + error message contains
+//            "without an assigned carrier" + load
+//            .update is NOT called (verifies both
+//            v3.8.j Layer 1 auto-assign removal
+//            AND Layer 2 gate together).
+//
+//          loadController.test.ts now 11 tests
+//          (was 10). Full backend suite 164/164
+//          passing locally. CI parity confirmed
+//          via npm test before commit.
+//
+//          Lesson for future state-machine /
+//          contract changes: add `npm test` to
+//          the §3.3 atomic-commits pre-commit
+//          checklist when touching
+//          controllers/loadController.ts or
+//          other tested code paths. Or wire a
+//          lighter pre-commit hook that runs
+//          tests for changed files only.
+export const SRL_VERSION = "3.8.o";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
