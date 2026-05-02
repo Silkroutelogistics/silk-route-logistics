@@ -1,0 +1,141 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "_meta": {
+    "name": "Silk Route Logistics — Design Tokens",
+    "version": "3.7.n",
+    "source": "project/colors_and_type.css designer handoff (2026-04-22), pixel-verified against project/screenshots/v29-full.png and BOL v2.9 production output (BOL-L6894191249)",
+    "surface_mode": {
+      "web":   { "page": "cream",  "panel": "cream-2", "elevation": "white" },
+      "print": { "page": "white",  "panel": "cream-2", "elevation": null }
+    }
+  },
+
+  "color": {
+    "navy": {
+      "100": "#E2EAF2",
+      "200": "#BECEDE",
+      "300": "#8AA5C0",
+      "400": "#5B7EA3",
+      "500": "#355E8A",
+      "600": "#234A73",
+      "700": "#15365A",
+      "800": "#0A2540",
+      "900": "#061629",
+      "DEFAULT": "#0A2540"
+    },
+    "gold": {
+      "DEFAULT":   "#C5A572",
+      "dark":      "#BA7517",
+      "light":     "#DAC39C",
+      "tint":      "#FAEEDA",
+      "_role": {
+        "DEFAULT": "structural — rules, dividers, frames, QR border",
+        "dark":    "emphasis — CTAs, hover, labels, tagline, vertical rules"
+      }
+    },
+    "cream": {
+      "DEFAULT": "#FBF7F0",
+      "2":       "#F5EEE0",
+      "3":       "#EFE6D3"
+    },
+    "neutral": {
+      "white": "#FFFFFF",
+      "black": "#000000"
+    },
+    "fg": {
+      "1":         "#0A2540",
+      "2":         "#3A4A5F",
+      "3":         "#6B7685",
+      "disabled":  "#A7AEB8",
+      "on-navy":   "#FBF7F0",
+      "on-navy-2": "#C9D2DE"
+    },
+    "bg": {
+      "page-web":   "#FBF7F0",
+      "page-print": "#FFFFFF",
+      "surface":    "#FFFFFF",
+      "surface-2":  "#F5EEE0",
+      "navy":       "#0A2540",
+      "navy-2":     "#15365A"
+    },
+    "border": {
+      "1":         "rgba(10, 37, 64, 0.10)",
+      "2":         "rgba(10, 37, 64, 0.16)",
+      "strong":    "rgba(10, 37, 64, 0.32)",
+      "on-navy":   "rgba(251, 247, 240, 0.14)"
+    },
+    "status": {
+      "success":    { "fg": "#2F7A4F", "bg": "#E6F0E9" },
+      "warning":    { "fg": "#B07A1A", "bg": "#FBEFD4" },
+      "danger":     { "fg": "#9B2C2C", "bg": "#F6E3E3" },
+      "info":       { "fg": "#2A5B8B", "bg": "#E2EAF2" }
+    }
+  },
+
+  "legacy": {
+    "_note": "These hex values exist in production code. Do not introduce in new work.",
+    "navy_old":         "#0D1B2A",
+    "gold_old":         "#C9A84C",
+    "gold-dark_old":    "#A88535",
+    "cream_old":        "#F8F5ED",
+    "icon-tabs_dark":   "#854F0B",
+    "ae-console_dark":  "#0F1117",
+    "portal_canvas":    "#faf9f7"
+  },
+
+  "font": {
+    "display":  { "stack": "'Playfair Display', Georgia, 'Times New Roman', serif",   "weights": [400, 700] },
+    "body":     { "stack": "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif", "weights": [400, 500, 700] },
+    "tagline":  { "stack": "Georgia, 'Times New Roman', serif",                        "use": "tagline callouts only" },
+    "mono":     { "stack": "'SF Mono', Menlo, Consolas, monospace",                    "use": "load IDs, PRO#, technical refs" }
+  },
+
+  "spacing": {
+    "0": "0",
+    "1": "4px",
+    "2": "8px",
+    "3": "12px",
+    "4": "16px",
+    "5": "20px",
+    "6": "24px",
+    "8": "32px",
+    "10": "40px",
+    "12": "48px",
+    "16": "64px",
+    "20": "80px"
+  },
+
+  "radius": {
+    "xs": "4px",
+    "sm": "6px",
+    "md": "8px",
+    "lg": "12px"
+  },
+
+  "shadow": {
+    "1": "0 1px 2px rgba(10, 37, 64, 0.06)",
+    "2": "0 2px 8px rgba(10, 37, 64, 0.08)",
+    "3": "0 6px 16px rgba(10, 37, 64, 0.10)",
+    "4": "0 12px 32px rgba(10, 37, 64, 0.14)"
+  },
+
+  "motion": {
+    "duration": { "fast": "150ms", "base": "250ms", "slow": "400ms" },
+    "ease":     { "out":  "cubic-bezier(0.2, 0.8, 0.2, 1)", "inOut": "cubic-bezier(0.4, 0, 0.2, 1)" }
+  },
+
+  "brand": {
+    "legal_name":          "Silk Route Logistics Inc.",
+    "short_name":          "Silk Route Logistics",
+    "tagline":             "Where Trust Travels.",
+    "operational_tagline": "First Call. Last Update. Every Mile In Between.",
+    "domain":              "silkroutelogistics.ai",
+    "address":             "2317 S 35th St, Galesburg, MI 49053",
+    "phone":               "+1 (269) 220-6760",
+    "email_ops":           "operations@silkroutelogistics.ai",
+    "email_exec":          "whaider@silkroutelogistics.ai",
+    "mc":                  "01794414",
+    "dot":                 "4526880",
+    "tracking_url_pattern": "https://silkroutelogistics.ai/track/{token}"
+  }
+}

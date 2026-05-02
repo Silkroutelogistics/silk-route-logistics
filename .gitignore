@@ -41,3 +41,7 @@ coverage/
 frontend/.env.production
 my-knowledge-base/raw/assets/_extracted/
 my-knowledge-base/raw/assets/*.zip
+
+# Python bytecode cache
+.claude/skills/**/__pycache__/
+**/__pycache__/

@@ -1,0 +1,26 @@
+{
+  "skill_name": "srl-brand-design",
+  "evals": [
+    {
+      "id": 1,
+      "name": "rate-confirmation-pdf-generation",
+      "prompt": "Generate a one-page Rate Confirmation PDF for SRL. Load: Pharmaloz pickup at 500 N 15th Ave Lebanon PA 17046 on Mon May 4 2026 0800-1630 (contact Brian, 269-220-6760), delivery to Mainfreight N Lake at 17801 I-35W Northlake TX 76262 on Wed May 6 2026 0800-1530 (contact Brian Morgan). Equipment Dry Van 53'. Twelve pallets total — six pallets lozenges 48x40x52 12500 lb class 60, six pallets lozenges 48x40x51 11000 lb class 70. Rate $2,800. 7-day Quick Pay at 2%. Save the PDF and tell me where it is. Match the SRL brand exactly.",
+      "expected_output": "PDF file using canonical SRL chrome — white canvas, cream-2 panels, navy text, gold structural rules, gold-dark labels and tagline, three-block signature with Carrier Driver column, per-page footer with MC#/DOT#, QR with TRACK label",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "carriers-page-section",
+      "prompt": "Build an HTML section for silkroutelogistics.ai/carriers explaining the SRAPP Quick Pay tier program. Three tiers: Silver (Net-30 standard, 7-day at 3%), Gold (Net-21 standard, 7-day at 2%), Platinum (Net-14 standard, 7-day at 1%). Same-day option +2% all tiers. Use the SRL brand. Output should be a single self-contained HTML file I can open in a browser.",
+      "expected_output": "HTML file with cream page canvas, navy primary text, gold-dark CTAs, three-card tier layout using cream-2 accent panels, Lucide icons, no marketing softeners (no 'best-in-class', no exclamation points), no emojis, references SRAPP / Caravan Partner Program by canonical name",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "themes-css-migration-plan",
+      "prompt": "Our themes.css file in the SRL repo currently uses these legacy hex values: --primary-navy: #0D1B2A; --accent-gold: #C9A84C; --accent-gold-dark: #A88535; --bg-cream: #F8F5ED;. Write a migration plan to update these to the canonical SRL brand tokens. I need the plan to cover what changes, how to verify nothing breaks visually, and which files in the repo are likely to need updating. Don't actually do the migration — just plan it.",
+      "expected_output": "Migration plan that maps each legacy value to its canonical replacement (#0A2540, #C5A572, #BA7517, #FBF7F0), identifies likely affected files, includes a visual-diff verification step, and acknowledges retained-by-design legacy values (AE Console dark mode) that should NOT be migrated",
+      "files": []
+    }
+  ]
+}
