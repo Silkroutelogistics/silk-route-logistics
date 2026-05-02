@@ -21,6 +21,7 @@ Last consolidated: Phase 6.1 close (v3.8.e.2, commit `adefc84`).
   - `accounting@silkroutelogistics.ai` — AR, carrier pay inquiries
   - `compliance@silkroutelogistics.ai` — fraud reports, BMC-84 claims, FMCSA contact
   - `noreply@silkroutelogistics.ai` — system/transactional emails only
+  - `operations@silkroutelogistics.ai` — customer-facing operations contact. Used on BOL, Rate Confirmation, Invoice, and other shipper/carrier-facing documents generated via the `srl-brand-design` skill. Routes to `whaider@` until the Pakistan-based AE/Compliance hire (Oct 2026), at which point routing flips to that inbox without requiring document reissue. The forward-looking aliasing avoids a future BOL-template churn when the hire lands.
 
 ---
 
