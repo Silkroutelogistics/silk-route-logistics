@@ -131,7 +131,7 @@ Invoice meta block should include `PRO #`, `BOL #`, `SERVICE` level, plus the st
 
 ### Voice: SRL writes like a freight veteran, not a marketer
 
-No "best-in-class," "world-class," "synergy," "revolutionary," "disrupting." No exclamation points in B2B documents. No emojis in formal SRL content. Verbs and numbers, not adjectives. See `references/voice.md` for full voice rules and the canonical naming convention (Marco Polo, Carvan vs The Caravan, Compass Engine, Lead Hunter, AE Console, Shipper Portal, SRAPP).
+No "best-in-class," "world-class," "synergy," "revolutionary," "disrupting." No exclamation points in B2B documents. No emojis in formal SRL content. Verbs and numbers, not adjectives. See `references/voice.md` for full voice rules and the canonical naming convention (Marco Polo, Carvan vs The Caravan, Compass Engine, Lead Hunter, AE Console, Shipper Portal, Caravan Partner Program).
 
 ---
 
