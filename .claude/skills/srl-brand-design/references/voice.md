@@ -67,7 +67,7 @@ These names are part of the brand. Be consistent — consistency is what makes a
 | **Lead Hunter** | Apollo-based prospecting | |
 | **AE Console** | account executive ops hub | |
 | **Shipper Portal** | shipper-side platform | |
-| **SRAPP** | Quick Pay tier program (legacy name) | Caravan Partner Program is the canonical Q4 2026+ name; tiers are Silver / Gold / Platinum |
+| **SRAPP** | Quick Pay tier program (legacy name) | Legacy name (renamed 2026-05-02). Caravan Partner Program is the canonical name; tiers are Silver / Gold / Platinum |
 
 The `Carvan` vs `The Caravan` distinction is a real spelling difference — the carrier mobile app drops the second `a` deliberately. Mixing them up reads as inattention.
 
