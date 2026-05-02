@@ -1766,7 +1766,58 @@
 //          other tested code paths. Or wire a
 //          lighter pre-commit hook that runs
 //          tests for changed files only.
-export const SRL_VERSION = "3.8.o";
+// v3.8.o.1 — Test-only fix for resetPassword T6
+//          flaky concurrent test. Failed CI on
+//          commit 1cabacc (audit-completeness
+//          tooling) — but the failure was
+//          unrelated to that commit; it surfaced
+//          a pre-existing race condition in the
+//          T6 test that had been intermittently
+//          green locally and red on CI's
+//          slightly different timing.
+//
+//          Root cause: T6 fires two concurrent
+//          resetPassword() calls via
+//          Promise.allSettled, with $transaction
+//          mock using mockResolvedValueOnce
+//          (success) + mockRejectedValueOnce
+//          (fail) — FIFO call order. Test then
+//          asserted `p1.status === fulfilled`
+//          and `p2.status === rejected` based on
+//          POSITIONAL order in the
+//          Promise.allSettled array. But two
+//          async resetPassword() calls suspend
+//          at their first `await` and the event
+//          loop's resume order is not guaranteed
+//          to match the array order. Whichever
+//          request happens to reach `await
+//          prisma.$transaction(...)` first
+//          consumes the success mock. Local Node
+//          tended to be deterministic; CI's
+//          slightly different timing flipped the
+//          order ~50% of the time.
+//
+//          Fix: order-independent assertions.
+//          Test now asserts that EXACTLY ONE
+//          fulfilled and EXACTLY ONE rejected
+//          (regardless of which positional
+//          request won), then identifies the
+//          fulfilled response by status and
+//          verifies its body. The behavior under
+//          test (one succeeds, one fails at
+//          transaction) is unchanged; only the
+//          assertion is order-independent now.
+//
+//          Verified deterministic: ran T6 in
+//          isolation 5 consecutive times
+//          locally — all 5 green. Full backend
+//          suite 164/164 passing.
+//
+//          No production code change, no
+//          contract change. Pure test-quality
+//          improvement. Same v3.8.o pattern
+//          (test-only, sub-letter bump).
+export const SRL_VERSION = "3.8.o.1";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

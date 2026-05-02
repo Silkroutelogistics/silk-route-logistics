@@ -212,10 +212,24 @@ describe("resetPassword — v3.7.m peek-validate-transactional-consume", () => {
 
   // ─── Edge cases (T6, T6b, T7, T8) ────────────────────────────
 
-  it("T6 — concurrent double-submit: first succeeds, second fails at $transaction", async () => {
+  it("T6 — concurrent double-submit: exactly one succeeds, the other fails at $transaction", async () => {
     // Both requests peek successfully (race: no commit has landed yet).
-    // Mock ordering: first $transaction resolves; second rejects as if the
-    // otpCode row's used: false predicate no longer matches post-commit.
+    // Mock ordering uses FIFO on $transaction: first call resolves, second
+    // rejects as if the otpCode row's used: false predicate no longer
+    // matches post-commit.
+    //
+    // v3.8.o.1 — assertions are now ORDER-INDEPENDENT. Pre-v3.8.o.1 the
+    // test asserted `p1.status === "fulfilled"` and `p2.status ===
+    // "rejected"` based on positional order in the Promise.allSettled
+    // array. But two concurrent resetPassword() calls suspend at their
+    // first `await` and the event loop's resume order is not guaranteed
+    // to match the array order — whichever request happens to reach
+    // `await prisma.$transaction(...)` first consumes the success mock.
+    // Local Node tended to be deterministic; CI's slightly different
+    // timing characteristics flipped the order ~50% of the time, causing
+    // intermittent failures. Fix: assert that EXACTLY ONE fulfilled and
+    // EXACTLY ONE rejected (regardless of which positional request won),
+    // then identify the fulfilled response by status and verify its body.
     mockPrisma.otpCode.findFirst.mockResolvedValue(validPeekRow() as any);
     mockPrisma.user.findUnique.mockResolvedValue(validUser() as any);
     mockPrisma.$transaction
@@ -238,17 +252,24 @@ describe("resetPassword — v3.7.m peek-validate-transactional-consume", () => {
       resetPassword(r2.req, r2.res),
     ]);
 
-    // First request completed normally
-    expect(p1.status).toBe("fulfilled");
-    expect(r1.res.json).toHaveBeenCalledWith(
+    // Order-independent: exactly one fulfilled, exactly one rejected.
+    const statuses = [p1.status, p2.status].sort();
+    expect(statuses).toEqual(["fulfilled", "rejected"]);
+
+    // Identify which req/res pair corresponds to the fulfilled request
+    // (whichever one won the race to $transaction).
+    const fulfilledRes = p1.status === "fulfilled" ? r1.res : r2.res;
+
+    // The fulfilled request returned the success response.
+    expect(fulfilledRes.json).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringMatching(/reset successfully/i),
       }),
     );
 
-    // Second request failed at $transaction (no try/catch in handler; error
-    // propagates to Express which would 500 in production)
-    expect(p2.status).toBe("rejected");
+    // The rejected request's error propagates to Express middleware (no
+    // try/catch in handler) which would 500 in production. No additional
+    // assertion needed — the rejected promise status itself is the signal.
   });
 
   it("T6b — $transaction throws → handler rejects; consume was NOT issued outside transaction", async () => {
