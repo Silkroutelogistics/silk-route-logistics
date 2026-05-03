@@ -8,6 +8,12 @@
 #                  files in the carrier portal scaffolding directory)
 # Defense-in-depth: per-page <meta name="robots" content="noindex,nofollow">
 # also injected into every file under /ae/ and /carrier/.
+#
+# v3.8.r — defense-in-depth disallow for /docs/internal/ and /internal/.
+# These paths are NOT in the Cloudflare Pages deploy scope (which is
+# frontend/public/ only) so they would 404 regardless. Belt-and-
+# suspenders entry in case the deploy scope ever changes or a future
+# misconfiguration exposes the docs/ directory.
 User-agent: *
 Allow: /
 Disallow: /ae/
@@ -17,5 +23,7 @@ Disallow: /carrier/
 Disallow: /shipper/dashboard/
 Disallow: /auth/
 Disallow: /api/
+Disallow: /docs/internal/
+Disallow: /internal/
 
 Sitemap: https://silkroutelogistics.ai/sitemap.xml

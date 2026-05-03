@@ -1840,7 +1840,42 @@
 //          static /auth/login.html page; HTML→React
 //          migration for /auth/login is a future
 //          Phase 6 candidate logged separately.
-export const SRL_VERSION = "3.8.q";
+// v3.8.r — Security policy public/private split. The
+//          previous frontend/public/security-policy.html
+//          published implementation specifics — JWT
+//          algorithm name, bcrypt cost, exact rate-
+//          limit thresholds, exact session timing,
+//          named vendor stack with services per
+//          vendor, AES-256-GCM encryption details —
+//          which collectively map attack surface for
+//          any reader and constrain SRL's
+//          implementation flexibility going forward.
+//          Industry-standard practice publishes a
+//          capability commitment publicly and shares
+//          configuration details under NDA.
+//          Changes:
+//            - Archived: detailed content moved to
+//              docs/internal/SECURITY-DETAILED.md
+//              (outside Cloudflare Pages deploy scope,
+//              committed in repo for internal +
+//              NDA-gated reference)
+//            - Replaced: frontend/public/
+//              security-policy.html now serves a
+//              ~280-word commitment overview with
+//              capabilities at the WHAT level not the
+//              HOW level; section structure 5 instead
+//              of 13; canonical typography (Playfair
+//              Display + DM Sans) per §2.1
+//            - robots.txt: defense-in-depth Disallow
+//              for /docs/internal/ + /internal/
+//            - sitemap.xml: /security-policy.html URL
+//              retained, content changed
+//          No customer data ever exposed. The
+//          disclosure was about implementation
+//          mechanics, not user data. Risk profile was
+//          attack-surface-mapping for hypothetical
+//          intrusion attempts, not an active breach.
+export const SRL_VERSION = "3.8.r";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

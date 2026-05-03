@@ -1,10 +1,10 @@
 
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
     *{margin:0;padding:0;box-sizing:border-box}
 
     body{
-      font-family:'Plus Jakarta Sans',sans-serif;
+      font-family:'DM Sans',sans-serif;
       background:#FFFFFF;color:#1A1A2E;
       line-height:1.8;font-size:15px;
     }
@@ -46,7 +46,7 @@
       background:linear-gradient(135deg,#0D1B2A 0%,#1a2d45 100%);
       border:1px solid rgba(200,150,62,0.2);border-radius:16px;
     }
-    .doc-header h1{font-family:'DM Serif Display',serif;font-size:32px;color:#f0f4f8;margin-bottom:8px}
+    .doc-header h1{font-family:'Playfair Display',serif;font-weight:600;font-size:32px;color:#f0f4f8;margin-bottom:8px}
     .doc-header .gold{color:#c8a951}
     .doc-header .doc-subtitle{font-size:14px;color:#7a9bb8;margin-bottom:20px}
     .doc-meta{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;font-size:12px;color:#8a9db0}
@@ -54,7 +54,7 @@
 
     .download-bar{text-align:center;margin-bottom:40px}
     .download-bar button{
-      padding:10px 24px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;
+      padding:10px 24px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;
       background:linear-gradient(135deg,#c8a951,#b8963e);color:#0D1B2A;
       border:none;border-radius:8px;cursor:pointer;transition:all .25s;
     }
@@ -72,7 +72,7 @@
     .toc a:hover{color:#b8862e}
 
     h2{
-      font-family:'DM Serif Display',serif;font-size:22px;color:#1A1A2E;
+      font-family:'DM Sans',sans-serif;font-weight:600;font-size:22px;color:#1A1A2E;
       margin:48px 0 20px;padding-bottom:10px;
       border-bottom:1px solid #E5E7EB;
     }
