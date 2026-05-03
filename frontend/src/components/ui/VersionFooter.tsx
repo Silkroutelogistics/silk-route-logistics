@@ -1875,7 +1875,44 @@
 //          mechanics, not user data. Risk profile was
 //          attack-surface-mapping for hypothetical
 //          intrusion attempts, not an active breach.
-export const SRL_VERSION = "3.8.r";
+// v3.8.s — Sprint 1: /about render bug + capability
+//          reframe + security-policy canvas
+//          conformance.
+//          (a) /about stats-section was rendering
+//              "0 States Covered" before the
+//              IntersectionObserver-driven JS counter
+//              fired (or under prefersReducedMotion /
+//              before scroll-into-view). Static-
+//              rendered the final value "48" in
+//              place of the "0" placeholder; removes
+//              the animated count-up which violated
+//              brand-skill motion-restraint guidance
+//              and eliminates the broken-render
+//              exposure.
+//              Label reframed from "States Covered"
+//              to "States Licensed." Per voice.md,
+//              capability claims (licensing scope)
+//              are distinct from volume/track-record
+//              claims; "States Licensed" is
+//              verifiable against MC# 1794414 and
+//              reads as capability scope
+//              unambiguously. "States Covered" can
+//              be misread as historical volume.
+//              Stats-section retained intentionally —
+//              single capability stat with section
+//              subtitle reads as restraint.
+//          (b) security-policy.html canvas color
+//              #FFFFFF → #FBF7F0 (--bg-page-web per
+//              tokens.md line 67). White section
+//              cards retained on cream canvas =
+//              canonical card-elevation pattern.
+//          Page title sentence-case fix dropped from
+//          this sprint pending skill-rule
+//          clarification (legal/policy genre
+//          convention question — voice.md line 51
+//          "legal documents — voice is the absence
+//          of voice" supports title case).
+export const SRL_VERSION = "3.8.s";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
