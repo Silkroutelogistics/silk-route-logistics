@@ -17,6 +17,11 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --shadow-lg: 0 12px 40px rgba(0,0,0,0.15);
   --radius-sm: 8px;
+  /* v3.8.t — text-on-navy tokens for shared footer chrome.
+     Per CLAUDE.md §2.1: --fg-on-navy is canonical text on navy
+     backgrounds (cream); --fg-on-navy-2 is muted secondary. */
+  --fg-on-navy: #FBF7F0;
+  --fg-on-navy-2: #C9D2DE;
 }
 
 /* ── Nav login dropdown (migrated from pages/index.css in v3.7.f) ── */
@@ -359,3 +364,65 @@
   padding: 40px;
   color: var(--gray-400);
 }
+
+/* ── Chrome footer alignment (v3.8.t) ──
+   The chrome _partials/footer.html emits <h5> + direct <a> children
+   in .footer-col, NOT <h4> + <ul><li><a>. Page-CSS files (about.css,
+   blog.css, careers.css, contact.css, faq.css) carry stale footer
+   rules targeting the <h4>/<ul>/<li> structure that no longer
+   match the chrome HTML, so footer text was inheriting from body
+   color cascade — invisible navy-on-navy on /about + sibling
+   marketing pages.
+
+   These rules target the chrome HTML structure directly with
+   selectors that don't conflict with page-CSS stale rules
+   (different selector shapes). Stale page-CSS rule cleanup is
+   deferred to a separate refactor — these additive rules deliver
+   the readability fix without touching page CSS files. */
+.footer-col h5 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  margin: 0 0 16px;
+}
+.footer-col > a {
+  display: block;
+  color: var(--fg-on-navy-2);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+.footer-col > a:hover { color: var(--gold); }
+.footer-col > a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.footer-brand > p {
+  color: var(--fg-on-navy-2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.footer-brand a {
+  color: var(--fg-on-navy-2);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.footer-brand a:hover { color: var(--gold); }
+
+.footer-bottom > p {
+  color: var(--fg-on-navy-2);
+  font-size: 13px;
+}
+.footer-bottom-links a {
+  color: var(--fg-on-navy-2);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s ease;
+}
+.footer-bottom-links a:hover { color: var(--gold); }

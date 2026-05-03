@@ -1912,7 +1912,44 @@
 //          convention question — voice.md line 51
 //          "legal documents — voice is the absence
 //          of voice" supports title case).
-export const SRL_VERSION = "3.8.s";
+// v3.8.t — Sprint 3: marketing footer cascade +
+//          .btn-primary contrast (2 real P0s from
+//          Sprint 2 scanner spot-check).
+//          (a) Marketing footer chrome/CSS structural
+//              mismatch — _partials/footer.html emits
+//              <h5> + direct <a> children of
+//              .footer-col, but page-CSS files
+//              (about.css, blog.css, careers.css,
+//              contact.css, faq.css) carry stale
+//              rules targeting <h4> + <ul><li><a>
+//              structure that no longer matches the
+//              chrome HTML, so footer text was
+//              inheriting from body color cascade
+//              and rendering invisible navy-on-navy.
+//              Fix: additive chrome-aligned footer
+//              rules added to utilities.css with
+//              new --fg-on-navy + --fg-on-navy-2
+//              tokens per CLAUDE.md §2.1. Stale
+//              page-CSS rule cleanup deferred to
+//              separate refactor (the additive rules
+//              don't conflict — different selector
+//              shapes — so dead-letter cleanup is
+//              cosmetic, not load-bearing).
+//          (b) .btn-primary gold-on-white = 2.66:1
+//              ratio across 13 occurrences in 10 AE
+//              accounting CSS files. Fix: surgical
+//              color swap var(--white) → var(--navy)
+//              in every .btn-primary rule. Navy-on-
+//              gold = ~9:1, passes AA + AAA. Plus
+//              canonical .btn-primary rule added to
+//              console.css for new-consumer single-
+//              source-of-truth. Existing per-page
+//              duplications retained (consolidation
+//              refactor deferred).
+//          Both fixes verified via Sprint 2 scanner
+//          spot-check static cascade analysis prior
+//          to writes (Sprint 3 Phase A).
+export const SRL_VERSION = "3.8.t";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

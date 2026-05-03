@@ -23,7 +23,7 @@
     /* --- Buttons --- */
     .btn-primary {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; background: var(--gold); color: var(--white);
+      padding: 8px 18px; background: var(--gold); color: var(--navy);
       border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
       cursor: pointer; white-space: nowrap; text-decoration: none;
     }

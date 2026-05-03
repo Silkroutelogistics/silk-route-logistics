@@ -1185,6 +1185,34 @@ tbody tr:hover {
   pointer-events: none;
 }
 
+/* ── Canonical .btn-primary (v3.8.t) ──
+   Per CLAUDE.md §2.1, gold button needs dark text for legibility.
+   Gold-on-white was 2.66:1 (fails WCAG AA + UI 3:1); navy-on-gold
+   is ~9:1 (passes AA + AAA). Page-specific .btn-primary rules in
+   ae/css/pages/*.css were updated in-place with the same color
+   correction in v3.8.t — this canonical rule serves as the
+   single-source-of-truth target for any new consumer that hasn't
+   inlined a .btn-primary block of their own. Existing per-page
+   duplications are deferred-cleanup candidates (consolidate +
+   delete duplications in a separate refactor commit). */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: var(--gold);
+  color: var(--navy);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--gold-hover); }
+
 .step-locked {
   opacity: 0.5;
   pointer-events: none;
