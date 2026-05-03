@@ -15,7 +15,7 @@
     { "label": "Carriers", "href": "/carriers.html" },
     { "label": "About", "href": "/about.html" },
     { "label": "Contact", "href": "/contact.html" },
-    { "label": "Track", "href": "/tracking.html" }
+    { "label": "Track", "href": "/track" }
   ],
   "loginDropdown": [
     { "label": "AE Login", "href": "/auth/login" },
@@ -37,7 +37,7 @@
       "links": [
         { "label": "Services", "href": "/shippers.html" },
         { "label": "Get a Quote", "href": "/shippers.html#quote" },
-        { "label": "Track Shipment", "href": "/tracking.html" },
+        { "label": "Track Shipment", "href": "/track" },
         { "label": "Shipper Portal", "href": "/shipper/login" }
       ]
     },

@@ -61,7 +61,7 @@ export default function ShipperRegisterPage() {
     return (
       <div className="bg-[#F8F5ED] min-h-screen">
         <nav className="bg-[#0F1117] px-6 h-14 flex items-center justify-between">
-          <Link href="/shipper" className="flex items-center gap-2.5">
+          <Link href="/shippers.html" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0F1117]">SR</div>
             <span className="font-serif text-sm text-white tracking-[1px]">SILK ROUTE LOGISTICS</span>
           </Link>
@@ -91,7 +91,7 @@ export default function ShipperRegisterPage() {
     <div className="bg-[#F8F5ED] min-h-screen">
       {/* Nav */}
       <nav className="bg-[#0F1117] px-6 h-14 flex items-center justify-between">
-        <Link href="/shipper" className="flex items-center gap-2.5">
+        <Link href="/shippers.html" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0F1117]">SR</div>
           <span className="font-serif text-sm text-white tracking-[1px]">SILK ROUTE LOGISTICS</span>
         </Link>

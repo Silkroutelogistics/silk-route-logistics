@@ -1817,7 +1817,30 @@
 //          contract change. Pure test-quality
 //          improvement. Same v3.8.o pattern
 //          (test-only, sub-letter bump).
-export const SRL_VERSION = "3.8.o.1";
+//
+// v3.8.q — Routing consolidation. Deleted divergent
+//          React /shipper landing, legacy
+//          /tracking.html, and root /login.html +
+//          /register.html orphans. Added Cloudflare
+//          Pages _redirects entries:
+//            /shipper       → /shippers.html  301
+//            /tracking.html → /track          301
+//            /tracking      → /track          301
+//            /login.html    → /auth/login     301
+//            /register.html → /auth/register  301
+//          Marketing nav + footer regenerated from
+//          site-chrome.json (single source-of-truth);
+//          Track entries now point at /track. Sub-
+//          routes /shipper/{login,dashboard,forgot-
+//          password,reset-password,register}
+//          unaffected. Closes §13.3 Item 9 (shipper
+//          landing divergence).
+//          Note: /login.html → /auth/login (React)
+//          creates an asymmetry with the existing
+//          static /auth/login.html page; HTML→React
+//          migration for /auth/login is a future
+//          Phase 6 candidate logged separately.
+export const SRL_VERSION = "3.8.q";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

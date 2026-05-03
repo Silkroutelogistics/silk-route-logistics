@@ -20,3 +20,10 @@
 /ae/* /dashboard/overview 301
 
 /carrier/* /carrier/:splat 200
+
+# 2026-05-03 v3.8.q routing consolidation
+/shipper       /shippers.html  301
+/tracking.html /track          301
+/tracking      /track          301
+/login.html    /auth/login     301
+/register.html /auth/register  301

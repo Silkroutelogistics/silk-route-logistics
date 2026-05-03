@@ -183,7 +183,7 @@ export async function getPublicTracking(req: Request, res: Response) {
     actualDelivery: load.actualDeliveryDatetime,
     // v3.8.i.1 — `carrierFirstName` field removed from response. Layer-2
     // allowlist (this object) now matches Layer-1 (loadSelect above).
-    // Frontend consumer at public/tracking.html:300 reads
+    // Frontend consumer at frontend/src/app/track/page.tsx reads
     // `d.carrierFirstName || '—'` so absence renders em-dash gracefully.
     shipperName: decodeOpt(load.customer?.name) || null,
     lastLocation,
