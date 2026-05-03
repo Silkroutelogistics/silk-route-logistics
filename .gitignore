@@ -48,3 +48,4 @@ my-knowledge-base/raw/assets/*.zip
 
 # Audit-completeness reports (regenerated on each script run; tracked outside git)
 docs/audit-reports/audit-*.md
+docs/audit-reports/brand-conformance-*.md
