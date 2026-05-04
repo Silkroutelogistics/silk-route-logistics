@@ -2268,7 +2268,13 @@
 //           #C5A572 or #BA7517 per CLAUDE.md §2.1)
 //           logged as separate backlog item per
 //           directive scope confirmation #1.
-export const SRL_VERSION = "3.8.dd";
+// v3.8.ee — Phase 6.2 Lead Hunter / CRM separation: ?context filter
+//           on /customers, POST /:id/approve with required-checks
+//           gate, CRM page filtered to APPROVED, AE Console approve
+//           UI with inline missing-checks. Closes §13.3 Item 6
+//           (Portal Approval UI S-3) and audit 39de1ad. Sprint span:
+//           7c74bb1 (Phase 2) → df3545f (Phase 5).
+export const SRL_VERSION = "3.8.ee";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -2,7 +2,7 @@
 
 This file is the single binding source of truth for any Claude Code session working in this repo. Read it at session start. Rules below override all defaults. Follow them exactly.
 
-Last consolidated: Phase 6.1 close (v3.8.e.2, commit `adefc84`).
+Last consolidated: Phase 6.2 close (v3.8.ee, sprint span `7c74bb1`–`df3545f`).
 
 ---
 
@@ -461,8 +461,11 @@ Same-day Quick Pay is UNIVERSAL +2% premium on tier fee. **Not tier-gated.** Eve
 | v3.8.e | `108e18e` | **Phase 6.1 — T&T status advancement controls** — new shared helper `frontend/src/lib/loadStatusActions.ts` (single source of truth for `NEXT_STATUS` + `STATUS_ACTIONS` + `getNextStatusAction()`); Load Board imports from shared module; T&T `LoadDetailDrawer` header gets advance button next to close button; cross-query invalidation refreshes both `tt-load-detail` and `loads`; inline error state on mutation failure; 5 files / +179 / −25 |
 | v3.8.e.1 | `ccfde90` | **Phase 6.1 — SHIPPER approval gate (S-2 backend)** — security gap closed: `Customer.onboardingStatus` now enforced on auth path. New `checkShipperApproval(user, email, req)` helper in `authController.ts`, SHIPPER role only, status-specific friendly messages, defense-in-depth gating at BOTH `handleVerifyOtp` (pre-TOTP) AND `handleTotpLoginVerify` (pre-JWT). AE Console + CARRIER flows unaffected. Build issue caught mid-session: `LogSeverity` enum is `WARNING` not `WARN`. Verified end-to-end with PENDING fixture (`shipper@acmemfg.com`) |
 | v3.8.e.2 | `adefc84` | **Phase 6.1 — ShipperSidebar Back-to-Website link** — repointed sidebar `href` from `/shipper` (divergent legacy prospect-landing page) to `/` (homepage), mirroring CarrierSidebar pattern. Surfaced during v3.8.e.1 smoke. The `/shipper` page itself remains untouched — visual alignment is a separate Phase 6 sprint |
+| v3.8.ee | `7c74bb1`–`df3545f` | **Phase 6.2 — Lead Hunter / CRM separation** — four-commit sprint closing audit `39de1ad` (Pattern A: unified `customers` table, no read filter, no APPROVED-flip path). (1) `7c74bb1` `feat(backend)` — `customerQuerySchema.context: "crm" \| "prospects"` filter on `GET /customers` partitions on `onboardingStatus`; omitted preserves legacy callers. 6 vitest cases covering crm/prospects/omitted/invalid/coexistence/findMany–count parity. (2) `2fb5279` `feat(backend)` — `POST /customers/:id/approve` (ADMIN/CEO only) with required-checks gate over `taxId`, `creditStatus IN (APPROVED, CONDITIONAL) AND creditCheckDate IS NOT NULL`, `contractUrl`. Returns 422 with `{ missing: [{ field, label, reason }] }` on unmet preconditions. Idempotent on already-APPROVED. Schema migration `20260504000000_add_customer_approval_fields` adds nullable `approvedAt` + `approvedById` (no FK, additive). `updateCustomerSchema` deliberately excludes `onboardingStatus` so PATCH cannot bypass the gate. 9 vitest cases. (3) `0b53cf6` `feat(frontend)` — `/dashboard/crm` passes `?context=crm`, removes `statusOf()` segmentation + four-pill filter bar + per-row status badge + duplicate "Active" StatCard. Inactive (REJECTED/SUSPENDED) view dropped from CRM by design — flagged for Item 8.1 (v3.8.l) to restore in its own context. (4) `df3545f` `feat(frontend)` — new `OnboardingActionBar` mounted in `CustomerDrawer`. Approve mutation, inline missing-checks rendering with brand-tokened palette (success #2F7A4F, warning #B07A1A, danger #9B2C2C). Suspend/Reject open TODO modals (no transitions exist; pairs to v3.8.l). Header status badge rebased off `onboardingStatus` (canonical) instead of free-form `status` text. Note: brand-sweep `22fc84c` (v3.8.dd) interleaved between Phase 4 and Phase 5 — unrelated to this sprint, picked up the next available letter; this sprint shipped under v3.8.ee at close-out |
 
 **Phase 6.1 closed** at v3.8.e.2 (T&T status controls + SHIPPER gate + sidebar link). Total Phase 6.1: 8 files / +342 / −26 across three commits.
+
+**Phase 6.2 closed** at v3.8.ee (Lead Hunter / CRM separation). Total Phase 6.2: 13 files / +634 / −95 across four code commits + this docs commit. Closes audit `39de1ad` and §13.3 Item 6.
 
 **Explicitly excluded from §11** (do not backfill, do not exist in git): v3.4.c, v3.4.k, v3.4.s, standalone v3.5, v3.5.d, standalone v3.6.
 
@@ -502,7 +505,7 @@ Sequenced backlog. Ordering is deliberate: items earlier in the list should be d
 
 ### §13.1 Active state
 
-Phase 6.1 closed at v3.8.e.2. No active sprint. Phase 6.2 awaiting scoping.
+Phase 6.2 closed at v3.8.ee (Lead Hunter / CRM separation). No active sprint. Phase 6.3 awaiting scoping.
 
 ### §13.2 Pre-Phase-6.2 housekeeping
 
@@ -526,7 +529,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 **Security / Portal completeness:**
 
-6. **Portal Approval UI S-3** — pairs with v3.8.e.1's gate. AE Console approve button at `/dashboard/shippers` (dedicated surface, mirror of `dashboard/carriers/page.tsx:730` pattern). Includes "Shipper application under review" UX page (paired requirement from v3.8.e.1 — the friendly message rendering when shipper hits the gate). Without this UI, the approval workflow is "manually flip onboardingStatus in Neon SQL editor." Effort: medium sprint, AE Console UI work.
+6. ~~**Portal Approval UI S-3**~~ — **CLOSED 2026-05-04 in v3.8.ee** (Phase 6.2 Lead Hunter / CRM separation sprint). Scope expanded mid-sprint to bundle the CRM read-filter gap from audit 39de1ad: (a) `?context=crm` filter on `GET /customers` so prospects no longer appear in CRM (commit `7c74bb1`); (b) `POST /customers/:id/approve` endpoint with required-checks gate over TIN, credit, contract preconditions, returns 422 with missing-checks payload (commit `2fb5279`, includes additive `approvedAt` + `approvedById` schema migration); (c) CRM page passes `?context=crm`, removes redundant client-side `statusOf()` segmentation and the four-pill filter bar (commit `0b53cf6`); (d) AE Console `OnboardingActionBar` mounted in `CustomerDrawer` — Approve / Suspend / Reject buttons with inline missing-checks rendering, brand-token styled (commit `df3545f`). Approve UI lives on the existing `/dashboard/crm` customer detail surface rather than a new `/dashboard/shippers` surface — the Drawer pattern is the AE-facing customer detail today. Suspend / Reject open TODO modals because no backend transitions exist yet — wires to Item 8.1 (v3.8.l customer inactivation). "Shipper application under review" UX page paired requirement is still open and tracked separately. The original §13.3 Item 6 scope (approve button only) was extended to the four-commit sprint after the audit surfaced the read-filter half of the bug.
 
 7. **Credit check integration** — service TBD (Experian Business, D&B, manual SOP). Once picked, wire into S-2 gate as prerequisite for APPROVED status. Decision needed before implementation.
 
