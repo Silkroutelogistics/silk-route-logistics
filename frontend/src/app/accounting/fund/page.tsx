@@ -77,7 +77,7 @@ export default function FundBalancePage() {
         </div>
         <button
           onClick={() => setShowDeposit(true)}
-          className="px-4 py-2 bg-[#C8963E] text-white rounded-lg text-sm font-medium hover:bg-[#B8862E] transition flex items-center gap-2"
+          className="px-4 py-2 bg-[#C8963E] text-[#0A2540] rounded-lg text-sm font-medium hover:bg-[#B8862E] transition flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Add Deposit
         </button>
@@ -178,7 +178,7 @@ export default function FundBalancePage() {
               <button
                 onClick={() => depositMutation.mutate({ amount: Number(depositAmount), description: depositDesc || "Manual deposit" })}
                 disabled={!depositAmount || Number(depositAmount) <= 0 || depositMutation.isPending}
-                className="w-full py-2.5 bg-[#C8963E] text-white rounded-lg text-sm font-medium hover:bg-[#B8862E] transition disabled:opacity-50"
+                className="w-full py-2.5 bg-[#C8963E] text-[#0A2540] rounded-lg text-sm font-medium hover:bg-[#B8862E] transition disabled:opacity-50"
               >
                 Deposit {depositAmount ? fmt(Number(depositAmount)) : "$0"}
               </button>

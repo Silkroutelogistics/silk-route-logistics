@@ -90,7 +90,7 @@ export default function DisputesPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-[#C8963E] text-white rounded-lg text-sm font-medium hover:bg-[#B8862E] transition flex items-center gap-2"
+          className="px-4 py-2 bg-[#C8963E] text-[#0A2540] rounded-lg text-sm font-medium hover:bg-[#B8862E] transition flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> New Dispute
         </button>
@@ -194,7 +194,7 @@ export default function DisputesPage() {
               <button
                 onClick={() => createMutation.mutate({ loadReferenceNumber: newDispute.loadRef, type: newDispute.type, amount: Number(newDispute.amount), description: newDispute.description })}
                 disabled={!newDispute.loadRef || !newDispute.amount || !newDispute.description || createMutation.isPending}
-                className="w-full py-2.5 bg-[#C8963E] text-white rounded-lg text-sm font-medium hover:bg-[#B8862E] transition disabled:opacity-50"
+                className="w-full py-2.5 bg-[#C8963E] text-[#0A2540] rounded-lg text-sm font-medium hover:bg-[#B8862E] transition disabled:opacity-50"
               >
                 Create Dispute
               </button>

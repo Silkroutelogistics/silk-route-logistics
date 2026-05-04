@@ -556,17 +556,17 @@ export default function CarrierPoolPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by company, MC#, DOT#, email..."
-            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-gold/50" />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white">
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-slate-700">
           <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
           {["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((s) => (
             <option key={s} value={s} className="bg-[#0F1117] text-white">{s.replace(/_/g, " ")}</option>
           ))}
         </select>
         <select value={equipFilter} onChange={(e) => setEquipFilter(e.target.value)}
-          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white">
+          className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-slate-700">
           <option value="" className="bg-[#0F1117] text-white">All Equipment</option>
           {["Dry Van", "Reefer", "Flatbed", "Step Deck", "Car Hauler", "Power Only"].map((t) => (
             <option key={t} value={t} className="bg-[#0F1117] text-white">{t}</option>
@@ -651,7 +651,7 @@ export default function CarrierPoolPage() {
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C9A84C] text-white shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C9A84C] text-[#0A2540] shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
                     <Icon className={`w-[18px] h-[18px] transition-all duration-150 ${panelTab === key ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
                   </div>
                   <span className={`text-[10px] leading-none transition-all duration-150 ${panelTab === key ? "text-[#C9A84C] font-semibold" : "text-gray-400 font-medium"}`}>{label}</span>
@@ -775,7 +775,7 @@ export default function CarrierPoolPage() {
                         </div>
                         <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
                           disabled={updateCarrier.isPending}
-                          className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                          className="w-full px-4 py-2 bg-[#C9A84C] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
@@ -904,7 +904,7 @@ export default function CarrierPoolPage() {
                         </div>
                         <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
                           disabled={updateCarrier.isPending}
-                          className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                          className="w-full px-4 py-2 bg-[#C9A84C] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
@@ -1257,7 +1257,7 @@ export default function CarrierPoolPage() {
                           if (uploadNotes) fd.append("notes", uploadNotes);
                           uploadDocMutation.mutate({ carrierId: selectedCarrier.id, formData: fd });
                         }}
-                        className="w-full px-4 py-2 bg-[#C9A84C] text-white rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                        className="w-full px-4 py-2 bg-[#C9A84C] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                         {uploadDocMutation.isPending ? "Uploading..." : "Upload Document"}
                       </button>
                     </div>

@@ -154,14 +154,14 @@ export default function ClaimsPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="bg-gray-100 border border-gray-200 text-sm text-white rounded-lg px-3 py-2">
+          className="bg-gray-100 border border-gray-200 text-sm text-slate-700 rounded-lg px-3 py-2">
           <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
           {["FILED", "UNDER_REVIEW", "INVESTIGATING", "RESOLVED", "DENIED"].map(s => (
             <option key={s} value={s} className="bg-[#0F1117] text-white">{formatType(s)}</option>
           ))}
         </select>
         <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
-          className="bg-gray-100 border border-gray-200 text-sm text-white rounded-lg px-3 py-2">
+          className="bg-gray-100 border border-gray-200 text-sm text-slate-700 rounded-lg px-3 py-2">
           <option value="" className="bg-[#0F1117] text-white">All Types</option>
           {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => (
             <option key={t} value={t} className="bg-[#0F1117] text-white">{formatType(t)}</option>
@@ -170,7 +170,7 @@ export default function ClaimsPage() {
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search load ref#..."
-            className="w-full bg-gray-100 border border-gray-200 text-sm text-white rounded-lg pl-9 pr-3 py-2" />
+            className="w-full bg-gray-100 border border-gray-200 text-sm text-slate-700 rounded-lg pl-9 pr-3 py-2" />
         </div>
       </div>
 
@@ -258,17 +258,17 @@ export default function ClaimsPage() {
       <SlideDrawer open={showNewModal} onClose={() => setShowNewModal(false)} title="File New Claim" width="max-w-md">
             <div className="space-y-4">
             <input placeholder="Load ID" value={newForm.loadId} onChange={e => setNewForm(p => ({ ...p, loadId: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700" />
             <select value={newForm.type} onChange={e => setNewForm(p => ({ ...p, type: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white">
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700">
               {["DAMAGE", "SHORTAGE", "LOSS", "DELAY", "OVERCHARGE"].map(t => <option key={t} value={t}>{formatType(t)}</option>)}
             </select>
             <input type="number" placeholder="Estimated Value ($)" value={newForm.estimatedValue}
               onChange={e => setNewForm(p => ({ ...p, estimatedValue: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700" />
             <textarea placeholder="Describe the claim..." rows={3} value={newForm.description}
               onChange={e => setNewForm(p => ({ ...p, description: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white resize-none" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700 resize-none" />
             <button disabled={!newForm.loadId || !newForm.estimatedValue || createMutation.isPending}
               onClick={() => createMutation.mutate({ loadId: newForm.loadId, type: newForm.type, estimatedValue: Number(newForm.estimatedValue), description: newForm.description })}
               className="w-full py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
@@ -285,10 +285,10 @@ export default function ClaimsPage() {
             <p className="text-sm text-gray-500">Claim for load {resolveTarget.load?.referenceNumber || resolveTarget.loadId.slice(0, 8)} — Est. {fmt(resolveTarget.estimatedValue)}</p>
             <input type="number" placeholder="Resolution Amount ($)" value={resolveForm.resolutionAmount}
               onChange={e => setResolveForm(p => ({ ...p, resolutionAmount: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700" />
             <textarea placeholder="Resolution notes..." rows={3} value={resolveForm.resolutionNotes}
               onChange={e => setResolveForm(p => ({ ...p, resolutionNotes: e.target.value }))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white resize-none" />
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700 resize-none" />
             <button disabled={!resolveForm.resolutionAmount || updateMutation.isPending}
               onClick={() => updateMutation.mutate({ id: resolveTarget.id, body: { status: "RESOLVED", resolutionNotes: resolveForm.resolutionNotes, resolutionAmount: Number(resolveForm.resolutionAmount) } })}
               className="w-full py-2.5 bg-green-600 text-white font-medium rounded-lg text-sm hover:bg-green-500 disabled:opacity-50">

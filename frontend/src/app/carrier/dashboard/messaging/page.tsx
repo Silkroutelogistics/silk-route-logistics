@@ -152,7 +152,7 @@ export default function CarrierMessagingPage() {
                   <div className="text-right shrink-0 ml-2">
                     <div className="text-[10px] text-gray-400">{new Date(conv.lastMessageAt).toLocaleDateString()}</div>
                     {conv.unreadCount > 0 && (
-                      <span className="inline-block mt-1 px-1.5 py-0.5 bg-[#C9A84C] text-white text-[9px] font-bold rounded-full">
+                      <span className="inline-block mt-1 px-1.5 py-0.5 bg-[#C9A84C] text-[#0A2540] text-[9px] font-bold rounded-full">
                         {conv.unreadCount}
                       </span>
                     )}

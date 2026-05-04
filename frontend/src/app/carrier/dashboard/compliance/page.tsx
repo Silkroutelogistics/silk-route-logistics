@@ -373,7 +373,7 @@ export default function CarrierCompliancePage() {
                 <X size={13} /> Cancel
               </button>
               <button onClick={() => updateInsurance.mutate(insForm)} disabled={updateInsurance.isPending}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs text-white bg-[#C9A84C] hover:bg-[#C9A84C]/90 rounded-lg transition disabled:opacity-50">
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#0A2540] bg-[#C9A84C] hover:bg-[#C9A84C]/90 rounded-lg transition disabled:opacity-50">
                 <Save size={13} /> {updateInsurance.isPending ? "Saving..." : "Save"}
               </button>
             </div>

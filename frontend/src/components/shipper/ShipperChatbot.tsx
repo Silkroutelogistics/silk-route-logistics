@@ -80,7 +80,7 @@ export function ShipperChatbot() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[9998] w-14 h-14 rounded-full bg-[#C9A84C] text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-[9998] w-14 h-14 rounded-full bg-[#C9A84C] text-[#0A2540] shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
           aria-label="Open SRL Assistant"
         >
           <MessageCircle size={24} />
@@ -141,7 +141,7 @@ export function ShipperChatbot() {
                 <div
                   className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "user"
-                      ? "bg-[#C9A84C] text-white rounded-br-md"
+                      ? "bg-[#C9A84C] text-[#0A2540] rounded-br-md"
                       : "bg-gray-100 text-gray-800 rounded-bl-md"
                   }`}
                 >
@@ -179,7 +179,7 @@ export function ShipperChatbot() {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || loading}
-                className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#C9A84C] text-white disabled:opacity-40 hover:bg-[#b8963e] transition-colors flex-shrink-0"
+                className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#C9A84C] text-[#0A2540] disabled:opacity-40 hover:bg-[#b8963e] transition-colors flex-shrink-0"
                 aria-label="Send message"
               >
                 <Send size={16} />

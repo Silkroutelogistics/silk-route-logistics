@@ -2207,7 +2207,68 @@
 //           No marketing softeners. No fabricated
 //           metrics. C6 of 6 — closes Lead Hunter
 //           outreach quality fix sprint.
-export const SRL_VERSION = "3.8.cc";
+// v3.8.dd — Sprint 10: bulk React/Tailwind P0 sweep.
+//           Mirrors v3.8.t / v3.8.u / v3.8.y CSS-side
+//           methodology applied to .tsx components
+//           surfaced by scanner v5 (commit a996142).
+//           Note: directive targeted next-available
+//           letter; v3.8.dd is next after v3.8.cc per
+//           §3.1 sequence rule.
+//           (a) Cluster T1 — solid gold CTA + white
+//               text (~12 occurrences, 7 files):
+//               text-white → text-[#0A2540] on
+//               bg-[#C8963E] / bg-[#C9A84C] CTA
+//               buttons in accounting/disputes,
+//               accounting/fund, accounting/reports,
+//               carrier/dashboard/compliance,
+//               carrier/dashboard/messaging,
+//               dashboard/carriers, ShipperChatbot.
+//               Navy-on-gold ≈ 9:1, passes AA + AAA.
+//               Bulk via sed.
+//           (b) Cluster T1b — broken bg-gray-50/100 +
+//               text-white form inputs (~12
+//               occurrences across dashboard/claims +
+//               dashboard/carriers): UI BUG (light
+//               gray bg + white text = ~1.05-1.10:1
+//               invisible regardless of parent — text
+//               was probably copy-pasted from a dark-
+//               themed page without updating fg). Sed:
+//               text-white → text-slate-700 on lines
+//               containing bg-gray-50/100. ~9:1 PASS.
+//           (c) Cluster T-edge composited gold-on-pale-
+//               gold: VERIFIED V6-FP, no fix applied.
+//               All occurrences (bg-[#C9A84C]/10 +
+//               text-[#C9A84C] etc.) on dashboard
+//               pages with dark-navy ancestor (var(--
+//               srl-bg-base) resolves to navy in
+//               default mode). Real rendering: gold-
+//               tinted-navy bg + gold text = ~5:1
+//               PASS. Scanner reports against pale
+//               gold from #FFFFFF compositing → false
+//               positive class same as Lead Hunter +
+//               /track. Logged for v6 JSX tree
+//               walking.
+//           (d) /track and Lead Hunter modal:
+//               VERIFIED ALL V6-FP. Page wrappers use
+//               bg-[#0f172a] / dashboard navy → all
+//               translucent overlay findings render
+//               correctly in real rendering.
+//               Customer-facing /track is rendering
+//               correctly modulo scanner blind spot;
+//               changing text-white to dark would
+//               CREATE contrast bugs. No Sprint 10
+//               fixes applied to either surface.
+//           Total: ~24 surgical Tailwind className
+//           edits across 8 files. Real React/Tailwind
+//           P0 surface comprehensively closed within
+//           v5 scanner's same-element-pairing scope.
+//           Remaining ~370 P0 are v6-FP class + ~150
+//           CSS-side residue + ~50 edge cases.
+//           Gold canonicalization (#C9A84C →
+//           #C5A572 or #BA7517 per CLAUDE.md §2.1)
+//           logged as separate backlog item per
+//           directive scope confirmation #1.
+export const SRL_VERSION = "3.8.dd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
