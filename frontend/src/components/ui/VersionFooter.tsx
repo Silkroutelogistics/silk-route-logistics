@@ -2131,26 +2131,30 @@
 //          React .tsx — scanner v5 candidate) +
 //          carrier portal dark-theme false positives
 //          (also scanner v5).
-// v3.8.z — Lead Hunter Bug 4a+b: ProspectVertical
-//          enum (COLDCHAIN | WELLNESS | UNKNOWN)
-//          added to Customer model via prisma db push
-//          to Neon. Apollo CSV `Vertical` column read
-//          by mapCsvRow with normalizeVertical() —
-//          anything not COLDCHAIN/WELLNESS becomes
-//          UNKNOWN. bulkCreateCustomers persists the
-//          field; re-import upgrades UNKNOWN →
-//          COLDCHAIN/WELLNESS but never downgrades.
-//          AE Console manual review queue surfaced
-//          via new "Manual Review (N)" filter mode in
-//          the Lead Hunter pipeline view, filtering
-//          on vertical=UNKNOWN. Hard-block on
-//          outreach generation lands in C5. Note:
-//          v3.8.y reserved by parallel Sprint 8
-//          uncommitted brand-sweep working tree per
-//          §3.1; this commit takes v3.8.z to keep the
-//          sequence continuous from my Lead Hunter
-//          chain (v3.8.v/w/x).
-export const SRL_VERSION = "3.8.z";
+// v3.8.z — VersionFooter-only marker. The descriptive
+//          comment block immediately above (Lead
+//          Hunter Bug 4a+b prep) was inadvertently
+//          rolled into commit c8c3846 (v3.8.y Sprint
+//          8 brand sweep) before the matching schema
+//          + code change had a chance to ship. The
+//          actual schema migration (ProspectVertical
+//          enum + Customer.vertical column + Apollo
+//          CSV `Vertical` import wiring + Manual
+//          Review queue filter) ships in v3.8.aa.
+//          Treat this v3.8.z block as documentation
+//          of intent; v3.8.aa is the load-bearing
+//          commit.
+// v3.8.aa — Lead Hunter Bug 4a+b actual ship: schema
+//           change pushed to Neon via prisma db push,
+//           bulkCreateCustomers persists vertical,
+//           types.ts adds ProspectVertical type, page
+//           .tsx mapCsvRow reads `Vertical` column +
+//           Manual Review filter mode added. Hard-
+//           block on outreach generation lands in C5
+//           (v3.8.bb). Per §3.1 letter sequence
+//           continuous, v3.8.aa is the next available
+//           letter past v3.8.z.
+export const SRL_VERSION = "3.8.aa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

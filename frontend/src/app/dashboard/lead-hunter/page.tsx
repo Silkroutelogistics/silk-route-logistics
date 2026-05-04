@@ -30,7 +30,7 @@ interface Lane { origin: string; dest: string; avgRate: number; avgRatePerMile: 
 
 interface CallLog { date: string; type: string; notes: string; by: string; }
 type Tab = "pipeline" | "replies" | "queue" | "activity" | "regions" | "lanes";
-type PipelineFilterMode = "active" | "all" | "not_interested";
+type PipelineFilterMode = "active" | "all" | "not_interested" | "manual_review";
 
 interface Reply {
   id: string;
@@ -393,15 +393,23 @@ export default function LeadHunterPage() {
 
   const getStage = useCallback((c: Customer) => resolveStage(c.status), []);
 
+  // v3.8.aa — Manual Review queue: customers with vertical=UNKNOWN. Hard-blocks
+  // outreach generation per §18 until classified. Defensive default to UNKNOWN
+  // if the API ever returns null (legacy rows pre-migration).
+  const manualReviewProspects = prospects.filter((c) => (c.vertical ?? "UNKNOWN") === "UNKNOWN");
+  const manualReviewCount = manualReviewProspects.length;
+
   // When a stage is explicitly chosen in the dropdown, it wins over the
-  // [Active]/[All]/[Not Interested] chip (chip is greyed out in that case).
+  // [Active]/[All]/[Not Interested]/[Manual Review] chip.
   const filteredProspects = stageFilter
     ? prospects.filter((c) => getStage(c) === stageFilter)
-    : pipelineMode === "not_interested"
-      ? prospects.filter((c) => getStage(c) === "NOT_INTERESTED")
-      : pipelineMode === "all"
-        ? prospects
-        : prospects.filter((c) => getStage(c) !== "NOT_INTERESTED");
+    : pipelineMode === "manual_review"
+      ? manualReviewProspects
+      : pipelineMode === "not_interested"
+        ? prospects.filter((c) => getStage(c) === "NOT_INTERESTED")
+        : pipelineMode === "all"
+          ? prospects
+          : prospects.filter((c) => getStage(c) !== "NOT_INTERESTED");
 
   // Server-side pipeline counts (authoritative, not limited by page size).
   // Fall back to local aggregation over the visible page while stats are loading.
@@ -475,6 +483,14 @@ export default function LeadHunterPage() {
   // `Title`, `Email`, `Industry`, `Vertical`. Capitals and spaces matter.
   // Compose contactName from First + Last so downstream firstName extraction works.
   // Title is parsed for audit but not persisted (no schema field today).
+  // Vertical: COLDCHAIN | WELLNESS literals only — anything else (blank, typo,
+  // unrecognized) → UNKNOWN, which hard-blocks outreach generation per §18.
+  const normalizeVertical = (raw: string): "COLDCHAIN" | "WELLNESS" | "UNKNOWN" => {
+    const v = raw.trim().toUpperCase();
+    if (v === "COLDCHAIN" || v === "COLD-CHAIN" || v === "COLD CHAIN") return "COLDCHAIN";
+    if (v === "WELLNESS") return "WELLNESS";
+    return "UNKNOWN";
+  };
   const mapCsvRow = (row: Record<string, string>) => {
     const firstName = (row["First Name"] || "").trim();
     const lastName = (row["Last Name"] || "").trim();
@@ -487,6 +503,7 @@ export default function LeadHunterPage() {
       city: (row["City"] || "").trim(),
       state: (row["State"] || "").trim(),
       industryType: (row["Industry"] || "").trim(),
+      vertical: normalizeVertical(row["Vertical"] || ""),
       type: "SHIPPER",
       status: "Prospect",
     };
@@ -828,6 +845,7 @@ export default function LeadHunterPage() {
               { key: "active", label: "Active" },
               { key: "all", label: "All" },
               { key: "not_interested", label: `Not Interested (${stageCounts.NOT_INTERESTED})` },
+              { key: "manual_review", label: `Manual Review (${manualReviewCount})` },
             ];
             return (
               <div className="flex items-center gap-2">

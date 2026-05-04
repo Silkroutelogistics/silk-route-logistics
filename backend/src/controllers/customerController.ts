@@ -636,6 +636,7 @@ export async function bulkCreateCustomers(req: AuthRequest, res: Response) {
     customers: {
       name: string; contactName?: string; email?: string; phone?: string;
       city?: string; state?: string; type?: string; industryType?: string;
+      vertical?: "COLDCHAIN" | "WELLNESS" | "UNKNOWN";
     }[];
   };
 
@@ -682,6 +683,10 @@ export async function bulkCreateCustomers(req: AuthRequest, res: Response) {
         if (row.state) patch.state = row.state;
         if (row.industryType) patch.industryType = row.industryType;
         if (email) patch.email = email;
+        // Vertical can transition UNKNOWN → COLDCHAIN/WELLNESS on re-import
+        // (e.g. follow-up CSV that adds the column for previously-unclassified
+        // rows). Never downgrade an explicit vertical to UNKNOWN.
+        if (row.vertical && row.vertical !== "UNKNOWN") patch.vertical = row.vertical;
         if (Object.keys(patch).length === 0) {
           skipped++;
           continue;
@@ -699,6 +704,7 @@ export async function bulkCreateCustomers(req: AuthRequest, res: Response) {
             state: row.state || null,
             type: row.type || "SHIPPER",
             industryType: row.industryType || null,
+            vertical: row.vertical || "UNKNOWN",
             status: "Prospect",
           } as any,
         });

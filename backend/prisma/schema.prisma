@@ -99,6 +99,16 @@ enum OnboardingStatus {
   SUSPENDED
 }
 
+// v3.8.aa — Lead Hunter prospect vertical. UNKNOWN is a persisted flag
+// state that hard-blocks outreach generation and surfaces the customer in
+// the AE Console manual review queue. Apollo CSV `Vertical` column maps
+// directly: COLDCHAIN | WELLNESS, anything else → UNKNOWN.
+enum ProspectVertical {
+  COLDCHAIN
+  WELLNESS
+  UNKNOWN
+}
+
 enum ScorecardPeriod {
   WEEKLY
   MONTHLY
@@ -1945,6 +1955,10 @@ model Customer {
   personalizedRelevance String?   @map("personalized_relevance")
   researchedAt          DateTime? @map("researched_at")
   researchNotes         String?   @map("research_notes") @db.Text
+
+  // Lead Hunter — Vertical routing (v3.8.aa). UNKNOWN hard-blocks outreach
+  // and surfaces customer in AE Console manual review queue. See §18.
+  vertical ProspectVertical @default(UNKNOWN)
 
   // Lead Hunter — Sequence State (v3.6.c)
   sequenceStatus  String?   @map("sequence_status")    // ACTIVE | PAUSED | STOPPED | COMPLETED

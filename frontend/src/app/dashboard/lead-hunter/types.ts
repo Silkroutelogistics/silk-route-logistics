@@ -10,6 +10,8 @@ export type { PipelineStage, PipelineStatus } from "@shared/constants/pipelineSt
 
 import type { PipelineStage } from "@shared/constants/pipelineStatus";
 
+export type ProspectVertical = "COLDCHAIN" | "WELLNESS" | "UNKNOWN";
+
 export interface Customer {
   id: string;
   name: string;
@@ -25,6 +27,9 @@ export interface Customer {
   annualRevenue: number | null;
   industryType: string | null;
   onboardingStatus: string | null;
+  // v3.8.y — UNKNOWN hard-blocks outreach generation per §18; AE Console
+  // surfaces UNKNOWN prospects in a manual-review queue.
+  vertical: ProspectVertical;
 }
 
 export interface ActivityEvent {
