@@ -114,7 +114,7 @@
       display: inline-block; padding: 3px 10px; border-radius: 12px;
       font-size: 11px; font-weight: 600;
     }
-    .status-FILED { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .status-FILED { background: rgba(59,130,246,0.1); color: #1D4ED8; }
     .status-UNDER_REVIEW { background: rgba(245,158,11,0.1); color: #B45309; }
     .status-INVESTIGATING { background: rgba(168,85,247,0.1); color: #9333EA; }
     .status-RESOLVED { background: rgba(34,197,94,0.1); color: #15803D; }
@@ -206,10 +206,10 @@
       border: 2px solid var(--gray-300);
       background: var(--white);
     }
-    .timeline-dot.dot-blue { border-color: #3B82F6; background: rgba(59,130,246,0.2); }
-    .timeline-dot.dot-amber { border-color: #F59E0B; background: rgba(245,158,11,0.2); }
+    .timeline-dot.dot-blue { border-color: #1D4ED8; background: rgba(59,130,246,0.2); }
+    .timeline-dot.dot-amber { border-color: #B45309; background: rgba(245,158,11,0.2); }
     .timeline-dot.dot-purple { border-color: #9333EA; background: rgba(168,85,247,0.2); }
-    .timeline-dot.dot-green { border-color: #22C55E; background: rgba(34,197,94,0.2); }
+    .timeline-dot.dot-green { border-color: #15803D; background: rgba(34,197,94,0.2); }
     .timeline-dot.dot-gray { border-color: var(--gray-400); background: var(--gray-200); }
     .timeline-dot.dot-gold { border-color: var(--gold); background: var(--gold-dim); }
     .timeline-meta {
@@ -318,7 +318,7 @@
     .summary-card-label {
       font-size: 12px; color: var(--gray-500); margin-top: 4px;
     }
-    .summary-card.sc-filed .summary-card-value { color: #3B82F6; }
+    .summary-card.sc-filed .summary-card-value { color: #1D4ED8; }
     .summary-card.sc-review .summary-card-value { color: #B45309; }
     .summary-card.sc-investigating .summary-card-value { color: #9333EA; }
     .summary-card.sc-resolved .summary-card-value { color: #15803D; }

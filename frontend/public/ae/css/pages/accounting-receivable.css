@@ -45,13 +45,13 @@
     .reminder-step-action { font-size: 11px; color: var(--gray-500); line-height: 1.3; }
     .step-green { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.03); }
     .step-green .reminder-step-dot { background: var(--green); }
-    .step-green .reminder-step-day { color: #16A34A; }
+    .step-green .reminder-step-day { color: #15803D; }
     .step-blue { border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.03); }
     .step-blue .reminder-step-dot { background: #3B82F6; }
     .step-blue .reminder-step-day { color: #2563EB; }
     .step-amber { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.03); }
     .step-amber .reminder-step-dot { background: var(--amber); }
-    .step-amber .reminder-step-day { color: #D97706; }
+    .step-amber .reminder-step-day { color: #B45309; }
     .step-orange { border-color: rgba(249, 115, 22, 0.3); background: rgba(249, 115, 22, 0.03); }
     .step-orange .reminder-step-dot { background: #F97316; }
     .step-orange .reminder-step-day { color: #EA580C; }
@@ -115,7 +115,7 @@
     .status-badge.overdue { background: rgba(239, 68, 68, 0.15); color: #DC2626; }
     .status-badge.paid { background: rgba(34, 197, 94, 0.15); color: #15803D; }
     .status-badge.void { background: rgba(100, 116, 139, 0.15); color: #64748B; }
-    .status-badge.partial { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+    .status-badge.partial { background: rgba(245, 158, 11, 0.12); color: #B45309; }
 
     /* --- Overdue Indicator --- */
     .overdue-color.current { color: var(--green); }
@@ -135,7 +135,7 @@
     }
     .action-btn.send { background: rgba(59, 130, 246, 0.1); color: #2563EB; border-color: rgba(59, 130, 246, 0.3); }
     .action-btn.send:hover { background: rgba(59, 130, 246, 0.2); }
-    .action-btn.mark-paid { background: rgba(34, 197, 94, 0.1); color: #16A34A; border-color: rgba(34, 197, 94, 0.3); }
+    .action-btn.mark-paid { background: rgba(34, 197, 94, 0.1); color: #15803D; border-color: rgba(34, 197, 94, 0.3); }
     .action-btn.mark-paid:hover { background: rgba(34, 197, 94, 0.2); }
     .action-btn.void-btn { background: rgba(100, 116, 139, 0.1); color: #475569; border-color: rgba(100, 116, 139, 0.3); }
     .action-btn.void-btn:hover { background: rgba(100, 116, 139, 0.2); }

@@ -193,7 +193,7 @@
       background: var(--gold-dim);
       border-radius: 6px;
       font-size: 12px;
-      color: var(--gold);
+      color: var(--gold-dark);
     }
     .step-tip strong { color: #8B6914; }
 

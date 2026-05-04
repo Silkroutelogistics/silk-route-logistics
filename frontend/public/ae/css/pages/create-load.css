@@ -40,12 +40,12 @@
     .progress-step.active .progress-step-num {
       border-color: var(--gold);
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
     .progress-step.completed .progress-step-num {
       border-color: var(--green);
       background: var(--green);
-      color: var(--white);
+      color: var(--navy);
     }
     .progress-step-label {
       font-size: 13px;
@@ -106,11 +106,11 @@
     }
     .form-section.active .form-section-num {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
     .form-section.completed .form-section-num {
       background: var(--green);
-      color: var(--white);
+      color: var(--navy);
     }
     .form-section-title {
       font-size: 16px;
@@ -521,7 +521,7 @@
       box-shadow: var(--shadow-lg);
     }
     .toast.show { transform: translateX(0); }
-    .toast-success { background: var(--green); color: var(--white); }
+    .toast-success { background: var(--green); color: var(--navy); }
     .toast-error { background: var(--red); color: var(--white); }
 
     /* --- Responsive --- */

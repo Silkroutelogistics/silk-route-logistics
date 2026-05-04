@@ -138,7 +138,7 @@
     .txn-type-badge.INITIAL_DEPOSIT { background: rgba(59,130,246,0.1); color: #2563EB; }
     .txn-type-badge.CARRIER_PAYMENT_OUT { background: var(--red-bg); color: var(--red); }
     .txn-type-badge.SHIPPER_PAYMENT_IN { background: var(--green-bg); color: #059669; }
-    .txn-type-badge.QP_FEE_EARNED { background: var(--gold-dim); color: var(--gold); }
+    .txn-type-badge.QP_FEE_EARNED { background: var(--gold-dim); color: var(--gold-dark); }
     .txn-type-badge.ADJUSTMENT { background: rgba(168,85,247,0.1); color: #7C3AED; }
     .txn-type-badge.WITHDRAWAL { background: var(--amber-bg); color: #B45309; }
 
@@ -153,7 +153,7 @@
       padding: 6px 14px; border: 1px solid var(--gray-200); border-radius: 6px;
       background: var(--white); color: var(--gray-600); font-size: 13px; cursor: pointer;
     }
-    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .pagination button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-dark); }
     .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
     .pagination button.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
     .pagination-info { font-size: 13px; color: var(--gray-400); }

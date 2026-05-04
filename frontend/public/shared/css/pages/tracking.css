@@ -47,7 +47,7 @@
     }
     .nav-links a:hover, .nav-links a.active { color: var(--gold); }
     .nav-cta {
-      background: var(--gold); color: var(--white); padding: 8px 20px;
+      background: var(--gold); color: var(--navy); padding: 8px 20px;
       border-radius: 6px; font-size: 0.85rem; font-weight: 600;
     }
     .nav-cta:hover { background: var(--gold-light); }
@@ -93,7 +93,7 @@
     .search-form input::placeholder { color: #9CA3AF; }
     .search-form input:focus { outline: none; border-color: var(--gold); }
     .search-form button {
-      padding: 12px 24px; background: var(--gold); color: var(--white);
+      padding: 12px 24px; background: var(--gold); color: var(--navy);
       border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: var(--transition);
     }
     .search-form button:hover { background: var(--gold-light); }

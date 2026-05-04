@@ -43,8 +43,8 @@
       color: var(--gray-500);
       flex-shrink: 0;
     }
-    .section-tab.active .tab-num { background: var(--gold); color: #fff; }
-    .section-tab.completed .tab-num { background: var(--green); color: #fff; }
+    .section-tab.active .tab-num { background: var(--gold); color: var(--navy); }
+    .section-tab.completed .tab-num { background: var(--green); color: var(--navy); }
 
     /* Center: form area */
     .form-area {
@@ -156,7 +156,7 @@
     .btn-gold:hover { background: var(--gold-hover); }
     .btn-outline { background: var(--white); color: var(--navy); border: 1px solid var(--gray-200) !important; }
     .btn-outline:hover { border-color: var(--gold) !important; color: var(--gold); }
-    .btn-green { background: var(--green); color: #fff; }
+    .btn-green { background: var(--green); color: var(--navy); }
     .btn-green:hover { opacity: 0.9; }
 
     /* Read-only info cards */

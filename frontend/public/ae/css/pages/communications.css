@@ -289,7 +289,7 @@
       font-size: 12px;
     }
     .icon-call { background: rgba(34,197,94,0.1); color: var(--green); }
-    .icon-text { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .icon-text { background: rgba(59,130,246,0.1); color: #1D4ED8; }
     .icon-email-in { background: rgba(168,85,247,0.1); color: #A855F7; }
     .icon-email-out { background: rgba(200,150,62,0.15); color: var(--gold); }
     .icon-email { background: rgba(168,85,247,0.1); color: #A855F7; }
@@ -556,7 +556,7 @@
       font-size: 10px; font-weight: 700;
     }
     .stage-Lead { background: rgba(99,102,241,0.1); color: #6366F1; }
-    .stage-Contacted { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .stage-Contacted { background: rgba(59,130,246,0.1); color: #1D4ED8; }
     .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
     .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
     .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }

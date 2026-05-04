@@ -66,7 +66,7 @@
     .nav-links a.active { color: var(--gold); }
 
     .nav-cta {
-      background: var(--gold); color: var(--white); padding: 10px 24px;
+      background: var(--gold); color: var(--navy); padding: 10px 24px;
       border-radius: 8px; font-size: 0.9rem; font-weight: 600;
       transition: var(--transition);
     }
@@ -189,7 +189,7 @@
     .form-group textarea { resize: vertical; min-height: 120px; }
 
     .btn-submit {
-      width: 100%; padding: 14px 32px; background: var(--gold); color: var(--white);
+      width: 100%; padding: 14px 32px; background: var(--gold); color: var(--navy);
       border: none; border-radius: var(--radius-sm); font-size: 1rem;
       font-weight: 700; cursor: pointer; transition: var(--transition);
       display: flex; align-items: center; justify-content: center; gap: 8px;

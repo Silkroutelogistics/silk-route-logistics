@@ -554,7 +554,7 @@ a:hover {
 
 .action-item-icon.icon-invoice {
   background: var(--gold-dim);
-  color: var(--gold);
+  color: var(--gold-dark);
 }
 
 .action-item-details {
@@ -612,7 +612,7 @@ a:hover {
 }
 
 .notif-item.clickable:hover .action-item-arrow {
-  color: var(--gold);
+  color: var(--gold-dark);
 }
 
 /* --- KPI Grid --- */
@@ -1262,7 +1262,7 @@ tbody tr:hover {
   transition: transform 0.2s;
   width: 16px;
   height: 16px;
-  color: var(--gray-400);
+  color: var(--gray-600);
 }
 
 .collapsible-panel.open .collapsible-panel-header .chevron {

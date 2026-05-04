@@ -2055,7 +2055,102 @@
 //          rendered-output verification per §3.2 and
 //          FMCSA-SAFER primary-source check per §3.13
 //          before sweeping public surfaces. C3 of 6.
-export const SRL_VERSION = "3.8.x";
+// v3.8.y — Sprint 8: bulk P0 sweep across 5 contrast
+//          clusters (CSS-side completion). Mirrors
+//          v3.8.t / v3.8.u methodology — surgical
+//          color swaps across shared component
+//          patterns surfaced by scanner v4 trusted
+//          baseline (commit a0d15bc). Note: directive
+//          targeted v3.8.v but Lead Hunter sprint
+//          (commits 2dff607, 99eec3e, ac41454) took
+//          v3.8.v / v3.8.w / v3.8.x in parallel; this
+//          ships as v3.8.y per §3.1 "never skip a
+//          letter".
+//          (a) Cluster A — gold/green/amber + white
+//              text (~30 occurrences across 14
+//              files): .navbar-cta + .category-pill
+//              .active across 6 marketing pages + 2
+//              auth pages; .btn-success / .btn-amber
+//              / .btn-green / .toast-success /
+//              .section-tab.active|completed .tab-num
+//              / .threshold-banner .info-icon / .nav-
+//              cta / .btn-submit / .search-form
+//              button / .progress-step.active +
+//              .completed .progress-step-num / .form-
+//              section.active + .completed .form-
+//              section-num. Bundled per "same-shape"
+//              directive — color: var(--white) /
+//              #FFFFFF / #fff → var(--navy) / #0D1B2A.
+//          (b) Cluster B — slate-400 on light card
+//              surfaces: 1 fix in console.css
+//              (.collapsible-panel-header .chevron
+//              var(--gray-400) → var(--gray-600)).
+//              tools.css carrier-portal selectors
+//              (.fuel-card / .weather-card /
+//              .detention-summary / .fuel-widget-
+//              placeholder) deliberately SKIPPED —
+//              scanner v4 false positive; carrier
+//              portal renders on dark navy bg, not
+//              white body, so slate-400 actually
+//              composites to ~6:1. Logged as scanner
+//              v5 candidate.
+//          (c) Cluster C — gold-text-on-white CTAs:
+//              1 fix in accounting-fund.css
+//              (.pagination button:hover:not
+//              (:disabled) var(--gold) → var(--gold-
+//              dark)). tools.css .weather-card .temp-
+//              display skipped (same dark-theme FP
+//              as B).
+//          (d) Cluster D — status badges + saturated
+//              colors at additional selectors (~25
+//              fixes across 12 files): per-color
+//              darkening matrix matching v3.8.u —
+//              green #16A34A → #15803D, amber #D97706
+//              / #F59E0B → #B45309, red #EF4444 →
+//              #B91C1C, blue #3B82F6 → #1D4ED8,
+//              violet #8B5CF6 → #6D28D9. Applied via
+//              bulk sed across accounting-receivable,
+//              accounting-payable, accounting-
+//              approvals, accounting-fund,
+//              accounting-dashboard, claims,
+//              communications, compliance-alerts,
+//              compliance-carrier, compliance-
+//              dashboard, crm, financials.
+//          (e) Cluster E — composited gold-on-pale-
+//              gold (4 fixes): color: var(--gold) →
+//              color: var(--gold-dark) on
+//              .action-item-icon.icon-invoice +
+//              .notif-item.clickable:hover .action-
+//              item-arrow (console.css), .txn-type-
+//              badge.QP_FEE_EARNED (accounting-fund),
+//              .step-tip (training.css).
+//          Total: ~70 surgical color edits across 14
+//          files. CSS-side audit comprehensively
+//          closed. Remaining P0 are themed-sidebar
+//          variants (Tailwind utility classes on
+//          React .tsx — scanner v5 candidate) +
+//          carrier portal dark-theme false positives
+//          (also scanner v5).
+// v3.8.z — Lead Hunter Bug 4a+b: ProspectVertical
+//          enum (COLDCHAIN | WELLNESS | UNKNOWN)
+//          added to Customer model via prisma db push
+//          to Neon. Apollo CSV `Vertical` column read
+//          by mapCsvRow with normalizeVertical() —
+//          anything not COLDCHAIN/WELLNESS becomes
+//          UNKNOWN. bulkCreateCustomers persists the
+//          field; re-import upgrades UNKNOWN →
+//          COLDCHAIN/WELLNESS but never downgrades.
+//          AE Console manual review queue surfaced
+//          via new "Manual Review (N)" filter mode in
+//          the Lead Hunter pipeline view, filtering
+//          on vertical=UNKNOWN. Hard-block on
+//          outreach generation lands in C5. Note:
+//          v3.8.y reserved by parallel Sprint 8
+//          uncommitted brand-sweep working tree per
+//          §3.1; this commit takes v3.8.z to keep the
+//          sequence continuous from my Lead Hunter
+//          chain (v3.8.v/w/x).
+export const SRL_VERSION = "3.8.z";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

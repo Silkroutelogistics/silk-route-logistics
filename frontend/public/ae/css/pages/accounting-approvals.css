@@ -40,7 +40,7 @@
       color: var(--navy);
     }
     .summary-card.pending .summary-count { color: #A16207; }
-    .summary-card.approved .summary-count { color: #16A34A; }
+    .summary-card.approved .summary-count { color: #15803D; }
     .summary-card.rejected .summary-count { color: var(--red); }
     .summary-card.escalated .summary-count { color: #EA580C; }
 
@@ -64,7 +64,7 @@
       height: 20px;
       border-radius: 50%;
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
       display: flex;
       align-items: center;
       justify-content: center;

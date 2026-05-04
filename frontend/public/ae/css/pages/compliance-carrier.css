@@ -353,9 +353,9 @@
     .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-gold { background: var(--gold); color: var(--navy); }
     .btn-gold:hover { background: var(--gold-hover); }
-    .btn-blue-outline { background: transparent; color: #3B82F6; border: 1.5px solid #3B82F6; }
+    .btn-blue-outline { background: transparent; color: #1D4ED8; border: 1.5px solid #3B82F6; }
     .btn-blue-outline:hover { background: rgba(59,130,246,0.08); }
-    .btn-amber { background: var(--amber); color: var(--white); }
+    .btn-amber { background: var(--amber); color: var(--navy); }
     .btn-amber:hover { background: #D97706; }
     .btn-red-outline { background: transparent; color: var(--red); border: 1.5px solid var(--red); }
     .btn-red-outline:hover { background: var(--red-bg); }

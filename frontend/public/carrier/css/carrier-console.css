@@ -442,7 +442,7 @@ tbody tr.clickable:hover { background: rgba(200, 150, 62, 0.05); }
   border: 1px solid var(--border);
 }
 .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
-.btn-success { background: var(--green); color: #fff; }
+.btn-success { background: var(--green); color: var(--navy); }
 .btn-success:hover { opacity: 0.9; }
 .btn-danger { background: var(--red); color: #fff; }
 .btn-danger:hover { opacity: 0.9; }

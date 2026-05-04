@@ -154,7 +154,7 @@
     }
 
     .stage-lead .kanban-card { border-left-color: #6366F1; }
-    .stage-contacted .kanban-card { border-left-color: #3B82F6; }
+    .stage-contacted .kanban-card { border-left-color: #1D4ED8; }
     .stage-quoted .kanban-card { border-left-color: var(--amber); }
     .stage-negotiating .kanban-card { border-left-color: #F97316; }
     .stage-won .kanban-card { border-left-color: var(--green); }
@@ -190,7 +190,7 @@
       font-size: 11px; font-weight: 600;
     }
     .stage-Lead { background: rgba(99,102,241,0.1); color: #6366F1; }
-    .stage-Contacted { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .stage-Contacted { background: rgba(59,130,246,0.1); color: #1D4ED8; }
     .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
     .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
     .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }

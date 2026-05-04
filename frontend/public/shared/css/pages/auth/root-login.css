@@ -41,7 +41,7 @@
     .navbar-links a:hover::after { width: 100%; }
     .navbar-cta {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 24px; background: #C8963E; color: #FFFFFF;
+      padding: 10px 24px; background: #C8963E; color: #0D1B2A;
       font-size: 14px; font-weight: 600; border-radius: 8px;
       transition: background 0.3s ease, transform 0.2s ease;
       border: none; cursor: pointer;
@@ -140,7 +140,7 @@
     }
     .portal-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px; background: #C8963E; color: #FFFFFF;
+      padding: 12px 28px; background: #C8963E; color: #0D1B2A;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 14px; font-weight: 600; border-radius: 8px;
       transition: background 0.3s ease, transform 0.2s ease;

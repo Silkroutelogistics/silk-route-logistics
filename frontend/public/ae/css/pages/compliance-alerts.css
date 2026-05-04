@@ -37,17 +37,17 @@
     }
     .filter-pill.pill-critical.active {
       background: #EF4444;
-      border-color: #EF4444;
+      border-color: #B91C1C;
       color: #fff;
     }
     .filter-pill.pill-warning.active {
       background: #F59E0B;
-      border-color: #F59E0B;
+      border-color: #B45309;
       color: #fff;
     }
     .filter-pill.pill-info.active {
       background: #3B82F6;
-      border-color: #3B82F6;
+      border-color: #1D4ED8;
       color: #fff;
     }
     .filter-spacer { flex: 1; }
@@ -233,8 +233,8 @@
     .carrier-link:hover { color: var(--gold); }
 
     /* Days remaining */
-    .days-overdue { color: #EF4444; font-weight: 600; }
-    .days-warn { color: #F59E0B; font-weight: 600; }
+    .days-overdue { color: #B91C1C; font-weight: 600; }
+    .days-warn { color: #B45309; font-weight: 600; }
     .days-ok { color: var(--gray-600); }
 
     /* Checkbox styling */
