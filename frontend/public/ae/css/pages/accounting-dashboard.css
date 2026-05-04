@@ -135,7 +135,7 @@
       text-align: left;
       padding: 12px 16px;
       font-size: 11px;
-      color: var(--gray-400);
+      color: var(--gray-600);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border-bottom: 2px solid var(--gray-200);
@@ -205,11 +205,11 @@
     }
     .qa-btn-gold {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
     .qa-btn-gold:hover {
       background: var(--gold-hover);
-      color: var(--white);
+      color: var(--navy);
     }
     .qa-btn-navy {
       background: var(--navy);
@@ -358,7 +358,7 @@
     }
     .modal-btn-submit {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
     .modal-btn-submit:hover {
       background: var(--gold-hover);

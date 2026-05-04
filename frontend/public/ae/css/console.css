@@ -718,7 +718,7 @@ a:hover {
 
 .btn-gold {
   background: var(--gold);
-  color: var(--white);
+  color: var(--navy);
 }
 
 .btn-gold:hover {

@@ -97,7 +97,7 @@
 
     .btn-gold {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
     .btn-gold:hover {
       background: var(--gold-light);

@@ -351,7 +351,7 @@
     }
     .action-btn:active { transform: scale(0.98); }
     .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-gold { background: var(--gold); color: var(--white); }
+    .btn-gold { background: var(--gold); color: var(--navy); }
     .btn-gold:hover { background: var(--gold-hover); }
     .btn-blue-outline { background: transparent; color: #3B82F6; border: 1.5px solid #3B82F6; }
     .btn-blue-outline:hover { background: rgba(59,130,246,0.08); }
@@ -561,7 +561,7 @@
     .modal-btn-cancel:hover { background: var(--gray-200); }
     .modal-btn-submit {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
     .modal-btn-submit:hover { background: var(--gold-hover); }
     .modal-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }

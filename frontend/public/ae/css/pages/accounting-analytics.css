@@ -107,11 +107,11 @@
       font-weight: 600;
       letter-spacing: 0.3px;
     }
-    .status-PAID, .status-paid { background: rgba(34,197,94,0.12); color: #16a34a; }
-    .status-UNPAID, .status-unpaid, .status-PENDING, .status-pending { background: rgba(245,158,11,0.12); color: #d97706; }
-    .status-OVERDUE, .status-overdue { background: rgba(239,68,68,0.12); color: #ef4444; }
-    .status-PARTIAL, .status-partial { background: rgba(59,130,246,0.12); color: #3b82f6; }
-    .status-SCHEDULED, .status-scheduled { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+    .status-PAID, .status-paid { background: rgba(34,197,94,0.12); color: #15803D; }
+    .status-UNPAID, .status-unpaid, .status-PENDING, .status-pending { background: rgba(245,158,11,0.12); color: #B45309; }
+    .status-OVERDUE, .status-overdue { background: rgba(239,68,68,0.12); color: #B91C1C; }
+    .status-PARTIAL, .status-partial { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+    .status-SCHEDULED, .status-scheduled { background: rgba(139,92,246,0.12); color: #6D28D9; }
 
     .utilization-bar {
       display: flex;

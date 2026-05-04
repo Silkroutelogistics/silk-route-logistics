@@ -152,7 +152,7 @@
       border: none;
       text-decoration: none;
     }
-    .btn-gold { background: var(--gold); color: #fff; }
+    .btn-gold { background: var(--gold); color: var(--navy); }
     .btn-gold:hover { background: var(--gold-hover); }
     .btn-outline { background: var(--white); color: var(--navy); border: 1px solid var(--gray-200) !important; }
     .btn-outline:hover { border-color: var(--gold) !important; color: var(--gold); }

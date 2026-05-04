@@ -1949,7 +1949,70 @@
 //          Both fixes verified via Sprint 2 scanner
 //          spot-check static cascade analysis prior
 //          to writes (Sprint 3 Phase A).
-export const SRL_VERSION = "3.8.t";
+// v3.8.u — Sprint 5: bulk P0 sweep from scanner v2
+//          baseline (commit 888cd4a). Three clusters
+//          fixed across 12 files / ~36 surgical color
+//          swaps:
+//          (a) Gold/green button family — color
+//              var(--white) → var(--navy) on 14
+//              .btn-gold / .qa-btn-gold / .modal-btn-
+//              submit / .tab-btn.active / .page-btn
+//              .active / .btn-approve(:hover) /
+//              .review-btn.approve-btn occurrences
+//              across console.css + 8 page CSS files.
+//              Mirrors v3.8.t methodology. Marketing
+//              page index.css .btn-gold bundled per
+//              Sprint 5 directive scope confirmation.
+//              shippers.css already-correct (navy
+//              text on gold) — skipped.
+//          (b) Status badges + tier cards — color
+//              darkening to satisfy WCAG AA on the
+//              composited pale-tint backgrounds.
+//              Tailwind-palette darkened literals
+//              chosen over canonical SRL --success/
+//              --warning/--danger tokens to match
+//              surrounding code style; canonical-
+//              token migration deferred. 13 fixes
+//              across accounting-analytics.css (5
+//              status-* rules), accounting-approvals
+//              .css (3 rules including .btn-approve
+//              and .status-badge.approved), and
+//              accounting-payable.css (5 .tier-*
+//              .cpp-tier-name rules + 4 status-badge/
+//              tier-badge rules). Color targets:
+//              green #16A34A → #15803D, amber #D97706
+//              → #B45309, red #EF4444 → #B91C1C,
+//              orange #F97316 → #C2410C, blue #3B82F6
+//              → #1D4ED8, violet #8B5CF6 → #6D28D9.
+//          (c) Slate-400 table headers — color
+//              var(--gray-400) → var(--gray-600)
+//              across 9 .data-table th / thead th /
+//              .approvals-table th / .ref-card .ref-
+//              title / .detail-close occurrences.
+//              ~7:1 contrast on slate-50 bg.
+//          Skipped: ~80-100 of remaining v2 P0 are
+//          scanner false positives by category —
+//          multi-mode CSS variable resolution (theme
+//          tokens like --theme-text-heading defined
+//          in both light and dark blocks; scanner
+//          buildVarMap picks the last definition);
+//          pseudo-class rule cascading (.btn-navy:
+//          hover only sets bg, color persists from
+//          base .btn-navy rule — scanner doesn't
+//          model this); HTML-vs-CSS cascade (.sidebar
+//          -nav not recognized as descendant of
+//          .sidebar despite HTML nesting). All three
+//          are scanner v3 candidates logged to
+//          backlog.
+//          Sprint 3 .btn-navy:hover finding (Sprint 5
+//          A4 cluster) verified false positive — base
+//          .btn-navy rule has explicit color: var(--
+//          white) which cascades through to :hover
+//          state. No fix applied.
+//          Estimated P0 delta: 299 → ~150-180. Real
+//          readability issues addressed; remaining
+//          count is scanner-side noise.
+export const SRL_VERSION = "3.8.u";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
