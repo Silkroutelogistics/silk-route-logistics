@@ -17,7 +17,7 @@
       --navy-deep: #0A1628;
       --gold: #C8963E;
       --gold-light: #D4A84E;
-      --gold-dark: #B8862E;
+      --gold-dark: #BA7517;
       --white: #FFFFFF;
       --light-gray: #F5F5F5;
       --dark-text: #1A1A2E;
@@ -79,7 +79,7 @@
     }
 
     .text-gold {
-      color: #C8963E;
+      color: #854F0B;
     }
 
     .text-muted {
@@ -100,6 +100,7 @@
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(200, 150, 62, 0.15);
       transition: box-shadow 0.3s ease;
+      color: var(--fg-on-navy);
     }
 
     .navbar.scrolled {
@@ -142,7 +143,7 @@
       display: block;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 10px;
-      color: #C8963E;
+      color: #854F0B;
       letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 600;
@@ -171,7 +172,7 @@
     }
 
     .nav-links a.active {
-      color: #C8963E;
+      color: #854F0B;
       background: rgba(200, 150, 62, 0.08);
     }
 
@@ -202,7 +203,7 @@
       gap: 6px;
       padding: 10px 22px;
       background: #C8963E;
-      color: #fff;
+      color: #0D1B2A;
       border: none;
       border-radius: 8px;
       font-weight: 600;
@@ -236,7 +237,7 @@
       text-decoration: none;
       transition: background 0.15s;
     }
-    .login-dropdown-menu a:hover { background: rgba(200,150,62,0.12); color: #C8963E; }
+    .login-dropdown-menu a:hover { background: rgba(200,150,62,0.12); color: #854F0B; }
     .login-dropdown.open .login-dropdown-menu { display: block; }
 
     /* Hamburger */
@@ -286,6 +287,7 @@
       flex-direction: column;
       gap: 8px;
       overflow-y: auto;
+      color: var(--fg-on-navy);
     }
 
     .mobile-menu.open {
@@ -303,7 +305,7 @@
 
     .mobile-menu a:hover,
     .mobile-menu a.active {
-      color: #C8963E;
+      color: #854F0B;
       background: rgba(200, 150, 62, 0.08);
     }
 
@@ -311,7 +313,7 @@
       margin-top: 16px;
       padding: 16px 24px;
       background: #C8963E;
-      color: #fff;
+      color: #0D1B2A;
       border-radius: 10px;
       font-weight: 600;
       text-align: center;
@@ -438,7 +440,7 @@
       border-radius: 100px;
       font-size: 13px;
       font-weight: 600;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 28px;
       letter-spacing: 0.5px;
     }
@@ -459,7 +461,7 @@
 
     .hero h1 em {
       font-style: normal;
-      color: #C8963E;
+      color: #854F0B;
     }
 
     .hero-sub {
@@ -483,7 +485,7 @@
       gap: 8px;
       padding: 16px 32px;
       background: #C8963E;
-      color: #fff;
+      color: #0D1B2A;
       font-size: 15px;
       font-weight: 600;
       border-radius: 10px;
@@ -548,7 +550,7 @@
     .hero-stat-number {
       font-family: 'DM Serif Display', serif;
       font-size: 36px;
-      color: #C8963E;
+      color: #854F0B;
       line-height: 1;
       margin-bottom: 6px;
     }
@@ -702,7 +704,7 @@
       border-radius: 100px;
       font-size: 11px;
       font-weight: 700;
-      color: #C8963E;
+      color: #854F0B;
       letter-spacing: 2px;
       text-transform: uppercase;
       margin-bottom: 20px;
@@ -770,7 +772,7 @@
 
     .tier-card.bronze .tier-icon { background: rgba(205, 127, 50, 0.15); color: #CD7F32; }
     .tier-card.silver .tier-icon { background: rgba(192, 192, 192, 0.15); color: #C0C0C0; }
-    .tier-card.gold .tier-icon { background: rgba(200, 150, 62, 0.15); color: #C8963E; }
+    .tier-card.gold .tier-icon { background: rgba(200, 150, 62, 0.15); color: #854F0B; }
     .tier-card.platinum .tier-icon { background: rgba(229, 228, 226, 0.15); color: #E5E4E2; }
 
     .tier-name {
@@ -821,7 +823,7 @@
       top: 16px;
       right: -30px;
       background: #C8963E;
-      color: #fff;
+      color: #0D1B2A;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
@@ -1117,6 +1119,7 @@
       background: var(--navy);
       border-top: 1px solid rgba(200, 150, 62, 0.15);
       padding: 64px 0 0;
+      color: var(--fg-on-navy);
     }
 
     .footer-grid {
@@ -1233,7 +1236,7 @@
     }
 
     .footer-legal a:hover {
-      color: #C8963E;
+      color: #854F0B;
     }
 
     /* ===== RESPONSIVE ===== */
@@ -1444,7 +1447,7 @@
       top: -100%;
       left: 16px;
       background: #C8963E;
-      color: #fff;
+      color: #0D1B2A;
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;

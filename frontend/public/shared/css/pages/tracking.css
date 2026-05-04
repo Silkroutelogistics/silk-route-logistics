@@ -30,6 +30,7 @@
       background: rgba(13,27,42,0.95); backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(255,255,255,0.06);
       padding: 0 24px; position: sticky; top: 0; z-index: 100;
+      color: var(--fg-on-navy);
     }
     .nav-inner {
       max-width: 1200px; margin: 0 auto;
@@ -64,6 +65,7 @@
       position: fixed; top: 0; right: -280px; width: 260px; height: 100vh;
       background: var(--navy); z-index: 99; padding: 72px 24px 24px;
       transition: right 0.3s ease;
+      color: var(--fg-on-navy);
     }
     .mobile-menu.open { right: 0; }
     .mobile-nav-link {
@@ -214,6 +216,7 @@
       border-top: 1px solid rgba(200, 150, 62, 0.15);
       padding: 64px 0 0;
       margin-top: 40px;
+      color: var(--fg-on-navy);
     }
     .footer .container {
       max-width: 1200px;

@@ -10,6 +10,7 @@
    homepage (index.css). */
 :root {
   --gold: #C8963E;
+  --gold-dark: #BA7517;
   --gold-light: #D4A84E;
   --white: #FFFFFF;
   --light-gray: #F5F5F5;
@@ -31,7 +32,7 @@
 
     .nav-login-btn {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
       padding: 9px 22px;
       border-radius: 6px;
       font-size: 0.875rem;
@@ -210,7 +211,7 @@
   gap: 6px;
   padding: 10px 22px;
   background: #C8963E;
-  color: #fff;
+  color: #0D1B2A;
   border: none;
   border-radius: 8px;
   font-family: 'Plus Jakarta Sans', sans-serif;

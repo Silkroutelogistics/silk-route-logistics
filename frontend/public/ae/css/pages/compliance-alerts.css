@@ -222,7 +222,7 @@
     }
     .status-ACTIVE { background: rgba(34,197,94,0.1); color: #15803D; }
     .status-SNOOZED { background: var(--gray-100); color: var(--gray-500); }
-    .status-DISMISSED { background: var(--gray-100); color: var(--gray-400); }
+    .status-DISMISSED { background: var(--gray-100); color: var(--gray-600); }
 
     /* Carrier link */
     .carrier-link {

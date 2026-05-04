@@ -68,7 +68,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 2.5px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 16px;
     }
 
@@ -118,11 +118,13 @@
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       transition: background 0.3s ease, box-shadow 0.3s ease;
+      color: var(--fg-on-navy);
     }
 
     .navbar.scrolled {
       background: rgba(13, 27, 42, 0.95);
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      color: var(--fg-on-navy);
     }
 
     .navbar-inner {
@@ -161,7 +163,7 @@
       display: block;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 10px;
-      color: #C8963E;
+      color: #854F0B;
       letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 500;
@@ -283,6 +285,7 @@
       flex-direction: column;
       gap: 8px;
       overflow-y: auto;
+      color: var(--fg-on-navy);
     }
 
     .mobile-menu.open {
@@ -364,7 +367,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 3px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 24px;
     }
 
@@ -377,7 +380,7 @@
 
     .hero h1 em {
       font-style: italic;
-      color: #C8963E;
+      color: #854F0B;
     }
 
     .hero-text {
@@ -440,7 +443,7 @@
     }
 
     .story-right strong {
-      color: #C8963E;
+      color: #854F0B;
       font-weight: 600;
     }
 
@@ -562,7 +565,7 @@
     .stat-number {
       font-family: 'DM Serif Display', serif;
       font-size: clamp(36px, 4vw, 48px);
-      color: #C8963E;
+      color: #854F0B;
       line-height: 1;
       margin-bottom: 8px;
     }
@@ -723,7 +726,7 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
-      color: #C8963E;
+      color: #854F0B;
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-bottom: 16px;
@@ -804,7 +807,7 @@
       gap: 8px;
       padding: 14px 32px;
       background: #C8963E;
-      color: #FFFFFF;
+      color: #0D1B2A;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
@@ -831,7 +834,7 @@
       gap: 8px;
       padding: 14px 32px;
       background: transparent;
-      color: #C8963E;
+      color: #854F0B;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
@@ -842,7 +845,7 @@
     }
 
     .btn-secondary:hover {
-      border-color: #C8963E;
+      border-color: #854F0B;
       background: rgba(200, 150, 62, 0.08);
       transform: translateY(-2px);
     }
@@ -860,6 +863,7 @@
       padding: 80px 0 40px;
       position: relative;
       background: var(--navy);
+      color: var(--fg-on-navy);
     }
 
     .footer-grid {
@@ -903,7 +907,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 20px;
     }
 
@@ -954,7 +958,7 @@
     }
 
     .footer-bottom-links a:hover {
-      color: #C8963E;
+      color: #854F0B;
     }
 
     /* ========================================
@@ -1075,7 +1079,7 @@
       top: -100%;
       left: 16px;
       background: #C8963E;
-      color: #FFFFFF;
+      color: #0D1B2A;
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;

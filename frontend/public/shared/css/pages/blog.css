@@ -52,7 +52,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 2.5px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 16px;
     }
 
@@ -88,11 +88,13 @@
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       transition: background 0.3s ease, box-shadow 0.3s ease;
+      color: var(--fg-on-navy);
     }
 
     .navbar.scrolled {
       background: rgba(13, 27, 42, 0.95);
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      color: var(--fg-on-navy);
     }
 
     .navbar-inner {
@@ -130,7 +132,7 @@
       display: block;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 10px;
-      color: #C8963E;
+      color: #854F0B;
       letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 500;
@@ -227,6 +229,7 @@
       flex-direction: column;
       gap: 8px;
       overflow-y: auto;
+      color: var(--fg-on-navy);
     }
 
     .mobile-menu.open { display: flex; }
@@ -298,7 +301,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 3px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 24px;
     }
 
@@ -311,7 +314,7 @@
 
     .hero h1 em {
       font-style: italic;
-      color: #C8963E;
+      color: #854F0B;
     }
 
     .hero-text {
@@ -347,7 +350,7 @@
     }
 
     .search-input:focus {
-      border-color: #C8963E;
+      border-color: #854F0B;
       box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.15);
     }
 
@@ -356,7 +359,7 @@
       right: 18px;
       top: 50%;
       transform: translateY(-50%);
-      color: #C8963E;
+      color: #854F0B;
       pointer-events: none;
     }
 
@@ -413,7 +416,7 @@
 
     .category-pill.active {
       background: #C8963E;
-      border-color: #C8963E;
+      border-color: #854F0B;
       color: #0D1B2A;
     }
 
@@ -501,7 +504,7 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       background: rgba(200, 150, 62, 0.12);
-      color: #C8963E;
+      color: #854F0B;
       border: 1px solid rgba(200, 150, 62, 0.2);
       margin-bottom: 14px;
     }
@@ -657,7 +660,7 @@
       padding: 3px 10px;
       border-radius: 100px;
       background: rgba(200, 150, 62, 0.08);
-      color: #C8963E;
+      color: #854F0B;
       border: 1px solid rgba(200, 150, 62, 0.15);
     }
 
@@ -675,7 +678,7 @@
       background: var(--white);
       border: 1px solid var(--gold);
       border-radius: 10px;
-      color: #C8963E;
+      color: #854F0B;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 14px;
       font-weight: 600;
@@ -685,7 +688,7 @@
 
     .load-more-btn:hover {
       background: rgba(200, 150, 62, 0.1);
-      border-color: #C8963E;
+      border-color: #854F0B;
       transform: translateY(-1px);
     }
 
@@ -717,7 +720,7 @@
       width: 48px;
       height: 48px;
       border: 3px solid rgba(200, 150, 62, 0.2);
-      border-top-color: #C8963E;
+      border-top-color: #854F0B;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 24px;
@@ -746,7 +749,7 @@
       width: 18px;
       height: 18px;
       border: 2px solid rgba(200, 150, 62, 0.3);
-      border-top-color: #C8963E;
+      border-top-color: #854F0B;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -801,6 +804,7 @@
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding: 80px 0 40px;
       position: relative;
+      color: var(--fg-on-navy);
     }
 
     .footer-grid {
@@ -843,7 +847,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 20px;
     }
 
@@ -883,7 +887,7 @@
       transition: color 0.3s ease;
     }
 
-    .footer-bottom-links a:hover { color: #C8963E; }
+    .footer-bottom-links a:hover { color: #854F0B; }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 1024px) {
@@ -919,7 +923,7 @@
       position: absolute;
       top: -100%; left: 16px;
       background: #C8963E;
-      color: #FFFFFF;
+      color: #0D1B2A;
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;

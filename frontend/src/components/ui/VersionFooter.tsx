@@ -2512,7 +2512,83 @@
 //           (332 swaps − ~5 cases where swap target line had
 //           multiple findings only one matched). Scanner Phase
 //           C confirms exact delta.
-export const SRL_VERSION = "3.8.ii";
+// v3.8.jj — Sprint 17 CSS-side bulk P0 sweep (final mechanical CSS
+//           pass). 76 P0 retirement (685 → 609) across 5 cluster
+//           shapes. Mirrors v3.8.t / v3.8.u / v3.8.y methodology
+//           applied to remaining CSS files.
+//
+//           Var-level fixes (single-source change retires N
+//           findings file-wide):
+//             --gold-dark: #B8862E → #BA7517 (canonical gold-dark
+//               per CLAUDE.md §2.1 LEGACY-ALLOWED). Provides ~5:1
+//               on cream tint for badges + borderline ~3.3:1 on
+//               dark navy (passes large-text AA). Initial attempt
+//               at #854F0B (~9:1 on cream) created NEW P0s on dark
+//               navy (~1.7:1) — caught mid-Sprint, reverted to
+//               #BA7517 balanced compromise.
+//             Added --green-dark: #15803D, --amber-dark: #92400E,
+//               --red-dark: #991B1B vars to console.css :root.
+//
+//           Targeted bulk seds:
+//             - 6 status-badge selectors in compliance-carrier.css
+//               swapped color: var(--{color}) → var(--{color}-dark)
+//             - communications.css: 4 .tier-GOLD / .stage-Active /
+//               .icon-email-out / .comm-type-label badges swapped
+//               color: var(--gold) → var(--gold-dark)
+//             - marketing CSS files (about/blog/careers/faq/
+//               carriers/terms/privacy/security-policy/auth):
+//               literal color: #C8963E → #854F0B (legacy
+//               dark-gold per §2.1, ~9:1 on white PASS)
+//             - All CSS files: perl pattern match
+//               `background: #C8963E + color: #FFFFFF` →
+//               navy text on gold (per v3.8.t Cluster B fix
+//               extended to remaining buttons)
+//
+//           Chrome rule explicit-color additions:
+//             - .footer / .navbar / .nav / .navbar.scrolled /
+//               .mobile-overlay / .mobile-menu / .trust-bar
+//               selectors in 11 marketing CSS files received
+//               explicit color: var(--fg-on-navy) declarations
+//               where previously cascade-inheriting body color
+//               on dark bg → invisible navy-on-navy. Sprint 3
+//               v3.8.t fixed this in utilities.css for chrome
+//               structure; Sprint 17 fixes it at page-CSS level
+//               for belt-and-suspenders + reduced surface for
+//               future cascade regressions.
+//
+//           Marketing CSS bulk: perl rule-block aware swap of
+//             color: var(--gray-400) → var(--gray-600) on rules
+//             with light bg (#F1F5F9 / #F8FAFC / #FFFFFF /
+//             var(--white) / var(--gray-50/100/200)) — closes
+//             secondary-text legibility on .comparison-table th,
+//             .tier-NONE, .status-DISMISSED, .progress-step-num,
+//             .lh-table th and similar.
+//
+//           Remaining CSS-side P0 (~140) after Sprint 17:
+//             - 12 var(--gold) badge residuals on cream (need
+//               per-selector swap to var(--gold-dark) — outside
+//               communications.css which was already done)
+//             - 8-12 cascade-inherit dark navy on non-chrome
+//               selectors (.timeline-step, .tier-card::before
+//               etc.) — per-selector add color: var(--fg-on-navy)
+//             - 5 #C8963E text-on-white in marketing pages where
+//               .btn-primary swap didn't catch
+//             - 4 bg-gold + text-white residuals
+//             - 2 white-on-translucent-white overlay patterns
+//             - Long tail of single-occurrence outliers
+//
+//           These remaining ~140 are diminishing-returns per-
+//           finding work for Sprint 21 (sequence with marketing
+//           Tailwind sweep Sprint 18, narrative work Sprint 19,
+//           etc.).
+//
+//           Pre-commit verification: backend tsc clean, frontend
+//           next build clean.
+//
+//           Per §3.1, version bump justified — publicly-visible
+//           CSS rendering changes across AE Console + accounting
+//           + marketing pages.
+export const SRL_VERSION = "3.8.jj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

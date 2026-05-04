@@ -106,11 +106,11 @@
     }
     .comm-layout.top-layout .contact-item.active {
       background: var(--theme-primary, var(--gold));
-      color: #fff;
+      color: var(--navy);
       border-color: var(--theme-primary, var(--gold));
     }
-    .comm-layout.top-layout .contact-item.active .contact-name { color: #fff; }
-    .comm-layout.top-layout .contact-item.active .contact-last-msg { color: rgba(255,255,255,0.7); }
+    .comm-layout.top-layout .contact-item.active .contact-name { color: var(--navy); }
+    .comm-layout.top-layout .contact-item.active .contact-last-msg { color: rgba(13,27,42,0.75); }
     .comm-layout.top-layout .contact-avatar {
       width: 24px;
       height: 24px;
@@ -291,7 +291,7 @@
     .icon-call { background: rgba(34,197,94,0.1); color: var(--green); }
     .icon-text { background: rgba(59,130,246,0.1); color: #1D4ED8; }
     .icon-email-in { background: rgba(168,85,247,0.1); color: #A855F7; }
-    .icon-email-out { background: rgba(200,150,62,0.15); color: var(--gold); }
+    .icon-email-out { background: rgba(200,150,62,0.15); color: var(--gold-dark); }
     .icon-email { background: rgba(168,85,247,0.1); color: #A855F7; }
     .icon-note { background: rgba(245,158,11,0.1); color: #B45309; }
     .comm-bubble {
@@ -387,7 +387,7 @@
       line-height: 1.5;
       word-break: break-word;
     }
-    .comm-entry.outbound .comm-type-label { color: var(--gold); }
+    .comm-entry.outbound .comm-type-label { color: var(--gold-dark); }
     .comm-duration {
       font-size: 11px;
       color: var(--gray-400);
@@ -460,7 +460,7 @@
     .btn-send {
       padding: 8px 18px;
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
       border: none;
       border-radius: 6px;
       font-size: 13px;
@@ -472,7 +472,7 @@
     .btn-new-convo {
       padding: 6px 14px;
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
       border: none;
       border-radius: 6px;
       font-size: 12px;
@@ -547,10 +547,10 @@
       font-weight: 700;
     }
     .tier-PLATINUM { background: #E5E7EB; color: #374151; }
-    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
+    .tier-GOLD { background: var(--gold-dim); color: var(--gold-dark); }
     .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
     .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
-    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-600); }
     .stage-badge {
       display: inline-block; padding: 2px 8px; border-radius: 4px;
       font-size: 10px; font-weight: 700;
@@ -560,7 +560,7 @@
     .stage-Quoted { background: rgba(245,158,11,0.1); color: #B45309; }
     .stage-Negotiating { background: rgba(249,115,22,0.1); color: #C2410C; }
     .stage-Won { background: rgba(34,197,94,0.1); color: #15803D; }
-    .stage-Active { background: var(--gold-dim); color: var(--gold); }
+    .stage-Active { background: var(--gold-dim); color: var(--gold-dark); }
 
     /* Toast */
     .toast {

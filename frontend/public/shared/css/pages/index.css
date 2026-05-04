@@ -37,7 +37,7 @@
       --navy-deep: #0A1628;
       --gold: #C8963E;
       --gold-light: #D4A84E;
-      --gold-dark: #B8862E;
+      --gold-dark: #BA7517;
       --white: #FFFFFF;
       --light-gray: #F5F5F5;
       --dark-text: #1A1A2E;
@@ -123,7 +123,7 @@
     }
     .btn-outline-gold:hover {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
       transform: translateY(-2px);
     }
 
@@ -231,6 +231,7 @@
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+      color: var(--fg-on-navy);
     }
 
     .nav-inner {
@@ -325,6 +326,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      color: var(--fg-on-navy);
     }
 
     .mobile-menu.open {
@@ -1122,6 +1124,7 @@
       background: var(--navy);
       padding: 72px 0 0;
       border-top: 1px solid rgba(200,150,62,0.15);
+      color: var(--fg-on-navy);
     }
 
     .footer-grid {
@@ -1172,7 +1175,7 @@
 
     .footer-social a:hover {
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
     }
 
     .footer-col h5 {

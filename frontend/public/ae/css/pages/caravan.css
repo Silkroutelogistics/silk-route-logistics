@@ -266,11 +266,11 @@
       letter-spacing: 0.5px;
     }
     .tier-PLATINUM { background: linear-gradient(135deg, #E5E7EB, #D1D5DB); color: #374151; }
-    .tier-GOLD { background: var(--gold-dim); color: var(--gold); }
+    .tier-GOLD { background: var(--gold-dim); color: var(--gold-dark); }
     .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
     .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
     .tier-GUEST { background: rgba(107,114,128,0.1); color: #6B7280; }
-    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-600); }
 
     /* --- Source Badge --- */
     .source-caravan {

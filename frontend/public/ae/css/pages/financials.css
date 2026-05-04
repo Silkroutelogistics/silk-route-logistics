@@ -73,7 +73,7 @@
     .lh-search-btn {
       padding: 10px 24px;
       background: var(--gold);
-      color: #fff;
+      color: var(--navy);
       border: none;
       border-radius: 8px;
       font-size: 14px;
@@ -108,7 +108,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--gray-400);
+      color: var(--gray-600);
       background: var(--gray-50);
       border-bottom: 1px solid var(--gray-200);
     }

@@ -70,7 +70,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 2.5px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 16px;
     }
 
@@ -109,11 +109,13 @@
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       transition: background 0.3s ease, box-shadow 0.3s ease;
+      color: var(--fg-on-navy);
     }
 
     .navbar.scrolled {
       background: rgba(13, 27, 42, 0.95);
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      color: var(--fg-on-navy);
     }
 
     .navbar-inner {
@@ -152,7 +154,7 @@
       display: block;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 10px;
-      color: #C8963E;
+      color: #854F0B;
       letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 500;
@@ -274,6 +276,7 @@
       flex-direction: column;
       gap: 8px;
       overflow-y: auto;
+      color: var(--fg-on-navy);
     }
 
     .mobile-menu.open {
@@ -355,7 +358,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 3px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 24px;
     }
 
@@ -368,7 +371,7 @@
 
     .hero h1 em {
       font-style: italic;
-      color: #C8963E;
+      color: #854F0B;
     }
 
     .hero-text {
@@ -420,7 +423,7 @@
 
     .legal-block h3 {
       font-size: 20px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 12px;
       margin-top: 24px;
     }
@@ -446,14 +449,14 @@
     }
 
     .legal-block a {
-      color: #C8963E;
+      color: #854F0B;
       text-decoration: underline;
       text-decoration-color: rgba(200, 150, 62, 0.4);
       transition: text-decoration-color 0.3s ease;
     }
 
     .legal-block a:hover {
-      text-decoration-color: #C8963E;
+      text-decoration-color: #854F0B;
     }
 
     /* ========================================
@@ -465,6 +468,7 @@
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding: 80px 0 40px;
       position: relative;
+      color: var(--fg-on-navy);
     }
 
     .footer-grid {
@@ -508,7 +512,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: #C8963E;
+      color: #854F0B;
       margin-bottom: 20px;
     }
 
@@ -559,7 +563,7 @@
     }
 
     .footer-bottom-links a:hover {
-      color: #C8963E;
+      color: #854F0B;
     }
 
     /* ========================================
@@ -631,7 +635,7 @@
       top: -100%;
       left: 16px;
       background: #C8963E;
-      color: #FFFFFF;
+      color: #0D1B2A;
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;

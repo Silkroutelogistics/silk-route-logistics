@@ -210,7 +210,7 @@
     .timeline-dot.dot-amber { border-color: #B45309; background: rgba(245,158,11,0.2); }
     .timeline-dot.dot-purple { border-color: #9333EA; background: rgba(168,85,247,0.2); }
     .timeline-dot.dot-green { border-color: #15803D; background: rgba(34,197,94,0.2); }
-    .timeline-dot.dot-gray { border-color: var(--gray-400); background: var(--gray-200); }
+    .timeline-dot.dot-gray { border-color: var(--gray-600); background: var(--gray-200); }
     .timeline-dot.dot-gold { border-color: var(--gold); background: var(--gold-dim); }
     .timeline-meta {
       font-size: 11px; color: var(--gray-400); margin-bottom: 2px;

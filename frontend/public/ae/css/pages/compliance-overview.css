@@ -213,7 +213,7 @@
     .tier-SILVER { background: rgba(148,163,184,0.15); color: #64748B; }
     .tier-BRONZE { background: rgba(180,83,9,0.1); color: #B45309; }
     .tier-GUEST { background: rgba(107,114,128,0.1); color: #6B7280; }
-    .tier-NONE { background: var(--gray-100); color: var(--gray-400); }
+    .tier-NONE { background: var(--gray-100); color: var(--gray-600); }
 
     /* --- Status Cells --- */
     .status-cell {
@@ -242,7 +242,7 @@
     }
     .status-na {
       background: var(--gray-100);
-      color: var(--gray-400);
+      color: var(--gray-600);
     }
 
     /* --- Tooltip --- */

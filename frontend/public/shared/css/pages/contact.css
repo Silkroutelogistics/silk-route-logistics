@@ -16,7 +16,7 @@
       --navy-deep: #0A1628;
       --gold: #C8963E;
       --gold-light: #D4A84E;
-      --gold-dark: #B8862E;
+      --gold-dark: #BA7517;
       --white: #FFFFFF;
       --light-gray: #F5F5F5;
       --dark-text: #1A1A2E;
@@ -46,6 +46,7 @@
       background: rgba(13, 27, 42, 0.97);
       backdrop-filter: blur(12px);
       box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+      color: var(--fg-on-navy);
     }
     .nav-inner {
       max-width: var(--container); margin: 0 auto; padding: 0 24px;
@@ -93,6 +94,7 @@
       position: fixed; top: 0; right: -300px; width: 280px; height: 100vh;
       background: var(--navy); z-index: 999; padding: 80px 24px 24px;
       transition: right 0.3s ease; overflow-y: auto;
+      color: var(--fg-on-navy);
     }
     .mobile-menu.open { right: 0; }
     .mobile-nav-link {
@@ -239,7 +241,7 @@
       display: inline-block;
       padding: 12px 28px;
       background: var(--gold);
-      color: var(--white);
+      color: var(--navy);
       border-radius: var(--radius);
       font-weight: 600;
       text-decoration: none;
@@ -317,6 +319,7 @@
        ====================================== */
     .footer {
       background: var(--navy); color: rgba(255,255,255,0.7); padding: 60px 0 0;
+      color: var(--fg-on-navy);
     }
     .footer-grid {
       display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
