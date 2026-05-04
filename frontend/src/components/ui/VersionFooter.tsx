@@ -2040,7 +2040,22 @@
 //          was already correct ("Wasi Haider"); the
 //          drift was only in body strings and Resend
 //          fromName. C2 of 6.
-export const SRL_VERSION = "3.8.w";
+// v3.8.x — Lead Hunter Bug 3: MC# 01794414 → 1794414
+//          in the Lead Hunter outreach single source
+//          of truth (whaider.html signature, builder
+//          .ts fallback, page.tsx EMAIL_TEMPLATES
+//          INTRO preview). Brand-skill voice.md is
+//          the canonical primary source per §3.13 and
+//          declares MC# 1794414 — the leading-zero
+//          variant was a propagated typo. Wider sweep
+//          across 17 remaining surfaces (10 public
+//          HTML pages, 2 chrome assets, 4 PDF
+//          services, BOLTemplate, CLAUDE.md §1)
+//          logged as §13.3 backlog 8.8 + 8.9 — needs
+//          rendered-output verification per §3.2 and
+//          FMCSA-SAFER primary-source check per §3.13
+//          before sweeping public surfaces. C3 of 6.
+export const SRL_VERSION = "3.8.x";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
