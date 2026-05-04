@@ -84,7 +84,7 @@ export default function CarrierRevenuePage() {
           <CarrierCard key={kpi.label} padding="p-5">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon size={16} className={kpi.color} />
-              <span className="text-[11px] text-gray-400 uppercase tracking-wide">{kpi.label}</span>
+              <span className="text-[11px] text-gray-700 uppercase tracking-wide">{kpi.label}</span>
             </div>
             <div className="text-[28px] font-bold text-[#0F1117]">{kpi.value}</div>
           </CarrierCard>
@@ -95,7 +95,7 @@ export default function CarrierRevenuePage() {
       <CarrierCard className="mb-6" padding="p-5">
         <h2 className="text-sm font-semibold text-[#0F1117] mb-4">Revenue Over Time</h2>
         {chartData.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-12">No revenue data for this period</p>
+          <p className="text-sm text-gray-700 text-center py-12">No revenue data for this period</p>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData}>
@@ -127,7 +127,7 @@ export default function CarrierRevenuePage() {
                 </thead>
                 <tbody>
                   {invoices.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">No invoices found</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-700">No invoices found</td></tr>
                   ) : invoices.slice(0, 15).map((inv: any, i: number) => (
                     <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="px-4 py-2.5 font-mono text-[11px] font-semibold text-[#0F1117]">{inv.load?.referenceNumber || "—"}</td>
@@ -154,18 +154,18 @@ export default function CarrierRevenuePage() {
           {/* Top Lanes */}
           <CarrierCard padding="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <MapPin size={14} className="text-[#C9A84C]" />
+              <MapPin size={14} className="text-[#BA7517]" />
               <h2 className="text-sm font-semibold text-[#0F1117]">Top Lanes</h2>
             </div>
             {topLanes.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No lane data yet</p>
+              <p className="text-xs text-gray-700 text-center py-4">No lane data yet</p>
             ) : topLanes.map((lane, i) => (
               <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                 <div>
                   <div className="text-[12px] font-semibold text-[#0F1117]">{lane.lane}</div>
-                  <div className="text-[10px] text-gray-400">{lane.count} loads</div>
+                  <div className="text-[10px] text-gray-700">{lane.count} loads</div>
                 </div>
-                <div className="text-[13px] font-bold text-[#C9A84C]">{fmt(lane.revenue)}</div>
+                <div className="text-[13px] font-bold text-[#BA7517]">{fmt(lane.revenue)}</div>
               </div>
             ))}
           </CarrierCard>
@@ -173,7 +173,7 @@ export default function CarrierRevenuePage() {
           {/* Payment Summary */}
           <CarrierCard padding="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <CreditCard size={14} className="text-[#C9A84C]" />
+              <CreditCard size={14} className="text-[#BA7517]" />
               <h2 className="text-sm font-semibold text-[#0F1117]">Payment Summary</h2>
             </div>
             {[

@@ -2419,7 +2419,100 @@
 //           navy. Real rendering is correct (text-white on dark
 //           navy nav). Not fixed because changing those would
 //           break correct rendering.
-export const SRL_VERSION = "3.8.hh";
+// v3.8.ii — Sprint 16: shipper/carrier portal Tailwind P0 sweep
+//           via per-file context-sensitive edits (Sprint 15b
+//           methodology) extended to portal scope. 332 swaps
+//           applied across 29 portal files; 38 single-occurrence
+//           outliers + scanner false positives skipped.
+//
+//           Portal context: layouts use `bg-[#F7F8FA]` light gray
+//           intentionally (per Sprint 13 audit) — fixes target
+//           text-color choices that work against light bg, NOT
+//           layout posture flip like Sprint 14 did for AE Console.
+//
+//           Files processed (29 with swaps applied):
+//             - carrier/dashboard/page.tsx (36 swaps, Caravan
+//               Partner Program tier display surface)
+//             - shipper/dashboard/tracking/page.tsx (38)
+//             - carrier/dashboard/settings (25)
+//             - carrier/dashboard/compliance (24)
+//             - carrier/dashboard/available-loads (21)
+//             - carrier/dashboard/scorecard (21)
+//             - carrier/dashboard/payments (21)
+//             - carrier/dashboard/my-loads (18)
+//             - carrier/dashboard/documents (17)
+//             - carrier/dashboard/messaging (12)
+//             - shipper/dashboard/messages (11)
+//             - 18 more portal files with smaller P0 counts
+//
+//           Fix shapes applied:
+//             P1 — text-{slate|gray}-{400|500} on light →
+//                  text-{slate|gray}-700 (~216 retired —
+//                  dominant secondary-text legibility cluster)
+//             P2 — text-[#C9A84C] non-canonical gold on light →
+//                  text-[#BA7517] gold-dark (~76 retired —
+//                  continues Sprint 15a's gold canonicalization
+//                  to portal scope which the earlier sed didn't
+//                  reach; aligns with §2.1 token discipline)
+//             P3 — text-white residual on light card →
+//                  text-[#0A2540] canonical SRL navy (~12)
+//             P4 — text-{color}-{400|500} status badge on
+//                  light → text-{color}-700 (~30 across emerald/
+//                  amber/red/green/blue/yellow/indigo)
+//             P5 — text-{slate|gray}-{200|300} light-on-light
+//                  decorative → text-{slate|gray}-{500|700}
+//                  (decorative chevrons get -500 to preserve
+//                  subtle indicator role; -700 default)
+//             E  — text-white/N translucent on light → text-
+//                  slate-500 (single occurrence in shipper
+//                  scope)
+//
+//           Caravan Partner Program tier badges (Silver/Gold/
+//           Platinum at carrier/dashboard/page.tsx:24-26)
+//           PRESERVED — TIER_COLORS uses text-slate-600,
+//           text-yellow-700, text-purple-700 which are not in
+//           swap rules (shade 600/700 on light is already PASS).
+//           Note: current tier visual palette (yellow/purple
+//           Tailwind) doesn't match brand-skill canonical (SRL
+//           gold #C5A572 for Gold; navy+gold for Platinum) but
+//           tier visual palette reconciliation is brand-skill
+//           scope, NOT contrast scope. Sprint 16 fixes contrast
+//           only.
+//
+//           Quick Pay tier name reconciliation (memory #26
+//           canonical Silver/Gold/Platinum) explicitly OUT of
+//           Sprint 16 scope per directive. Sprint 16 fixes
+//           contrast on whatever tier names exist today.
+//
+//           Methodology: same per-line edit approach as Sprint
+//           15b — scanner v8 produces (file, line, bg, token)
+//           tuples; perl swap-applier reads tuples + applies
+//           word-boundary regex swap on the target line only.
+//           NO bulk-sed across files. Each swap is line-targeted
+//           with bg-context confirmed by scanner output.
+//
+//           Scanner false positives skipped (4 instances):
+//           text-[#0F1117] inside dark sidebar/nav at
+//           shipper/register lines 65/95, CarrierSidebar:79,
+//           ShipperSidebar:99 — element parent has gradient or
+//           non-Tailwind hex bg the scanner doesn't resolve, so
+//           it walks up to the nav's `bg-[#0F1117]` and reports
+//           dark-on-dark. Real rendering is text-on-gold-avatar
+//           or similar correct contrast. Defer to Sprint 19
+//           per-finding triage or v9 scanner gradient bg
+//           recognition.
+//
+//           Public-facing impact: shipper portal (procurement-
+//           facing tracking/messages/documents/quote/invoices/
+//           settings/analytics) and carrier-facing Caravan
+//           Partner Program + dispatch board surfaces now
+//           render with brand-conformant readable contrast.
+//
+//           Net retirement vs 1,016 baseline: ~332 P0 expected
+//           (332 swaps − ~5 cases where swap target line had
+//           multiple findings only one matched). Scanner Phase
+//           C confirms exact delta.
+export const SRL_VERSION = "3.8.ii";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

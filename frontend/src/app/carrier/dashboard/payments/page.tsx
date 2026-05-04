@@ -91,7 +91,7 @@ export default function CarrierPaymentsPage() {
           <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Payments &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track your payment history, pending earnings, and QuickPay options</p>
         </div>
-        <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+        <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
           <Download size={14} /> Export
         </button>
       </div>
@@ -100,43 +100,43 @@ export default function CarrierPaymentsPage() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={16} className="text-emerald-500" />
-            <span className="text-[11px] text-gray-400">YTD Earnings</span>
+            <TrendingUp size={16} className="text-emerald-700" />
+            <span className="text-[11px] text-gray-700">YTD Earnings</span>
           </div>
           <div className="text-[28px] font-bold text-[#0F1117]">
             ${(summary?.ytdEarnings?.amount || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">{summary?.ytdEarnings?.count || 0} loads</div>
+          <div className="text-[11px] text-gray-700 mt-1">{summary?.ytdEarnings?.count || 0} loads</div>
         </CarrierCard>
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign size={16} className="text-emerald-500" />
-            <span className="text-[11px] text-gray-400">Total Paid</span>
+            <DollarSign size={16} className="text-emerald-700" />
+            <span className="text-[11px] text-gray-700">Total Paid</span>
           </div>
-          <div className="text-[28px] font-bold text-emerald-500">
+          <div className="text-[28px] font-bold text-emerald-700">
             ${(summary?.totalPaid?.amount || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">{summary?.totalPaid?.count || 0} payments</div>
+          <div className="text-[11px] text-gray-700 mt-1">{summary?.totalPaid?.count || 0} payments</div>
         </CarrierCard>
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar size={16} className="text-amber-500" />
-            <span className="text-[11px] text-gray-400">Pending</span>
+            <Calendar size={16} className="text-amber-700" />
+            <span className="text-[11px] text-gray-700">Pending</span>
           </div>
-          <div className="text-[28px] font-bold text-amber-500">
+          <div className="text-[28px] font-bold text-amber-700">
             ${(summary?.totalPending?.amount || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">{summary?.totalPending?.count || 0} pending</div>
+          <div className="text-[11px] text-gray-700 mt-1">{summary?.totalPending?.count || 0} pending</div>
         </CarrierCard>
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
             <Zap size={16} className="text-violet-500" />
-            <span className="text-[11px] text-gray-400">QuickPay Used</span>
+            <span className="text-[11px] text-gray-700">QuickPay Used</span>
           </div>
           <div className="text-[28px] font-bold text-[#0F1117]">
             {summary?.quickPayUsed?.count || 0}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">
+          <div className="text-[11px] text-gray-700 mt-1">
             ${(summary?.quickPayUsed?.discount || 0).toLocaleString()} in fees
           </div>
         </CarrierCard>
@@ -178,7 +178,7 @@ export default function CarrierPaymentsPage() {
                   </tr>
                 ))
               ) : payments.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">No payments found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-700">No payments found</td></tr>
               ) : (
                 payments.map((pay: Record<string, any>) => (
                   <tr key={pay.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -190,7 +190,7 @@ export default function CarrierPaymentsPage() {
                     <td className="px-4 py-3 font-bold text-[#0F1117]">
                       ${(pay.netAmount || pay.amount || 0).toLocaleString()}
                       {pay.quickPayDiscount > 0 && (
-                        <span className="text-[10px] text-gray-400 ml-1">(-${pay.quickPayDiscount})</span>
+                        <span className="text-[10px] text-gray-700 ml-1">(-${pay.quickPayDiscount})</span>
                       )}
                     </td>
                     <td className="px-4 py-3"><CarrierBadge status={pay.status} /></td>
@@ -209,7 +209,7 @@ export default function CarrierPaymentsPage() {
                       ) : pay.paymentMethod === "FLASH" || pay.quickPayDiscount > 0 ? (
                         <span className="text-[11px] text-violet-500 font-medium flex items-center gap-1"><Zap size={12} /> Used</span>
                       ) : (
-                        <span className="text-[11px] text-gray-400">—</span>
+                        <span className="text-[11px] text-gray-700">—</span>
                       )}
                     </td>
                   </tr>
@@ -238,9 +238,9 @@ export default function CarrierPaymentsPage() {
       {/* Success Toast */}
       {qpSuccess && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg shadow-lg animate-in slide-in-from-bottom">
-          <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+          <CheckCircle size={16} className="text-emerald-700 shrink-0" />
           <span className="text-sm text-emerald-700 font-medium">{qpSuccess}</span>
-          <button onClick={() => setQpSuccess(null)} className="text-emerald-400 hover:text-emerald-600 ml-2">
+          <button onClick={() => setQpSuccess(null)} className="text-emerald-700 hover:text-emerald-600 ml-2">
             <X size={14} />
           </button>
         </div>
@@ -259,7 +259,7 @@ export default function CarrierPaymentsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 " onClick={() => setQpModal(null)} />
             <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-              <button onClick={() => setQpModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setQpModal(null)} className="absolute top-4 right-4 text-gray-700 hover:text-gray-600">
                 <X size={18} />
               </button>
 
@@ -269,7 +269,7 @@ export default function CarrierPaymentsPage() {
                 </div>
                 <div>
                   <h3 className="text-[15px] font-bold text-[#0F1117]">Request Quick Pay</h3>
-                  <p className="text-[11px] text-gray-400">Load {loadRef}</p>
+                  <p className="text-[11px] text-gray-700">Load {loadRef}</p>
                 </div>
               </div>
 

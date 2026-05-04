@@ -44,7 +44,7 @@ export default function ShipperFacilitiesPage() {
                 ["Contact", f.contact],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between py-1.5 border-b border-gray-50">
-                  <span className="text-xs text-gray-400">{k}</span>
+                  <span className="text-xs text-gray-700">{k}</span>
                   <span className="text-xs text-gray-700 font-medium text-right max-w-[60%]">{v}</span>
                 </div>
               ))}

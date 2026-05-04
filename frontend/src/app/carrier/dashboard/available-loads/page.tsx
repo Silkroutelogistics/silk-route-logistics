@@ -105,7 +105,7 @@ export default function AvailableLoadsPage() {
             ))
           ) : loads.length === 0 ? (
             <CarrierCard padding="p-12">
-              <div className="text-center text-gray-400 text-sm">No loads available matching your profile right now. Check back soon.</div>
+              <div className="text-center text-gray-700 text-sm">No loads available matching your profile right now. Check back soon.</div>
             </CarrierCard>
           ) : (
             loads.map((load) => (
@@ -123,23 +123,23 @@ export default function AvailableLoadsPage() {
                       <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{load.equipmentType}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                      <MapPin size={14} className="text-[#C9A84C]" />
+                      <MapPin size={14} className="text-[#BA7517]" />
                       <span>{load.originCity}, {load.originState}</span>
-                      <span className="text-gray-400">&rarr;</span>
+                      <span className="text-gray-700">&rarr;</span>
                       <span>{load.destCity}, {load.destState}</span>
                     </div>
-                    <div className="flex gap-4 mt-2 text-[11px] text-gray-400">
+                    <div className="flex gap-4 mt-2 text-[11px] text-gray-700">
                       <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                       {load.weight && <span className="flex items-center gap-1"><Weight size={12} /> {Number(load.weight).toLocaleString()} lbs</span>}
                       {load.distance && <span className="flex items-center gap-1"><Ruler size={12} /> {load.distance} mi</span>}
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <span className="text-lg font-bold text-[#C9A84C]">${(load.carrierRate || load.rate).toLocaleString()}</span>
+                    <span className="text-lg font-bold text-[#BA7517]">${(load.carrierRate || load.rate).toLocaleString()}</span>
                     {load.distance && (
-                      <span className="text-[10px] text-gray-400">${((load.carrierRate || load.rate) / load.distance).toFixed(2)}/mi</span>
+                      <span className="text-[10px] text-gray-700">${((load.carrierRate || load.rate) / load.distance).toFixed(2)}/mi</span>
                     )}
-                    <ChevronRight size={16} className="text-gray-300 mt-1" />
+                    <ChevronRight size={16} className="text-gray-500 mt-1" />
                   </div>
                 </div>
               </CarrierCard>
@@ -162,52 +162,52 @@ export default function AvailableLoadsPage() {
               <h3 className="text-sm font-bold text-[#0F1117] mb-4">Load Details</h3>
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Reference</span>
+                  <span className="text-gray-700">Reference</span>
                   <span className="font-mono font-bold">{detail.referenceNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Equipment</span>
+                  <span className="text-gray-700">Equipment</span>
                   <span>{detail.equipmentType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Origin</span>
+                  <span className="text-gray-700">Origin</span>
                   <span>{detail.originCity}, {detail.originState} {detail.originZip || ""}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Destination</span>
+                  <span className="text-gray-700">Destination</span>
                   <span>{detail.destCity}, {detail.destState} {detail.destZip || ""}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Pickup</span>
+                  <span className="text-gray-700">Pickup</span>
                   <span>{new Date(detail.pickupDate).toLocaleDateString()}</span>
                 </div>
                 {detail.deliveryDate && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Delivery</span>
+                    <span className="text-gray-700">Delivery</span>
                     <span>{new Date(detail.deliveryDate).toLocaleDateString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Weight</span>
+                  <span className="text-gray-700">Weight</span>
                   <span>{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Commodity</span>
+                  <span className="text-gray-700">Commodity</span>
                   <span>{detail.commodity || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Rate</span>
-                  <span className="text-lg font-bold text-[#C9A84C]">${(detail.carrierRate || detail.rate || 0).toLocaleString()}</span>
+                  <span className="text-gray-700">Rate</span>
+                  <span className="text-lg font-bold text-[#BA7517]">${(detail.carrierRate || detail.rate || 0).toLocaleString()}</span>
                 </div>
                 {detail.specialInstructions && (
                   <div>
-                    <span className="text-gray-400 block mb-1">Special Instructions</span>
+                    <span className="text-gray-700 block mb-1">Special Instructions</span>
                     <p className="text-gray-600 bg-gray-50 rounded p-2">{detail.specialInstructions}</p>
                   </div>
                 )}
                 {detail.poster && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Posted by</span>
+                    <span className="text-gray-700">Posted by</span>
                     <span>{detail.poster.company || `${detail.poster.firstName} ${detail.poster.lastName}`}</span>
                   </div>
                 )}
@@ -228,8 +228,8 @@ export default function AvailableLoadsPage() {
             </CarrierCard>
           ) : (
             <CarrierCard padding="p-8" className="sticky top-6">
-              <div className="text-center text-gray-400 text-sm">
-                <MapPin size={32} className="mx-auto mb-3 text-gray-300" />
+              <div className="text-center text-gray-700 text-sm">
+                <MapPin size={32} className="mx-auto mb-3 text-gray-500" />
                 Select a load to view details
               </div>
             </CarrierCard>

@@ -86,7 +86,7 @@ export default function CarrierMessagingPage() {
         <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Messages</h1>
         <p className="text-[13px] text-gray-500">
           Communicate with your dispatcher and SRL operations team
-          {totalUnread > 0 && <span className="ml-2 text-[#C9A84C] font-semibold">{totalUnread} unread</span>}
+          {totalUnread > 0 && <span className="ml-2 text-[#BA7517] font-semibold">{totalUnread} unread</span>}
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export default function CarrierMessagingPage() {
           {showNewMsg && (
             <div className="p-3 border-b border-gray-100">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                <Search size={14} className="absolute left-3 top-2.5 text-gray-700" />
                 <input
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
@@ -123,8 +123,8 @@ export default function CarrierMessagingPage() {
                       className="w-full text-left p-2 rounded-md hover:bg-gray-50 text-xs"
                     >
                       <div className="font-semibold text-[#0F1117]">{u.firstName} {u.lastName}</div>
-                      <div className="text-gray-400">{u.email}</div>
-                      <div className="text-gray-400">{u.company || u.role}</div>
+                      <div className="text-gray-700">{u.email}</div>
+                      <div className="text-gray-700">{u.company || u.role}</div>
                     </button>
                   ))}
                 </div>
@@ -146,11 +146,11 @@ export default function CarrierMessagingPage() {
                     <div className={`text-[13px] text-[#0F1117] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
                       {conv.partner.firstName} {conv.partner.lastName}
                     </div>
-                    <div className="text-[11px] text-gray-400 truncate">{conv.partner.company || conv.partner.role}</div>
+                    <div className="text-[11px] text-gray-700 truncate">{conv.partner.company || conv.partner.role}</div>
                     <div className="text-xs text-gray-500 truncate mt-1">{conv.lastMessage}</div>
                   </div>
                   <div className="text-right shrink-0 ml-2">
-                    <div className="text-[10px] text-gray-400">{new Date(conv.lastMessageAt).toLocaleDateString()}</div>
+                    <div className="text-[10px] text-gray-700">{new Date(conv.lastMessageAt).toLocaleDateString()}</div>
                     {conv.unreadCount > 0 && (
                       <span className="inline-block mt-1 px-1.5 py-0.5 bg-[#C9A84C] text-[#0A2540] text-[9px] font-bold rounded-full">
                         {conv.unreadCount}
@@ -162,8 +162,8 @@ export default function CarrierMessagingPage() {
             ))}
             {(!conversations || conversations.length === 0) && !showNewMsg && (
               <div className="p-8 text-center">
-                <MessageSquare size={28} className="text-gray-300 mx-auto mb-2" />
-                <p className="text-xs text-gray-400">No conversations yet</p>
+                <MessageSquare size={28} className="text-gray-500 mx-auto mb-2" />
+                <p className="text-xs text-gray-700">No conversations yet</p>
               </div>
             )}
           </div>
@@ -174,7 +174,7 @@ export default function CarrierMessagingPage() {
           {selectedUserId ? (
             <>
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[11px] font-bold text-[#C9A84C]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[11px] font-bold text-[#BA7517]">
                   {selectedUserName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                 </div>
                 <span className="text-sm font-semibold text-[#0F1117]">{selectedUserName}</span>
@@ -197,7 +197,7 @@ export default function CarrierMessagingPage() {
                   </div>
                 ))}
                 {(!messages || messages.length === 0) && (
-                  <p className="text-sm text-gray-400 text-center py-8">Start a conversation</p>
+                  <p className="text-sm text-gray-700 text-center py-8">Start a conversation</p>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -224,9 +224,9 @@ export default function CarrierMessagingPage() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            <div className="flex-1 flex items-center justify-center text-gray-700 text-sm">
               <div className="text-center">
-                <MessageSquare size={36} className="mx-auto mb-3 text-gray-300" />
+                <MessageSquare size={36} className="mx-auto mb-3 text-gray-500" />
                 Select a conversation or start a new one
               </div>
             </div>

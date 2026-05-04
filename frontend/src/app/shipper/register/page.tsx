@@ -69,7 +69,7 @@ export default function ShipperRegisterPage() {
         <div className="max-w-[640px] mx-auto px-6 py-16">
           <div className="bg-white rounded-md border border-gray-200 p-9 text-center">
             <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              <CheckCircle2 className="w-8 h-8 text-emerald-700" />
             </div>
             <h2 className="font-serif text-2xl text-[#0F1117] mb-2">Account Created Successfully</h2>
             <p className="text-[13px] text-gray-500 mb-6 leading-relaxed max-w-md mx-auto">
@@ -135,7 +135,7 @@ export default function ShipperRegisterPage() {
                   Company Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><MapPin size={16} /></div>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-700"><MapPin size={16} /></div>
                   <AddressAutocomplete
                     value={form.address || ""}
                     onChange={(v) => upd("address", v)}
@@ -252,7 +252,7 @@ export default function ShipperRegisterPage() {
           {/* Navigation buttons */}
           <div className="flex justify-between mt-7 gap-3">
             {step > 1 ? (
-              <button onClick={() => setStep(step - 1)} disabled={submitting} className="px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-[1.5px] hover:text-[#C9A84C] transition-colors disabled:opacity-50">
+              <button onClick={() => setStep(step - 1)} disabled={submitting} className="px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-[1.5px] hover:text-[#BA7517] transition-colors disabled:opacity-50">
                 Back
               </button>
             ) : <div />}
@@ -423,10 +423,10 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
           {results.map((r) => (
             <button key={r.placeId} onClick={() => handleSelect(r)}
               className="w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition truncate">
-              <MapPin className="w-3.5 h-3.5 inline mr-2 text-[#C9A84C]" />{r.description}
+              <MapPin className="w-3.5 h-3.5 inline mr-2 text-[#BA7517]" />{r.description}
             </button>
           ))}
-          <div className="px-3 py-1 text-[9px] text-gray-400 text-right">Powered by Google</div>
+          <div className="px-3 py-1 text-[9px] text-gray-700 text-right">Powered by Google</div>
         </div>
       )}
     </div>

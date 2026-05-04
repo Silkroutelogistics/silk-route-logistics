@@ -25,7 +25,7 @@ export default function ShipperIntegrationsPage() {
             </div>
             <div>
               <h3 className="text-base font-bold text-[#0F1117]">REST API</h3>
-              <div className="text-xs text-gray-400">v2.0 · JSON over HTTPS</div>
+              <div className="text-xs text-gray-700">v2.0 · JSON over HTTPS</div>
             </div>
           </div>
           <div className="font-mono text-xs bg-[#0F1117] text-gray-300 p-4 rounded-lg mb-4 leading-relaxed">
@@ -38,7 +38,7 @@ export default function ShipperIntegrationsPage() {
             <span className="text-[#C9A84C]">POST</span> /api/v2/documents<br/>
             <span className="text-gray-500">{"// api.silkroutelogistics.ai"}</span>
           </div>
-          <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-500 text-[11px] font-semibold uppercase tracking-[2px] rounded hover:text-[#C9A84C] hover:border-[#C9A84C] transition-colors">
+          <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-500 text-[11px] font-semibold uppercase tracking-[2px] rounded hover:text-[#BA7517] hover:border-[#C9A84C] transition-colors">
             <FileText size={14} /> View API Documentation
           </button>
         </ShipperCard>
@@ -51,7 +51,7 @@ export default function ShipperIntegrationsPage() {
             </div>
             <div>
               <h3 className="text-base font-bold text-[#0F1117]">EDI Integration</h3>
-              <div className="text-xs text-gray-400">ANSI X12 Standards</div>
+              <div className="text-xs text-gray-700">ANSI X12 Standards</div>
             </div>
           </div>
           {ediCodes.map((e, i) => (
@@ -60,7 +60,7 @@ export default function ShipperIntegrationsPage() {
               <span className="text-xs text-gray-500">{e.desc}</span>
             </div>
           ))}
-          <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 mt-4 border border-gray-200 text-gray-500 text-[11px] font-semibold uppercase tracking-[2px] rounded hover:text-[#C9A84C] hover:border-[#C9A84C] transition-colors">
+          <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 mt-4 border border-gray-200 text-gray-500 text-[11px] font-semibold uppercase tracking-[2px] rounded hover:text-[#BA7517] hover:border-[#C9A84C] transition-colors">
             <MessageSquare size={14} /> Contact for EDI Setup
           </button>
         </ShipperCard>
@@ -69,7 +69,7 @@ export default function ShipperIntegrationsPage() {
       {/* API Credentials */}
       <ShipperCard padding="p-5" className="mt-5">
         <h3 className="text-sm font-bold text-[#0F1117] mb-1">Your API Credentials</h3>
-        <p className="text-xs text-gray-400 mb-4">Use these to authenticate your freight management integration</p>
+        <p className="text-xs text-gray-700 mb-4">Use these to authenticate your freight management integration</p>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-[11px] font-semibold text-gray-500 mb-1">API Key</div>

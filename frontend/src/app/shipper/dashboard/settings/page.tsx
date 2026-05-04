@@ -212,7 +212,7 @@ export default function ShipperSettingsPage() {
             {/* Change Password */}
             <div className="mb-8 pb-6 border-b border-gray-200">
               <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
-                <Lock size={16} className="text-[#C9A84C]" /> Change Password
+                <Lock size={16} className="text-[#BA7517]" /> Change Password
               </h3>
               <div className="space-y-3 max-w-md">
                 <div>
@@ -231,7 +231,7 @@ export default function ShipperSettingsPage() {
                     className="w-full py-2.5 px-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C]" />
                 </div>
                 {pwError && <div className="text-xs text-red-500">{pwError}</div>}
-                {pwSuccess && <div className="flex items-center gap-1.5 text-xs text-emerald-500"><CheckCircle size={14} /> Password changed successfully</div>}
+                {pwSuccess && <div className="flex items-center gap-1.5 text-xs text-emerald-700"><CheckCircle size={14} /> Password changed successfully</div>}
                 <button
                   onClick={() => {
                     if (pwNew !== pwConfirm) { setPwError("Passwords don't match"); return; }
@@ -249,7 +249,7 @@ export default function ShipperSettingsPage() {
             {/* Two-Factor Authentication */}
             <div>
               <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#C9A84C]" /> Two-Factor Authentication
+                <ShieldCheck size={16} className="text-[#BA7517]" /> Two-Factor Authentication
               </h3>
 
               {totpSuccess && (
@@ -264,7 +264,7 @@ export default function ShipperSettingsPage() {
               {totpEnabled ? (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle size={16} className="text-emerald-500" />
+                    <CheckCircle size={16} className="text-emerald-700" />
                     <span className="text-[13px] font-semibold text-emerald-600">Two-factor authentication is enabled</span>
                   </div>
                   {showDisable ? (
@@ -286,7 +286,7 @@ export default function ShipperSettingsPage() {
                         >
                           {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
                         </button>
-                        <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0F1117]">Cancel</button>
+                        <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0F1117]">Cancel</button>
                       </div>
                     </div>
                   ) : (
@@ -341,7 +341,7 @@ export default function ShipperSettingsPage() {
                     >
                       <ShieldCheck size={14} /> {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
                     </button>
-                    <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0F1117]">Cancel</button>
+                    <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0F1117]">Cancel</button>
                   </div>
                 </div>
               ) : (

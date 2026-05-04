@@ -54,8 +54,8 @@ export default function LoadboardPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Load Board</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-semibold text-[#0A2540]">Load Board</h1>
+        <p className="text-sm text-slate-700 mt-1">
           Browse available loads from The Caravan. Submit a bid to book.
         </p>
       </div>
@@ -71,12 +71,12 @@ export default function LoadboardPage() {
           <div key={l.id} className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-white">{l.loadNumber ?? l.referenceNumber}</span>
+                <span className="font-semibold text-[#0A2540]">{l.loadNumber ?? l.referenceNumber}</span>
                 {l.visibility === "reserved" && (
                   <span className="px-1.5 py-0.5 text-[10px] rounded bg-indigo-500/20 text-indigo-300">Reserved</span>
                 )}
               </div>
-              <div className="mt-1 text-sm text-slate-300 flex items-center gap-1">
+              <div className="mt-1 text-sm text-slate-500 flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-gold" />
                 {l.originCity}, {l.originState} → {l.destCity}, {l.destState}
                 {l.distance && ` · ${Math.round(l.distance).toLocaleString()} mi`}

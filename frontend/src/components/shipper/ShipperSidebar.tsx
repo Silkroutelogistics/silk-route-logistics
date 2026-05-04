@@ -84,8 +84,8 @@ export function ShipperSidebar() {
           href="/"
           className="flex items-center gap-3 rounded-lg py-2 mt-0.5 px-3 justify-start hover:bg-white/5"
         >
-          <ArrowLeft size={18} className="text-gray-400" />
-          <span className="text-xs text-gray-400">Back to Website</span>
+          <ArrowLeft size={18} className="text-gray-700" />
+          <span className="text-xs text-gray-700">Back to Website</span>
         </Link>
       </div>
     </>

@@ -130,7 +130,7 @@ export default function ShipperMessagesPage() {
         <ShipperCard padding="p-0">
           <div className="p-3.5 border-b border-gray-100 relative">
             <div className="flex items-center gap-2 px-2.5 py-1.5 border border-gray-200 rounded-md">
-              <Search size={14} className="text-gray-400" />
+              <Search size={14} className="text-gray-700" />
               <input
                 placeholder="Search users..."
                 className="border-none outline-none text-xs w-full"
@@ -148,7 +148,7 @@ export default function ShipperMessagesPage() {
                     className="px-3 py-2 hover:bg-gray-50 cursor-pointer"
                   >
                     <div className="text-[13px] font-medium text-[#0F1117]">{u.name}</div>
-                    <div className="text-[11px] text-gray-400">{u.email}</div>
+                    <div className="text-[11px] text-gray-700">{u.email}</div>
                   </div>
                 ))}
               </div>
@@ -156,10 +156,10 @@ export default function ShipperMessagesPage() {
           </div>
           {convoLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 size={20} className="animate-spin text-gray-400" />
+              <Loader2 size={20} className="animate-spin text-gray-700" />
             </div>
           ) : conversations.length === 0 ? (
-            <div className="px-4 py-12 text-center text-xs text-gray-400">
+            <div className="px-4 py-12 text-center text-xs text-gray-700">
               No conversations yet. Search for a user to start messaging.
             </div>
           ) : (
@@ -175,7 +175,7 @@ export default function ShipperMessagesPage() {
                   <span className={`text-[13px] ${c.unreadCount > 0 ? "font-bold" : "font-medium"} text-[#0F1117]`}>
                     {c.partnerName}
                   </span>
-                  <span className="text-[10px] text-gray-400">{formatTime(c.lastMessageAt)}</span>
+                  <span className="text-[10px] text-gray-700">{formatTime(c.lastMessageAt)}</span>
                 </div>
                 <div className="text-xs text-gray-500 overflow-hidden text-ellipsis whitespace-nowrap">
                   {c.lastMessage}
@@ -190,7 +190,7 @@ export default function ShipperMessagesPage() {
           {selectedUserId ? (
             <>
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[13px] font-bold text-[#C9A84C]">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[13px] font-bold text-[#BA7517]">
                   {getInitials(selectedUserName)}
                 </div>
                 <div>
@@ -200,10 +200,10 @@ export default function ShipperMessagesPage() {
               <div className="flex-1 p-5 min-h-[300px] max-h-[500px] overflow-y-auto">
                 {msgsLoading ? (
                   <div className="flex items-center justify-center h-full">
-                    <Loader2 size={20} className="animate-spin text-gray-400" />
+                    <Loader2 size={20} className="animate-spin text-gray-700" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                  <div className="flex items-center justify-center h-full text-sm text-gray-700">
                     No messages yet. Send one to start the conversation.
                   </div>
                 ) : (
@@ -213,7 +213,7 @@ export default function ShipperMessagesPage() {
                         m.senderId !== selectedUserId ? "bg-[#0F1117] text-white" : "bg-gray-100 text-gray-700"
                       }`}>
                         {m.content}
-                        <div className="text-[10px] text-gray-400 mt-1 text-right">{formatMessageTime(m.createdAt)}</div>
+                        <div className="text-[10px] text-gray-700 mt-1 text-right">{formatMessageTime(m.createdAt)}</div>
                       </div>
                     </div>
                   ))
@@ -239,8 +239,8 @@ export default function ShipperMessagesPage() {
               </div>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-400">
-              <MessageSquare size={40} className="mb-3 text-gray-300" />
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-700">
+              <MessageSquare size={40} className="mb-3 text-gray-500" />
               <div className="text-sm font-medium">Select a conversation</div>
               <div className="text-xs mt-1">Choose a contact or search for a user to start messaging</div>
             </div>

@@ -70,7 +70,7 @@ export function ShipmentDetailDrawer({
     <div className="fixed top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] z-[200] overflow-y-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-serif text-xl text-[#0F1117]">Shipment Details</h2>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <button onClick={onClose} className="text-gray-700 hover:text-gray-600">
           <X size={20} />
         </button>
       </div>
@@ -82,7 +82,7 @@ export function ShipmentDetailDrawer({
 
       {/* Progress bar */}
       <div className="mb-6">
-        <div className="flex justify-between text-[11px] text-gray-400 mb-1.5">
+        <div className="flex justify-between text-[11px] text-gray-700 mb-1.5">
           <span>{shipment.origin}</span>
           <span>{shipment.dest}</span>
         </div>

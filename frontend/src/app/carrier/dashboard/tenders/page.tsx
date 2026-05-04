@@ -92,8 +92,8 @@ export default function CarrierTendersPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Active tenders</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-semibold text-[#0A2540]">Active tenders</h1>
+        <p className="text-sm text-slate-700 mt-1">
           Respond within 20 minutes or the tender will expire and cascade to the next carrier.
         </p>
       </div>
@@ -111,19 +111,19 @@ export default function CarrierTendersPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-semibold text-white">
+                  <h2 className="text-xl font-semibold text-[#0A2540]">
                     Load {t.load.loadNumber ?? t.load.referenceNumber}
                   </h2>
                   <span className="px-2 py-0.5 text-xs rounded bg-[#FAEEDA] text-[#854F0B] font-medium">
                     Position #{t.position}
                   </span>
                 </div>
-                <div className="mt-2 text-sm text-slate-300 flex items-center gap-1">
+                <div className="mt-2 text-sm text-slate-500 flex items-center gap-1">
                   <MapPin className="w-4 h-4 text-gold" />
                   {t.load.originCity}, {t.load.originState} → {t.load.destCity}, {t.load.destState}
                   {t.load.distance && ` · ${Math.round(t.load.distance).toLocaleString()} mi`}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">
+                <div className="mt-1 text-xs text-slate-700">
                   {t.load.equipmentType} · {t.load.weight ? `${t.load.weight} lbs` : ""}
                   {t.load.commodity && ` · ${t.load.commodity}`}
                 </div>
@@ -139,11 +139,11 @@ export default function CarrierTendersPage() {
             <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Pickup</div>
-                <div className="text-slate-200">{new Date(t.load.pickupDate).toLocaleDateString()}</div>
+                <div className="text-slate-700">{new Date(t.load.pickupDate).toLocaleDateString()}</div>
               </div>
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Delivery</div>
-                <div className="text-slate-200">{new Date(t.load.deliveryDate).toLocaleDateString()}</div>
+                <div className="text-slate-700">{new Date(t.load.deliveryDate).toLocaleDateString()}</div>
               </div>
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Time left</div>
@@ -171,7 +171,7 @@ export default function CarrierTendersPage() {
 
             {isDeclining && (
               <div className="mt-5 space-y-2">
-                <label className="block text-xs text-slate-400">Decline reason (required)</label>
+                <label className="block text-xs text-slate-700">Decline reason (required)</label>
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}

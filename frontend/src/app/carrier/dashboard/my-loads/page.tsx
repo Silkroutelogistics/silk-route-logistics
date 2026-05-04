@@ -109,7 +109,7 @@ export default function MyLoadsPage() {
             ))
           ) : loads.length === 0 ? (
             <CarrierCard padding="p-12">
-              <div className="text-center text-gray-400 text-sm">No loads found</div>
+              <div className="text-center text-gray-700 text-sm">No loads found</div>
             </CarrierCard>
           ) : (
             loads.map((load: Record<string, any>) => (
@@ -129,7 +129,7 @@ export default function MyLoadsPage() {
                     <div className="text-xs text-gray-600">
                       {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-1">
+                    <div className="text-[10px] text-gray-700 mt-1">
                       {load.equipmentType} &middot; Pick: {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </div>
                   </div>
@@ -159,24 +159,24 @@ export default function MyLoadsPage() {
                 </div>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2">
-                    <MapPin size={14} className="text-[#C9A84C] mt-0.5" />
+                    <MapPin size={14} className="text-[#BA7517] mt-0.5" />
                     <div>
                       <div className="font-medium">{detail.originCity}, {detail.originState} {detail.originZip || ""}</div>
-                      <div className="text-gray-400">&darr;</div>
+                      <div className="text-gray-700">&darr;</div>
                       <div className="font-medium">{detail.destCity}, {detail.destState} {detail.destZip || ""}</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
-                    <div><span className="text-gray-400">Equipment</span><br />{detail.equipmentType}</div>
-                    <div><span className="text-gray-400">Weight</span><br />{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "—"}</div>
-                    <div><span className="text-gray-400">Pickup</span><br />{new Date(detail.pickupDate).toLocaleDateString()}</div>
-                    <div><span className="text-gray-400">Delivery</span><br />{detail.deliveryDate ? new Date(detail.deliveryDate).toLocaleDateString() : "—"}</div>
-                    <div><span className="text-gray-400">Rate</span><br /><span className="text-[#C9A84C] font-bold">${(detail.carrierRate || detail.rate || 0).toLocaleString()}</span></div>
-                    <div><span className="text-gray-400">Distance</span><br />{detail.distance ? `${detail.distance} mi` : "—"}</div>
+                    <div><span className="text-gray-700">Equipment</span><br />{detail.equipmentType}</div>
+                    <div><span className="text-gray-700">Weight</span><br />{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "—"}</div>
+                    <div><span className="text-gray-700">Pickup</span><br />{new Date(detail.pickupDate).toLocaleDateString()}</div>
+                    <div><span className="text-gray-700">Delivery</span><br />{detail.deliveryDate ? new Date(detail.deliveryDate).toLocaleDateString() : "—"}</div>
+                    <div><span className="text-gray-700">Rate</span><br /><span className="text-[#BA7517] font-bold">${(detail.carrierRate || detail.rate || 0).toLocaleString()}</span></div>
+                    <div><span className="text-gray-700">Distance</span><br />{detail.distance ? `${detail.distance} mi` : "—"}</div>
                   </div>
                   {detail.poster && (
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                      <Phone size={14} className="text-gray-400" />
+                      <Phone size={14} className="text-gray-700" />
                       <span>{detail.poster.company || `${detail.poster.firstName} ${detail.poster.lastName}`}</span>
                     </div>
                   )}
@@ -199,7 +199,7 @@ export default function MyLoadsPage() {
               {nextStatuses.length > 0 && (
                 <CarrierCard padding="p-4">
                   <h4 className="text-xs font-bold text-[#0F1117] mb-3 flex items-center gap-1.5">
-                    <CheckCircle size={14} className="text-[#C9A84C]" /> Update Status
+                    <CheckCircle size={14} className="text-[#BA7517]" /> Update Status
                   </h4>
                   <div className="flex gap-2">
                     {nextStatuses.map((ns) => (
@@ -233,9 +233,9 @@ export default function MyLoadsPage() {
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition">
-                      <Upload size={24} className="text-gray-400" />
+                      <Upload size={24} className="text-gray-700" />
                       <span className="text-xs text-gray-500">{podUploadMutation.isPending ? "Uploading..." : "Tap to upload photo or PDF"}</span>
-                      <span className="text-[10px] text-gray-400">JPG, PNG, or PDF — max 10MB</span>
+                      <span className="text-[10px] text-gray-700">JPG, PNG, or PDF — max 10MB</span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,application/pdf"
@@ -260,7 +260,7 @@ export default function MyLoadsPage() {
               {!["DELIVERED", "POD_RECEIVED", "COMPLETED", "CANCELLED"].includes(detail.status) && (
                 <CarrierCard padding="p-4">
                   <h4 className="text-xs font-bold text-[#0F1117] mb-3 flex items-center gap-1.5">
-                    <Clock size={14} className="text-amber-500" /> Submit Check Call
+                    <Clock size={14} className="text-amber-700" /> Submit Check Call
                   </h4>
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     <input
@@ -295,8 +295,8 @@ export default function MyLoadsPage() {
             </>
           ) : (
             <CarrierCard padding="p-8">
-              <div className="text-center text-gray-400 text-sm">
-                <Truck size={32} className="mx-auto mb-3 text-gray-300" />
+              <div className="text-center text-gray-700 text-sm">
+                <Truck size={32} className="mx-auto mb-3 text-gray-500" />
                 Select a load to manage
               </div>
             </CarrierCard>

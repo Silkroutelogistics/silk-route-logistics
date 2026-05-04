@@ -81,24 +81,24 @@ export default function ShipperInvoicesPage() {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <ShipperCard padding="p-5">
-          <div className="text-[11px] text-gray-400 mb-1.5">Outstanding Balance</div>
+          <div className="text-[11px] text-gray-700 mb-1.5">Outstanding Balance</div>
           <div className="text-[28px] font-bold text-red-500">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `$${(billing?.outstandingBalance || 0).toLocaleString()}`}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">{billing?.unpaidCount || 0} unpaid invoices</div>
+          <div className="text-[11px] text-gray-700 mt-1">{billing?.unpaidCount || 0} unpaid invoices</div>
         </ShipperCard>
         <ShipperCard padding="p-5">
-          <div className="text-[11px] text-gray-400 mb-1.5">YTD Total Billed</div>
+          <div className="text-[11px] text-gray-700 mb-1.5">YTD Total Billed</div>
           <div className="text-[28px] font-bold text-[#0F1117]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `$${(billing?.ytdBilled || 0).toLocaleString()}`}
           </div>
         </ShipperCard>
         <ShipperCard padding="p-5">
-          <div className="text-[11px] text-gray-400 mb-1.5">Avg Payment Cycle</div>
+          <div className="text-[11px] text-gray-700 mb-1.5">Avg Payment Cycle</div>
           <div className="text-[28px] font-bold text-[#0F1117]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `${billing?.avgPaymentCycleDays || 0} days`}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">Net 30 terms</div>
+          <div className="text-[11px] text-gray-700 mt-1">Net 30 terms</div>
         </ShipperCard>
       </div>
 
@@ -135,7 +135,7 @@ export default function ShipperInvoicesPage() {
                 </tr>
               ))
             ) : invoices.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">No invoices found</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-700">No invoices found</td></tr>
             ) : (
               invoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-gray-100">

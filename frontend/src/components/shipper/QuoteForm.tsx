@@ -127,10 +127,10 @@ function AddressInput({ label, value, onSelect, required }: {
             {results.map((r) => (
               <button key={r.placeId} type="button" onClick={() => handleSelect(r)}
                 className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-[#C9A84C]/8 hover:text-[#0F1117] transition-colors border-b border-gray-100 last:border-0">
-                <MapPin size={12} className="inline mr-2 text-gray-400" />{r.description}
+                <MapPin size={12} className="inline mr-2 text-gray-700" />{r.description}
               </button>
             ))}
-            <div className="px-4 py-1.5 text-[10px] text-gray-400">Powered by Google</div>
+            <div className="px-4 py-1.5 text-[10px] text-gray-700">Powered by Google</div>
           </div>
         )}
       </div>
@@ -138,13 +138,13 @@ function AddressInput({ label, value, onSelect, required }: {
       {value.city && (
         <div className="grid grid-cols-3 gap-2 mt-2">
           <div className="px-3 py-1.5 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
-            <span className="text-[10px] text-gray-400 block">City</span>{value.city}
+            <span className="text-[10px] text-gray-700 block">City</span>{value.city}
           </div>
           <div className="px-3 py-1.5 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
-            <span className="text-[10px] text-gray-400 block">State</span>{value.state}
+            <span className="text-[10px] text-gray-700 block">State</span>{value.state}
           </div>
           <div className="px-3 py-1.5 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
-            <span className="text-[10px] text-gray-400 block">ZIP</span>{value.zip || "—"}
+            <span className="text-[10px] text-gray-700 block">ZIP</span>{value.zip || "—"}
           </div>
         </div>
       )}

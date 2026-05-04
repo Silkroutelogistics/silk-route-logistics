@@ -124,7 +124,7 @@ export default function CarrierOverviewPage() {
               <Award size={24} className={tierStyle.text} />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Caravan Tier</div>
+              <div className="text-[11px] text-gray-700 font-medium uppercase tracking-wider">Caravan Tier</div>
               <span className={`inline-block mt-0.5 px-3 py-1 rounded-full text-sm font-bold border ${tierStyle.badge}`}>
                 {caravanTier}
               </span>
@@ -135,12 +135,12 @@ export default function CarrierOverviewPage() {
               <span className="text-[10px] font-bold text-gray-500">{currentMilestone}</span>
             </div>
             <span className="text-xs text-gray-500">{MILESTONE_NAMES[currentMilestone] || currentMilestone}</span>
-            <span className="text-[10px] text-gray-400 ml-auto">{milestoneLoads}/{milestoneTarget} loads to {nextMilestone}</span>
+            <span className="text-[10px] text-gray-700 ml-auto">{milestoneLoads}/{milestoneTarget} loads to {nextMilestone}</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
             <div className="h-full bg-[#C9A84C] rounded-full transition-all duration-500" style={{ width: `${milestoneProgress}%` }} />
           </div>
-          <Link href="/carrier/dashboard/scorecard" className="text-[11px] text-[#C9A84C] font-semibold mt-2.5 inline-flex items-center gap-1 hover:underline">
+          <Link href="/carrier/dashboard/scorecard" className="text-[11px] text-[#BA7517] font-semibold mt-2.5 inline-flex items-center gap-1 hover:underline">
             View Scorecard <ChevronRight size={12} />
           </Link>
         </CarrierCard>
@@ -149,24 +149,24 @@ export default function CarrierOverviewPage() {
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Zap size={20} className="text-emerald-500" />
+              <Zap size={20} className="text-emerald-700" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium">Quick Pay</div>
+              <div className="text-[11px] text-gray-700 font-medium">Quick Pay</div>
               <div className="text-[22px] font-bold text-[#0F1117]">${qpBalance.toLocaleString()}</div>
             </div>
           </div>
           <div className="space-y-1.5 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-400">Fee Rate</span>
+              <span className="text-gray-700">Fee Rate</span>
               <span className="font-semibold text-[#0F1117]">{benefits.qpFee}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Speed</span>
+              <span className="text-gray-700">Speed</span>
               <span className="font-semibold text-[#0F1117]">{benefits.qpSpeed}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">Monthly Usage</span>
+              <span className="text-gray-700">Monthly Usage</span>
               <span className="font-semibold text-[#0F1117]">${qpUsedThisMonth.toLocaleString()} / ${qpMonthlyLimit.toLocaleString()}</span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -178,28 +178,28 @@ export default function CarrierOverviewPage() {
         {/* Your Tier Benefits */}
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-3">
-            <Award size={16} className="text-[#C9A84C]" />
+            <Award size={16} className="text-[#BA7517]" />
             <span className="text-[13px] font-bold text-[#0F1117]">Your Tier Benefits</span>
           </div>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-400">Payment Terms</span>
+              <span className="text-gray-700">Payment Terms</span>
               <span className="font-semibold text-[#0F1117]">{benefits.paymentTerms}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Quick Pay Speed</span>
+              <span className="text-gray-700">Quick Pay Speed</span>
               <span className="font-semibold text-[#0F1117]">{benefits.qpSpeed}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Quick Pay Fee</span>
+              <span className="text-gray-700">Quick Pay Fee</span>
               <span className="font-semibold text-[#0F1117]">{benefits.qpFee}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Safety Bonus</span>
+              <span className="text-gray-700">Safety Bonus</span>
               <span className="font-semibold text-emerald-600">{benefits.safetyBonus}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Detention Rate</span>
+              <span className="text-gray-700">Detention Rate</span>
               <span className="font-semibold text-[#0F1117]">{benefits.detentionRate}</span>
             </div>
           </div>
@@ -209,13 +209,13 @@ export default function CarrierOverviewPage() {
       {/* QP Savings Calculator */}
       <CarrierCard padding="p-5" className="mb-6">
         <div className="flex items-center gap-2 mb-3">
-          <Calculator size={16} className="text-emerald-500" />
+          <Calculator size={16} className="text-emerald-700" />
           <span className="text-[13px] font-bold text-[#0F1117]">Quick Pay Savings Calculator</span>
         </div>
         <div className="mb-3">
-          <label className="text-[11px] text-gray-400 font-medium block mb-1">Average Monthly Invoice Amount</label>
+          <label className="text-[11px] text-gray-700 font-medium block mb-1">Average Monthly Invoice Amount</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-700 text-sm">$</span>
             <input
               type="number"
               value={calcAmount}
@@ -248,7 +248,7 @@ export default function CarrierOverviewPage() {
               <Truck size={20} className="text-blue-500" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium">Active Loads</div>
+              <div className="text-[11px] text-gray-700 font-medium">Active Loads</div>
               <div className="text-[28px] font-bold text-[#0F1117]">{activeLoads.length}</div>
             </div>
           </div>
@@ -256,10 +256,10 @@ export default function CarrierOverviewPage() {
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Package size={20} className="text-emerald-500" />
+              <Package size={20} className="text-emerald-700" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium">Available Loads</div>
+              <div className="text-[11px] text-gray-700 font-medium">Available Loads</div>
               <div className="text-[28px] font-bold text-[#0F1117]">{available?.total || 0}</div>
             </div>
           </div>
@@ -267,10 +267,10 @@ export default function CarrierOverviewPage() {
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <DollarSign size={20} className="text-amber-500" />
+              <DollarSign size={20} className="text-amber-700" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium">Pending Pay</div>
+              <div className="text-[11px] text-gray-700 font-medium">Pending Pay</div>
               <div className="text-[28px] font-bold text-[#0F1117]">
                 ${(paymentSummary?.totalPending?.amount || 0).toLocaleString()}
               </div>
@@ -283,12 +283,12 @@ export default function CarrierOverviewPage() {
               <Shield size={20} className="text-violet-500" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-400 font-medium">Compliance</div>
+              <div className="text-[11px] text-gray-700 font-medium">Compliance</div>
               <div className="text-[28px] font-bold text-[#0F1117]">
                 {criticalAlerts > 0 ? (
                   <span className="text-red-500">{criticalAlerts} Alert{criticalAlerts > 1 ? "s" : ""}</span>
                 ) : (
-                  <span className="text-emerald-500">Good</span>
+                  <span className="text-emerald-700">Good</span>
                 )}
               </div>
             </div>
@@ -308,7 +308,7 @@ export default function CarrierOverviewPage() {
             <CarrierCard hover padding="p-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-lg bg-[#C9A84C]/10 flex items-center justify-center">
-                  <a.icon size={18} className="text-[#C9A84C]" />
+                  <a.icon size={18} className="text-[#BA7517]" />
                 </div>
                 <span className="text-[13px] font-semibold text-[#0F1117]">{a.label}</span>
               </div>
@@ -322,18 +322,18 @@ export default function CarrierOverviewPage() {
         <CarrierCard padding="p-0">
           <div className="px-5 py-4 flex justify-between items-center border-b border-gray-100">
             <h3 className="text-[15px] font-bold text-[#0F1117]">My Active Loads</h3>
-            <Link href="/carrier/dashboard/my-loads" className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+            <Link href="/carrier/dashboard/my-loads" className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
               View All
             </Link>
           </div>
           {recentLoads.length === 0 ? (
-            <div className="px-5 py-8 text-center text-xs text-gray-400">No loads assigned yet</div>
+            <div className="px-5 py-8 text-center text-xs text-gray-700">No loads assigned yet</div>
           ) : (
             recentLoads.slice(0, 5).map((load: Record<string, any>) => (
               <div key={load.id} className="px-5 py-3 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50">
                 <div>
                   <div className="text-xs font-mono font-semibold text-[#0F1117]">{load.referenceNumber}</div>
-                  <div className="text-[11px] text-gray-400">
+                  <div className="text-[11px] text-gray-700">
                     {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                   </div>
                 </div>
@@ -350,23 +350,23 @@ export default function CarrierOverviewPage() {
         <CarrierCard padding="p-0">
           <div className="px-5 py-4 flex justify-between items-center border-b border-gray-100">
             <h3 className="text-[15px] font-bold text-[#0F1117]">Available Loads</h3>
-            <Link href="/carrier/dashboard/available-loads" className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+            <Link href="/carrier/dashboard/available-loads" className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
               View All
             </Link>
           </div>
           {availableLoads.length === 0 ? (
-            <div className="px-5 py-8 text-center text-xs text-gray-400">No available loads right now</div>
+            <div className="px-5 py-8 text-center text-xs text-gray-700">No available loads right now</div>
           ) : (
             availableLoads.slice(0, 5).map((load: Record<string, any>) => (
               <div key={load.id} className="px-5 py-3 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50">
                 <div>
                   <div className="text-xs font-mono font-semibold text-[#0F1117]">{load.referenceNumber}</div>
-                  <div className="text-[11px] text-gray-400">
+                  <div className="text-[11px] text-gray-700">
                     {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                   </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{load.equipmentType} &middot; {load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "\u2014"}</div>
+                  <div className="text-[10px] text-gray-700 mt-0.5">{load.equipmentType} &middot; {load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "\u2014"}</div>
                 </div>
-                <span className="text-xs font-bold text-[#C9A84C]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
+                <span className="text-xs font-bold text-[#BA7517]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
               </div>
             ))
           )}
@@ -377,13 +377,13 @@ export default function CarrierOverviewPage() {
       {alerts.length > 0 && (
         <CarrierCard padding="p-4" className="!bg-amber-500/[0.06] !border-amber-500/20">
           <div className="flex items-center gap-2 mb-2">
-            <AlertCircle size={16} className="text-amber-500" />
-            <span className="text-xs font-bold text-amber-600">Compliance Alerts</span>
+            <AlertCircle size={16} className="text-amber-700" />
+            <span className="text-xs font-bold text-amber-700">Compliance Alerts</span>
           </div>
           {alerts.slice(0, 3).map((a: any, i: number) => (
             <div key={i} className="text-xs text-gray-600 leading-relaxed mb-1">{a.message || a.type}</div>
           ))}
-          <Link href="/carrier/dashboard/compliance" className="text-[11px] text-[#C9A84C] font-semibold mt-2 inline-block">
+          <Link href="/carrier/dashboard/compliance" className="text-[11px] text-[#BA7517] font-semibold mt-2 inline-block">
             View All &rarr;
           </Link>
         </CarrierCard>

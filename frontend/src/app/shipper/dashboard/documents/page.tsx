@@ -103,7 +103,7 @@ export default function ShipperDocumentsPage() {
                   </div>
                   <div>
                     <div className="text-xl font-bold text-[#0F1117]">{d.count}</div>
-                    <div className="text-[11px] text-gray-400">{typeLabels[d.type] || d.type}</div>
+                    <div className="text-[11px] text-gray-700">{typeLabels[d.type] || d.type}</div>
                   </div>
                 </div>
               </ShipperCard>
@@ -134,18 +134,18 @@ export default function ShipperDocumentsPage() {
       >
         {uploadMutation.isPending ? (
           <>
-            <Loader2 size={32} className="text-[#C9A84C] mx-auto animate-spin" />
+            <Loader2 size={32} className="text-[#BA7517] mx-auto animate-spin" />
             <div className="text-sm font-semibold text-gray-600 mt-3">Uploading...</div>
           </>
         ) : (
           <>
-            <Upload size={32} className="text-gray-400 mx-auto" />
+            <Upload size={32} className="text-gray-700 mx-auto" />
             <div className="text-sm font-semibold text-gray-600 mt-3">Drag &amp; drop files here or click to upload</div>
-            <div className="text-xs text-gray-400 mt-1">Supports PDF, JPEG, PNG up to 25MB</div>
+            <div className="text-xs text-gray-700 mt-1">Supports PDF, JPEG, PNG up to 25MB</div>
           </>
         )}
         {uploadMutation.isSuccess && (
-          <div className="text-xs text-emerald-500 mt-2">Upload complete!</div>
+          <div className="text-xs text-emerald-700 mt-2">Upload complete!</div>
         )}
         {uploadMutation.isError && (
           <div className="text-xs text-red-500 mt-2">Upload failed. Please try again.</div>
@@ -168,7 +168,7 @@ export default function ShipperDocumentsPage() {
             </div>
           ))
         ) : documents.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-400">No documents found</div>
+          <div className="px-5 py-12 text-center text-sm text-gray-700">No documents found</div>
         ) : (
           documents.map((doc) => (
             <div key={doc.id} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
@@ -178,7 +178,7 @@ export default function ShipperDocumentsPage() {
                 </div>
                 <div>
                   <div className="text-[13px] font-semibold text-[#0F1117]">{doc.name}</div>
-                  <div className="text-[11px] text-gray-400">
+                  <div className="text-[11px] text-gray-700">
                     {typeLabels[doc.type] || doc.type} &middot; {doc.shipment} &middot; {doc.size > 1024 * 1024 ? `${(doc.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(doc.size / 1024)} KB`}
                   </div>
                 </div>
@@ -186,10 +186,10 @@ export default function ShipperDocumentsPage() {
               <div className="flex gap-2">
                 {doc.url && (
                   <>
-                    <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+                    <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Search size={14} /> View
                     </a>
-                    <a href={doc.url} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+                    <a href={doc.url} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Download size={14} /> Download
                     </a>
                   </>

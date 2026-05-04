@@ -137,35 +137,35 @@ export default function CarrierSettingsPage() {
         {/* Profile Info */}
         <CarrierCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
-            <User size={16} className="text-[#C9A84C]" /> Profile Information
+            <User size={16} className="text-[#BA7517]" /> Profile Information
           </h3>
           <div className="space-y-3 text-xs">
             <div>
-              <label className="text-gray-400 block mb-1">Name</label>
+              <label className="text-gray-700 block mb-1">Name</label>
               <div className="text-[#0F1117] font-medium">{user?.firstName} {user?.lastName}</div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">Email</label>
+              <label className="text-gray-700 block mb-1">Email</label>
               <div className="text-[#0F1117] font-medium">{user?.email}</div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">Company</label>
+              <label className="text-gray-700 block mb-1">Company</label>
               <div className="text-[#0F1117] font-medium">{profile?.companyName || user?.company || "—"}</div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">MC Number</label>
+              <label className="text-gray-700 block mb-1">MC Number</label>
               <div className="text-[#0F1117] font-medium">{profile?.mcNumber || "—"}</div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">DOT Number</label>
+              <label className="text-gray-700 block mb-1">DOT Number</label>
               <div className="text-[#0F1117] font-medium">{profile?.dotNumber || "—"}</div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">Tier</label>
+              <label className="text-gray-700 block mb-1">Tier</label>
               <div className="text-[#0F1117] font-medium">{profile?.tier || "—"}</div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">Equipment Types</label>
+              <label className="text-gray-700 block mb-1">Equipment Types</label>
               <div className="flex flex-wrap gap-1">
                 {(profile?.equipmentTypes || []).map((eq: string) => (
                   <span key={eq} className="px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600">{eq}</span>
@@ -173,7 +173,7 @@ export default function CarrierSettingsPage() {
               </div>
             </div>
             <div>
-              <label className="text-gray-400 block mb-1">Operating Regions</label>
+              <label className="text-gray-700 block mb-1">Operating Regions</label>
               <div className="flex flex-wrap gap-1">
                 {(profile?.operatingRegions || []).map((r: string) => (
                   <span key={r} className="px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600">{r}</span>
@@ -181,7 +181,7 @@ export default function CarrierSettingsPage() {
               </div>
             </div>
             <div className="pt-2 border-t border-gray-100">
-              <label className="text-gray-400 block mb-1">Contact Phone</label>
+              <label className="text-gray-700 block mb-1">Contact Phone</label>
               <div className="flex gap-2">
                 <input
                   type="tel"
@@ -199,7 +199,7 @@ export default function CarrierSettingsPage() {
                 </button>
               </div>
               {phoneSaved && (
-                <div className="flex items-center gap-1 text-[11px] text-emerald-500 mt-1">
+                <div className="flex items-center gap-1 text-[11px] text-emerald-700 mt-1">
                   <CheckCircle size={12} /> Saved
                 </div>
               )}
@@ -213,11 +213,11 @@ export default function CarrierSettingsPage() {
         {/* Change Password */}
         <CarrierCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
-            <Lock size={16} className="text-amber-500" /> Change Password
+            <Lock size={16} className="text-amber-700" /> Change Password
           </h3>
           <form onSubmit={handleChangePassword} className="space-y-3">
             <div>
-              <label className="text-xs text-gray-400 block mb-1">Current Password</label>
+              <label className="text-xs text-gray-700 block mb-1">Current Password</label>
               <input
                 type="password"
                 value={currentPw}
@@ -227,7 +227,7 @@ export default function CarrierSettingsPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 block mb-1">New Password</label>
+              <label className="text-xs text-gray-700 block mb-1">New Password</label>
               <input
                 type="password"
                 value={newPw}
@@ -238,7 +238,7 @@ export default function CarrierSettingsPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 block mb-1">Confirm New Password</label>
+              <label className="text-xs text-gray-700 block mb-1">Confirm New Password</label>
               <input
                 type="password"
                 value={confirmPw}
@@ -251,7 +251,7 @@ export default function CarrierSettingsPage() {
 
             {pwError && <div className="text-xs text-red-500">{pwError}</div>}
             {pwSuccess && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-500">
+              <div className="flex items-center gap-1.5 text-xs text-emerald-700">
                 <CheckCircle size={14} /> Password changed successfully
               </div>
             )}
@@ -269,7 +269,7 @@ export default function CarrierSettingsPage() {
         {/* Two-Factor Authentication */}
         <CarrierCard padding="p-5" className="col-span-2">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
-            <ShieldCheck size={16} className="text-[#C9A84C]" /> Two-Factor Authentication
+            <ShieldCheck size={16} className="text-[#BA7517]" /> Two-Factor Authentication
           </h3>
 
           {totpSuccess && (
@@ -284,7 +284,7 @@ export default function CarrierSettingsPage() {
           {totpEnabled ? (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle size={16} className="text-emerald-500" />
+                <CheckCircle size={16} className="text-emerald-700" />
                 <span className="text-xs font-semibold text-emerald-600">Two-factor authentication is enabled</span>
               </div>
               {showDisable ? (
@@ -306,7 +306,7 @@ export default function CarrierSettingsPage() {
                     >
                       {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
                     </button>
-                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0F1117]">Cancel</button>
+                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0F1117]">Cancel</button>
                   </div>
                 </div>
               ) : (
@@ -325,11 +325,11 @@ export default function CarrierSettingsPage() {
                 <img src={totpSetupData.qrCodeDataUrl} alt="TOTP QR Code" width={180} height={180} className="rounded-lg" />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Manual entry key</label>
+                <label className="block text-xs text-gray-700 mb-1">Manual entry key</label>
                 <code className="block px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm text-[#C9A84C] font-mono break-all select-all">{totpSetupData.secret}</code>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-2">Backup codes (save these somewhere safe)</label>
+                <label className="block text-xs text-gray-700 mb-2">Backup codes (save these somewhere safe)</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                   {totpSetupData.backupCodes.map((code, i) => (
                     <div key={i} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs font-mono text-gray-700 text-center">{code}</div>
@@ -343,7 +343,7 @@ export default function CarrierSettingsPage() {
                 </button>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Enter the 6-digit code from your app</label>
+                <label className="block text-xs text-gray-700 mb-1">Enter the 6-digit code from your app</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -361,7 +361,7 @@ export default function CarrierSettingsPage() {
                 >
                   {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
                 </button>
-                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-400 hover:text-[#0F1117]">Cancel</button>
+                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0F1117]">Cancel</button>
               </div>
             </div>
           ) : (
@@ -382,7 +382,7 @@ export default function CarrierSettingsPage() {
         <CarrierCard padding="p-5" className="col-span-2">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold text-[#0F1117] flex items-center gap-2">
-              <Bell size={16} className="text-[#C9A84C]" /> Notification Preferences
+              <Bell size={16} className="text-[#BA7517]" /> Notification Preferences
             </h3>
             <button
               onClick={() => notifMutation.mutate()}
@@ -404,7 +404,7 @@ export default function CarrierSettingsPage() {
               >
                 <div>
                   <div className="text-xs font-semibold text-[#0F1117]">{opt.label}</div>
-                  <div className="text-[11px] text-gray-400">{opt.desc}</div>
+                  <div className="text-[11px] text-gray-700">{opt.desc}</div>
                 </div>
                 <div className={`w-9 h-5 rounded-full flex items-center transition-colors ${notifications[opt.key] ? "bg-[#C9A84C] justify-end" : "bg-gray-200 justify-start"}`}>
                   <div className="w-4 h-4 rounded-full bg-white shadow-sm mx-0.5" />

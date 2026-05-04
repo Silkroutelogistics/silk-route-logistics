@@ -79,7 +79,7 @@ export default function ShipperShipmentsPage() {
           ))}
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md">
-            <Search size={14} className="text-gray-400" />
+            <Search size={14} className="text-gray-700" />
             <input
               placeholder="Search by ID, route, carrier..."
               className="border-none outline-none text-xs w-[180px]"
@@ -111,14 +111,14 @@ export default function ShipperShipmentsPage() {
                   </tr>
                 ))
               ) : shipments.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-gray-400">No shipments found</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-gray-700">No shipments found</td></tr>
               ) : (
                 shipments.map((s) => (
                   <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => setSelected(s)}>
                     <td className="px-3.5 py-3 font-semibold text-[#0F1117] font-mono text-[11px]">{s.id}</td>
                     <td className="px-3.5 py-3">
                       <div className="text-xs text-gray-700">{s.origin}</div>
-                      <div className="text-[11px] text-gray-400">&rarr; {s.dest}</div>
+                      <div className="text-[11px] text-gray-700">&rarr; {s.dest}</div>
                     </td>
                     <td className="px-3.5 py-3"><ShipperBadge status={s.status} /></td>
                     <td className="px-3.5 py-3 text-gray-600 text-xs">{s.carrier}</td>
@@ -133,7 +133,7 @@ export default function ShipperShipmentsPage() {
                           s.progress === 100 ? "bg-emerald-500" : s.status === "At Risk" ? "bg-red-500" : "bg-blue-500"
                         }`} style={{ width: `${s.progress}%` }} />
                       </div>
-                      <div className="text-[10px] text-gray-400 mt-1">{s.progress}%</div>
+                      <div className="text-[10px] text-gray-700 mt-1">{s.progress}%</div>
                     </td>
                   </tr>
                 ))

@@ -129,16 +129,16 @@ export default function CarrierDocumentsPage() {
         <CarrierCard padding="p-5" className="mb-5 border-[#C9A84C]/30">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold text-[#0F1117] flex items-center gap-2">
-              <Upload size={16} className="text-[#C9A84C]" /> Upload Document
+              <Upload size={16} className="text-[#BA7517]" /> Upload Document
             </h3>
-            <button onClick={() => { setShowUpload(false); setSelectedFile(null); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => { setShowUpload(false); setSelectedFile(null); }} className="text-gray-700 hover:text-gray-600">
               <X size={16} />
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label className="text-xs text-gray-400 block mb-1">Document Type</label>
+              <label className="text-xs text-gray-700 block mb-1">Document Type</label>
               <select
                 value={uploadDocType}
                 onChange={(e) => { setUploadDocType(e.target.value); setUploadLoadId(""); }}
@@ -151,7 +151,7 @@ export default function CarrierDocumentsPage() {
             </div>
             {isLoadDocType && (
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Load Reference</label>
+                <label className="text-xs text-gray-700 block mb-1">Load Reference</label>
                 <select
                   value={uploadLoadId}
                   onChange={(e) => setUploadLoadId(e.target.value)}
@@ -185,18 +185,18 @@ export default function CarrierDocumentsPage() {
             />
             {selectedFile ? (
               <div className="flex items-center justify-center gap-2">
-                <FileText size={18} className="text-[#C9A84C]" />
+                <FileText size={18} className="text-[#BA7517]" />
                 <span className="text-sm font-medium text-[#0F1117]">{selectedFile.name}</span>
-                <span className="text-[11px] text-gray-400">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
-                <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="text-gray-400 hover:text-red-500 ml-1">
+                <span className="text-[11px] text-gray-700">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
+                <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="text-gray-700 hover:text-red-500 ml-1">
                   <X size={14} />
                 </button>
               </div>
             ) : (
               <>
-                <Upload size={24} className="mx-auto mb-2 text-gray-300" />
+                <Upload size={24} className="mx-auto mb-2 text-gray-500" />
                 <p className="text-xs text-gray-500">Drag & drop or click to select</p>
-                <p className="text-[10px] text-gray-400 mt-1">PDF, JPEG, PNG up to 10MB</p>
+                <p className="text-[10px] text-gray-700 mt-1">PDF, JPEG, PNG up to 10MB</p>
               </>
             )}
           </div>
@@ -223,11 +223,11 @@ export default function CarrierDocumentsPage() {
           <CarrierCard key={type} padding="p-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-[#C9A84C]/10 flex items-center justify-center">
-                <FileText size={18} className="text-[#C9A84C]" />
+                <FileText size={18} className="text-[#BA7517]" />
               </div>
               <div>
                 <div className="text-lg font-bold text-[#0F1117]">{count}</div>
-                <div className="text-[11px] text-gray-400">{typeLabels[type] || type}</div>
+                <div className="text-[11px] text-gray-700">{typeLabels[type] || type}</div>
               </div>
             </div>
           </CarrierCard>
@@ -250,11 +250,11 @@ export default function CarrierDocumentsPage() {
                 </div>
                 <div>
                   <div className="text-[13px] font-semibold text-[#0F1117]">{doc.fileName || doc.type}</div>
-                  <div className="text-[11px] text-gray-400">{doc.docType || doc.type}</div>
+                  <div className="text-[11px] text-gray-700">{doc.docType || doc.type}</div>
                 </div>
               </div>
               {doc.uploaded || doc.fileUrl ? (
-                <CheckCircle size={16} className="text-emerald-500" />
+                <CheckCircle size={16} className="text-emerald-700" />
               ) : (
                 <span className="text-[11px] text-red-500 font-medium">Missing</span>
               )}
@@ -269,7 +269,7 @@ export default function CarrierDocumentsPage() {
           <h3 className="text-[15px] font-bold text-[#0F1117]">Load Documents</h3>
         </div>
         {loadDocs.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-400">No load documents yet</div>
+          <div className="px-5 py-12 text-center text-sm text-gray-700">No load documents yet</div>
         ) : (
           loadDocs.slice(0, 20).map((doc: DocItem) => (
             <div key={doc.id} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
@@ -279,16 +279,16 @@ export default function CarrierDocumentsPage() {
                 </div>
                 <div>
                   <div className="text-[13px] font-semibold text-[#0F1117]">{doc.fileName}</div>
-                  <div className="text-[11px] text-gray-400">{doc.docType || "DOC"} &middot; {doc.loadRef}</div>
+                  <div className="text-[11px] text-gray-700">{doc.docType || "DOC"} &middot; {doc.loadRef}</div>
                 </div>
               </div>
               <div className="flex gap-2">
                 {doc.fileUrl && (
                   <>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Search size={14} /> View
                     </a>
-                    <a href={doc.fileUrl} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+                    <a href={doc.fileUrl} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Download size={14} />
                     </a>
                   </>

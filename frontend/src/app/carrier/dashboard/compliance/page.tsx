@@ -192,7 +192,7 @@ export default function CarrierCompliancePage() {
       {vettingReport && (
         <CarrierCard padding="p-6" className="mb-6">
           <div className="flex items-center gap-2 mb-5">
-            <Compass size={20} className="text-[#C9A84C]" />
+            <Compass size={20} className="text-[#BA7517]" />
             <h2 className="text-sm font-bold text-[#0F1117]">Your Compass Score</h2>
           </div>
 
@@ -207,7 +207,7 @@ export default function CarrierCompliancePage() {
                   vettingReport.grade === "C" ? "text-amber-600" :
                   vettingReport.grade === "D" ? "text-orange-600" : "text-red-600"
                 }`}>Grade {vettingReport.grade}</span>
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-500">|</span>
                 <span className={`text-sm font-semibold ${
                   vettingReport.riskLevel === "LOW" ? "text-green-600" :
                   vettingReport.riskLevel === "MEDIUM" ? "text-amber-600" :
@@ -245,9 +245,9 @@ export default function CarrierCompliancePage() {
                     {vettingReport.checks.map((check, i) => (
                       <div key={i} className="flex items-center gap-1.5 text-xs">
                         {check.result === "PASS" ? (
-                          <CheckCircle size={13} className="text-emerald-500 shrink-0" />
+                          <CheckCircle size={13} className="text-emerald-700 shrink-0" />
                         ) : check.result === "WARNING" ? (
-                          <AlertTriangle size={13} className="text-amber-500 shrink-0" />
+                          <AlertTriangle size={13} className="text-amber-700 shrink-0" />
                         ) : (
                           <AlertCircle size={13} className="text-red-500 shrink-0" />
                         )}
@@ -257,7 +257,7 @@ export default function CarrierCompliancePage() {
                         }`}>
                           {check.name}
                           {check.result === "WARNING" && (
-                            <span className="text-[10px] text-amber-500 ml-1">- Review recommended</span>
+                            <span className="text-[10px] text-amber-700 ml-1">- Review recommended</span>
                           )}
                         </span>
                       </div>
@@ -266,8 +266,8 @@ export default function CarrierCompliancePage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <Shield size={24} className="text-gray-300 mb-2" />
-                  <p className="text-xs text-gray-400">Detailed check data will appear after your next Compass review.</p>
+                  <Shield size={24} className="text-gray-500 mb-2" />
+                  <p className="text-xs text-gray-700">Detailed check data will appear after your next Compass review.</p>
                 </div>
               )}
             </div>
@@ -276,9 +276,9 @@ export default function CarrierCompliancePage() {
           {/* Tip + Last checked */}
           <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
             <p className="text-xs text-gray-500">
-              <span className="font-medium text-[#C9A84C]">Tip:</span> Keep your score above 80 for GOLD tier eligibility and priority load matching.
+              <span className="font-medium text-[#BA7517]">Tip:</span> Keep your score above 80 for GOLD tier eligibility and priority load matching.
             </p>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-gray-700">
               Last checked: {new Date(vettingReport.vettedAt).toLocaleDateString()}
             </p>
           </div>
@@ -295,16 +295,16 @@ export default function CarrierCompliancePage() {
             </div>
             <div>
               <div className="text-sm font-bold text-[#0F1117]">{carrier?.company || "—"}</div>
-              <div className="text-[11px] text-gray-400">MC-{carrier?.mcNumber || "—"} &middot; DOT-{carrier?.dotNumber || "—"}</div>
+              <div className="text-[11px] text-gray-700">MC-{carrier?.mcNumber || "—"} &middot; DOT-{carrier?.dotNumber || "—"}</div>
             </div>
           </div>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-400">Tier</span>
+              <span className="text-gray-700">Tier</span>
               {carrier?.tier ? <CarrierBadge status={carrier.tier} /> : <span>—</span>}
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Safety Score</span>
+              <span className="text-gray-700">Safety Score</span>
               <span className="font-bold">{carrier?.safetyScore ?? "—"}</span>
             </div>
           </div>
@@ -318,19 +318,19 @@ export default function CarrierCompliancePage() {
           ) : (
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-gray-400">Status</span>
+                <span className="text-gray-700">Status</span>
                 {insurance?.status ? <CarrierBadge status={insurance.status} /> : <span>—</span>}
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Expires</span>
+                <span className="text-gray-700">Expires</span>
                 <span>{insurance?.expiry ? new Date(insurance.expiry).toLocaleDateString() : "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Cargo</span>
+                <span className="text-gray-700">Cargo</span>
                 <span>{insurance?.cargoAmount ? `$${Number(insurance.cargoAmount).toLocaleString()}` : "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Auto Liability</span>
+                <span className="text-gray-700">Auto Liability</span>
                 <span>{insurance?.autoLiability ? `$${Number(insurance.autoLiability).toLocaleString()}` : "—"}</span>
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function CarrierCompliancePage() {
               <div key={i} className="flex items-center justify-between">
                 <span className="text-xs text-gray-600">{d.label}</span>
                 {d.done ? (
-                  <CheckCircle size={16} className="text-emerald-500" />
+                  <CheckCircle size={16} className="text-emerald-700" />
                 ) : (
                   <AlertCircle size={16} className="text-red-500" />
                 )}
@@ -364,7 +364,7 @@ export default function CarrierCompliancePage() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-[#0F1117]">Insurance Details</h3>
           {!editingInsurance ? (
-            <button onClick={startEditInsurance} className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition">
+            <button onClick={startEditInsurance} className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#BA7517] hover:bg-[#C9A84C]/10 rounded-lg transition">
               <Edit3 size={13} /> Edit
             </button>
           ) : (
@@ -393,7 +393,7 @@ export default function CarrierCompliancePage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold text-[#0F1117] w-28">{line.label}</span>
                   <span className="text-xs text-gray-600">{line.provider || "Not set"}</span>
-                  {line.policy && <span className="text-xs text-gray-400">| {line.policy}</span>}
+                  {line.policy && <span className="text-xs text-gray-700">| {line.policy}</span>}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-medium text-[#0F1117]">{line.amount ? `$${Number(line.amount).toLocaleString()}` : "—"}</span>
@@ -402,7 +402,7 @@ export default function CarrierCompliancePage() {
                       {new Date(line.expiry).toLocaleDateString()} {insuranceDaysLabel(line.expiry)}
                     </span>
                   ) : (
-                    <span className="text-xs text-gray-400">No expiry set</span>
+                    <span className="text-xs text-gray-700">No expiry set</span>
                   )}
                 </div>
               </div>
@@ -462,7 +462,7 @@ export default function CarrierCompliancePage() {
         <CarrierCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4">FMCSA BASIC Scores</h3>
           {Object.keys(basicScores).length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-400">No BASIC scores available</div>
+            <div className="py-6 text-center text-xs text-gray-700">No BASIC scores available</div>
           ) : (
             <div className="space-y-3">
               {Object.entries(basicScores).map(([key, value]) => {
@@ -511,7 +511,7 @@ export default function CarrierCompliancePage() {
               })}
             </div>
           ) : (
-            <div className="py-6 text-center text-xs text-gray-400">No performance data yet</div>
+            <div className="py-6 text-center text-xs text-gray-700">No performance data yet</div>
           )}
         </CarrierCard>
       </div>
@@ -521,7 +521,7 @@ export default function CarrierCompliancePage() {
         <CarrierCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4">Upcoming Expirations</h3>
           {expItems.length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-400">No upcoming expirations</div>
+            <div className="py-6 text-center text-xs text-gray-700">No upcoming expirations</div>
           ) : (
             <div className="space-y-2">
               {expItems.map((exp: any, i: number) => (
@@ -543,7 +543,7 @@ export default function CarrierCompliancePage() {
         <CarrierCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4">Compliance Alerts</h3>
           {alerts.length === 0 ? (
-            <div className="py-6 text-center text-xs text-emerald-500 flex flex-col items-center gap-2">
+            <div className="py-6 text-center text-xs text-emerald-700 flex flex-col items-center gap-2">
               <CheckCircle size={24} />
               All compliance requirements met
             </div>

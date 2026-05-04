@@ -50,7 +50,7 @@ export default function ShipperAnalyticsPage() {
           { label: "Avg Transit Time", value: metrics ? `${metrics.avgTransitDays} days` : "—" },
         ].map((m, i) => (
           <ShipperCard key={i} padding="p-5">
-            <div className="text-[11px] text-gray-400 mb-1.5">{m.label}</div>
+            <div className="text-[11px] text-gray-700 mb-1.5">{m.label}</div>
             <div className="text-[28px] font-bold text-[#0F1117] mb-1">
               {isLoading ? <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" /> : m.value}
             </div>
@@ -75,7 +75,7 @@ export default function ShipperAnalyticsPage() {
               }
             />
           ) : (
-            <div className="h-[140px] flex items-center justify-center text-xs text-gray-400">Loading...</div>
+            <div className="h-[140px] flex items-center justify-center text-xs text-gray-700">Loading...</div>
           )}
         </ShipperCard>
         <ShipperCard padding="p-5">
@@ -89,7 +89,7 @@ export default function ShipperAnalyticsPage() {
               colorFn={(v) => (v >= 97 ? "#10B981" : v >= 95 ? "#F59E0B" : "#EF4444")}
             />
           ) : (
-            <div className="h-[140px] flex items-center justify-center text-xs text-gray-400">Loading...</div>
+            <div className="h-[140px] flex items-center justify-center text-xs text-gray-700">Loading...</div>
           )}
         </ShipperCard>
       </div>
@@ -99,7 +99,7 @@ export default function ShipperAnalyticsPage() {
         <ShipperCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4">Top Lanes by Spend</h3>
           {topLanes.length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-400">No lane data yet</div>
+            <div className="py-6 text-center text-xs text-gray-700">No lane data yet</div>
           ) : (
             topLanes.map((l, i) => (
               <div key={i} className={`py-2.5 ${i < topLanes.length - 1 ? "border-b border-gray-100" : ""}`}>
@@ -110,7 +110,7 @@ export default function ShipperAnalyticsPage() {
                 <div className="bg-gray-100 rounded h-[5px] overflow-hidden">
                   <div className="h-full bg-[#C9A84C] rounded" style={{ width: `${Math.round((l.spend / maxLaneSpend) * 100)}%` }} />
                 </div>
-                <div className="text-[10px] text-gray-400 mt-1">{l.loads} loads</div>
+                <div className="text-[10px] text-gray-700 mt-1">{l.loads} loads</div>
               </div>
             ))
           )}
@@ -118,13 +118,13 @@ export default function ShipperAnalyticsPage() {
         <ShipperCard padding="p-5">
           <h3 className="text-sm font-bold text-[#0F1117] mb-4">Carrier Scorecard</h3>
           {carriers.length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-400">No carrier data yet</div>
+            <div className="py-6 text-center text-xs text-gray-700">No carrier data yet</div>
           ) : (
             carriers.map((c, i) => (
               <div key={i} className={`flex justify-between items-center py-2.5 ${i < carriers.length - 1 ? "border-b border-gray-100" : ""}`}>
                 <div>
                   <div className="text-[13px] font-semibold text-[#0F1117]">{c.name}</div>
-                  <div className="text-[11px] text-gray-400">{c.loads} loads &middot; {c.otd}% on-time</div>
+                  <div className="text-[11px] text-gray-700">{c.loads} loads &middot; {c.otd}% on-time</div>
                 </div>
                 <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                   c.otd >= 97 ? "bg-emerald-500/15 text-emerald-500" : c.otd >= 93 ? "bg-amber-500/15 text-amber-500" : "bg-red-500/15 text-red-500"

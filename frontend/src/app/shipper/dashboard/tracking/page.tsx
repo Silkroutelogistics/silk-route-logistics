@@ -149,7 +149,7 @@ export default function ShipperTrackingPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Package className="w-4 h-4 text-[#C9A84C]" />
+            <Package className="w-4 h-4 text-[#BA7517]" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">Active</span>
           </div>
           <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : allActive.length}</p>
@@ -163,14 +163,14 @@ export default function ShipperTrackingPage() {
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">On Schedule</span>
           </div>
           <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : allActive.filter(s => s.riskLevel === "GREEN").length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Bell className="w-4 h-4 text-amber-500" />
+            <Bell className="w-4 h-4 text-amber-700" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">At Risk</span>
           </div>
           <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : atRisk.length}</p>
@@ -189,7 +189,7 @@ export default function ShipperTrackingPage() {
         </div>
 
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" />
+          <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-700" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -235,7 +235,7 @@ export default function ShipperTrackingPage() {
           <div className="space-y-4">
             {!selected && !isLoading && (
               <ShipperCard padding="p-8">
-                <div className="text-center text-gray-400 text-sm">
+                <div className="text-center text-gray-700 text-sm">
                   {search || riskFilter !== "ALL" ? "No shipments match your filters" : "No active shipments to track"}
                 </div>
               </ShipperCard>
@@ -260,12 +260,12 @@ export default function ShipperTrackingPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm font-bold text-[#0F1117]">{selected.id}</span>
                         {selected.loadId && (
-                          <button onClick={() => handleShare(selected.loadId!)} className="text-gray-400 hover:text-[#C9A84C] transition" title="Share tracking link">
+                          <button onClick={() => handleShare(selected.loadId!)} className="text-gray-700 hover:text-[#BA7517] transition" title="Share tracking link">
                             <Share2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {selected.loadId && (
-                          <button onClick={() => setTimelineLoadId(selected.loadId!)} className="text-gray-400 hover:text-[#C9A84C] transition" title="View full timeline">
+                          <button onClick={() => setTimelineLoadId(selected.loadId!)} className="text-gray-700 hover:text-[#BA7517] transition" title="View full timeline">
                             <ChevronDown className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -287,20 +287,20 @@ export default function ShipperTrackingPage() {
                   {/* Route Display */}
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
                     <div className="flex-1">
-                      <div className="text-[10px] text-gray-400 uppercase">Origin</div>
+                      <div className="text-[10px] text-gray-700 uppercase">Origin</div>
                       <div className="text-sm font-medium text-[#0F1117] flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-emerald-500 shrink-0" /> {selected.origin}
+                        <MapPin className="w-3 h-3 text-emerald-700 shrink-0" /> {selected.origin}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-300 shrink-0">
+                    <div className="flex items-center gap-1 text-gray-500 shrink-0">
                       <div className="w-8 h-px bg-gray-300" />
-                      <Navigation className="w-3.5 h-3.5 text-[#C9A84C]" />
+                      <Navigation className="w-3.5 h-3.5 text-[#BA7517]" />
                       <div className="w-8 h-px bg-gray-300" />
                     </div>
                     <div className="flex-1 text-right">
-                      <div className="text-[10px] text-gray-400 uppercase">Destination</div>
+                      <div className="text-[10px] text-gray-700 uppercase">Destination</div>
                       <div className="text-sm font-medium text-[#0F1117] flex items-center justify-end gap-1">
-                        {selected.dest} <MapPin className="w-3 h-3 text-red-400 shrink-0" />
+                        {selected.dest} <MapPin className="w-3 h-3 text-red-700 shrink-0" />
                       </div>
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export default function ShipperTrackingPage() {
 
                   {/* Progress bar */}
                   <div className="mt-4">
-                    <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                    <div className="flex justify-between text-[10px] text-gray-700 mb-1">
                       <span>Progress</span>
                       <span>{selected.progress}%</span>
                     </div>
@@ -350,9 +350,9 @@ export default function ShipperTrackingPage() {
                 {selected.eldPosition && (
                   <ShipperCard padding="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Truck className="w-4 h-4 text-[#C9A84C]" />
+                      <Truck className="w-4 h-4 text-[#BA7517]" />
                       <span className="text-xs font-bold text-[#0F1117]">Last Known Position</span>
-                      <span className="ml-auto text-[10px] text-gray-400">via ELD</span>
+                      <span className="ml-auto text-[10px] text-gray-700">via ELD</span>
                     </div>
                     <div className="text-sm text-gray-700">{selected.eldPosition.address}</div>
                     <div className="flex gap-4 mt-1.5 text-[11px] text-gray-500">
@@ -372,9 +372,9 @@ export default function ShipperTrackingPage() {
                           <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#C9A84C] shrink-0" />
                           <div className="flex-1">
                             <span className="text-gray-700">{cc.city}, {cc.state}</span>
-                            <span className="text-gray-400 ml-2">{cc.method}</span>
+                            <span className="text-gray-700 ml-2">{cc.method}</span>
                           </div>
-                          <span className="text-gray-400 shrink-0">{fmtTimestamp(cc.timestamp)}</span>
+                          <span className="text-gray-700 shrink-0">{fmtTimestamp(cc.timestamp)}</span>
                         </div>
                       ))}
                     </div>
@@ -399,7 +399,7 @@ export default function ShipperTrackingPage() {
                   </div>
                 ))
               ) : filteredActive.length === 0 ? (
-                <div className="py-6 text-center text-xs text-gray-400">
+                <div className="py-6 text-center text-xs text-gray-700">
                   {search || riskFilter !== "ALL" ? "No matches" : "No active shipments"}
                 </div>
               ) : (
@@ -417,7 +417,7 @@ export default function ShipperTrackingPage() {
                     </div>
                     <div className="text-xs text-gray-600 mb-2">{s.origin} &rarr; {s.dest}</div>
                     {s.checkCalls.length > 0 && (
-                      <div className="text-[10px] text-gray-400 mb-1.5">
+                      <div className="text-[10px] text-gray-700 mb-1.5">
                         Last: {s.checkCalls[0].city}, {s.checkCalls[0].state} &middot; {s.checkCalls[0].method}
                       </div>
                     )}
@@ -428,8 +428,8 @@ export default function ShipperTrackingPage() {
                       />
                     </div>
                     <div className="flex justify-between mt-1">
-                      <span className="text-[10px] text-gray-400">ETA: {s.eta}</span>
-                      <span className="text-[10px] text-gray-400">{s.progress}%</span>
+                      <span className="text-[10px] text-gray-700">ETA: {s.eta}</span>
+                      <span className="text-[10px] text-gray-700">{s.progress}%</span>
                     </div>
                   </div>
                 ))
@@ -453,9 +453,9 @@ export default function ShipperTrackingPage() {
         <ShipperCard padding="p-4">
           <div className="text-xs font-bold text-[#0F1117] mb-4">Completed Shipments</div>
           {historyLoading ? (
-            <div className="py-8 text-center text-xs text-gray-400">Loading history...</div>
+            <div className="py-8 text-center text-xs text-gray-700">Loading history...</div>
           ) : filteredHistory.length === 0 ? (
-            <div className="py-8 text-center text-xs text-gray-400">
+            <div className="py-8 text-center text-xs text-gray-700">
               {search ? "No matches found" : "No completed shipments yet"}
             </div>
           ) : (
@@ -506,9 +506,9 @@ export default function ShipperTrackingPage() {
             <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-[#0F1117]">Shipment Timeline</h3>
-                {timelineData && <p className="text-[10px] text-gray-400 font-mono">{timelineData.referenceNumber}</p>}
+                {timelineData && <p className="text-[10px] text-gray-700 font-mono">{timelineData.referenceNumber}</p>}
               </div>
-              <button onClick={() => setTimelineLoadId(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setTimelineLoadId(null)} className="text-gray-700 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -525,7 +525,7 @@ export default function ShipperTrackingPage() {
                       </div>
                       <div className="flex-1">
                         <div className="text-[#0F1117] font-medium">{stop.facility || stop.type}</div>
-                        {stop.actualArrival && <div className="text-gray-400">Arrived: {fmtTimestamp(stop.actualArrival)}</div>}
+                        {stop.actualArrival && <div className="text-gray-700">Arrived: {fmtTimestamp(stop.actualArrival)}</div>}
                       </div>
                       {stop.onTime !== null && (
                         <span className={`text-[10px] font-medium ${stop.onTime ? "text-emerald-600" : "text-red-500"}`}>
@@ -540,9 +540,9 @@ export default function ShipperTrackingPage() {
               {/* Timeline events */}
               <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-3">Event Log</div>
               {!timelineData ? (
-                <div className="py-6 text-center text-xs text-gray-400">Loading timeline...</div>
+                <div className="py-6 text-center text-xs text-gray-700">Loading timeline...</div>
               ) : timelineData.timeline.length === 0 ? (
-                <div className="py-6 text-center text-xs text-gray-400">No events recorded</div>
+                <div className="py-6 text-center text-xs text-gray-700">No events recorded</div>
               ) : (
                 <div className="relative pl-4 border-l-2 border-gray-100">
                   {timelineData.timeline.map((evt, i) => (
@@ -563,13 +563,13 @@ export default function ShipperTrackingPage() {
                              evt.eventType}
                           </span>
                           {evt.detail && (
-                            <span className="text-[10px] text-gray-400">{evt.detail}</span>
+                            <span className="text-[10px] text-gray-700">{evt.detail}</span>
                           )}
                         </div>
                         {(evt.city || evt.state) && (
                           <div className="text-gray-500">{evt.city}{evt.city && evt.state ? ", " : ""}{evt.state}</div>
                         )}
-                        <div className="text-gray-400 text-[10px]">{fmtTimestamp(evt.timestamp)}</div>
+                        <div className="text-gray-700 text-[10px]">{fmtTimestamp(evt.timestamp)}</div>
                       </div>
                     </div>
                   ))}
@@ -587,23 +587,23 @@ export default function ShipperTrackingPage() {
           <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-[#0F1117]">Share Tracking Link</h3>
-              <button onClick={() => setShareLoadId(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShareLoadId(null)} className="text-gray-700 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
             {shareMutation.isPending ? (
-              <div className="py-4 text-center text-xs text-gray-400">Generating link...</div>
+              <div className="py-4 text-center text-xs text-gray-700">Generating link...</div>
             ) : shareMutation.data ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg">
-                  <ExternalLink className="w-3.5 h-3.5 text-[#C9A84C] shrink-0" />
+                  <ExternalLink className="w-3.5 h-3.5 text-[#BA7517] shrink-0" />
                   <span className="text-xs text-gray-600 truncate flex-1">{shareMutation.data.url}</span>
-                  <button onClick={() => copyLink(shareMutation.data!.url)} className="text-[#C9A84C] hover:text-[#b89a3f] shrink-0">
+                  <button onClick={() => copyLink(shareMutation.data!.url)} className="text-[#BA7517] hover:text-[#b89a3f] shrink-0">
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 {copiedLink && <p className="text-[10px] text-emerald-600 text-center">Link copied to clipboard!</p>}
-                <p className="text-[10px] text-gray-400 text-center">
+                <p className="text-[10px] text-gray-700 text-center">
                   Expires {new Date(shareMutation.data.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
               </div>
