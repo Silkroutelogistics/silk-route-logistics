@@ -68,7 +68,7 @@ export function DocsTab({ load, loadId, onChange }: Props) {
   if (preview) {
     return (
       <div className="space-y-3">
-        <button onClick={() => setPreview(null)} className="text-xs text-[#854F0B] hover:underline">← Back to list</button>
+        <button onClick={() => setPreview(null)} className="text-xs text-[#C5A572] hover:underline">← Back to list</button>
         <div className="font-medium text-gray-900">{preview.fileName}</div>
         <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
           {preview.fileType?.includes("pdf") ? (
@@ -110,7 +110,7 @@ export function DocsTab({ load, loadId, onChange }: Props) {
                         )}
                       </>
                     )}
-                    <label className="px-2 py-1 text-xs text-[#854F0B] border border-[#BA7517]/40 bg-[#FAEEDA]/40 rounded hover:bg-[#FAEEDA] cursor-pointer">
+                    <label className="px-2 py-1 text-xs text-[#BA7517] border border-[#BA7517]/40 bg-[#FAEEDA]/40 rounded hover:bg-[#FAEEDA] cursor-pointer">
                       <Upload className="w-3 h-3 inline mr-1" />
                       {uploading === d.code ? "…" : "Upload"}
                       <input

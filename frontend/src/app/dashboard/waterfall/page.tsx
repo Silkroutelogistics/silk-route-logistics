@@ -84,7 +84,7 @@ export default function WaterfallPage() {
                 onClick={() => setAndPersistMode(m)}
                 className={`px-3 py-1.5 text-xs font-medium rounded transition ${
                   mode === m
-                    ? "bg-[#FAEEDA] text-[#854F0B]"
+                    ? "bg-[#FAEEDA] text-[#BA7517]"
                     : "text-gray-500 hover:text-gray-800"
                 }`}
               >
@@ -123,7 +123,7 @@ export default function WaterfallPage() {
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
               tab === t.id
-                ? "border-[#BA7517] text-[#854F0B]"
+                ? "border-[#BA7517] text-[#C5A572]"
                 : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >

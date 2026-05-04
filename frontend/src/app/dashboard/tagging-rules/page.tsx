@@ -281,7 +281,7 @@ export default function TaggingRulesPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Tag className="w-6 h-6 text-[#C9A84C]" />
+                <Tag className="w-6 h-6 text-[#C5A572]" />
                 Tagging Rules Engine
               </h1>
               <p className="text-sm text-white/50 mt-1">
@@ -292,7 +292,7 @@ export default function TaggingRulesPage() {
               <button
                 onClick={() => updateAllTags.mutate()}
                 disabled={updateAllTags.isPending}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/10 transition text-sm font-medium disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#C5A572]/30 text-[#C5A572] hover:bg-[#C5A572]/10 transition text-sm font-medium disabled:opacity-50"
               >
                 {updateAllTags.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -303,7 +303,7 @@ export default function TaggingRulesPage() {
               </button>
               <button
                 onClick={openCreateDrawer}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A84C] text-black font-medium hover:bg-[#C9A84C]/90 transition text-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C5A572] text-black font-medium hover:bg-[#C5A572]/90 transition text-sm"
               >
                 <Plus className="w-4 h-4" />
                 Create Tag Rule
@@ -319,7 +319,7 @@ export default function TaggingRulesPage() {
               placeholder="Search tags..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/40 transition"
+              className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C5A572]/40 transition"
             />
           </div>
 
@@ -333,7 +333,7 @@ export default function TaggingRulesPage() {
               ].map((s) => (
                 <div key={s.label} className="rounded-lg bg-white/[0.03] border border-white/5 px-4 py-3">
                   <p className="text-xs text-white/40 uppercase tracking-wider">{s.label}</p>
-                  <p className="text-xl font-bold text-[#C9A84C] mt-0.5">{s.value}</p>
+                  <p className="text-xl font-bold text-[#C5A572] mt-0.5">{s.value}</p>
                 </div>
               ))}
             </div>
@@ -342,7 +342,7 @@ export default function TaggingRulesPage() {
           {/* Table */}
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-[#C9A84C]" />
+              <Loader2 className="w-6 h-6 animate-spin text-[#C5A572]" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-white/40">
@@ -451,7 +451,7 @@ export default function TaggingRulesPage() {
                               e.stopPropagation();
                               openEditDrawer(tag);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-gray-50 text-white/40 hover:text-[#C9A84C] transition"
+                            className="p-1.5 rounded-lg hover:bg-gray-50 text-white/40 hover:text-[#C5A572] transition"
                             title="Edit tag"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -507,7 +507,7 @@ export default function TaggingRulesPage() {
                   className={cn(
                     "flex-1 px-4 py-2.5 text-xs font-medium uppercase tracking-wider transition",
                     detailTab === tab
-                      ? "text-[#C9A84C] border-b-2 border-[#C9A84C]"
+                      ? "text-[#C5A572] border-b-2 border-[#C5A572]"
                       : "text-white/40 hover:text-white/60"
                   )}
                 >
@@ -592,7 +592,7 @@ export default function TaggingRulesPage() {
 
                   <button
                     onClick={() => openEditDrawer(activeTag)}
-                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/10 transition text-sm font-medium"
+                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[#C5A572]/30 text-[#C5A572] hover:bg-[#C5A572]/10 transition text-sm font-medium"
                   >
                     <Edit3 className="w-4 h-4" />
                     Edit Tag
@@ -616,7 +616,7 @@ export default function TaggingRulesPage() {
                           className="flex items-center justify-between rounded-lg bg-white/[0.03] border border-white/5 px-3 py-2.5"
                         >
                           <div className="text-xs">
-                            <span className="text-[#C9A84C] font-medium">{rule.field}</span>
+                            <span className="text-[#C5A572] font-medium">{rule.field}</span>
                             <span className="text-white/40 mx-1.5">
                               {OPERATOR_OPTIONS.find((o) => o.value === rule.operator)?.label || rule.operator}
                             </span>
@@ -645,7 +645,7 @@ export default function TaggingRulesPage() {
                       <select
                         value={ruleField}
                         onChange={(e) => setRuleField(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white focus:outline-none focus:border-[#C9A84C]/40 transition appearance-none"
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white focus:outline-none focus:border-[#C5A572]/40 transition appearance-none"
                       >
                         {FIELD_OPTIONS.map((f) => (
                           <option key={f} value={f} className="">
@@ -657,7 +657,7 @@ export default function TaggingRulesPage() {
                       <select
                         value={ruleOperator}
                         onChange={(e) => setRuleOperator(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white focus:outline-none focus:border-[#C9A84C]/40 transition appearance-none"
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white focus:outline-none focus:border-[#C5A572]/40 transition appearance-none"
                       >
                         {OPERATOR_OPTIONS.map((o) => (
                           <option key={o.value} value={o.value} className="">
@@ -672,13 +672,13 @@ export default function TaggingRulesPage() {
                         value={ruleValue}
                         onChange={(e) => setRuleValue(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleAddRule()}
-                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/40 transition"
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#C5A572]/40 transition"
                       />
 
                       <button
                         onClick={handleAddRule}
                         disabled={!ruleValue.trim() || addRule.isPending}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#C9A84C] text-black font-medium text-sm hover:bg-[#C9A84C]/90 transition disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#C5A572] text-black font-medium text-sm hover:bg-[#C5A572]/90 transition disabled:opacity-50"
                       >
                         {addRule.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -696,7 +696,7 @@ export default function TaggingRulesPage() {
               {detailTab === "assignments" && (
                 <div className="space-y-4">
                   <div className="rounded-lg bg-white/[0.03] border border-white/5 px-4 py-6 text-center">
-                    <p className="text-3xl font-bold text-[#C9A84C]">{activeTag._count.assignments}</p>
+                    <p className="text-3xl font-bold text-[#C5A572]">{activeTag._count.assignments}</p>
                     <p className="text-xs text-white/40 mt-1 uppercase tracking-wider">
                       Entities Tagged
                     </p>
@@ -746,7 +746,7 @@ export default function TaggingRulesPage() {
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="e.g., High Priority, Reefer, West Coast"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572]"
             />
           </div>
 
@@ -760,7 +760,7 @@ export default function TaggingRulesPage() {
                   onClick={() => setFormColor(c)}
                   className={cn(
                     "w-8 h-8 rounded-full border-2 transition hover:scale-110",
-                    formColor === c ? "border-gray-800 ring-2 ring-offset-2 ring-[#C9A84C]" : "border-transparent"
+                    formColor === c ? "border-gray-800 ring-2 ring-offset-2 ring-[#C5A572]" : "border-transparent"
                   )}
                   style={{ backgroundColor: c }}
                   title={c}
@@ -777,7 +777,7 @@ export default function TaggingRulesPage() {
                 value={formColor}
                 onChange={(e) => setFormColor(e.target.value)}
                 placeholder="#C9A84C"
-                className="w-32 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                className="w-32 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572]"
               />
             </div>
           </div>
@@ -790,7 +790,7 @@ export default function TaggingRulesPage() {
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder="Describe what this tag represents..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C] resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572] resize-none"
             />
           </div>
 
@@ -805,7 +805,7 @@ export default function TaggingRulesPage() {
                   className={cn(
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition",
                     formEntityTypes.includes(et)
-                      ? "bg-[#C9A84C]/10 border-[#C9A84C]/40 text-[#C9A84C]"
+                      ? "bg-[#C5A572]/10 border-[#C5A572]/40 text-[#C5A572]"
                       : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-200"
                   )}
                 >
@@ -820,7 +820,7 @@ export default function TaggingRulesPage() {
             <button
               onClick={handleSubmit}
               disabled={createTag.isPending || updateTag.isPending}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9A84C] text-black font-medium hover:bg-[#C9A84C]/90 transition disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#C5A572] text-black font-medium hover:bg-[#C5A572]/90 transition disabled:opacity-50"
             >
               {(createTag.isPending || updateTag.isPending) && (
                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -51,7 +51,7 @@ export default function GeoSpendPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Map className="w-5 h-5 text-[#C9A84C]" /> Geographic Spend Analysis
+            <Map className="w-5 h-5 text-[#C5A572]" /> Geographic Spend Analysis
           </h1>
           <p className="text-sm text-gray-400 mt-1">Spending breakdown by state with cost-per-unit metrics</p>
         </div>
@@ -62,7 +62,7 @@ export default function GeoSpendPage() {
               onClick={() => setDays(p.value)}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition",
-                days === p.value ? "bg-[#C9A84C] text-[#0F1117]" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                days === p.value ? "bg-[#C5A572] text-[#0F1117]" : "bg-white/5 text-gray-400 hover:bg-white/10"
               )}
             >
               {p.label}
@@ -103,7 +103,7 @@ export default function GeoSpendPage() {
                   onClick={() => setMapType(t)}
                   className={cn(
                     "px-3 py-1 rounded-md text-xs font-medium transition",
-                    mapType === t ? "bg-[#C9A84C] text-[#0F1117]" : "text-gray-400 hover:text-white"
+                    mapType === t ? "bg-[#C5A572] text-[#0F1117]" : "text-gray-400 hover:text-white"
                   )}
                 >
                   {t === "origin" ? "Pickup" : "Dropoff"}
@@ -159,7 +159,7 @@ export default function GeoSpendPage() {
                 <span className="text-sm text-white font-medium w-8">{s.state}</span>
                 <div className="flex-1">
                   <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#C9A84C]/60 rounded-full" style={{ width: `${(s.spend / maxSpend) * 100}%` }} />
+                    <div className="h-full bg-[#C5A572]/60 rounded-full" style={{ width: `${(s.spend / maxSpend) * 100}%` }} />
                   </div>
                 </div>
                 <span className="text-xs text-gray-500 w-12 text-right">{s.count}</span>

@@ -40,7 +40,7 @@ export default function VarianceReportsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-white flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-[#C9A84C]" /> Variance Reports
+            <BarChart3 className="w-5 h-5 text-[#C5A572]" /> Variance Reports
           </h1>
           <p className="text-sm text-gray-400 mt-1">Quoted vs actual cost analysis — detect margin leaks</p>
         </div>
@@ -51,7 +51,7 @@ export default function VarianceReportsPage() {
               onClick={() => setDays(p.value)}
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition",
-                days === p.value ? "bg-[#C9A84C] text-[#0F1117]" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                days === p.value ? "bg-[#C5A572] text-[#0F1117]" : "bg-white/5 text-gray-400 hover:bg-white/10"
               )}
             >
               {p.label}
@@ -119,7 +119,7 @@ export default function VarianceReportsPage() {
             <input
               value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search loads..."
-              className="pl-9 pr-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-xs text-white placeholder-gray-500 focus:border-[#C9A84C]/50 focus:outline-none w-48"
+              className="pl-9 pr-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-xs text-white placeholder-gray-500 focus:border-[#C5A572]/50 focus:outline-none w-48"
             />
           </div>
         </div>

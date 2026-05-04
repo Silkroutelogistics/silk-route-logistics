@@ -69,7 +69,7 @@ export default function ShipperDefaultsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Settings className="w-5 h-5 text-[#C9A84C]" /> Shipper Defaults
+            <Settings className="w-5 h-5 text-[#C5A572]" /> Shipper Defaults
           </h1>
           <p className="text-sm text-gray-400 mt-1">Configure default values and preferences for each shipper</p>
         </div>
@@ -81,7 +81,7 @@ export default function ShipperDefaultsPage() {
         <select
           value={selectedCustomerId}
           onChange={(e) => setSelectedCustomerId(e.target.value)}
-          className="w-full max-w-md px-4 py-3 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none"
+          className="w-full max-w-md px-4 py-3 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white focus:border-[#C5A572]/50 focus:outline-none"
         >
           <option value="">Choose a customer...</option>
           {(customers || []).map((c: any) => (
@@ -98,7 +98,7 @@ export default function ShipperDefaultsPage() {
             return (
               <div key={category}>
                 <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                  <cat.icon className="w-4 h-4 text-[#C9A84C]" /> {cat.label}
+                  <cat.icon className="w-4 h-4 text-[#C5A572]" /> {cat.label}
                 </h3>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {(fields as any[]).map((field) => {
@@ -145,7 +145,7 @@ export default function ShipperDefaultsPage() {
                               value={editValue}
                               onChange={(e) => setEditValue(field.type === "number" ? Number(e.target.value) : e.target.value)}
                               type={field.type === "number" ? "number" : "text"}
-                              className="flex-1 px-2 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white focus:border-[#C9A84C]/50 focus:outline-none"
+                              className="flex-1 px-2 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white focus:border-[#C5A572]/50 focus:outline-none"
                               autoFocus
                             />
                             <button onClick={() => setEditingField(null)} className="p-1 hover:bg-white/5 rounded">

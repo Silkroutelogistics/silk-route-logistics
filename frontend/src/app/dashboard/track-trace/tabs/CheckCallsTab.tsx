@@ -93,7 +93,7 @@ export function CheckCallsTab({ load, loadId, onChange }: Props) {
       {load.driverPhone && (
         <a
           href={`tel:${load.driverPhone}`}
-          className="flex items-center justify-center gap-2 py-2 text-sm text-[#854F0B] border border-[#BA7517]/40 bg-[#FAEEDA]/30 rounded-lg hover:bg-[#FAEEDA]/60"
+          className="flex items-center justify-center gap-2 py-2 text-sm text-[#BA7517] border border-[#BA7517]/40 bg-[#FAEEDA]/30 rounded-lg hover:bg-[#FAEEDA]/60"
         >
           <PhoneCall className="w-4 h-4" /> Call driver — {load.driverPhone}
         </a>

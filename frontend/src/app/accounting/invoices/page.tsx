@@ -312,7 +312,7 @@ export default function InvoicesPage() {
                           className={cn(
                             "cursor-pointer transition-colors",
                             selected
-                              ? "bg-[#C9A84C]/10 border-l-2 border-l-[#C9A84C]"
+                              ? "bg-[#C5A572]/10 border-l-2 border-l-[#C5A572]"
                               : "hover:bg-white/[0.03]"
                           )}
                         >
@@ -409,7 +409,7 @@ export default function InvoicesPage() {
                       <h2 className="text-lg font-bold text-white">
                         {selectedInvoice.invoiceNumber}
                       </h2>
-                      <p className="text-sm text-[#C9A84C] font-semibold">
+                      <p className="text-sm text-[#C5A572] font-semibold">
                         {fmt(selectedInvoice.amount)}
                       </p>
                     </div>
@@ -484,7 +484,7 @@ export default function InvoicesPage() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition border-b-2 -mb-px",
                         active
-                          ? "text-[#C9A84C] border-[#C9A84C]"
+                          ? "text-[#C5A572] border-[#C5A572]"
                           : "text-slate-500 border-transparent hover:text-slate-300"
                       )}
                     >
@@ -539,7 +539,7 @@ export default function InvoicesPage() {
                 {confirmPayId.invoiceNumber}
               </span>{" "}
               as paid for{" "}
-              <span className="text-[#C9A84C] font-bold">
+              <span className="text-[#C5A572] font-bold">
                 {fmt(confirmPayId.amount)}
               </span>
               ?
@@ -658,7 +658,7 @@ function SummaryTab({ invoice }: { invoice: Invoice }) {
             )}
             <div className="pt-2 border-t border-white/10 flex justify-between">
               <span className="text-sm text-white font-medium">Total</span>
-              <span className="text-sm text-[#C9A84C] font-bold tabular-nums">
+              <span className="text-sm text-[#C5A572] font-bold tabular-nums">
                 {fmt(invoice.amount)}
               </span>
             </div>
@@ -764,7 +764,7 @@ function LineItemsTab({ invoice }: { invoice: Invoice }) {
             <td colSpan={4} className="py-2.5 text-sm text-white font-medium text-right pr-3">
               Total
             </td>
-            <td className="py-2.5 text-sm text-[#C9A84C] font-bold text-right tabular-nums">
+            <td className="py-2.5 text-sm text-[#C5A572] font-bold text-right tabular-nums">
               {fmt(invoice.amount)}
             </td>
           </tr>
@@ -822,7 +822,7 @@ function TimelineTab({ invoice }: { invoice: Invoice }) {
                       ? "bg-red-400"
                       : event.status === "PAID"
                       ? "bg-green-400"
-                      : "bg-[#C9A84C]"
+                      : "bg-[#C5A572]"
                     : "bg-white/10 border border-white/20"
                 )}
               />
@@ -901,7 +901,7 @@ function DetailField({
         className={cn(
           "text-sm",
           highlight
-            ? "text-[#C9A84C] font-semibold"
+            ? "text-[#C5A572] font-semibold"
             : warn
             ? "text-red-400 font-medium"
             : "text-white"

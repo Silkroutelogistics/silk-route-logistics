@@ -243,7 +243,7 @@ export default function ExceptionConfigPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <Settings2 className="h-7 w-7 text-[#C9A84C]" />
+              <Settings2 className="h-7 w-7 text-[#C5A572]" />
               <h1 className="text-2xl font-semibold tracking-tight">Exception Configuration</h1>
             </div>
             <p className="text-sm text-gray-600 ml-10">
@@ -291,8 +291,8 @@ export default function ExceptionConfigPage() {
             label="Total Alerts"
             value={stats?.total ?? 0}
             icon={Shield}
-            accent="text-[#C9A84C]"
-            bg="bg-[#C9A84C]/10"
+            accent="text-[#C5A572]"
+            bg="bg-[#C5A572]/10"
           />
         </div>
 
@@ -457,7 +457,7 @@ export default function ExceptionConfigPage() {
               onChange={(e) => setNoteText(e.target.value)}
               placeholder="Add a note (optional)..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-gray-200 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-[#C9A84C]/40 focus:ring-1 focus:ring-[#C9A84C]/20 resize-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-gray-200 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-[#C5A572]/40 focus:ring-1 focus:ring-[#C5A572]/20 resize-none transition-colors"
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
@@ -548,7 +548,7 @@ function ConfigCard({
           onClick={onToggle}
           className={cn(
             "relative flex-shrink-0 w-10 h-[22px] rounded-full transition-colors",
-            config.isEnabled ? "bg-[#C9A84C]" : "bg-white/10"
+            config.isEnabled ? "bg-[#C5A572]" : "bg-white/10"
           )}
           aria-label={config.isEnabled ? "Disable exception" : "Enable exception"}
         >

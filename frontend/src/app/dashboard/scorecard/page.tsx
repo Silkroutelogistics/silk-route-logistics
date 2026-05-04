@@ -216,7 +216,7 @@ export default function ScorecardPage() {
                 placeholder="Search carriers by name or MC#..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50 focus:ring-1 focus:ring-[#C9A84C]/20"
+                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/50 focus:ring-1 focus:ring-[#C5A572]/20"
               />
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function ScorecardPage() {
           <div className="flex-1 overflow-y-auto">
             {carriersLoading ? (
               <div className="flex items-center justify-center py-16">
-                <div className="w-6 h-6 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-[#C5A572] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : filteredCarriers.length === 0 ? (
               <div className="text-center py-16 text-slate-500 text-sm">
@@ -250,7 +250,7 @@ export default function ScorecardPage() {
                   className={cn(
                     "w-full grid grid-cols-[1fr_80px_70px_60px_60px] gap-2 items-center px-4 py-3 text-left transition-colors border-b border-white/[0.03] group",
                     selectedCarrierId === c.id
-                      ? "bg-[#C9A84C]/10 border-l-2 border-l-[#C9A84C]"
+                      ? "bg-[#C5A572]/10 border-l-2 border-l-[#C5A572]"
                       : "hover:bg-white/[0.03] border-l-2 border-l-transparent"
                   )}
                 >
@@ -296,8 +296,8 @@ export default function ScorecardPage() {
             <div className="sticky top-0 z-10 bg-white border-b border-white/5 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-[#C9A84C]/20 flex items-center justify-center">
-                    <Truck className="w-5 h-5 text-[#C9A84C]" />
+                  <div className="w-10 h-10 rounded-lg bg-[#C5A572]/20 flex items-center justify-center">
+                    <Truck className="w-5 h-5 text-[#C5A572]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-3">
@@ -348,13 +348,13 @@ export default function ScorecardPage() {
                     className={cn(
                       "px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative",
                       activeTab === tab.key
-                        ? "text-[#C9A84C] bg-white/5"
+                        ? "text-[#C5A572] bg-white/5"
                         : "text-slate-400 hover:text-slate-300 hover:bg-white/[0.02]"
                     )}
                   >
                     {tab.label}
                     {activeTab === tab.key && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C9A84C] rounded-full" />
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A572] rounded-full" />
                     )}
                   </button>
                 ))}
@@ -365,7 +365,7 @@ export default function ScorecardPage() {
             <div className="p-6">
               {detailLoading ? (
                 <div className="flex items-center justify-center py-20">
-                  <div className="w-6 h-6 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-[#C5A572] border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
                 <>
@@ -437,7 +437,7 @@ export default function ScorecardPage() {
                           </div>
                           <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-[#C9A84C] transition-all"
+                              className="h-full rounded-full bg-[#C5A572] transition-all"
                               style={{
                                 width: `${
                                   carrierDetail?.currentScore &&
@@ -581,7 +581,7 @@ export default function ScorecardPage() {
                               <div className="flex flex-wrap gap-1.5">
                                 {(carrier as any).regions?.length > 0
                                   ? (carrier as any).regions.map((r: string) => (
-                                      <span key={r} className="px-2 py-1 bg-[#C9A84C]/10 text-[#C9A84C] text-[10px] rounded">{r}</span>
+                                      <span key={r} className="px-2 py-1 bg-[#C5A572]/10 text-[#C5A572] text-[10px] rounded">{r}</span>
                                     ))
                                   : <span className="text-xs text-slate-600">No regions specified</span>
                                 }

@@ -2312,7 +2312,50 @@
 //           content at line 40). Shipper/carrier portals use
 //           bg-[#F7F8FA] light gray intentionally and are
 //           unaffected. Marketing pages unaffected.
-export const SRL_VERSION = "3.8.ff";
+// v3.8.gg — Sprint 15a: Tailwind bulk sweep, scoped to safe
+//           pattern-based replacements. Ships Cluster S1
+//           (bg-[#1e293b] → bg-[#0F1117], 7 instances across 3
+//           files — closes the user-flagged Lead Hunter modal
+//           light-mode runtime bug from screenshots) + Cluster
+//           S2 (token-discipline gold canonicalization
+//           [#C9A84C] → [#C5A572] per CLAUDE.md §2.1, ~200
+//           occurrences across all dashboard/accounting/admin/
+//           onboarding files) + Cluster S7-legacy
+//           (text-[#854F0B] → text-[#C5A572], 19 instances) +
+//           cream-context repair (text-[#C5A572] on bg-[#FAEEDA]
+//           creates 2.13:1 P0; flipped to text-[#BA7517]
+//           gold-dark which pairs ~5:1 on cream — applied across
+//           ~15 spots).
+//
+//           Sprint 15a scope DELIBERATELY DOES NOT include the
+//           larger context-sensitive clusters (S3 slate-400/
+//           gray-400 on light surfaces 98 P0; S4 text-white on
+//           light surfaces 112 P0; S5 status badges 23 P0; S7
+//           main DARK-on-DARK Sprint 14 collateral 187 P0)
+//           because those need per-line context awareness — the
+//           same token (e.g. text-gray-600) is correct on light
+//           cards and wrong on dark dashboard wrappers within
+//           the same file. Bulk sed risks creating new P0s by
+//           over-correcting in mixed-context files. Already
+//           caught one over-correction class during Sprint 15a
+//           execution: S2 [#C9A84C] sed broke gold-on-cream
+//           badge pattern at 15+ spots; repaired in same commit.
+//
+//           Sprint 15b is queued for the ~420 context-sensitive
+//           findings via per-line edits driven by scanner output
+//           file:line metadata. Top files for Sprint 15b focus:
+//           loads/page.tsx (45 P0, 21d/24l mixed),
+//           fuel-tables/page.tsx (33, 20d/13l), onboarding/
+//           page.tsx (35, 0d/35l pure-light), routing-guide/
+//           page.tsx (25, 4d/21l), scorecard/page.tsx (25,
+//           2d/23l).
+//
+//           Per-cluster retirement count this commit: ~33 P0
+//           (S1 7 + S2 14 in P0 bucket + S7-legacy 19) plus
+//           ~200 §2.1 token-discipline improvements not in
+//           scanner P0 awareness. Scanner Phase C re-run will
+//           show the exact delta vs 1,211 baseline.
+export const SRL_VERSION = "3.8.gg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

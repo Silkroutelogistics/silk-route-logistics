@@ -131,7 +131,7 @@ export function ProfileTab({ customer, onChange }: Props) {
         <button
           onClick={() => secCheck.mutate()}
           disabled={secCheck.isPending}
-          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-[#854F0B] border border-[#BA7517]/40 bg-[#FAEEDA] rounded hover:bg-[#FAEEDA]/70 disabled:opacity-40"
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-[#BA7517] border border-[#BA7517]/40 bg-[#FAEEDA] rounded hover:bg-[#FAEEDA]/70 disabled:opacity-40"
         >
           <Shield className="w-3 h-3" />
           {secCheck.isPending ? "Checking SEC…" : "Check Credit (SEC)"}
@@ -152,7 +152,7 @@ function SecLookupView({
   if (!lookup.publiclyTraded) {
     return (
       <div className="space-y-4 text-sm">
-        <button onClick={onBack} className="text-xs text-[#854F0B] hover:underline">← Back to profile</button>
+        <button onClick={onBack} className="text-xs text-[#C5A572] hover:underline">← Back to profile</button>
         <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
           <div className="flex items-start gap-2">
             <Search className="w-4 h-4 text-amber-600 mt-0.5" />
@@ -184,7 +184,7 @@ function SecLookupView({
 
   return (
     <div className="space-y-4 text-sm">
-      <button onClick={onBack} className="text-xs text-[#854F0B] hover:underline">← Back to profile</button>
+      <button onClick={onBack} className="text-xs text-[#C5A572] hover:underline">← Back to profile</button>
 
       <div className="border border-gray-200 rounded-lg bg-white p-4">
         <div className="flex items-start justify-between">
@@ -218,7 +218,7 @@ function SecLookupView({
             href={lookup.profileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1 text-[11px] text-[#854F0B] hover:underline"
+            className="mt-2 inline-flex items-center gap-1 text-[11px] text-[#C5A572] hover:underline"
           >
             View on SEC.gov <ExternalLink className="w-3 h-3" />
           </a>
@@ -241,7 +241,7 @@ function SecLookupView({
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] font-semibold text-[#854F0B]">{f.form}</span>
+                  <span className="font-mono text-[11px] font-semibold text-[#C5A572]">{f.form}</span>
                   <span className="text-xs text-gray-600">{f.filedDate}</span>
                 </div>
                 {f.description && <div className="text-[11px] text-gray-500 truncate mt-0.5">{f.description}</div>}

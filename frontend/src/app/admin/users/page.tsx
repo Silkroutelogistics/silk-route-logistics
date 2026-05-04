@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
           className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 appearance-none cursor-pointer"
         >
           {ROLES.map((r) => (
-            <option key={r} value={r} className="bg-[#1e293b]">
+            <option key={r} value={r} className="bg-[#0F1117]">
               {r === "ALL" ? "All Roles" : r}
             </option>
           ))}
@@ -119,7 +119,7 @@ export default function AdminUsersPage() {
           className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50 appearance-none cursor-pointer"
         >
           {STATUSES.map((s) => (
-            <option key={s} value={s} className="bg-[#1e293b]">
+            <option key={s} value={s} className="bg-[#0F1117]">
               {s === "ALL" ? "All Statuses" : s}
             </option>
           ))}
@@ -257,7 +257,7 @@ export default function AdminUsersPage() {
       {/* Confirmation Modal */}
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 ">
-          <div className="bg-[#1e293b] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+          <div className="bg-[#0F1117] border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-white mb-2">
               {confirmAction.type === "status"
                 ? confirmAction.currentActive

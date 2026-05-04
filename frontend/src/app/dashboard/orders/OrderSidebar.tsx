@@ -151,15 +151,15 @@ export function OrderSidebar({
             <div className="flex items-center justify-between">
               <div className="text-[10px] uppercase text-slate-400">Customer rate</div>
               {customerRateSource === "agreement" && (
-                <span className="text-[9px] text-[#854F0B] font-semibold">From agreement</span>
+                <span className="text-[9px] text-[#C5A572] font-semibold">From agreement</span>
               )}
             </div>
             <div className="mt-1 flex items-baseline gap-1">
-              <span className={`text-lg font-semibold ${customerRateSource === "agreement" ? "text-[#854F0B]" : "text-white"}`}>
+              <span className={`text-lg font-semibold ${customerRateSource === "agreement" ? "text-[#C5A572]" : "text-white"}`}>
                 ${(customerRate ?? 0).toLocaleString()}
               </span>
               {distance && customerRate ? (
-                <span className={`text-[10px] ${customerRateSource === "agreement" ? "text-[#854F0B]" : "text-slate-400"}`}>
+                <span className={`text-[10px] ${customerRateSource === "agreement" ? "text-[#C5A572]" : "text-slate-400"}`}>
                   · ${(customerRate / distance).toFixed(2)}/mi
                 </span>
               ) : null}
@@ -309,7 +309,7 @@ export function OrderSidebar({
               )}
               {(recipientsQuery.data?.contacts ?? []).map((c: any) => (
                 <div key={c.id} className="flex items-center gap-2 rounded-lg p-2 border border-white/10 bg-white/5">
-                  <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#854F0B] flex items-center justify-center text-[9px] font-bold shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-[9px] font-bold shrink-0">
                     {(c.name || "?").split(" ").slice(0, 2).map((w: string) => w[0]).join("")}
                   </div>
                   <div className="min-w-0">

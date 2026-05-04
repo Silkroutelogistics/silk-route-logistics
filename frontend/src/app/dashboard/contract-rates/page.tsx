@@ -167,14 +167,14 @@ export default function ContractRatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <FileText className="w-7 h-7 text-[#C9A84C]" />
+            <FileText className="w-7 h-7 text-[#C5A572]" />
             Contract Rate Management
           </h1>
           <p className="text-slate-400 text-sm mt-1">Manage negotiated rates with shippers</p>
         </div>
         <button
           onClick={() => { setEditId(null); setForm(EMPTY_FORM); setDrawerOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-[#0a0e1a] rounded-lg text-sm font-medium hover:bg-[#C9A84C]/90 transition"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#C5A572] text-[#0a0e1a] rounded-lg text-sm font-medium hover:bg-[#C5A572]/90 transition"
         >
           <Plus className="w-4 h-4" /> New Rate
         </button>
@@ -196,15 +196,15 @@ export default function ContractRatesPage() {
             value={filterCustomer}
             onChange={(e) => setFilterCustomer(e.target.value)}
             placeholder="Search customer..."
-            className="bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none w-56"
+            className="bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C5A572]/50 focus:outline-none w-56"
           />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C5A572]/50 focus:outline-none">
           {STATUSES.map((s) => <option key={s} value={s} className="bg-[#0F1117]">{s === "ALL" ? "All Statuses" : s}</option>)}
         </select>
         <select value={filterEquipment} onChange={(e) => setFilterEquipment(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C5A572]/50 focus:outline-none">
           <option value="ALL" className="bg-[#0F1117]">All Equipment</option>
           {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0F1117]">{e.replace(/_/g, " ")}</option>)}
         </select>
@@ -242,7 +242,7 @@ export default function ContractRatesPage() {
                       className={cn(
                         "border-b border-white/5 cursor-pointer transition-colors",
                         selectedId === r.id
-                          ? "bg-[#C9A84C]/10 border-l-2 border-l-[#C9A84C]"
+                          ? "bg-[#C5A572]/10 border-l-2 border-l-[#C5A572]"
                           : "hover:bg-white/[0.03]"
                       )}
                     >
@@ -278,7 +278,7 @@ export default function ContractRatesPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex items-center gap-2 text-lg font-semibold text-white">
                         <span className="font-mono">{selectedRate.originState}</span>
-                        <ArrowRight className="w-4 h-4 text-[#C9A84C]" />
+                        <ArrowRight className="w-4 h-4 text-[#C5A572]" />
                         <span className="font-mono">{selectedRate.destState}</span>
                       </div>
                       <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium shrink-0", statusColor[selectedRate.status] ?? "bg-white/10 text-white")}>
@@ -288,7 +288,7 @@ export default function ContractRatesPage() {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => openEdit(selectedRate)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-[#C9A84C] hover:bg-white/5 transition"
+                        className="p-1.5 rounded-md text-slate-400 hover:text-[#C5A572] hover:bg-white/5 transition"
                         title="Edit"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -328,13 +328,13 @@ export default function ContractRatesPage() {
                         className={cn(
                           "pb-2.5 text-xs font-medium capitalize transition-colors relative",
                           activeTab === tab
-                            ? "text-[#C9A84C]"
+                            ? "text-[#C5A572]"
                             : "text-slate-500 hover:text-slate-300"
                         )}
                       >
                         {tab}
                         {activeTab === tab && (
-                          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#C9A84C] rounded-full" />
+                          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#C5A572] rounded-full" />
                         )}
                       </button>
                     ))}
@@ -377,7 +377,7 @@ export default function ContractRatesPage() {
                   value={form.customerSearch}
                   onChange={(e) => setForm({ ...form, customerSearch: e.target.value, customerId: "" })}
                   placeholder="Search customer..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C5A572]/50 focus:outline-none"
                 />
                 {customers?.customers?.length > 0 && form.customerSearch.length >= 2 && !form.customerId && (
                   <div className="mt-1 bg-[#2A2F42] rounded-lg border border-white/10 max-h-40 overflow-y-auto">
@@ -399,7 +399,7 @@ export default function ContractRatesPage() {
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Equipment Type</label>
                 <select value={form.equipmentType} onChange={(e) => setForm({ ...form, equipmentType: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C5A572]/50 focus:outline-none">
                   {EQUIPMENT_TYPES.map((e) => <option key={e} value={e} className="bg-[#0F1117]">{e.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
@@ -415,12 +415,12 @@ export default function ContractRatesPage() {
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Effective Date</label>
                   <input type="date" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none" />
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C5A572]/50 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Expiry Date</label>
                   <input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none" />
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#C5A572]/50 focus:outline-none" />
                 </div>
               </div>
 
@@ -429,11 +429,11 @@ export default function ContractRatesPage() {
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Notes</label>
                 <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none resize-none" />
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C5A572]/50 focus:outline-none resize-none" />
               </div>
 
               <button onClick={handleSave} disabled={saveMutation.isPending}
-                className="w-full px-4 py-2.5 bg-[#C9A84C] text-[#0a0e1a] rounded-lg text-sm font-medium hover:bg-[#C9A84C]/90 transition disabled:opacity-50">
+                className="w-full px-4 py-2.5 bg-[#C5A572] text-[#0a0e1a] rounded-lg text-sm font-medium hover:bg-[#C5A572]/90 transition disabled:opacity-50">
                 {saveMutation.isPending ? "Saving..." : editId ? "Update Rate" : "Create Rate"}
               </button>
             </div>
@@ -535,7 +535,7 @@ function HistoryTab({ rateId }: { rateId: string }) {
     <div className="space-y-2">
       {entries.map((e: any) => (
         <div key={e.id} className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-2 shrink-0" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-2 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-white">{e.action} {e.field ? `— ${e.field}` : ""}</p>
             {e.oldValue && <p className="text-[10px] text-slate-500">From: {e.oldValue} → {e.newValue}</p>}
@@ -578,7 +578,7 @@ function InfoCard({ label, value }: { label: string; value: string }) {
 
 function KpiCard({ icon: Icon, label, value, color }: { icon: typeof DollarSign; label: string; value: string | number; color: string }) {
   const colorMap: Record<string, string> = {
-    gold: "text-[#C9A84C] bg-[#C9A84C]/10", green: "text-green-400 bg-green-500/10",
+    gold: "text-[#C5A572] bg-[#C5A572]/10", green: "text-green-400 bg-green-500/10",
     yellow: "text-yellow-400 bg-yellow-500/10", blue: "text-blue-400 bg-blue-500/10",
   };
   return (
@@ -601,7 +601,7 @@ function FormField({ label, value, onChange, placeholder, maxLength }: {
     <div>
       <label className="block text-xs text-slate-400 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength}
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C9A84C]/50 focus:outline-none" />
+        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-[#C5A572]/50 focus:outline-none" />
     </div>
   );
 }
@@ -609,7 +609,7 @@ function FormField({ label, value, onChange, placeholder, maxLength }: {
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-[#C5A572]/30 border-t-[#C5A572] rounded-full animate-spin" />
     </div>
   );
 }

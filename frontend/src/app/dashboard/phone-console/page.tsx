@@ -265,8 +265,8 @@ export default function PhoneConsolePage() {
       <div className="shrink-0 px-6 pt-5 pb-4">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-              <Phone className="w-5 h-5 text-[#C9A84C]" />
+            <div className="w-10 h-10 rounded-xl bg-[#C5A572]/10 flex items-center justify-center">
+              <Phone className="w-5 h-5 text-[#C5A572]" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Phone Console</h1>
@@ -275,7 +275,7 @@ export default function PhoneConsolePage() {
           </div>
           <button
             onClick={() => openSmsDrawer()}
-            className="flex items-center gap-2 px-4 py-2 bg-[#C9A84C] hover:bg-[#b8963e] text-black text-sm font-semibold rounded-lg transition"
+            className="flex items-center gap-2 px-4 py-2 bg-[#C5A572] hover:bg-[#b8963e] text-black text-sm font-semibold rounded-lg transition"
           >
             <Send className="w-4 h-4" />
             New SMS
@@ -310,8 +310,8 @@ export default function PhoneConsolePage() {
             label="Avg Duration"
             value={formatAvgDuration(stats?.avgCallDuration ?? 0)}
             icon={Timer}
-            color="text-[#C9A84C]"
-            bgColor="bg-[#C9A84C]/10"
+            color="text-[#C5A572]"
+            bgColor="bg-[#C5A572]/10"
           />
         </div>
 
@@ -326,7 +326,7 @@ export default function PhoneConsolePage() {
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition",
                   typeFilter === key
-                    ? "bg-[#C9A84C]/20 text-[#C9A84C]"
+                    ? "bg-[#C5A572]/20 text-[#C5A572]"
                     : "text-gray-600 hover:text-white hover:bg-gray-50"
                 )}
               >
@@ -379,7 +379,7 @@ export default function PhoneConsolePage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search phone or name..."
-              className="w-full pl-9 pr-8 py-2 bg-white/[0.03] border border-white/5 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40 transition"
+              className="w-full pl-9 pr-8 py-2 bg-white/[0.03] border border-white/5 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/40 transition"
             />
             {search && (
               <button
@@ -414,7 +414,7 @@ export default function PhoneConsolePage() {
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-64 gap-3">
-                <div className="w-6 h-6 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-[#C5A572]/30 border-t-[#C5A572] rounded-full animate-spin" />
                 <span className="text-sm text-slate-500">Loading communications...</span>
               </div>
             ) : comms.length === 0 ? (
@@ -484,7 +484,7 @@ export default function PhoneConsolePage() {
                   <button
                     onClick={() => syncMutation.mutate(selected)}
                     disabled={syncMutation.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 text-[#C9A84C] text-xs font-medium rounded-lg transition disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C5A572]/10 hover:bg-[#C5A572]/20 text-[#C5A572] text-xs font-medium rounded-lg transition disabled:opacity-50"
                   >
                     <RefreshCw className={cn("w-3.5 h-3.5", syncMutation.isPending && "animate-spin")} />
                     Sync
@@ -535,7 +535,7 @@ export default function PhoneConsolePage() {
               value={smsTo}
               onChange={(e) => setSmsTo(e.target.value)}
               placeholder="+1 (555) 000-0000"
-              className="w-full px-3 py-2.5  border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40"
+              className="w-full px-3 py-2.5  border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/40"
             />
           </div>
           <div>
@@ -545,14 +545,14 @@ export default function PhoneConsolePage() {
               onChange={(e) => setSmsBody(e.target.value)}
               rows={5}
               placeholder="Type your message..."
-              className="w-full px-3 py-2.5  border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
+              className="w-full px-3 py-2.5  border border-gray-200 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/40 resize-none"
             />
             <p className="mt-1 text-xs text-slate-500">{smsBody.length}/160 characters</p>
           </div>
           <button
             onClick={handleSendSms}
             disabled={!smsTo.trim() || !smsBody.trim() || sendSmsMutation.isPending}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C9A84C] hover:bg-[#b8963e] text-black text-sm font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C5A572] hover:bg-[#b8963e] text-black text-sm font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {sendSmsMutation.isPending ? (
               <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -666,7 +666,7 @@ function CommRow({
       onClick={onClick}
       className={cn(
         "w-full text-left px-4 py-3 border-b border-white/[0.03] flex items-center gap-3 transition hover:bg-white/[0.03]",
-        isSelected && "bg-gray-50 border-l-2 border-l-[#C9A84C]"
+        isSelected && "bg-gray-50 border-l-2 border-l-[#C5A572]"
       )}
     >
       {/* Direction indicator */}
@@ -710,7 +710,7 @@ function CommRow({
           </span>
         )}
         {comm.metadata?.recordingUrl && (
-          <Mic className="w-3 h-3 text-[#C9A84C]" />
+          <Mic className="w-3 h-3 text-[#C5A572]" />
         )}
       </div>
     </button>
@@ -766,7 +766,7 @@ function TranscriptTab({ comm }: { comm: OpenPhoneComm }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-3">
-        <FileText className="w-4 h-4 text-[#C9A84C]" />
+        <FileText className="w-4 h-4 text-[#C5A572]" />
         <span className="text-sm font-medium text-white">
           {comm.metadata?.voicemailTranscript ? "Voicemail Transcript" : "Call Transcript"}
         </span>
@@ -793,7 +793,7 @@ function RecordingTab({ comm }: { comm: OpenPhoneComm }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Headphones className="w-4 h-4 text-[#C9A84C]" />
+        <Headphones className="w-4 h-4 text-[#C5A572]" />
         <span className="text-sm font-medium text-white">Call Recording</span>
       </div>
       <div className="p-4 bg-white/[0.03] rounded-xl">
@@ -806,7 +806,7 @@ function RecordingTab({ comm }: { comm: OpenPhoneComm }) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs text-[#C9A84C] hover:underline"
+        className="inline-flex items-center gap-1.5 text-xs text-[#C5A572] hover:underline"
       >
         <ExternalLink className="w-3.5 h-3.5" />
         Open in new tab
@@ -851,7 +851,7 @@ function SmsThreadTab({
             className={cn(
               "max-w-[80%] px-3 py-2 rounded-xl text-sm",
               sms.direction === "OUTBOUND"
-                ? "ml-auto bg-[#C9A84C]/15 text-[#C9A84C] rounded-br-sm"
+                ? "ml-auto bg-[#C5A572]/15 text-[#C5A572] rounded-br-sm"
                 : "mr-auto bg-gray-50 text-gray-700 rounded-bl-sm"
             )}
           >
@@ -868,12 +868,12 @@ function SmsThreadTab({
           onChange={(e) => setMsg(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
           placeholder="Type a reply..."
-          className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/5 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/40"
+          className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/5 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/40"
         />
         <button
           onClick={handleSend}
           disabled={!msg.trim()}
-          className="p-2 bg-[#C9A84C] hover:bg-[#b8963e] text-black rounded-lg transition disabled:opacity-50"
+          className="p-2 bg-[#C5A572] hover:bg-[#b8963e] text-black rounded-lg transition disabled:opacity-50"
         >
           <Send className="w-4 h-4" />
         </button>

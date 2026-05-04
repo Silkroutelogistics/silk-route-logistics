@@ -92,7 +92,7 @@ export default function LoadsCalendarPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-[#C9A84C]" /> Load Calendar
+            <Calendar className="w-5 h-5 text-[#C5A572]" /> Load Calendar
           </h1>
           <p className="text-sm text-gray-400 mt-1">Visual timeline of shipments by pickup date</p>
         </div>
@@ -105,7 +105,7 @@ export default function LoadsCalendarPage() {
                 onClick={() => setView(v)}
                 className={cn(
                   "px-3 py-1.5 rounded-md text-xs font-medium transition",
-                  view === v ? "bg-[#C9A84C] text-[#0F1117]" : "text-gray-400 hover:text-white"
+                  view === v ? "bg-[#C5A572] text-[#0F1117]" : "text-gray-400 hover:text-white"
                 )}
               >
                 {v === "week" ? "Week" : "Month"}
@@ -144,7 +144,7 @@ export default function LoadsCalendarPage() {
               {d instanceof Date && (
                 <p className={cn(
                   "text-lg font-semibold mt-0.5",
-                  d.toISOString().split("T")[0] === today ? "text-[#C9A84C]" : "text-white"
+                  d.toISOString().split("T")[0] === today ? "text-[#C5A572]" : "text-white"
                 )}>
                   {d.getDate()}
                 </p>
@@ -162,7 +162,7 @@ export default function LoadsCalendarPage() {
               const isToday = dateKey === today;
 
               return (
-                <div key={dateKey} className={cn("border-r border-white/5 last:border-r-0 p-2 min-h-[500px]", isToday && "bg-[#C9A84C]/[0.03]")}>
+                <div key={dateKey} className={cn("border-r border-white/5 last:border-r-0 p-2 min-h-[500px]", isToday && "bg-[#C5A572]/[0.03]")}>
                   <div className="space-y-1.5">
                     {dayLoads.map((load: any) => (
                       <div
@@ -171,7 +171,7 @@ export default function LoadsCalendarPage() {
                         className={cn(
                           "px-2 py-1.5 rounded-md border cursor-pointer transition-all text-[10px] hover:scale-[1.02]",
                           STATUS_COLORS[load.status] || "bg-white/5 text-gray-400 border-white/10",
-                          selectedLoad?.id === load.id && "ring-1 ring-[#C9A84C]"
+                          selectedLoad?.id === load.id && "ring-1 ring-[#C5A572]"
                         )}
                       >
                         <p className="font-medium truncate">{load.loadNumber || load.referenceNumber?.slice(0, 8)}</p>
@@ -204,8 +204,8 @@ export default function LoadsCalendarPage() {
                 const isToday = dateKey === today;
 
                 cells.push(
-                  <div key={d} className={cn("border-r border-b border-white/5 min-h-[100px] p-1", isToday && "bg-[#C9A84C]/[0.03]")}>
-                    <p className={cn("text-xs mb-1", isToday ? "text-[#C9A84C] font-bold" : "text-gray-500")}>{d}</p>
+                  <div key={d} className={cn("border-r border-b border-white/5 min-h-[100px] p-1", isToday && "bg-[#C5A572]/[0.03]")}>
+                    <p className={cn("text-xs mb-1", isToday ? "text-[#C5A572] font-bold" : "text-gray-500")}>{d}</p>
                     {dayLoads.slice(0, 3).map((load: any) => (
                       <div key={load.id} className={cn("px-1 py-0.5 rounded text-[9px] mb-0.5 truncate cursor-pointer", STATUS_COLORS[load.status] || "bg-white/5 text-gray-400")}
                         onClick={() => setSelectedLoad(load)}

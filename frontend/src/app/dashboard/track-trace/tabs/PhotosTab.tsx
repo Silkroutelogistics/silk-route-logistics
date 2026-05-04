@@ -60,7 +60,7 @@ export function PhotosTab({ load, loadId, onChange }: Props) {
   if (preview) {
     return (
       <div className="space-y-3">
-        <button onClick={() => setPreview(null)} className="text-xs text-[#854F0B] hover:underline">← Back</button>
+        <button onClick={() => setPreview(null)} className="text-xs text-[#C5A572] hover:underline">← Back</button>
         <div className="font-medium">{preview.fileName}</div>
         <img src={preview.fileUrl} alt={preview.fileName} className="w-full border border-gray-200 rounded-lg" />
       </div>
@@ -69,7 +69,7 @@ export function PhotosTab({ load, loadId, onChange }: Props) {
 
   return (
     <div className="space-y-5 text-sm">
-      <button className="w-full flex items-center justify-center gap-2 py-2 border border-[#BA7517]/40 bg-[#FAEEDA]/30 text-[#854F0B] rounded-lg hover:bg-[#FAEEDA]/60">
+      <button className="w-full flex items-center justify-center gap-2 py-2 border border-[#BA7517]/40 bg-[#FAEEDA]/30 text-[#BA7517] rounded-lg hover:bg-[#FAEEDA]/60">
         <Send className="w-4 h-4" /> Request from driver
       </button>
 

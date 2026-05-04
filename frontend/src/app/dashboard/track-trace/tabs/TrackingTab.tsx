@@ -118,7 +118,7 @@ export function TrackingTab({ load }: { load: any }) {
 
       {/* Shipper link */}
       {token && (
-        <div className="p-3 border border-[#FAEEDA] bg-[#FAEEDA]/30 rounded-lg text-xs text-[#854F0B]">
+        <div className="p-3 border border-[#FAEEDA] bg-[#FAEEDA]/30 rounded-lg text-xs text-[#BA7517]">
           Shipper tracking: <code>track.silkroutelogistics.ai/s/{token.token}</code>
           {load.bolNumber && <> · BOL-{load.bolNumber}</>}
         </div>

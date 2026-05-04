@@ -47,7 +47,7 @@ export function MatchTab({ waterfall, loadId, onChange }: Props) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-gray-900 truncate">{c.companyName ?? "—"}</span>
-                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#FAEEDA] text-[#854F0B]">{c.tier}</span>
+                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#FAEEDA] text-[#BA7517]">{c.tier}</span>
                   {already && <span className="px-1.5 py-0.5 text-[10px] rounded bg-gray-200 text-gray-600">In waterfall</span>}
                 </div>
                 <div className="mt-1 h-1.5 bg-gray-100 rounded overflow-hidden">
@@ -69,11 +69,11 @@ export function MatchTab({ waterfall, loadId, onChange }: Props) {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-2xl font-semibold text-[#854F0B]">{scorePct}%</div>
+                <div className="text-2xl font-semibold text-[#C5A572]">{scorePct}%</div>
                 {!already && (
                   <button
                     onClick={() => addPos.mutate(c.userId)}
-                    className="mt-1 flex items-center gap-1 px-2 py-1 text-[11px] text-[#854F0B] border border-[#BA7517]/40 bg-[#FAEEDA] rounded hover:bg-[#FAEEDA]/80"
+                    className="mt-1 flex items-center gap-1 px-2 py-1 text-[11px] text-[#BA7517] border border-[#BA7517]/40 bg-[#FAEEDA] rounded hover:bg-[#FAEEDA]/80"
                   >
                     <Plus className="w-3 h-3" /> Add
                   </button>

@@ -49,7 +49,7 @@ export function LoadsTab({ customerId }: { customerId: string }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Recent loads</h3>
-          <Link href="/dashboard/track-trace" className="text-[11px] text-[#854F0B] hover:underline">
+          <Link href="/dashboard/track-trace" className="text-[11px] text-[#C5A572] hover:underline">
             View all →
           </Link>
         </div>

@@ -217,13 +217,13 @@ export default function FuelTablesPage() {
         <div className="flex items-center gap-3 mb-2">
           <div className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center",
-            accent ? "bg-[#C9A84C]/10 text-[#C9A84C]" : "bg-gray-100 text-white/50"
+            accent ? "bg-[#C5A572]/10 text-[#C5A572]" : "bg-gray-100 text-white/50"
           )}>
             <Icon className="w-4 h-4" />
           </div>
           <span className="text-xs text-white/40 uppercase tracking-wider">{label}</span>
         </div>
-        <p className={cn("text-2xl font-semibold", accent ? "text-[#C9A84C]" : "text-white")}>
+        <p className={cn("text-2xl font-semibold", accent ? "text-[#C5A572]" : "text-white")}>
           {value}
         </p>
       </div>
@@ -240,7 +240,7 @@ export default function FuelTablesPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
-              <Fuel className="w-6 h-6 text-[#C9A84C]" />
+              <Fuel className="w-6 h-6 text-[#C5A572]" />
               Fuel Surcharge Tables
             </h1>
             <p className="text-sm text-white/40 mt-1">
@@ -249,7 +249,7 @@ export default function FuelTablesPage() {
           </div>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9A84C] text-black font-medium text-sm hover:bg-[#d4b85e] transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#C5A572] text-black font-medium text-sm hover:bg-[#d4b85e] transition"
           >
             <Plus className="w-4 h-4" />
             New Table
@@ -289,9 +289,9 @@ export default function FuelTablesPage() {
               Lookup
             </button>
             {lookupResult && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/20">
-                <Percent className="w-4 h-4 text-[#C9A84C]" />
-                <span className="text-sm font-medium text-[#C9A84C]">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C5A572]/10 border border-[#C5A572]/20">
+                <Percent className="w-4 h-4 text-[#C5A572]" />
+                <span className="text-sm font-medium text-[#C5A572]">
                   {fmtRate(lookupResult.surchargeRate, lookupResult.type)}
                 </span>
               </div>
@@ -332,7 +332,7 @@ export default function FuelTablesPage() {
                     className={cn(
                       "rounded-xl border p-4 cursor-pointer transition group",
                       selectedId === table.id
-                        ? "border-[#C9A84C]/30 bg-[#C9A84C]/5"
+                        ? "border-[#C5A572]/30 bg-[#C5A572]/5"
                         : "border-white/5 bg-white/[0.03] hover:border-gray-200 hover:bg-gray-50"
                     )}
                   >
@@ -380,7 +380,7 @@ export default function FuelTablesPage() {
                         </button>
                         <ChevronRight className={cn(
                           "w-4 h-4 transition",
-                          selectedId === table.id ? "text-[#C9A84C]" : "text-white/20 group-hover:text-white/40"
+                          selectedId === table.id ? "text-[#C5A572]" : "text-white/20 group-hover:text-white/40"
                         )} />
                       </div>
                     </div>
@@ -442,7 +442,7 @@ export default function FuelTablesPage() {
                       className={cn(
                         "flex-1 py-2.5 text-xs font-medium uppercase tracking-wider transition",
                         detailTab === tab
-                          ? "text-[#C9A84C] border-b-2 border-[#C9A84C]"
+                          ? "text-[#C5A572] border-b-2 border-[#C5A572]"
                           : "text-white/30 hover:text-white/50"
                       )}
                     >
@@ -484,7 +484,7 @@ export default function FuelTablesPage() {
                                 <tr key={i} className="text-white/70">
                                   <td className="py-2.5">${tier.fuelPriceMin.toFixed(2)}</td>
                                   <td className="py-2.5">${tier.fuelPriceMax.toFixed(2)}</td>
-                                  <td className="py-2.5 text-[#C9A84C] font-medium">
+                                  <td className="py-2.5 text-[#C5A572] font-medium">
                                     {fmtRate(tier.surchargeRate, tier.type)}
                                   </td>
                                   <td className="py-2.5">
@@ -532,7 +532,7 @@ export default function FuelTablesPage() {
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Q2 2026 DOE Schedule"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/30 focus:border-[#C5A572]"
             />
           </div>
 
@@ -542,7 +542,7 @@ export default function FuelTablesPage() {
             <select
               value={form.type}
               onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as FuelTableForm["type"] }))}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/30 focus:border-[#C5A572]"
             >
               <option value="DOE_NATIONAL">DOE National</option>
               <option value="CUSTOM">Custom</option>
@@ -557,7 +557,7 @@ export default function FuelTablesPage() {
                 type="date"
                 value={form.effectiveDate}
                 onChange={(e) => setForm((f) => ({ ...f, effectiveDate: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/30 focus:border-[#C5A572]"
               />
             </div>
             <div>
@@ -566,7 +566,7 @@ export default function FuelTablesPage() {
                 type="date"
                 value={form.expiryDate}
                 onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C]"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/30 focus:border-[#C5A572]"
               />
             </div>
           </div>
@@ -579,7 +579,7 @@ export default function FuelTablesPage() {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={2}
               placeholder="Optional notes..."
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C] resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A572]/30 focus:border-[#C5A572] resize-none"
             />
           </div>
 
@@ -589,7 +589,7 @@ export default function FuelTablesPage() {
               <label className="text-sm font-medium text-gray-700">Surcharge Tiers</label>
               <button
                 onClick={addTier}
-                className="text-xs text-[#C9A84C] hover:text-[#d4b85e] font-medium flex items-center gap-1"
+                className="text-xs text-[#C5A572] hover:text-[#d4b85e] font-medium flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> Add Tier
               </button>
@@ -605,7 +605,7 @@ export default function FuelTablesPage() {
                         step="0.01"
                         value={tier.fuelPriceMin}
                         onChange={(e) => updateTier(idx, "fuelPriceMin", e.target.value)}
-                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C9A84C]"
+                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C5A572]"
                       />
                     </div>
                     <div>
@@ -615,7 +615,7 @@ export default function FuelTablesPage() {
                         step="0.01"
                         value={tier.fuelPriceMax}
                         onChange={(e) => updateTier(idx, "fuelPriceMax", e.target.value)}
-                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C9A84C]"
+                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C5A572]"
                       />
                     </div>
                     <div>
@@ -625,7 +625,7 @@ export default function FuelTablesPage() {
                         step="0.01"
                         value={tier.surchargeRate}
                         onChange={(e) => updateTier(idx, "surchargeRate", e.target.value)}
-                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C9A84C]"
+                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C5A572]"
                       />
                     </div>
                     <div>
@@ -633,7 +633,7 @@ export default function FuelTablesPage() {
                       <select
                         value={tier.type}
                         onChange={(e) => updateTier(idx, "type", e.target.value)}
-                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C9A84C]"
+                        className="w-full px-2 py-1.5 rounded border border-gray-200 text-sm focus:outline-none focus:border-[#C5A572]"
                       >
                         {TIER_TYPES.map((t) => (
                           <option key={t} value={t}>{t}</option>
@@ -658,7 +658,7 @@ export default function FuelTablesPage() {
           <button
             onClick={handleCreate}
             disabled={!form.name || !form.effectiveDate || createMutation.isPending}
-            className="w-full py-2.5 rounded-lg bg-[#C9A84C] text-black font-medium text-sm hover:bg-[#d4b85e] transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-2.5 rounded-lg bg-[#C5A572] text-black font-medium text-sm hover:bg-[#d4b85e] transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {createMutation.isPending ? "Creating..." : "Create Table"}
           </button>
@@ -695,7 +695,7 @@ export default function FuelTablesPage() {
               onChange={(e) => setCsvContent(e.target.value)}
               rows={12}
               placeholder={`fuelPriceMin,fuelPriceMax,surchargeRate,type\n3.00,3.25,8.5,PERCENTAGE\n3.26,3.50,10.0,PERCENTAGE\n3.51,3.75,11.5,PERCENTAGE`}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 focus:border-[#C9A84C] resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C5A572]/30 focus:border-[#C5A572] resize-none"
             />
           </div>
 
@@ -706,7 +706,7 @@ export default function FuelTablesPage() {
               }
             }}
             disabled={!csvContent.trim() || csvMutation.isPending}
-            className="w-full py-2.5 rounded-lg bg-[#C9A84C] text-black font-medium text-sm hover:bg-[#d4b85e] transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-lg bg-[#C5A572] text-black font-medium text-sm hover:bg-[#d4b85e] transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <FileSpreadsheet className="w-4 h-4" />
             {csvMutation.isPending ? "Importing..." : "Import Tiers"}

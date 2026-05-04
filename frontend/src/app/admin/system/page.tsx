@@ -130,7 +130,7 @@ export default function AdminSystemPage() {
         </h2>
 
         {/* Free APIs */}
-        <p className="text-[10px] text-[#C9A84C] uppercase tracking-widest font-semibold mb-2">Free APIs (No Cost)</p>
+        <p className="text-[10px] text-[#C5A572] uppercase tracking-widest font-semibold mb-2">Free APIs (No Cost)</p>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
           {data?.integrations.filter((i) => ["FMCSA_WEB_KEY","FMCSA_INSURANCE","OFAC_SDN","NHTSA_VIN","SEC_EDGAR","SAM_GOV","OPENCORPORATES","CROSS_REF","FMCSA_BULK","RESEND_API_KEY","GOOGLE_MAPS_API_KEY","SENTRY_DSN"].includes(i.key)).map((integration) => {
             const Icon = integrationIcons[integration.key] || Globe;

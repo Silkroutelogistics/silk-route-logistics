@@ -136,7 +136,7 @@ export default function TrackTracePage() {
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
               tab === t.id
-                ? "border-[#BA7517] text-[#854F0B]"
+                ? "border-[#BA7517] text-[#C5A572]"
                 : "border-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
@@ -198,7 +198,7 @@ export default function TrackTracePage() {
                 onClick={() => setQuickFilter(p.id)}
                 className={`px-3 py-1.5 text-xs rounded-full border transition ${
                   active
-                    ? "bg-[#FAEEDA] border-[#BA7517] text-[#854F0B] font-medium"
+                    ? "bg-[#FAEEDA] border-[#BA7517] text-[#BA7517] font-medium"
                     : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
                 }`}
               >

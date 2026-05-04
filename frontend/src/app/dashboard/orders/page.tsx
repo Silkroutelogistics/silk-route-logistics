@@ -692,7 +692,7 @@ export default function OrderBuilderPage() {
               <div className="rounded-lg border border-[#BA7517] bg-[#FAEEDA]/10 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-[#FAEEDA] text-[#854F0B] flex items-center justify-center text-sm font-bold">
+                    <div className="w-10 h-10 rounded-lg bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-sm font-bold">
                       {selectedCustomer.name.split(" ").slice(0, 2).map((w) => w[0]).join("")}
                     </div>
                     <div className="min-w-0">
@@ -1021,7 +1021,7 @@ export default function OrderBuilderPage() {
                 <button
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, accessorials: [...f.accessorials, { type: "Detention", amount: 0, payer: "Customer" }] }))}
-                  className="flex items-center gap-1 text-[11px] text-[#C9A84C] hover:text-white"
+                  className="flex items-center gap-1 text-[11px] text-[#C5A572] hover:text-white"
                 >
                   <Plus className="w-3 h-3" /> Add accessorial
                 </button>
@@ -1035,7 +1035,7 @@ export default function OrderBuilderPage() {
               <div>
                 <Label>
                   Special instructions (sent to carrier)
-                  {autoFillBanner && <span className="ml-1 text-[9px] text-[#C9A84C]">· Pre-filled from CRM notes + facility</span>}
+                  {autoFillBanner && <span className="ml-1 text-[9px] text-[#C5A572]">· Pre-filled from CRM notes + facility</span>}
                 </Label>
                 <textarea
                   value={form.specialInstructions}
@@ -1106,7 +1106,7 @@ export default function OrderBuilderPage() {
                     key={m}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, waterfallMode: m }))}
-                    className={`px-2 py-1 rounded ${form.waterfallMode === m ? "bg-[#C9A84C] text-[#0F1117]" : "bg-white/5 text-slate-400"}`}
+                    className={`px-2 py-1 rounded ${form.waterfallMode === m ? "bg-[#C5A572] text-[#0F1117]" : "bg-white/5 text-slate-400"}`}
                   >
                     {m === "full_auto" ? "Full auto" : m === "semi_auto" ? "Semi-auto" : "Manual"}
                   </button>
@@ -1216,7 +1216,7 @@ function Section({ number, title, children }: { number: number; title: React.Rea
   return (
     <section className="mb-5 bg-[#161921] border border-white/10 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#854F0B] flex items-center justify-center text-xs font-bold">
+        <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-xs font-bold">
           {number}
         </div>
         <h2 className="text-sm font-semibold text-white">{title}</h2>
@@ -1235,7 +1235,7 @@ function Field({ label, tag, children }: { label: string; tag?: string; children
     <div>
       <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">
         {label}
-        {tag && <span className="text-[8px] text-[#C9A84C] normal-case">· {tag}</span>}
+        {tag && <span className="text-[8px] text-[#C5A572] normal-case">· {tag}</span>}
       </div>
       {children}
     </div>
@@ -1265,7 +1265,7 @@ function TogglePill({
       onClick={onClick}
       className={`px-3 py-1.5 text-xs rounded-full border transition ${
         active
-          ? activeCls ?? "bg-[#C9A84C] text-[#0F1117] border-[#C9A84C]"
+          ? activeCls ?? "bg-[#C5A572] text-[#0F1117] border-[#C5A572]"
           : "bg-white/5 text-slate-400 border-white/10"
       }`}
     >
@@ -1282,11 +1282,11 @@ function DispatchCard({
       type="button"
       onClick={onClick}
       className={`text-left p-3 rounded-lg border transition ${
-        active ? "border-[#C9A84C] bg-[#C9A84C]/10" : "border-white/10 bg-white/[0.02] hover:border-white/20"
+        active ? "border-[#C5A572] bg-[#C5A572]/10" : "border-white/10 bg-white/[0.02] hover:border-white/20"
       }`}
     >
       <div className="flex items-center gap-2">
-        <span className={`w-3 h-3 rounded-full border ${active ? "bg-[#C9A84C] border-[#C9A84C]" : "border-white/30"}`} />
+        <span className={`w-3 h-3 rounded-full border ${active ? "bg-[#C5A572] border-[#C5A572]" : "border-white/30"}`} />
         <span className="text-xs font-semibold text-white">{title}</span>
       </div>
       <div className="text-[10px] text-slate-400 mt-1 ml-5">{desc}</div>

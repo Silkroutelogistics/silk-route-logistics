@@ -118,7 +118,7 @@ export default function CrmPage() {
                   isSelected ? "bg-[#FAEEDA]/30 border-l-2 border-[#BA7517]" : ""
                 }`}
               >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0 bg-[#FAEEDA] text-[#854F0B]">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0 bg-[#FAEEDA] text-[#BA7517]">
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0">

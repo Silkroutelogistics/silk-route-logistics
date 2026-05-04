@@ -130,7 +130,7 @@ function DetailPanel({
             className={cn(
               "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
               activeTab === t.key
-                ? "border-[#C9A84C] text-[#C9A84C]"
+                ? "border-[#C5A572] text-[#C5A572]"
                 : "border-transparent text-gray-400 hover:text-gray-600"
             )}
           >
@@ -265,7 +265,7 @@ function Field({ label, value, highlight }: { label: string; value: React.ReactN
   return (
     <div>
       <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className={cn("font-medium", highlight ? "text-[#C9A84C]" : "text-white")}>{value}</p>
+      <p className={cn("font-medium", highlight ? "text-[#C5A572]" : "text-white")}>{value}</p>
     </div>
   );
 }
@@ -274,8 +274,8 @@ function TimelineStep({ label, time, done, last }: { label: string; time: string
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
-        <div className={cn("w-3 h-3 rounded-full border-2 mt-1", done ? "bg-[#C9A84C] border-[#C9A84C]" : "bg-white border-gray-200")} />
-        {!last && <div className={cn("w-0.5 flex-1 my-1", done ? "bg-[#C9A84C]/40" : "bg-gray-200")} />}
+        <div className={cn("w-3 h-3 rounded-full border-2 mt-1", done ? "bg-[#C5A572] border-[#C5A572]" : "bg-white border-gray-200")} />
+        {!last && <div className={cn("w-0.5 flex-1 my-1", done ? "bg-[#C5A572]/40" : "bg-gray-200")} />}
       </div>
       <div className="pb-4">
         <p className={cn("text-sm font-medium", done ? "text-white" : "text-gray-400")}>{label}</p>
@@ -349,7 +349,7 @@ function CreateForm({
   onSubmit: () => void;
   loading: boolean;
 }) {
-  const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]";
+  const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572]";
   const labelCls = "block text-xs font-medium text-gray-500 mb-1";
 
   return (
@@ -436,7 +436,7 @@ function CreateForm({
       <button
         onClick={onSubmit}
         disabled={loading || !form.facilityName || !form.dockNumber || !form.startTime || !form.endTime || !form.loadId || !form.carrierName}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-[#0a0e1a] font-semibold rounded-lg text-sm hover:bg-[#C9A84C]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C5A572] text-[#0a0e1a] font-semibold rounded-lg text-sm hover:bg-[#C5A572]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
         Create Appointment
@@ -584,7 +584,7 @@ export default function DockSchedulingPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-[#0a0e1a] font-medium rounded-lg text-sm hover:bg-[#C9A84C]/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#C5A572] text-[#0a0e1a] font-medium rounded-lg text-sm hover:bg-[#C5A572]/90 transition-colors"
         >
           <Plus className="w-4 h-4" /> New Appointment
         </button>
@@ -615,7 +615,7 @@ export default function DockSchedulingPage() {
             label: "Avg Dwell Time",
             value: stats?.avgDwellMinutes != null ? `${stats.avgDwellMinutes} min` : "—",
             icon: <Timer className="w-5 h-5" />,
-            color: "text-[#C9A84C]",
+            color: "text-[#C5A572]",
           },
         ].map((k) => (
           <div key={k.label} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
@@ -641,7 +641,7 @@ export default function DockSchedulingPage() {
             className={cn(
               "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
               isToday(selectedDate)
-                ? "bg-[#C9A84C]/20 text-[#C9A84C]"
+                ? "bg-[#C5A572]/20 text-[#C5A572]"
                 : "text-gray-700 hover:bg-gray-100"
             )}
           >
@@ -697,7 +697,7 @@ export default function DockSchedulingPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search facility, carrier, load..."
-            className="w-full bg-white/[0.03] border border-white/5 text-sm text-white rounded-lg pl-9 pr-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#C9A84C]/40"
+            className="w-full bg-white/[0.03] border border-white/5 text-sm text-white rounded-lg pl-9 pr-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#C5A572]/40"
           />
         </div>
       </div>
@@ -735,7 +735,7 @@ export default function DockSchedulingPage() {
                     </p>
                     <button
                       onClick={() => setShowCreate(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#C9A84C]/20 text-[#C9A84C] rounded-lg text-sm font-medium hover:bg-[#C9A84C]/30 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-[#C5A572]/20 text-[#C5A572] rounded-lg text-sm font-medium hover:bg-[#C5A572]/30 transition-colors"
                     >
                       <Plus className="w-4 h-4" /> Schedule Appointment
                     </button>
@@ -750,7 +750,7 @@ export default function DockSchedulingPage() {
                   className={cn(
                     "border-b border-white/5 cursor-pointer transition-colors",
                     selected?.id === appt.id
-                      ? "bg-[#C9A84C]/5"
+                      ? "bg-[#C5A572]/5"
                       : "hover:bg-white/[0.02]"
                   )}
                 >
@@ -789,7 +789,7 @@ export default function DockSchedulingPage() {
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className="text-[#C9A84C] font-mono text-xs">
+                    <span className="text-[#C5A572] font-mono text-xs">
                       {appt.loadRefNumber || appt.loadId.slice(0, 8)}
                     </span>
                   </td>

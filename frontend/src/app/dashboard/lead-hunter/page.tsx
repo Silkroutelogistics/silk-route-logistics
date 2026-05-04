@@ -1530,7 +1530,7 @@ export default function LeadHunterPage() {
       {/* ═══════════════ ADD PROSPECT MODAL ═══════════════ */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 " onClick={() => setShowModal(false)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#0F1117] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-white">Add Prospect</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -1579,7 +1579,7 @@ export default function LeadHunterPage() {
       {/* ═══════════════ EMAIL CAMPAIGN MODAL ═══════════════ */}
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/60  z-50 flex items-center justify-center p-4" onClick={() => setShowEmailModal(false)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#0F1117] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div>
                 <h2 className="text-lg font-bold text-white">Send Outreach</h2>

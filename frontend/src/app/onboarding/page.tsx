@@ -1085,13 +1085,13 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setShowDropdown(true)}
           placeholder={placeholder}
-          className={className ? `pl-9 ${className}` : "w-full pl-9 pr-3 py-2 bg-[#1e293b] border border-white/10 rounded-lg text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"}
+          className={className ? `pl-9 ${className}` : "w-full pl-9 pr-3 py-2 bg-[#0F1117] border border-white/10 rounded-lg text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"}
           autoComplete="off"
         />
         {loading && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />}
       </div>
       {showDropdown && results.length > 0 && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-[#1e293b] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-1 w-full bg-[#0F1117] border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
           {results.map((r) => (
             <button key={r.placeId} onClick={() => handleSelect(r)}
               className="w-full text-left px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition truncate">

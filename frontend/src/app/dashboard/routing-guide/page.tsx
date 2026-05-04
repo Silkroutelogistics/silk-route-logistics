@@ -213,11 +213,11 @@ export default function RoutingGuidePage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h1 className="text-xl font-semibold text-white flex items-center gap-2">
-                <Route className="w-5 h-5 text-[#C9A84C]" /> Routing Guide
+                <Route className="w-5 h-5 text-[#C5A572]" /> Routing Guide
               </h1>
               <p className="text-sm text-gray-400 mt-1">Manage carrier priority lists per lane for automated tendering</p>
             </div>
-            <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition">
+            <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2.5 bg-[#C5A572] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition">
               <Plus className="w-4 h-4" /> New Guide
             </button>
           </div>
@@ -271,7 +271,7 @@ export default function RoutingGuidePage() {
             <div className="flex flex-col items-center justify-center h-40 text-gray-500 text-sm">
               <Route className="w-8 h-8 mb-2 opacity-30" />
               <p>No routing guides found</p>
-              <button onClick={openCreate} className="mt-2 text-[#C9A84C] text-xs hover:underline">Create your first guide</button>
+              <button onClick={openCreate} className="mt-2 text-[#C5A572] text-xs hover:underline">Create your first guide</button>
             </div>
           ) : (
             <div className="divide-y divide-white/5">
@@ -281,7 +281,7 @@ export default function RoutingGuidePage() {
                   onClick={() => { setSelectedId(g.id); setPanelTab("details"); }}
                   className={cn(
                     "flex items-center gap-4 px-6 py-4 cursor-pointer transition-all hover:bg-white/[0.02]",
-                    selectedId === g.id && "bg-white/[0.04] border-l-2 border-[#C9A84C]"
+                    selectedId === g.id && "bg-white/[0.04] border-l-2 border-[#C5A572]"
                   )}
                 >
                   {/* Lane */}
@@ -356,7 +356,7 @@ export default function RoutingGuidePage() {
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-3 text-xs font-medium transition-all border-b-2",
                   panelTab === t.key
-                    ? "border-[#C9A84C] text-[#C9A84C]"
+                    ? "border-[#C5A572] text-[#C5A572]"
                     : "border-transparent text-gray-500 hover:text-gray-300"
                 )}
               >
@@ -408,7 +408,7 @@ export default function RoutingGuidePage() {
                       {/* Rank badge */}
                       <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                        i === 0 ? "bg-[#C9A84C]/20 text-[#C9A84C]" : i === 1 ? "bg-gray-400/20 text-gray-300" : "bg-gray-100 text-gray-400"
+                        i === 0 ? "bg-[#C5A572]/20 text-[#C5A572]" : i === 1 ? "bg-gray-400/20 text-gray-300" : "bg-gray-100 text-gray-400"
                       )}>
                         {entry.rank}
                       </div>
@@ -497,7 +497,7 @@ export default function RoutingGuidePage() {
                 </div>
                 {selected.updatedAt !== selected.createdAt && (
                   <div className="flex items-start gap-3 py-2 border-b border-white/5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-2 shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-2 shrink-0" />
                     <div>
                       <p className="text-xs text-white">Last Updated</p>
                       <p className="text-[10px] text-gray-500">{new Date(selected.updatedAt).toLocaleString()}</p>
@@ -606,7 +606,7 @@ export default function RoutingGuidePage() {
           {/* Save */}
           <div className="flex gap-3 pt-2">
             <button onClick={() => { setDrawerOpen(false); setEditingId(null); }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
-            <button onClick={handleSave} disabled={saveMut.isPending || !form.name || !form.originState || !form.destState} className="flex-1 px-4 py-2.5 bg-[#C9A84C] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition disabled:opacity-50">
+            <button onClick={handleSave} disabled={saveMut.isPending || !form.name || !form.originState || !form.destState} className="flex-1 px-4 py-2.5 bg-[#C5A572] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition disabled:opacity-50">
               {saveMut.isPending ? "Saving..." : editingId ? "Update" : "Create"}
             </button>
           </div>

@@ -127,7 +127,7 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
                 {load?.bolNumber && (
                   <button
                     onClick={() => navigator.clipboard?.writeText(`BOL-${load.bolNumber}`)}
-                    className="mt-1 text-[11px] text-[#854F0B] hover:underline"
+                    className="mt-1 text-[11px] text-[#C5A572] hover:underline"
                   >
                     Copy tracking link · BOL-{load.bolNumber}
                   </button>

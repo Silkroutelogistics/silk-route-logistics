@@ -347,18 +347,18 @@ export default function LoadsPage() {
       onClick={() => { setActiveTab(key); setPage(1); }}
       className={`relative px-5 py-2.5 text-sm whitespace-nowrap transition-colors ${
         activeTab === key
-          ? "text-[#C9A84C] font-bold"
+          ? "text-[#C5A572] font-bold"
           : "text-gray-600 hover:text-slate-200"
       }`}
     >
       {label}
       <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-        activeTab === key ? "bg-[#C9A84C]/20 text-[#C9A84C]" : "bg-gray-100 text-slate-500"
+        activeTab === key ? "bg-[#C5A572]/20 text-[#C5A572]" : "bg-gray-100 text-slate-500"
       }`}>
         {count}
       </span>
       {activeTab === key && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C9A84C] rounded-full" />
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A572] rounded-full" />
       )}
     </button>
   );
@@ -471,14 +471,14 @@ export default function LoadsPage() {
               onClick={() => setLaneFilter(laneFilter === lc.lane ? null : lc.lane)}
               className={`min-w-[180px] shrink-0 rounded-xl p-3 text-left transition-all ${
                 laneFilter === lc.lane
-                  ? "bg-gray-100 border-2 border-[#C9A84C] shadow-[0_0_12px_rgba(201,168,76,0.15)]"
+                  ? "bg-gray-100 border-2 border-[#C5A572] shadow-[0_0_12px_rgba(201,168,76,0.15)]"
                   : "bg-gray-100 border border-gray-200 hover:border-white/25"
               }`}
             >
               <p className="text-white font-bold text-base">{lc.lane}</p>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-gray-600 text-xs">{lc.count} load{lc.count !== 1 ? "s" : ""}</span>
-                <span className="text-[#C9A84C] text-sm font-semibold">${lc.avgRate.toLocaleString()}</span>
+                <span className="text-[#C5A572] text-sm font-semibold">${lc.avgRate.toLocaleString()}</span>
               </div>
             </button>
           ))}
@@ -501,7 +501,7 @@ export default function LoadsPage() {
             placeholder="Search loads..."
             value={filters.search}
             onChange={(e) => { setFilters((f) => ({ ...f, search: e.target.value })); setPage(1); }}
-            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-[#C9A84C]/20"
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-[#C5A572]/20"
           />
         </div>
         <select
@@ -524,9 +524,9 @@ export default function LoadsPage() {
             <button
               key={ld.id}
               onClick={() => { setSelectedLoadId(ld.id); setPanelTab("details"); }}
-              className={`block w-full text-left rounded-xl border p-4 hover:border-[#C9A84C]/30 transition ${
+              className={`block w-full text-left rounded-xl border p-4 hover:border-[#C5A572]/30 transition ${
                 selectedLoadId === ld.id
-                  ? "bg-white/10 border-[#C9A84C]/40"
+                  ? "bg-white/10 border-[#C5A572]/40"
                   : "bg-gray-100 border-gray-200"
               }`}
             >
@@ -542,7 +542,7 @@ export default function LoadsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-white text-sm">
-                    <MapPin className="w-3.5 h-3.5 text-[#C9A84C] shrink-0" />
+                    <MapPin className="w-3.5 h-3.5 text-[#C5A572] shrink-0" />
                     <span className="truncate">
                       {ld.originCity}, {ld.originState} &rarr; {ld.destCity}, {ld.destState}
                     </span>
@@ -556,7 +556,7 @@ export default function LoadsPage() {
                   </div>
                 </div>
                 <div className="text-right shrink-0 ml-2">
-                  <div className="flex items-center gap-1 text-[#C9A84C]">
+                  <div className="flex items-center gap-1 text-[#C5A572]">
                     <DollarSign className="w-4 h-4" />
                     <span className="text-lg font-bold">{ld.rate.toLocaleString()}</span>
                   </div>
@@ -616,7 +616,7 @@ export default function LoadsPage() {
                   title={t.label}
                   className={`w-9 h-9 flex items-center justify-center rounded-lg transition ${
                     panelTab === t.key
-                      ? "bg-[#C9A84C] text-[#0F1117]"
+                      ? "bg-[#C5A572] text-[#0F1117]"
                       : "text-gray-600 hover:text-white hover:bg-gray-100"
                   }`}
                 >
@@ -679,7 +679,7 @@ export default function LoadsPage() {
                     {/* BOL download */}
                     <button
                       onClick={() => downloadBol(load.id, load.referenceNumber)}
-                      className="px-3 py-1.5 bg-[#C9A84C]/20 text-[#C9A84C] rounded-lg text-xs hover:bg-[#C9A84C]/30"
+                      className="px-3 py-1.5 bg-[#C5A572]/20 text-[#C5A572] rounded-lg text-xs hover:bg-[#C5A572]/30"
                       title="Download BOL"
                     >
                       <Download className="w-3 h-3 inline mr-1" />BOL
@@ -903,7 +903,7 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
           </div>
           <div>
             <p className="text-[10px] text-slate-500">Avg</p>
-            <p className="text-sm text-[#C9A84C] font-bold">${data.avgRate?.toLocaleString()}</p>
+            <p className="text-sm text-[#C5A572] font-bold">${data.avgRate?.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-[10px] text-slate-500">High</p>
@@ -975,7 +975,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         {/* Pickup */}
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center">
-            <div className="w-3 h-3 rounded-full bg-[#C9A84C] border-2 border-[#C9A84C]/40" />
+            <div className="w-3 h-3 rounded-full bg-[#C5A572] border-2 border-[#C5A572]/40" />
             <div className="w-0.5 h-10 bg-white/10" />
           </div>
           <div className="pb-2">
@@ -1045,7 +1045,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
       {/* Rate / Margin */}
       <section>
         <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Rate</h3>
-        <div className="flex items-center gap-2 text-[#C9A84C]">
+        <div className="flex items-center gap-2 text-[#C5A572]">
           <DollarSign className="w-5 h-5" />
           <span className="text-2xl font-bold">{load.rate.toLocaleString()}</span>
         </div>
@@ -1119,14 +1119,14 @@ function PanelTracking({ load }: { load: Load }) {
                 className={`w-3 h-3 rounded-full shrink-0 mt-0.5 z-10 ${
                   done
                     ? active
-                      ? "bg-[#C9A84C] ring-2 ring-[#C9A84C]/30"
+                      ? "bg-[#C5A572] ring-2 ring-[#C5A572]/30"
                       : "bg-green-500"
                     : "bg-slate-700"
                 }`}
               />
               <span
                 className={`text-xs pb-3 ${
-                  done ? (active ? "text-[#C9A84C] font-semibold" : "text-green-400") : "text-slate-600"
+                  done ? (active ? "text-[#C5A572] font-semibold" : "text-green-400") : "text-slate-600"
                 }`}
               >
                 {st.replace(/_/g, " ")}
@@ -1193,7 +1193,7 @@ function PanelDocuments({ load }: { load: Load }) {
               href={doc.fileUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#C9A84C] p-2 bg-gray-100 rounded-lg border border-gray-200 transition"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#C5A572] p-2 bg-gray-100 rounded-lg border border-gray-200 transition"
             >
               <FileText className="w-4 h-4" /> {doc.fileName}
             </a>
@@ -1230,7 +1230,7 @@ function PanelHistory({ load }: { load: Load }) {
         )}
         <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
           <div className={`w-3 h-3 rounded-full shrink-0 ${
-            STATUS_COLORS[load.status]?.includes("green") ? "bg-green-500" : "bg-[#C9A84C]"
+            STATUS_COLORS[load.status]?.includes("green") ? "bg-green-500" : "bg-[#C5A572]"
           }`} />
           <div>
             <p className="text-sm text-white">Current status: {load.status.replace(/_/g, " ")}</p>
@@ -1321,7 +1321,7 @@ function PanelCarrier({
       {/* Suggested carriers (from carrier match) */}
       {load.status === "POSTED" && canCreate && suggestedCarriers && suggestedCarriers.carriers.length > 0 && (
         <section>
-          <h3 className="text-xs font-medium text-[#C9A84C] uppercase tracking-wider mb-2 flex items-center gap-1">
+          <h3 className="text-xs font-medium text-[#C5A572] uppercase tracking-wider mb-2 flex items-center gap-1">
             <Users className="w-3.5 h-3.5" /> Suggested Carriers
           </h3>
           <p className="text-xs text-slate-500 mb-2">{suggestedCarriers.total} candidates evaluated</p>
@@ -1345,7 +1345,7 @@ function PanelCarrier({
                     ) : (
                       <button
                         onClick={() => onQuickTender(c.carrierId)}
-                        className="px-2 py-1 bg-[#C9A84C]/20 text-[#C9A84C] rounded text-xs hover:bg-[#C9A84C]/30"
+                        className="px-2 py-1 bg-[#C5A572]/20 text-[#C5A572] rounded text-xs hover:bg-[#C5A572]/30"
                       >
                         Quick Tender
                       </button>
@@ -1374,7 +1374,7 @@ function PanelCarrier({
                     <p className="text-xs text-slate-500">MC: {r.mcNumber} | DOT: {r.dotNumber}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-[#C9A84C] font-medium">${r.offeredRate.toLocaleString()}</p>
+                    <p className="text-sm text-[#C5A572] font-medium">${r.offeredRate.toLocaleString()}</p>
                     {r.driverAvailable && <span className="text-xs text-green-400">Driver available</span>}
                   </div>
                 </div>

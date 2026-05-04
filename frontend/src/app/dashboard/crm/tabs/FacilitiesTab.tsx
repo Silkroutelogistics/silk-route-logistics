@@ -42,7 +42,7 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
                 <MapPin className="w-3.5 h-3.5 text-[#BA7517] shrink-0" />
                 <span className="font-medium text-gray-900 truncate">{f.name}</span>
                 {f.isPrimary && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-[#FAEEDA] text-[#854F0B]">
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-[#FAEEDA] text-[#BA7517]">
                     <Star className="w-2.5 h-2.5" /> Primary {f.facilityType === "pickup" ? "PU" : f.facilityType === "delivery" ? "DEL" : ""}
                   </span>
                 )}

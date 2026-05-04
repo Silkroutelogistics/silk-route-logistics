@@ -79,7 +79,7 @@ export default function MessagesPage() {
       <div className="w-96 bg-[#161921] rounded-l-xl border border-[#2A2F42] flex flex-col">
         <div className="p-4 border-b border-[#2A2F42] flex items-center justify-between">
           <h2 className="font-semibold text-white text-base">Messages</h2>
-          <button onClick={() => setShowNewMsg(true)} className="p-2 bg-[#C9A84C] text-[#16162a] rounded-lg hover:bg-[#d4b85e] transition">
+          <button onClick={() => setShowNewMsg(true)} className="p-2 bg-[#C5A572] text-[#16162a] rounded-lg hover:bg-[#d4b85e] transition">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -89,7 +89,7 @@ export default function MessagesPage() {
             <div className="relative">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
               <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search users..."
-                className="w-full pl-9 pr-3 py-2 bg-[#161921] border border-[#2A2F42] rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50" />
+                className="w-full pl-9 pr-3 py-2 bg-[#161921] border border-[#2A2F42] rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/50" />
             </div>
             {searchResults && searchResults.length > 0 && (
               <div className="mt-2 space-y-0.5 max-h-40 overflow-y-auto">
@@ -111,7 +111,7 @@ export default function MessagesPage() {
               onClick={() => selectConversation(conv.partner.id, `${conv.partner.firstName} ${conv.partner.lastName}`)}
               className={`w-full text-left px-4 py-3.5 text-sm transition border-b border-[#2A2F42]/50 ${selectedUserId === conv.partner.id ? "bg-[#1C1F2B]" : "hover:bg-[#161921]"}`}>
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full bg-[#2A2F42] flex items-center justify-center text-xs font-bold text-[#C9A84C] shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-full bg-[#2A2F42] flex items-center justify-center text-xs font-bold text-[#C5A572] shrink-0 mt-0.5">
                   {initials(conv.partner.firstName, conv.partner.lastName)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -124,7 +124,7 @@ export default function MessagesPage() {
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-slate-400 truncate">{conv.lastMessage}</p>
                     {conv.unreadCount > 0 && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-[#C9A84C] text-[#16162a] text-[10px] font-bold rounded-full shrink-0">{conv.unreadCount}</span>
+                      <span className="ml-2 px-1.5 py-0.5 bg-[#C5A572] text-[#16162a] text-[10px] font-bold rounded-full shrink-0">{conv.unreadCount}</span>
                     )}
                   </div>
                 </div>
@@ -147,7 +147,7 @@ export default function MessagesPage() {
           <>
             {/* Thread Header */}
             <div className="px-6 py-4 border-b border-[#2A2F42] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#2A2F42] flex items-center justify-center text-sm font-bold text-[#C9A84C]">
+              <div className="w-10 h-10 rounded-full bg-[#2A2F42] flex items-center justify-center text-sm font-bold text-[#C5A572]">
                 {initials(selectedUserName.split(" ")[0], selectedUserName.split(" ")[1] || "")}
               </div>
               <div>
@@ -167,7 +167,7 @@ export default function MessagesPage() {
                     <div className={`max-w-[70%] ${isMe ? "order-2" : "order-1"}`}>
                       <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                         isMe
-                          ? "bg-[#C9A84C] text-[#16162a] rounded-br-md"
+                          ? "bg-[#C5A572] text-[#16162a] rounded-br-md"
                           : "bg-[#1C1F2B] text-slate-200 rounded-bl-md"
                       }`}>
                         {msg.content}
@@ -196,9 +196,9 @@ export default function MessagesPage() {
                 <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && newMessage.trim() && sendMsg.mutate()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 bg-[#161921] border border-[#2A2F42] rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C9A84C]/50 focus:ring-1 focus:ring-[#C9A84C]/20" />
+                  className="flex-1 px-4 py-2.5 bg-[#161921] border border-[#2A2F42] rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#C5A572]/50 focus:ring-1 focus:ring-[#C5A572]/20" />
                 <button onClick={() => newMessage.trim() && sendMsg.mutate()} disabled={!newMessage.trim() || sendMsg.isPending}
-                  className="px-4 py-2.5 bg-[#C9A84C] text-[#16162a] rounded-xl hover:bg-[#d4b85e] disabled:opacity-50 transition font-medium">
+                  className="px-4 py-2.5 bg-[#C5A572] text-[#16162a] rounded-xl hover:bg-[#d4b85e] disabled:opacity-50 transition font-medium">
                   <Send className="w-4 h-4" />
                 </button>
               </div>
@@ -208,7 +208,7 @@ export default function MessagesPage() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-[#2A2F42] flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-7 h-7 text-[#C9A84C]" />
+                <MessageSquare className="w-7 h-7 text-[#C5A572]" />
               </div>
               <p className="text-white font-medium">Select a conversation</p>
               <p className="text-sm text-slate-500 mt-1">or click + to start a new one</p>

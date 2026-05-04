@@ -68,17 +68,17 @@ export function FacilityPicker({ customerId, side, selectedFacilityId, onSelect,
             onClick={() => onSelect(f)}
             className={`w-full text-left p-2.5 rounded-lg border transition ${
               isSelected
-                ? "border-[#C9A84C] bg-[#C9A84C]/10"
+                ? "border-[#C5A572] bg-[#C5A572]/10"
                 : "border-white/10 bg-white/[0.02] hover:border-white/20"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <MapPin className={`w-3 h-3 shrink-0 ${isSelected ? "text-[#C9A84C]" : "text-slate-400"}`} />
+                  <MapPin className={`w-3 h-3 shrink-0 ${isSelected ? "text-[#C5A572]" : "text-slate-400"}`} />
                   <span className="text-xs font-medium text-white truncate">{f.name}</span>
                   {f.isPrimary && (
-                    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] rounded bg-[#FAEEDA] text-[#854F0B]">
+                    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] rounded bg-[#FAEEDA] text-[#BA7517]">
                       <Star className="w-2 h-2" /> Primary {side === "pickup" ? "PU" : "DEL"}
                     </span>
                   )}
@@ -104,7 +104,7 @@ export function FacilityPicker({ customerId, side, selectedFacilityId, onSelect,
       <button
         type="button"
         onClick={onAddNew}
-        className="w-full flex items-center justify-center gap-1 p-2 text-[11px] text-[#C9A84C] border border-dashed border-[#C9A84C]/40 rounded-lg hover:bg-[#C9A84C]/5 transition"
+        className="w-full flex items-center justify-center gap-1 p-2 text-[11px] text-[#C5A572] border border-dashed border-[#C5A572]/40 rounded-lg hover:bg-[#C5A572]/5 transition"
       >
         <Plus className="w-3 h-3" /> Add new {side}
       </button>

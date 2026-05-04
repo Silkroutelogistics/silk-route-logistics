@@ -32,7 +32,7 @@ export default function BackhaulDiscoveryPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Compass className="w-5 h-5 text-[#C9A84C]" /> Backhaul / Fronthaul Discovery
+            <Compass className="w-5 h-5 text-[#C5A572]" /> Backhaul / Fronthaul Discovery
           </h1>
           <p className="text-sm text-gray-400 mt-1">Find unassigned loads near a location to maximize carrier utilization</p>
         </div>
@@ -51,7 +51,7 @@ export default function BackhaulDiscoveryPage() {
                   onClick={() => setType(t)}
                   className={cn(
                     "px-4 py-2 rounded-md text-xs font-medium transition",
-                    type === t ? "bg-[#C9A84C] text-[#0F1117]" : "text-gray-400 hover:text-white"
+                    type === t ? "bg-[#C5A572] text-[#0F1117]" : "text-gray-400 hover:text-white"
                   )}
                 >
                   {t === "backhaul" ? "Backhaul (loads TO area)" : "Fronthaul (loads FROM area)"}
@@ -65,7 +65,7 @@ export default function BackhaulDiscoveryPage() {
             <label className="block text-xs text-gray-400 mb-1.5">State</label>
             <select
               value={state} onChange={(e) => setState(e.target.value)}
-              className="px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none"
+              className="px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white focus:border-[#C5A572]/50 focus:outline-none"
             >
               {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -77,13 +77,13 @@ export default function BackhaulDiscoveryPage() {
             <input
               value={city} onChange={(e) => setCity(e.target.value)}
               placeholder="e.g. Dallas"
-              className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C9A84C]/50 focus:outline-none"
+              className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C5A572]/50 focus:outline-none"
             />
           </div>
 
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#C9A84C] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#C5A572] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition"
           >
             <Search className="w-4 h-4" /> Search
           </button>

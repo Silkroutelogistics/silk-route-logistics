@@ -590,12 +590,12 @@ export default function CarrierPoolPage() {
                     <p className="font-semibold text-white text-sm truncate">{carrier.company}</p>
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
                     {carrier.lastVettingScore != null && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
                         <Compass className="w-2.5 h-2.5" /> {carrier.lastVettingScore}
                       </span>
                     )}
                     {compassCarrierId === carrier.id && compassResult && !carrier.lastVettingScore && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
                         <Compass className="w-2.5 h-2.5" /> {compassResult.score}
                       </span>
                     )}
@@ -651,10 +651,10 @@ export default function CarrierPoolPage() {
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C9A84C] text-[#0A2540] shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C5A572] text-[#0A2540] shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
                     <Icon className={`w-[18px] h-[18px] transition-all duration-150 ${panelTab === key ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
                   </div>
-                  <span className={`text-[10px] leading-none transition-all duration-150 ${panelTab === key ? "text-[#C9A84C] font-semibold" : "text-gray-400 font-medium"}`}>{label}</span>
+                  <span className={`text-[10px] leading-none transition-all duration-150 ${panelTab === key ? "text-[#C5A572] font-semibold" : "text-gray-400 font-medium"}`}>{label}</span>
                 </button>
               ))}
             </div>
@@ -683,7 +683,7 @@ export default function CarrierPoolPage() {
                         {selectedCarrier.onboardingStatus.replace(/_/g, " ")}
                       </span>
                       {(selectedCarrier.lastVettingScore != null || (compassCarrierId === selectedCarrier.id && compassResult)) && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-1">
                           <Compass className="w-3 h-3" /> Compass: {selectedCarrier.lastVettingScore ?? compassResult?.score ?? "—"}
                         </span>
                       )}
@@ -775,7 +775,7 @@ export default function CarrierPoolPage() {
                         </div>
                         <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
                           disabled={updateCarrier.isPending}
-                          className="w-full px-4 py-2 bg-[#C9A84C] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                          className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
@@ -904,7 +904,7 @@ export default function CarrierPoolPage() {
                         </div>
                         <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
                           disabled={updateCarrier.isPending}
-                          className="w-full px-4 py-2 bg-[#C9A84C] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                          className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
@@ -954,7 +954,7 @@ export default function CarrierPoolPage() {
                     <div className="flex items-center gap-2">
                       {isAdmin && (
                         <button onClick={() => runCompass(selectedCarrier.id)} disabled={compassLoading === selectedCarrier.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 border border-[#C9A84C] text-[#C9A84C] rounded-lg text-xs hover:bg-[#C9A84C]/10 transition disabled:opacity-50">
+                          className="flex items-center gap-1.5 px-3 py-1.5 border border-[#C5A572] text-[#C5A572] rounded-lg text-xs hover:bg-[#C5A572]/10 transition disabled:opacity-50">
                           {compassLoading === selectedCarrier.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Compass className="w-3.5 h-3.5" />}
                           {compassLoading === selectedCarrier.id ? "Running..." : "Run Compass"}
                         </button>
@@ -971,7 +971,7 @@ export default function CarrierPoolPage() {
                           <div className="flex items-center gap-6 flex-wrap">
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Score</span>
-                              <p className="text-2xl font-bold text-[#C9A84C]">{compassResult.score}/100</p>
+                              <p className="text-2xl font-bold text-[#C5A572]">{compassResult.score}/100</p>
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Grade</span>
@@ -1036,7 +1036,7 @@ export default function CarrierPoolPage() {
                         <div className="flex items-center gap-4">
                           <div>
                             <span className="text-[10px] text-slate-500 uppercase">Last Score</span>
-                            <p className="text-2xl font-bold text-[#C9A84C]">{selectedCarrier.lastVettingScore}/100</p>
+                            <p className="text-2xl font-bold text-[#C5A572]">{selectedCarrier.lastVettingScore}/100</p>
                           </div>
                           {selectedCarrier.lastVettingGrade && (
                             <div>
@@ -1164,7 +1164,7 @@ export default function CarrierPoolPage() {
                     {compassCarrierId === selectedCarrier.id && compassResult ? (
                       <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                         <div className="flex items-start gap-2 text-xs">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-1.5 shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-1.5 shrink-0" />
                           <div>
                             <span className="text-white">{new Date(compassResult.vettedAt).toLocaleString()}</span>
                             <span className="text-slate-500 ml-2">Score: {compassResult.score}/100, Grade {compassResult.grade}</span>
@@ -1174,7 +1174,7 @@ export default function CarrierPoolPage() {
                     ) : selectedCarrier.lastVettingScore != null ? (
                       <div className="bg-gray-100 rounded-lg p-4">
                         <div className="flex items-start gap-2 text-xs">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] mt-1.5 shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-1.5 shrink-0" />
                           <span className="text-white">Last Score: {selectedCarrier.lastVettingScore}/100{selectedCarrier.lastVettingGrade ? `, Grade ${selectedCarrier.lastVettingGrade}` : ""}</span>
                         </div>
                       </div>
@@ -1241,7 +1241,7 @@ export default function CarrierPoolPage() {
                         <label className="text-xs text-gray-500 mb-1 block">File</label>
                         <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                           onChange={e => setUploadFile(e.target.files?.[0] || null)}
-                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#C9A84C]/10 file:text-[#C9A84C] hover:file:bg-[#C9A84C]/20" />
+                          className="w-full text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#C5A572]/10 file:text-[#C5A572] hover:file:bg-[#C5A572]/20" />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Notes (optional)</label>
@@ -1257,7 +1257,7 @@ export default function CarrierPoolPage() {
                           if (uploadNotes) fd.append("notes", uploadNotes);
                           uploadDocMutation.mutate({ carrierId: selectedCarrier.id, formData: fd });
                         }}
-                        className="w-full px-4 py-2 bg-[#C9A84C] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+                        className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                         {uploadDocMutation.isPending ? "Uploading..." : "Upload Document"}
                       </button>
                     </div>
@@ -1290,7 +1290,7 @@ export default function CarrierPoolPage() {
                             <FileText className="w-10 h-10 mb-2" />
                             <p className="text-xs">Preview not available</p>
                             <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-xs text-[#C9A84C] hover:underline mt-1">Download file</a>
+                              className="text-xs text-[#C5A572] hover:underline mt-1">Download file</a>
                           </div>
                         )}
                       </div>
@@ -1316,7 +1316,7 @@ export default function CarrierPoolPage() {
                         <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents ({carrierDocs.length})</h3>
                         {isAdmin && (
                           <button onClick={() => setDocView("upload")}
-                            className="flex items-center gap-1 px-2.5 py-1 bg-[#C9A84C]/10 text-[#C9A84C] rounded-lg text-xs font-medium hover:bg-[#C9A84C]/20 transition">
+                            className="flex items-center gap-1 px-2.5 py-1 bg-[#C5A572]/10 text-[#C5A572] rounded-lg text-xs font-medium hover:bg-[#C5A572]/20 transition">
                             <Upload className="w-3 h-3" /> Upload
                           </button>
                         )}
@@ -1326,7 +1326,7 @@ export default function CarrierPoolPage() {
                         <div className="bg-gray-100 rounded-lg p-8 text-center">
                           <FolderOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                           <p className="text-xs text-gray-400">No documents on file.</p>
-                          {isAdmin && <button onClick={() => setDocView("upload")} className="text-xs text-[#C9A84C] hover:underline mt-1">Upload the first document</button>}
+                          {isAdmin && <button onClick={() => setDocView("upload")} className="text-xs text-[#C5A572] hover:underline mt-1">Upload the first document</button>}
                         </div>
                       ) : (
                         grouped.map(group => (
@@ -1340,7 +1340,7 @@ export default function CarrierPoolPage() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }}
-                                      className="text-xs font-medium text-gray-800 hover:text-[#C9A84C] truncate block text-left w-full">
+                                      className="text-xs font-medium text-gray-800 hover:text-[#C5A572] truncate block text-left w-full">
                                       {doc.fileName}
                                     </button>
                                     <p className="text-[10px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>

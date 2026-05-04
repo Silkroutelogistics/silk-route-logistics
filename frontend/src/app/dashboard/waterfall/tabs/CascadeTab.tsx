@@ -24,7 +24,7 @@ function Countdown({ expiresAt }: { expiresAt: string | null }) {
   if (!expiresAt) return null;
   const m = Math.floor(remaining / 60000);
   const s = Math.floor((remaining % 60000) / 1000);
-  const cls = m < 5 ? "text-red-600" : m < 10 ? "text-amber-600" : "text-[#854F0B]";
+  const cls = m < 5 ? "text-red-600" : m < 10 ? "text-amber-600" : "text-[#C5A572]";
   return (
     <span className={`font-mono font-semibold tabular-nums ${cls}`}>
       {remaining === 0 ? "Expired" : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`}
@@ -59,7 +59,7 @@ export function CascadeTab({ waterfall, onChange }: Props) {
             <Pause className="w-3 h-3" /> Pause
           </button>
         ) : waterfall.status === "paused" ? (
-          <button onClick={() => resume.mutate()} className="flex items-center gap-1 px-3 py-1.5 text-xs text-[#854F0B] border border-[#BA7517]/40 bg-[#FAEEDA] rounded">
+          <button onClick={() => resume.mutate()} className="flex items-center gap-1 px-3 py-1.5 text-xs text-[#BA7517] border border-[#BA7517]/40 bg-[#FAEEDA] rounded">
             Resume
           </button>
         ) : null}
