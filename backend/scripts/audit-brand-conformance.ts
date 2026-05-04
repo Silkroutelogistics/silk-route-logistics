@@ -86,13 +86,75 @@
  *           survive into v2. Sprint 5 P0 sweep is the operational
  *           consumer of v2's reduced output.
  *
- * v3 candidates deferred from this scope:
+ *   v3 (2026-05-04) — three cascade fixes that eliminate the
+ *           ~80–100 false-positive class surfaced by the Sprint 5
+ *           re-run. Targets:
+ *
+ *           Fix 1 — Pseudo-class rule cascading. v2's
+ *           `isDescendantSelector` returned false for `.X:hover`
+ *           vs `.X` (the `:` next-char failed the `[space,>,+,~]`
+ *           check), so cascade-inherit walker treated pseudo
+ *           rules as standalone — missing the base rule's color:
+ *           that browsers cascade through per CSS specificity.
+ *           v3 adds `stripPseudoSuffix` + `getAllBaseSelectors`
+ *           and extends the cascade-inherit walker's
+ *           `hasExplicitColor` check to ALSO consider base
+ *           selectors. When base has explicit color, the
+ *           pseudo-class rule is treated as having that
+ *           inherited color → cascade-inherit finding skipped.
+ *
+ *           Fix 2 — Multi-mode token resolution. v2's
+ *           `buildVarMap` swept all `--token: value;` lines
+ *           regardless of selector context, so vars defined
+ *           in `[data-mode="dark"]` blocks would overwrite
+ *           default-mode values when the dark declaration
+ *           appeared later in the file. Defaults like
+ *           `--theme-text-heading: #FFFFFF` (dark mode)
+ *           leaked into rules like `.export-card h3 { color:
+ *           var(--theme-text-heading, #0d1b2a) }` producing
+ *           white-on-white false positives. v3 adds
+ *           `findDarkModeSkipRanges` (brace-counting walker)
+ *           and modifies `buildVarMap` to skip declarations
+ *           whose offset falls inside a dark-mode block.
+ *           Default-mode rendering is what the scanner
+ *           targets (no `data-mode` attribute set on the html
+ *           element on silkroutelogistics.ai's public pages),
+ *           so dark-mode values shouldn't influence the
+ *           resolution.
+ *
+ *           Fix 3 — HTML cascade hints. v2's `findOpaqueParentBg`
+ *           walked `bgRules` ancestors via CSS-selector descent
+ *           only. Selectors like `.sidebar-nav` aren't recognized
+ *           as descendants of `.sidebar` even though HTML nests
+ *           them (`<aside class="sidebar"><nav class="sidebar-
+ *           nav">`), so alpha overlays composited over the body
+ *           bg fallback instead of the true opaque ancestor.
+ *           v3 adds `HTML_CASCADE_HINTS` covering documented
+ *           nesting patterns (`.sidebar-` inside `.sidebar`,
+ *           `.modal-` inside `.modal`, `.card-` inside `.card`,
+ *           `.notif-` inside `.notif-list`, `.action-item-` inside
+ *           `.action-list`, `.badge-` inside `.card`, etc.) and
+ *           consults them when CSS-selector descent finds no
+ *           opaque ancestor. Hint lookup is a fallback — CSS
+ *           descent runs first per directive priority.
+ *           findOpaqueParentBg now returns a richer
+ *           `OpaqueParentResult` with source tag (`css-descent` /
+ *           `html-hint` / `file-body` / `global-body` / `default-
+ *           white`) for finding-output trail.
+ *
+ *           Behavior delta: P0 contrast count drops sharply
+ *           because the three known false-positive classes are
+ *           eliminated. Remaining P0s are real readability
+ *           issues — input for Sprint 7 fix sweep.
+ *
+ * v4 candidates deferred from this scope:
  *   - @media query rules
  *   - pseudo-element styling (::before, ::after)
  *   - CSS-in-JS dynamic styles
- *   - cross-file CSS variable cascade resolution beyond the
- *     best-effort attempt in v1 (unresolved variables surface
- *     in the Pass 3 summary count for v3-need signaling)
+ *   - full HTML-DOM cascade resolution (v3's hardcoded hint
+ *     table is intentional v3 simplification per directive Phase
+ *     A2 Option (a); v4 would parse HTML files to build a
+ *     class-containment graph)
  *   - PDF template colors (backend/src/services/pdfService.ts) —
  *     out of frontend scope per Sprint 2 directive
  *   - orphan-CSS detection (Sprint 3 spot-check 2 found
@@ -497,18 +559,68 @@ interface VarMap {
   [name: string]: string; // --token → resolved hex (best-effort)
 }
 
+// v3 — Find offset ranges of `[data-mode="dark"]` blocks in a CSS file
+// using brace counting. Used by buildVarMap to skip variable
+// declarations defined ONLY in dark mode, which would otherwise leak
+// into default-mode resolution and produce false positives like
+// .export-card h3 reporting #FFFFFF (dark-mode value) on white card.
+//
+// Per Sprint 6 directive Phase A2 confirmation #2: only the exact
+// `[data-mode="dark"]` selector is treated as skip-worthy. Other named
+// modes (e.g., `data-mode="silk-route-classic"`, `data-mode="midnight-
+// blue"`) stay in the default map as additional theme variants — the
+// public site's default state has no data-mode attribute, so all
+// non-dark scoped vars are equivalent to default.
+function findDarkModeSkipRanges(content: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const openRe = /\[data-mode\s*=\s*["']dark["']\][^{]*\{/g;
+  let m: RegExpExecArray | null;
+  while ((m = openRe.exec(content)) !== null) {
+    const blockStart = m.index;
+    const openBraceIdx = m.index + m[0].length - 1;
+    let depth = 1;
+    let i = openBraceIdx + 1;
+    while (i < content.length && depth > 0) {
+      const ch = content[i];
+      if (ch === "{") depth++;
+      else if (ch === "}") depth--;
+      i++;
+    }
+    ranges.push([blockStart, i]);
+    openRe.lastIndex = i; // advance past the closed block
+  }
+  return ranges;
+}
+
+function isInRange(offset: number, ranges: Array<[number, number]>): boolean {
+  for (const [s, e] of ranges) {
+    if (offset >= s && offset < e) return true;
+  }
+  return false;
+}
+
 // Build a global variable map by scanning :root, @theme, and other
 // top-level variable-declaring blocks across all CSS sources passed in.
+//
+// v3 — Skips var declarations inside `[data-mode="dark"]` blocks. This
+// matches what browsers compute for the default render (no data-mode
+// attribute set on the html element). Vars defined ONLY in dark mode
+// become undefined in our map, so var(--name, fallback) syntax falls
+// back to the literal default per CSS spec. Vars defined in BOTH
+// default scope AND dark mode keep the default value because dark
+// declarations are skipped.
 function buildVarMap(cssFiles: string[]): VarMap {
   const vars: VarMap = {};
-  // First pass: capture raw declarations.
+  // First pass: capture raw declarations, skipping dark-mode-only ones.
   const rawDecls: { [name: string]: string } = {};
   for (const file of cssFiles) {
     const content = readFile(file);
+    const skipRanges = findDarkModeSkipRanges(content);
     // Match lines like:   --foo: #BA7517;   OR   --foo: var(--bar);
     const re = /(--[A-Za-z0-9_-]+)\s*:\s*([^;]+);/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(content)) !== null) {
+      if (isInRange(m.index, skipRanges)) continue;
       const name = m[1];
       const val = m[2].trim();
       // Skip composite shorthand values (multiple words/commas without
@@ -729,6 +841,73 @@ function isDescendantSelector(parent: string, child: string): boolean {
   return next === " " || next === ">" || next === "+" || next === "~";
 }
 
+// v3 — Strip the outermost pseudo-class / functional-pseudo from a
+// selector. Returns the stripped form (one level), or null if no
+// strippable suffix is present. Used by the cascade-inherit walker to
+// recognize that `.btn-navy:hover` shares its color cascade with
+// `.btn-navy` per CSS specificity (a :hover rule that only changes bg
+// keeps the base rule's `color:` declaration in effect).
+//
+// Patterns supported:
+//   .X:hover               → .X
+//   .X:focus-visible       → .X
+//   .X:not(:disabled)      → .X
+//   .X:hover:not(:disabled) → .X:hover (one level only — apply repeatedly)
+//
+// Per Sprint 6 directive Phase A confirmation #1: outermost-first
+// repeated application via getAllBaseSelectors() below.
+function stripPseudoSuffix(sel: string): string | null {
+  // Functional pseudo: :foo(...)
+  const fnMatch = sel.match(/^(.+):(?:not|is|where|has|nth-child|nth-of-type|first-child|first-of-type|last-child|last-of-type)\([^)]*\)$/);
+  if (fnMatch) return fnMatch[1];
+  // Simple pseudo: :foo (must come at very end, not mid-selector
+  // descendants like `.parent:hover .child`).
+  const simpleMatch = sel.match(/^(.+):(hover|focus|active|focus-visible|focus-within|checked|disabled|visited|link|first-child|last-child|only-child|empty|target)$/);
+  if (simpleMatch) return simpleMatch[1];
+  return null;
+}
+
+// v3 — Collect all base selectors by repeatedly stripping pseudo-class
+// suffixes. Used to find every level of the cascade chain that may
+// contribute color/bg via CSS specificity.
+function getAllBaseSelectors(sel: string): string[] {
+  const bases: string[] = [];
+  let current = sel;
+  for (let i = 0; i < 8; i++) {
+    const next = stripPseudoSuffix(current);
+    if (next === null || next === current) break;
+    bases.push(next);
+    current = next;
+  }
+  return bases;
+}
+
+// v3 — HTML cascade hints. CSS-selector descent in findOpaqueParentBg
+// can't see HTML structure where elements share a class prefix without
+// an explicit selector relationship (e.g., `<aside class="sidebar">
+// <nav class="sidebar-nav">` — `.sidebar-nav` is NOT a descendant of
+// `.sidebar` per CSS, but IS contained inside it per HTML). These hints
+// hardcode the documented nesting patterns surfaced in Sprint 3 spot-
+// checks + Sprint 5 false-positive analysis.
+//
+// Per Sprint 6 directive Phase A2 Option (a): hardcoded table covers the
+// known cases; full HTML-DOM cascade is a v4 candidate.
+//
+// Priority per Sprint 6 directive confirmation #4: CSS-selector descent
+// runs first; HTML hints are consulted only when CSS descent finds no
+// opaque ancestor in bgRules.
+interface CascadeHint { childRegex: RegExp; parentSelector: string; }
+const HTML_CASCADE_HINTS: CascadeHint[] = [
+  { childRegex: /^\.sidebar-/,     parentSelector: ".sidebar" },
+  { childRegex: /^\.topbar-/,      parentSelector: ".topbar" },
+  { childRegex: /^\.modal-/,       parentSelector: ".modal" },
+  { childRegex: /^\.card-/,        parentSelector: ".card" },
+  { childRegex: /^\.panel-/,       parentSelector: ".panel" },
+  { childRegex: /^\.notif-/,       parentSelector: ".notif-list" },
+  { childRegex: /^\.action-item-/, parentSelector: ".action-list" },
+  { childRegex: /^\.badge-/,       parentSelector: ".card" },
+];
+
 // Find body/html/:root foreground color in a single rule list (per-file).
 // Used by the cascade-inheritance detector to "walk up the cascade where
 // possible" per Sprint 2 directive Step 5. Per-file lookup beats a single
@@ -795,15 +974,27 @@ function buildGlobalCascadeBg(cssFiles: string[], vars: VarMap): string | null {
 
 // v2 — Walk bgRules for ancestors of childSelector and return the most-
 // specific OPAQUE background. Used to resolve what an alpha overlay sits
-// on top of for compositing. Falls back to per-file body bg → global
-// body bg → "#FFFFFF" sentinel. Returns the resolved opaque hex.
+// on top of for compositing.
+//
+// v3 — Falls through to HTML_CASCADE_HINTS when CSS-selector descent
+// finds no opaque ancestor in bgRules. Hints cover documented HTML
+// nesting patterns (`.sidebar-nav` inside `.sidebar`, etc.) where CSS
+// selector relationships don't reflect the rendered DOM containment.
+// Per Sprint 6 directive Phase A2 confirmation #4: CSS descent runs
+// first; HTML hints are consulted as a fallback.
+//
+// Returns an object with the resolved hex plus a `source` tag for trail
+// reporting in Pass 3 finding output: `css-descent` / `html-hint` /
+// `file-body` / `global-body` / `default-white`.
 interface BgRuleEntry { selector: string; bgHex: string; bgAlpha?: number; raw: string }
+interface OpaqueParentResult { hex: string; source: "css-descent" | "html-hint" | "file-body" | "global-body" | "default-white"; viaSelector?: string }
 function findOpaqueParentBg(
   childSelector: string,
   bgRules: BgRuleEntry[],
   fileBodyBg: string | null,
   globalBodyBg: string | null
-): string {
+): OpaqueParentResult {
+  // 1. CSS-selector descent (v2 behavior, unchanged priority).
   let best: BgRuleEntry | null = null;
   for (const b of bgRules) {
     if (b.selector === childSelector) continue; // exclude self — we want strict ancestors
@@ -812,8 +1003,31 @@ function findOpaqueParentBg(
     if (!opaque) continue;
     if (!best || b.selector.length > best.selector.length) best = b;
   }
-  if (best) return best.bgHex;
-  return fileBodyBg ?? globalBodyBg ?? "#FFFFFF";
+  if (best) return { hex: best.bgHex, source: "css-descent", viaSelector: best.selector };
+
+  // 2. v3 — HTML cascade hints. Extract the FIRST .className token
+  //    anywhere in the childSelector (skipping html / body / attribute
+  //    prefixes like `html[data-mode="dark"]`, since the semantically
+  //    meaningful class is the nearest one). Match against hint table,
+  //    look up the parent class in bgRules.
+  const leadingClassMatch = childSelector.match(/\.([A-Za-z][A-Za-z0-9_-]*)/);
+  if (leadingClassMatch) {
+    const leadingClass = "." + leadingClassMatch[1];
+    for (const hint of HTML_CASCADE_HINTS) {
+      if (!hint.childRegex.test(leadingClass)) continue;
+      const parent = bgRules.find(
+        (b) => b.selector === hint.parentSelector && (b.bgAlpha === undefined || b.bgAlpha >= 1)
+      );
+      if (parent) {
+        return { hex: parent.bgHex, source: "html-hint", viaSelector: hint.parentSelector };
+      }
+    }
+  }
+
+  // 3. Body-bg fallback chain.
+  if (fileBodyBg) return { hex: fileBodyBg, source: "file-body" };
+  if (globalBodyBg) return { hex: globalBodyBg, source: "global-body" };
+  return { hex: "#FFFFFF", source: "default-white" };
 }
 
 function pass3Contrast(
@@ -893,12 +1107,20 @@ function pass3Contrast(
       // v2 — Composite alpha overlays. If the parent bg is non-opaque,
       // composite it over the nearest opaque ancestor (excluding the
       // parent itself, since we're trying to figure out what IT sits on).
+      // v3 — findOpaqueParentBg now returns source metadata; threaded
+      // into composedFromOverlay for finding-output trail.
       let effectiveBg = parent.bgHex;
-      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number } | null = null;
+      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string } | null = null;
       if (parent.bgAlpha !== undefined && parent.bgAlpha < 1) {
-        const opaque = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg);
-        effectiveBg = compositeAlpha(parent.bgHex, parent.bgAlpha, opaque);
-        composedFromOverlay = { overlay: parent.bgHex, parentBg: opaque, alpha: parent.bgAlpha };
+        const opaqueResult = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg);
+        effectiveBg = compositeAlpha(parent.bgHex, parent.bgAlpha, opaqueResult.hex);
+        composedFromOverlay = {
+          overlay: parent.bgHex,
+          parentBg: opaqueResult.hex,
+          alpha: parent.bgAlpha,
+          source: opaqueResult.source,
+          viaSelector: opaqueResult.viaSelector,
+        };
         compositedCount++;
       }
 
@@ -921,8 +1143,16 @@ function pass3Contrast(
             : "ancestor-bg vs descendant-color contrast",
         ];
         if (composedFromOverlay) {
+          const sourceTrail =
+            composedFromOverlay.source === "html-hint" && composedFromOverlay.viaSelector
+              ? ` (parent bg from HTML hint → ${composedFromOverlay.viaSelector})`
+              : composedFromOverlay.source === "css-descent" && composedFromOverlay.viaSelector
+              ? ` (parent bg from CSS ancestor ${composedFromOverlay.viaSelector})`
+              : composedFromOverlay.source === "file-body" || composedFromOverlay.source === "global-body" || composedFromOverlay.source === "default-white"
+              ? ` (parent bg from ${composedFromOverlay.source} fallback)`
+              : "";
           noteParts.push(
-            `composited overlay ${composedFromOverlay.overlay} α=${composedFromOverlay.alpha.toFixed(2)} over ${composedFromOverlay.parentBg} → ${effectiveBg}`
+            `composited overlay ${composedFromOverlay.overlay} α=${composedFromOverlay.alpha.toFixed(2)} over ${composedFromOverlay.parentBg} → ${effectiveBg}${sourceTrail}`
           );
         }
         if (fgAlphaTrail) {
@@ -951,21 +1181,41 @@ function pass3Contrast(
     for (const b of bgRules) {
       if (!b.bgHex) continue;
       let effectiveBg = b.bgHex;
-      let composeTrail: { overlay: string; parentBg: string; alpha: number } | null = null;
+      let composeTrail: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string } | null = null;
       if (b.bgAlpha !== undefined && b.bgAlpha < 1) {
-        const opaque = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg);
-        effectiveBg = compositeAlpha(b.bgHex, b.bgAlpha, opaque);
-        composeTrail = { overlay: b.bgHex, parentBg: opaque, alpha: b.bgAlpha };
+        const opaqueResult = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg);
+        effectiveBg = compositeAlpha(b.bgHex, b.bgAlpha, opaqueResult.hex);
+        composeTrail = {
+          overlay: b.bgHex,
+          parentBg: opaqueResult.hex,
+          alpha: b.bgAlpha,
+          source: opaqueResult.source,
+          viaSelector: opaqueResult.viaSelector,
+        };
       }
       const rgb = hexToRgb(effectiveBg);
       if (!rgb) continue;
       const lum = relativeLuminance(rgb);
       if (lum > 0.18) continue; // not a dark surface
 
+      // v3 — Fix 1: pseudo-class rule cascading. If b.selector is a
+      // pseudo-class rule (e.g., `.btn-navy:hover`), look up base
+      // selectors (`.btn-navy`) for explicit color. Browser cascade
+      // applies the base rule's color to the pseudo state when the
+      // pseudo rule doesn't override it. Treat finding base color as
+      // equivalent to having explicit color → skip cascade-inherit
+      // emission (the real fg is the base color, not body inherited).
+      const baseSelectors = getAllBaseSelectors(b.selector);
+      const baseHasColor = baseSelectors.some((base) =>
+        rules.some(
+          (r) => r.color && (r.selector === base || isDescendantSelector(base, r.selector))
+        )
+      );
+
       const hasExplicitColor = rules.some(
         (r) => r.color && (r.selector === b.selector || isDescendantSelector(b.selector, r.selector))
       );
-      if (hasExplicitColor) continue;
+      if (hasExplicitColor || baseHasColor) continue;
 
       if (composeTrail) compositedCount++;
 
@@ -978,9 +1228,16 @@ function pass3Contrast(
         if (sev) {
           const noteBase =
             "dark bg with no explicit `color:` — cascade resolves to body/html color. Set explicit `color: var(--fg-on-navy)` or equivalent.";
-          const note = composeTrail
-            ? `${noteBase} · composited overlay ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)} over ${composeTrail.parentBg} → ${effectiveBg}`
-            : noteBase;
+          let note = noteBase;
+          if (composeTrail) {
+            const sourceTrail =
+              composeTrail.source === "html-hint" && composeTrail.viaSelector
+                ? ` (parent bg from HTML hint → ${composeTrail.viaSelector})`
+                : composeTrail.source === "css-descent" && composeTrail.viaSelector
+                ? ` (parent bg from CSS ancestor ${composeTrail.viaSelector})`
+                : ` (parent bg from ${composeTrail.source} fallback)`;
+            note = `${noteBase} · composited overlay ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)} over ${composeTrail.parentBg} → ${effectiveBg}${sourceTrail}`;
+          }
           findings.push({
             file,
             selector: `${b.selector} (cascade-inherited fg)`,
@@ -1036,7 +1293,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v2 (alpha-overlay compositing)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v3 (alpha-overlay compositing + pseudo-class cascade + multi-mode tokens + HTML hints)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
