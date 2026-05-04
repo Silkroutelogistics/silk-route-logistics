@@ -28,11 +28,16 @@ export { GMAIL_SIGNATURE };
 
 // ─── Types ──────────────────────────────────────────────────
 
+// v3.8.bb — vertical drives Touch 1 template selection. UNKNOWN is a hard
+// block: callers MUST classify customer.vertical before invoking buildEmail
+// or buildEmailSync. See §18 Lead Hunter Standing Rules.
+export type Vertical = "COLDCHAIN" | "WELLNESS" | "UNKNOWN";
+
 export interface EmailBuildInput {
   customerId: string;
   contactFirstName?: string;
   touchNumber: number; // 1 = intro, 2-6 = follow-ups
-  cluster?: string;    // industry cluster for template selection
+  cluster?: string;    // industry cluster for template selection (touch 2+)
   personalizedHook?: string;
   personalizedRelevance?: string;
   subjectOverride?: string;
@@ -56,8 +61,51 @@ interface TemplateOutput {
   angle: string;
 }
 
+// v3.8.bb — Touch 1 branches on prospect.vertical. The fallback `touch1Template`
+// is retained for non-Lead-Hunter call paths and for UNKNOWN that has slipped
+// through the gate, but UNKNOWN is supposed to hard-block before reaching here.
+// See §18 Lead Hunter Standing Rules.
+
+function touch1ColdChainTemplate(firstName: string): TemplateOutput {
+  return {
+    subject: `Reefer capacity comparison, ${firstName}`,
+    angle: "coldchain-operational",
+    body: `Morning ${firstName},
+
+I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates). We run temperature-controlled reefer FTL for CPG shippers moving fresh, frozen, and chilled out of Midwest and Northeast plants.
+
+In refrigerated CPG, the operational signal that matters is logger-download temperature drift on the last 50 miles into the DC. That drift translates into receiving-lane rejection rates that Walmart and Kroger compliance teams flag.
+
+Compass Engine is our 35-point carrier vetting system. For reefer freight the load-bearing checks are unit age, last PM date, calibration certificate currency, and historical temp-compliance scores.
+
+If you're running outbound reefer into retailer DCs or 3PLs and want a comparison on one current lane, send a recent BOL and I'll come back with a quote and the carrier's full Compass profile.
+
+Wasi`,
+  };
+}
+
+function touch1WellnessTemplate(firstName: string): TemplateOutput {
+  return {
+    subject: `Dry van for retail outbound, ${firstName}`,
+    angle: "wellness-operational",
+    body: `Morning ${firstName},
+
+I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates). We run dry van FTL for clean-beauty and personal-care brands moving into Sephora, Ulta, Target, and DTC fulfillment 3PLs.
+
+In clean beauty, the operational signal that matters is damage rate at the retailer DC. Sephora 003 chargebacks on broken glass, leaking primary, pallet shift, and missed signature-required residential on PR drops kill margin on a launch SKU. We pre-check carriers on equipment age, brake performance, and load-securement history before assignment, and keep a small expedited bench for launch-window surges that does not surge-price.
+
+Compass Engine is our 35-point carrier vetting system. For premium retail freight the load-bearing checks are claims ratio, inspection history, and on-time-in-full at retailer DCs.
+
+If you're running outbound to retailer DCs or 3PLs and want a comparison on one current lane, send a recent BOL and I'll come back with a quote and the carrier's full Compass profile.
+
+Wasi`,
+  };
+}
+
 function touch1Template(firstName: string, hook: string, relevance: string, cluster: string): TemplateOutput {
-  // Default hook/relevance if not researched
+  // Fallback for non-Lead-Hunter call paths (e.g. legacy, manual API).
+  // Lead Hunter prospects must hard-block at vertical=UNKNOWN before reaching
+  // this template. See §18.
   const h = hook || "your company's growth in the supply chain space";
   const r = relevance || "your shipping operations involve freight coordination or carrier management";
 
@@ -176,9 +224,22 @@ function getTemplate(
   hook: string,
   relevance: string,
   cluster: string,
+  vertical: Vertical,
 ): TemplateOutput {
+  // Touch 1 branches on vertical — operational signal for cold-chain CPG
+  // (temp drift, retailer DC rejection) is structurally different from
+  // wellness CPG (damage rate, signature-required residential, launch
+  // capacity). Touches 2-6 keep their existing cluster-based logic for now.
+  if (touchNumber === 1) {
+    if (vertical === "COLDCHAIN") return touch1ColdChainTemplate(firstName);
+    if (vertical === "WELLNESS") return touch1WellnessTemplate(firstName);
+    // UNKNOWN should hard-block at the caller (sendMassEmail / startSequence)
+    // before reaching getTemplate. This throw is defense-in-depth.
+    throw new Error(
+      `Cannot generate Touch 1 outreach for vertical=UNKNOWN — manual review required (see §18 Lead Hunter Standing Rules)`,
+    );
+  }
   switch (touchNumber) {
-    case 1: return touch1Template(firstName, hook, relevance, cluster);
     case 2: return touch2Template(firstName, hook, cluster);
     case 3: return touch3Template(firstName, cluster);
     case 4: return touch4Template(firstName, cluster);
@@ -210,11 +271,20 @@ export async function buildEmail(input: EmailBuildInput): Promise<BuiltEmail> {
       personalizedHook: true,
       personalizedRelevance: true,
       sequenceCluster: true,
+      vertical: true,
     },
   });
 
   if (!customer) throw new Error(`Customer not found: ${input.customerId}`);
   if (!customer.email) throw new Error(`Customer has no email: ${input.customerId}`);
+
+  // v3.8.bb — Hard-block UNKNOWN vertical per §18. Customer must be
+  // classified COLDCHAIN or WELLNESS before any outreach generation runs.
+  if (customer.vertical === "UNKNOWN") {
+    throw new Error(
+      `Refusing to build email: customer ${input.customerId} (${customer.name}) has vertical=UNKNOWN — manual review required (§18 Lead Hunter Standing Rules)`,
+    );
+  }
 
   const fullName = customer.contactName || customer.name;
   const firstName = input.contactFirstName || fullName.split(/\s+/)[0] || fullName;
@@ -222,7 +292,7 @@ export async function buildEmail(input: EmailBuildInput): Promise<BuiltEmail> {
   const relevance = input.personalizedRelevance || customer.personalizedRelevance || "";
   const cluster = input.cluster || customer.sequenceCluster || customer.industryType || "General Manufacturing";
 
-  const template = getTemplate(input.touchNumber, firstName, hook, relevance, cluster);
+  const template = getTemplate(input.touchNumber, firstName, hook, relevance, cluster, customer.vertical);
 
   const subject = input.subjectOverride || template.subject;
   const bodyText = input.bodyOverride || template.body;
@@ -252,18 +322,29 @@ export function buildEmailSync(params: {
   firstName: string;
   email: string;
   touchNumber: number;
+  vertical: Vertical;
   hook?: string;
   relevance?: string;
   cluster?: string;
   subjectOverride?: string;
   bodyOverride?: string;
 }): BuiltEmail {
+  // v3.8.bb — Hard-block UNKNOWN per §18. The Lead Hunter sendMassEmail
+  // controller skips UNKNOWN customers with a "manual review required"
+  // reason; this throw is defense-in-depth for any other caller.
+  if (params.vertical === "UNKNOWN") {
+    throw new Error(
+      `Refusing to build email: vertical=UNKNOWN — manual review required (§18 Lead Hunter Standing Rules)`,
+    );
+  }
+
   const template = getTemplate(
     params.touchNumber,
     params.firstName,
     params.hook || "",
     params.relevance || "",
     params.cluster || "General Manufacturing",
+    params.vertical,
   );
 
   const subject = params.subjectOverride || template.subject;

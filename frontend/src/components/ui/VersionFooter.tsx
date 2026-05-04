@@ -2154,7 +2154,30 @@
 //           (v3.8.bb). Per §3.1 letter sequence
 //           continuous, v3.8.aa is the next available
 //           letter past v3.8.z.
-export const SRL_VERSION = "3.8.aa";
+// v3.8.bb — Lead Hunter Bug 4c: vertical-branched
+//           Touch 1 outreach + UNKNOWN hard-block.
+//           New touch1ColdChainTemplate +
+//           touch1WellnessTemplate in email/builder
+//           with per-vertical operational signal
+//           (logger-download temp drift / DC rejection
+//           rate for COLDCHAIN; Sephora 003 chargebacks
+//           / damage rate / signature-required
+//           residential for WELLNESS). Both pass
+//           voice.md calibration: no em-dashes, no
+//           softeners, no exclamations, MC# 1794414 +
+//           DOT# 4526880 + BMC-84 $75K + $100K
+//           contingent cargo authority line, Compass
+//           Engine described as 35-point vetting
+//           (NOT "AI-powered market intelligence"),
+//           specific operational ask at close.
+//           UNKNOWN hard-blocks at four call sites:
+//           buildEmail (DB lookup), buildEmailSync
+//           (in-memory), sendMassEmail (skip with
+//           reason in skippedReasons[]), startSequence
+//           (throw at sequence start), and
+//           processDueSequences (hold + push
+//           nextSendAt forward). C5 of 6.
+export const SRL_VERSION = "3.8.bb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

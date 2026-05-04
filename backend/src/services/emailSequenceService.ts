@@ -35,10 +35,18 @@ export async function startSequence(
 ) {
   const prospect = await prisma.customer.findUnique({
     where: { id: prospectId },
-    select: { id: true, name: true, email: true, contactName: true, status: true },
+    select: { id: true, name: true, email: true, contactName: true, status: true, vertical: true },
   });
   if (!prospect) throw new Error("Prospect not found");
   if (!prospect.email) throw new Error("Prospect has no email address");
+  // v3.8.bb — Hard-block UNKNOWN vertical per §18 Lead Hunter Standing Rules.
+  // Sequencer must not start an automated cadence on an unclassified
+  // prospect — those go through the Manual Review queue first.
+  if (prospect.vertical === "UNKNOWN") {
+    throw new Error(
+      `Cannot start sequence: ${prospect.name} has vertical=UNKNOWN — manual review required`,
+    );
+  }
 
   const existing = await prisma.emailSequence.findFirst({
     where: { prospectId, status: "ACTIVE" },
@@ -258,6 +266,25 @@ export async function processDueSequences() {
     const step = schedule[seq.currentStep];
     if (!step) {
       await handleSequenceCompleted(seq);
+      continue;
+    }
+
+    // v3.8.bb — Hard-block UNKNOWN vertical per §18. Pause the send (do
+    // not advance the step, do not ship a generic template). The Manual
+    // Review queue surfaces this for AE classification; once classified,
+    // the next cron tick will pick the sequence up and send normally.
+    const prospect = await prisma.customer.findUnique({
+      where: { id: seq.prospectId },
+      select: { vertical: true, name: true },
+    });
+    if (!prospect || prospect.vertical === "UNKNOWN") {
+      log.info(`[Sequence] Holding seq ${seq.id} (${prospect?.name ?? seq.prospectName}) — vertical=UNKNOWN, manual review required`);
+      // Push nextSendAt forward by a day so we don't tight-loop. Once the
+      // AE classifies, the existing schedule resumes from this step.
+      await prisma.emailSequence.update({
+        where: { id: seq.id },
+        data: { nextSendAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+      });
       continue;
     }
 

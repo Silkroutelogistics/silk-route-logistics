@@ -782,17 +782,30 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
     select: {
       id: true, name: true, contactName: true, email: true, industryType: true,
       personalizedHook: true, personalizedRelevance: true, sequenceCluster: true, currentTouch: true,
+      vertical: true,
     },
   });
 
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  const skippedReasons: string[] = [];
 
   for (let i = 0; i < customers.length; i++) {
     const c = customers[i];
     if (!c.email) {
       skipped++;
+      skippedReasons.push(`${c.name}: no email on file`);
+      continue;
+    }
+
+    // v3.8.bb — Hard-block UNKNOWN vertical per §18. Outreach must not
+    // auto-send and must not silently fall back to a generic template.
+    // The Lead Hunter Manual Review queue surfaces these for AE
+    // classification before next send.
+    if (c.vertical === "UNKNOWN") {
+      skipped++;
+      skippedReasons.push(`${c.name}: vertical=UNKNOWN — manual review required`);
       continue;
     }
 
@@ -804,6 +817,7 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
       firstName,
       email: c.email,
       touchNumber,
+      vertical: c.vertical,
       hook: c.personalizedHook || undefined,
       relevance: c.personalizedRelevance || undefined,
       cluster: c.sequenceCluster || c.industryType || undefined,
@@ -909,5 +923,5 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
     }
   }
 
-  res.json({ sent, failed, skipped });
+  res.json({ sent, failed, skipped, skippedReasons });
 }
