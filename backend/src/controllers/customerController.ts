@@ -7,6 +7,48 @@ import { sendEmail } from "../services/emailService";
 import { buildEmailSync, GMAIL_SIGNATURE, CEO_NAME, CEO_EMAIL } from "../email/builder";
 import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatus";
 import { markProspectNotInterested } from "../services/prospectStatusService";
+import { logCustomerActivity } from "../services/customerActivityService";
+
+// Required-checks gate for customer onboarding approval. Each entry is
+// surfaced inline by the AE Console approve UI when a 422 fires.
+type RequiredCheck = { field: string; label: string; reason: string };
+
+function evaluateApprovalChecks(customer: {
+  taxId: string | null;
+  creditStatus: string | null;
+  creditCheckDate: Date | null;
+  contractUrl: string | null;
+}): RequiredCheck[] {
+  const missing: RequiredCheck[] = [];
+
+  if (!customer.taxId || customer.taxId.trim() === "") {
+    missing.push({
+      field: "taxId",
+      label: "TIN / Tax ID",
+      reason: "Tax ID required on file before onboarding approval",
+    });
+  }
+
+  const creditAcceptable =
+    customer.creditStatus === "APPROVED" || customer.creditStatus === "CONDITIONAL";
+  if (!creditAcceptable || customer.creditCheckDate === null) {
+    missing.push({
+      field: "creditCheck",
+      label: "Credit check",
+      reason: "Credit must be APPROVED or CONDITIONAL with a check date on file",
+    });
+  }
+
+  if (!customer.contractUrl || customer.contractUrl.trim() === "") {
+    missing.push({
+      field: "contractUrl",
+      label: "Signed contract",
+      reason: "Customer contract URL must be on file",
+    });
+  }
+
+  return missing;
+}
 
 export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
@@ -378,6 +420,69 @@ export async function markNotInterested(req: AuthRequest, res: Response) {
     }
     throw err;
   }
+}
+
+// Phase 6.2 Lead Hunter / CRM separation. Single canonical write path
+// for Customer.onboardingStatus → APPROVED. Validates required checks
+// (TIN, credit, contract) before flipping. Idempotent on already-APPROVED.
+// updateCustomerSchema deliberately does NOT include onboardingStatus,
+// so PATCH /customers/:id cannot bypass this gate.
+export async function approveCustomer(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      onboardingStatus: true,
+      taxId: true,
+      creditStatus: true,
+      creditCheckDate: true,
+      contractUrl: true,
+      approvedAt: true,
+      approvedById: true,
+    },
+  });
+
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
+  // Idempotent: already-APPROVED returns current state without re-writing.
+  if (customer.onboardingStatus === "APPROVED") {
+    res.status(200).json({ customer, alreadyApproved: true });
+    return;
+  }
+
+  const missing = evaluateApprovalChecks(customer);
+  if (missing.length > 0) {
+    res.status(422).json({
+      error: "Required checks not satisfied",
+      missing,
+    });
+    return;
+  }
+
+  const updated = await prisma.customer.update({
+    where: { id: customer.id },
+    data: {
+      onboardingStatus: "APPROVED",
+      approvedAt: new Date(),
+      approvedById: req.user!.id,
+    },
+  });
+
+  await logCustomerActivity({
+    customerId: customer.id,
+    eventType: "onboarding_approved",
+    description: `Onboarding approved by ${req.user!.email}`,
+    actorType: "USER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+  });
+
+  res.status(200).json({ customer: updated });
 }
 
 export async function deleteCustomer(req: AuthRequest, res: Response) {

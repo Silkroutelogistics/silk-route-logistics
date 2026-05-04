@@ -1950,6 +1950,10 @@ model Customer {
   origins            Json?
   destinations       Json?
 
+  // Approval-event metadata (Phase 6.2 Lead Hunter / CRM separation)
+  approvedAt   DateTime? @map("approved_at")
+  approvedById String?   @map("approved_by_id")
+
   // Lead Hunter — Personalization (v3.6.c)
   personalizedHook      String?   @map("personalized_hook")
   personalizedRelevance String?   @map("personalized_relevance")
