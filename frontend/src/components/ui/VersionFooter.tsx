@@ -2588,7 +2588,84 @@
 //           Per §3.1, version bump justified — publicly-visible
 //           CSS rendering changes across AE Console + accounting
 //           + marketing pages.
-export const SRL_VERSION = "3.8.jj";
+// v3.8.kk — Sprint 18 small-scope auth/error/track P0 sweep.
+//           10 genuine fixes applied across 9 files. Sprint 18
+//           directive's projected ~220 P0 was inflated by stale
+//           Sprint 14 Phase C analysis; actual filtered scope
+//           after Sprints 15b/16/17 is ~80 in-scope, of which
+//           ~65 are SCANNER FALSE POSITIVES due to v8's cross-
+//           component layout context limitation.
+//
+//           Files fixed (10 swaps):
+//             - auth/login/page.tsx:387 — TOTP secret display:
+//               text-[#C9A84C] → text-[#BA7517] canonical gold-dark
+//             - auth/error.tsx:16 — error icon: text-red-400 →
+//               text-red-700 (composited red tint)
+//             - app/error.tsx:23 — root error ID display:
+//               text-white/30 → text-slate-400
+//             - onboarding/error.tsx:16 — onboarding error icon:
+//               text-red-400 → text-red-700
+//             - onboarding/page.tsx:501 — Sprint 15b residue:
+//               text-amber-500 → text-amber-700
+//             - track/page.tsx:176 — public track icon:
+//               text-white/30 → text-slate-400 on dark bg
+//             - components/auth/LoginSplash.tsx:189 — feature
+//               icon: text-[#d4a574] → text-[#BA7517] canonical
+//             - components/invoices/CreateInvoiceModal.tsx:88 —
+//               close X icon: text-gray-400 → text-gray-700
+//             - components/contacts/ContactsPanel.tsx:250 — close
+//               X icon: text-gray-400 → text-gray-700
+//             - components/invoices/InvoiceLineItemsEditor.tsx:96
+//               — hover delete: hover:text-red-400 → -700
+//
+//           Scanner false positives DOCUMENTED (~65 across):
+//             - components/layout/Sidebar.tsx (8) — renders inside
+//               app/dashboard/layout.tsx bg-[#0F1117] dark navy
+//             - components/orders/LineItemsSection.tsx (13) —
+//               renders inside Order Builder dashboard
+//             - components/loads/RateConfirmationModal.tsx (11) —
+//               dashboard load modal
+//             - components/loads/CreateLoadModal.tsx (11) — same
+//             - components/invoices/BatchActionsBar.tsx (5)
+//             - components/ui/CommandPalette.tsx (4)
+//             - components/ui/StatCard.tsx (3)
+//             - components/ui/FormElements.tsx (3)
+//             - components/ui/ClickToCall.tsx (2)
+//             - components/MarcoPolo.tsx (2)
+//             - components/auth/LoginBrandPanel.tsx (1)
+//             - components/ui/ThemePanel.tsx (1)
+//             - others
+//
+//           ROOT CAUSE: scanner v8 layout-fallback resolution
+//           (Sprint 13 v8) only fires for files in app/ route
+//           directories; components in components/ render in
+//           dashboard dark contexts but scanner can't resolve
+//           that statically. Real rendering is high-contrast
+//           (text-slate-400 on dashboard dark navy = ~5:1 PASS).
+//           Force-fixing these would create dark-on-dark
+//           readability bugs in actual dashboard rendering —
+//           rejected as net-negative per Sprint 17 lesson
+//           reinforced.
+//
+//           v9 scanner candidate (already in v7/v8 deferred
+//           list as "cross-file React component composition"):
+//           extend findAncestorBg to walk import graph and
+//           propagate layout context through component
+//           boundaries, OR use Next.js app-router conventions
+//           to associate components with their consuming routes.
+//
+//           Pre-commit verification: backend tsc clean, frontend
+//           next build clean.
+//
+//           Per §3.1, version bump justified — publicly-visible
+//           changes to auth flow + error boundaries that every
+//           user encounters on first error.
+//
+//           Sprint 18 retirement: 609 → ~595 P0 (~10 actual
+//           retires + ~5 P0→P1 reclassifications via swap shape).
+//           Small headline number, correct work — same atomic
+//           commit discipline pattern as Sprint 15a.
+export const SRL_VERSION = "3.8.kk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

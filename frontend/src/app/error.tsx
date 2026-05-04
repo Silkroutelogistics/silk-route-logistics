@@ -20,7 +20,7 @@ export default function RootError({
           {error.message || "An unexpected error occurred. Please try again."}
         </p>
         {error.digest && (
-          <p className="text-white/30 text-xs mb-4 font-mono">Error ID: {error.digest}</p>
+          <p className="text-slate-400 text-xs mb-4 font-mono">Error ID: {error.digest}</p>
         )}
         <button
           onClick={reset}

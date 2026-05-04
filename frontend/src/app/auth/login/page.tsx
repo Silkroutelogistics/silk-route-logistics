@@ -384,7 +384,7 @@ export default function EmployeeLoginPage() {
                 {totpSecret && (
                   <div className="mb-4 p-3 rounded-xl text-center bg-white border border-gray-200">
                     <p className="text-[11px] text-gray-500 mb-1">Manual entry key:</p>
-                    <p className="text-[13px] text-[#C9A84C] font-mono tracking-wider select-all">{totpSecret}</p>
+                    <p className="text-[13px] text-[#BA7517] font-mono tracking-wider select-all">{totpSecret}</p>
                   </div>
                 )}
                 <label className={labelClass}>Authenticator Code</label>

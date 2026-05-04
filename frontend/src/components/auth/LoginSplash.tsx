@@ -186,7 +186,7 @@ export default function LoginSplash({
                 style={{ animationDelay: `${0.4 + i * 0.5}s` }}
               >
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 border border-[#d4a574]/30 flex items-center justify-center">
-                  <Icon className="w-5 h-5 md:w-6 md:h-6 text-[#d4a574]" />
+                  <Icon className="w-5 h-5 md:w-6 md:h-6 text-[#BA7517]" />
                 </div>
                 <span className="text-[10px] md:text-xs text-slate-500 whitespace-nowrap">
                   {node.label}

@@ -247,7 +247,7 @@ function AddContactForm({
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="font-medium text-gray-900">New contact</h4>
-        <button onClick={onClose} aria-label="Cancel"><X className="w-4 h-4 text-gray-400" /></button>
+        <button onClick={onClose} aria-label="Cancel"><X className="w-4 h-4 text-gray-700" /></button>
       </div>
       <input value={form.name}  onChange={(e) => setForm({ ...form, name: e.target.value })}  placeholder="Name *" className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-white focus:outline-none focus:border-[#BA7517]" />
       <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title"   className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-white focus:outline-none focus:border-[#BA7517]" />

@@ -173,7 +173,7 @@ export default function PublicTrackPage() {
                     <div className="relative">
                       {done
                         ? <CheckCircle2 className="w-6 h-6 text-[#BA7517]" fill="#BA7517" strokeWidth={0} />
-                        : <Circle className="w-6 h-6 text-white/30" />}
+                        : <Circle className="w-6 h-6 text-slate-400" />}
                     </div>
                     <div className="text-[11px] mt-1 text-gray-400">{s.label}</div>
                   </div>

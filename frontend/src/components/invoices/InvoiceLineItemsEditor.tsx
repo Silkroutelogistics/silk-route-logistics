@@ -93,7 +93,7 @@ export function InvoiceLineItemsEditor({ items, onChange }: Props) {
           <button
             type="button"
             onClick={() => removeRow(idx)}
-            className="p-1 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded transition"
+            className="p-1 hover:bg-red-500/20 text-slate-500 hover:text-red-700 rounded transition"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
