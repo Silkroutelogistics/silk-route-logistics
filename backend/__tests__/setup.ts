@@ -28,11 +28,13 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
+      aggregate: vi.fn(),
     },
     shipment: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
+      aggregate: vi.fn(),
     },
     invoice: {
       findMany: vi.fn(),
@@ -63,9 +65,11 @@ vi.mock("../src/config/database", () => ({
     },
     customer: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     notification: {
       create: vi.fn(),

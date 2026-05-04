@@ -44,6 +44,15 @@ export async function getCustomers(req: AuthRequest, res: Response) {
     ];
   }
 
+  // Lead Hunter / CRM separation gate. Customers and Lead Hunter prospects
+  // share this table; onboardingStatus is the partition key. Audit
+  // 39de1ad documented the gap. Omitted context preserves legacy callers.
+  if (query.context === "crm") {
+    where.onboardingStatus = "APPROVED";
+  } else if (query.context === "prospects") {
+    where.onboardingStatus = { not: "APPROVED" };
+  }
+
   const [customers, total] = await Promise.all([
     prisma.customer.findMany({
       where,

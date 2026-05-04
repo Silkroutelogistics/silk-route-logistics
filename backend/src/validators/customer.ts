@@ -33,6 +33,11 @@ export const customerQuerySchema = z.object({
   search: z.string().optional(),
   industry: z.string().optional(),
   city: z.string().optional(),
+  // context partitions the unified customers table:
+  //   "crm"       → onboardingStatus = APPROVED  (post-approval customer list)
+  //   "prospects" → onboardingStatus != APPROVED (Lead Hunter pipeline)
+  //   omitted     → no onboardingStatus filter (back-compat: AE Console legacy callers)
+  context: z.enum(["crm", "prospects"]).optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
 });
