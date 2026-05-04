@@ -192,16 +192,89 @@
  *           `globalMatchCount` and `ambiguousGlobalCount` for
  *           operator visibility.
  *
- * v5 candidates deferred from this scope:
- *   - Tailwind class resolution on .tsx React components (the
- *     Lead Hunter / dashboard modal class of contrast issues
- *     where bg + color come from utility classes, not CSS rules)
- *   - full HTML-DOM cascade resolution (v3's hardcoded hint table
- *     covers documented patterns; v5 would parse HTML files to
- *     build a class-containment graph for arbitrary nesting)
+ *   v5 (2026-05-04) — per-page body-bg context + Tailwind class
+ *           resolution on .tsx components. Closes the two
+ *           structural false-positive classes documented in Sprint
+ *           8 Phase C analysis.
+ *
+ *           Fix 1 — Per-page body-bg context. v4's body-bg fallback
+ *           used a single global value (whichever CSS file in walk
+ *           order first declared `body { background }`). For the
+ *           SRL repo this lands on a marketing-page `#FFFFFF`,
+ *           which is wrong for any CSS file that's actually loaded
+ *           by a non-marketing page. Carrier-portal `tools.css`
+ *           widget findings composited over `#FFFFFF` produced
+ *           2.56:1 P0s; real rendering composites over carrier-
+ *           portal navy bg → ~6:1 PASS.
+ *
+ *           v5 adds `buildPageBgContext(htmlFiles, cssFiles, vars)`:
+ *           walks `frontend/public/**\/*.html`, parses
+ *           `<link rel="stylesheet" href="...">` tags, finds the
+ *           effective body bg by walking loaded CSS files in
+ *           order, builds `Map<cssFilePath, PageBgContextEntry>`.
+ *           `findOpaqueParentBg` extends to a 7-tier lookup chain
+ *           (Tier 5 NEW): Tier 1-2 same-file → Tier 3-4 global
+ *           cross-file → **Tier 5 page-context body bg** → Tier 6
+ *           file-body → Tier 7 global-body → Tier 8 default white.
+ *
+ *           Per Sprint 9 directive confirmation #4: first walk-
+ *           order match wins on multi-page conflicts; conflicts
+ *           count surfaced for triage.
+ *           OpaqueParentResult source enum extended with
+ *           `page-context-body`. New trail field: `viaHtml` for the
+ *           HTML page that supplied the body bg.
+ *
+ *           Fix 2 — Tailwind class resolution on .tsx. v4's Pass 3
+ *           only iterated `.css` files. React components using
+ *           Tailwind utility classes for bg/fg pairs (Lead Hunter
+ *           modal, /track, dashboard pages) were invisible to
+ *           contrast detection. Pass 1 flagged non-canonical
+ *           palettes but didn't compute actual contrast.
+ *
+ *           v5 adds `TAILWIND_PALETTES` (14 palettes × 11 shades =
+ *           154 entries + white/black) per directive confirmation
+ *           #1, plus `resolveTailwindClass()` to map a single
+ *           utility-class token → hex (with alpha for opacity
+ *           suffix patterns like `text-white/80`, with arbitrary-
+ *           value support for `bg-[#0A2540]`). New `pass3Tailwind`
+ *           function:
+ *             - Extracts className expressions from .tsx files
+ *               (static "..." / '...' / `...` template literals
+ *               WITHOUT `${...}` interpolation per directive
+ *               confirmation #3).
+ *             - Tokenizes on whitespace, groups by pseudo-variant
+ *               prefix (base / hover / focus / active per directive
+ *               confirmation #2 — sm:/md:/lg:/dark: variants
+ *               deferred to v6).
+ *             - For each variant group with both `text-*` AND
+ *               `bg-*` resolved tokens, computes WCAG contrast and
+ *               emits findings using same P0/P1/P2 buckets as the
+ *               CSS pass.
+ *             - Files with dynamic `${...}` className interpolation
+ *               are logged once per file as
+ *               `dynamicSkippedFiles` for human triage.
+ *
+ *           v5 simplifications: same-element pairing only (parent-
+ *           child JSX walking deferred to v6); composite alpha-
+ *           overlay text/bg against `#FFFFFF` default parent (no
+ *           JSX tree walk to resolve actual ancestor).
+ *
+ *           Behavior delta: scanner now covers BOTH CSS files AND
+ *           React/Tailwind components. Trusted baseline established
+ *           for sitewide contrast detection across all surfaces.
+ *
+ * v6 candidates deferred from this scope:
+ *   - JSX tree walking for parent-child element contrast (when
+ *     parent element sets bg, child sets text on a different
+ *     element)
+ *   - sm:/md:/lg:/xl:/2xl: responsive variant evaluation
+ *   - dark: variant evaluation against the dark-mode body bg
+ *   - React state-driven className via cn() / clsx() / classnames
+ *     helpers
+ *   - CSS-in-JS dynamic styles (styled-components / emotion /
+ *     not currently used in repo)
  *   - @media query rules
  *   - pseudo-element styling (::before, ::after)
- *   - CSS-in-JS dynamic styles
  *   - PDF template colors (backend/src/services/pdfService.ts) —
  *     out of frontend scope per Sprint 2 directive
  *   - orphan-CSS detection (Sprint 3 spot-check 2 found
@@ -294,6 +367,67 @@ const NON_CANONICAL_TW_PALETTES: Set<string> = new Set([
 // Matches: bg-{palette}-{shade}, text-{palette}-{shade}, etc.
 const TW_COLOR_CLASS_RE =
   /\b(bg|text|border|fill|stroke|ring|outline|divide|placeholder|caret|accent|from|via|to)-([a-z]+)(?:-([0-9]{2,3}))?(?:\/[0-9]+)?\b/g;
+
+// v5 — Tailwind palette map for Pass 3 contrast resolution on .tsx
+// React components. Covers all 14 standard color palettes × 11 shades
+// (50–950) per Sprint 9 directive confirmation #1 ("include all 14 for
+// completeness — costs ~150 lines of map data, eliminates need for
+// grep-then-extend"). Plus white / black for non-shaded variants.
+const TAILWIND_PALETTES: { [palette: string]: { [shade: string]: string } } = {
+  slate:    { "50": "#F8FAFC", "100": "#F1F5F9", "200": "#E2E8F0", "300": "#CBD5E1", "400": "#94A3B8", "500": "#64748B", "600": "#475569", "700": "#334155", "800": "#1E293B", "900": "#0F172A", "950": "#020617" },
+  gray:     { "50": "#F9FAFB", "100": "#F3F4F6", "200": "#E5E7EB", "300": "#D1D5DB", "400": "#9CA3AF", "500": "#6B7280", "600": "#4B5563", "700": "#374151", "800": "#1F2937", "900": "#111827", "950": "#030712" },
+  zinc:     { "50": "#FAFAFA", "100": "#F4F4F5", "200": "#E4E4E7", "300": "#D4D4D8", "400": "#A1A1AA", "500": "#71717A", "600": "#52525B", "700": "#3F3F46", "800": "#27272A", "900": "#18181B", "950": "#09090B" },
+  stone:    { "50": "#FAFAF9", "100": "#F5F5F4", "200": "#E7E5E4", "300": "#D6D3D1", "400": "#A8A29E", "500": "#78716C", "600": "#57534E", "700": "#44403C", "800": "#292524", "900": "#1C1917", "950": "#0C0A09" },
+  neutral:  { "50": "#FAFAFA", "100": "#F5F5F5", "200": "#E5E5E5", "300": "#D4D4D4", "400": "#A3A3A3", "500": "#737373", "600": "#525252", "700": "#404040", "800": "#262626", "900": "#171717", "950": "#0A0A0A" },
+  red:      { "50": "#FEF2F2", "100": "#FEE2E2", "200": "#FECACA", "300": "#FCA5A5", "400": "#F87171", "500": "#EF4444", "600": "#DC2626", "700": "#B91C1C", "800": "#991B1B", "900": "#7F1D1D", "950": "#450A0A" },
+  orange:   { "50": "#FFF7ED", "100": "#FFEDD5", "200": "#FED7AA", "300": "#FDBA74", "400": "#FB923C", "500": "#F97316", "600": "#EA580C", "700": "#C2410C", "800": "#9A3412", "900": "#7C2D12", "950": "#431407" },
+  amber:    { "50": "#FFFBEB", "100": "#FEF3C7", "200": "#FDE68A", "300": "#FCD34D", "400": "#FBBF24", "500": "#F59E0B", "600": "#D97706", "700": "#B45309", "800": "#92400E", "900": "#78350F", "950": "#451A03" },
+  yellow:   { "50": "#FEFCE8", "100": "#FEF9C3", "200": "#FEF08A", "300": "#FDE047", "400": "#FACC15", "500": "#EAB308", "600": "#CA8A04", "700": "#A16207", "800": "#854D0E", "900": "#713F12", "950": "#422006" },
+  green:    { "50": "#F0FDF4", "100": "#DCFCE7", "200": "#BBF7D0", "300": "#86EFAC", "400": "#4ADE80", "500": "#22C55E", "600": "#16A34A", "700": "#15803D", "800": "#166534", "900": "#14532D", "950": "#052E16" },
+  emerald:  { "50": "#ECFDF5", "100": "#D1FAE5", "200": "#A7F3D0", "300": "#6EE7B7", "400": "#34D399", "500": "#10B981", "600": "#059669", "700": "#047857", "800": "#065F46", "900": "#064E3B", "950": "#022C22" },
+  blue:     { "50": "#EFF6FF", "100": "#DBEAFE", "200": "#BFDBFE", "300": "#93C5FD", "400": "#60A5FA", "500": "#3B82F6", "600": "#2563EB", "700": "#1D4ED8", "800": "#1E40AF", "900": "#1E3A8A", "950": "#172554" },
+  indigo:   { "50": "#EEF2FF", "100": "#E0E7FF", "200": "#C7D2FE", "300": "#A5B4FC", "400": "#818CF8", "500": "#6366F1", "600": "#4F46E5", "700": "#4338CA", "800": "#3730A3", "900": "#312E81", "950": "#1E1B4B" },
+  violet:   { "50": "#F5F3FF", "100": "#EDE9FE", "200": "#DDD6FE", "300": "#C4B5FD", "400": "#A78BFA", "500": "#8B5CF6", "600": "#7C3AED", "700": "#6D28D9", "800": "#5B21B6", "900": "#4C1D95", "950": "#2E1065" },
+};
+const TAILWIND_SPECIAL: { [name: string]: string } = {
+  "white": "#FFFFFF",
+  "black": "#000000",
+};
+
+// v5 — Resolve a Tailwind utility class token (e.g. `text-slate-400`,
+// `bg-white`, `bg-[#0A2540]`, `text-white/80`) to a hex value plus
+// optional alpha. Returns null if the token can't be resolved (unknown
+// palette, dynamic interpolation, non-color utility). The kind
+// (`bg` / `text`) is returned alongside hex so callers can pair on the
+// same JSX element.
+function resolveTailwindClass(token: string): { kind: "bg" | "text"; hex: string; alpha?: number; raw: string } | null {
+  // Strip arbitrary-opacity suffix (e.g. text-white/80 → text-white α=0.8)
+  let cls = token;
+  let alpha: number | undefined;
+  const opacityMatch = cls.match(/^(.+?)\/(\d+)$/);
+  if (opacityMatch) {
+    cls = opacityMatch[1];
+    alpha = Math.max(0, Math.min(100, parseInt(opacityMatch[2], 10))) / 100;
+  }
+  // Arbitrary value: text-[#FF0000] / bg-[#0A2540]
+  const arbMatch = cls.match(/^(text|bg)-\[(#[0-9A-Fa-f]{3,8})\]$/);
+  if (arbMatch) {
+    return { kind: arbMatch[1] as "bg" | "text", hex: normHex(arbMatch[2]), alpha, raw: token };
+  }
+  // Standard format: text-{palette}-{shade} OR text-white / text-black
+  const stdMatch = cls.match(/^(text|bg)-([a-z]+)(?:-(\d+))?$/);
+  if (!stdMatch) return null;
+  const kind = stdMatch[1] as "bg" | "text";
+  const palette = stdMatch[2];
+  const shade = stdMatch[3];
+  if (!shade && TAILWIND_SPECIAL[palette] !== undefined) {
+    return { kind, hex: TAILWIND_SPECIAL[palette], alpha, raw: token };
+  }
+  if (shade && TAILWIND_PALETTES[palette] && TAILWIND_PALETTES[palette][shade]) {
+    return { kind, hex: TAILWIND_PALETTES[palette][shade], alpha, raw: token };
+  }
+  return null;
+}
 
 // ─── Shared helpers ────────────────────────────────────────────────────
 
@@ -1019,6 +1153,101 @@ function buildGlobalCascadeBg(cssFiles: string[], vars: VarMap): string | null {
   return null;
 }
 
+// v5 — Per-page body-bg context. Walks frontend/public/**/*.html files
+// at scanner startup; for each HTML file, parses `<link
+// rel="stylesheet" href="...">` tags to identify the loaded CSS files,
+// then walks those CSS files in order to resolve the effective body bg
+// for that page. Builds a map of CSS-file-path → page body bg so Pass 3
+// can use the right context when a CSS file (e.g., carrier-portal
+// `tools.css`) doesn't declare its own body bg but is loaded by an
+// HTML page where another CSS file (e.g., `carrier-console.css`) sets
+// it.
+//
+// Closes the carrier-portal dark-theme false-positive class from
+// Sprint 8 Phase C: tools.css widget cards previously composited over
+// AE Console body-bg `#F8FAFC` fallback (since walk-order picked up a
+// marketing-page `body { background: #FFFFFF }` first), producing
+// 2.56:1 P0 findings against white. Real rendering composites over
+// carrier portal navy bg → ~6:1 PASS.
+//
+// Per Sprint 9 directive confirmation #4: first walk-order match wins
+// when a CSS file is loaded by multiple HTML pages with different body
+// bgs; conflicts count surfaced for transparency.
+interface PageBgContextEntry { bg: string; viaHtml: string; conflicts?: number }
+function buildPageBgContext(
+  htmlFiles: string[],
+  cssFiles: string[],
+  vars: VarMap
+): Map<string, PageBgContextEntry> {
+  const ctx = new Map<string, PageBgContextEntry>();
+  // Pre-cache parsed CSS rules so we don't re-parse for every HTML page.
+  const cssCache = new Map<string, ReturnType<typeof parseCssRules>>();
+  for (const file of cssFiles) {
+    cssCache.set(file, parseCssRules(readFile(file)));
+  }
+
+  for (const htmlFile of htmlFiles) {
+    const html = readFile(htmlFile);
+    // Match <link rel="stylesheet" href="..."> in any attribute order.
+    // Extract href via two-pass regex to be robust to attribute ordering.
+    const linkTagRe = /<link\b[^>]*>/gi;
+    const linkedRelPaths: string[] = [];
+    let lm: RegExpExecArray | null;
+    while ((lm = linkTagRe.exec(html)) !== null) {
+      const tag = lm[0];
+      if (!/rel\s*=\s*["']stylesheet["']/i.test(tag)) continue;
+      const hrefMatch = tag.match(/href\s*=\s*["']([^"']+)["']/i);
+      if (hrefMatch) linkedRelPaths.push(hrefMatch[1]);
+    }
+
+    // Resolve linked hrefs to absolute paths matching cssFiles[].
+    const linkedCss: string[] = [];
+    for (const rel of linkedRelPaths) {
+      const cleanRel = rel.split("?")[0].split("#")[0];
+      // Absolute path (starts with /) → relative to FRONTEND_PUBLIC.
+      // Relative path → relative to the HTML file's directory.
+      let absCandidate: string;
+      if (cleanRel.startsWith("/")) {
+        absCandidate = path.join(FRONTEND_PUBLIC, cleanRel.replace(/^\//, ""));
+      } else {
+        absCandidate = path.join(path.dirname(htmlFile), cleanRel);
+      }
+      const norm = path.normalize(absCandidate);
+      const match = cssFiles.find((f) => path.normalize(f) === norm);
+      if (match) linkedCss.push(match);
+    }
+    if (linkedCss.length === 0) continue;
+
+    // Find first opaque body bg by walking the loaded CSS files in
+    // load order. First match wins.
+    let pageBodyBg: string | null = null;
+    for (const cssFile of linkedCss) {
+      const { rules } = cssCache.get(cssFile)!;
+      const bg = findCascadeBg(rules, vars);
+      if (bg) {
+        pageBodyBg = bg;
+        break;
+      }
+    }
+    if (!pageBodyBg) continue;
+
+    // Stamp every loaded CSS file with this page's body bg. If a CSS
+    // file is already stamped from a previous HTML page with a
+    // DIFFERENT bg, increment conflicts but keep first match.
+    for (const cssFile of linkedCss) {
+      const existing = ctx.get(cssFile);
+      if (existing) {
+        if (existing.bg !== pageBodyBg) {
+          existing.conflicts = (existing.conflicts ?? 0) + 1;
+        }
+      } else {
+        ctx.set(cssFile, { bg: pageBodyBg, viaHtml: htmlFile });
+      }
+    }
+  }
+  return ctx;
+}
+
 // v2 — Walk bgRules for ancestors of childSelector and return the most-
 // specific OPAQUE background. Used to resolve what an alpha overlay sits
 // on top of for compositing.
@@ -1038,10 +1267,11 @@ interface BgRuleEntry { selector: string; bgHex: string; bgAlpha?: number; raw: 
 interface GlobalBgRuleEntry extends BgRuleEntry { file: string }
 interface OpaqueParentResult {
   hex: string;
-  source: "css-descent" | "html-hint" | "global-css-descent" | "global-html-hint" | "file-body" | "global-body" | "default-white";
+  source: "css-descent" | "html-hint" | "global-css-descent" | "global-html-hint" | "page-context-body" | "file-body" | "global-body" | "default-white";
   viaSelector?: string;
   viaFile?: string;          // v4 — origin file when source is global-*
   ambiguousMatches?: number; // v4 — count when multiple global files define same selector
+  pageContextConflicts?: number; // v5 — count when page-context-body matched multiple HTML pages
 }
 
 // v4 — Strip `html[data-mode="X"]` and `html[data-theme="X"][data-mode="X"]`
@@ -1092,7 +1322,8 @@ function findOpaqueParentBg(
   bgRules: BgRuleEntry[],
   fileBodyBg: string | null,
   globalBodyBg: string | null,
-  globalBgRules?: GlobalBgRuleEntry[]
+  globalBgRules?: GlobalBgRuleEntry[],
+  pageContextBg?: { bg: string; viaHtml: string; conflicts?: number }
 ): OpaqueParentResult {
   // Tier 1 — Same-file CSS-selector descent (v2 behavior, unchanged priority).
   let best: BgRuleEntry | null = null;
@@ -1178,7 +1409,22 @@ function findOpaqueParentBg(
     }
   }
 
-  // Tier 5 — Body-bg fallback chain (existing behavior).
+  // Tier 5 — v5 page-context body bg. When the current CSS file is
+  // loaded by an HTML page that resolves a different body bg than the
+  // global default, prefer the page-context value. Closes the carrier-
+  // portal pattern where tools.css loads alongside carrier-console.css
+  // (which sets navy body bg) but the global default fell back to
+  // marketing-page white.
+  if (pageContextBg) {
+    return {
+      hex: pageContextBg.bg,
+      source: "page-context-body",
+      viaFile: pageContextBg.viaHtml,
+      pageContextConflicts: pageContextBg.conflicts,
+    };
+  }
+
+  // Tier 6 — Body-bg fallback chain (existing behavior).
   if (fileBodyBg) return { hex: fileBodyBg, source: "file-body" };
   if (globalBodyBg) return { hex: globalBodyBg, source: "global-body" };
   return { hex: "#FFFFFF", source: "default-white" };
@@ -1186,8 +1432,9 @@ function findOpaqueParentBg(
 
 function pass3Contrast(
   cssFiles: string[],
-  vars: VarMap
-): { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number } {
+  vars: VarMap,
+  htmlFiles: string[]
+): { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number } {
   const findings: ContrastFinding[] = [];
   const unresolved: UnresolvedFinding[] = [];
   let resolved = 0;
@@ -1195,6 +1442,8 @@ function pass3Contrast(
   let compositedCount = 0;  // v2: tracks how many findings used alpha compositing
   let globalMatchCount = 0; // v4: tracks Tier-3 / Tier-4 global lookups
   let ambiguousGlobalCount = 0; // v4: tracks how many global matches had >1 file
+  let pageContextMatchCount = 0; // v5: tracks Tier-5 page-context body-bg lookups
+  let pageContextConflictsCount = 0; // v5: tracks page-context entries with >1 conflicting HTML page
   const globalBody = buildGlobalCascadeColor(cssFiles, vars);
   const globalBodyBg = buildGlobalCascadeBg(cssFiles, vars);
   // v4: cross-file bgRules index. Built once at start; passed to every
@@ -1202,6 +1451,10 @@ function pass3Contrast(
   // lookup misses (themed selectors in themes.css whose opaque parent
   // bg lives in console.css or page CSS).
   const globalBgRules = buildGlobalBgRules(cssFiles, vars);
+  // v5: page-context body-bg map. Built once at start; per-file lookup
+  // provides a Tier-5 fallback that's HTML-page-aware (e.g., tools.css
+  // loaded by carrier dashboard knows the carrier portal navy bg).
+  const pageBgContext = buildPageBgContext(htmlFiles, cssFiles, vars);
 
   for (const file of cssFiles) {
     const content = readFile(file);
@@ -1212,6 +1465,11 @@ function pass3Contrast(
     const localBody = findCascadeColor(rules, vars);
     const inferredBody = localBody ?? globalBody;
     const localBodyBg = findCascadeBg(rules, vars);
+    // v5: per-file page-context body bg lookup. If this CSS file is
+    // loaded by an HTML page that resolves a body bg from a different
+    // CSS file (e.g., carrier-portal tools.css alongside carrier-
+    // console.css's navy body), use that as Tier-5 fallback.
+    const pageContextBg = pageBgContext.get(file);
 
     // Build per-file selector → bg map. v2: track alpha alongside hex.
     const bgRules: BgRuleEntry[] = [];
@@ -1271,9 +1529,9 @@ function pass3Contrast(
       // v3 — findOpaqueParentBg now returns source metadata; threaded
       // into composedFromOverlay for finding-output trail.
       let effectiveBg = parent.bgHex;
-      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string; viaFile?: string; ambiguousMatches?: number } | null = null;
+      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string; viaFile?: string; ambiguousMatches?: number; pageContextConflicts?: number } | null = null;
       if (parent.bgAlpha !== undefined && parent.bgAlpha < 1) {
-        const opaqueResult = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg, globalBgRules);
+        const opaqueResult = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg, globalBgRules, pageContextBg);
         effectiveBg = compositeAlpha(parent.bgHex, parent.bgAlpha, opaqueResult.hex);
         composedFromOverlay = {
           overlay: parent.bgHex,
@@ -1283,11 +1541,16 @@ function pass3Contrast(
           viaSelector: opaqueResult.viaSelector,
           viaFile: opaqueResult.viaFile,
           ambiguousMatches: opaqueResult.ambiguousMatches,
+          pageContextConflicts: opaqueResult.pageContextConflicts,
         };
         compositedCount++;
         if (opaqueResult.source === "global-css-descent" || opaqueResult.source === "global-html-hint") {
           globalMatchCount++;
           if (opaqueResult.ambiguousMatches) ambiguousGlobalCount++;
+        }
+        if (opaqueResult.source === "page-context-body") {
+          pageContextMatchCount++;
+          if (opaqueResult.pageContextConflicts) pageContextConflictsCount++;
         }
       }
 
@@ -1312,6 +1575,7 @@ function pass3Contrast(
         if (composedFromOverlay) {
           const ambig = composedFromOverlay.ambiguousMatches ? ` [ambiguousMatches=${composedFromOverlay.ambiguousMatches}]` : "";
           const fileSuffix = composedFromOverlay.viaFile ? ` in ${composedFromOverlay.viaFile.replace(/^.*\/frontend\//, "frontend/")}` : "";
+          const conflicts = composedFromOverlay.pageContextConflicts ? ` [conflicts=${composedFromOverlay.pageContextConflicts}]` : "";
           const sourceTrail =
             composedFromOverlay.source === "html-hint" && composedFromOverlay.viaSelector
               ? ` (parent bg from HTML hint → ${composedFromOverlay.viaSelector})`
@@ -1321,6 +1585,8 @@ function pass3Contrast(
               ? ` (parent bg from global CSS ancestor ${composedFromOverlay.viaSelector}${fileSuffix}${ambig})`
               : composedFromOverlay.source === "global-html-hint" && composedFromOverlay.viaSelector
               ? ` (parent bg from global HTML hint → ${composedFromOverlay.viaSelector}${fileSuffix}${ambig})`
+              : composedFromOverlay.source === "page-context-body"
+              ? ` (parent bg from page-context body via${fileSuffix}${conflicts})`
               : composedFromOverlay.source === "file-body" || composedFromOverlay.source === "global-body" || composedFromOverlay.source === "default-white"
               ? ` (parent bg from ${composedFromOverlay.source} fallback)`
               : "";
@@ -1354,9 +1620,9 @@ function pass3Contrast(
     for (const b of bgRules) {
       if (!b.bgHex) continue;
       let effectiveBg = b.bgHex;
-      let composeTrail: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string; viaFile?: string; ambiguousMatches?: number } | null = null;
+      let composeTrail: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string; viaFile?: string; ambiguousMatches?: number; pageContextConflicts?: number } | null = null;
       if (b.bgAlpha !== undefined && b.bgAlpha < 1) {
-        const opaqueResult = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg, globalBgRules);
+        const opaqueResult = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg, globalBgRules, pageContextBg);
         effectiveBg = compositeAlpha(b.bgHex, b.bgAlpha, opaqueResult.hex);
         composeTrail = {
           overlay: b.bgHex,
@@ -1366,10 +1632,15 @@ function pass3Contrast(
           viaSelector: opaqueResult.viaSelector,
           viaFile: opaqueResult.viaFile,
           ambiguousMatches: opaqueResult.ambiguousMatches,
+          pageContextConflicts: opaqueResult.pageContextConflicts,
         };
         if (opaqueResult.source === "global-css-descent" || opaqueResult.source === "global-html-hint") {
           globalMatchCount++;
           if (opaqueResult.ambiguousMatches) ambiguousGlobalCount++;
+        }
+        if (opaqueResult.source === "page-context-body") {
+          pageContextMatchCount++;
+          if (opaqueResult.pageContextConflicts) pageContextConflictsCount++;
         }
       }
       const rgb = hexToRgb(effectiveBg);
@@ -1410,6 +1681,7 @@ function pass3Contrast(
           let note = noteBase;
           if (composeTrail) {
             const ambig = composeTrail.ambiguousMatches ? ` [ambiguousMatches=${composeTrail.ambiguousMatches}]` : "";
+            const conflicts = composeTrail.pageContextConflicts ? ` [conflicts=${composeTrail.pageContextConflicts}]` : "";
             const fileSuffix = composeTrail.viaFile ? ` in ${composeTrail.viaFile.replace(/^.*\/frontend\//, "frontend/")}` : "";
             const sourceTrail =
               composeTrail.source === "html-hint" && composeTrail.viaSelector
@@ -1420,6 +1692,8 @@ function pass3Contrast(
                 ? ` (parent bg from global CSS ancestor ${composeTrail.viaSelector}${fileSuffix}${ambig})`
                 : composeTrail.source === "global-html-hint" && composeTrail.viaSelector
                 ? ` (parent bg from global HTML hint → ${composeTrail.viaSelector}${fileSuffix}${ambig})`
+                : composeTrail.source === "page-context-body"
+                ? ` (parent bg from page-context body via${fileSuffix}${conflicts})`
                 : ` (parent bg from ${composeTrail.source} fallback)`;
             note = `${noteBase} · composited overlay ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)} over ${composeTrail.parentBg} → ${effectiveBg}${sourceTrail}`;
           }
@@ -1453,7 +1727,147 @@ function pass3Contrast(
     }
   }
 
-  return { findings, unresolved, resolved, skippedMedia, inferredBody: globalBody, compositedCount, globalMatchCount, ambiguousGlobalCount };
+  return { findings, unresolved, resolved, skippedMedia, inferredBody: globalBody, compositedCount, globalMatchCount, ambiguousGlobalCount, pageContextMatchCount, pageContextConflictsCount };
+}
+
+// v5 — Tailwind contrast pass on .tsx React components. Extracts
+// className expressions from each .tsx file, tokenizes, finds text-* +
+// bg-* pairs on the SAME className string (= same JSX element per v5
+// simplification — parent-child JSX walking is v6), resolves each via
+// TAILWIND_PALETTES / TAILWIND_SPECIAL / arbitrary-value bracket
+// syntax, computes contrast.
+//
+// Per Sprint 9 directive confirmation #2: parses `hover:` and `focus:`
+// pseudo-variant prefixes and emits separate state-pair findings (so a
+// className containing both `bg-white hover:bg-slate-100` and
+// `text-slate-700` produces two pairs: base and hover).
+//
+// Per directive confirmation #3: skips whole className when `${...}`
+// template interpolation is detected; logs once per file in
+// `dynamicSkippedFiles` for human triage.
+//
+// v6 candidates deferred: parent-child JSX tree walking (when parent
+// element sets bg, child sets text), `sm:` / `md:` / `lg:` / `dark:`
+// responsive variants, React state-driven className via cn() / clsx()
+// helpers, CSS-in-JS dynamic styles.
+function pass3Tailwind(tsxFiles: string[]): {
+  findings: ContrastFinding[];
+  scanned: number;
+  pairsEvaluated: number;
+  dynamicSkippedFiles: number;
+} {
+  const findings: ContrastFinding[] = [];
+  let pairsEvaluated = 0;
+  let dynamicSkippedFiles = 0;
+  const dynamicLogged = new Set<string>();
+
+  // Match className=<value>. Three forms:
+  //   className="static string"
+  //   className='static string'
+  //   className={`static template no $\{` }
+  //   (Skip className={...} arbitrary expressions — captured separately
+  //    for dynamic-interpolation detection.)
+  const staticDoubleRe = /className\s*=\s*"([^"]+)"/g;
+  const staticSingleRe = /className\s*=\s*'([^']+)'/g;
+  // Backtick template with NO interpolation. Anti-anchor on $ so any
+  // template containing ${...} fails the match.
+  const staticBacktickRe = /className\s*=\s*\{`([^`$]+)`\}/g;
+  // Detect ANY className with ${...} interpolation, for once-per-file
+  // logging.
+  const dynamicRe = /className\s*=\s*\{[^}]*`[^`]*\$\{/;
+
+  for (const file of tsxFiles) {
+    const content = readFile(file);
+    const lines = content.split("\n");
+
+    if (dynamicRe.test(content) && !dynamicLogged.has(file)) {
+      dynamicLogged.add(file);
+      dynamicSkippedFiles++;
+    }
+
+    const harvest = (re: RegExp) => {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(content)) !== null) {
+        const classNames = m[1];
+        if (!classNames || /\$\{/.test(classNames)) continue;
+        const lineIdx = content.slice(0, m.index).split("\n").length;
+        evalClassNames(file, classNames, lineIdx);
+      }
+    };
+
+    const evalClassNames = (file: string, classNames: string, line: number) => {
+      // Tokenize on whitespace + group by pseudo-variant.
+      const tokens = classNames.split(/\s+/).filter(Boolean);
+      const groups = new Map<
+        string,
+        { bg?: { hex: string; alpha?: number; raw: string }; text?: { hex: string; alpha?: number; raw: string } }
+      >();
+      for (const token of tokens) {
+        // Strip variant prefix (one level — `hover:bg-white` → variant=hover, cls=bg-white).
+        // Skip variants beyond hover/focus/active per v5 simplification.
+        const variantMatch = token.match(/^(hover|focus|active|disabled):(.+)$/);
+        const variant = variantMatch ? variantMatch[1] : "base";
+        const cls = variantMatch ? variantMatch[2] : token;
+        // Skip dark:/sm:/md:/lg:/xl:/2xl: variants per v5 simplification.
+        if (/^(dark|sm|md|lg|xl|2xl):/.test(cls)) continue;
+        const resolved = resolveTailwindClass(cls);
+        if (!resolved) continue;
+        const group = groups.get(variant) ?? {};
+        if (resolved.kind === "bg") {
+          group.bg = { hex: resolved.hex, alpha: resolved.alpha, raw: resolved.raw };
+        } else {
+          group.text = { hex: resolved.hex, alpha: resolved.alpha, raw: resolved.raw };
+        }
+        groups.set(variant, group);
+      }
+
+      // For each variant with both bg + text, compute contrast. v5
+      // simplification: composite alpha-overlay text against composited
+      // bg; composite alpha-overlay bg against #FFFFFF (no JSX tree
+      // walk to find the actual ancestor).
+      for (const [variant, group] of groups) {
+        if (!group.bg || !group.text) continue;
+        pairsEvaluated++;
+
+        let bg = group.bg.hex;
+        if (group.bg.alpha !== undefined && group.bg.alpha < 1) {
+          bg = compositeAlpha(group.bg.hex, group.bg.alpha, "#FFFFFF");
+        }
+        let fg = group.text.hex;
+        if (group.text.alpha !== undefined && group.text.alpha < 1) {
+          fg = compositeAlpha(group.text.hex, group.text.alpha, bg);
+        }
+
+        const ratio = contrastRatio(bg, fg);
+        if (ratio === null) continue;
+        const sev = contrastSeverity(ratio);
+        if (sev) {
+          const variantLabel = variant === "base" ? "" : `${variant}:`;
+          findings.push({
+            file,
+            selector: `Tailwind ${variantLabel}${group.bg.raw} + ${variantLabel}${group.text.raw}`,
+            background: bg,
+            foreground: fg,
+            ratio: Math.round(ratio * 100) / 100,
+            severity: sev,
+            note: `tailwind ${variant}: bg=${group.bg.raw}→${bg} text=${group.text.raw}→${fg} (line ${line})`,
+          });
+        }
+      }
+    };
+
+    harvest(staticDoubleRe);
+    harvest(staticSingleRe);
+    harvest(staticBacktickRe);
+  }
+
+  return {
+    findings,
+    scanned: tsxFiles.length,
+    pairsEvaluated,
+    dynamicSkippedFiles,
+  };
 }
 
 // ─── Output formatter ───────────────────────────────────────────────────
@@ -1462,7 +1876,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -1478,7 +1892,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v4 (alpha-overlay compositing + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules merging)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v5 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -1505,6 +1919,10 @@ function buildReport(
   lines.push(`**Pass 3 alpha-overlay compositing (v2)**: ${pass3.compositedCount} finding(s) used alpha compositing — overlay rgba/hex composited over nearest opaque ancestor before contrast math, eliminating the alpha-stripping false-positive class from v1.`);
   lines.push("");
   lines.push(`**Pass 3 cross-file bgRules merging (v4)**: ${pass3.globalMatchCount} finding(s) resolved their opaque parent bg via the global cross-file index (Tier 3 / Tier 4 fallback) — themed selectors in themes.css whose parent rule lives in console.css or page CSS. ${pass3.ambiguousGlobalCount} of those had ambiguous matches (multiple files defined the same selector); first-match-wins per directive, ambiguity count surfaced in finding-output trail for triage.`);
+  lines.push("");
+  lines.push(`**Pass 3 page-context body-bg (v5)**: ${pass3.pageContextMatchCount} finding(s) resolved their parent bg via the per-page HTML-aware Tier-5 fallback — closes the carrier-portal pattern where tools.css widgets composite over the carrier portal's navy body bg (set by carrier-console.css) rather than the AE Console marketing-page white default. ${pass3.pageContextConflictsCount} of those had conflicting matches across multiple HTML pages (first-match-wins per directive, conflicts count surfaced in trail).`);
+  lines.push("");
+  lines.push(`**Pass 3 Tailwind contrast on .tsx (v5)**: ${pass3.tailwindFindingsCount} finding(s) from ${pass3.tailwindPairsEvaluated} text+bg pairs evaluated across React .tsx components. ${pass3.tailwindDynamicSkippedFiles} file(s) had dynamic className interpolation skipped per directive simplification. JSX tree walking (parent-child element pairing), responsive variants (sm:/md:/lg:), and dark: variant deferred to v6.`);
   lines.push("");
 
   // ── P0 section
@@ -1670,10 +2088,26 @@ function main() {
   console.error("[brand-audit] Pass 3 — surface contrast...");
   const vars = buildVarMap(cssFiles);
   console.error(`[brand-audit] Pass 3 var map: ${Object.keys(vars).length} CSS variables resolved.`);
-  const pass3 = pass3Contrast(cssFiles, vars);
+  const pass3 = pass3Contrast(cssFiles, vars, htmlFiles);
   console.error(
-    `[brand-audit] Pass 3: ${pass3.findings.length} contrast findings, ${pass3.unresolved.length} unresolved vars, ${pass3.skippedMedia} @media blocks skipped.`
+    `[brand-audit] Pass 3 CSS: ${pass3.findings.length} contrast findings, ${pass3.unresolved.length} unresolved vars, ${pass3.skippedMedia} @media blocks skipped, ${pass3.pageContextMatchCount} page-context body-bg lookups.`
   );
+
+  // v5 — Pass 3 extension: Tailwind contrast pairs on .tsx components.
+  console.error("[brand-audit] Pass 3 — Tailwind contrast on .tsx...");
+  const pass3tw = pass3Tailwind(tsxFiles);
+  console.error(
+    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs evaluated, ${pass3tw.dynamicSkippedFiles} files with dynamic className skipped.`
+  );
+
+  // Merge Tailwind findings into pass3 for unified P0/P1/P2 reporting.
+  const pass3Combined = {
+    ...pass3,
+    findings: [...pass3.findings, ...pass3tw.findings],
+    tailwindFindingsCount: pass3tw.findings.length,
+    tailwindPairsEvaluated: pass3tw.pairsEvaluated,
+    tailwindDynamicSkippedFiles: pass3tw.dynamicSkippedFiles,
+  };
 
   const report = buildReport(
     {
@@ -1684,7 +2118,7 @@ function main() {
     },
     pass1,
     pass2,
-    pass3
+    pass3Combined
   );
 
   if (!fs.existsSync(REPORT_DIR)) {
@@ -1695,7 +2129,7 @@ function main() {
   fs.writeFileSync(reportPath, report);
   console.error(`\n[brand-audit] Report: ${relPath(reportPath)}`);
   console.error(
-    `[brand-audit] Totals: P0=${pass1.filter(f => f.severity === "P0").length + pass2.filter(f => f.severity === "P0").length + pass3.findings.filter(f => f.severity === "P0").length} · P1=${pass1.filter(f => f.severity === "P1").length + pass2.filter(f => f.severity === "P1").length + pass3.findings.filter(f => f.severity === "P1").length} · P2=${pass1.filter(f => f.severity === "P2").length + pass2.filter(f => f.severity === "P2").length + pass3.findings.filter(f => f.severity === "P2").length}`
+    `[brand-audit] Totals: P0=${pass1.filter(f => f.severity === "P0").length + pass2.filter(f => f.severity === "P0").length + pass3Combined.findings.filter(f => f.severity === "P0").length} · P1=${pass1.filter(f => f.severity === "P1").length + pass2.filter(f => f.severity === "P1").length + pass3Combined.findings.filter(f => f.severity === "P1").length} · P2=${pass1.filter(f => f.severity === "P2").length + pass2.filter(f => f.severity === "P2").length + pass3Combined.findings.filter(f => f.severity === "P2").length}`
   );
 
   process.stdout.write(report);
