@@ -147,14 +147,61 @@
  *           eliminated. Remaining P0s are real readability
  *           issues — input for Sprint 7 fix sweep.
  *
- * v4 candidates deferred from this scope:
+ *   v4 (2026-05-04) — cross-file bgRules merging. v3's HTML
+ *           cascade hints (and CSS-selector descent) only searched
+ *           same-file bgRules, so themed selectors in themes.css
+ *           (`html[data-mode="dark"] .sidebar-nav a:hover`) couldn't
+ *           resolve their opaque parent bg because the parent rule
+ *           (`.sidebar { background: var(--theme-sidebar-bg) }`)
+ *           lives in console.css. The HTML hint correctly identified
+ *           `.sidebar` as the parent class but the same-file lookup
+ *           returned no match.
+ *
+ *           v4 builds a global bgRules index across all CSS files at
+ *           Pass 3 startup (`buildGlobalBgRules`) with file
+ *           attribution. `findOpaqueParentBg` extends to a 5-tier
+ *           lookup chain:
+ *             Tier 1 — same-file CSS-selector descent (existing)
+ *             Tier 2 — same-file HTML cascade hint (existing)
+ *             Tier 3 — global CSS-selector descent (NEW)
+ *             Tier 4 — global HTML cascade hint (NEW)
+ *             Tier 5 — body bg fallback chain (existing)
+ *
+ *           Same-file priority preserved so per-file overrides win
+ *           when present (per directive confirmation #4). Mode-prefix
+ *           stripping applied on both sides of the global match
+ *           (`stripModePrefix`) so themed variants resolve to the
+ *           canonical parent class regardless of `[data-mode="X"]` /
+ *           `[data-theme="X"]` prefix presence.
+ *
+ *           Ambiguous global matches (multiple files defining the
+ *           same selector — e.g., `.sidebar` in console.css and
+ *           carrier-console.css with potentially different bg
+ *           values) take first-match-wins per directive
+ *           confirmation #1, with `ambiguousMatches` count
+ *           surfaced in finding-output trail for human triage.
+ *
+ *           OpaqueParentResult source enum extended with
+ *           `global-css-descent` and `global-html-hint`. Trail
+ *           additions: `viaFile` for global hits, `ambiguousMatches`
+ *           when applicable.
+ *
+ *           Behavior delta: themed-selector false positives
+ *           eliminated when the parent class has an opaque bg rule
+ *           anywhere in scope. Pass 3 summary surfaces
+ *           `globalMatchCount` and `ambiguousGlobalCount` for
+ *           operator visibility.
+ *
+ * v5 candidates deferred from this scope:
+ *   - Tailwind class resolution on .tsx React components (the
+ *     Lead Hunter / dashboard modal class of contrast issues
+ *     where bg + color come from utility classes, not CSS rules)
+ *   - full HTML-DOM cascade resolution (v3's hardcoded hint table
+ *     covers documented patterns; v5 would parse HTML files to
+ *     build a class-containment graph for arbitrary nesting)
  *   - @media query rules
  *   - pseudo-element styling (::before, ::after)
  *   - CSS-in-JS dynamic styles
- *   - full HTML-DOM cascade resolution (v3's hardcoded hint
- *     table is intentional v3 simplification per directive Phase
- *     A2 Option (a); v4 would parse HTML files to build a
- *     class-containment graph)
  *   - PDF template colors (backend/src/services/pdfService.ts) —
  *     out of frontend scope per Sprint 2 directive
  *   - orphan-CSS detection (Sprint 3 spot-check 2 found
@@ -985,16 +1032,69 @@ function buildGlobalCascadeBg(cssFiles: string[], vars: VarMap): string | null {
 //
 // Returns an object with the resolved hex plus a `source` tag for trail
 // reporting in Pass 3 finding output: `css-descent` / `html-hint` /
-// `file-body` / `global-body` / `default-white`.
+// `global-css-descent` / `global-html-hint` (v4) / `file-body` /
+// `global-body` / `default-white`.
 interface BgRuleEntry { selector: string; bgHex: string; bgAlpha?: number; raw: string }
-interface OpaqueParentResult { hex: string; source: "css-descent" | "html-hint" | "file-body" | "global-body" | "default-white"; viaSelector?: string }
+interface GlobalBgRuleEntry extends BgRuleEntry { file: string }
+interface OpaqueParentResult {
+  hex: string;
+  source: "css-descent" | "html-hint" | "global-css-descent" | "global-html-hint" | "file-body" | "global-body" | "default-white";
+  viaSelector?: string;
+  viaFile?: string;          // v4 — origin file when source is global-*
+  ambiguousMatches?: number; // v4 — count when multiple global files define same selector
+}
+
+// v4 — Strip `html[data-mode="X"]` and `html[data-theme="X"][data-mode="X"]`
+// prefixes from a selector. Used by global bgRules matching so themed
+// variants (`html[data-mode="dark"] .sidebar-nav a:hover`) resolve to
+// the canonical class hierarchy (`.sidebar-nav a:hover`) for cross-file
+// lookup.
+function stripModePrefix(sel: string): string {
+  // Combined theme + mode: html[data-theme="X"][data-mode="X"]
+  let out = sel.replace(/^html\[data-theme\s*=\s*["'][^"']*["']\]\[data-mode\s*=\s*["'][^"']*["']\]\s*/, "");
+  // Mode-only: html[data-mode="X"]
+  out = out.replace(/^html\[data-mode\s*=\s*["'][^"']*["']\]\s*/, "");
+  // Theme-only: html[data-theme="X"]
+  out = out.replace(/^html\[data-theme\s*=\s*["'][^"']*["']\]\s*/, "");
+  return out;
+}
+
+// v4 — Build global bgRules index across all CSS files. Used as a Tier-3
+// fallback when same-file bgRules can't resolve the opaque parent (e.g.,
+// themes.css sets `--theme-sidebar-bg` but the opaque `.sidebar`
+// background rule lives in console.css). Each entry carries `file`
+// attribution for ambiguity logging when multiple files define the same
+// selector.
+function buildGlobalBgRules(cssFiles: string[], vars: VarMap): GlobalBgRuleEntry[] {
+  const out: GlobalBgRuleEntry[] = [];
+  for (const file of cssFiles) {
+    const content = readFile(file);
+    const { rules } = parseCssRules(content);
+    for (const r of rules) {
+      if (!r.background) continue;
+      const res = resolveColor(r.background, vars);
+      if (res.hex && res.hex !== "TRANSPARENT") {
+        out.push({
+          selector: r.selector,
+          bgHex: res.hex,
+          bgAlpha: res.alpha,
+          raw: r.background,
+          file,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 function findOpaqueParentBg(
   childSelector: string,
   bgRules: BgRuleEntry[],
   fileBodyBg: string | null,
-  globalBodyBg: string | null
+  globalBodyBg: string | null,
+  globalBgRules?: GlobalBgRuleEntry[]
 ): OpaqueParentResult {
-  // 1. CSS-selector descent (v2 behavior, unchanged priority).
+  // Tier 1 — Same-file CSS-selector descent (v2 behavior, unchanged priority).
   let best: BgRuleEntry | null = null;
   for (const b of bgRules) {
     if (b.selector === childSelector) continue; // exclude self — we want strict ancestors
@@ -1005,14 +1105,13 @@ function findOpaqueParentBg(
   }
   if (best) return { hex: best.bgHex, source: "css-descent", viaSelector: best.selector };
 
-  // 2. v3 — HTML cascade hints. Extract the FIRST .className token
-  //    anywhere in the childSelector (skipping html / body / attribute
-  //    prefixes like `html[data-mode="dark"]`, since the semantically
-  //    meaningful class is the nearest one). Match against hint table,
-  //    look up the parent class in bgRules.
+  // Tier 2 — v3 same-file HTML cascade hints. Extract the FIRST .className
+  // token anywhere in childSelector (skipping html / body / attribute
+  // prefixes), match against hint table, look up the parent class in
+  // same-file bgRules.
   const leadingClassMatch = childSelector.match(/\.([A-Za-z][A-Za-z0-9_-]*)/);
-  if (leadingClassMatch) {
-    const leadingClass = "." + leadingClassMatch[1];
+  const leadingClass = leadingClassMatch ? "." + leadingClassMatch[1] : null;
+  if (leadingClass) {
     for (const hint of HTML_CASCADE_HINTS) {
       if (!hint.childRegex.test(leadingClass)) continue;
       const parent = bgRules.find(
@@ -1024,7 +1123,62 @@ function findOpaqueParentBg(
     }
   }
 
-  // 3. Body-bg fallback chain.
+  // v4 — Global bgRules fallback. Matches against a cross-file index
+  // with `html[data-mode="X"]` / `html[data-theme="X"]` prefixes
+  // stripped on both sides, so themed variants resolve to canonical
+  // parent classes living in different files. Per Sprint 7 directive
+  // confirmations: same-file priority preserved (Tier 1 + 2 first);
+  // first-match-wins on ambiguity with `ambiguousMatches` count
+  // surfaced for transparency.
+  if (globalBgRules) {
+    const normalizedChild = stripModePrefix(childSelector);
+
+    // Tier 3 — Global CSS-selector descent.
+    let bestGlobal: GlobalBgRuleEntry | null = null;
+    let bestGlobalParentNorm = "";
+    for (const b of globalBgRules) {
+      const normalizedParent = stripModePrefix(b.selector);
+      if (normalizedParent === normalizedChild) continue;
+      if (!isDescendantSelector(normalizedParent, normalizedChild)) continue;
+      const opaque = b.bgAlpha === undefined || b.bgAlpha >= 1;
+      if (!opaque) continue;
+      if (!bestGlobal || normalizedParent.length > bestGlobalParentNorm.length) {
+        bestGlobal = b;
+        bestGlobalParentNorm = normalizedParent;
+      }
+    }
+    if (bestGlobal) {
+      return {
+        hex: bestGlobal.bgHex,
+        source: "global-css-descent",
+        viaSelector: bestGlobalParentNorm,
+        viaFile: bestGlobal.file,
+      };
+    }
+
+    // Tier 4 — Global HTML cascade hints.
+    if (leadingClass) {
+      for (const hint of HTML_CASCADE_HINTS) {
+        if (!hint.childRegex.test(leadingClass)) continue;
+        const matches = globalBgRules.filter(
+          (b) =>
+            stripModePrefix(b.selector) === hint.parentSelector &&
+            (b.bgAlpha === undefined || b.bgAlpha >= 1)
+        );
+        if (matches.length > 0) {
+          return {
+            hex: matches[0].bgHex,
+            source: "global-html-hint",
+            viaSelector: hint.parentSelector,
+            viaFile: matches[0].file,
+            ambiguousMatches: matches.length > 1 ? matches.length : undefined,
+          };
+        }
+      }
+    }
+  }
+
+  // Tier 5 — Body-bg fallback chain (existing behavior).
   if (fileBodyBg) return { hex: fileBodyBg, source: "file-body" };
   if (globalBodyBg) return { hex: globalBodyBg, source: "global-body" };
   return { hex: "#FFFFFF", source: "default-white" };
@@ -1033,14 +1187,21 @@ function findOpaqueParentBg(
 function pass3Contrast(
   cssFiles: string[],
   vars: VarMap
-): { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number } {
+): { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number } {
   const findings: ContrastFinding[] = [];
   const unresolved: UnresolvedFinding[] = [];
   let resolved = 0;
   let skippedMedia = 0;
   let compositedCount = 0;  // v2: tracks how many findings used alpha compositing
+  let globalMatchCount = 0; // v4: tracks Tier-3 / Tier-4 global lookups
+  let ambiguousGlobalCount = 0; // v4: tracks how many global matches had >1 file
   const globalBody = buildGlobalCascadeColor(cssFiles, vars);
   const globalBodyBg = buildGlobalCascadeBg(cssFiles, vars);
+  // v4: cross-file bgRules index. Built once at start; passed to every
+  // findOpaqueParentBg call as a Tier-3 / Tier-4 fallback when same-file
+  // lookup misses (themed selectors in themes.css whose opaque parent
+  // bg lives in console.css or page CSS).
+  const globalBgRules = buildGlobalBgRules(cssFiles, vars);
 
   for (const file of cssFiles) {
     const content = readFile(file);
@@ -1110,9 +1271,9 @@ function pass3Contrast(
       // v3 — findOpaqueParentBg now returns source metadata; threaded
       // into composedFromOverlay for finding-output trail.
       let effectiveBg = parent.bgHex;
-      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string } | null = null;
+      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string; viaFile?: string; ambiguousMatches?: number } | null = null;
       if (parent.bgAlpha !== undefined && parent.bgAlpha < 1) {
-        const opaqueResult = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg);
+        const opaqueResult = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg, globalBgRules);
         effectiveBg = compositeAlpha(parent.bgHex, parent.bgAlpha, opaqueResult.hex);
         composedFromOverlay = {
           overlay: parent.bgHex,
@@ -1120,8 +1281,14 @@ function pass3Contrast(
           alpha: parent.bgAlpha,
           source: opaqueResult.source,
           viaSelector: opaqueResult.viaSelector,
+          viaFile: opaqueResult.viaFile,
+          ambiguousMatches: opaqueResult.ambiguousMatches,
         };
         compositedCount++;
+        if (opaqueResult.source === "global-css-descent" || opaqueResult.source === "global-html-hint") {
+          globalMatchCount++;
+          if (opaqueResult.ambiguousMatches) ambiguousGlobalCount++;
+        }
       }
 
       // v2 — If the foreground itself has alpha (rare: rgba color or
@@ -1143,11 +1310,17 @@ function pass3Contrast(
             : "ancestor-bg vs descendant-color contrast",
         ];
         if (composedFromOverlay) {
+          const ambig = composedFromOverlay.ambiguousMatches ? ` [ambiguousMatches=${composedFromOverlay.ambiguousMatches}]` : "";
+          const fileSuffix = composedFromOverlay.viaFile ? ` in ${composedFromOverlay.viaFile.replace(/^.*\/frontend\//, "frontend/")}` : "";
           const sourceTrail =
             composedFromOverlay.source === "html-hint" && composedFromOverlay.viaSelector
               ? ` (parent bg from HTML hint → ${composedFromOverlay.viaSelector})`
               : composedFromOverlay.source === "css-descent" && composedFromOverlay.viaSelector
               ? ` (parent bg from CSS ancestor ${composedFromOverlay.viaSelector})`
+              : composedFromOverlay.source === "global-css-descent" && composedFromOverlay.viaSelector
+              ? ` (parent bg from global CSS ancestor ${composedFromOverlay.viaSelector}${fileSuffix}${ambig})`
+              : composedFromOverlay.source === "global-html-hint" && composedFromOverlay.viaSelector
+              ? ` (parent bg from global HTML hint → ${composedFromOverlay.viaSelector}${fileSuffix}${ambig})`
               : composedFromOverlay.source === "file-body" || composedFromOverlay.source === "global-body" || composedFromOverlay.source === "default-white"
               ? ` (parent bg from ${composedFromOverlay.source} fallback)`
               : "";
@@ -1181,9 +1354,9 @@ function pass3Contrast(
     for (const b of bgRules) {
       if (!b.bgHex) continue;
       let effectiveBg = b.bgHex;
-      let composeTrail: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string } | null = null;
+      let composeTrail: { overlay: string; parentBg: string; alpha: number; source: string; viaSelector?: string; viaFile?: string; ambiguousMatches?: number } | null = null;
       if (b.bgAlpha !== undefined && b.bgAlpha < 1) {
-        const opaqueResult = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg);
+        const opaqueResult = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg, globalBgRules);
         effectiveBg = compositeAlpha(b.bgHex, b.bgAlpha, opaqueResult.hex);
         composeTrail = {
           overlay: b.bgHex,
@@ -1191,7 +1364,13 @@ function pass3Contrast(
           alpha: b.bgAlpha,
           source: opaqueResult.source,
           viaSelector: opaqueResult.viaSelector,
+          viaFile: opaqueResult.viaFile,
+          ambiguousMatches: opaqueResult.ambiguousMatches,
         };
+        if (opaqueResult.source === "global-css-descent" || opaqueResult.source === "global-html-hint") {
+          globalMatchCount++;
+          if (opaqueResult.ambiguousMatches) ambiguousGlobalCount++;
+        }
       }
       const rgb = hexToRgb(effectiveBg);
       if (!rgb) continue;
@@ -1230,11 +1409,17 @@ function pass3Contrast(
             "dark bg with no explicit `color:` — cascade resolves to body/html color. Set explicit `color: var(--fg-on-navy)` or equivalent.";
           let note = noteBase;
           if (composeTrail) {
+            const ambig = composeTrail.ambiguousMatches ? ` [ambiguousMatches=${composeTrail.ambiguousMatches}]` : "";
+            const fileSuffix = composeTrail.viaFile ? ` in ${composeTrail.viaFile.replace(/^.*\/frontend\//, "frontend/")}` : "";
             const sourceTrail =
               composeTrail.source === "html-hint" && composeTrail.viaSelector
                 ? ` (parent bg from HTML hint → ${composeTrail.viaSelector})`
                 : composeTrail.source === "css-descent" && composeTrail.viaSelector
                 ? ` (parent bg from CSS ancestor ${composeTrail.viaSelector})`
+                : composeTrail.source === "global-css-descent" && composeTrail.viaSelector
+                ? ` (parent bg from global CSS ancestor ${composeTrail.viaSelector}${fileSuffix}${ambig})`
+                : composeTrail.source === "global-html-hint" && composeTrail.viaSelector
+                ? ` (parent bg from global HTML hint → ${composeTrail.viaSelector}${fileSuffix}${ambig})`
                 : ` (parent bg from ${composeTrail.source} fallback)`;
             note = `${noteBase} · composited overlay ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)} over ${composeTrail.parentBg} → ${effectiveBg}${sourceTrail}`;
           }
@@ -1268,7 +1453,7 @@ function pass3Contrast(
     }
   }
 
-  return { findings, unresolved, resolved, skippedMedia, inferredBody: globalBody, compositedCount };
+  return { findings, unresolved, resolved, skippedMedia, inferredBody: globalBody, compositedCount, globalMatchCount, ambiguousGlobalCount };
 }
 
 // ─── Output formatter ───────────────────────────────────────────────────
@@ -1277,7 +1462,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -1293,7 +1478,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v3 (alpha-overlay compositing + pseudo-class cascade + multi-mode tokens + HTML hints)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v4 (alpha-overlay compositing + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules merging)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -1318,6 +1503,8 @@ function buildReport(
   lines.push(`**Pass 3 inferred cascade body color**: ${pass3.inferredBody ? `\`${pass3.inferredBody}\` (resolved from body/html/:root color rule)` : "**unresolved** — cascade-inheritance findings degraded to P1 advisory"}.`);
   lines.push("");
   lines.push(`**Pass 3 alpha-overlay compositing (v2)**: ${pass3.compositedCount} finding(s) used alpha compositing — overlay rgba/hex composited over nearest opaque ancestor before contrast math, eliminating the alpha-stripping false-positive class from v1.`);
+  lines.push("");
+  lines.push(`**Pass 3 cross-file bgRules merging (v4)**: ${pass3.globalMatchCount} finding(s) resolved their opaque parent bg via the global cross-file index (Tier 3 / Tier 4 fallback) — themed selectors in themes.css whose parent rule lives in console.css or page CSS. ${pass3.ambiguousGlobalCount} of those had ambiguous matches (multiple files defined the same selector); first-match-wins per directive, ambiguity count surfaced in finding-output trail for triage.`);
   lines.push("");
 
   // ── P0 section
