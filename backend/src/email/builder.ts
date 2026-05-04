@@ -102,23 +102,24 @@ Wasi`,
   };
 }
 
-function touch1Template(firstName: string, hook: string, relevance: string, cluster: string): TemplateOutput {
-  // Fallback for non-Lead-Hunter call paths (e.g. legacy, manual API).
-  // Lead Hunter prospects must hard-block at vertical=UNKNOWN before reaching
-  // this template. See §18.
-  const h = hook || "your company's growth in the supply chain space";
-  const r = relevance || "your shipping operations involve freight coordination or carrier management";
-
+function touch1Template(firstName: string, _hook: string, _relevance: string, _cluster: string): TemplateOutput {
+  // v3.8.cc — Fallback for non-Lead-Hunter call paths (legacy, manual API).
+  // Honest-framing rule per §18: no "we track", no implied portfolio, no
+  // marketing softeners. Lead Hunter prospects must hard-block at
+  // vertical=UNKNOWN before reaching this template; this fallback exists
+  // only for callers that don't go through the vertical gate.
   return {
-    subject: "Quick Intro from a Michigan Brokerage",
+    subject: "Quick intro from a Michigan brokerage",
     angle: "personalized-intro",
     body: `Morning ${firstName},
 
-With ${h}, there is significant momentum in your space. If ${r}, I would appreciate the opportunity to connect.
+I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates). We move FTL freight for shippers across the Midwest and nationwide.
 
-Silk Route Logistics is a Michigan-based freight brokerage offering vetted carriers, fast payment, and real-time tracking. As a local provider, we are committed to delivering the high service quality that your customers expect.
+Compass Engine is our 35-point carrier vetting system. Every carrier in our network clears equipment age, brake performance, claims ratio, and on-time-in-full at retailer DCs before hauling a load.
 
-I am happy to connect whenever it is convenient for you.`,
+If you have a recent BOL on a lane that has been tricky, send it over and I will come back with a quote and the carrier's full Compass profile.
+
+Wasi`,
   };
 }
 

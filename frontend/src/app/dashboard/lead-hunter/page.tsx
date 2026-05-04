@@ -99,36 +99,42 @@ const EMPTY_FORM = {
   annualRevenue: "", notes: "", status: "Prospect", type: "SHIPPER", paymentTerms: "Net 30",
 };
 
+// v3.8.cc — Honest-framing rule applied to fallback EMAIL_TEMPLATES per §18.
+// Removed: "AI-powered market intelligence", "I'd love the opportunity",
+// fabricated "8-12% reduction" claim, fabricated "98% pickup rate" claim,
+// marketing softeners. Replaced with: capability-level claims (regulatory
+// authority, Compass Engine vetting), operational asks (send a BOL, run
+// a quote), industry-knowledge framing only.
 const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; preview: (name: string) => string }> = {
   INTRO: {
     label: "Company Introduction",
-    subject: "Introducing Silk Route Logistics — Your Freight Partner",
-    preview: (name: string) => `<h2 style="color:#C9A84C;margin:0 0 16px">Silk Route Logistics Inc.</h2>
-<p>Hi ${name},</p>
-<p>I'm reaching out from Silk Route Logistics — a technology-driven freight brokerage based in Galesburg, MI.</p>
-<p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
-<ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
-<p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
+    subject: "Quote on a recent lane",
+    preview: (name: string) => `<p>Hi ${name},</p>
+<p>I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock &amp; Associates). We move FTL dry van and reefer for CPG shippers across the Midwest and nationwide.</p>
+<p>What I can offer on a first lane:</p>
+<ul><li>Real-time GPS tracking on every load via our shipper portal</li><li>Compass Engine, our 35-point carrier vetting system, applied before any carrier hauls a load</li><li>Dedicated point of contact: I personally handle every account today</li></ul>
+<p>If you have a recent BOL on a lane that has been tricky, send it over and I will come back with a quote and the carrier's full Compass profile.</p>
+<p>Wasi</p>
 <p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 1794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
   },
   FOLLOW_UP: {
     label: "Follow-Up",
-    subject: "Following Up — Silk Route Logistics",
+    subject: "Comparison on one current lane",
     preview: (name: string) => `<p>Hi ${name},</p>
-<p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped manufacturing companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
-<p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
-<p>Just reply to this email or book a call at your convenience.</p>
+<p>Following up on my previous note. If freight pricing or carrier reliability is on your radar this quarter, I can run a competitive quote on one of your current lanes. No obligation, no follow-up sales calls if the number does not work for you.</p>
+<p>Send a recent BOL or rate confirmation on the lane you would like priced and I will come back with our number plus the carrier's full Compass profile.</p>
+<p>Wasi</p>
 <p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
   CAPACITY: {
     label: "Capacity Pitch",
-    subject: "Freight capacity when you need it — Silk Route Logistics",
+    subject: "Backup capacity quote",
     preview: (name: string) => `<p>Hi ${name},</p>
-<p>I know finding reliable freight capacity can be a headache — especially during peak seasons or when you need last-minute trucks.</p>
-<p>At Silk Route Logistics, we maintain a vetted carrier network across all 48 states with:</p>
-<ul><li><strong>Same-day truck coverage</strong> — Dry van, flatbed, reefer, and specialized</li><li><strong>98% pickup rate</strong> — When we commit to a load, it gets picked up</li><li><strong>Real-time GPS tracking</strong> — Full visibility from pickup to delivery</li><li><strong>Dedicated point of contact</strong> — You deal with me directly, not a rotating desk</li></ul>
-<p>Happy to start with a single trial load so you can see how we operate — no long-term commitment required.</p>
-<p>Best regards,<br/><strong>Wasi Haider</strong><br/>Founder & CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+<p>If you are looking at backup capacity for a tight week or peak season, I have a vetted carrier bench across dry van, reefer, flatbed, and specialized.</p>
+<p>Compass Engine is our 35-point carrier vetting system. Equipment age, brake performance, claims ratio, on-time-in-full at retailer DCs, and load-securement history are all checked before any carrier touches a load on our network. The full Compass profile travels with every quote.</p>
+<p>If you have a lane or a single trial load you want quoted, send me the BOL or rate confirmation and I will come back with our number plus the carrier's full profile.</p>
+<p>Wasi</p>
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>Founder &amp; CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
   CUSTOM: {
     label: "Custom",

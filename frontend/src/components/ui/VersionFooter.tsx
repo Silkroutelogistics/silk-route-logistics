@@ -2177,7 +2177,37 @@
 //           (throw at sequence start), and
 //           processDueSequences (hold + push
 //           nextSendAt forward). C5 of 6.
-export const SRL_VERSION = "3.8.bb";
+// v3.8.cc — Lead Hunter Bugs 5-7: fallback voice
+//           cleanup. Honest-framing rule per §18
+//           applied to:
+//           (a) builder.ts touch1Template fallback —
+//               replaced softeners ("I would
+//               appreciate the opportunity to
+//               connect", "I am happy to connect
+//               whenever it is convenient") with
+//               authority line + Compass framing +
+//               specific operational ask.
+//           (b) page.tsx EMAIL_TEMPLATES INTRO/
+//               FOLLOW_UP/CAPACITY previews —
+//               removed prohibited claims:
+//               "AI-powered market intelligence"
+//               (voice.md line 25 prohibition),
+//               fabricated "8-12% reduction"
+//               (§5 volume stats), fabricated
+//               "98% pickup rate" (§5 volume stats);
+//               replaced with capability claims
+//               (regulatory authority, Compass
+//               Engine vetting) + operational asks.
+//           (c) emailSequenceService introduction
+//               template — dropped fabricated 98%
+//               pickup rate, replaced "I'd love to
+//               hear about your shipping lanes"
+//               softener with operational ask.
+//           No em-dashes in any cleaned template.
+//           No marketing softeners. No fabricated
+//           metrics. C6 of 6 — closes Lead Hunter
+//           outreach quality fix sprint.
+export const SRL_VERSION = "3.8.cc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
