@@ -15,6 +15,7 @@ import { DocsTab } from "./tabs/DocsTab";
 import { OrdersTab } from "./tabs/OrdersTab";
 import { ActivityTab } from "./tabs/ActivityTab";
 import { NewCustomerForm } from "./NewCustomerForm";
+import { OnboardingActionBar } from "./OnboardingActionBar";
 import type { CrmTab, CrmCustomer } from "./types";
 
 interface Props {
@@ -56,13 +57,22 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
   const isNew = customerId === "__new__";
   const customer = query.data;
 
-  const statusBadge = (s: string) => {
-    const v = (s || "").toLowerCase();
-    const cls =
-      v.includes("prospect") ? "bg-amber-100 text-amber-700"
-    : v.includes("inactive") ? "bg-gray-100 text-gray-600"
-    : "bg-green-100 text-green-700";
-    return <span className={`px-2 py-0.5 text-[11px] rounded ${cls}`}>{s || "Active"}</span>;
+  // Header status badge keys off onboardingStatus (the canonical signal),
+  // not the free-form `status` text field. APPROVED = success, REJECTED /
+  // SUSPENDED = danger, everything else (PENDING / UNDER_REVIEW /
+  // DOCUMENTS_SUBMITTED) reads as warning. Uses brand status palette per
+  // srl-brand-design tokens.
+  const statusBadge = (onb: string | undefined) => {
+    const v = (onb ?? "PENDING").toUpperCase();
+    let cls = "bg-[#FBEFD4] text-[#B07A1A]";
+    let label = v.replace(/_/g, " ");
+    if (v === "APPROVED") {
+      cls = "bg-[#E6F0E9] text-[#2F7A4F]";
+      label = "APPROVED";
+    } else if (v === "REJECTED" || v === "SUSPENDED") {
+      cls = "bg-[#F6E3E3] text-[#9B2C2C]";
+    }
+    return <span className={`px-2 py-0.5 text-[10px] tracking-wide rounded ${cls}`}>{label}</span>;
   };
 
   return (
@@ -86,7 +96,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
                   <>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-[15px] font-semibold text-gray-900 truncate">{customer?.name ?? "Loading…"}</h2>
-                      {customer && statusBadge(customer.status)}
+                      {customer && statusBadge(customer.onboardingStatus)}
                       {customer?.type && (
                         <span className="px-2 py-0.5 text-[11px] rounded bg-blue-50 text-blue-700 uppercase">{customer.type}</span>
                       )}
@@ -120,6 +130,15 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
               </button>
             </div>
           </div>
+
+          {/* Onboarding gate — Approve / Suspend / Reject. Only renders for
+              existing customers; hidden on the New Customer form. */}
+          {!isNew && customer && (
+            <OnboardingActionBar
+              customer={customer}
+              onChange={() => { query.refetch(); onCustomerChange(); }}
+            />
+          )}
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
