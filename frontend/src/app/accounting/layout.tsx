@@ -144,7 +144,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
 
   return (
     <AuthGuard>
-    <div className="min-h-screen flex" style={{ background: 'var(--srl-bg-base)', color: 'var(--srl-text)' }}>
+    <div className="min-h-screen flex bg-[#0F1117] text-white">
       {/* Mobile header bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#0a1120] border-b border-white/5 px-4 py-3 flex items-center justify-between">
         <Link href="/accounting" className="flex items-center gap-2">

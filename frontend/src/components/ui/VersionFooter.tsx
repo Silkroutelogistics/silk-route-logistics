@@ -2274,7 +2274,45 @@
 //           UI with inline missing-checks. Closes §13.3 Item 6
 //           (Portal Approval UI S-3) and audit 39de1ad. Sprint span:
 //           7c74bb1 (Phase 2) → df3545f (Phase 5).
-export const SRL_VERSION = "3.8.ee";
+// v3.8.ff — Sprint 14 dashboard layout posture fix. Three AE Console
+//           layouts (dashboard, accounting, admin) had their
+//           outermost wrappers using inline
+//           style={{ background: 'var(--srl-bg-base)',
+//                    color: 'var(--srl-text)' }}
+//           which resolved to light cream (#F5F3EF) + dark text
+//           (#1A1714) in default-mode rendering — but the AE Console
+//           UI is built with text-white, slate-400 secondary text,
+//           and dark hex card backgrounds, all assuming a dark
+//           ancestor. Net effect: flash-of-broken-content during
+//           SSR and initial paint before useTheme.loadFromStorage()
+//           hydrated and set data-mode="light" on <html>, at which
+//           point the existing globals.css [data-mode="light"]
+//           override layer would remap the dark Tailwind classes
+//           to light surfaces.
+//
+//           Architectural fix: replace inline style with Tailwind
+//           classNames `bg-[#0F1117] text-white`. The existing
+//           globals.css overrides at lines 162 + 188 already remap
+//           bg-[#0F1117] → var(--srl-bg-base) and text-white →
+//           var(--srl-text) when [data-mode="light"] is active, so
+//           mode toggle continues to work for free with zero
+//           globals.css edits. During SSR/initial paint (before
+//           data-mode is set), the literal dark hex renders directly,
+//           giving text-white the high-contrast ancestor it expects.
+//
+//           Sprint 14 is functionally a hydration-flash fix dressed
+//           as a bg posture change. v8 scanner findings of
+//           text-white-on-cream were partial false positives (real
+//           runtime rendering applies the override layer), but the
+//           FOBC bug they pointed at IS real.
+//
+//           Affected files (3): app/dashboard/layout.tsx,
+//           app/accounting/layout.tsx, app/admin/layout.tsx (both
+//           wrappers — Access Denied splash at line 21 + main
+//           content at line 40). Shipper/carrier portals use
+//           bg-[#F7F8FA] light gray intentionally and are
+//           unaffected. Marketing pages unaffected.
+export const SRL_VERSION = "3.8.ff";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
