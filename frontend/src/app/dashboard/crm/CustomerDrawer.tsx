@@ -123,7 +123,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-gray-600"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />

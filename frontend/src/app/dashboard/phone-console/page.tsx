@@ -458,7 +458,7 @@ export default function PhoneConsolePage() {
                 </div>
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-600 hover:text-white transition"
+                  className="p-1.5 rounded-lg hover:bg-gray-50 text-slate-400 hover:text-white transition"
                 >
                   <X className="w-4 h-4" />
                 </button>

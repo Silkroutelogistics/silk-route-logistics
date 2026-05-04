@@ -380,7 +380,7 @@ export default function FuelTablesPage() {
                         </button>
                         <ChevronRight className={cn(
                           "w-4 h-4 transition",
-                          selectedId === table.id ? "text-[#C5A572]" : "text-white/20 group-hover:text-white/40"
+                          selectedId === table.id ? "text-[#C5A572]" : "text-slate-400 group-hover:text-white/40"
                         )} />
                       </div>
                     </div>
@@ -644,7 +644,7 @@ export default function FuelTablesPage() {
                   {form.tiers.length > 1 && (
                     <button
                       onClick={() => removeTier(idx)}
-                      className="p-1 text-gray-400 hover:text-red-500 transition shrink-0"
+                      className="p-1 text-gray-700 hover:text-red-500 transition shrink-0"
                     >
                       <X className="w-4 h-4" />
                     </button>

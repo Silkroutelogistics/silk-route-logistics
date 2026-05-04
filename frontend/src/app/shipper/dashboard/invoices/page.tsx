@@ -74,7 +74,7 @@ export default function ShipperInvoicesPage() {
           <p className="text-[13px] text-gray-500">Track all freight invoices, carrier payments, and transportation billing history</p>
         </div>
         <button onClick={() => invoices.length > 0 && exportInvoicesCSV(invoices)}
-          className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+          className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
           <Download size={14} /> Export Statement
         </button>
       </div>
@@ -147,12 +147,12 @@ export default function ShipperInvoicesPage() {
                   <td className="px-4 py-3"><ShipperBadge status={inv.status} /></td>
                   <td className="px-4 py-3 flex items-center gap-2">
                     <button onClick={() => downloadInvoicePdf(inv.id)}
-                      className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+                      className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Download size={14} /> PDF
                     </button>
                     {inv.status !== "Paid" && (
                       <button onClick={() => setDisputeInvoice({ id: inv.id, invoiceNumber: inv.id, amount: inv.amount })}
-                        className="inline-flex items-center gap-1 text-gray-400 text-[11px] font-semibold uppercase tracking-wider hover:text-red-500">
+                        className="inline-flex items-center gap-1 text-gray-700 text-[11px] font-semibold uppercase tracking-wider hover:text-red-500">
                         <AlertTriangle size={12} /> Dispute
                       </button>
                     )}

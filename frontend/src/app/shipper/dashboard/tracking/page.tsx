@@ -484,7 +484,7 @@ export default function ShipperTrackingPage() {
                       <td className="py-2.5 px-2 text-center">
                         <button
                           onClick={() => setTimelineLoadId(s.loadId)}
-                          className="text-[#C9A84C] hover:underline text-[10px] font-medium"
+                          className="text-[#BA7517] hover:underline text-[10px] font-medium"
                         >
                           Timeline
                         </button>

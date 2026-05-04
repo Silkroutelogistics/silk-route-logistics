@@ -33,7 +33,7 @@ export default function CarrierDashboardError({
           </button>
           <a
             href="/carrier/dashboard"
-            className="px-5 py-2.5 text-sm font-medium text-slate-400 border border-white/10 rounded-lg hover:bg-white/5 transition"
+            className="px-5 py-2.5 text-sm font-medium text-slate-700 border border-white/10 rounded-lg hover:bg-white/5 transition"
           >
             Go to Dashboard
           </a>

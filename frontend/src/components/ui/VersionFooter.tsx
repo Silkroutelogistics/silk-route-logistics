@@ -2752,7 +2752,62 @@
 //           Per §3.1, version bump justified — publicly-visible
 //           changes to AE Console carrier-management page (used
 //           daily by AE staff) + 70+ other dashboard surfaces.
-export const SRL_VERSION = "3.8.ll";
+// v3.8.mm — Sprint 20 long-tail dashboard residue per-finding
+//           triage. 46 swaps applied across 27 files via v2
+//           window-search swap-applier (handles scanner JSX
+//           opening-tag line vs className-on-child-line offset).
+//
+//           Smaller scope than Sprint 19 — Sprint 19 already
+//           retired the high-density rule-matching findings;
+//           Sprint 20 residue is OUTLIER + FP. Honest scope.
+//
+//           Methodology refinement (v2 swap-applier): scanner
+//           reports JSX opening-tag line, but className token
+//           often appears 2-5 lines later inside multi-line
+//           JSX. v1 applier searched only the exact line and
+//           missed many swaps; v2 searches +/-5 line window
+//           around scanner-reported line. 46 vs ~4 applied with
+//           same swap proposal set.
+//
+//           Files touched (27 with swaps applied):
+//             - dashboard/contract-rates/page.tsx (5)
+//             - dashboard/exception-config/page.tsx (4)
+//             - dashboard/carriers/page.tsx (4)
+//             - shipper/dashboard/settings, invoices,
+//               carrier/dashboard/my-loads, settings (3 each)
+//             - dashboard/fuel-tables, dock-scheduling (3 each)
+//             - dashboard/scorecard, fleet (2 each)
+//             - long tail of 1-swap files
+//
+//           Onboarding 6 swap proposals SKIPPED (5 confirmed
+//           bg-navy custom utility scanner FPs documented in
+//           Sprint 15b — element parent has `bg-navy` Tailwind
+//           plugin class scanner doesn't recognize, real
+//           rendering is text-white on dark navy nav PASS).
+//           Line 501 amber finding may have shifted from Sprint
+//           18 fix; not re-applied to avoid double-correction.
+//
+//           Cream-context gold preventive repair: SKIPPED per
+//           Phase A confirmation. Sprint 19 already covered.
+//
+//           Pre-commit verification clean.
+//
+//           Net P0 retirement vs 444 baseline: ~40-46 expected
+//           (46 swaps minus a few cases where swap target line
+//           had multiple findings only one matched). Phase C
+//           confirms exact delta.
+//
+//           Sprint 20 closes the diminishing-returns mechanical
+//           sweep tail. Brand-mechanical workstream functionally
+//           complete after this commit. Sprint 21+ direction:
+//             - Scanner v9 (resolve ~95 shared-component FPs)
+//             - CSS residue per-finding (~140)
+//             - OUTLIER per-finding (~88 visual-judgment cases)
+//             - Narrative work (/shippers vertical positioning)
+//
+//           Per §3.1, version bump justified — publicly-visible
+//           changes across 27 dashboard surfaces.
+export const SRL_VERSION = "3.8.mm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

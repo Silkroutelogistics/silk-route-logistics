@@ -182,13 +182,13 @@ export default function MyLoadsPage() {
                   )}
                   {detail.rateConfirmationPdfUrl && (
                     <a href={detail.rateConfirmationPdfUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-[#C9A84C] font-semibold mt-2">
+                      className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2">
                       <FileText size={14} /> View Rate Confirmation
                     </a>
                   )}
                   <button
                     onClick={() => setShowBOL(true)}
-                    className="flex items-center gap-1.5 text-[#C9A84C] font-semibold mt-2 hover:underline text-xs"
+                    className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2 hover:underline text-xs"
                   >
                     <Printer size={14} /> Print Bill of Lading
                   </button>
@@ -207,7 +207,7 @@ export default function MyLoadsPage() {
                         key={ns}
                         onClick={() => statusMutation.mutate({ loadId: selectedId, status: ns })}
                         disabled={statusMutation.isPending}
-                        className="px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-white text-xs font-semibold rounded-md disabled:opacity-60"
+                        className="px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md disabled:opacity-60"
                       >
                         {ns.replace(/_/g, " ")}
                       </button>

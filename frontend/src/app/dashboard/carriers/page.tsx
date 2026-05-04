@@ -1025,7 +1025,7 @@ export default function CarrierPoolPage() {
 
                         <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
                           <button onClick={() => runCompass(selectedCarrier.id)} disabled={compassLoading === selectedCarrier.id}
-                            className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 hover:text-white transition">
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 hover:text-[#0A2540] transition">
                             <RefreshCw className={`w-3 h-3 ${compassLoading === selectedCarrier.id ? "animate-spin" : ""}`} /> Re-run
                           </button>
                           <span className="text-[10px] text-slate-600">Vetted: {new Date(compassResult.vettedAt).toLocaleString()}</span>
@@ -1348,14 +1348,14 @@ export default function CarrierPoolPage() {
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium shrink-0 ${DOC_STATUS_COLORS[doc.status] || ""}`}>{doc.status}</span>
                                   <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }} title="Preview"
-                                      className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"><Eye className="w-3 h-3" /></button>
+                                      className="p-1 rounded hover:bg-gray-200 text-gray-700 hover:text-gray-600"><Eye className="w-3 h-3" /></button>
                                     {isAdmin && doc.status !== "VERIFIED" && (
                                       <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "VERIFIED" })} title="Verify"
-                                        className="p-1 rounded hover:bg-green-100 text-gray-400 hover:text-green-600"><CheckCircle2 className="w-3 h-3" /></button>
+                                        className="p-1 rounded hover:bg-green-100 text-gray-700 hover:text-green-600"><CheckCircle2 className="w-3 h-3" /></button>
                                     )}
                                     {isAdmin && doc.status !== "REJECTED" && (
                                       <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "REJECTED" })} title="Reject"
-                                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600"><X className="w-3 h-3" /></button>
+                                        className="p-1 rounded hover:bg-red-100 text-gray-700 hover:text-red-600"><X className="w-3 h-3" /></button>
                                     )}
                                   </div>
                                 </div>

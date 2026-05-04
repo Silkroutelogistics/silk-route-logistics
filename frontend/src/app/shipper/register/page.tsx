@@ -159,7 +159,7 @@ export default function ShipperRegisterPage() {
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowUnit(true)}
-                    className="mt-1.5 text-xs text-[#C9A84C] hover:text-[#A88535] font-semibold">
+                    className="mt-1.5 text-xs text-[#BA7517] hover:text-[#A88535] font-semibold">
                     + Add Unit / Suite #
                   </button>
                 )}

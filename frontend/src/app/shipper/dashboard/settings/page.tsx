@@ -196,7 +196,7 @@ export default function ShipperSettingsPage() {
               <button
                 onClick={handleCancel}
                 disabled={!isDirty}
-                className="px-6 py-3 text-gray-500 text-xs font-semibold uppercase tracking-[1.5px] hover:text-[#C9A84C] transition-colors disabled:opacity-50"
+                className="px-6 py-3 text-gray-500 text-xs font-semibold uppercase tracking-[1.5px] hover:text-[#BA7517] transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -317,7 +317,7 @@ export default function ShipperSettingsPage() {
                     </div>
                     <button
                       onClick={() => { navigator.clipboard.writeText(totpSetupData.backupCodes.join("\n")); setTotpSuccess("Backup codes copied to clipboard."); }}
-                      className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-[#C9A84C]"
+                      className="flex items-center gap-1.5 text-[11px] text-gray-700 hover:text-[#BA7517]"
                     >
                       <Copy size={12} /> Copy backup codes
                     </button>

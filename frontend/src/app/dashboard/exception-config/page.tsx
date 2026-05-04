@@ -253,7 +253,7 @@ export default function ExceptionConfigPage() {
           <button
             onClick={() => seedConfigs.mutate()}
             disabled={seedConfigs.isPending}
-            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/5 text-gray-700 hover:text-white transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/5 text-slate-400 hover:text-white transition-all disabled:opacity-50"
           >
             {seedConfigs.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -416,7 +416,7 @@ export default function ExceptionConfigPage() {
                   <button
                     onClick={() => setAlertPage((p) => Math.max(1, p - 1))}
                     disabled={alertPage <= 1}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
@@ -426,7 +426,7 @@ export default function ExceptionConfigPage() {
                   <button
                     onClick={() => setAlertPage((p) => Math.min(alertsData.totalPages, p + 1))}
                     disabled={alertPage >= alertsData.totalPages}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>
@@ -671,7 +671,7 @@ function AlertRow({
           </button>
           <button
             onClick={onDismiss}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] text-slate-500 hover:bg-white/[0.08] hover:text-gray-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] text-slate-500 hover:bg-white/[0.08] hover:text-slate-400 transition-colors"
           >
             <XCircle className="h-3.5 w-3.5" />
             Dismiss

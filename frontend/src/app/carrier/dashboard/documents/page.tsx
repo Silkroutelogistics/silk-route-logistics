@@ -118,7 +118,7 @@ export default function CarrierDocumentsPage() {
         </div>
         <button
           onClick={() => setShowUpload(!showUpload)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-white text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
+          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
         >
           <Upload size={14} /> Upload Document
         </button>

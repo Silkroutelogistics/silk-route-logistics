@@ -216,7 +216,7 @@ export default function AvailableLoadsPage() {
               <button
                 onClick={() => acceptMutation.mutate(selectedId)}
                 disabled={acceptMutation.isPending}
-                className="w-full mt-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-white text-sm font-semibold rounded-md shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-60"
+                className="w-full mt-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-sm font-semibold rounded-md shadow-[0_4px_20px_rgba(201,168,76,0.3)] disabled:opacity-60"
               >
                 {acceptMutation.isPending ? "Accepting..." : "Accept Load"}
               </button>

@@ -151,7 +151,7 @@ export function NewCustomerForm({ onCreated, onCancel }: Props) {
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 py-2 border border-gray-200 text-gray-700 text-sm rounded"
+          className="flex-1 py-2 border border-gray-200 text-slate-400 text-sm rounded"
         >
           Cancel
         </button>

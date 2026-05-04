@@ -56,7 +56,7 @@ export default function ShipperShipmentsPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => data?.shipments && exportShipmentsCSV(data.shipments)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#C9A84C]">
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
             <Download size={14} /> Export CSV
           </button>
           <Link href="/shipper/dashboard/quote" className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">

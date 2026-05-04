@@ -337,7 +337,7 @@ export default function CarrierSettingsPage() {
                 </div>
                 <button
                   onClick={() => { navigator.clipboard.writeText(totpSetupData.backupCodes.join("\n")); setTotpSuccess("Backup codes copied to clipboard."); }}
-                  className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-[#C9A84C]"
+                  className="flex items-center gap-1.5 text-[11px] text-gray-700 hover:text-[#BA7517]"
                 >
                   <Copy size={12} /> Copy backup codes
                 </button>

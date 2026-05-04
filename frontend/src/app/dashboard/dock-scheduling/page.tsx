@@ -632,7 +632,7 @@ export default function DockSchedulingPage() {
         <div className="flex items-center gap-1 bg-white/[0.03] border border-white/5 rounded-lg p-1">
           <button
             onClick={() => shiftDate(-1)}
-            className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-white transition-colors"
+            className="p-2 rounded-md hover:bg-gray-100 text-slate-400 hover:text-white transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -649,7 +649,7 @@ export default function DockSchedulingPage() {
           </button>
           <button
             onClick={() => shiftDate(1)}
-            className="p-2 rounded-md hover:bg-gray-100 text-gray-600 hover:text-white transition-colors"
+            className="p-2 rounded-md hover:bg-gray-100 text-slate-400 hover:text-white transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

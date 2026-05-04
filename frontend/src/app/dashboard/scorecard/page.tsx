@@ -333,7 +333,7 @@ export default function ScorecardPage() {
                 </div>
                 <button
                   onClick={() => setSelectedCarrierId(null)}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors text-slate-400 hover:text-white"
+                  className="p-2 rounded-lg hover:bg-white/5 transition-colors text-slate-700 hover:text-white"
                 >
                   <X className="w-5 h-5" />
                 </button>

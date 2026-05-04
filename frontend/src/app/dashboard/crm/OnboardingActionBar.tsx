@@ -147,7 +147,7 @@ function TodoModal({ action, onClose }: { action: "suspend" | "reject"; onClose:
           <h3 className="text-base font-semibold text-gray-900">{verb} customer — not yet wired</h3>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+            className="p-1 rounded hover:bg-gray-100 text-gray-700 hover:text-gray-600"
             aria-label="Close"
           >
             <X className="w-4 h-4" />

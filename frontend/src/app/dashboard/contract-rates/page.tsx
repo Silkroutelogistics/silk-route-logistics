@@ -288,21 +288,21 @@ export default function ContractRatesPage() {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => openEdit(selectedRate)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-[#C5A572] hover:bg-white/5 transition"
+                        className="p-1.5 rounded-md text-slate-700 hover:text-[#C5A572] hover:bg-white/5 transition"
                         title="Edit"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => suspendMutation.mutate(selectedRate.id)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-yellow-400 hover:bg-white/5 transition"
+                        className="p-1.5 rounded-md text-slate-700 hover:text-yellow-400 hover:bg-white/5 transition"
                         title="Suspend"
                       >
                         <Pause className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => { if (confirm("Delete this rate?")) deleteMutation.mutate(selectedRate.id); }}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-white/5 transition"
+                        className="p-1.5 rounded-md text-slate-700 hover:text-red-400 hover:bg-white/5 transition"
                         title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -310,7 +310,7 @@ export default function ContractRatesPage() {
                       <div className="w-px h-5 bg-white/10 mx-1" />
                       <button
                         onClick={() => setSelectedId(null)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/5 transition"
+                        className="p-1.5 rounded-md text-slate-700 hover:text-white hover:bg-white/5 transition"
                         title="Close"
                       >
                         <X className="w-4 h-4" />

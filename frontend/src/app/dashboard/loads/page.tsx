@@ -765,7 +765,7 @@ export default function LoadsPage() {
                     {/* Close */}
                     <button
                       onClick={() => setSelectedLoadId(null)}
-                      className="p-1.5 text-gray-600 hover:text-white rounded-lg hover:bg-gray-100"
+                      className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-gray-100"
                     >
                       <X className="w-4 h-4" />
                     </button>

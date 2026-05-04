@@ -232,7 +232,7 @@ export default function FleetPage() {
                 <div className="flex items-center gap-3">
                   {isExpired(truck.insuranceExpiry) && <AlertTriangle className="w-4 h-4 text-red-400" />}
                   {isExpiringSoon(truck.registrationExpiry) && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
-                  {expanded === truck.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+                  {expanded === truck.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                 </div>
               </div>
             </button>
@@ -281,7 +281,7 @@ export default function FleetPage() {
                     </div>
                   </div>
                 </div>
-                {expanded === trailer.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+                {expanded === trailer.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
             </button>
             {expanded === trailer.id && (

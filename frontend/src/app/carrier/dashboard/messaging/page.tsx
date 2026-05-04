@@ -217,7 +217,7 @@ export default function CarrierMessagingPage() {
                 <button
                   onClick={() => newMessage.trim() && sendMsg.mutate()}
                   disabled={!newMessage.trim() || sendMsg.isPending}
-                  className="px-4 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-white text-sm rounded-lg disabled:opacity-50"
+                  className="px-4 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-sm rounded-lg disabled:opacity-50"
                 >
                   <Send size={16} />
                 </button>
