@@ -109,7 +109,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 <p>We specialize in FTL dry van freight across the Midwest and nationwide, with a focus on:</p>
 <ul><li>Real-time shipment tracking via our shipper portal</li><li>Competitive rates backed by AI-powered market intelligence</li><li>35-point carrier compliance vetting (Compass Engine)</li><li>Dedicated account management — not a call center</li></ul>
 <p>I'd love the opportunity to learn about your shipping needs and see if we can add value. Would you be open to a brief call this week?</p>
-<p>Best regards,<br/><strong>Wasih Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 01794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 01794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
   },
   FOLLOW_UP: {
     label: "Follow-Up",
@@ -118,7 +118,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 <p>I wanted to follow up on my previous email about Silk Route Logistics. We recently helped manufacturing companies reduce their freight costs by 8-12% while improving on-time delivery rates.</p>
 <p>If you're currently evaluating freight providers or have any upcoming shipping needs, I'd be happy to provide a no-obligation rate comparison on your top lanes.</p>
 <p>Just reply to this email or book a call at your convenience.</p>
-<p>Best regards,<br/><strong>Wasih Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
   CAPACITY: {
     label: "Capacity Pitch",
@@ -128,7 +128,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
 <p>At Silk Route Logistics, we maintain a vetted carrier network across all 48 states with:</p>
 <ul><li><strong>Same-day truck coverage</strong> — Dry van, flatbed, reefer, and specialized</li><li><strong>98% pickup rate</strong> — When we commit to a load, it gets picked up</li><li><strong>Real-time GPS tracking</strong> — Full visibility from pickup to delivery</li><li><strong>Dedicated point of contact</strong> — You deal with me directly, not a rotating desk</li></ul>
 <p>Happy to start with a single trial load so you can see how we operate — no long-term commitment required.</p>
-<p>Best regards,<br/><strong>Wasih Haider</strong><br/>Founder & CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
+<p>Best regards,<br/><strong>Wasi Haider</strong><br/>Founder & CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,
   },
   CUSTOM: {
     label: "Custom",

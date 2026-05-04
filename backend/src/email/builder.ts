@@ -3,6 +3,16 @@ import { join } from "path";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 
+// ─── CEO identity (single source of truth) ──────────────────
+// Every outbound email surface — sender display name, body sign-off, sequence
+// templates, internal labels — MUST consume these constants. Never hard-code
+// "Wasih" or any other spelling variant. Startup log line below makes the
+// active value visible so a future regression surfaces in logs immediately.
+export const CEO_NAME = "Wasi Haider";
+export const CEO_EMAIL = "whaider@silkroutelogistics.ai";
+
+log.info(`[EmailBuilder] CEO identity SOT loaded: ${CEO_NAME} <${CEO_EMAIL}>`);
+
 // ─── Signature ──────────────────────────────────────────────
 // Load the real Gmail signature from file (matches whaider@silkroutelogistics.ai exactly)
 const SIGNATURE_PATH = join(__dirname, "../config/signatures/whaider.html");
@@ -11,7 +21,7 @@ try {
   GMAIL_SIGNATURE = readFileSync(SIGNATURE_PATH, "utf-8");
 } catch {
   log.warn(`[EmailBuilder] Signature file not found at ${SIGNATURE_PATH}, using fallback`);
-  GMAIL_SIGNATURE = `<!-- SIG_START --><p>Cheers,<br><strong>Wasi Haider</strong><br>Founder & CEO, Silk Route Logistics<br>MC# 01794414 | DOT# 4526880<br>(269) 220-6760<br>whaider@silkroutelogistics.ai</p><!-- SIG_END -->`;
+  GMAIL_SIGNATURE = `<!-- SIG_START --><p>Cheers,<br><strong>${CEO_NAME}</strong><br>Founder & CEO, Silk Route Logistics<br>MC# 01794414 | DOT# 4526880<br>(269) 220-6760<br>${CEO_EMAIL}</p><!-- SIG_END -->`;
 }
 
 export { GMAIL_SIGNATURE };

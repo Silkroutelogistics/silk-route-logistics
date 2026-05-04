@@ -4,7 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
 import { sendEmail } from "../services/emailService";
-import { buildEmailSync, GMAIL_SIGNATURE } from "../email/builder";
+import { buildEmailSync, GMAIL_SIGNATURE, CEO_NAME, CEO_EMAIL } from "../email/builder";
 import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatus";
 import { markProspectNotInterested } from "../services/prospectStatusService";
 
@@ -814,7 +814,7 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
           direction: "OUTBOUND",
           entityType: "SHIPPER",
           entityId: c.id,
-          from: "whaider@silkroutelogistics.ai",
+          from: CEO_EMAIL,
           to: c.email,
           subject: built.subject,
           body: built.bodyPlainText,
@@ -844,8 +844,8 @@ export async function sendMassEmail(req: AuthRequest, res: Response) {
 
     try {
       const resendEmailId = await sendEmail(c.email, built.subject, built.bodyHtml, undefined, {
-        replyTo: "whaider@silkroutelogistics.ai",
-        fromName: "Wasih Haider",
+        replyTo: CEO_EMAIL,
+        fromName: CEO_NAME,
       });
       sent++;
 

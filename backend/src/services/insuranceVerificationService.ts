@@ -166,7 +166,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
         </p>
 
         <div style="border-top:1px solid #E5E7EB;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7280;line-height:1.6">
-          <strong style="color:#374151">Wasih Haider</strong><br/>
+          <strong style="color:#374151">Wasi Haider</strong><br/>
           Compliance Department<br/>
           Silk Route Logistics Inc.<br/>
           MC# 01794414 | DOT# 4526880<br/>

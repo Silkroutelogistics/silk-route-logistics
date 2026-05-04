@@ -2025,7 +2025,22 @@
 //          producing "Hi InsideTracker" instead of
 //          "Hi Sarah". No schema change. C1 of 6
 //          atomic Lead Hunter outreach quality fixes.
-export const SRL_VERSION = "3.8.v";
+// v3.8.w — Lead Hunter Bug 2: Wasih → Wasi typo +
+//          single source of truth. Added CEO_NAME +
+//          CEO_EMAIL exports to email/builder.ts as
+//          the canonical SOT, with a startup log line
+//          so future regressions surface in logs.
+//          emailSequenceService, customerController
+//          (mass-email fromName + replyTo + comm
+//          from-field), insuranceVerificationService,
+//          page.tsx EMAIL_TEMPLATES preview, and the
+//          internal CeoOverview "Sales (Wasih)" label
+//          all consume the SOT or were renamed. The
+//          actual Gmail signature file (whaider.html)
+//          was already correct ("Wasi Haider"); the
+//          drift was only in body strings and Resend
+//          fromName. C2 of 6.
+export const SRL_VERSION = "3.8.w";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

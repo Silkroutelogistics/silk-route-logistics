@@ -336,11 +336,11 @@ export function CeoOverview() {
           ═══════════════════════════════════════════════════════════════════════ */}
       {/* TODO: Filter by userId when team grows */}
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Sales (Wasih) */}
+        {/* Sales (Wasi) */}
         <div className="bg-white/5 rounded-xl border border-white/10 p-5">
           <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-gold" />
-            Sales (Wasih)
+            Sales (Wasi)
           </h3>
           <div className="space-y-3">
             <TeamMetricRow label="Loads Created This Week" value={String(loadsCreatedThisWeek)} />

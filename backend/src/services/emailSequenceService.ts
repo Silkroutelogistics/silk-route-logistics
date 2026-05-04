@@ -1,16 +1,15 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { CEO_NAME, CEO_EMAIL } from "../email/builder";
 
 /**
  * C.5 — Email Auto-Sequences
  * Sequence engine for prospect outreach: Day 0 Introduction, Day 3 Follow-up #1, Day 7 #2, Day 14 #3
  *
- * Emails come from whaider@silkroutelogistics.ai (CEO personal email) so replies
- * land in the Gmail inbox which gmailService monitors.
+ * Emails come from CEO_EMAIL (personal email) so replies land in the Gmail
+ * inbox which gmailService monitors. CEO_NAME and CEO_EMAIL are imported from
+ * email/builder — single source of truth, no local re-declaration.
  */
-
-const CEO_EMAIL = "whaider@silkroutelogistics.ai";
-const CEO_NAME = "Wasih Haider";
 
 const DEFAULT_SCHEDULE = [
   { day: 0, subject: "Quick intro — Silk Route Logistics", template: "introduction" },
@@ -422,13 +421,13 @@ export async function checkProspectStageChange(prospectId: string, newStatus: st
   }
 }
 
-/** Wasih's email signature — loaded from backend/src/config/signatures/whaider.html */
+/** Email signature — loaded from backend/src/config/signatures/whaider.html via builder. */
 import { GMAIL_SIGNATURE } from "../email/builder";
 const EMAIL_SIGNATURE = GMAIL_SIGNATURE;
 
 /**
  * Build personal-style email for prospect outreach.
- * No brand headers/footers — looks like a real email from Wasih.
+ * No brand headers/footers — looks like a real email from Wasi.
  * Includes the standard email signature on all templates.
  */
 function buildSequenceEmail(template: string, name: string, step: number): string {
@@ -437,7 +436,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
   const bodies: Record<string, string> = {
     introduction: `
       <p>Hi ${firstName},</p>
-      <p>I'm Wasih, founder of Silk Route Logistics here in Galesburg, Michigan. I came across your company and thought there might be a fit.</p>
+      <p>I'm Wasi, founder of Silk Route Logistics here in Galesburg, Michigan. I came across your company and thought there might be a fit.</p>
       <p>We're a freight brokerage that runs on technology — real-time tracking on every load, 98% pickup rate, and I personally manage every account. No call centers, no runaround.</p>
       <p>Would you have 10 minutes this week for a quick call? I'd love to hear about your shipping lanes and see if we can help.</p>
       <p>Best,</p>
@@ -466,7 +465,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
     // ── Carrier Recruitment Templates ──
     carrier_intro: `
       <p>Hi ${firstName},</p>
-      <p>I'm Wasih, founder of Silk Route Logistics in Galesburg, Michigan. I came across your authority and wanted to reach out.</p>
+      <p>I'm Wasi, founder of Silk Route Logistics in Galesburg, Michigan. I came across your authority and wanted to reach out.</p>
       <p>We're a freight brokerage that pays carriers in <strong>3 days, not 30</strong>. No factoring company needed. Our QuickPay program has zero contracts, zero hidden fees, and zero reserve holdback — just a flat 1.5-3% fee that saves our carriers <strong>$3,600+ per year</strong> compared to traditional factoring.</p>
       <p>If you're running lanes in the Midwest or cross-country, I'd love to get you set up on our load board. We have consistent freight and I personally work with every carrier in our network.</p>
       <p>Would you have 5 minutes for a quick call, or just reply to this email? I'll get you onboarded same day.</p>
@@ -484,7 +483,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
       </ul>
       <p>Plus, our top carriers earn their way to PLATINUM tier — <strong>1.5% QuickPay with Net-3 payment</strong>. The more loads you run with us, the better your terms get.</p>
       <p>Interested? Just reply and I'll send you a registration link.</p>
-      <p>Wasih</p>
+      <p>Wasi</p>
     `,
     carrier_compliance: `
       <p>Hi ${firstName},</p>
@@ -498,7 +497,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
       </ul>
       <p>We also have a strict <strong>no double-brokering policy</strong>. Your load stays on your truck. Period. That's our commitment — we think it's the minimum a carrier should expect from a broker.</p>
       <p>If any of this sounds useful, reply and I'll get you set up.</p>
-      <p>Wasih</p>
+      <p>Wasi</p>
     `,
     carrier_final: `
       <p>Hi ${firstName},</p>
