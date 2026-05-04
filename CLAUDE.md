@@ -727,7 +727,7 @@ When you halt on a mechanical issue (file not found, permission denied, missing 
 
 Every `Customer` record created through the Lead Hunter import path MUST have `vertical ∈ {COLDCHAIN, WELLNESS}` before any outreach generation runs. `UNKNOWN` is a valid persisted state but is a **hard block** on the email-generation pipeline. UNKNOWN customers surface in the AE Console **Manual Review queue** (Lead Hunter pipeline view → "Manual Review (N)" filter mode at [`page.tsx`](frontend/src/app/dashboard/lead-hunter/page.tsx)).
 
-The hard block enforces at five call sites:
+The hard block enforces at six call sites:
 
 1. [`buildEmail`](backend/src/email/builder.ts) (DB lookup) — throws on `customer.vertical === "UNKNOWN"`
 2. [`buildEmailSync`](backend/src/email/builder.ts) (in-memory) — throws on `params.vertical === "UNKNOWN"`
