@@ -2433,12 +2433,40 @@ function buildLayoutBgContext(
       continue;
     }
 
-    // 2) JSX walk — first element with bg-* token wins.
+    // 2) JSX walk — restrict to the rendered tree of the LAST root JSX
+    //    expression in the file. A layout file may have helper JSX
+    //    blocks defined as variables earlier in source (e.g. accounting
+    //    layout's `sidebarContent` const); those are NOT the rendered
+    //    outermost wrapper. The function's return JSX appears LAST in
+    //    source, so its root element is the final parentIndex===-1
+    //    element in the buildJsxElementStack sequence; descendants of
+    //    that root are the actual render-tree.
     const { elements } = buildJsxElementStack(content);
-    for (const elem of elements) {
+    let lastRootIdx = -1;
+    for (let i = elements.length - 1; i >= 0; i--) {
+      if (elements[i].parentIndex === -1) {
+        lastRootIdx = i;
+        break;
+      }
+    }
+    if (lastRootIdx === -1) continue;
+
+    // Collect the last-root subtree by index. Walk forward from
+    // lastRootIdx, including only elements whose parentIndex chain
+    // resolves back to lastRootIdx.
+    const inSubtree = new Set<number>([lastRootIdx]);
+    for (let i = lastRootIdx + 1; i < elements.length; i++) {
+      const e = elements[i];
+      if (e.parentIndex >= 0 && inSubtree.has(e.parentIndex)) {
+        inSubtree.add(i);
+      }
+    }
+
+    let found = false;
+    for (const idx of Array.from(inSubtree).sort((a, b) => a - b)) {
+      const elem = elements[idx];
       if (!elem.classNames) continue;
       const tokens = elem.classNames.split(/\s+/).filter(Boolean);
-      let found = false;
       for (const token of tokens) {
         const stripped = token.replace(/^(hover|focus|active|disabled):/, "");
         if (/^(dark|sm|md|lg|xl|2xl):/.test(stripped)) continue;
