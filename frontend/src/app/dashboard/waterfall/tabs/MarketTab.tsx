@@ -54,7 +54,7 @@ function Row({ label, value, tone }: { label: string; value: string | number; to
   const cls = tone === "green" ? "text-green-700" : tone === "red" ? "text-red-700" : "text-gray-900";
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-gray-600">{label}</span>
+      <span className="text-slate-400">{label}</span>
       <span className={cls}>{value}</span>
     </div>
   );

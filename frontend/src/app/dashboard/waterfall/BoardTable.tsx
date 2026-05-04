@@ -112,7 +112,7 @@ export function BoardTable({ loads, onRowClick }: Props) {
                 </td>
                 <td className="px-3 py-3 text-gray-700">
                   <div className="flex items-center gap-1 text-xs">
-                    <MapPin className="w-3 h-3 text-gray-400" />{fmtLane(l)}
+                    <MapPin className="w-3 h-3 text-gray-700" />{fmtLane(l)}
                   </div>
                 </td>
                 <td className="px-3 py-3 text-gray-700 text-xs">{fmtDate(l.pickupDate)}</td>

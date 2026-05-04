@@ -76,7 +76,7 @@ export function ExceptionsTab({ load, loadId, onChange }: Props) {
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">New exception</h4>
-            <button onClick={() => setShowForm(false)}><X className="w-4 h-4 text-gray-400" /></button>
+            <button onClick={() => setShowForm(false)}><X className="w-4 h-4 text-gray-700" /></button>
           </div>
 
           <div>
@@ -136,13 +136,13 @@ export function ExceptionsTab({ load, loadId, onChange }: Props) {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <AlertTriangle className="w-4 h-4 text-red-700" />
                 <span className="font-medium text-gray-900">
                   {e.unitType && e.unitType !== "na" ? `${e.unitType.charAt(0).toUpperCase()}${e.unitType.slice(1)} — ` : ""}
                   {filteredReasons.find((r) => r.code === e.category)?.label ?? e.category}
                 </span>
               </div>
-              <div className="text-xs text-gray-500 mt-0.5">
+              <div className="text-xs text-gray-700 mt-0.5">
                 Reported {new Date(e.reportedAt).toLocaleString()}
                 {e.locationText && ` · ${e.locationText}`}
               </div>
@@ -179,10 +179,10 @@ export function ExceptionsTab({ load, loadId, onChange }: Props) {
 
       {resolved.length > 0 && (
         <details className="text-xs">
-          <summary className="cursor-pointer text-gray-500 hover:text-gray-800">Resolved ({resolved.length})</summary>
+          <summary className="cursor-pointer text-gray-500 hover:text-white">Resolved ({resolved.length})</summary>
           <ul className="mt-2 space-y-1">
             {resolved.map((e: any) => (
-              <li key={e.id} className="text-gray-600">
+              <li key={e.id} className="text-slate-400">
                 {filteredReasons.find((r) => r.code === e.category)?.label ?? e.category} — {new Date(e.resolvedAt).toLocaleDateString()}
               </li>
             ))}

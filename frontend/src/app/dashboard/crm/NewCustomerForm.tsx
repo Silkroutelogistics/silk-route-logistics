@@ -111,7 +111,7 @@ export function NewCustomerForm({ onCreated, onCancel }: Props) {
         </div>
       </Section>
 
-      <label className="flex items-center gap-2 text-xs text-gray-700">
+      <label className="flex items-center gap-2 text-xs text-slate-400">
         <input
           type="checkbox"
           checked={form.sameBilling}

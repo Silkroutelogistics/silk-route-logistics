@@ -59,8 +59,8 @@ export function NotesTab({ prospectId }: Props) {
                 </span>
               )}
             </div>
-            {n.title && <div className="font-medium text-gray-900 text-sm">{n.title}</div>}
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.content}</p>
+            {n.title && <div className="font-medium text-white text-sm">{n.title}</div>}
+            <p className="text-sm text-white whitespace-pre-wrap">{n.content}</p>
             <div className="text-[10px] text-gray-500 mt-1.5">
               {n.createdByName && `${n.createdByName} · `}
               {new Date(n.createdAt).toLocaleDateString()}
@@ -110,7 +110,7 @@ function AddNoteForm({
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium text-gray-900">New note</h4>
-        <button onClick={onClose} aria-label="Cancel"><X className="w-4 h-4 text-gray-400" /></button>
+        <button onClick={onClose} aria-label="Cancel"><X className="w-4 h-4 text-gray-700" /></button>
       </div>
       <select
         value={noteType}

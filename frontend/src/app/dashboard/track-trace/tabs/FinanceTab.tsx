@@ -74,7 +74,7 @@ function Card({ label, value, subtitle, tone }: { label: string; value: string; 
   return (
     <div className={`border rounded-lg p-3 ${cls}`}>
       <div className="text-[11px] uppercase text-gray-500">{label}</div>
-      <div className="text-xl font-semibold text-gray-900">{value}</div>
+      <div className="text-xl font-semibold text-white">{value}</div>
       {subtitle && <div className="text-[11px] text-gray-500">{subtitle}</div>}
     </div>
   );
@@ -83,8 +83,8 @@ function Card({ label, value, subtitle, tone }: { label: string; value: string; 
 function Line({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <div className={`flex justify-between text-sm ${bold ? "border-t border-gray-200 mt-1 pt-1 font-semibold" : ""}`}>
-      <span className="text-gray-600">{label}</span>
-      <span className="text-gray-900">{value}</span>
+      <span className="text-slate-400">{label}</span>
+      <span className="text-white">{value}</span>
     </div>
   );
 }

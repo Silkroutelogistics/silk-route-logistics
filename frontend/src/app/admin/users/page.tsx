@@ -180,7 +180,7 @@ export default function AdminUsersPage() {
                       {user.totpEnabled ? (
                         <Shield className="w-4 h-4 text-emerald-400" />
                       ) : (
-                        <span className="text-slate-600 text-xs">Off</span>
+                        <span className="text-slate-400 text-xs">Off</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">

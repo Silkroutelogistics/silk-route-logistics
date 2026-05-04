@@ -179,7 +179,7 @@ export default function LoadsCalendarPage() {
                       </div>
                     ))}
                     {dayLoads.length === 0 && (
-                      <p className="text-[10px] text-gray-600 text-center pt-4">—</p>
+                      <p className="text-[10px] text-slate-400 text-center pt-4">—</p>
                     )}
                   </div>
                 </div>
@@ -213,7 +213,7 @@ export default function LoadsCalendarPage() {
                         {load.originState}→{load.destState}
                       </div>
                     ))}
-                    {dayLoads.length > 3 && <p className="text-[9px] text-gray-600">+{dayLoads.length - 3} more</p>}
+                    {dayLoads.length > 3 && <p className="text-[9px] text-slate-400">+{dayLoads.length - 3} more</p>}
                   </div>
                 );
               }

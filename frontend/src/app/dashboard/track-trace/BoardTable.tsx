@@ -100,14 +100,14 @@ export function BoardTable({ loads, onRowClick }: BoardTableProps) {
                   <div className={`h-2 flex-1 ${progressSegmentClass(l.progress.inTransit)}`} />
                   <div className={`h-2 flex-1 rounded-r ${progressSegmentClass(l.progress.delivered)}`} />
                 </div>
-                <div className="mt-1 flex justify-between text-[9px] text-gray-400 uppercase">
+                <div className="mt-1 flex justify-between text-[9px] text-gray-700 uppercase">
                   <span>Booked</span><span>PU</span><span>Transit</span><span>Del</span>
                 </div>
               </td>
               <td className="px-3 py-3 text-gray-700 truncate max-w-[160px]">{l.shipper ?? "—"}</td>
               <td className="px-3 py-3 text-gray-700">
                 <div className="flex items-center gap-1 text-xs">
-                  <MapPin className="w-3 h-3 text-gray-400" />
+                  <MapPin className="w-3 h-3 text-gray-700" />
                   {abbreviateLane(l)}
                 </div>
               </td>
@@ -117,7 +117,7 @@ export function BoardTable({ loads, onRowClick }: BoardTableProps) {
               </td>
               <td className="px-3 py-3">
                 <div className="flex items-center gap-1">
-                  <PhoneCall className="w-3 h-3 text-gray-400" />
+                  <PhoneCall className="w-3 h-3 text-gray-700" />
                   {l.callsDue
                     ? <span className="w-2 h-2 rounded-full bg-amber-500" title="Check call due" />
                     : <span className="w-2 h-2 rounded-full bg-gray-300" />}

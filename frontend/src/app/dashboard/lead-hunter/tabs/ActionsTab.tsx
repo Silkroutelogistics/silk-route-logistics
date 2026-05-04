@@ -132,7 +132,7 @@ export function ActionsTab({ prospect, onClose }: Props) {
       {canConvert && (
         <section className="border border-green-200 rounded-lg p-3 bg-green-50/40">
           <div className="flex items-center gap-2 mb-2">
-            <ArrowRight className="w-4 h-4 text-green-600" strokeWidth={1.75} />
+            <ArrowRight className="w-4 h-4 text-green-700" strokeWidth={1.75} />
             <h4 className="font-semibold text-gray-900">Convert to Customer</h4>
           </div>
           <p className="text-xs text-gray-600 mb-2">Move this prospect to the Active customer pipeline in CRM.</p>
@@ -149,7 +149,7 @@ export function ActionsTab({ prospect, onClose }: Props) {
       {/* Delete */}
       <section className="border border-red-200 rounded-lg p-3 bg-red-50/30">
         <div className="flex items-center gap-2 mb-2">
-          <Trash2 className="w-4 h-4 text-red-600" strokeWidth={1.75} />
+          <Trash2 className="w-4 h-4 text-red-700" strokeWidth={1.75} />
           <h4 className="font-semibold text-gray-900">Delete Prospect</h4>
         </div>
         {!confirmDelete ? (

@@ -52,7 +52,7 @@ export function OrdersTab({ customerId }: { customerId: string }) {
       </Link>
 
       <div className="border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
-        {loads.length === 0 && <div className="p-4 text-xs text-gray-400 text-center">No orders yet.</div>}
+        {loads.length === 0 && <div className="p-4 text-xs text-gray-700 text-center">No orders yet.</div>}
         {loads.map((l) => (
           <div key={l.id} className="flex items-center justify-between p-3">
             <div>

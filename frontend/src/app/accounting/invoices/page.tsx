@@ -861,7 +861,7 @@ function DocumentsTab() {
     <div className="flex flex-col items-center justify-center py-12 text-slate-500">
       <Paperclip className="w-8 h-8 mb-2 opacity-40" />
       <p className="text-sm font-medium">No documents attached</p>
-      <p className="text-xs mt-1 text-slate-600">
+      <p className="text-xs mt-1 text-slate-400">
         BOL, POD, and rate confirmations will appear here
       </p>
     </div>
@@ -874,7 +874,7 @@ function NotesTab({ invoice }: { invoice: Invoice }) {
     <div className="flex flex-col items-center justify-center py-12 text-slate-500">
       <StickyNote className="w-8 h-8 mb-2 opacity-40" />
       <p className="text-sm font-medium">No notes</p>
-      <p className="text-xs mt-1 text-slate-600">
+      <p className="text-xs mt-1 text-slate-400">
         Internal notes for invoice {invoice.invoiceNumber}
       </p>
     </div>

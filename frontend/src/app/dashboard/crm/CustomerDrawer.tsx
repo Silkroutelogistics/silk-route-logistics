@@ -151,7 +151,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
                 onCancel={onClose}
               />
             )}
-            {!isNew && !customer && <div className="text-sm text-gray-400">Loading…</div>}
+            {!isNew && !customer && <div className="text-sm text-gray-700">Loading…</div>}
             {!isNew && customer && (
               <>
                 {tab === "profile"    && <ProfileTab    customer={customer} onChange={() => { query.refetch(); onCustomerChange(); }} />}

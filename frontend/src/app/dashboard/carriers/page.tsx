@@ -172,7 +172,7 @@ function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: s
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">{icon}</div>
         <div>
-          <p className="text-2xl font-bold text-white">{value}</p>
+          <p className="text-2xl font-bold text-[#0A2540]">{value}</p>
           <p className="text-xs text-gray-600">{label}</p>
           {sub && <p className="text-[10px] text-slate-500">{sub}</p>}
         </div>
@@ -194,7 +194,7 @@ function PerformanceBar({ label, value, color }: { label: string; value: number;
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-600">{label}</span>
+        <span className="text-slate-400">{label}</span>
         <span className="text-white font-medium">{value}%</span>
       </div>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -252,7 +252,7 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
           </div>
         </div>
       ) : (
-        <span className="text-xs text-red-400">Not on file</span>
+        <span className="text-xs text-red-700">Not on file</span>
       )}
     </div>
   );
@@ -261,7 +261,7 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
 function ComplianceRow({ label, status }: { label: string; status: boolean }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
-      <span className="text-xs text-gray-600">{label}</span>
+      <span className="text-xs text-slate-400">{label}</span>
       <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${status ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
         {status ? "Active" : "Not Verified"}
       </span>
@@ -522,7 +522,7 @@ export default function CarrierPoolPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Carrier Pool</h1>
-          <p className="text-gray-600 text-sm mt-1">{carriers.length} carriers in network</p>
+          <p className="text-slate-400 text-sm mt-1">{carriers.length} carriers in network</p>
         </div>
       </div>
 
@@ -554,7 +554,7 @@ export default function CarrierPoolPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by company, MC#, DOT#, email..."
             className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-gold/50" />
         </div>
@@ -603,7 +603,7 @@ export default function CarrierPoolPage() {
                       {carrier.onboardingStatus.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-gray-600">
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-slate-400">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
                     {carrier.mcNumber && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{carrier.mcNumber}</span>}
                     {!selectedCarrier && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {carrier.operatingRegions.slice(0, 3).join(", ")}{carrier.operatingRegions.length > 3 ? ` +${carrier.operatingRegions.length - 3}` : ""}</span>}
@@ -626,9 +626,9 @@ export default function CarrierPoolPage() {
           ))}
           {filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Truck className="w-12 h-12 text-gray-700 mb-4" />
+              <Truck className="w-12 h-12 text-slate-400 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
-              <p className="text-sm text-gray-600 mb-4 max-w-sm">Invite carriers to join your network</p>
+              <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
               <a href="/onboarding" className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Invite Carriers</a>
             </div>
           )}
@@ -664,7 +664,7 @@ export default function CarrierPoolPage() {
               {/* Panel Header */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
                 <h2 className="text-base font-semibold text-gray-900 truncate">{selectedCarrier.company}</h2>
-                <button onClick={closePanel} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition">
+                <button onClick={closePanel} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-gray-600 transition">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -752,7 +752,7 @@ export default function CarrierPoolPage() {
                       <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-gray-900">Edit Profile</h4>
-                          <button onClick={() => setEditingTab(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                          <button onClick={() => setEditingTab(null)} className="text-xs text-gray-700 hover:text-gray-600">Cancel</button>
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Tier</label>
@@ -808,7 +808,7 @@ export default function CarrierPoolPage() {
                       <div className="bg-gray-100 rounded-lg p-3 mt-2">
                         <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Insurance Agent</span>
                         <div className="flex flex-wrap gap-3 mt-1 text-xs">
-                          {selectedCarrier.insuranceAgentName && <span className="text-white">{selectedCarrier.insuranceAgentName}</span>}
+                          {selectedCarrier.insuranceAgentName && <span className="text-[#0A2540]">{selectedCarrier.insuranceAgentName}</span>}
                           {selectedCarrier.insuranceAgencyName && <span className="text-gray-600">({selectedCarrier.insuranceAgencyName})</span>}
                           {selectedCarrier.insuranceAgentEmail && <a href={`mailto:${selectedCarrier.insuranceAgentEmail}`} className="text-gold hover:underline">{selectedCarrier.insuranceAgentEmail}</a>}
                           {selectedCarrier.insuranceAgentPhone && <span className="text-gray-700">{selectedCarrier.insuranceAgentPhone}</span>}
@@ -826,7 +826,7 @@ export default function CarrierPoolPage() {
                       <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-gray-900">Edit Insurance Details</h4>
-                          <button onClick={() => setEditingTab(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                          <button onClick={() => setEditingTab(null)} className="text-xs text-gray-700 hover:text-gray-600">Cancel</button>
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Tier</label>
@@ -996,11 +996,11 @@ export default function CarrierPoolPage() {
                           {compassResult.checks.map((check, i) => (
                             <div key={i} className="flex items-start gap-2 text-xs py-1 border-b border-white/5">
                               {check.result === "PASS" ? (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-700 shrink-0 mt-0.5" />
                               ) : check.result === "WARNING" ? (
-                                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                                <AlertTriangle className="w-3.5 h-3.5 text-yellow-700 shrink-0 mt-0.5" />
                               ) : (
-                                <X className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                                <X className="w-3.5 h-3.5 text-red-700 shrink-0 mt-0.5" />
                               )}
                               <div className="flex-1">
                                 <span className={`font-medium ${
@@ -1063,7 +1063,7 @@ export default function CarrierPoolPage() {
                     <div className="bg-gray-100 rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between py-1.5 border-b border-white/5">
                         <span className="text-xs text-gray-600">Driver Inspections</span>
-                        <span className="text-xs text-white font-medium">&mdash;</span>
+                        <span className="text-xs text-[#0A2540] font-medium">&mdash;</span>
                       </div>
                       <div className="flex items-center justify-between py-1.5 border-b border-white/5">
                         <span className="text-xs text-gray-600">Driver OOS Rate</span>
@@ -1071,7 +1071,7 @@ export default function CarrierPoolPage() {
                       </div>
                       <div className="flex items-center justify-between py-1.5 border-b border-white/5">
                         <span className="text-xs text-gray-600">Vehicle Inspections</span>
-                        <span className="text-xs text-white font-medium">&mdash;</span>
+                        <span className="text-xs text-[#0A2540] font-medium">&mdash;</span>
                       </div>
                       <div className="flex items-center justify-between py-1.5">
                         <span className="text-xs text-gray-600">Vehicle OOS Rate</span>
@@ -1082,9 +1082,9 @@ export default function CarrierPoolPage() {
                     <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Crash History</h3>
                     <div className="bg-gray-100 rounded-lg p-4">
                       <div className="grid grid-cols-4 gap-3 text-center">
-                        <div><p className="text-lg font-bold text-white">&mdash;</p><p className="text-[10px] text-slate-500">Total</p></div>
-                        <div><p className="text-lg font-bold text-red-400">&mdash;</p><p className="text-[10px] text-slate-500">Fatal</p></div>
-                        <div><p className="text-lg font-bold text-yellow-400">&mdash;</p><p className="text-[10px] text-slate-500">Injury</p></div>
+                        <div><p className="text-lg font-bold text-[#0A2540]">&mdash;</p><p className="text-[10px] text-slate-500">Total</p></div>
+                        <div><p className="text-lg font-bold text-red-700">&mdash;</p><p className="text-[10px] text-slate-500">Fatal</p></div>
+                        <div><p className="text-lg font-bold text-yellow-700">&mdash;</p><p className="text-[10px] text-slate-500">Injury</p></div>
                         <div><p className="text-lg font-bold text-gray-700">&mdash;</p><p className="text-[10px] text-slate-500">Towaway</p></div>
                       </div>
                     </div>
@@ -1116,15 +1116,15 @@ export default function CarrierPoolPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
-                        <p className="text-xl font-bold text-white">{selectedCarrier.completedLoads}</p>
+                        <p className="text-xl font-bold text-[#0A2540]">{selectedCarrier.completedLoads}</p>
                         <p className="text-[10px] text-slate-500">Completed Loads</p>
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
-                        <p className="text-xl font-bold text-blue-400">{selectedCarrier.activeLoads}</p>
+                        <p className="text-xl font-bold text-blue-700">{selectedCarrier.activeLoads}</p>
                         <p className="text-[10px] text-slate-500">Active Loads</p>
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
-                        <p className="text-xl font-bold text-green-400">${(selectedCarrier.totalRevenue / 1000).toFixed(1)}k</p>
+                        <p className="text-xl font-bold text-green-700">${(selectedCarrier.totalRevenue / 1000).toFixed(1)}k</p>
                         <p className="text-[10px] text-slate-500">Revenue</p>
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
@@ -1166,7 +1166,7 @@ export default function CarrierPoolPage() {
                         <div className="flex items-start gap-2 text-xs">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-1.5 shrink-0" />
                           <div>
-                            <span className="text-white">{new Date(compassResult.vettedAt).toLocaleString()}</span>
+                            <span className="text-[#0A2540]">{new Date(compassResult.vettedAt).toLocaleString()}</span>
                             <span className="text-slate-500 ml-2">Score: {compassResult.score}/100, Grade {compassResult.grade}</span>
                           </div>
                         </div>
@@ -1175,7 +1175,7 @@ export default function CarrierPoolPage() {
                       <div className="bg-gray-100 rounded-lg p-4">
                         <div className="flex items-start gap-2 text-xs">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-1.5 shrink-0" />
-                          <span className="text-white">Last Score: {selectedCarrier.lastVettingScore}/100{selectedCarrier.lastVettingGrade ? `, Grade ${selectedCarrier.lastVettingGrade}` : ""}</span>
+                          <span className="text-[#0A2540]">Last Score: {selectedCarrier.lastVettingScore}/100{selectedCarrier.lastVettingGrade ? `, Grade ${selectedCarrier.lastVettingGrade}` : ""}</span>
                         </div>
                       </div>
                     ) : (
@@ -1189,7 +1189,7 @@ export default function CarrierPoolPage() {
                       <div className="flex items-start gap-2 text-xs">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
                         <div>
-                          <span className="text-white">{new Date(selectedCarrier.createdAt).toLocaleDateString()}</span>
+                          <span className="text-[#0A2540]">{new Date(selectedCarrier.createdAt).toLocaleDateString()}</span>
                           <span className="text-slate-500 ml-2">Registered ({selectedCarrier.onboardingStatus.replace(/_/g, " ")})</span>
                         </div>
                       </div>
@@ -1197,7 +1197,7 @@ export default function CarrierPoolPage() {
                         <div className="flex items-start gap-2 text-xs">
                           <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 shrink-0" />
                           <div>
-                            <span className="text-white">{new Date(selectedCarrier.approvedAt).toLocaleDateString()}</span>
+                            <span className="text-[#0A2540]">{new Date(selectedCarrier.approvedAt).toLocaleDateString()}</span>
                             <span className="text-slate-500 ml-2">Approved</span>
                           </div>
                         </div>
@@ -1228,7 +1228,7 @@ export default function CarrierPoolPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-gray-900">Upload Document</h3>
-                        <button onClick={() => setDocView("list")} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                        <button onClick={() => setDocView("list")} className="text-xs text-gray-700 hover:text-gray-600">Cancel</button>
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Category</label>
@@ -1273,7 +1273,7 @@ export default function CarrierPoolPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-sm font-semibold text-gray-900 break-all">{previewDoc.fileName}</h3>
-                          <p className="text-[10px] text-gray-400 mt-0.5">
+                          <p className="text-[10px] text-gray-700 mt-0.5">
                             {DOC_CATEGORIES.find(c => c.key === previewDoc.docType)?.label || previewDoc.docType} &middot; {new Date(previewDoc.createdAt).toLocaleDateString()} &middot; {(previewDoc.fileSize / 1024).toFixed(0)} KB
                           </p>
                         </div>
@@ -1286,7 +1286,7 @@ export default function CarrierPoolPage() {
                         ) : previewDoc.fileType === "application/pdf" ? (
                           <iframe src={previewDoc.fileUrl} className="w-full" style={{ height: 500 }} title={previewDoc.fileName} />
                         ) : (
-                          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                          <div className="flex flex-col items-center justify-center py-12 text-gray-700">
                             <FileText className="w-10 h-10 mb-2" />
                             <p className="text-xs">Preview not available</p>
                             <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
@@ -1324,8 +1324,8 @@ export default function CarrierPoolPage() {
 
                       {carrierDocs.length === 0 ? (
                         <div className="bg-gray-100 rounded-lg p-8 text-center">
-                          <FolderOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <p className="text-xs text-gray-400">No documents on file.</p>
+                          <FolderOpen className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                          <p className="text-xs text-gray-700">No documents on file.</p>
                           {isAdmin && <button onClick={() => setDocView("upload")} className="text-xs text-[#C5A572] hover:underline mt-1">Upload the first document</button>}
                         </div>
                       ) : (
@@ -1343,7 +1343,7 @@ export default function CarrierPoolPage() {
                                       className="text-xs font-medium text-gray-800 hover:text-[#C5A572] truncate block text-left w-full">
                                       {doc.fileName}
                                     </button>
-                                    <p className="text-[10px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>
+                                    <p className="text-[10px] text-gray-700">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>
                                   </div>
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium shrink-0 ${DOC_STATUS_COLORS[doc.status] || ""}`}>{doc.status}</span>
                                   <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
@@ -1380,13 +1380,13 @@ export default function CarrierPoolPage() {
       {confirmAction && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-white mb-2">
+            <h3 className="text-lg font-semibold text-[#0A2540] mb-2">
               {confirmAction.status === "APPROVED" ? "Approve Carrier" : "Reject Carrier"}
             </h3>
             <p className="text-sm text-gray-600 mb-6">
               Are you sure you want to <strong className={confirmAction.status === "APPROVED" ? "text-green-600" : "text-red-600"}>
                 {confirmAction.status === "APPROVED" ? "approve" : "reject"}
-              </strong> <strong className="text-white">{confirmAction.company}</strong>?
+              </strong> <strong className="text-[#0A2540]">{confirmAction.company}</strong>?
               {confirmAction.status === "REJECTED" && " This carrier will be blocked from accepting loads."}
               {confirmAction.status === "APPROVED" && " This carrier will be able to accept loads and appear on the load board."}
             </p>

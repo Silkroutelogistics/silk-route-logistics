@@ -92,7 +92,7 @@ export default function FactoringPage() {
           <h2 className="font-semibold text-white">Eligible for Factoring</h2>
           {eligible.length === 0 ? (
             <div className="bg-white/5 rounded-xl border border-white/10 p-12 text-center">
-              <CheckCircle2 className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+              <CheckCircle2 className="w-8 h-8 text-slate-400 mx-auto mb-3" />
               <p className="text-sm text-slate-500">No invoices pending factoring</p>
             </div>
           ) : (
@@ -199,7 +199,7 @@ export default function FactoringPage() {
             </div>
           ) : (
             <div className="bg-white/5 rounded-xl border border-white/10 p-12 text-center">
-              <DollarSign className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+              <DollarSign className="w-8 h-8 text-slate-400 mx-auto mb-3" />
               <p className="text-sm text-slate-500">Select an invoice to see factoring breakdown</p>
             </div>
           )}

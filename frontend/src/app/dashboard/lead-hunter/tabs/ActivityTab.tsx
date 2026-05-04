@@ -91,7 +91,7 @@ export function ActivityTab({ prospectId }: Props) {
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium text-gray-900 uppercase tracking-wider">
+                <span className="text-xs font-medium text-white uppercase tracking-wider">
                   {e.kind === "stage_change" ? "Stage change" :
                    e.kind === "email" && isInbound ? "Reply received" :
                    e.kind === "email" ? "Email sent" :
@@ -106,7 +106,7 @@ export function ActivityTab({ prospectId }: Props) {
                 )}
                 <span className="text-[10px] text-gray-400 ml-auto">{relativeTime(e.timestamp)}</span>
               </div>
-              <p className="text-xs text-gray-700 mt-0.5 line-clamp-2">
+              <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">
                 {e.summary}
                 {e.detail && e.kind === "stage_change" && <span className="text-gray-500"> ({e.detail})</span>}
               </p>

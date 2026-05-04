@@ -632,8 +632,8 @@ export default function OrderBuilderPage() {
                   className="text-left px-2 py-1.5 rounded bg-white/5 border border-white/10 hover:border-[#BA7517] transition"
                 >
                   <div className="text-[11px] text-white truncate">{d.customer?.name ?? "No customer"}</div>
-                  <div className="text-[9px] text-slate-500 truncate">{lane}</div>
-                  <div className="text-[9px] text-slate-500">Edited {edited}</div>
+                  <div className="text-[9px] text-slate-700 truncate">{lane}</div>
+                  <div className="text-[9px] text-slate-700">Edited {edited}</div>
                 </button>
               );
             })}

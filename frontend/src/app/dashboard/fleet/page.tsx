@@ -36,7 +36,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   ACTIVE: <CheckCircle2 className="w-4 h-4 text-green-400" />,
   IN_SHOP: <Wrench className="w-4 h-4 text-yellow-400" />,
   OUT_OF_SERVICE: <XCircle className="w-4 h-4 text-red-400" />,
-  SOLD: <AlertTriangle className="w-4 h-4 text-gray-600" />,
+  SOLD: <AlertTriangle className="w-4 h-4 text-slate-400" />,
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -144,7 +144,7 @@ export default function FleetPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Fleet Management</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-slate-400 mt-1">
             {overview?.totalTrucks || 0} trucks &middot; {overview?.totalTrailers || 0} trailers
           </p>
         </div>
@@ -179,7 +179,7 @@ export default function FleetPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${tab}...`}
             className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
@@ -218,7 +218,7 @@ export default function FleetPage() {
                       </span>
                       <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{truck.ownershipType.replace(/_/g, " ")}</span>
                     </div>
-                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-600">
+                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-slate-400">
                       {truck.year && truck.make && <span>{truck.year} {truck.make} {truck.model || ""}</span>}
                       <span>{truck.type.replace(/_/g, " ")}</span>
                       <span>{truck.mileage.toLocaleString()} mi</span>
@@ -232,7 +232,7 @@ export default function FleetPage() {
                 <div className="flex items-center gap-3">
                   {isExpired(truck.insuranceExpiry) && <AlertTriangle className="w-4 h-4 text-red-400" />}
                   {isExpiringSoon(truck.registrationExpiry) && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
-                  {expanded === truck.id ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+                  {expanded === truck.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                 </div>
               </div>
             </button>
@@ -271,7 +271,7 @@ export default function FleetPage() {
                       <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{trailer.type.replace(/_/g, " ")}</span>
                       {trailer.reeferUnit && <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-xs">Reefer</span>}
                     </div>
-                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-600">
+                    <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-slate-400">
                       {trailer.year && trailer.make && <span>{trailer.year} {trailer.make} {trailer.model || ""}</span>}
                       {trailer.length && <span>{trailer.length}ft</span>}
                       {trailer.capacity && <span>{trailer.capacity.toLocaleString()} lbs cap</span>}
@@ -281,7 +281,7 @@ export default function FleetPage() {
                     </div>
                   </div>
                 </div>
-                {expanded === trailer.id ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+                {expanded === trailer.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
               </div>
             </button>
             {expanded === trailer.id && (

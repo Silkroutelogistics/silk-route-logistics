@@ -86,7 +86,7 @@ export function ProspectDrawer({ prospect, onClose }: Props) {
                     <span className="text-xs text-gray-500">{prospect.contactName}</span>
                   )}
                   {(prospect.city || prospect.state) && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-700">
                       · {[prospect.city, prospect.state].filter(Boolean).join(", ")}
                     </span>
                   )}

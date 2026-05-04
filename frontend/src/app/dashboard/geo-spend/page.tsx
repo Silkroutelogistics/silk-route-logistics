@@ -155,7 +155,7 @@ export default function GeoSpendPage() {
           <div className="space-y-1 max-h-[400px] overflow-y-auto">
             {stateData.sort((a: any, b: any) => b.spend - a.spend).slice(0, 20).map((s: any, i: number) => (
               <div key={s.state} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white/[0.02] transition">
-                <span className="text-[10px] text-gray-600 w-4">{i + 1}</span>
+                <span className="text-[10px] text-slate-400 w-4">{i + 1}</span>
                 <span className="text-sm text-white font-medium w-8">{s.state}</span>
                 <div className="flex-1">
                   <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -188,7 +188,7 @@ export default function GeoSpendPage() {
               {topLanes.map((l: any) => (
                 <tr key={`${l.origin}-${l.dest}`} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition">
                   <td className="px-4 py-3 text-white">
-                    <span className="flex items-center gap-1.5">{l.origin} <ArrowRight className="w-3 h-3 text-gray-600" /> {l.dest}</span>
+                    <span className="flex items-center gap-1.5">{l.origin} <ArrowRight className="w-3 h-3 text-slate-400" /> {l.dest}</span>
                   </td>
                   <td className="px-4 py-3 text-gray-400">{l.count}</td>
                   <td className="px-4 py-3 text-white font-medium">${l.spend.toLocaleString()}</td>

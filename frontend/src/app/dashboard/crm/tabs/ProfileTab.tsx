@@ -229,7 +229,7 @@ function SecLookupView({
         <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Recent filings</h4>
         <div className="border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
           {lookup.recentFilings.length === 0 && (
-            <div className="p-4 text-xs text-gray-400 text-center">No recent filings found.</div>
+            <div className="p-4 text-xs text-gray-700 text-center">No recent filings found.</div>
           )}
           {lookup.recentFilings.map((f, i) => (
             <a
@@ -246,7 +246,7 @@ function SecLookupView({
                 </div>
                 {f.description && <div className="text-[11px] text-gray-500 truncate mt-0.5">{f.description}</div>}
               </div>
-              <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
+              <ExternalLink className="w-3 h-3 text-gray-700 shrink-0" />
             </a>
           ))}
         </div>
@@ -368,7 +368,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <div className="text-[11px] text-gray-500">{label}</div>
-      <div className="text-sm text-gray-900">{value ?? "—"}</div>
+      <div className="text-sm text-white">{value ?? "—"}</div>
     </div>
   );
 }

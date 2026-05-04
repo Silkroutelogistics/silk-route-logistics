@@ -211,7 +211,7 @@ export default function CommunicationsPage() {
                 </span>
               </div>
               <p className="text-slate-500 text-xs truncate">{c.company}</p>
-              {c.email && <p className="text-slate-600 text-xs truncate mt-0.5">{c.email}</p>}
+              {c.email && <p className="text-slate-400 text-xs truncate mt-0.5">{c.email}</p>}
             </button>
           ))}
         </div>
@@ -222,7 +222,7 @@ export default function CommunicationsPage() {
         {!selectedContact ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <MessageSquare className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-3" />
               <p className="text-slate-400 text-lg">Select a contact to view communications</p>
             </div>
           </div>

@@ -157,7 +157,7 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
           {/* Tab content */}
           {waterfallId && (
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              {!wf && <div className="text-sm text-gray-400">Loading cascade…</div>}
+              {!wf && <div className="text-sm text-gray-700">Loading cascade…</div>}
               {wf && tab === "waterfall" && (
                 <div className="space-y-4">
                   {wf.status === "building" && (

@@ -36,9 +36,9 @@ export function ProfileTab({ prospect, onChange }: Props) {
   return (
     <div className="space-y-5 text-sm">
       <div>
-        <h3 className="text-xl font-semibold text-gray-900 leading-tight">{prospect.name}</h3>
+        <h3 className="text-xl font-semibold text-white leading-tight">{prospect.name}</h3>
         {prospect.contactName && (
-          <p className="text-gray-600 mt-0.5">{prospect.contactName}</p>
+          <p className="text-slate-400 mt-0.5">{prospect.contactName}</p>
         )}
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
@@ -93,7 +93,7 @@ export function ProfileTab({ prospect, onChange }: Props) {
             </a>
           )}
           {(prospect.city || prospect.state) && (
-            <div className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center gap-2 text-slate-400">
               <MapPin className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.75} />
               <span>{[prospect.city, prospect.state].filter(Boolean).join(", ")}</span>
             </div>
@@ -109,16 +109,16 @@ export function ProfileTab({ prospect, onChange }: Props) {
         <h4 className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2">Details</h4>
         <dl className="space-y-1.5">
           {revenue && (
-            <div className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center gap-2 text-slate-400">
               <DollarSign className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.75} />
-              <span>Est. revenue: <span className="text-gray-900 font-medium">{revenue}</span></span>
+              <span>Est. revenue: <span className="text-white font-medium">{revenue}</span></span>
             </div>
           )}
           {prospect.paymentTerms && (
-            <div className="text-gray-700 pl-5">Payment terms: <span className="text-gray-900 font-medium">{prospect.paymentTerms}</span></div>
+            <div className="text-slate-400 pl-5">Payment terms: <span className="text-white font-medium">{prospect.paymentTerms}</span></div>
           )}
           {prospect.onboardingStatus && (
-            <div className="text-gray-700 pl-5">Onboarding: <span className="text-gray-900 font-medium">{prospect.onboardingStatus}</span></div>
+            <div className="text-slate-400 pl-5">Onboarding: <span className="text-white font-medium">{prospect.onboardingStatus}</span></div>
           )}
           {!revenue && !prospect.paymentTerms && !prospect.onboardingStatus && (
             <p className="text-xs text-gray-400 italic">No additional details</p>
@@ -130,7 +130,7 @@ export function ProfileTab({ prospect, onChange }: Props) {
       {(prospect.notes) && (
         <section>
           <h4 className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2">Notes</h4>
-          <p className="text-gray-700 whitespace-pre-wrap text-xs">{prospect.notes}</p>
+          <p className="text-slate-400 whitespace-pre-wrap text-xs">{prospect.notes}</p>
         </section>
       )}
 

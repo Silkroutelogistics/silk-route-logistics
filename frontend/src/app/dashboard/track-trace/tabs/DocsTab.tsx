@@ -69,7 +69,7 @@ export function DocsTab({ load, loadId, onChange }: Props) {
     return (
       <div className="space-y-3">
         <button onClick={() => setPreview(null)} className="text-xs text-[#C5A572] hover:underline">← Back to list</button>
-        <div className="font-medium text-gray-900">{preview.fileName}</div>
+        <div className="font-medium text-white">{preview.fileName}</div>
         <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
           {preview.fileType?.includes("pdf") ? (
             <iframe src={preview.fileUrl} className="w-full h-[520px]" title={preview.fileName} />
@@ -92,7 +92,7 @@ export function DocsTab({ load, loadId, onChange }: Props) {
               return (
                 <div key={d.code} className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                    <FileText className="w-4 h-4 text-gray-700 shrink-0" />
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 truncate">{d.label}</div>
                       <div>{statusPill(doc)}</div>

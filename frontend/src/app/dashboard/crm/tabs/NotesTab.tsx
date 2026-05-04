@@ -50,8 +50,8 @@ export function NotesTab({ customerId, onChange }: Props) {
                 </span>
               )}
             </div>
-            {n.title && <div className="font-medium text-gray-900">{n.title}</div>}
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.content}</p>
+            {n.title && <div className="font-medium text-white">{n.title}</div>}
+            <p className="text-sm text-white whitespace-pre-wrap">{n.content}</p>
             <div className="text-[10px] text-gray-500 mt-1">
               {n.facility ? `From ${n.facility.name} · ` : ""}
               {n.createdByName && `By ${n.createdByName} · `}
@@ -106,7 +106,7 @@ function AddNoteForm({
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="font-medium">New note</h4>
-        <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
+        <button onClick={onClose}><X className="w-4 h-4 text-gray-700" /></button>
       </div>
       <select
         value={noteType}

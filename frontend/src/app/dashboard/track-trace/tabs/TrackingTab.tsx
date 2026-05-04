@@ -131,7 +131,7 @@ function Info({ label, value }: { label: string; value: any }) {
   return (
     <div>
       <div className="text-[11px] text-gray-500">{label}</div>
-      <div className="text-gray-900">{value ?? "—"}</div>
+      <div className="text-white">{value ?? "—"}</div>
     </div>
   );
 }

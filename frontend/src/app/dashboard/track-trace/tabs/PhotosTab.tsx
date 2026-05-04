@@ -104,7 +104,7 @@ export function PhotosTab({ load, loadId, onChange }: Props) {
                   )}
                   <div className="mt-1 text-[10px] text-gray-600 truncate">{p.label}</div>
                   {existing && (
-                    <div className="text-[9px] text-gray-400">
+                    <div className="text-[9px] text-gray-700">
                       {new Date(existing.createdAt).toLocaleDateString()}
                     </div>
                   )}

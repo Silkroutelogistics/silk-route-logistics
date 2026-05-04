@@ -339,7 +339,7 @@ export default function FuelTablesPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                          <Fuel className="w-4 h-4 text-white/40" />
+                          <Fuel className="w-4 h-4 text-slate-500" />
                         </div>
                         <div className="min-w-0">
                           <h3 className="text-sm font-medium text-white truncate">{table.name}</h3>

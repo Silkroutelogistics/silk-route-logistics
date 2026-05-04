@@ -85,7 +85,7 @@ export default function CrmPage() {
       {/* Search bar */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-700" />
           <input
             type="text"
             value={search}
@@ -98,7 +98,7 @@ export default function CrmPage() {
 
       {/* Customer list */}
       {customersQuery.isLoading ? (
-        <div className="p-12 text-center text-gray-400">Loading…</div>
+        <div className="p-12 text-center text-gray-700">Loading…</div>
       ) : customers.length === 0 ? (
         <div className="p-12 text-center text-gray-500 border border-gray-200 rounded-lg bg-white">
           {search

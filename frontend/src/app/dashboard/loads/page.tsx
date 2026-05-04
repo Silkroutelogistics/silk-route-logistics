@@ -1628,7 +1628,7 @@ function DatAdvancedForm({
     "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-slate-400">
         Override load details for the DAT posting. Leave blank to use load defaults.
       </p>
       <div className="grid grid-cols-2 gap-3">

@@ -2665,7 +2665,94 @@
 //           retires + ~5 P0→P1 reclassifications via swap shape).
 //           Small headline number, correct work — same atomic
 //           commit discipline pattern as Sprint 15a.
-export const SRL_VERSION = "3.8.kk";
+// v3.8.ll — Sprint 19 per-finding dashboard + portal residue
+//           triage. 162 swaps applied across 71 files. No bulk
+//           cluster methodology — each file processed via the
+//           Sprint 15b/16/18 perl swap-applier with line-targeted
+//           edits driven by scanner v8 file:line:bg:token tuples.
+//
+//           Major surprise: dashboard/carriers/page.tsx (55 P0,
+//           40 swaps applied) was MISSED in Sprint 15b's top-11
+//           cutoff AND explicitly excluded from Sprint 16 portal
+//           scope (it's an AE Console carrier-management page,
+//           not the carrier portal). Single-largest residue file
+//           in the codebase — fixed in Sprint 19 using same shape
+//           A/B/C/D/E methodology as Sprint 15b. Lesson: top-N
+//           file filtering misses long-tail files that
+//           individually count but cumulatively matter.
+//
+//           Other files swept in Sprint 19 (smaller counts):
+//             - dashboard/dock-scheduling/page.tsx (11)
+//             - dashboard/exception-config/page.tsx (10)
+//             - dashboard/lead-hunter/tabs/ProfileTab.tsx (10)
+//             - dashboard/fleet/page.tsx (7)
+//             - dashboard/claims/page.tsx (6)
+//             - dashboard/contract-rates/page.tsx (5)
+//             - dashboard/track-trace/tabs/ExceptionsTab.tsx (5)
+//             - dashboard/waterfall/tabs/TendersTab.tsx (5)
+//             - long tail of 60+ files with 1-4 P0 each
+//
+//           Same shape mapping as Sprint 15b/16:
+//             A — text-{slate|gray}-{500|600|700|800|900} on dark
+//                 → text-slate-400 (Sprint 14 collateral retired
+//                 in files Sprint 15b's top-11 didn't cover)
+//             B — text-white on light card → text-[#0A2540]
+//             C — text-{slate|gray}-{300|400|500} on light →
+//                 text-{slate|gray}-700
+//             D — text-{color}-{400|500} status badge on light →
+//                 text-{color}-700
+//             E — text-white/N translucent on dark → text-slate-400
+//             gold-residual — text-[#C5A572] on light cream
+//                 (bg-[#FAEEDA]) → text-[#BA7517] gold-dark
+//                 (preserves Sprint 15a's cream-context repair
+//                 pattern; applied as preventive sweep across
+//                 all in-scope files even where current scanner
+//                 didn't surface a finding)
+//
+//           Sprint 19 OUTLIERS deferred (~50-60 across):
+//             - text-gray-300 / text-slate-300 decorative icons
+//               where -500 or -700 swap creates wrong visual
+//               weight (chevrons, dividers)
+//             - Conditional className branches where one branch
+//               is correct and one isn't (cn(isActive ? "..." :
+//               "...") patterns)
+//             - text-white/N translucent text in contexts where
+//               the visual intent is "barely visible placeholder"
+//             - 4 text-[#0F1117]-on-gradient-bg sidebar avatar
+//               findings (Sprint 16 already documented these as
+//               v9 scanner FPs)
+//
+//           These outliers stay as residue for Sprint 21 per-
+//           finding work or v9 scanner enhancement.
+//
+//           Methodology validation: applying Sprint 15b/16
+//           perl methodology to Sprint 19's broader scope
+//           confirmed the rule-set is robust. No new over-
+//           correction classes surfaced (gold-on-cream repair
+//           applied preventively this time, before scanner
+//           re-run). Pre-commit verification clean.
+//
+//           Net P0 retirement vs 600 baseline: ~150-170 expected
+//           (162 swaps − ~10 cases where scanner trail had
+//           multiple findings on same line and only one matched).
+//           Phase C confirms exact delta.
+//
+//           Post-Sprint-19 remaining ~430-450 P0 partition:
+//             ~140 CSS residue (Sprint 21)
+//             ~65 shared-component v8 scanner FPs (v9 scanner)
+//             ~50-60 OUTLIERS deferred this sprint
+//             ~150-180 long-tail single-occurrence findings in
+//               files this sprint didn't reach (e.g., docs
+//               surfaces, edge-case form modals, etc.)
+//
+//           Sprint 19 substantially closes the structured-
+//           sweep workstream. Sprints 20+ are per-finding
+//           triage + scanner v9 + narrative work.
+//
+//           Per §3.1, version bump justified — publicly-visible
+//           changes to AE Console carrier-management page (used
+//           daily by AE staff) + 70+ other dashboard surfaces.
+export const SRL_VERSION = "3.8.ll";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

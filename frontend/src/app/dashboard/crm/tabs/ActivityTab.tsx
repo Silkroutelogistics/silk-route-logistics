@@ -37,7 +37,7 @@ export function ActivityTab({ customerId }: { customerId: string }) {
               </div>
               <div className="text-[10px] uppercase text-gray-400">{a.actorType}</div>
             </div>
-            <div className="text-gray-900">{a.description}</div>
+            <div className="text-white">{a.description}</div>
             {a.actorName && <div className="text-xs text-gray-500">{a.actorName}</div>}
           </div>
         </li>

@@ -156,7 +156,7 @@ export default function ShipperDefaultsPage() {
                           <p className="text-sm text-gray-300">
                             {currentValue !== undefined && currentValue !== null && currentValue !== ""
                               ? String(currentValue)
-                              : <span className="text-gray-600 italic">Not set</span>
+                              : <span className="text-slate-400 italic">Not set</span>
                             }
                           </p>
                         )}

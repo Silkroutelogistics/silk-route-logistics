@@ -89,7 +89,7 @@ export default function VarianceReportsPage() {
               <div key={lane.lane} className="flex items-center gap-4 py-2 px-3 rounded-lg hover:bg-white/[0.02] transition">
                 <div className="flex items-center gap-1.5 text-sm text-gray-300 w-32">
                   <span>{lane.lane.split("→")[0]}</span>
-                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                  <ArrowRight className="w-3 h-3 text-slate-400" />
                   <span>{lane.lane.split("→")[1]}</span>
                 </div>
                 <div className="flex-1">
@@ -141,7 +141,7 @@ export default function VarianceReportsPage() {
                   <tr key={l.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition">
                     <td className="px-4 py-3 text-white font-medium">{l.loadNumber || l.referenceNumber?.slice(0, 10)}</td>
                     <td className="px-4 py-3 text-gray-400">
-                      <span className="flex items-center gap-1">{l.originState} <ArrowRight className="w-3 h-3 text-gray-600" /> {l.destState}</span>
+                      <span className="flex items-center gap-1">{l.originState} <ArrowRight className="w-3 h-3 text-slate-400" /> {l.destState}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-400">{l.equipmentType?.replace("_", " ")}</td>
                     <td className="px-4 py-3 text-gray-400 truncate max-w-[120px]">{l.customer?.name || "—"}</td>

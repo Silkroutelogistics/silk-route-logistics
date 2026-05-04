@@ -172,7 +172,7 @@ function DetailPanel({
               <User className="w-5 h-5 text-gray-500" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">{appt.driverName || "Not assigned"}</p>
+              <p className="text-sm font-medium text-[#0A2540]">{appt.driverName || "Not assigned"}</p>
               {appt.driverPhone && (
                 <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                   <Phone className="w-3 h-3" /> {appt.driverPhone}
@@ -580,7 +580,7 @@ export default function DockSchedulingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Dock Scheduling</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage facility dock appointments and yard operations</p>
+          <p className="text-sm text-slate-400 mt-1">Manage facility dock appointments and yard operations</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -706,7 +706,7 @@ export default function DockSchedulingPage() {
       <div className="bg-white/[0.03] border border-white/5 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/5 text-gray-600">
+            <tr className="border-b border-white/5 text-slate-400">
               <th className="text-left p-3 font-medium">Time</th>
               <th className="text-left p-3 font-medium">Facility / Dock</th>
               <th className="text-left p-3 font-medium">Type</th>
@@ -728,9 +728,9 @@ export default function DockSchedulingPage() {
               <tr>
                 <td colSpan={7}>
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <CalendarDays className="w-12 h-12 text-slate-600 mb-4" />
+                    <CalendarDays className="w-12 h-12 text-slate-400 mb-4" />
                     <h3 className="text-lg font-semibold text-white mb-1">No appointments</h3>
-                    <p className="text-sm text-gray-600 mb-4 max-w-sm">
+                    <p className="text-sm text-slate-400 mb-4 max-w-sm">
                       No dock appointments found for {fmtDate(selectedDate)}.
                     </p>
                     <button
@@ -757,7 +757,7 @@ export default function DockSchedulingPage() {
                   <td className="p-3">
                     <span className="text-white font-medium">{fmtTime(appt.startTime)}</span>
                     <span className="text-slate-500 mx-1">-</span>
-                    <span className="text-gray-600">{fmtTime(appt.endTime)}</span>
+                    <span className="text-slate-400">{fmtTime(appt.endTime)}</span>
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
@@ -796,11 +796,11 @@ export default function DockSchedulingPage() {
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <Truck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="text-gray-700 truncate max-w-[160px]">{appt.carrierName}</span>
+                      <span className="text-slate-400 truncate max-w-[160px]">{appt.carrierName}</span>
                     </div>
                   </td>
                   <td className="p-3">
-                    <p className="text-gray-700 text-xs">{appt.driverName || "—"}</p>
+                    <p className="text-slate-400 text-xs">{appt.driverName || "—"}</p>
                     {appt.truckNumber && (
                       <p className="text-slate-500 text-xs">Truck: {appt.truckNumber}</p>
                     )}

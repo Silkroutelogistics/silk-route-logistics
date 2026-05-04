@@ -132,7 +132,7 @@ function AddFacilityForm({
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="font-medium">New facility</h4>
-        <button onClick={onClose}><X className="w-4 h-4 text-gray-400" /></button>
+        <button onClick={onClose}><X className="w-4 h-4 text-gray-700" /></button>
       </div>
       <In placeholder="Facility name *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <AddressAutocomplete

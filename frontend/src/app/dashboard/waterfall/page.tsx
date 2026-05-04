@@ -139,7 +139,7 @@ export default function WaterfallPage() {
 
       {/* Table */}
       {boardQuery.isLoading
-        ? <div className="p-12 text-center text-gray-400">Loading…</div>
+        ? <div className="p-12 text-center text-gray-700">Loading…</div>
         : <BoardTable loads={loads} onRowClick={setSelectedLoadId} />}
 
       {/* Drawer */}

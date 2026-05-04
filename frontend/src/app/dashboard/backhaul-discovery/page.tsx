@@ -110,9 +110,9 @@ export default function BackhaulDiscoveryPage() {
           <div className="p-8 text-center text-gray-500 text-sm">Searching...</div>
         ) : results.length === 0 ? (
           <div className="p-12 text-center">
-            <Compass className="w-10 h-10 mx-auto mb-3 text-gray-600" />
+            <Compass className="w-10 h-10 mx-auto mb-3 text-slate-400" />
             <p className="text-sm text-gray-500">No unassigned loads found in this area</p>
-            <p className="text-xs text-gray-600 mt-1">Try expanding your search to a different state or removing the city filter</p>
+            <p className="text-xs text-slate-400 mt-1">Try expanding your search to a different state or removing the city filter</p>
           </div>
         ) : (
           <div className="divide-y divide-white/[0.03]">
@@ -132,7 +132,7 @@ export default function BackhaulDiscoveryPage() {
                   <div className="flex items-center gap-1.5 text-xs text-gray-400">
                     <MapPin className="w-3 h-3" />
                     <span>{load.originCity}, {load.originState}</span>
-                    <ArrowRight className="w-3 h-3 text-gray-600" />
+                    <ArrowRight className="w-3 h-3 text-slate-400" />
                     <span>{load.destCity}, {load.destState}</span>
                   </div>
                 </div>

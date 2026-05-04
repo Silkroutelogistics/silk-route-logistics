@@ -64,7 +64,7 @@ export function CheckCallsTab({ load, loadId, onChange }: Props) {
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">New check call</h4>
-            <button onClick={() => setShowForm(false)}><X className="w-4 h-4 text-gray-400" /></button>
+            <button onClick={() => setShowForm(false)}><X className="w-4 h-4 text-gray-700" /></button>
           </div>
           <textarea
             value={notes} onChange={(e) => setNotes(e.target.value)}
@@ -108,8 +108,8 @@ export function CheckCallsTab({ load, loadId, onChange }: Props) {
             <li key={`${t.kind}-${t.id}`} className="relative">
               <span className={`absolute -left-[19px] top-2 w-2.5 h-2.5 rounded-full ${dotColor}`} />
               <div className="text-xs text-gray-500">{new Date(t.time).toLocaleString()}</div>
-              <div className="text-sm text-gray-900">{t.type}</div>
-              {t.notes && <div className="text-xs text-gray-600">{t.notes}</div>}
+              <div className="text-sm text-white">{t.type}</div>
+              {t.notes && <div className="text-xs text-slate-400">{t.notes}</div>}
               {t.method && <div className="text-[11px] text-gray-400">{t.method}</div>}
             </li>
           );

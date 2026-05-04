@@ -246,7 +246,7 @@ export default function ExceptionConfigPage() {
               <Settings2 className="h-7 w-7 text-[#C5A572]" />
               <h1 className="text-2xl font-semibold tracking-tight">Exception Configuration</h1>
             </div>
-            <p className="text-sm text-gray-600 ml-10">
+            <p className="text-sm text-slate-400 ml-10">
               Configure exception monitoring rules and manage active alerts
             </p>
           </div>
@@ -314,7 +314,7 @@ export default function ExceptionConfigPage() {
             <div className="text-center py-20 text-slate-500">
               <ShieldAlert className="h-12 w-12 mx-auto mb-4 opacity-30" />
               <p className="text-sm">No exception configurations found.</p>
-              <p className="text-xs mt-1 text-slate-600">Click &quot;Seed Defaults&quot; to create the standard set.</p>
+              <p className="text-xs mt-1 text-slate-400">Click &quot;Seed Defaults&quot; to create the standard set.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -539,7 +539,7 @@ function ConfigCard({
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-slate-200 truncate">{config.name}</h4>
+          <h4 className="text-sm font-medium text-slate-700 truncate">{config.name}</h4>
           <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{config.description}</p>
         </div>
 
@@ -647,12 +647,12 @@ function AlertRow({
         </div>
         <p className="text-xs text-slate-500 truncate">{alert.message}</p>
         <div className="flex items-center gap-3 mt-1">
-          <span className="text-[11px] text-slate-600">
+          <span className="text-[11px] text-slate-400">
             {alert.entityType} {alert.entityId.slice(0, 8)}
           </span>
-          <span className="text-[11px] text-slate-600">{timeAgo(alert.createdAt)}</span>
+          <span className="text-[11px] text-slate-400">{timeAgo(alert.createdAt)}</span>
           {alert.resolutionNote && (
-            <span className="text-[11px] text-slate-600 italic truncate max-w-[200px]">
+            <span className="text-[11px] text-slate-400 italic truncate max-w-[200px]">
               Note: {alert.resolutionNote}
             </span>
           )}

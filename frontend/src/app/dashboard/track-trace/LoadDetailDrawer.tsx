@@ -168,7 +168,7 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            {!load && <div className="text-sm text-gray-400">Loading…</div>}
+            {!load && <div className="text-sm text-gray-700">Loading…</div>}
             {load && tab === "details"     && <DetailsTab     load={load} />}
             {load && tab === "tracking"    && <TrackingTab    load={load} />}
             {load && tab === "activity"    && <ActivityTab    load={load} />}

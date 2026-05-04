@@ -231,7 +231,7 @@ export default function ViolationsPage() {
                     {alert.status}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-2">{new Date(alert.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs text-slate-400 mt-2">{new Date(alert.createdAt).toLocaleDateString()}</p>
               </div>
             ))}
           </div>

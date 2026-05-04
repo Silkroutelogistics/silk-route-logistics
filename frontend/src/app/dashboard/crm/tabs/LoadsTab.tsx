@@ -34,7 +34,7 @@ export function LoadsTab({ customerId }: { customerId: string }) {
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Top lanes</h3>
         <div className="border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
-          {d.topLanes.length === 0 && <div className="p-3 text-xs text-gray-400 text-center">No lanes yet.</div>}
+          {d.topLanes.length === 0 && <div className="p-3 text-xs text-gray-700 text-center">No lanes yet.</div>}
           {d.topLanes.map((l, i) => (
             <div key={i} className="flex items-center justify-between px-3 py-2">
               <div className="text-sm text-gray-900">{l.origin} → {l.dest}</div>
@@ -54,7 +54,7 @@ export function LoadsTab({ customerId }: { customerId: string }) {
           </Link>
         </div>
         <div className="border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
-          {d.loads.length === 0 && <div className="p-3 text-xs text-gray-400 text-center">No loads yet.</div>}
+          {d.loads.length === 0 && <div className="p-3 text-xs text-gray-700 text-center">No loads yet.</div>}
           {d.loads.map((l) => (
             <Link
               key={l.id}
@@ -62,7 +62,7 @@ export function LoadsTab({ customerId }: { customerId: string }) {
               className="flex items-center justify-between px-3 py-2 hover:bg-gray-50"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Truck className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <Truck className="w-3.5 h-3.5 text-gray-700 shrink-0" />
                 <span className="font-medium text-gray-900">{l.loadNumber ?? l.referenceNumber.slice(0, 8)}</span>
                 <span className="text-xs text-gray-500 truncate">
                   {l.originCity}, {l.originState} → {l.destCity}, {l.destState}

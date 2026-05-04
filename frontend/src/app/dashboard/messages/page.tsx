@@ -120,7 +120,7 @@ export default function MessagesPage() {
                     <p className="text-[10px] text-slate-500 shrink-0 ml-2">{new Date(conv.lastMessageAt).toLocaleDateString()}</p>
                   </div>
                   <p className="text-xs text-slate-500 truncate">{conv.partner.company || conv.partner.role}</p>
-                  {conv.partner.email && <p className="text-[10px] text-slate-600 truncate">{conv.partner.email}</p>}
+                  {conv.partner.email && <p className="text-[10px] text-slate-400 truncate">{conv.partner.email}</p>}
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-slate-400 truncate">{conv.lastMessage}</p>
                     {conv.unreadCount > 0 && (
@@ -135,7 +135,7 @@ export default function MessagesPage() {
             <div className="p-8 text-center">
               <MessageSquare className="w-10 h-10 text-[#2A2F42] mx-auto mb-3" />
               <p className="text-sm text-slate-500">No conversations yet</p>
-              <p className="text-xs text-slate-600 mt-1">Click + to start a new message</p>
+              <p className="text-xs text-slate-400 mt-1">Click + to start a new message</p>
             </div>
           )}
         </div>

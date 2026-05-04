@@ -72,7 +72,7 @@ export function CascadeTab({ waterfall, onChange }: Props) {
           </button>
         )}
         <div className="ml-auto text-xs text-gray-500">
-          Mode: <span className="font-medium text-gray-700">{waterfall.mode}</span> · {waterfall.status}
+          Mode: <span className="font-medium text-slate-400">{waterfall.mode}</span> · {waterfall.status}
         </div>
       </div>
 
@@ -101,7 +101,7 @@ export function CascadeTab({ waterfall, onChange }: Props) {
                     {p.isFallback ? "D" : p.position}
                   </div>
                   <div className="min-w-0">
-                    <div className="font-medium text-gray-900 truncate">
+                    <div className="font-medium text-white truncate">
                       {p.isFallback ? "DAT fallback" : carrier?.companyName ?? p.carrier?.email ?? "Unknown carrier"}
                     </div>
                     {!p.isFallback && carrier && (

@@ -24,18 +24,18 @@ export function TendersTab({ waterfall }: { waterfall: any }) {
           <div key={t.id} className={`border rounded-lg p-3 ${cls}`}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="font-medium text-gray-900">Position #{t.position.position}</div>
+                <div className="font-medium text-white">Position #{t.position.position}</div>
                 <div className="text-[11px] text-gray-500">
                   Sent {new Date(t.createdAt).toLocaleString()}
                 </div>
               </div>
               <span className="px-2 py-0.5 text-[10px] rounded bg-white/60 text-gray-700 font-medium">{t.status}</span>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-gray-600">
-              <div>Rate: <span className="text-gray-900">${Number(t.offeredRate).toLocaleString()}</span></div>
-              <div>Expires: <span className="text-gray-900">{new Date(t.expiresAt).toLocaleTimeString()}</span></div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+              <div>Rate: <span className="text-white">${Number(t.offeredRate).toLocaleString()}</span></div>
+              <div>Expires: <span className="text-white">{new Date(t.expiresAt).toLocaleTimeString()}</span></div>
               {t.respondedAt && (
-                <div>Responded: <span className="text-gray-900">{new Date(t.respondedAt).toLocaleTimeString()}</span></div>
+                <div>Responded: <span className="text-white">{new Date(t.respondedAt).toLocaleTimeString()}</span></div>
               )}
             </div>
           </div>

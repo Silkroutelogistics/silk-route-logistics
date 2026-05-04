@@ -45,7 +45,7 @@ export function NotesTab({ load, loadId, onChange }: Props) {
               <span>{NOTE_TYPES.find((nt) => nt.id === n.noteType)?.label ?? n.noteType}</span>
               <span>{new Date(n.createdAt).toLocaleString()}</span>
             </div>
-            <p className="text-gray-900 whitespace-pre-wrap">{n.content}</p>
+            <p className="text-white whitespace-pre-wrap">{n.content}</p>
             {n.createdByName && <div className="text-[10px] text-gray-400 mt-1">{n.createdByName}</div>}
           </div>
         ))}

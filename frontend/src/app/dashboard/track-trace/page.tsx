@@ -151,7 +151,7 @@ export default function TrackTracePage() {
       {/* Filter bar */}
       <div className="grid grid-cols-6 gap-3">
         <div className="relative col-span-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-700" />
           <input
             type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Search load#, BOL, PO…"
@@ -219,7 +219,7 @@ export default function TrackTracePage() {
 
       {/* Table */}
       {boardQuery.isLoading
-        ? <div className="p-12 text-center text-gray-400">Loading…</div>
+        ? <div className="p-12 text-center text-gray-700">Loading…</div>
         : <BoardTable loads={loads} onRowClick={setSelectedLoadId} />}
 
       {/* Detail drawer */}

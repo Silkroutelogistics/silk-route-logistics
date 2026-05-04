@@ -55,15 +55,15 @@ export function MatchTab({ waterfall, loadId, onChange }: Props) {
                 </div>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-gray-600">
                   <div>
-                    <div className="text-gray-400">Lane runs</div>
+                    <div className="text-gray-700">Lane runs</div>
                     <div>{c.breakdown.laneRunCount}</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">On-time</div>
+                    <div className="text-gray-700">On-time</div>
                     <div>{c.breakdown.onTimePct.toFixed(0)}%</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Est. rate</div>
+                    <div className="text-gray-700">Est. rate</div>
                     <div>{c.breakdown.estimatedRate ? `$${Math.round(c.breakdown.estimatedRate).toLocaleString()}` : "—"}</div>
                   </div>
                 </div>
