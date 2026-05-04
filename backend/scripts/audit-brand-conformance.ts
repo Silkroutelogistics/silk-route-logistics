@@ -263,14 +263,78 @@
  *           React/Tailwind components. Trusted baseline established
  *           for sitewide contrast detection across all surfaces.
  *
- * v6 candidates deferred from this scope:
- *   - JSX tree walking for parent-child element contrast (when
- *     parent element sets bg, child sets text on a different
- *     element)
+ *   v6 (2026-05-04) — JSX tree walking for parent-child element
+ *           contrast. Closes the ~320 false-positive class
+ *           surfaced by Sprint 10's Phase A inspection: Tailwind
+ *           translucent overlays (`bg-white/5`, `bg-black/40`,
+ *           `bg-white/10`) are reported by v5 as 1.05:1 white-on-
+ *           white because v5 composites the overlay against
+ *           `#FFFFFF` default parent (no JSX walking). Real
+ *           rendering: the JSX ancestor element (often
+ *           `<div className="bg-[#0f172a]">` for /track or
+ *           dashboard pages) supplies an opaque dark navy bg, and
+ *           the translucent overlay composites to a slightly-lifted
+ *           navy → contrast against text-white is ~14:1 PASS.
+ *
+ *           v6 introduces a stack-based regex JSX walker (no AST
+ *           dep per directive confirmation #4) that builds a per-
+ *           file element tree at Pass 3 startup
+ *           (`buildJsxElementStack`). Walker handles: self-closing
+ *           tags, fragments (`<>` / `</>`), HTML tags vs React
+ *           components (capitalized first char), clsx()/cn()
+ *           helper unwrapping (string-literal args extracted),
+ *           dynamic interpolation `${...}` skipped per directive
+ *           confirmation #3 (file noted in dynamicSkippedFiles),
+ *           multi-line className expressions, brace-depth tracking
+ *           for nested ternaries.
+ *
+ *           `findAncestorBg(elementIndex, elements, counter)`
+ *           walks the parentIndex chain and returns the first
+ *           ancestor with a `bg-*` resolved class. When walking
+ *           past a capitalized-tag (component) ancestor without
+ *           bg-*, increments `crossFileBoundaryCount` because the
+ *           component's actual rendered bg lives in a different
+ *           file (deferred to v7 — cross-file component
+ *           composition).
+ *
+ *           pass3Tailwind refactored to two cases:
+ *             Case 1 — same-element bg+text pair (existing v5
+ *               path). When bg has α<1, NEW: composite against
+ *               findAncestorBg result (not #FFFFFF default).
+ *               Increments `ancestorBgFiringCount` when the
+ *               ancestor lookup fires and changes the parent bg
+ *               from default white to the JSX ancestor.
+ *             Case 2 — orphan text-* element with no same-element
+ *               bg-* (NEW v6 path). Pair against findAncestorBg
+ *               result. Increments `orphanTextFiringCount`. Closes
+ *               the dashboard-page pattern where `<h2 className="
+ *               text-white">` sits inside `<div className="
+ *               bg-[#0A2540]">` two levels up.
+ *
+ *           Counters surfaced in summary:
+ *             - tailwindAncestorBgFiringCount
+ *             - tailwindOrphanTextFiringCount
+ *             - tailwindCrossFileBoundaryCount
+ *
+ *           Behavior delta: Sprint 10 baseline 571 P0s expected
+ *           to drop sharply because the dashboard-page +
+ *           public-tracking translucent-overlay class is no
+ *           longer misclassified. Surviving P0s are real
+ *           readability issues — input for Sprint 12 fix sweep.
+ *
+ * v7 candidates deferred from this scope:
+ *   - Cross-file React component composition (when a parent
+ *     `<Card>` sets bg in its own file, child `<h2 className=
+ *     "text-white">` sees crossFileBoundaryCount++ but cannot
+ *     resolve the ancestor bg — would require multi-file element
+ *     tree merging at component-boundary)
  *   - sm:/md:/lg:/xl:/2xl: responsive variant evaluation
  *   - dark: variant evaluation against the dark-mode body bg
- *   - React state-driven className via cn() / clsx() / classnames
- *     helpers
+ *   - State-driven conditional className branches (ternary inside
+ *     clsx args — currently first-string-literal-wins)
+ *   - Full AST parsing (typescript / @babel/parser) — would
+ *     resolve clsx/cn helpers with arbitrary call signatures and
+ *     spread arguments correctly, plus enable type-aware analysis
  *   - CSS-in-JS dynamic styles (styled-components / emotion /
  *     not currently used in repo)
  *   - @media query rules
@@ -1750,66 +1814,250 @@ function pass3Contrast(
 // element sets bg, child sets text), `sm:` / `md:` / `lg:` / `dark:`
 // responsive variants, React state-driven className via cn() / clsx()
 // helpers, CSS-in-JS dynamic styles.
+
+// v6 — JSX element stack entry. Built per .tsx file by
+// buildJsxElementStack(). Each entry represents a JSX opening tag; the
+// stack is iterated to find Tailwind classNames per element, and the
+// `parentIndex` chain enables ancestor bg resolution for alpha
+// compositing and orphan-text contrast pairing.
+interface JsxStackEntry {
+  tag: string;          // e.g., "div", "Modal", "button"
+  classNames: string;   // raw className string-literal value (or "" if dynamic / missing)
+  parentIndex: number;  // -1 for root; else index into elements[]
+  line: number;
+  isComponent: boolean; // capitalized first letter = React component (cross-file boundary)
+}
+
+// v6 — Stack-based JSX walker. Heuristic, not a full AST parser. Per
+// Sprint 11 directive confirmation #1, capitalized-tag (React
+// component) ancestors are walked PAST when their className doesn't
+// supply a bg-* — `crossFileBoundaryCount` is incremented for
+// transparency.
+//
+// Scope per directive confirmations:
+//   #2 — closest LEXICAL ancestor wins; map() body is a nested scope
+//        sharing the parent. Walker doesn't try to detect map at all;
+//        naive walking gives this behavior for free.
+//   #3 — conditional rendering branches (`cond ? <A> : <B>`) become
+//        sequential same-position siblings sharing parentIndex.
+//        Self-closed branches push + immediately pop.
+//   #4 — clsx/cn helper string-literal arguments extracted; variables
+//        skipped.
+//
+// The walker handles:
+//   - <Tag attr1="x" attr2={...}>...</Tag>  (full element)
+//   - <Tag />                                (self-closed, pushed + popped)
+//   - <></>  / <Fragment>...</Fragment>      (transparent — not pushed)
+//   - className="literal", className='literal', className={`backtick`},
+//     className={clsx("a", "b", var)}, className={cn("a", "b")}
+//
+// Skipped:
+//   - className with ${...} template interpolation → empty classNames
+//   - Comparison operators `a < b` (next-char must be A-Za-z or `/`)
+//   - JSX inside string literals or comments (handled approximately by
+//     the inString tracker)
+function buildJsxElementStack(content: string): { elements: JsxStackEntry[]; crossFileBoundaryCount: number } {
+  const elements: JsxStackEntry[] = [];
+  const stack: number[] = []; // indices into elements[]
+  let crossFileBoundaryCount = 0;
+  let i = 0;
+  const n = content.length;
+
+  // Helper: extract className value from a tag's attribute body.
+  // Returns the merged literal string; "" if dynamic-only or absent.
+  const extractClassNames = (attrBody: string): string => {
+    // Try simple literal forms first.
+    const literalMatch = attrBody.match(/className\s*=\s*(?:"([^"]*)"|'([^']*)'|\{`([^`$]*)`\})/);
+    if (literalMatch) {
+      const v = literalMatch[1] ?? literalMatch[2] ?? literalMatch[3] ?? "";
+      return v;
+    }
+    // Try clsx / cn / classnames helper invocation.
+    const helperMatch = attrBody.match(/className\s*=\s*\{\s*(?:clsx|cn|classnames|cva|twMerge)\s*\(([\s\S]+?)\)\s*\}/);
+    if (helperMatch) {
+      const args = helperMatch[1];
+      const literals: string[] = [];
+      const litRe = /["']([^"']+)["']/g;
+      let lm: RegExpExecArray | null;
+      while ((lm = litRe.exec(args)) !== null) {
+        if (!/\$\{/.test(lm[1])) literals.push(lm[1]);
+      }
+      return literals.join(" ");
+    }
+    // Try simple `{"literal"}` wrapping.
+    const braceLiteralMatch = attrBody.match(/className\s*=\s*\{\s*["']([^"']+)["']\s*\}/);
+    if (braceLiteralMatch) return braceLiteralMatch[1];
+    return "";
+  };
+
+  // Find tag end — first '>' not inside attribute braces or strings.
+  const findTagEnd = (start: number): number => {
+    let depth = 0;
+    let inString: string | null = null;
+    let p = start;
+    while (p < n) {
+      const c = content[p];
+      if (inString !== null) {
+        if (c === inString && content[p - 1] !== "\\") inString = null;
+      } else if (c === '"' || c === "'" || c === "`") {
+        inString = c;
+      } else if (c === "{") {
+        depth++;
+      } else if (c === "}") {
+        depth--;
+      } else if (c === ">" && depth === 0) {
+        return p;
+      }
+      p++;
+    }
+    return -1;
+  };
+
+  while (i < n) {
+    const ch = content[i];
+    if (ch !== "<") { i++; continue; }
+    const next = content[i + 1];
+    if (!next) break;
+
+    // Closing tag </Tag>
+    if (next === "/") {
+      const closeMatch = content.slice(i).match(/^<\/([A-Za-z][A-Za-z0-9_.\-]*|)\s*>/);
+      if (closeMatch) {
+        const tag = closeMatch[1];
+        if (tag !== "") {
+          // Pop stack to matching opener.
+          for (let s = stack.length - 1; s >= 0; s--) {
+            if (elements[stack[s]].tag === tag) {
+              stack.length = s;
+              break;
+            }
+          }
+        }
+        i += closeMatch[0].length;
+        continue;
+      }
+      i++; continue;
+    }
+
+    // Fragment opener <>
+    if (next === ">") { i += 2; continue; }
+
+    // Must be A-Z or a-z to be an opening tag
+    if (!/[A-Za-z]/.test(next)) { i++; continue; }
+
+    // Read tag name
+    let j = i + 1;
+    while (j < n && /[A-Za-z0-9_.\-]/.test(content[j])) j++;
+    const tag = content.slice(i + 1, j);
+    if (tag.length === 0) { i++; continue; }
+
+    // Find tag end
+    const tagEnd = findTagEnd(j);
+    if (tagEnd === -1) break;
+    const attrBody = content.slice(j, tagEnd);
+    const isSelfClosed = attrBody.trimEnd().endsWith("/");
+    const classNames = /\$\{/.test(attrBody) && !/className\s*=\s*\{\s*(?:clsx|cn|classnames|cva|twMerge)\s*\(/.test(attrBody)
+      ? "" // contains ${} interpolation outside helper — skip
+      : extractClassNames(attrBody);
+
+    const isComponent = /^[A-Z]/.test(tag);
+    const lineIdx = content.slice(0, i).split("\n").length;
+    const parentIndex = stack.length > 0 ? stack[stack.length - 1] : -1;
+
+    elements.push({ tag, classNames, parentIndex, line: lineIdx, isComponent });
+    if (!isSelfClosed) stack.push(elements.length - 1);
+
+    i = tagEnd + 1;
+  }
+  return { elements, crossFileBoundaryCount };
+}
+
+// v6 — Walk JSX ancestor chain to find first ancestor with a bg-*
+// className. Used by pass3Tailwind to:
+//   (a) supply the opaque ancestor bg for alpha compositing when the
+//       same-element bg has α<1 (e.g., `bg-white/5` overlay over a
+//       dark navy parent renders as lifted-navy, NOT white)
+//   (b) supply the bg for orphan text-* elements (no same-element bg-*)
+//
+// Returns null if no bg-* ancestor found within the lexical scope of
+// this file; caller falls back to existing v5 page-context body or
+// #FFFFFF default. Increments crossFileBoundaryCount when walking past
+// a React component (capitalized tag) without finding bg-*.
+function findAncestorBg(
+  elementIndex: number,
+  elements: JsxStackEntry[],
+  counter: { crossFileBoundaryCount: number }
+): { hex: string; alpha?: number; viaTag: string; viaLine: number } | null {
+  let parentIdx = elements[elementIndex].parentIndex;
+  while (parentIdx >= 0) {
+    const ancestor = elements[parentIdx];
+    if (ancestor.classNames) {
+      const tokens = ancestor.classNames.split(/\s+/).filter(Boolean);
+      for (const token of tokens) {
+        const variantStripped = token.replace(/^(hover|focus|active|disabled):/, "");
+        if (/^(dark|sm|md|lg|xl|2xl):/.test(variantStripped)) continue;
+        const resolved = resolveTailwindClass(variantStripped);
+        if (!resolved || resolved.kind !== "bg") continue;
+        // First bg-* match wins (per v3.8 first-match-wins convention).
+        return {
+          hex: resolved.hex,
+          alpha: resolved.alpha,
+          viaTag: ancestor.tag,
+          viaLine: ancestor.line,
+        };
+      }
+    }
+    if (ancestor.isComponent) counter.crossFileBoundaryCount++;
+    parentIdx = ancestor.parentIndex;
+  }
+  return null;
+}
+
 function pass3Tailwind(tsxFiles: string[]): {
   findings: ContrastFinding[];
   scanned: number;
   pairsEvaluated: number;
   dynamicSkippedFiles: number;
+  ancestorBgFiringCount: number;
+  orphanTextFiringCount: number;
+  crossFileBoundaryCount: number;
 } {
   const findings: ContrastFinding[] = [];
   let pairsEvaluated = 0;
   let dynamicSkippedFiles = 0;
+  let ancestorBgFiringCount = 0;     // v6: same-element pair used ancestor for alpha compositing
+  let orphanTextFiringCount = 0;     // v6: text-only element resolved bg via ancestor walking
+  const counter = { crossFileBoundaryCount: 0 }; // v6: walked past a React component boundary
   const dynamicLogged = new Set<string>();
-
-  // Match className=<value>. Three forms:
-  //   className="static string"
-  //   className='static string'
-  //   className={`static template no $\{` }
-  //   (Skip className={...} arbitrary expressions — captured separately
-  //    for dynamic-interpolation detection.)
-  const staticDoubleRe = /className\s*=\s*"([^"]+)"/g;
-  const staticSingleRe = /className\s*=\s*'([^']+)'/g;
-  // Backtick template with NO interpolation. Anti-anchor on $ so any
-  // template containing ${...} fails the match.
-  const staticBacktickRe = /className\s*=\s*\{`([^`$]+)`\}/g;
-  // Detect ANY className with ${...} interpolation, for once-per-file
-  // logging.
   const dynamicRe = /className\s*=\s*\{[^}]*`[^`]*\$\{/;
 
   for (const file of tsxFiles) {
     const content = readFile(file);
-    const lines = content.split("\n");
 
     if (dynamicRe.test(content) && !dynamicLogged.has(file)) {
       dynamicLogged.add(file);
       dynamicSkippedFiles++;
     }
 
-    const harvest = (re: RegExp) => {
-      re.lastIndex = 0;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(content)) !== null) {
-        const classNames = m[1];
-        if (!classNames || /\$\{/.test(classNames)) continue;
-        const lineIdx = content.slice(0, m.index).split("\n").length;
-        evalClassNames(file, classNames, lineIdx);
-      }
-    };
+    // v6 — Build JSX element stack for this file ONCE, then walk it
+    // for each element's classNames. Replaces v5's regex-only pass
+    // that lacked ancestor context.
+    const { elements } = buildJsxElementStack(content);
 
-    const evalClassNames = (file: string, classNames: string, line: number) => {
-      // Tokenize on whitespace + group by pseudo-variant.
-      const tokens = classNames.split(/\s+/).filter(Boolean);
+    for (let elemIdx = 0; elemIdx < elements.length; elemIdx++) {
+      const elem = elements[elemIdx];
+      if (!elem.classNames || /\$\{/.test(elem.classNames)) continue;
+
+      // Tokenize + group by pseudo-variant (existing v5 logic).
+      const tokens = elem.classNames.split(/\s+/).filter(Boolean);
       const groups = new Map<
         string,
         { bg?: { hex: string; alpha?: number; raw: string }; text?: { hex: string; alpha?: number; raw: string } }
       >();
       for (const token of tokens) {
-        // Strip variant prefix (one level — `hover:bg-white` → variant=hover, cls=bg-white).
-        // Skip variants beyond hover/focus/active per v5 simplification.
         const variantMatch = token.match(/^(hover|focus|active|disabled):(.+)$/);
         const variant = variantMatch ? variantMatch[1] : "base";
         const cls = variantMatch ? variantMatch[2] : token;
-        // Skip dark:/sm:/md:/lg:/xl:/2xl: variants per v5 simplification.
         if (/^(dark|sm|md|lg|xl|2xl):/.test(cls)) continue;
         const resolved = resolveTailwindClass(cls);
         if (!resolved) continue;
@@ -1822,44 +2070,104 @@ function pass3Tailwind(tsxFiles: string[]): {
         groups.set(variant, group);
       }
 
-      // For each variant with both bg + text, compute contrast. v5
-      // simplification: composite alpha-overlay text against composited
-      // bg; composite alpha-overlay bg against #FFFFFF (no JSX tree
-      // walk to find the actual ancestor).
-      for (const [variant, group] of groups) {
-        if (!group.bg || !group.text) continue;
-        pairsEvaluated++;
-
-        let bg = group.bg.hex;
-        if (group.bg.alpha !== undefined && group.bg.alpha < 1) {
-          bg = compositeAlpha(group.bg.hex, group.bg.alpha, "#FFFFFF");
+      // Lazy ancestor lookup — call only when needed, reuse result
+      // across variants for this same element.
+      let ancestorBg: ReturnType<typeof findAncestorBg> = undefined as any;
+      const getAncestor = () => {
+        if (ancestorBg === undefined) {
+          ancestorBg = findAncestorBg(elemIdx, elements, counter);
         }
-        let fg = group.text.hex;
-        if (group.text.alpha !== undefined && group.text.alpha < 1) {
-          fg = compositeAlpha(group.text.hex, group.text.alpha, bg);
+        return ancestorBg;
+      };
+
+      for (const [variant, group] of Array.from(groups.entries())) {
+        // Case 1: same-element bg + text pair (v5 behavior).
+        if (group.bg && group.text) {
+          pairsEvaluated++;
+
+          // v6 — When same-element bg has α<1, composite against the
+          // JSX ancestor's opaque bg instead of #FFFFFF default.
+          // Closes the bg-white/5 + text-white false-positive class
+          // where the overlay actually sits on a dark navy ancestor.
+          let parentBgHex = "#FFFFFF";
+          let usedAncestor: ReturnType<typeof findAncestorBg> = null;
+          if (group.bg.alpha !== undefined && group.bg.alpha < 1) {
+            const anc = getAncestor();
+            if (anc) {
+              parentBgHex = anc.hex;
+              usedAncestor = anc;
+              ancestorBgFiringCount++;
+            }
+          }
+
+          let bg = group.bg.hex;
+          if (group.bg.alpha !== undefined && group.bg.alpha < 1) {
+            bg = compositeAlpha(group.bg.hex, group.bg.alpha, parentBgHex);
+          }
+          let fg = group.text.hex;
+          if (group.text.alpha !== undefined && group.text.alpha < 1) {
+            fg = compositeAlpha(group.text.hex, group.text.alpha, bg);
+          }
+
+          const ratio = contrastRatio(bg, fg);
+          if (ratio === null) continue;
+          const sev = contrastSeverity(ratio);
+          if (sev) {
+            const variantLabel = variant === "base" ? "" : `${variant}:`;
+            const ancTrail = usedAncestor
+              ? ` · alpha composited over ancestor <${usedAncestor.viaTag}> bg=${usedAncestor.hex} (line ${usedAncestor.viaLine})`
+              : "";
+            findings.push({
+              file,
+              selector: `Tailwind <${elem.tag}> ${variantLabel}${group.bg.raw} + ${variantLabel}${group.text.raw}`,
+              background: bg,
+              foreground: fg,
+              ratio: Math.round(ratio * 100) / 100,
+              severity: sev,
+              note: `tailwind ${variant}: bg=${group.bg.raw}→${bg} text=${group.text.raw}→${fg} (line ${elem.line})${ancTrail}`,
+            });
+          }
+          continue;
         }
 
-        const ratio = contrastRatio(bg, fg);
-        if (ratio === null) continue;
-        const sev = contrastSeverity(ratio);
-        if (sev) {
-          const variantLabel = variant === "base" ? "" : `${variant}:`;
-          findings.push({
-            file,
-            selector: `Tailwind ${variantLabel}${group.bg.raw} + ${variantLabel}${group.text.raw}`,
-            background: bg,
-            foreground: fg,
-            ratio: Math.round(ratio * 100) / 100,
-            severity: sev,
-            note: `tailwind ${variant}: bg=${group.bg.raw}→${bg} text=${group.text.raw}→${fg} (line ${line})`,
-          });
+        // Case 2: orphan text-* on element with no same-element bg-*
+        // (v6 — previously skipped). Walk JSX ancestors to find bg
+        // context; pair text against that.
+        if (group.text && !group.bg) {
+          const anc = getAncestor();
+          if (!anc) continue; // no ancestor bg in scope — defer to v5 page-context which we don't have here
+          orphanTextFiringCount++;
+          pairsEvaluated++;
+
+          // If ancestor bg is itself translucent, composite against #FFFFFF
+          // as a v6 simplification. v7 candidate: recurse to grandparent.
+          let bg = anc.hex;
+          if (anc.alpha !== undefined && anc.alpha < 1) {
+            bg = compositeAlpha(anc.hex, anc.alpha, "#FFFFFF");
+          }
+          let fg = group.text.hex;
+          if (group.text.alpha !== undefined && group.text.alpha < 1) {
+            fg = compositeAlpha(group.text.hex, group.text.alpha, bg);
+          }
+
+          const ratio = contrastRatio(bg, fg);
+          if (ratio === null) continue;
+          const sev = contrastSeverity(ratio);
+          if (sev) {
+            const variantLabel = variant === "base" ? "" : `${variant}:`;
+            findings.push({
+              file,
+              selector: `Tailwind <${elem.tag}> ${variantLabel}${group.text.raw} (orphan-text, ancestor bg)`,
+              background: bg,
+              foreground: fg,
+              ratio: Math.round(ratio * 100) / 100,
+              severity: sev,
+              note: `tailwind ${variant} (orphan-text): text=${group.text.raw}→${fg} on ancestor <${anc.viaTag}> bg=${anc.hex}${anc.alpha !== undefined ? ` α=${anc.alpha.toFixed(2)} → ${bg}` : ""} (text line ${elem.line}, ancestor line ${anc.viaLine})`,
+            });
+          }
         }
       }
-    };
-
-    harvest(staticDoubleRe);
-    harvest(staticSingleRe);
-    harvest(staticBacktickRe);
+    }
   }
 
   return {
@@ -1867,6 +2175,9 @@ function pass3Tailwind(tsxFiles: string[]): {
     scanned: tsxFiles.length,
     pairsEvaluated,
     dynamicSkippedFiles,
+    ancestorBgFiringCount,
+    orphanTextFiringCount,
+    crossFileBoundaryCount: counter.crossFileBoundaryCount,
   };
 }
 
@@ -1876,7 +2187,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -1892,7 +2203,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v5 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v6 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -1922,7 +2233,9 @@ function buildReport(
   lines.push("");
   lines.push(`**Pass 3 page-context body-bg (v5)**: ${pass3.pageContextMatchCount} finding(s) resolved their parent bg via the per-page HTML-aware Tier-5 fallback — closes the carrier-portal pattern where tools.css widgets composite over the carrier portal's navy body bg (set by carrier-console.css) rather than the AE Console marketing-page white default. ${pass3.pageContextConflictsCount} of those had conflicting matches across multiple HTML pages (first-match-wins per directive, conflicts count surfaced in trail).`);
   lines.push("");
-  lines.push(`**Pass 3 Tailwind contrast on .tsx (v5)**: ${pass3.tailwindFindingsCount} finding(s) from ${pass3.tailwindPairsEvaluated} text+bg pairs evaluated across React .tsx components. ${pass3.tailwindDynamicSkippedFiles} file(s) had dynamic className interpolation skipped per directive simplification. JSX tree walking (parent-child element pairing), responsive variants (sm:/md:/lg:), and dark: variant deferred to v6.`);
+  lines.push(`**Pass 3 Tailwind contrast on .tsx (v5+v6)**: ${pass3.tailwindFindingsCount} finding(s) from ${pass3.tailwindPairsEvaluated} text+bg pairs evaluated across React .tsx components. ${pass3.tailwindDynamicSkippedFiles} file(s) had dynamic className interpolation skipped.`);
+  lines.push("");
+  lines.push(`**Pass 3 v6 JSX tree walking**: ${pass3.tailwindAncestorBgFiringCount} ancestor-bg lookups (same-element pairs with translucent bg → composited against opaque ancestor instead of #FFFFFF default). ${pass3.tailwindOrphanTextFiringCount} orphan-text findings (text-* element with no same-element bg-* — paired against ancestor bg). ${pass3.tailwindCrossFileBoundaryCount} React component boundaries walked past (capitalized-tag ancestors without bg-*; can't resolve into the component's own className from here per v7 cross-file deferral).`);
   lines.push("");
 
   // ── P0 section
@@ -2094,10 +2407,11 @@ function main() {
   );
 
   // v5 — Pass 3 extension: Tailwind contrast pairs on .tsx components.
+  // v6 — Now uses JSX tree walker for ancestor-bg resolution.
   console.error("[brand-audit] Pass 3 — Tailwind contrast on .tsx...");
   const pass3tw = pass3Tailwind(tsxFiles);
   console.error(
-    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs evaluated, ${pass3tw.dynamicSkippedFiles} files with dynamic className skipped.`
+    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs evaluated, ${pass3tw.dynamicSkippedFiles} files with dynamic className skipped, ${pass3tw.ancestorBgFiringCount} ancestor-bg lookups (v6), ${pass3tw.orphanTextFiringCount} orphan-text findings (v6), ${pass3tw.crossFileBoundaryCount} component boundaries crossed.`
   );
 
   // Merge Tailwind findings into pass3 for unified P0/P1/P2 reporting.
@@ -2107,6 +2421,9 @@ function main() {
     tailwindFindingsCount: pass3tw.findings.length,
     tailwindPairsEvaluated: pass3tw.pairsEvaluated,
     tailwindDynamicSkippedFiles: pass3tw.dynamicSkippedFiles,
+    tailwindAncestorBgFiringCount: pass3tw.ancestorBgFiringCount,
+    tailwindOrphanTextFiringCount: pass3tw.orphanTextFiringCount,
+    tailwindCrossFileBoundaryCount: pass3tw.crossFileBoundaryCount,
   };
 
   const report = buildReport(
