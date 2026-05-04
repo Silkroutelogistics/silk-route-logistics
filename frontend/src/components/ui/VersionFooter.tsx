@@ -2012,7 +2012,20 @@
 //          Estimated P0 delta: 299 → ~150-180. Real
 //          readability issues addressed; remaining
 //          count is scanner-side noise.
-export const SRL_VERSION = "3.8.u";
+// v3.8.v — Lead Hunter Bug 1: Apollo CSV literal
+//          column mapping. mapCsvRow at lead-hunter/
+//          page.tsx now reads `First Name` + `Last
+//          Name` literals (Apollo's actual columns)
+//          and composes contactName, replacing the
+//          stale `Contact Name` lookup that returned
+//          empty for every Apollo import. Closes the
+//          "Hi InsideTracker" greeting bug — when
+//          contactName was null, sendMassEmail fell
+//          back to company name's first token,
+//          producing "Hi InsideTracker" instead of
+//          "Hi Sarah". No schema change. C1 of 6
+//          atomic Lead Hunter outreach quality fixes.
+export const SRL_VERSION = "3.8.v";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

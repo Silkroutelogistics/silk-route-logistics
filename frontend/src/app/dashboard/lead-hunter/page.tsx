@@ -471,17 +471,26 @@ export default function LeadHunterPage() {
     reader.readAsText(file);
   };
 
-  const mapCsvRow = (row: Record<string, string>) => ({
-    name: row["Company Name"] || row["company_name"] || row["Name"] || "",
-    contactName: row["Contact Name"] || row["contact_name"] || row["Contact"] || "",
-    email: row["Email"] || row["email"] || "",
-    phone: row["Phone"] || row["phone"] || "",
-    city: row["City"] || row["city"] || "",
-    state: row["State"] || row["state"] || "",
-    industryType: row["Industry"] || row["industry"] || row["IndustryType"] || "",
-    type: row["Type"] || row["type"] || "SHIPPER",
-    status: "Prospect",
-  });
+  // Apollo CSV column names are literal — `First Name`, `Last Name`, `Company Name`,
+  // `Title`, `Email`, `Industry`, `Vertical`. Capitals and spaces matter.
+  // Compose contactName from First + Last so downstream firstName extraction works.
+  // Title is parsed for audit but not persisted (no schema field today).
+  const mapCsvRow = (row: Record<string, string>) => {
+    const firstName = (row["First Name"] || "").trim();
+    const lastName = (row["Last Name"] || "").trim();
+    const composedContactName = [firstName, lastName].filter(Boolean).join(" ");
+    return {
+      name: (row["Company Name"] || "").trim(),
+      contactName: composedContactName,
+      email: (row["Email"] || "").trim(),
+      phone: (row["Phone"] || "").trim(),
+      city: (row["City"] || "").trim(),
+      state: (row["State"] || "").trim(),
+      industryType: (row["Industry"] || "").trim(),
+      type: "SHIPPER",
+      status: "Prospect",
+    };
+  };
 
   const handleCsvImport = async () => {
     setCsvImporting(true);
