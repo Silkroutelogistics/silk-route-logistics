@@ -756,6 +756,30 @@ Cold-outreach copy MUST follow voice.md + §4 + §5:
 - Sender identity: `Wasi Haider` / `whaider@silkroutelogistics.ai` (never `Wasih`). Single source of truth: `CEO_NAME` + `CEO_EMAIL` exports in [`backend/src/email/builder.ts`](backend/src/email/builder.ts) — startup log line surfaces a regression in production logs immediately.
 - Specific operational ask at close: "send a recent BOL on a tricky lane and I'll come back with a quote and the carrier's full Compass profile" — never "would you be open to a brief call this week?"
 
+### §18.9 — Outreach copy AI-tell audit (mandatory pre-send)
+
+Every SRL outreach email — Lead Hunter generated, manually drafted, or templated — must pass an AI-tell audit before send. The audit applies to body, subject line, and signature. The character "—" (em dash, U+2014) must not appear anywhere in any sent email. Banned constructions:
+
+  1. Em dashes in body, subject, or signature. Replace with periods, commas, colons, or restructure.
+  2. "That's where..." / "That's the..." / "That's what..." sentence openers. Use the actual subject of the sentence.
+  3. Parenthetical asides used as voice texture. Allowed only when genuinely necessary for clarity.
+  4. Symmetric two-clause balanced sentences ("X is Y, and Y is X"-style construction).
+  5. Consultant-speak imports: "step-change", "in under a year", "planning-vs-actuals", "leverage", "synergy", "best-in-class", "world-class", "north star", "unlock value", "comprehensive solution", "AI-powered" (when describing capabilities, not products).
+  6. Marketing softeners: "I'd love the opportunity", "see if we can add value", "would you be open to a brief call", "I would appreciate the opportunity to connect".
+  7. Repeated close patterns within a single batch. No two outreach emails sent within the same week may use the same closing operational ask. Acceptable closes: "Send a recent BOL on [lane] and I'll quote against your incumbent" / "If your next outbound RFQ has a slot open" / "What does your current carrier review cycle look like?" / Other operational asks specific to the recipient's situation.
+
+Adjective/noun lists are NOT banned when they are factual proper-noun enumerations (real product categories, real retailer names from the recipient's actual distribution). The prohibition is on adjective-stacking as a "showing range" device, not on naming actual entities.
+
+Hook structure rule (per voice.md, restated here for outreach scope):
+  - Opening sentence: a company-specific operational signal that proves recipient research. Not credentials.
+  - Authority line (MC#, BMC-84, contingent cargo): one line above signature. Not paragraph one.
+  - Length: 4-5 short paragraphs. Tight beats long.
+  - Compass Engine described correctly (35-point carrier vetting), never "AI-powered market intelligence".
+
+Implementation guidance for Lead Hunter system prompts (touch1ColdChainTemplate, touch1WellnessTemplate, fallback): the system prompt must explicitly enumerate the banned constructions in §18.9 above and instruct the model to self-check before output. The audit is also applied at the test/preview stage — Little Spoon and MERIT preview render must pass §18.9 audit, not just §18.8 honest-framing.
+
+For manual outreach (founder-drafted in Gmail, not Lead Hunter generated): same audit applies. Run it mentally before send. The discipline is the writer's, not the platform's.
+
 ---
 
 ## Appendix: Legacy / Custom Sections
