@@ -46,15 +46,59 @@
  * check P1 findings against site-chrome.json — one source-of-
  * truth edit may resolve dozens of downstream findings.
  *
- * v2 candidates deferred from this scope:
+ * Revision log:
+ *
+ *   v1 (2026-05-03) — initial release with three passes (color
+ *           literals, font families, surface-mode contrast).
+ *           Documented in Sprint 2 directive.
+ *
+ *   v2 (2026-05-03) — alpha-overlay handling. Sprint 3 spot-check
+ *           confirmed 3 of 5 v1 P0 findings were alpha artifacts
+ *           (e.g. `rgba(255,255,255,0.05)` overlay in
+ *           `.sidebar-nav a:hover` reported as 1.00:1 white-on-
+ *           white when the real rendering composites to ~12:1
+ *           white-on-slightly-lifted-navy). v1 stripped alpha and
+ *           treated `rgba(R,G,B,α)` as solid `#RRGGBB` for
+ *           contrast math; v2 preserves alpha through
+ *           `resolveColor()`, then in Pass 3 finds the nearest
+ *           opaque ancestor bg and applies standard sRGB
+ *           composition (`composited.C = α × overlay.C +
+ *           (1 − α) × parent.C`) before computing the contrast
+ *           ratio. Same fix applied to fg-with-alpha (rare).
+ *           Cascade-inheritance branch also composites the
+ *           overlay before checking dark-surface luminance, so
+ *           e.g. `rgba(239,68,68,0.10)` over white doesn't
+ *           trigger as "dark bg" anymore. Pass 3 summary now
+ *           reports `compositedCount` so the operator can see
+ *           how many findings benefited from the new logic.
+ *
+ *           New helpers:
+ *             - compositeAlpha(overlayHex, alpha, parentHex)
+ *             - findOpaqueParentBg(child, bgRules, fileBodyBg,
+ *               globalBodyBg)
+ *             - findCascadeBg / buildGlobalCascadeBg (mirror of
+ *               the existing color-cascade walkers, for body bg)
+ *
+ *           Behavior delta: v1 P0 contrast count drops sharply
+ *           because the alpha-overlay class is no longer
+ *           misclassified. Real readability failures (e.g. solid
+ *           gold-on-white .btn-primary, marketing footer cascade)
+ *           survive into v2. Sprint 5 P0 sweep is the operational
+ *           consumer of v2's reduced output.
+ *
+ * v3 candidates deferred from this scope:
  *   - @media query rules
  *   - pseudo-element styling (::before, ::after)
  *   - CSS-in-JS dynamic styles
  *   - cross-file CSS variable cascade resolution beyond the
  *     best-effort attempt in v1 (unresolved variables surface
- *     in the Pass 3 summary count for v2-need signaling)
+ *     in the Pass 3 summary count for v3-need signaling)
  *   - PDF template colors (backend/src/services/pdfService.ts) —
  *     out of frontend scope per Sprint 2 directive
+ *   - orphan-CSS detection (Sprint 3 spot-check 2 found
+ *     `tracking.css` is dead code post-v3.8.q routing
+ *     consolidation — scanner doesn't yet flag CSS files with
+ *     zero HTML/TSX consumers)
  */
 
 import * as fs from "fs";
@@ -259,6 +303,20 @@ function contrastRatio(hexA: string, hexB: string): number | null {
   const lb = relativeLuminance(b);
   const [light, dark] = la > lb ? [la, lb] : [lb, la];
   return (light + 0.05) / (dark + 0.05);
+}
+
+// v2 — Composite an alpha overlay over an opaque parent in sRGB space.
+// Uses straight-alpha (CSS-standard) compositing per A3 formula:
+//   composited.C = α × overlay.C + (1 − α) × parent.C
+// Returns #RRGGBB. Caller must guarantee the parent is opaque; nested
+// transparency must be resolved by walking up the cascade first.
+function compositeAlpha(overlayHex: string, alpha: number, parentHex: string): string {
+  const o = hexToRgb(overlayHex);
+  const p = hexToRgb(parentHex);
+  if (!o || !p) return overlayHex;
+  const a = Math.max(0, Math.min(1, alpha));
+  const c = [0, 1, 2].map((i) => Math.round(a * o[i] + (1 - a) * p[i]));
+  return `#${c.map((n) => n.toString(16).padStart(2, "0")).join("")}`.toUpperCase();
 }
 
 // ─── Pass 1: Color literal violations ──────────────────────────────────
@@ -474,21 +532,32 @@ function buildVarMap(cssFiles: string[]): VarMap {
   return vars;
 }
 
-// Resolve a CSS value to a concrete hex string (or null if unresolvable).
-function resolveColor(value: string, vars: VarMap): { hex: string | null; unresolved?: string } {
+// Resolve a CSS value to a concrete hex string + optional alpha (0..1).
+// alpha === undefined means opaque (alpha = 1). Preserving alpha is what
+// enables Pass 3 v2 alpha-overlay compositing — see compositeAlpha().
+function resolveColor(value: string, vars: VarMap): { hex: string | null; alpha?: number; unresolved?: string } {
   const v = value.trim();
 
-  // Direct hex
+  // Direct hex — including #RRGGBBAA which carries alpha.
   if (/^#[0-9A-Fa-f]{3,8}$/.test(v)) {
+    const h = v.replace("#", "");
     const norm = normHex(v);
+    if (h.length === 8) {
+      const alpha = parseInt(h.slice(6, 8), 16) / 255;
+      return alpha < 1 ? { hex: norm, alpha } : { hex: norm };
+    }
     return { hex: norm };
   }
 
-  // rgb / rgba — fold to hex (drop alpha for contrast purposes).
-  const rgbMatch = v.match(/^rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  // rgb / rgba — preserve alpha when present (4th argument).
+  const rgbMatch = v.match(/^rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([0-9.]+)\s*)?\)/);
   if (rgbMatch) {
     const [r, g, b] = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((n) => parseInt(n, 10));
     const hex = `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+    if (rgbMatch[4] !== undefined) {
+      const alpha = parseFloat(rgbMatch[4]);
+      return alpha < 1 ? { hex, alpha } : { hex };
+    }
     return { hex };
   }
 
@@ -681,6 +750,26 @@ function findCascadeColor(
   return null;
 }
 
+// v2 — Per-file body/html/:root background lookup (opaque only).
+// Used as a fallback when an alpha-overlay bg has no opaque ancestor in
+// the same stylesheet. Mirrors findCascadeColor but for backgrounds.
+function findCascadeBg(
+  rules: Array<{ selector: string; background?: string }>,
+  vars: VarMap
+): string | null {
+  for (const r of rules) {
+    if (!r.background) continue;
+    const sel = r.selector.trim();
+    if (sel === "body" || sel === "html" || sel === "html, body" || sel === ":root") {
+      const res = resolveColor(r.background, vars);
+      if (res.hex && res.hex !== "TRANSPARENT" && (res.alpha === undefined || res.alpha >= 1)) {
+        return res.hex;
+      }
+    }
+  }
+  return null;
+}
+
 // Global fallback — first body color found across all files. Used only
 // when a CSS file has no local body/html/:root color rule.
 function buildGlobalCascadeColor(cssFiles: string[], vars: VarMap): string | null {
@@ -693,15 +782,51 @@ function buildGlobalCascadeColor(cssFiles: string[], vars: VarMap): string | nul
   return null;
 }
 
+// v2 — Global body-bg fallback. Same per-file→global fallback pattern.
+function buildGlobalCascadeBg(cssFiles: string[], vars: VarMap): string | null {
+  for (const file of cssFiles) {
+    const content = readFile(file);
+    const { rules } = parseCssRules(content);
+    const c = findCascadeBg(rules, vars);
+    if (c) return c;
+  }
+  return null;
+}
+
+// v2 — Walk bgRules for ancestors of childSelector and return the most-
+// specific OPAQUE background. Used to resolve what an alpha overlay sits
+// on top of for compositing. Falls back to per-file body bg → global
+// body bg → "#FFFFFF" sentinel. Returns the resolved opaque hex.
+interface BgRuleEntry { selector: string; bgHex: string; bgAlpha?: number; raw: string }
+function findOpaqueParentBg(
+  childSelector: string,
+  bgRules: BgRuleEntry[],
+  fileBodyBg: string | null,
+  globalBodyBg: string | null
+): string {
+  let best: BgRuleEntry | null = null;
+  for (const b of bgRules) {
+    if (b.selector === childSelector) continue; // exclude self — we want strict ancestors
+    if (!isDescendantSelector(b.selector, childSelector)) continue;
+    const opaque = b.bgAlpha === undefined || b.bgAlpha >= 1;
+    if (!opaque) continue;
+    if (!best || b.selector.length > best.selector.length) best = b;
+  }
+  if (best) return best.bgHex;
+  return fileBodyBg ?? globalBodyBg ?? "#FFFFFF";
+}
+
 function pass3Contrast(
   cssFiles: string[],
   vars: VarMap
-): { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null } {
+): { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number } {
   const findings: ContrastFinding[] = [];
   const unresolved: UnresolvedFinding[] = [];
   let resolved = 0;
   let skippedMedia = 0;
+  let compositedCount = 0;  // v2: tracks how many findings used alpha compositing
   const globalBody = buildGlobalCascadeColor(cssFiles, vars);
+  const globalBodyBg = buildGlobalCascadeBg(cssFiles, vars);
 
   for (const file of cssFiles) {
     const content = readFile(file);
@@ -711,14 +836,20 @@ function pass3Contrast(
     // over the global fallback.
     const localBody = findCascadeColor(rules, vars);
     const inferredBody = localBody ?? globalBody;
+    const localBodyBg = findCascadeBg(rules, vars);
 
-    // Build per-file selector → bg map.
-    const bgRules: Array<{ selector: string; bgHex: string | null; raw: string }> = [];
+    // Build per-file selector → bg map. v2: track alpha alongside hex.
+    const bgRules: BgRuleEntry[] = [];
     for (const r of rules) {
       if (!r.background) continue;
       const res = resolveColor(r.background, vars);
       if (res.hex && res.hex !== "TRANSPARENT") {
-        bgRules.push({ selector: r.selector, bgHex: res.hex, raw: r.background });
+        bgRules.push({
+          selector: r.selector,
+          bgHex: res.hex,
+          bgAlpha: res.alpha,
+          raw: r.background,
+        });
         resolved++;
       } else if (res.unresolved && res.hex !== "TRANSPARENT") {
         unresolved.push({
@@ -729,7 +860,10 @@ function pass3Contrast(
       }
     }
 
-    // For each child rule with `color`, find a parent bg rule and compute contrast.
+    // For each child rule with `color`, find a parent bg rule and compute
+    // contrast. v2: when parent bg has alpha < 1, composite over the
+    // nearest opaque ancestor (or per-file/global body bg fallback)
+    // before the contrast math runs.
     for (const r of rules) {
       if (!r.color) continue;
       const fgRes = resolveColor(r.color, vars);
@@ -745,7 +879,7 @@ function pass3Contrast(
       }
 
       // Find parent bg — prefer most-specific match.
-      let parent: { selector: string; bgHex: string | null; raw: string } | null = null;
+      let parent: BgRuleEntry | null = null;
       for (const b of bgRules) {
         if (b.selector === r.selector || isDescendantSelector(b.selector, r.selector)) {
           if (!parent || b.selector.length > parent.selector.length) {
@@ -754,23 +888,54 @@ function pass3Contrast(
         }
       }
 
-      if (!parent || !parent.bgHex) continue;
+      if (!parent) continue;
 
-      const ratio = contrastRatio(parent.bgHex, fgRes.hex);
+      // v2 — Composite alpha overlays. If the parent bg is non-opaque,
+      // composite it over the nearest opaque ancestor (excluding the
+      // parent itself, since we're trying to figure out what IT sits on).
+      let effectiveBg = parent.bgHex;
+      let composedFromOverlay: { overlay: string; parentBg: string; alpha: number } | null = null;
+      if (parent.bgAlpha !== undefined && parent.bgAlpha < 1) {
+        const opaque = findOpaqueParentBg(parent.selector, bgRules, localBodyBg, globalBodyBg);
+        effectiveBg = compositeAlpha(parent.bgHex, parent.bgAlpha, opaque);
+        composedFromOverlay = { overlay: parent.bgHex, parentBg: opaque, alpha: parent.bgAlpha };
+        compositedCount++;
+      }
+
+      // v2 — If the foreground itself has alpha (rare: rgba color or
+      // #RRGGBBAA), composite it over the effective bg before measuring.
+      let effectiveFg = fgRes.hex;
+      let fgAlphaTrail: { fgOverlay: string; alpha: number } | null = null;
+      if (fgRes.alpha !== undefined && fgRes.alpha < 1) {
+        effectiveFg = compositeAlpha(fgRes.hex, fgRes.alpha, effectiveBg);
+        fgAlphaTrail = { fgOverlay: fgRes.hex, alpha: fgRes.alpha };
+      }
+
+      const ratio = contrastRatio(effectiveBg, effectiveFg);
       if (ratio === null) continue;
       const sev = contrastSeverity(ratio);
       if (sev) {
+        const noteParts: string[] = [
+          parent.selector === r.selector
+            ? "self-element contrast (same selector sets bg + color)"
+            : "ancestor-bg vs descendant-color contrast",
+        ];
+        if (composedFromOverlay) {
+          noteParts.push(
+            `composited overlay ${composedFromOverlay.overlay} α=${composedFromOverlay.alpha.toFixed(2)} over ${composedFromOverlay.parentBg} → ${effectiveBg}`
+          );
+        }
+        if (fgAlphaTrail) {
+          noteParts.push(`fg overlay ${fgAlphaTrail.fgOverlay} α=${fgAlphaTrail.alpha.toFixed(2)} → ${effectiveFg}`);
+        }
         findings.push({
           file,
           selector: `${parent.selector} → ${r.selector}`,
-          background: parent.bgHex,
-          foreground: fgRes.hex,
+          background: composedFromOverlay ? `${effectiveBg} (from ${composedFromOverlay.overlay} α=${composedFromOverlay.alpha.toFixed(2)})` : effectiveBg,
+          foreground: fgAlphaTrail ? `${effectiveFg} (from ${fgAlphaTrail.fgOverlay} α=${fgAlphaTrail.alpha.toFixed(2)})` : effectiveFg,
           ratio: Math.round(ratio * 100) / 100,
           severity: sev,
-          note:
-            parent.selector === r.selector
-              ? "self-element contrast (same selector sets bg + color)"
-              : "ancestor-bg vs descendant-color contrast",
+          note: noteParts.join(" · "),
         });
       }
     }
@@ -780,9 +945,19 @@ function pass3Contrast(
     // the global inferred body/html color as the cascade fallback. When
     // it resolves, we compute the actual contrast ratio. When it doesn't,
     // we emit a "needs DOM inspection" finding (not a confirmed P0).
+    // v2 — composite alpha bg over its opaque ancestor before the dark-
+    // surface luminance check, so e.g. rgba(239,68,68,0.10) over white
+    // (effective ≈ pale pink, lum > 0.18) doesn't trigger as "dark bg".
     for (const b of bgRules) {
       if (!b.bgHex) continue;
-      const rgb = hexToRgb(b.bgHex);
+      let effectiveBg = b.bgHex;
+      let composeTrail: { overlay: string; parentBg: string; alpha: number } | null = null;
+      if (b.bgAlpha !== undefined && b.bgAlpha < 1) {
+        const opaque = findOpaqueParentBg(b.selector, bgRules, localBodyBg, globalBodyBg);
+        effectiveBg = compositeAlpha(b.bgHex, b.bgAlpha, opaque);
+        composeTrail = { overlay: b.bgHex, parentBg: opaque, alpha: b.bgAlpha };
+      }
+      const rgb = hexToRgb(effectiveBg);
       if (!rgb) continue;
       const lum = relativeLuminance(rgb);
       if (lum > 0.18) continue; // not a dark surface
@@ -792,19 +967,30 @@ function pass3Contrast(
       );
       if (hasExplicitColor) continue;
 
+      if (composeTrail) compositedCount++;
+
       if (inferredBody) {
-        const ratio = contrastRatio(b.bgHex, inferredBody);
+        // v2: contrast against the composited (effective) bg, not the
+        // raw overlay hex.
+        const ratio = contrastRatio(effectiveBg, inferredBody);
         if (ratio === null) continue;
         const sev = contrastSeverity(ratio);
         if (sev) {
+          const noteBase =
+            "dark bg with no explicit `color:` — cascade resolves to body/html color. Set explicit `color: var(--fg-on-navy)` or equivalent.";
+          const note = composeTrail
+            ? `${noteBase} · composited overlay ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)} over ${composeTrail.parentBg} → ${effectiveBg}`
+            : noteBase;
           findings.push({
             file,
             selector: `${b.selector} (cascade-inherited fg)`,
-            background: b.bgHex,
+            background: composeTrail
+              ? `${effectiveBg} (from ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)})`
+              : effectiveBg,
             foreground: `${inferredBody} (inferred from body/html cascade)`,
             ratio: Math.round(ratio * 100) / 100,
             severity: sev,
-            note: "dark bg with no explicit `color:` — cascade resolves to body/html color. Set explicit `color: var(--fg-on-navy)` or equivalent.",
+            note,
           });
         }
       } else {
@@ -813,7 +999,9 @@ function pass3Contrast(
         findings.push({
           file,
           selector: `${b.selector} (no explicit color, cascade unresolvable)`,
-          background: b.bgHex,
+          background: composeTrail
+            ? `${effectiveBg} (from ${composeTrail.overlay} α=${composeTrail.alpha.toFixed(2)})`
+            : effectiveBg,
           foreground: "(unresolved cascade)",
           ratio: 0,
           severity: "P1",
@@ -823,7 +1011,7 @@ function pass3Contrast(
     }
   }
 
-  return { findings, unresolved, resolved, skippedMedia, inferredBody: globalBody };
+  return { findings, unresolved, resolved, skippedMedia, inferredBody: globalBody, compositedCount };
 }
 
 // ─── Output formatter ───────────────────────────────────────────────────
@@ -832,7 +1020,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -848,7 +1036,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v1`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v2 (alpha-overlay compositing)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -871,6 +1059,8 @@ function buildReport(
   lines.push(`**Pass 3 variable resolution**: ${pass3.resolved} resolved · ${pass3.unresolved.length} unresolved · ${pass3.skippedMedia} \`@media\` blocks skipped (v2 candidate).`);
   lines.push("");
   lines.push(`**Pass 3 inferred cascade body color**: ${pass3.inferredBody ? `\`${pass3.inferredBody}\` (resolved from body/html/:root color rule)` : "**unresolved** — cascade-inheritance findings degraded to P1 advisory"}.`);
+  lines.push("");
+  lines.push(`**Pass 3 alpha-overlay compositing (v2)**: ${pass3.compositedCount} finding(s) used alpha compositing — overlay rgba/hex composited over nearest opaque ancestor before contrast math, eliminating the alpha-stripping false-positive class from v1.`);
   lines.push("");
 
   // ── P0 section
