@@ -495,20 +495,106 @@
  *           ADD findings net. Real-world P0 may go UP, not
  *           down, on this commit — that's correct semantic.
  *
- * v9 candidates deferred from this scope:
- *   - Cross-file React component composition (resolve `<Card>`,
- *     `<Modal>`, `<DashboardShell>` ancestor bg by walking the
- *     component's own file — would require multi-file element
- *     tree merging at component-boundary; currently scanner
- *     walks past components and increments
- *     crossFileBoundaryCount)
+ *   v9 (2026-05-04) — cross-component layout resolution. Closes
+ *           the ~95 documented FP class from Sprints 18+19+20
+ *           audits where shared React components in
+ *           frontend/src/components/ render correctly inside
+ *           dashboard/accounting/admin layout wrappers but
+ *           v8's layoutBgContext only fires for files in
+ *           frontend/src/app/ route directories. When pass3-
+ *           Tailwind processes a component file,
+ *           findLayoutBgForPage returns null → findAncestorBg
+ *           falls back to #FFFFFF default → reports white-on-
+ *           white for text-white on bg-white/5 overlays that
+ *           actually render against dashboard dark navy at
+ *           runtime.
+ *
+ *           v9 introduces:
+ *             - resolveImportPath(specifier, fromFile) — handles
+ *               TypeScript path aliases (`@/X` → frontend/src/X)
+ *               and relative imports; tries .tsx/.ts/index.tsx/
+ *               index.ts suffixes
+ *             - parseComponentImports(file) — regex-matches
+ *               `(?:from|import)\s*\(?\s*['"]([^'"]+)['"]\s*\)?`
+ *               (catches static imports, dynamic imports,
+ *               require). Filters to imports resolving into
+ *               frontend/src/components/. Follows barrel re-
+ *               exports.
+ *             - resolveBarrelReExports(indexFile, ...) — when
+ *               import target is index.ts(x), parses
+ *               `export { Name } from "./Path"` and
+ *               `export * from "./X"` to map back to source
+ *               files. Per-Phase-A-confirmation #3: handles
+ *               BOTH named and namespace re-exports.
+ *             - buildComponentContextMap(tsxFiles) — walks app/
+ *               files at scanner startup, builds initial
+ *               Map<componentAbsPath, Set<appFilePath>> from
+ *               app-route imports, then transitively
+ *               propagates through component-to-component
+ *               imports (BFS, depth cap MAX_COMPONENT_GRAPH_-
+ *               DEPTH = 5 per Phase A #4). Final conversion
+ *               from app-file paths → route-prefix arrays via
+ *               existing deriveRoutePrefix-style logic.
+ *             - findLayoutBgForPage extended with
+ *               componentContextMap parameter — handles
+ *               component files via component-context lookup,
+ *               app files via existing route-prefix matching.
+ *               Multi-context first-match-wins per directive
+ *               A2 confirmation; tracks multiContextCount.
+ *
+ *           v9 simplifications per Phase A confirmations:
+ *             - String-literal import paths only (no template
+ *               literals or computed paths)
+ *             - Transitive depth cap = 5 (real-world rarely > 3)
+ *             - First-match-wins for multi-context ambiguity
+ *             - No JSX-prop-passed component refs (v10)
+ *             - No render-prop pattern resolution (v10)
+ *             - No server vs client component disambiguation
+ *               (v10 — both render via the same layout cascade
+ *               in practice)
+ *
+ *           Counters surfaced in summary:
+ *             - componentContextMapSize (number of components
+ *               resolved into app-route import graph)
+ *             - componentContextOrphanCount (components with no
+ *               app consumer found — fall through to v8 default)
+ *             - tailwindComponentContextFiringCount (per pass3-
+ *               Tailwind file: shared component file resolved
+ *               via component-context map)
+ *             - tailwindComponentMultiContextCount (component
+ *               had >1 distinct route context, first-match
+ *               applied)
+ *
+ *           Behavior delta vs Sprint 20 v8 baseline: P0 expected
+ *           to drop sharply (~95 FPs retired) for shared
+ *           components like Sidebar, LineItemsSection, modals,
+ *           StatCard, FormElements, MarcoPolo. Real readability
+ *           bugs surviving v9 are the trusted-final residue
+ *           for visual-judgment per-finding triage.
+ *
+ *           Brand-mechanical scanner workstream COMPLETE after
+ *           v9. Remaining v10+ candidates listed below are
+ *           narrow extensions for specific edge cases (CSS-in-
+ *           JS, render-props, server/client disambiguation,
+ *           etc.) — not blocking for normal repo audit.
+ *
+ * v10 candidates deferred from this scope:
+ *   - Dynamic JSX-prop-passed component contrast (when
+ *     component A passes <B /> as a prop to component C with
+ *     different bg — v9 captures the import edge but not the
+ *     render-prop application)
+ *   - Render-prop pattern resolution (children-as-function,
+ *     render={...} props)
+ *   - Server vs client component context disambiguation (both
+ *     resolve to the same layout cascade in practice but
+ *     could differ in edge cases like async server components)
+ *   - State-driven conditional className resolution (ternary
+ *     inside clsx args — currently first-string-literal-wins)
  *   - Globals.css body styling consultation (when layout.tsx
  *     has no bg but globals.css sets one — currently skipped
- *     for v8 simplicity)
+ *     for v8/v9 simplicity)
  *   - sm:/md:/lg:/xl:/2xl: responsive variant evaluation
  *   - dark: variant evaluation against the dark-mode body bg
- *   - State-driven conditional className branches (ternary
- *     inside clsx args — currently first-string-literal-wins)
  *   - Full AST parsing (typescript / @babel/parser) — would
  *     resolve clsx/cn helpers with arbitrary call signatures
  *     and spread arguments correctly, plus enable type-aware
@@ -2497,17 +2583,42 @@ function buildLayoutBgContext(
 // prefix match against the layoutBgContext map. Returns null when no
 // layout in the chain has a resolvable bg (caller falls back to
 // #FFFFFF default).
+//
+// v9 — Extended to handle component files (frontend/src/components/**).
+// When pageFile is a component, look up its rendering route prefixes
+// from componentContextMap, take the first one (multi-context first-
+// match-wins per directive), then run existing layout-prefix match
+// against layoutBgContext. Increments multiContext counter when
+// component has >1 distinct route prefix.
 function findLayoutBgForPage(
   pageFile: string,
-  layoutBgContext: Map<string, LayoutBgContextEntry>
+  layoutBgContext: Map<string, LayoutBgContextEntry>,
+  componentContextMap: Map<string, string[]> | null = null,
+  multiContextCounter: { count: number } | null = null
 ): LayoutBgContextEntry | null {
   const appRoot = path.join(REPO_ROOT, "frontend/src/app").replace(/\\/g, "/");
+  const componentsRoot = path.join(REPO_ROOT, "frontend/src/components").replace(/\\/g, "/");
   const norm = pageFile.replace(/\\/g, "/");
-  if (!norm.startsWith(appRoot)) return null;
 
-  const rel = path.posix.relative(appRoot, norm);
-  const dir = path.posix.dirname(rel);
-  const pageRoute = dir === "." ? "/" : "/" + dir;
+  let pageRoute: string;
+  if (norm.startsWith(appRoot)) {
+    // App-route file: derive prefix from path (existing v5/v8 behavior)
+    const rel = path.posix.relative(appRoot, norm);
+    const dir = path.posix.dirname(rel);
+    pageRoute = dir === "." ? "/" : "/" + dir;
+  } else if (norm.startsWith(componentsRoot) && componentContextMap) {
+    // v9 — Component file: look up its rendering contexts.
+    const contexts = componentContextMap.get(norm);
+    if (!contexts || contexts.length === 0) {
+      return null; // Orphan component — caller falls back to #FFFFFF default.
+    }
+    if (contexts.length > 1 && multiContextCounter) {
+      multiContextCounter.count++;
+    }
+    pageRoute = contexts[0]; // First-match-wins per directive A2 confirmation.
+  } else {
+    return null; // Outside app/ and components/ — no resolution available.
+  }
 
   let bestMatch: LayoutBgContextEntry | null = null;
   let bestLen = -1;
@@ -2524,9 +2635,217 @@ function findLayoutBgForPage(
   return bestMatch;
 }
 
+// v9 — Build a Map<componentAbsPath, routePrefixes[]> by walking the
+// app-route import graph at scanner startup. Closes the ~95 false-
+// positive class from Sprints 18+19+20 audits where shared React
+// components in frontend/src/components/ render correctly inside
+// dashboard/accounting/admin layouts but were flagged as #FFFFFF
+// default-fallback because they live outside frontend/src/app/.
+//
+// Algorithm:
+//   1. First pass: walk app/ files, regex-match `import` statements
+//      with paths matching @/components/* (path alias) or relative
+//      ./<dotpath> resolving into components/. Resolve to absolute
+//      paths trying .tsx/.ts/index.tsx/index.ts suffixes.
+//   2. Barrel re-export resolution: when import target is index.ts(x),
+//      parse `export { Name } from "./Path"` and `export * from "./X"`
+//      to map specifier → actual file.
+//   3. Track Map<componentAbsPath, Set<appFilePath>>.
+//   4. Transitive propagation (BFS, depth cap 5): for components
+//      already in the map, parse their imports of other components,
+//      propagate the consuming app-file set.
+//   5. Convert app-file paths → route prefixes via deriveRoutePrefix-
+//      style logic (file's dirname relative to app/).
+//
+// v9 simplifications per Phase A confirmations:
+//   - String-literal import paths only (no template literals)
+//   - First-match-wins for multi-context ambiguity
+//   - Transitive depth cap = 5 (real-world rarely > 3)
+//   - No JSX-prop-passed component refs (v10)
+//   - No render-prop pattern resolution (v10)
+//   - No server vs client component disambiguation (v10)
+
+// Resolve an import specifier to an absolute file path, trying
+// common Next.js/TypeScript suffixes. Returns null if no resolution
+// found. Path alias `@/X` → frontend/src/X.
+function resolveImportPath(specifier: string, fromFile: string): string | null {
+  const srcRoot = path.join(REPO_ROOT, "frontend/src").replace(/\\/g, "/");
+  let absBase: string;
+
+  if (specifier.startsWith("@/")) {
+    absBase = path.posix.join(srcRoot, specifier.slice(2));
+  } else if (specifier.startsWith("./") || specifier.startsWith("../")) {
+    const fromDir = path.dirname(fromFile.replace(/\\/g, "/"));
+    absBase = path.posix.join(fromDir, specifier);
+  } else {
+    return null; // node_modules / external — out of scope
+  }
+
+  // Try suffixes in order
+  const candidates = [
+    absBase + ".tsx",
+    absBase + ".ts",
+    path.posix.join(absBase, "index.tsx"),
+    path.posix.join(absBase, "index.ts"),
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {}
+  }
+  return null;
+}
+
+// Parse import statements in a file. Returns array of resolved
+// absolute paths to imported files within frontend/src/components/.
+function parseComponentImports(file: string): string[] {
+  const componentsRoot = path.join(REPO_ROOT, "frontend/src/components").replace(/\\/g, "/");
+  let content: string;
+  try {
+    content = readFile(file);
+  } catch {
+    return [];
+  }
+
+  const results: string[] = [];
+  // Match: import ... from "specifier";
+  // Match: const X = require("specifier"); (defensive, rare in app router)
+  // Match: import("specifier") (dynamic)
+  const importRe = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]\s*\)?/g;
+  let m: RegExpExecArray | null;
+  while ((m = importRe.exec(content)) !== null) {
+    const spec = m[1];
+    const resolved = resolveImportPath(spec, file);
+    if (!resolved) continue;
+    if (!resolved.startsWith(componentsRoot)) continue;
+
+    // If resolved is index.ts(x), follow re-exports
+    const baseName = path.posix.basename(resolved);
+    if (baseName === "index.ts" || baseName === "index.tsx") {
+      const rerouted = resolveBarrelReExports(resolved, content, m.index);
+      if (rerouted.length > 0) {
+        results.push(...rerouted);
+        continue;
+      }
+      // No specific re-export found — count the index file itself
+      // (rare; conservative fallback)
+    }
+    results.push(resolved);
+  }
+  return results;
+}
+
+// Given a resolved barrel index file, parse its `export { X } from`
+// and `export * from` statements to map back to actual source files.
+// Returns array of absolute paths to source files exported by the
+// barrel. The `consumerContent` + `consumerOffset` args allow us to
+// optionally narrow to specific named imports, but for v9 simplicity
+// we collect ALL re-exports (over-coverage is harmless — extra
+// components just inherit the same route context).
+function resolveBarrelReExports(
+  indexFile: string,
+  _consumerContent: string,
+  _consumerOffset: number
+): string[] {
+  let content: string;
+  try {
+    content = readFile(indexFile);
+  } catch {
+    return [];
+  }
+
+  const results: string[] = [];
+  // Named: export { X, Y as Z } from "./path"
+  const namedRe = /export\s*\{[^}]*\}\s*from\s*['"]([^'"]+)['"]/g;
+  // Namespace: export * from "./path"
+  const starRe = /export\s*\*\s*from\s*['"]([^'"]+)['"]/g;
+
+  for (const re of [namedRe, starRe]) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(content)) !== null) {
+      const resolved = resolveImportPath(m[1], indexFile);
+      if (resolved) results.push(resolved);
+    }
+  }
+  return results;
+}
+
+const MAX_COMPONENT_GRAPH_DEPTH = 5;
+
+function buildComponentContextMap(
+  tsxFiles: string[]
+): { map: Map<string, string[]>; orphanCount: number; multiContextSeed: number } {
+  const appRoot = path.join(REPO_ROOT, "frontend/src/app").replace(/\\/g, "/");
+  const componentsRoot = path.join(REPO_ROOT, "frontend/src/components").replace(/\\/g, "/");
+
+  // Step 1: Build initial mapping from app-route imports.
+  // Map<componentAbsPath, Set<appFilePath>>
+  const componentToApp = new Map<string, Set<string>>();
+  const appFiles = tsxFiles
+    .map((f) => f.replace(/\\/g, "/"))
+    .filter((f) => f.startsWith(appRoot));
+
+  for (const appFile of appFiles) {
+    const imported = parseComponentImports(appFile);
+    for (const compFile of imported) {
+      if (!componentToApp.has(compFile)) componentToApp.set(compFile, new Set());
+      componentToApp.get(compFile)!.add(appFile);
+    }
+  }
+
+  // Step 2: Transitive propagation (BFS, depth cap).
+  // For each component already in the map, parse its imports of
+  // OTHER components and propagate the consuming app-file set.
+  for (let depth = 0; depth < MAX_COMPONENT_GRAPH_DEPTH; depth++) {
+    let changed = false;
+    const componentFiles = Array.from(componentToApp.keys());
+    for (const compFile of componentFiles) {
+      const consumers = componentToApp.get(compFile)!;
+      const subImports = parseComponentImports(compFile);
+      for (const sub of subImports) {
+        if (sub === compFile) continue; // skip self-loop
+        if (!componentToApp.has(sub)) componentToApp.set(sub, new Set());
+        const subSet = componentToApp.get(sub)!;
+        const sizeBefore = subSet.size;
+        for (const c of Array.from(consumers)) subSet.add(c);
+        if (subSet.size > sizeBefore) changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // Step 3: Convert app-file sets → route-prefix arrays.
+  const map = new Map<string, string[]>();
+  let multiContextSeed = 0;
+  for (const [compFile, appSet] of Array.from(componentToApp.entries())) {
+    const routes = new Set<string>();
+    for (const af of Array.from(appSet)) {
+      const rel = path.posix.relative(appRoot, af);
+      const dir = path.posix.dirname(rel);
+      const route = dir === "." ? "/" : "/" + dir;
+      routes.add(route);
+    }
+    const arr = Array.from(routes);
+    if (arr.length > 1) multiContextSeed++;
+    map.set(compFile, arr);
+  }
+
+  // Step 4: Identify orphan component files (in tsxFiles but not in map).
+  const allComponentFiles = tsxFiles
+    .map((f) => f.replace(/\\/g, "/"))
+    .filter((f) => f.startsWith(componentsRoot));
+  let orphanCount = 0;
+  for (const cf of allComponentFiles) {
+    if (!map.has(cf)) orphanCount++;
+  }
+
+  return { map, orphanCount, multiContextSeed };
+}
+
 function pass3Tailwind(
   tsxFiles: string[],
-  layoutBgContext: Map<string, LayoutBgContextEntry>
+  layoutBgContext: Map<string, LayoutBgContextEntry>,
+  componentContextMap: Map<string, string[]> | null = null
 ): {
   findings: ContrastFinding[];
   scanned: number;
@@ -2542,6 +2861,8 @@ function pass3Tailwind(
   layoutFallbackFiringCount: number;
   layoutPrefixHistogram: Record<string, number>;
   layoutNotFoundCount: number;
+  componentContextFiringCount: number;
+  componentMultiContextCount: number;
 } {
   const findings: ContrastFinding[] = [];
   let pairsEvaluated = 0;
@@ -2552,9 +2873,11 @@ function pass3Tailwind(
   let fellThroughToBodyCount = 0;    // v7: stack base was #FFFFFF default (no opaque ancestor in chain)
   let layoutFallbackFiringCount = 0; // v8: ancestor result used a layout.tsx-resolved bg (longest-prefix match)
   let layoutNotFoundCount = 0;       // v8: file outside app-router OR no matching layout — falls to #FFFFFF
+  let componentContextFiringCount = 0; // v9: shared component file resolved via componentContextMap
   const recursionDepthHistogram: Record<number, number> = {}; // v7: stack-depth distribution
   const layoutPrefixHistogram: Record<string, number> = {};   // v8: which layout prefix supplied the fallback most often
   const counter = { crossFileBoundaryCount: 0, depthExceededCount: 0 }; // v6/v7
+  const multiContextCounter = { count: 0 }; // v9: component had >1 distinct route context
   const dynamicLogged = new Set<string>();
   const dynamicRe = /className\s*=\s*\{[^}]*`[^`]*\$\{/;
 
@@ -2579,8 +2902,18 @@ function pass3Tailwind(
     // v8 — Resolve layout fallback bg for this file's route ONCE per
     // file. Used by findAncestorBg as the final fallback when no
     // opaque JSX ancestor is found in the lexical chain.
-    const layoutFallback = findLayoutBgForPage(file, layoutBgContext);
-    if (!layoutFallback) layoutNotFoundCount++;
+    // v9 — Extended to handle component files via componentContextMap.
+    const fileNorm = file.replace(/\\/g, "/");
+    const componentsRoot = path.join(REPO_ROOT, "frontend/src/components").replace(/\\/g, "/");
+    const isComponentFile = fileNorm.startsWith(componentsRoot);
+    const layoutFallback = findLayoutBgForPage(file, layoutBgContext, componentContextMap, multiContextCounter);
+    if (!layoutFallback) {
+      layoutNotFoundCount++;
+    } else if (isComponentFile && componentContextMap && componentContextMap.has(fileNorm)) {
+      // v9 — Component-context firing: layout was resolved via component
+      // import-graph rather than direct app-route prefix matching.
+      componentContextFiringCount++;
+    }
 
     // v6 — Build JSX element stack for this file ONCE, then walk it
     // for each element's classNames. Replaces v5's regex-only pass
@@ -2787,6 +3120,8 @@ function pass3Tailwind(
     layoutFallbackFiringCount,
     layoutPrefixHistogram,
     layoutNotFoundCount,
+    componentContextFiringCount,
+    componentMultiContextCount: multiContextCounter.count,
   };
 }
 
@@ -2796,7 +3131,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number; tailwindRecursionFiringCount: number; tailwindRecursionDepthHistogram: Record<number, number>; tailwindDepthExceededCount: number; tailwindFellThroughToBodyCount: number; tailwindLayoutFallbackFiringCount: number; tailwindLayoutPrefixHistogram: Record<string, number>; tailwindLayoutNotFoundCount: number; layoutBgContextSize: number; layoutBgContextEntries: LayoutBgContextEntry[] }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number; tailwindRecursionFiringCount: number; tailwindRecursionDepthHistogram: Record<number, number>; tailwindDepthExceededCount: number; tailwindFellThroughToBodyCount: number; tailwindLayoutFallbackFiringCount: number; tailwindLayoutPrefixHistogram: Record<string, number>; tailwindLayoutNotFoundCount: number; layoutBgContextSize: number; layoutBgContextEntries: LayoutBgContextEntry[]; tailwindComponentContextFiringCount: number; tailwindComponentMultiContextCount: number; componentContextMapSize: number; componentContextOrphanCount: number }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -2812,7 +3147,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v8 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking + translucent-ancestor recursion + app-router layout.tsx body-bg)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v9 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking + translucent-ancestor recursion + app-router layout.tsx body-bg + cross-component layout resolution)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -2864,6 +3199,9 @@ function buildReport(
     .map((e) => `${e.routePrefix}→${e.resolvedHex} (${e.source})`)
     .join("; ");
   lines.push(`**Pass 3 v8 app-router layout.tsx body-bg**: ${pass3.layoutBgContextSize} layout file(s) registered with resolvable bg (${layoutEntriesSummary}). ${pass3.tailwindLayoutFallbackFiringCount} ancestor lookups used the layout-fallback (longest-prefix-wins) — closes the v7 fall-through class for pages whose actual bg comes from app-router layout cascade rather than inline className. Top route prefixes by firings: ${layoutPrefixStr}. ${pass3.tailwindLayoutNotFoundCount} file(s) had no layout match in the route cascade (file outside app/ OR page in route segment with no layout.tsx — falls to #FFFFFF default).`);
+  lines.push("");
+
+  lines.push(`**Pass 3 v9 cross-component layout resolution**: ${pass3.componentContextMapSize} component file(s) resolved into the app-route import graph (${pass3.componentContextOrphanCount} orphan component file(s) had no app-route consumer found, fall through to v8 #FFFFFF default). ${pass3.tailwindComponentContextFiringCount} component-context lookups fired during pass3Tailwind (shared component file in frontend/src/components/ resolved its rendering route via the import-graph map rather than #FFFFFF default-fallback). ${pass3.tailwindComponentMultiContextCount} of those had multi-context ambiguity (component imported by multiple route trees with potentially different layout bgs; first-match-wins per directive). Closes the ~95 documented FP class from Sprints 18+19+20 audits — Sidebar, modals, ui/* widgets, dashboard overview cards now correctly composite against their dashboard dark-navy layout instead of being misclassified as #FFFFFF white-on-white.`);
   lines.push("");
 
   // ── P0 section
@@ -3057,8 +3395,19 @@ function main() {
     `[brand-audit] layoutBgContext: ${layoutBgContext.size} entries — ${layoutSummary || "(none resolved)"}`
   );
 
+  // v9 — Build component-context map by walking the app-route import
+  // graph. Closes the ~95 documented FP class where shared React
+  // components (Sidebar, modals, ui/* widgets) live in
+  // frontend/src/components/ rather than app/, so v8's layoutBgContext
+  // lookup falls through to #FFFFFF default.
+  console.error("[brand-audit] Pass 3 — building componentContextMap (v9)...");
+  const componentContext = buildComponentContextMap(tsxFiles);
+  console.error(
+    `[brand-audit] componentContextMap: ${componentContext.map.size} components resolved into app-route import graph; ${componentContext.orphanCount} orphan components (no app consumer found); ${componentContext.multiContextSeed} components have >1 distinct route context.`
+  );
+
   console.error("[brand-audit] Pass 3 — Tailwind contrast on .tsx...");
-  const pass3tw = pass3Tailwind(tsxFiles, layoutBgContext);
+  const pass3tw = pass3Tailwind(tsxFiles, layoutBgContext, componentContext.map);
   const histStr = Object.keys(pass3tw.recursionDepthHistogram)
     .map((k) => parseInt(k, 10))
     .sort((a, b) => a - b)
@@ -3068,7 +3417,7 @@ function main() {
     .map((p) => `${p}=${pass3tw.layoutPrefixHistogram[p]}`)
     .join(",") || "none";
   console.error(
-    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs, ${pass3tw.dynamicSkippedFiles} dynamic-skipped, ${pass3tw.ancestorBgFiringCount} ancestor (v6), ${pass3tw.orphanTextFiringCount} orphan-text (v6), ${pass3tw.crossFileBoundaryCount} component-boundary, ${pass3tw.recursionFiringCount} recursive-stacks (v7) [${histStr}], ${pass3tw.fellThroughToBodyCount} body-fallthrough, ${pass3tw.depthExceededCount} depth-cap, ${pass3tw.layoutFallbackFiringCount} layout-fallback (v8) [${layoutHistStr}], ${pass3tw.layoutNotFoundCount} no-layout-match.`
+    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs, ${pass3tw.dynamicSkippedFiles} dynamic-skipped, ${pass3tw.ancestorBgFiringCount} ancestor (v6), ${pass3tw.orphanTextFiringCount} orphan-text (v6), ${pass3tw.crossFileBoundaryCount} component-boundary, ${pass3tw.recursionFiringCount} recursive-stacks (v7) [${histStr}], ${pass3tw.fellThroughToBodyCount} body-fallthrough, ${pass3tw.depthExceededCount} depth-cap, ${pass3tw.layoutFallbackFiringCount} layout-fallback (v8) [${layoutHistStr}], ${pass3tw.layoutNotFoundCount} no-layout-match, ${pass3tw.componentContextFiringCount} component-context (v9), ${pass3tw.componentMultiContextCount} multi-context.`
   );
 
   // Merge Tailwind findings into pass3 for unified P0/P1/P2 reporting.
@@ -3090,6 +3439,10 @@ function main() {
     tailwindLayoutNotFoundCount: pass3tw.layoutNotFoundCount,
     layoutBgContextSize: layoutBgContext.size,
     layoutBgContextEntries: layoutEntriesArr,
+    tailwindComponentContextFiringCount: pass3tw.componentContextFiringCount,
+    tailwindComponentMultiContextCount: pass3tw.componentMultiContextCount,
+    componentContextMapSize: componentContext.map.size,
+    componentContextOrphanCount: componentContext.orphanCount,
   };
 
   const report = buildReport(
