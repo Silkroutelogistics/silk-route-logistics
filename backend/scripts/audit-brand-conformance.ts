@@ -387,37 +387,153 @@
  *           Surviving P0s are the trusted-baseline real
  *           readability issues for final CSS + Tailwind sweeps.
  *
- * v8 candidates deferred from this scope:
- *   - Cross-file React component composition (resolve `<Card>`
- *     ancestor bg from Card's own file when JSX walker hits a
- *     capitalized-tag boundary without bg-* — would require
- *     multi-file element tree merging at component-boundary;
- *     currently scanner just walks past components and increments
+ *   v8 (2026-05-04) — app-router layout.tsx body-bg resolution
+ *           for Tailwind path. Closes the v7 fall-through class
+ *           (Sprint 12: 1,188 of 1,382 recursive stacks fell
+ *           through to #FFFFFF default because the .tsx file
+ *           contained no opaque bg-* anywhere in its lexical
+ *           chain). Real rendering inherits body bg from the
+ *           Next.js app-router layout cascade (e.g. /dashboard/*
+ *           pages render against app/dashboard/layout.tsx's
+ *           outermost wrapper bg).
+ *
+ *           v8 introduces:
+ *             - LayoutBgContextEntry — per-layout-file record
+ *               with route prefix, raw bg value, resolved hex,
+ *               and source ("tailwind-class" | "inline-style-
+ *               literal" | "inline-style-var")
+ *             - buildLayoutBgContext(tsxFiles, vars) — walks
+ *               app/**\/layout.tsx files, resolves bg from
+ *               either:
+ *                 (1) inline `style={{ background: '...' }}`
+ *                     via regex + reuse of resolveColor() for
+ *                     var(--name) and rgb/rgba/hex literals
+ *                 (2) outermost element's className with bg-*
+ *                     token via existing resolveTailwindClass()
+ *               First match wins. Files with no resolvable bg
+ *               are absent from the map (longest-prefix lookup
+ *               falls through).
+ *             - deriveRoutePrefix(layoutFile) — converts file
+ *               path to route prefix (app/dashboard/layout.tsx
+ *               → /dashboard, app/layout.tsx → /)
+ *             - findLayoutBgForPage(pageFile, layoutBgContext)
+ *               — longest-prefix match returning the most-
+ *               specific layout entry for a given page
+ *             - findAncestorBg() extended with layoutFallback
+ *               parameter; recursion's null-inner branch and
+ *               outermost walk's empty-result branch use the
+ *               layout-resolved bg in place of #FFFFFF default
+ *             - findAncestorBg() returns a SYNTHETIC layout-
+ *               fallback ancestor at depth=0 when the JSX walk
+ *               completes empty but a layout fallback is
+ *               available — Case 2 orphan-text findings now
+ *               emit instead of skipping (the v7 `if (!anc)
+ *               continue` path)
+ *
+ *           Layout cascade per Next.js semantics: child layouts
+ *           override parent. Longest-prefix-wins on lookup so
+ *           /dashboard/loads/page.tsx finds /dashboard's layout
+ *           rather than /'s.
+ *
+ *           Important light-mode semantic: `--srl-bg-base` in
+ *           globals.css resolves to `#F5F3EF` (light cream)
+ *           by default (`:root, [data-mode="light"]`); only
+ *           resolves to `#0F1117` (dark navy) when
+ *           `[data-mode="dark"]` attribute is set. Per the
+ *           existing v3 default-mode convention, scanner
+ *           targets default rendering (no data-mode set),
+ *           so dashboard/accounting/admin pages now correctly
+ *           composite against light cream. Many `text-white`
+ *           findings on these pages are GENUINE readability
+ *           bugs in light mode — v8 SURFACES them rather than
+ *           retires them, which is correct semantic.
+ *
+ *           Counters surfaced in summary:
+ *             - layoutBgContextSize (number of layouts registered)
+ *             - layoutBgContextEntries (full list with route
+ *               prefix → resolved hex → source for transparency)
+ *             - tailwindLayoutFallbackFiringCount (how often a
+ *               page used the layout fallback)
+ *             - tailwindLayoutPrefixHistogram (which prefixes
+ *               supplied the fallback — usage distribution)
+ *             - tailwindLayoutNotFoundCount (files with no
+ *               matching layout — outside app/ OR no layout.tsx
+ *               in the route segment chain)
+ *
+ *           Trail format extension:
+ *             "ancestor stack: <div> α=0.05 #FFFFFF →
+ *              #F5F3EF (layout fallback) composited:
+ *              <final-hex> (depth=1) · layout: /dashboard
+ *              (inline-style-var) bg=var(--srl-bg-base)→#F5F3EF"
+ *
+ *           v8 simplifications (acceptable):
+ *             - String-literal classNames + style values only;
+ *               no template-literal interpolation (consistent
+ *               with rest of scanner)
+ *             - First-bg-ancestor wins on layout outermost
+ *               element (conditional rendering uses first
+ *               branch literal)
+ *             - No cross-file component import resolution
+ *               (defer to v9 — `<DashboardShell>` wrapping
+ *               component currently not present in repo)
+ *             - Globals.css `body { background }` not consulted
+ *               (out of scope for v8; layouts cover the cases
+ *               that matter)
+ *             - Translucent layout outermost bg composited
+ *               against #FFFFFF (rare; v9 candidate to recurse)
+ *
+ *           Behavior delta vs Sprint 12 v7 baseline: P0 expected
+ *           to MOVE rather than reduce sharply. v7's #FFFFFF
+ *           default fall-through misclassified some text-white
+ *           cases AS pass-through P0s (1.00:1 white-on-white)
+ *           that are still P0 against #F5F3EF light cream
+ *           (1.00:1 white-on-cream — both fail). The v7 P0
+ *           count was correct in CLASSIFICATION, but the
+ *           composition trail is now accurate. v8 also
+ *           SURFACES previously-skipped Case 2 orphan-text
+ *           findings (v7's `if (!anc) continue`), expected to
+ *           ADD findings net. Real-world P0 may go UP, not
+ *           down, on this commit — that's correct semantic.
+ *
+ * v9 candidates deferred from this scope:
+ *   - Cross-file React component composition (resolve `<Card>`,
+ *     `<Modal>`, `<DashboardShell>` ancestor bg by walking the
+ *     component's own file — would require multi-file element
+ *     tree merging at component-boundary; currently scanner
+ *     walks past components and increments
  *     crossFileBoundaryCount)
- *   - App-router layout.tsx body bg resolution for Tailwind path
- *     (analog of v5 page-context body bg, but for .tsx files —
- *     would walk app/layout.tsx + nested layouts to resolve the
- *     effective body bg per route)
+ *   - Globals.css body styling consultation (when layout.tsx
+ *     has no bg but globals.css sets one — currently skipped
+ *     for v8 simplicity)
  *   - sm:/md:/lg:/xl:/2xl: responsive variant evaluation
  *   - dark: variant evaluation against the dark-mode body bg
- *   - State-driven conditional className branches (ternary inside
- *     clsx args — currently first-string-literal-wins)
+ *   - State-driven conditional className branches (ternary
+ *     inside clsx args — currently first-string-literal-wins)
  *   - Full AST parsing (typescript / @babel/parser) — would
- *     resolve clsx/cn helpers with arbitrary call signatures and
- *     spread arguments correctly, plus enable type-aware analysis
+ *     resolve clsx/cn helpers with arbitrary call signatures
+ *     and spread arguments correctly, plus enable type-aware
+ *     analysis
  *   - CSS-in-JS dynamic styles (styled-components / emotion /
  *     not currently used in repo)
  *   - @media query rules
  *   - pseudo-element styling (::before, ::after)
- *   - PDF template colors (backend/src/services/pdfService.ts) —
- *     out of frontend scope per Sprint 2 directive
+ *   - PDF template colors (backend/src/services/pdfService.ts)
+ *     — out of frontend scope per Sprint 2 directive
  *   - orphan-CSS detection (Sprint 3 spot-check 2 found
  *     `tracking.css` is dead code post-v3.8.q routing
  *     consolidation — scanner doesn't yet flag CSS files with
  *     zero HTML/TSX consumers)
- *   - Memoized cache for findAncestorBg results per element index
- *     (currently O(N×depth) but N×depth is small in practice; add
- *     only if smoke shows runtime regression)
+ *   - Memoized cache for findAncestorBg results per element
+ *     index (currently O(N×depth) but N×depth is small in
+ *     practice; add only if smoke shows runtime regression)
+ *   - Translucent layout outermost bg recursion (when
+ *     layout.tsx outermost wrapper itself has α<1, currently
+ *     composited against #FFFFFF — should recurse parent
+ *     layout per cascade)
+ *   - Dark-mode opt-in flag (run scanner in [data-mode="dark"]
+ *     posture against dashboard pages — would let users
+ *     verify dark-mode rendering separately from default
+ *     light-mode rendering)
  */
 
 import * as fs from "fs";
@@ -2079,8 +2195,10 @@ type AncestorBgResult = {
     viaLine: number;
   }>;
   baseHex?: string;               // the opaque value the stack composited against (only set when stack present)
-  fellThroughToBody?: boolean;    // base was #FFFFFF default fallback (no opaque ancestor in chain)
+  fellThroughToBody?: boolean;    // base was #FFFFFF default fallback (no opaque ancestor in chain AND no layout fallback either)
   depthExceeded?: boolean;        // recursion cap hit
+  layoutFallbackUsed?: boolean;   // v8: stack ended in layout.tsx-resolved bg (longest-prefix match)
+  layoutFallbackEntry?: LayoutBgContextEntry; // v8: the layout that supplied the base
 };
 
 const MAX_ANCESTOR_BG_DEPTH = 5;
@@ -2089,6 +2207,7 @@ function findAncestorBg(
   elementIndex: number,
   elements: JsxStackEntry[],
   counter: { crossFileBoundaryCount: number; depthExceededCount: number },
+  layoutFallback: LayoutBgContextEntry | null = null,
   depth: number = 0
 ): AncestorBgResult | null {
   if (depth >= MAX_ANCESTOR_BG_DEPTH) {
@@ -2118,21 +2237,31 @@ function findAncestorBg(
         }
 
         // Translucent — recurse to find the bg this composites against.
-        const inner = findAncestorBg(parentIdx, elements, counter, depth + 1);
+        const inner = findAncestorBg(parentIdx, elements, counter, layoutFallback, depth + 1);
 
         let baseHex: string;
         let fellThrough = false;
         let priorStack: AncestorBgResult["stack"] = undefined;
         let depthExceededFromInner = false;
+        let layoutUsed = false;
+        let layoutEntry: LayoutBgContextEntry | undefined;
 
         if (inner) {
           baseHex = inner.hex;
           priorStack = inner.stack;
           fellThrough = inner.fellThroughToBody ?? false;
           depthExceededFromInner = inner.depthExceeded ?? false;
+          layoutUsed = inner.layoutFallbackUsed ?? false;
+          layoutEntry = inner.layoutFallbackEntry;
+        } else if (layoutFallback) {
+          // v8 — No opaque ancestor in lexical chain, but we have a
+          // layout.tsx-derived bg from the route cascade. Use it.
+          baseHex = layoutFallback.resolvedHex;
+          layoutUsed = true;
+          layoutEntry = layoutFallback;
         } else {
-          // No opaque ancestor found OR depth cap hit during recursion —
-          // fall back to white default.
+          // No opaque ancestor found AND no layout fallback — final
+          // resort to #FFFFFF default.
           baseHex = "#FFFFFF";
           fellThrough = true;
         }
@@ -2156,16 +2285,221 @@ function findAncestorBg(
           baseHex,
           fellThroughToBody: fellThrough,
           depthExceeded: depthExceededFromInner,
+          layoutFallbackUsed: layoutUsed,
+          layoutFallbackEntry: layoutEntry,
         };
       }
     }
     if (ancestor.isComponent) counter.crossFileBoundaryCount++;
     parentIdx = ancestor.parentIndex;
   }
+
+  // v8 — Walked all ancestors with NO bg-* match. If a layout fallback
+  // is available, return it as a synthetic ancestor result so that
+  // Case 2 orphan-text findings can pair against the route's layout bg
+  // instead of skipping (the v7 `if (!anc) continue;` path).
+  if (layoutFallback && depth === 0) {
+    return {
+      hex: layoutFallback.resolvedHex,
+      viaTag: "<layout>",
+      viaLine: 0,
+      layoutFallbackUsed: true,
+      layoutFallbackEntry: layoutFallback,
+    };
+  }
   return null;
 }
 
-function pass3Tailwind(tsxFiles: string[]): {
+// v8 — Layout bg context. Walks frontend/src/app/**/layout.tsx files
+// at scanner startup, resolves the outermost wrapper's bg (either via
+// Tailwind className or inline `style={{ background: ... }}`), and
+// builds a Map<routePrefix, LayoutBgContextEntry> for route-aware
+// fallback during pass3Tailwind contrast resolution.
+//
+// The map is consulted by findAncestorBg (via layoutFallbackHex
+// parameter) when JSX recursion finds no opaque ancestor in the
+// .tsx file's lexical chain — instead of falling through to #FFFFFF
+// default, scanner resolves the page's actual layout cascade bg.
+//
+// Layout cascade: child layouts override parent layouts. Longest-
+// prefix-wins on lookup (e.g. /dashboard/loads → /dashboard layout
+// wins over / layout).
+type LayoutBgContextEntry = {
+  layoutFile: string;
+  routePrefix: string;
+  rawBg: string;                         // verbatim source (e.g. "var(--srl-bg-base)" or "bg-[#F7F8FA]")
+  resolvedHex: string;                   // final resolved opaque hex
+  source:
+    | "tailwind-class"
+    | "inline-style-literal"
+    | "inline-style-var";
+  unresolvedReason?: string;             // when resolution failed
+  conditionalLayout?: boolean;           // first-branch wins on conditionals
+};
+
+// Convert a layout.tsx file path to its Next.js app-router route prefix.
+//   frontend/src/app/layout.tsx              → /
+//   frontend/src/app/dashboard/layout.tsx    → /dashboard
+//   frontend/src/app/shipper/dashboard/...   → /shipper/dashboard
+function deriveRoutePrefix(layoutFile: string): string {
+  const appRoot = path.join(REPO_ROOT, "frontend/src/app");
+  const rel = path.relative(appRoot, layoutFile).replace(/\\/g, "/");
+  const dir = path.posix.dirname(rel);
+  return dir === "." ? "/" : "/" + dir;
+}
+
+// Resolve an inline `style={{ background: '...' }}` value to an opaque
+// hex. Reuses Pass 3 var resolution for var(--name) lookups.
+function resolveStyleBgValue(
+  raw: string,
+  vars: VarMap
+): { hex: string | null; alpha?: number; source: "literal" | "var"; unresolvedReason?: string } {
+  const v = raw.trim();
+
+  // var(--name) — defer to existing resolveColor for var resolution.
+  if (/^var\(/i.test(v)) {
+    const resolved = resolveColor(v, vars);
+    if (resolved.hex) {
+      return { hex: resolved.hex, alpha: resolved.alpha, source: "var" };
+    }
+    return { hex: null, source: "var", unresolvedReason: resolved.unresolved ?? "var-unresolvable" };
+  }
+
+  // Direct literal — hex, rgb(a), hsl(a). Defer to resolveColor.
+  const resolved = resolveColor(v, vars);
+  if (resolved.hex) {
+    return { hex: resolved.hex, alpha: resolved.alpha, source: "literal" };
+  }
+  return { hex: null, source: "literal", unresolvedReason: resolved.unresolved ?? "non-color-value" };
+}
+
+// Build the layoutBgContext map from layout.tsx files.
+// Walks each layout file:
+//   1. First-pass: regex-match `style={{ background: '...' }}` on outer wrapper
+//   2. Second-pass: walk JSX, find first element with bg-* className token
+// First match wins. Files with no resolvable bg are simply absent from
+// the map (longest-prefix lookup falls through to next-shorter prefix).
+function buildLayoutBgContext(
+  tsxFiles: string[],
+  vars: VarMap
+): Map<string, LayoutBgContextEntry> {
+  const map = new Map<string, LayoutBgContextEntry>();
+  const appRoot = path.join(REPO_ROOT, "frontend/src/app");
+
+  // Filter to layout.tsx files under app/ only.
+  const layoutFiles = tsxFiles.filter((f) => {
+    const norm = f.replace(/\\/g, "/");
+    if (!norm.startsWith(appRoot.replace(/\\/g, "/"))) return false;
+    return path.basename(norm) === "layout.tsx";
+  });
+
+  for (const file of layoutFiles) {
+    const content = readFile(file);
+    const routePrefix = deriveRoutePrefix(file);
+
+    // 1) Inline style={{ background: '...' }} — match first occurrence.
+    //    Allow other style props before/after `background:`.
+    const styleBgRe = /style\s*=\s*\{\{[^}]*background\s*:\s*(['"`])([^'"`]+)\1[^}]*\}\}/;
+    const styleMatch = styleBgRe.exec(content);
+    if (styleMatch) {
+      const raw = styleMatch[2];
+      const resolved = resolveStyleBgValue(raw, vars);
+      if (resolved.hex) {
+        // Layouts with translucent outermost bg are rare; treat as
+        // composited-against-#FFFFFF here (consistent with rest of
+        // scanner; v9 candidate to recurse).
+        const finalHex = resolved.alpha !== undefined && resolved.alpha < 1
+          ? compositeAlpha(resolved.hex, resolved.alpha, "#FFFFFF")
+          : resolved.hex;
+        map.set(routePrefix, {
+          layoutFile: file,
+          routePrefix,
+          rawBg: raw,
+          resolvedHex: finalHex,
+          source: resolved.source === "var" ? "inline-style-var" : "inline-style-literal",
+        });
+        continue;
+      }
+      // Inline style with unresolvable value — record as unresolved
+      // for trail visibility, then continue to JSX walk.
+      map.set(routePrefix, {
+        layoutFile: file,
+        routePrefix,
+        rawBg: raw,
+        resolvedHex: "#FFFFFF", // best-effort fallback
+        source: resolved.source === "var" ? "inline-style-var" : "inline-style-literal",
+        unresolvedReason: resolved.unresolvedReason,
+      });
+      continue;
+    }
+
+    // 2) JSX walk — first element with bg-* token wins.
+    const { elements } = buildJsxElementStack(content);
+    for (const elem of elements) {
+      if (!elem.classNames) continue;
+      const tokens = elem.classNames.split(/\s+/).filter(Boolean);
+      let found = false;
+      for (const token of tokens) {
+        const stripped = token.replace(/^(hover|focus|active|disabled):/, "");
+        if (/^(dark|sm|md|lg|xl|2xl):/.test(stripped)) continue;
+        const resolved = resolveTailwindClass(stripped);
+        if (!resolved || resolved.kind !== "bg") continue;
+
+        const finalHex = resolved.alpha === undefined || resolved.alpha >= 1
+          ? resolved.hex
+          : compositeAlpha(resolved.hex, resolved.alpha, "#FFFFFF");
+
+        map.set(routePrefix, {
+          layoutFile: file,
+          routePrefix,
+          rawBg: token,
+          resolvedHex: finalHex,
+          source: "tailwind-class",
+        });
+        found = true;
+        break;
+      }
+      if (found) break;
+    }
+  }
+  return map;
+}
+
+// Find the most-specific layout bg for a given page file via longest-
+// prefix match against the layoutBgContext map. Returns null when no
+// layout in the chain has a resolvable bg (caller falls back to
+// #FFFFFF default).
+function findLayoutBgForPage(
+  pageFile: string,
+  layoutBgContext: Map<string, LayoutBgContextEntry>
+): LayoutBgContextEntry | null {
+  const appRoot = path.join(REPO_ROOT, "frontend/src/app").replace(/\\/g, "/");
+  const norm = pageFile.replace(/\\/g, "/");
+  if (!norm.startsWith(appRoot)) return null;
+
+  const rel = path.posix.relative(appRoot, norm);
+  const dir = path.posix.dirname(rel);
+  const pageRoute = dir === "." ? "/" : "/" + dir;
+
+  let bestMatch: LayoutBgContextEntry | null = null;
+  let bestLen = -1;
+  for (const [prefix, entry] of Array.from(layoutBgContext.entries())) {
+    const matches =
+      prefix === "/" ||
+      pageRoute === prefix ||
+      pageRoute.startsWith(prefix + "/");
+    if (matches && prefix.length > bestLen) {
+      bestMatch = entry;
+      bestLen = prefix.length;
+    }
+  }
+  return bestMatch;
+}
+
+function pass3Tailwind(
+  tsxFiles: string[],
+  layoutBgContext: Map<string, LayoutBgContextEntry>
+): {
   findings: ContrastFinding[];
   scanned: number;
   pairsEvaluated: number;
@@ -2177,6 +2511,9 @@ function pass3Tailwind(tsxFiles: string[]): {
   recursionDepthHistogram: Record<number, number>;
   depthExceededCount: number;
   fellThroughToBodyCount: number;
+  layoutFallbackFiringCount: number;
+  layoutPrefixHistogram: Record<string, number>;
+  layoutNotFoundCount: number;
 } {
   const findings: ContrastFinding[] = [];
   let pairsEvaluated = 0;
@@ -2185,18 +2522,37 @@ function pass3Tailwind(tsxFiles: string[]): {
   let orphanTextFiringCount = 0;     // v6: text-only element resolved bg via ancestor walking
   let recursionFiringCount = 0;      // v7: ancestor result included a translucent stack (≥1 overlay)
   let fellThroughToBodyCount = 0;    // v7: stack base was #FFFFFF default (no opaque ancestor in chain)
+  let layoutFallbackFiringCount = 0; // v8: ancestor result used a layout.tsx-resolved bg (longest-prefix match)
+  let layoutNotFoundCount = 0;       // v8: file outside app-router OR no matching layout — falls to #FFFFFF
   const recursionDepthHistogram: Record<number, number> = {}; // v7: stack-depth distribution
+  const layoutPrefixHistogram: Record<string, number> = {};   // v8: which layout prefix supplied the fallback most often
   const counter = { crossFileBoundaryCount: 0, depthExceededCount: 0 }; // v6/v7
   const dynamicLogged = new Set<string>();
   const dynamicRe = /className\s*=\s*\{[^}]*`[^`]*\$\{/;
 
+  // Skip layout.tsx files themselves from the contrast scan — they're
+  // structural wrappers, not content surfaces. Their bg is consumed
+  // via layoutBgContext as a FALLBACK for child page.tsx files; double-
+  // counting them as their own targets would inflate findings without
+  // surfacing real readability issues.
+  const layoutFilesSet = new Set(
+    Array.from(layoutBgContext.values()).map((e) => e.layoutFile)
+  );
+
   for (const file of tsxFiles) {
+    if (layoutFilesSet.has(file)) continue;
     const content = readFile(file);
 
     if (dynamicRe.test(content) && !dynamicLogged.has(file)) {
       dynamicLogged.add(file);
       dynamicSkippedFiles++;
     }
+
+    // v8 — Resolve layout fallback bg for this file's route ONCE per
+    // file. Used by findAncestorBg as the final fallback when no
+    // opaque JSX ancestor is found in the lexical chain.
+    const layoutFallback = findLayoutBgForPage(file, layoutBgContext);
+    if (!layoutFallback) layoutNotFoundCount++;
 
     // v6 — Build JSX element stack for this file ONCE, then walk it
     // for each element's classNames. Replaces v5's regex-only pass
@@ -2230,37 +2586,69 @@ function pass3Tailwind(tsxFiles: string[]): {
       }
 
       // Lazy ancestor lookup — call only when needed, reuse result
-      // across variants for this same element.
+      // across variants for this same element. v8 — passes
+      // layoutFallback so findAncestorBg can substitute layout.tsx-
+      // resolved bg in place of #FFFFFF when no opaque JSX ancestor
+      // is found in the lexical chain.
       let ancestorBg: ReturnType<typeof findAncestorBg> = undefined as any;
       const getAncestor = () => {
         if (ancestorBg === undefined) {
-          ancestorBg = findAncestorBg(elemIdx, elements, counter);
+          ancestorBg = findAncestorBg(elemIdx, elements, counter, layoutFallback);
         }
         return ancestorBg;
       };
 
-      // v7 — Format the recursion stack as a human-readable composition
+      // v7/v8 — Format the recursion stack as a human-readable composition
       // trail for finding-output transparency.
-      // Format: "ancestor stack: bg-rawTag(α=X.XX) → bg-rawTag(α=X.XX) → <baseHex> composited: <finalHex>"
-      // Outermost layer first (closest to viewer), base last.
+      // Format: "ancestor stack: <tag> α=X.XX <hex> → <tag> α=X.XX <hex> → <baseHex> composited: <finalHex> (depth=N)"
+      // Outermost layer first (closest to viewer), base last. v8 adds
+      // "layout: <route-prefix> (<source>) bg-<raw>" suffix when the
+      // base resolved via layout.tsx fallback.
       const formatAncestorStack = (anc: NonNullable<ReturnType<typeof findAncestorBg>>): string => {
+        const layoutSuffix = anc.layoutFallbackUsed && anc.layoutFallbackEntry
+          ? ` · layout: ${anc.layoutFallbackEntry.routePrefix} (${anc.layoutFallbackEntry.source}) bg=${anc.layoutFallbackEntry.rawBg}→${anc.layoutFallbackEntry.resolvedHex}`
+          : "";
+
         if (!anc.stack || anc.stack.length === 0) {
+          // Either bare opaque ancestor (v6) OR v8 synthetic
+          // layout-fallback ancestor (no JSX ancestor existed at all).
+          if (anc.layoutFallbackUsed && anc.layoutFallbackEntry) {
+            return ` · ancestor <layout> bg=${anc.hex}${layoutSuffix}`;
+          }
           return ` · ancestor <${anc.viaTag}> bg=${anc.hex} (line ${anc.viaLine})`;
         }
         const layerStr = anc.stack
           .map((l) => `<${l.viaTag}> α=${l.alpha.toFixed(2)} ${l.hex}`)
           .join(" → ");
-        const baseStr = anc.fellThroughToBody ? `${anc.baseHex} (default fallback)` : anc.baseHex;
+        let baseStr: string;
+        if (anc.layoutFallbackUsed) {
+          baseStr = `${anc.baseHex} (layout fallback)`;
+        } else if (anc.fellThroughToBody) {
+          baseStr = `${anc.baseHex} (default fallback)`;
+        } else {
+          baseStr = `${anc.baseHex}`;
+        }
         const depthFlag = anc.depthExceeded ? " [depth-cap-hit]" : "";
-        return ` · ancestor stack: ${layerStr} → ${baseStr} composited: ${anc.hex} (depth=${anc.stack.length})${depthFlag}`;
+        return ` · ancestor stack: ${layerStr} → ${baseStr} composited: ${anc.hex} (depth=${anc.stack.length})${depthFlag}${layoutSuffix}`;
       };
 
-      // v7 — Track recursion firing + depth + body fall-through.
+      // v7/v8 — Track recursion firing + depth + body fall-through +
+      // layout fallback usage. Idempotent within a single ancestor
+      // result (Case 1 + Case 2 both call this; the result is
+      // memoized via getAncestor()).
+      let accountedFor = false;
       const accountForRecursion = (anc: NonNullable<ReturnType<typeof findAncestorBg>>) => {
+        if (accountedFor) return;
+        accountedFor = true;
         if (anc.stack && anc.stack.length > 0) {
           recursionFiringCount++;
           recursionDepthHistogram[anc.stack.length] = (recursionDepthHistogram[anc.stack.length] ?? 0) + 1;
           if (anc.fellThroughToBody) fellThroughToBodyCount++;
+        }
+        if (anc.layoutFallbackUsed && anc.layoutFallbackEntry) {
+          layoutFallbackFiringCount++;
+          const prefix = anc.layoutFallbackEntry.routePrefix;
+          layoutPrefixHistogram[prefix] = (layoutPrefixHistogram[prefix] ?? 0) + 1;
         }
       };
 
@@ -2315,11 +2703,14 @@ function pass3Tailwind(tsxFiles: string[]): {
         }
 
         // Case 2: orphan text-* on element with no same-element bg-*
-        // (v6 — added in v6, recursion in v7). Walk JSX ancestors to
-        // find bg context; pair text against that.
+        // (v6 — added, v7 — recursion, v8 — layout fallback). Walk JSX
+        // ancestors to find bg context; pair text against that.
         if (group.text && !group.bg) {
           const anc = getAncestor();
-          if (!anc) continue; // no ancestor bg in scope — defer to v8 layout-tree resolution
+          // v8 — `anc` is null only when there's neither a JSX bg ancestor
+          // nor a layout.tsx-resolved fallback (file outside app-router OR
+          // no matching layout in the route cascade). Skip in that case.
+          if (!anc) continue;
           orphanTextFiringCount++;
           pairsEvaluated++;
           accountForRecursion(anc);
@@ -2365,6 +2756,9 @@ function pass3Tailwind(tsxFiles: string[]): {
     recursionDepthHistogram,
     depthExceededCount: counter.depthExceededCount,
     fellThroughToBodyCount,
+    layoutFallbackFiringCount,
+    layoutPrefixHistogram,
+    layoutNotFoundCount,
   };
 }
 
@@ -2374,7 +2768,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number; tailwindRecursionFiringCount: number; tailwindRecursionDepthHistogram: Record<number, number>; tailwindDepthExceededCount: number; tailwindFellThroughToBodyCount: number }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number; tailwindRecursionFiringCount: number; tailwindRecursionDepthHistogram: Record<number, number>; tailwindDepthExceededCount: number; tailwindFellThroughToBodyCount: number; tailwindLayoutFallbackFiringCount: number; tailwindLayoutPrefixHistogram: Record<string, number>; tailwindLayoutNotFoundCount: number; layoutBgContextSize: number; layoutBgContextEntries: LayoutBgContextEntry[] }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -2390,7 +2784,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v7 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking + translucent-ancestor recursion)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v8 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking + translucent-ancestor recursion + app-router layout.tsx body-bg)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -2429,7 +2823,19 @@ function buildReport(
     .sort((a, b) => a - b)
     .map((d) => `depth=${d}: ${pass3.tailwindRecursionDepthHistogram[d]}`)
     .join(", ") || "(no recursion fired)";
-  lines.push(`**Pass 3 v7 translucent-ancestor recursion**: ${pass3.tailwindRecursionFiringCount} ancestor lookups built a translucent stack (≥1 overlay layer composited through to an opaque base). Stack depth distribution: ${histogramStr}. ${pass3.tailwindFellThroughToBodyCount} of those fell through to #FFFFFF default base (no opaque ancestor in lexical chain — v8 candidate: app-router layout.tsx body bg resolution). ${pass3.tailwindDepthExceededCount} recursion(s) hit MAX_DEPTH=5 cap (defensive — real JSX rarely exceeds 2-3 levels). v6's "composite translucent ancestor against #FFFFFF" simplification retired; ancestor hex is always opaque after v7.`);
+  lines.push(`**Pass 3 v7 translucent-ancestor recursion**: ${pass3.tailwindRecursionFiringCount} ancestor lookups built a translucent stack (≥1 overlay layer composited through to an opaque base). Stack depth distribution: ${histogramStr}. ${pass3.tailwindFellThroughToBodyCount} of those fell through to #FFFFFF default base (no opaque ancestor in lexical chain AND no layout.tsx fallback — v8 candidate when route is outside app/). ${pass3.tailwindDepthExceededCount} recursion(s) hit MAX_DEPTH=5 cap (defensive — real JSX rarely exceeds 2-3 levels). v6's "composite translucent ancestor against #FFFFFF" simplification retired; ancestor hex is always opaque after v7.`);
+  lines.push("");
+
+  // v8 — Layout bg context summary.
+  const layoutPrefixStr = Object.keys(pass3.tailwindLayoutPrefixHistogram)
+    .map((p) => ({ p, n: pass3.tailwindLayoutPrefixHistogram[p] }))
+    .sort((a, b) => b.n - a.n)
+    .map((e) => `${e.p}=${e.n}`)
+    .join(", ") || "(no firings)";
+  const layoutEntriesSummary = pass3.layoutBgContextEntries
+    .map((e) => `${e.routePrefix}→${e.resolvedHex} (${e.source})`)
+    .join("; ");
+  lines.push(`**Pass 3 v8 app-router layout.tsx body-bg**: ${pass3.layoutBgContextSize} layout file(s) registered with resolvable bg (${layoutEntriesSummary}). ${pass3.tailwindLayoutFallbackFiringCount} ancestor lookups used the layout-fallback (longest-prefix-wins) — closes the v7 fall-through class for pages whose actual bg comes from app-router layout cascade rather than inline className. Top route prefixes by firings: ${layoutPrefixStr}. ${pass3.tailwindLayoutNotFoundCount} file(s) had no layout match in the route cascade (file outside app/ OR page in route segment with no layout.tsx — falls to #FFFFFF default).`);
   lines.push("");
 
   // ── P0 section
@@ -2593,7 +2999,15 @@ function main() {
   console.error(`[brand-audit] Pass 2: ${pass2.length} findings.`);
 
   console.error("[brand-audit] Pass 3 — surface contrast...");
-  const vars = buildVarMap(cssFiles);
+  // v8 — Include globals.css from app-router for layout var resolution.
+  // Public CSS files don't define `--srl-*` tokens; those live in
+  // frontend/src/app/globals.css (loaded via root layout via `import
+  // "./globals.css"`). Without this, layout.tsx files using
+  // style={{ background: 'var(--srl-bg-base)' }} resolve to "unresolved"
+  // and fall back to #FFFFFF instead of the actual cream/navy bg.
+  const globalsCss = path.join(FRONTEND_SRC, "app/globals.css");
+  const cssFilesForVars = fs.existsSync(globalsCss) ? [...cssFiles, globalsCss] : cssFiles;
+  const vars = buildVarMap(cssFilesForVars);
   console.error(`[brand-audit] Pass 3 var map: ${Object.keys(vars).length} CSS variables resolved.`);
   const pass3 = pass3Contrast(cssFiles, vars, htmlFiles);
   console.error(
@@ -2603,15 +3017,30 @@ function main() {
   // v5 — Pass 3 extension: Tailwind contrast pairs on .tsx components.
   // v6 — Now uses JSX tree walker for ancestor-bg resolution.
   // v7 — findAncestorBg recurses through translucent ancestors.
+  // v8 — App-router layout.tsx body-bg resolution as final fallback
+  //      before #FFFFFF default.
+  console.error("[brand-audit] Pass 3 — building layoutBgContext (v8)...");
+  const layoutBgContext = buildLayoutBgContext(tsxFiles, vars);
+  const layoutEntriesArr = Array.from(layoutBgContext.values());
+  const layoutSummary = layoutEntriesArr
+    .map((e) => `${e.routePrefix}→${e.resolvedHex}(${e.source})`)
+    .join(", ");
+  console.error(
+    `[brand-audit] layoutBgContext: ${layoutBgContext.size} entries — ${layoutSummary || "(none resolved)"}`
+  );
+
   console.error("[brand-audit] Pass 3 — Tailwind contrast on .tsx...");
-  const pass3tw = pass3Tailwind(tsxFiles);
+  const pass3tw = pass3Tailwind(tsxFiles, layoutBgContext);
   const histStr = Object.keys(pass3tw.recursionDepthHistogram)
     .map((k) => parseInt(k, 10))
     .sort((a, b) => a - b)
     .map((d) => `d${d}=${pass3tw.recursionDepthHistogram[d]}`)
     .join(",") || "none";
+  const layoutHistStr = Object.keys(pass3tw.layoutPrefixHistogram)
+    .map((p) => `${p}=${pass3tw.layoutPrefixHistogram[p]}`)
+    .join(",") || "none";
   console.error(
-    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs evaluated, ${pass3tw.dynamicSkippedFiles} files with dynamic className skipped, ${pass3tw.ancestorBgFiringCount} ancestor-bg lookups (v6), ${pass3tw.orphanTextFiringCount} orphan-text findings (v6), ${pass3tw.crossFileBoundaryCount} component boundaries crossed, ${pass3tw.recursionFiringCount} recursive translucent stacks (v7) [${histStr}], ${pass3tw.fellThroughToBodyCount} fell through to body, ${pass3tw.depthExceededCount} hit depth-cap.`
+    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs, ${pass3tw.dynamicSkippedFiles} dynamic-skipped, ${pass3tw.ancestorBgFiringCount} ancestor (v6), ${pass3tw.orphanTextFiringCount} orphan-text (v6), ${pass3tw.crossFileBoundaryCount} component-boundary, ${pass3tw.recursionFiringCount} recursive-stacks (v7) [${histStr}], ${pass3tw.fellThroughToBodyCount} body-fallthrough, ${pass3tw.depthExceededCount} depth-cap, ${pass3tw.layoutFallbackFiringCount} layout-fallback (v8) [${layoutHistStr}], ${pass3tw.layoutNotFoundCount} no-layout-match.`
   );
 
   // Merge Tailwind findings into pass3 for unified P0/P1/P2 reporting.
@@ -2628,6 +3057,11 @@ function main() {
     tailwindRecursionDepthHistogram: pass3tw.recursionDepthHistogram,
     tailwindDepthExceededCount: pass3tw.depthExceededCount,
     tailwindFellThroughToBodyCount: pass3tw.fellThroughToBodyCount,
+    tailwindLayoutFallbackFiringCount: pass3tw.layoutFallbackFiringCount,
+    tailwindLayoutPrefixHistogram: pass3tw.layoutPrefixHistogram,
+    tailwindLayoutNotFoundCount: pass3tw.layoutNotFoundCount,
+    layoutBgContextSize: layoutBgContext.size,
+    layoutBgContextEntries: layoutEntriesArr,
   };
 
   const report = buildReport(
