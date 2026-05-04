@@ -9,8 +9,6 @@ export type CrmTab =
   | "orders"
   | "activity";
 
-export type CrmStatusFilter = "all" | "active" | "prospect" | "inactive";
-
 export interface CrmCustomer {
   id: string;
   name: string;
