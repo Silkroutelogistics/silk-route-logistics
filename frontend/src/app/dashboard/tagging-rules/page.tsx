@@ -313,7 +313,7 @@ export default function TaggingRulesPage() {
 
           {/* Search Bar */}
           <div className="relative mb-4 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search tags..."
@@ -394,7 +394,7 @@ export default function TaggingRulesPage() {
                             ))}
                           </div>
                         ) : (
-                          <span className="text-white/30 text-xs">--</span>
+                          <span className="text-slate-400 text-xs">--</span>
                         )}
                       </td>
 
@@ -560,7 +560,7 @@ export default function TaggingRulesPage() {
                           </span>
                         ))
                       ) : (
-                        <span className="text-sm text-white/30">None specified</span>
+                        <span className="text-sm text-slate-400">None specified</span>
                       )}
                     </div>
                   </div>
@@ -605,7 +605,7 @@ export default function TaggingRulesPage() {
                 <div className="space-y-4">
                   {/* Existing rules */}
                   {activeTag.rules.length === 0 ? (
-                    <p className="text-sm text-white/30 text-center py-4">
+                    <p className="text-sm text-slate-400 text-center py-4">
                       No auto-apply rules. Add one below.
                     </p>
                   ) : (
@@ -721,7 +721,7 @@ export default function TaggingRulesPage() {
                     </div>
                   )}
 
-                  <p className="text-xs text-white/30 text-center">
+                  <p className="text-xs text-slate-400 text-center">
                     View tagged entities from their respective pages (Loads, Carriers, etc.)
                   </p>
                 </div>
@@ -740,7 +740,7 @@ export default function TaggingRulesPage() {
         <div className="space-y-5">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tag Name</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Tag Name</label>
             <input
               type="text"
               value={formName}
@@ -752,7 +752,7 @@ export default function TaggingRulesPage() {
 
           {/* Color Picker */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+            <label className="block text-sm font-medium text-slate-400 mb-2">Color</label>
             <div className="flex flex-wrap gap-2 mb-3">
               {PRESET_COLORS.map((c) => (
                 <button
@@ -784,7 +784,7 @@ export default function TaggingRulesPage() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Description</label>
             <textarea
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
@@ -796,7 +796,7 @@ export default function TaggingRulesPage() {
 
           {/* Entity Types */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Entity Types</label>
+            <label className="block text-sm font-medium text-slate-400 mb-2">Entity Types</label>
             <div className="flex flex-wrap gap-2">
               {ENTITY_TYPE_OPTIONS.map((et) => (
                 <button

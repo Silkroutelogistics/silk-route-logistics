@@ -173,7 +173,7 @@ export default function DriversPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Driver Management</h1>
-          <p className="text-sm text-gray-600 mt-1">Compliance, HOS tracking, and fleet assignments</p>
+          <p className="text-sm text-slate-400 mt-1">Compliance, HOS tracking, and fleet assignments</p>
         </div>
         <button onClick={() => setShowAddDriver(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90">
@@ -199,7 +199,7 @@ export default function DriversPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, license..."
             className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
         </div>
@@ -227,7 +227,7 @@ export default function DriversPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-white">{d.firstName} {d.lastName}</p>
+                        <p className="font-semibold text-[#0A2540]">{d.firstName} {d.lastName}</p>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[d.status] || ""}`}>
                           {STATUS_LABELS[d.status] || d.status}
                         </span>
@@ -247,7 +247,7 @@ export default function DriversPage() {
                     <div className="text-right">
                       <div className="flex items-center gap-1">
                         <Shield className={`w-4 h-4 ${d.safetyScore >= 95 ? "text-green-400" : d.safetyScore >= 90 ? "text-amber-400" : "text-red-400"}`} />
-                        <span className="text-sm font-bold text-white">{d.safetyScore}%</span>
+                        <span className="text-sm font-bold text-[#0A2540]">{d.safetyScore}%</span>
                       </div>
                       <p className="text-xs text-slate-500">Safety</p>
                     </div>
@@ -311,7 +311,7 @@ export default function DriversPage() {
                     <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
                       <p className="text-xs text-slate-500 mb-1">Assigned Truck</p>
                       {d.assignedTruck ? (
-                        <p className="text-sm text-white">{d.assignedTruck.unitNumber} — {d.assignedTruck.year} {d.assignedTruck.make} {d.assignedTruck.model}</p>
+                        <p className="text-sm text-[#0A2540]">{d.assignedTruck.unitNumber} — {d.assignedTruck.year} {d.assignedTruck.make} {d.assignedTruck.model}</p>
                       ) : <p className="text-sm text-gray-600">None</p>}
                       <button onClick={(e) => { e.stopPropagation(); setAssignModal({ driverId: d.id, type: "truck" }); }}
                         className="mt-2 text-xs text-gold hover:text-gold/80">
@@ -321,7 +321,7 @@ export default function DriversPage() {
                     <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
                       <p className="text-xs text-slate-500 mb-1">Assigned Trailer</p>
                       {d.assignedTrailer ? (
-                        <p className="text-sm text-white">{d.assignedTrailer.unitNumber} — {d.assignedTrailer.make} {d.assignedTrailer.model} ({d.assignedTrailer.type})</p>
+                        <p className="text-sm text-[#0A2540]">{d.assignedTrailer.unitNumber} — {d.assignedTrailer.make} {d.assignedTrailer.model} ({d.assignedTrailer.type})</p>
                       ) : <p className="text-sm text-gray-600">None</p>}
                       <button onClick={(e) => { e.stopPropagation(); setAssignModal({ driverId: d.id, type: "trailer" }); }}
                         className="mt-2 text-xs text-gold hover:text-gold/80">
@@ -375,7 +375,7 @@ export default function DriversPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={driverForm.twicCard} onChange={(e) => setDriverForm((f) => ({ ...f, twicCard: e.target.checked }))}
                   className="w-4 h-4 rounded bg-gray-50 border-gray-200 accent-amber-500" />
-                <span className="text-sm text-gray-600">TWIC Card</span>
+                <span className="text-sm text-slate-400">TWIC Card</span>
               </label>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500">Endorsements:</span>
@@ -386,7 +386,7 @@ export default function DriversPage() {
                         ...f,
                         endorsements: ev.target.checked ? [...f.endorsements, e] : f.endorsements.filter(x => x !== e),
                       }))} className="w-3 h-3 rounded bg-gray-50 border-gray-200 accent-amber-500" />
-                    <span className="text-xs text-gray-600">{e}</span>
+                    <span className="text-xs text-slate-400">{e}</span>
                   </label>
                 ))}
               </div>
@@ -441,7 +441,7 @@ export default function DriversPage() {
 function StatCard({ label, value, color, alert }: { label: string; value: string | number; color?: string; alert?: boolean }) {
   return (
     <div className={`bg-gray-100 rounded-xl border p-4 ${alert ? "border-red-500/30" : "border-gray-200"}`}>
-      <p className="text-xs text-gray-600">{label}</p>
+      <p className="text-xs text-slate-400">{label}</p>
       <p className={`text-xl font-bold mt-0.5 ${color || "text-white"}`}>{value}</p>
     </div>
   );
@@ -453,8 +453,8 @@ function HOSBar({ label, used, max, warnAt, critAt }: { label: string; used: num
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-600">{label}</span>
-        <span className="font-medium text-gray-700">{used}h / {max}h</span>
+        <span className="text-slate-400">{label}</span>
+        <span className="font-medium text-slate-400">{used}h / {max}h</span>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />

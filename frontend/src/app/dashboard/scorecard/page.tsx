@@ -116,9 +116,9 @@ const detailTabs: { key: DetailTab; label: string }[] = [
 function PlaceholderTab({ title, icon: Icon }: { title: string; icon: React.ComponentType<{ className?: string }> }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-      <Icon className="w-10 h-10 mb-3 text-slate-600" />
+      <Icon className="w-10 h-10 mb-3 text-slate-400" />
       <p className="text-sm font-medium">{title}</p>
-      <p className="text-xs text-slate-600 mt-1">Coming soon</p>
+      <p className="text-xs text-slate-400 mt-1">Coming soon</p>
     </div>
   );
 }
@@ -297,11 +297,11 @@ export default function ScorecardPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[#C5A572]/20 flex items-center justify-center">
-                    <Truck className="w-5 h-5 text-[#C5A572]" />
+                    <Truck className="w-5 h-5 text-[#BA7517]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-bold text-white">
+                      <h2 className="text-lg font-bold text-[#0A2540]">
                         {carrierDetail?.companyName ||
                           carriers.find((c) => c.id === selectedCarrierId)
                             ?.name ||
@@ -312,7 +312,7 @@ export default function ScorecardPage() {
                       )}
                     </div>
                     {carrierDetail && (
-                      <p className="text-sm text-slate-400 mt-0.5">
+                      <p className="text-sm text-slate-700 mt-0.5">
                         Overall Score:{" "}
                         <span
                           className={cn(
@@ -372,7 +372,7 @@ export default function ScorecardPage() {
                   {/* KPIs Tab */}
                   {activeTab === "kpis" && (
                     <div>
-                      <h3 className="text-sm font-medium text-slate-400 mb-4">
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">
                         Current Period KPIs
                       </h3>
                       {latest ? (
@@ -402,7 +402,7 @@ export default function ScorecardPage() {
                       {/* Score + Tier Progress */}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white/5 rounded-xl border border-white/10 p-5 text-center">
-                          <p className="text-xs text-slate-400 mb-1.5 uppercase tracking-wide">
+                          <p className="text-xs text-slate-700 mb-1.5 uppercase tracking-wide">
                             Overall Score
                           </p>
                           <p
@@ -422,14 +422,14 @@ export default function ScorecardPage() {
                           </p>
                         </div>
                         <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-                          <p className="text-xs text-slate-400 mb-3 uppercase tracking-wide">
+                          <p className="text-xs text-slate-700 mb-3 uppercase tracking-wide">
                             Path to Next Tier
                           </p>
                           <div className="flex items-center justify-between text-sm mb-2">
-                            <span className="text-slate-300">
+                            <span className="text-slate-700">
                               {carrierDetail?.currentTier || "--"}
                             </span>
-                            <span className="font-medium text-white text-xs">
+                            <span className="font-medium text-[#0A2540] text-xs">
                               {carrierDetail?.pointsToNextTier?.toFixed(1) ||
                                 0}{" "}
                               pts needed
@@ -466,7 +466,7 @@ export default function ScorecardPage() {
 
                       {/* Historical Chart */}
                       <div className="bg-white/5 rounded-xl border border-white/10 p-5">
-                        <h3 className="text-sm font-medium text-slate-400 mb-4">
+                        <h3 className="text-sm font-medium text-slate-700 mb-4">
                           Score History
                         </h3>
                         {history.length > 0 ? (
@@ -539,13 +539,13 @@ export default function ScorecardPage() {
                           { label: "Active Loads", value: (carriers.find((c) => c.id === selectedCarrierId) as any)?.activeLoads || 0 },
                         ].map((s) => (
                           <div key={s.label} className="bg-white/[0.03] border border-white/5 rounded-lg p-3 text-center">
-                            <p className="text-xl font-bold text-white">{s.value}</p>
+                            <p className="text-xl font-bold text-[#0A2540]">{s.value}</p>
                             <p className="text-[10px] text-slate-500 mt-1">{s.label}</p>
                           </div>
                         ))}
                       </div>
                       <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
-                        <h4 className="text-xs font-medium text-slate-400 mb-2">Load Update Compliance</h4>
+                        <h4 className="text-xs font-medium text-slate-700 mb-2">Load Update Compliance</h4>
                         {latest && (
                           <div className="space-y-2">
                             {[
@@ -577,7 +577,7 @@ export default function ScorecardPage() {
                         return carrier ? (
                           <>
                             <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
-                              <h4 className="text-xs font-medium text-slate-400 mb-2">Operating Regions</h4>
+                              <h4 className="text-xs font-medium text-slate-700 mb-2">Operating Regions</h4>
                               <div className="flex flex-wrap gap-1.5">
                                 {(carrier as any).regions?.length > 0
                                   ? (carrier as any).regions.map((r: string) => (
@@ -588,7 +588,7 @@ export default function ScorecardPage() {
                               </div>
                             </div>
                             <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
-                              <h4 className="text-xs font-medium text-slate-400 mb-2">Equipment Types</h4>
+                              <h4 className="text-xs font-medium text-slate-700 mb-2">Equipment Types</h4>
                               <div className="flex flex-wrap gap-1.5">
                                 {(carrier as any).equipment?.length > 0
                                   ? (carrier as any).equipment.map((e: string) => (
@@ -599,8 +599,8 @@ export default function ScorecardPage() {
                               </div>
                             </div>
                             <div className="bg-white/[0.03] border border-white/5 rounded-lg p-4">
-                              <h4 className="text-xs font-medium text-slate-400 mb-2">Revenue</h4>
-                              <p className="text-lg font-bold text-white">${((carrier as any).revenue || 0).toLocaleString()}</p>
+                              <h4 className="text-xs font-medium text-slate-700 mb-2">Revenue</h4>
+                              <p className="text-lg font-bold text-[#0A2540]">${((carrier as any).revenue || 0).toLocaleString()}</p>
                               <p className="text-[10px] text-slate-500">Total revenue from {(carrier as any).completedLoads || 0} completed loads</p>
                             </div>
                           </>
@@ -619,7 +619,7 @@ export default function ScorecardPage() {
               <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
                 <Users className="w-10 h-10 text-slate-600" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-300 mb-2">
+              <h3 className="text-lg font-semibold text-slate-700 mb-2">
                 Select a Carrier
               </h3>
               <p className="text-sm text-slate-500 leading-relaxed">

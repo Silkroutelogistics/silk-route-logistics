@@ -866,7 +866,7 @@ export default function LeadHunterPage() {
                       title={stageOverride ? "Clear the stage filter to use view modes" : undefined}
                       className={`text-xs px-3 py-1 rounded-full border transition ${
                         stageOverride
-                          ? "bg-white/5 border-white/5 text-slate-600 cursor-not-allowed"
+                          ? "bg-white/5 border-white/5 text-slate-400 cursor-not-allowed"
                           : isSelected
                             ? "bg-gold/20 border-gold/40 text-gold"
                             : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
@@ -906,7 +906,7 @@ export default function LeadHunterPage() {
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
                 <span className="text-xs text-slate-400">{selectedProspects.size} selected</span>
                 <button onClick={handleBulkEmail} className="text-xs text-gold hover:text-gold/80 font-medium">Email</button>
-                <span className="text-slate-600">|</span>
+                <span className="text-slate-400">|</span>
                 <select onChange={(e) => { if (e.target.value) handleBulkStageChange(e.target.value as PipelineStage); e.target.value = ""; }}
                   className="bg-transparent text-xs text-gold font-medium focus:outline-none cursor-pointer">
                   <option value="" className="bg-[#0F1117]">Move to...</option>
@@ -1034,7 +1034,7 @@ export default function LeadHunterPage() {
                             {daysSince_}d ago
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-600">Never</span>
+                          <span className="text-xs text-slate-400">Never</span>
                         )}
                       </td>
                       <td className="px-3 py-3">
@@ -1117,9 +1117,9 @@ export default function LeadHunterPage() {
             </h3>
             {replies.length === 0 ? (
               <div className="text-center py-12">
-                <Mail className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                <Mail className="w-8 h-8 mx-auto mb-2 text-slate-400" />
                 <p className="text-slate-500 text-sm">No replies detected yet</p>
-                <p className="text-slate-600 text-xs mt-1">Gmail is polled every 30 minutes. Replies from prospects auto-stop their sequences and appear here.</p>
+                <p className="text-slate-400 text-xs mt-1">Gmail is polled every 30 minutes. Replies from prospects auto-stop their sequences and appear here.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1225,7 +1225,7 @@ export default function LeadHunterPage() {
             if (allQueue.length === 0) {
               return (
                 <div className="text-center py-16">
-                  <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                  <Inbox className="w-12 h-12 text-slate-400 mx-auto mb-3" />
                   <p className="text-white font-medium">Inbox Zero</p>
                   <p className="text-slate-500 text-sm mt-1">No follow-ups due today.{" "}
                     <button onClick={() => setTab("pipeline")} className="text-gold hover:underline">Go to Pipeline</button>
@@ -1437,7 +1437,7 @@ export default function LeadHunterPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs text-slate-500">{formatActivityDate(e.timestamp)}</span>
-                          <span className="text-xs text-slate-600">|</span>
+                          <span className="text-xs text-slate-400">|</span>
                           <span className="text-xs font-medium text-white uppercase tracking-wider">{e.kind.replace("_", " ")}</span>
                         </div>
                         <p className="text-sm text-slate-300 mt-0.5">
@@ -1446,7 +1446,7 @@ export default function LeadHunterPage() {
                           {e.detail && e.kind === "stage_change" && <span className="text-slate-500"> ({e.detail})</span>}
                         </p>
                       </div>
-                      <span className="text-xs text-slate-600 shrink-0">{e.actor}</span>
+                      <span className="text-xs text-slate-400 shrink-0">{e.actor}</span>
                     </button>
                   ))}
                 </div>
@@ -1622,7 +1622,7 @@ export default function LeadHunterPage() {
                         <span className="font-medium">All Prospects with Email ({prospects.filter((c) => c.email).length})</span>
                       </label>
                       {prospects.map((c) => (
-                        <label key={c.id} className={`flex items-center gap-2 text-sm cursor-pointer ${c.email ? "text-slate-300" : "text-slate-600"}`}>
+                        <label key={c.id} className={`flex items-center gap-2 text-sm cursor-pointer ${c.email ? "text-slate-300" : "text-slate-400"}`}>
                           <input type="checkbox" checked={selectedRecipients.has(c.id)}
                             onChange={() => handleToggleRecipient(c.id)}
                             disabled={!c.email}
@@ -1631,7 +1631,7 @@ export default function LeadHunterPage() {
                           {c.email ? (
                             <span className="text-xs text-slate-500 ml-auto truncate max-w-[200px]">{c.email}</span>
                           ) : (
-                            <span className="text-xs text-red-400/60 ml-auto">No email</span>
+                            <span className="text-xs text-red-400 ml-auto">No email</span>
                           )}
                         </label>
                       ))}
@@ -1654,18 +1654,18 @@ export default function LeadHunterPage() {
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Subject</label>
                     <input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50" />
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50" />
                   </div>
 
                   {/* Custom body */}
                   {emailTemplate === "CUSTOM" && (
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
-                        Message Body <span className="text-slate-600 normal-case">(HTML supported, use {"{contactName}"} for personalization)</span>
+                        Message Body <span className="text-slate-400 normal-case">(HTML supported, use {"{contactName}"} for personalization)</span>
                       </label>
                       <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={8}
                         placeholder="<p>Hi {contactName},</p><p>Your message here...</p>"
-                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 font-mono" />
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50 font-mono" />
                     </div>
                   )}
 

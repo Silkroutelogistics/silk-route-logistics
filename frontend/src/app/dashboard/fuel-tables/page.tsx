@@ -271,7 +271,7 @@ export default function FuelTablesPage() {
           </h3>
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
               <input
                 type="number"
                 step="0.01"
@@ -305,7 +305,7 @@ export default function FuelTablesPage() {
           <div className={cn("flex-1 min-w-0", selectedId && "max-w-[55%]")}>
             {/* Search bar */}
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 placeholder="Search tables..."
                 value={search}
@@ -315,9 +315,9 @@ export default function FuelTablesPage() {
             </div>
 
             {isLoading ? (
-              <div className="text-center py-20 text-white/30 text-sm">Loading fuel tables...</div>
+              <div className="text-center py-20 text-slate-400 text-sm">Loading fuel tables...</div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-20 text-white/30 text-sm">
+              <div className="text-center py-20 text-slate-400 text-sm">
                 {search ? "No tables match your search" : "No fuel surcharge tables yet"}
               </div>
             ) : (
@@ -352,10 +352,10 @@ export default function FuelTablesPage() {
                             )}>
                               {table.type === "DOE_NATIONAL" ? "DOE National" : "Custom"}
                             </span>
-                            <span className="text-xs text-white/30">
+                            <span className="text-xs text-slate-400">
                               {fmtDate(table.effectiveDate)}
                             </span>
-                            <span className="text-xs text-white/30">
+                            <span className="text-xs text-slate-400">
                               {table.tiers?.length ?? 0} tiers
                             </span>
                           </div>
@@ -375,7 +375,7 @@ export default function FuelTablesPage() {
                           {table.isActive ? (
                             <ToggleRight className="w-6 h-6 text-emerald-400" />
                           ) : (
-                            <ToggleLeft className="w-6 h-6 text-white/20" />
+                            <ToggleLeft className="w-6 h-6 text-slate-400" />
                           )}
                         </button>
                         <ChevronRight className={cn(
@@ -467,7 +467,7 @@ export default function FuelTablesPage() {
                   {detailTab === "tiers" && (
                     <div>
                       {!detail.tiers || detail.tiers.length === 0 ? (
-                        <p className="text-sm text-white/30 text-center py-8">No tiers defined</p>
+                        <p className="text-sm text-slate-400 text-center py-8">No tiers defined</p>
                       ) : (
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
@@ -506,7 +506,7 @@ export default function FuelTablesPage() {
                       {detail.notes ? (
                         <p className="text-sm text-white/60 whitespace-pre-wrap">{detail.notes}</p>
                       ) : (
-                        <p className="text-sm text-white/30 text-center py-8">No notes</p>
+                        <p className="text-sm text-slate-400 text-center py-8">No notes</p>
                       )}
                     </div>
                   )}
@@ -527,7 +527,7 @@ export default function FuelTablesPage() {
         <div className="space-y-5">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Table Name</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Table Name</label>
             <input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -538,7 +538,7 @@ export default function FuelTablesPage() {
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Type</label>
             <select
               value={form.type}
               onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as FuelTableForm["type"] }))}
@@ -552,7 +552,7 @@ export default function FuelTablesPage() {
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Effective Date</label>
               <input
                 type="date"
                 value={form.effectiveDate}
@@ -561,7 +561,7 @@ export default function FuelTablesPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Expiry Date</label>
               <input
                 type="date"
                 value={form.expiryDate}
@@ -573,7 +573,7 @@ export default function FuelTablesPage() {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Notes</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
@@ -586,7 +586,7 @@ export default function FuelTablesPage() {
           {/* Tiers */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-medium text-gray-700">Surcharge Tiers</label>
+              <label className="text-sm font-medium text-slate-400">Surcharge Tiers</label>
               <button
                 onClick={addTier}
                 className="text-xs text-[#C5A572] hover:text-[#d4b85e] font-medium flex items-center gap-1"
@@ -599,7 +599,7 @@ export default function FuelTablesPage() {
                 <div key={idx} className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border border-gray-100">
                   <div className="flex-1 grid grid-cols-4 gap-2">
                     <div>
-                      <label className="text-[10px] text-gray-400 uppercase">Min $</label>
+                      <label className="text-[10px] text-gray-700 uppercase">Min $</label>
                       <input
                         type="number"
                         step="0.01"
@@ -609,7 +609,7 @@ export default function FuelTablesPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400 uppercase">Max $</label>
+                      <label className="text-[10px] text-gray-700 uppercase">Max $</label>
                       <input
                         type="number"
                         step="0.01"
@@ -619,7 +619,7 @@ export default function FuelTablesPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400 uppercase">Rate</label>
+                      <label className="text-[10px] text-gray-700 uppercase">Rate</label>
                       <input
                         type="number"
                         step="0.01"
@@ -629,7 +629,7 @@ export default function FuelTablesPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400 uppercase">Type</label>
+                      <label className="text-[10px] text-gray-700 uppercase">Type</label>
                       <select
                         value={tier.type}
                         onChange={(e) => updateTier(idx, "type", e.target.value)}
@@ -689,7 +689,7 @@ export default function FuelTablesPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CSV Content</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1">CSV Content</label>
             <textarea
               value={csvContent}
               onChange={(e) => setCsvContent(e.target.value)}
@@ -735,8 +735,8 @@ function DetailField({ icon: Icon, label, value, accent }: {
   return (
     <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3">
       <div className="flex items-center gap-2 mb-1">
-        <Icon className="w-3.5 h-3.5 text-white/30" />
-        <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">{label}</span>
+        <Icon className="w-3.5 h-3.5 text-slate-400" />
+        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{label}</span>
       </div>
       <p className={cn("text-sm font-medium", accent ? "text-emerald-400" : "text-white/80")}>
         {value}

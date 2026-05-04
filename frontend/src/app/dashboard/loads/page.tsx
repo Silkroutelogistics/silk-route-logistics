@@ -414,7 +414,7 @@ export default function LoadsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Load Board</h1>
-          <p className="text-gray-600 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
+          <p className="text-slate-400 text-sm mt-1">Build, price & post — {data?.total || 0} loads</p>
         </div>
         {canCreate && (
           <button onClick={() => { setCloneData(null); setShowCreate(true); }}
@@ -477,7 +477,7 @@ export default function LoadsPage() {
             >
               <p className="text-white font-bold text-base">{lc.lane}</p>
               <div className="flex items-center justify-between mt-1">
-                <span className="text-gray-600 text-xs">{lc.count} load{lc.count !== 1 ? "s" : ""}</span>
+                <span className="text-slate-400 text-xs">{lc.count} load{lc.count !== 1 ? "s" : ""}</span>
                 <span className="text-[#C5A572] text-sm font-semibold">${lc.avgRate.toLocaleString()}</span>
               </div>
             </button>
@@ -496,7 +496,7 @@ export default function LoadsPage() {
       {/* ---- Filters ---- */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           <input
             placeholder="Search loads..."
             value={filters.search}
@@ -533,7 +533,7 @@ export default function LoadsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-sm text-gray-700 truncate">{ld.referenceNumber}</span>
+                    <span className="font-mono text-sm text-slate-400 truncate">{ld.referenceNumber}</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${STATUS_COLORS[ld.status] || "bg-white/10 text-white"}`}>
                       {ld.status.replace(/_/g, " ")}
                     </span>
@@ -547,7 +547,7 @@ export default function LoadsPage() {
                       {ld.originCity}, {ld.originState} &rarr; {ld.destCity}, {ld.destState}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
+                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {ld.equipmentType}</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> {new Date(ld.pickupDate).toLocaleDateString()}
@@ -570,9 +570,9 @@ export default function LoadsPage() {
 
           {filteredLoads.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Package className="w-12 h-12 text-slate-600 mb-4" />
+              <Package className="w-12 h-12 text-slate-400 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-1">No loads match your filters</h3>
-              <p className="text-sm text-gray-600 mb-4 max-w-sm">
+              <p className="text-sm text-slate-400 mb-4 max-w-sm">
                 Adjust your filters or create a new load to get started.
               </p>
             </div>
@@ -587,7 +587,7 @@ export default function LoadsPage() {
               >
                 Prev
               </button>
-              <span className="text-sm text-gray-600">Page {page} of {data.totalPages}</span>
+              <span className="text-sm text-slate-400">Page {page} of {data.totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                 disabled={page === data.totalPages}
@@ -603,7 +603,7 @@ export default function LoadsPage() {
         {selectedLoadId && load && (
           <div className="w-full lg:w-[55%] shrink-0 lg:ml-4 fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto bg-[#161921] border border-gray-200 rounded-xl flex flex-col overflow-hidden lg:sticky lg:top-0 h-full lg:h-[calc(100vh-4rem)]">
             {/* Mobile close bar */}
-            <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-gray-600 hover:text-white shrink-0">
+            <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-slate-400 hover:text-white shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
             </button>
             <div className="flex flex-1 min-h-0">
@@ -637,7 +637,7 @@ export default function LoadsPage() {
                         {load.status.replace(/_/g, " ")}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-400">
                       {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                     </p>
                     <p className="text-xs text-slate-500">{new Date(load.pickupDate).toLocaleDateString()}</p>
@@ -899,15 +899,15 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <p className="text-[10px] text-slate-500">Low</p>
-            <p className="text-sm text-white font-medium">${data.minRate?.toLocaleString()}</p>
+            <p className="text-sm text-[#0A2540] font-medium">${data.minRate?.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-[10px] text-slate-500">Avg</p>
-            <p className="text-sm text-[#C5A572] font-bold">${data.avgRate?.toLocaleString()}</p>
+            <p className="text-sm text-[#BA7517] font-bold">${data.avgRate?.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-[10px] text-slate-500">High</p>
-            <p className="text-sm text-white font-medium">${data.maxRate?.toLocaleString()}</p>
+            <p className="text-sm text-[#0A2540] font-medium">${data.maxRate?.toLocaleString()}</p>
           </div>
         </div>
         <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
@@ -931,7 +931,7 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
 function Detail({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
   return (
     <div>
-      <div className="flex items-center gap-1 text-xs text-gray-600 mb-0.5">{icon}{label}</div>
+      <div className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">{icon}{label}</div>
       <p className="text-sm text-white">{value}</p>
     </div>
   );
@@ -981,7 +981,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           <div className="pb-2">
             <p className="text-xs text-slate-500 uppercase tracking-wider">Pickup</p>
             <p className="text-white font-medium">{load.originCity}, {load.originState} {load.originZip || ""}</p>
-            <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
+            <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
               <span>Requested: {new Date(load.pickupDate).toLocaleDateString()}</span>
             </div>
           </div>
@@ -996,7 +996,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
             <p className="text-xs text-slate-500 uppercase tracking-wider">Delivery</p>
             <p className="text-white font-medium">{load.destCity}, {load.destState} {load.destZip || ""}</p>
             {load.deliveryDate && (
-              <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-600">
+              <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
                 <span>Requested: {new Date(load.deliveryDate).toLocaleDateString()}</span>
               </div>
             )}
@@ -1004,7 +1004,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         </div>
 
         {load.distance && (
-          <p className="text-xs text-gray-600 pl-6 pt-1">Distance: {load.distance} miles</p>
+          <p className="text-xs text-slate-400 pl-6 pt-1">Distance: {load.distance} miles</p>
         )}
       </section>
 
@@ -1030,14 +1030,14 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         {load.accessorials && load.accessorials.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {load.accessorials.map((a) => (
-              <span key={a} className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{a}</span>
+              <span key={a} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-400">{a}</span>
             ))}
           </div>
         )}
         {load.specialInstructions && (
           <div className="mt-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
             <span className="text-xs text-gray-600">Special Instructions</span>
-            <p className="text-sm text-white mt-1">{load.specialInstructions}</p>
+            <p className="text-sm text-[#0A2540] mt-1">{load.specialInstructions}</p>
           </div>
         )}
       </section>
@@ -1050,7 +1050,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           <span className="text-2xl font-bold">{load.rate.toLocaleString()}</span>
         </div>
         {load.distance && (
-          <p className="text-xs text-gray-600 mt-1">${(load.rate / load.distance).toFixed(2)}/mile</p>
+          <p className="text-xs text-slate-400 mt-1">${(load.rate / load.distance).toFixed(2)}/mile</p>
         )}
         {canSeeMargin && load.tenders && load.tenders.length > 0 && (
           <div className="mt-2 p-2 bg-gray-100 rounded-lg border border-gray-200">
@@ -1086,7 +1086,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
             </p>
           )}
           {load.poster && (
-            <p className="text-xs text-gray-600 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Posted by {load.poster.company || `${load.poster.firstName} ${load.poster.lastName}`}
               {load.poster.phone ? ` | ${load.poster.phone}` : ""}
             </p>
@@ -1215,15 +1215,15 @@ function PanelHistory({ load }: { load: Load }) {
         <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
           <Clock className="w-4 h-4 text-gray-600 shrink-0" />
           <div>
-            <p className="text-sm text-white">Load created</p>
+            <p className="text-sm text-[#0A2540]">Load created</p>
             <p className="text-xs text-gray-600">{new Date(load.createdAt).toLocaleString()}</p>
           </div>
         </div>
         {load.datPostedAt && (
           <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
-            <Globe className="w-4 h-4 text-green-400 shrink-0" />
+            <Globe className="w-4 h-4 text-green-700 shrink-0" />
             <div>
-              <p className="text-sm text-white">Posted to DAT</p>
+              <p className="text-sm text-[#0A2540]">Posted to DAT</p>
               <p className="text-xs text-gray-600">{new Date(load.datPostedAt).toLocaleString()}</p>
             </div>
           </div>
@@ -1233,7 +1233,7 @@ function PanelHistory({ load }: { load: Load }) {
             STATUS_COLORS[load.status]?.includes("green") ? "bg-green-500" : "bg-[#C5A572]"
           }`} />
           <div>
-            <p className="text-sm text-white">Current status: {load.status.replace(/_/g, " ")}</p>
+            <p className="text-sm text-[#0A2540]">Current status: {load.status.replace(/_/g, " ")}</p>
           </div>
         </div>
         {load.tenders && load.tenders.length > 0 && (
@@ -1241,9 +1241,9 @@ function PanelHistory({ load }: { load: Load }) {
             <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider pt-2">Tender Events</h4>
             {load.tenders.map((t) => (
               <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
-                <Send className="w-4 h-4 text-blue-400 shrink-0" />
+                <Send className="w-4 h-4 text-blue-700 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white truncate">
+                  <p className="text-sm text-[#0A2540] truncate">
                     Tender to {t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}
                   </p>
                   <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleString()}</p>
@@ -1306,7 +1306,7 @@ function PanelCarrier({
         <section>
           <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Assigned Carrier</h3>
           <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
-            <p className="text-white font-medium">
+            <p className="text-[#0A2540] font-medium">
               {load.carrier.company || `${load.carrier.firstName} ${load.carrier.lastName}`}
             </p>
             {load.carrier.phone && (
@@ -1334,14 +1334,14 @@ function PanelCarrier({
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${isRed ? "bg-red-500" : isAmber ? "bg-amber-500" : "bg-green-500"}`} />
                     <div className="min-w-0">
-                      <p className="text-sm text-white truncate">{c.company}</p>
+                      <p className="text-sm text-[#0A2540] truncate">{c.company}</p>
                       <p className="text-xs text-slate-500">{c.equipmentTypes.join(", ")}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-gray-600">{c.matchScore}%</span>
                     {isRed ? (
-                      <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs">Non-Compliant</span>
+                      <span className="px-2 py-1 bg-red-500/20 text-red-700 rounded text-xs">Non-Compliant</span>
                     ) : (
                       <button
                         onClick={() => onQuickTender(c.carrierId)}
@@ -1370,12 +1370,12 @@ function PanelCarrier({
               <div key={r.id} className="p-2 bg-gray-100 rounded-lg border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">{r.carrierName}</p>
+                    <p className="text-sm text-[#0A2540]">{r.carrierName}</p>
                     <p className="text-xs text-slate-500">MC: {r.mcNumber} | DOT: {r.dotNumber}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-[#C5A572] font-medium">${r.offeredRate.toLocaleString()}</p>
-                    {r.driverAvailable && <span className="text-xs text-green-400">Driver available</span>}
+                    <p className="text-sm text-[#BA7517] font-medium">${r.offeredRate.toLocaleString()}</p>
+                    {r.driverAvailable && <span className="text-xs text-green-700">Driver available</span>}
                   </div>
                 </div>
               </div>
@@ -1428,7 +1428,7 @@ function PanelCarrier({
             {tenders.map((t) => (
               <div key={t.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-lg border border-gray-200">
                 <div className="min-w-0">
-                  <p className="text-sm text-white truncate">
+                  <p className="text-sm text-[#0A2540] truncate">
                     {t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}
                   </p>
                   <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</p>
@@ -1436,9 +1436,9 @@ function PanelCarrier({
                 <div className="flex items-center gap-2 shrink-0">
                   {canSeeMargin ? (
                     <div className="text-right">
-                      <p className="text-xs text-white">${t.offeredRate.toLocaleString()}</p>
+                      <p className="text-xs text-[#0A2540]">${t.offeredRate.toLocaleString()}</p>
                       {t.counterRate && (
-                        <p className="text-xs text-yellow-400">Counter: ${t.counterRate.toLocaleString()}</p>
+                        <p className="text-xs text-yellow-700">Counter: ${t.counterRate.toLocaleString()}</p>
                       )}
                     </div>
                   ) : (
@@ -1468,7 +1468,7 @@ function PanelExceptions({ load }: { load: Load }) {
           <p className="text-sm text-red-400 font-medium">
             {load.status === "TONU" ? "TONU \u2014 Truck Ordered Not Used" : "Load Cancelled"}
           </p>
-          <p className="text-xs text-gray-600 mt-1">Review claims or delays associated with this load.</p>
+          <p className="text-xs text-slate-400 mt-1">Review claims or delays associated with this load.</p>
         </div>
       ) : (
         <p className="text-sm text-slate-500">No exceptions or issues reported for this load.</p>
@@ -1543,7 +1543,7 @@ function TenderForm({
     "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-slate-400">
         {load.referenceNumber} &mdash; {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
       </p>
       <div>

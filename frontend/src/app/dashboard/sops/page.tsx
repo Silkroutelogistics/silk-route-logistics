@@ -89,7 +89,7 @@ export default function SOPsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">SOP Library</h1>
-          <p className="text-gray-600 text-sm mt-1">{data?.total || 0} documents</p>
+          <p className="text-slate-400 text-sm mt-1">{data?.total || 0} documents</p>
         </div>
         {canEdit && (
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 cursor-pointer">
@@ -100,7 +100,7 @@ export default function SOPsPage() {
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-600" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SOPs..."
             className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-gold/50" />
         </div>
@@ -133,9 +133,9 @@ export default function SOPsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-white">{sop.title}</p>
-                    {sop.description && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{sop.description}</p>}
+                    {sop.description && <p className="text-xs text-slate-400 mt-1 line-clamp-2">{sop.description}</p>}
                     <div className="flex items-center gap-3 mt-2.5 text-xs text-slate-500">
-                      <span className="flex items-center gap-1 text-gray-600"><Clock className="w-3 h-3" /> v{sop.version}</span>
+                      <span className="flex items-center gap-1 text-slate-400"><Clock className="w-3 h-3" /> v{sop.version}</span>
                       <span>{sop.pages} pages</span>
                       <span className="flex items-center gap-1"><User className="w-3 h-3" /> {sop.author}</span>
                       <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${CATEGORY_COLORS[catLower] || "bg-white/10 text-gray-700"}`}>
@@ -151,7 +151,7 @@ export default function SOPsPage() {
             <div className="text-center py-16 text-slate-500">
               <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p className="text-sm">No SOPs found</p>
-              <p className="text-xs text-slate-600 mt-1">Try adjusting your search or category filter</p>
+              <p className="text-xs text-slate-400 mt-1">Try adjusting your search or category filter</p>
             </div>
           )}
         </div>
@@ -171,7 +171,7 @@ export default function SOPsPage() {
                   </span>
                 </div>
               </div>
-              {selectedSOP.description && <p className="text-sm text-gray-700 leading-relaxed">{selectedSOP.description}</p>}
+              {selectedSOP.description && <p className="text-sm text-slate-400 leading-relaxed">{selectedSOP.description}</p>}
               {selectedSOP.content && (
                 <div className="bg-[#161921] rounded-lg p-4 text-sm text-gray-700 max-h-[400px] overflow-y-auto leading-relaxed whitespace-pre-wrap font-mono text-xs border border-white/5">
                   {selectedSOP.content}
@@ -191,7 +191,7 @@ export default function SOPsPage() {
               </a>
 
               <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-400">
                   Updated {new Date(selectedSOP.updatedAt).toLocaleDateString()}
                 </p>
                 {canEdit && (
@@ -204,9 +204,9 @@ export default function SOPsPage() {
             </div>
           ) : (
             <div className="bg-[#161921] rounded-xl border border-gray-200 p-12 text-center">
-              <BookOpen className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+              <BookOpen className="w-10 h-10 text-slate-400 mx-auto mb-3" />
               <p className="text-sm text-slate-500">Select a document to preview</p>
-              <p className="text-xs text-slate-600 mt-1">Click any SOP from the list</p>
+              <p className="text-xs text-slate-400 mt-1">Click any SOP from the list</p>
             </div>
           )}
         </div>

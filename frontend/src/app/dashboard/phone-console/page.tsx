@@ -270,7 +270,7 @@ export default function PhoneConsolePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Phone Console</h1>
-              <p className="text-sm text-gray-600">OpenPhone call and SMS management</p>
+              <p className="text-sm text-slate-400">OpenPhone call and SMS management</p>
             </div>
           </div>
           <button
@@ -404,7 +404,7 @@ export default function PhoneConsolePage() {
         >
           {/* List header */}
           <div className="shrink-0 px-4 py-3 border-b border-white/5 flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-600">
+            <span className="text-xs font-medium text-slate-400">
               {comms.length} communication{comms.length !== 1 ? "s" : ""}
             </span>
             <span className="text-xs text-slate-500">Sorted by latest</span>
@@ -530,7 +530,7 @@ export default function PhoneConsolePage() {
       <SlideDrawer open={smsDrawerOpen} onClose={() => setSmsDrawerOpen(false)} title="Send SMS">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">To</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1.5">To</label>
             <input
               value={smsTo}
               onChange={(e) => setSmsTo(e.target.value)}
@@ -539,7 +539,7 @@ export default function PhoneConsolePage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
+            <label className="block text-sm font-medium text-slate-400 mb-1.5">Message</label>
             <textarea
               value={smsBody}
               onChange={(e) => setSmsBody(e.target.value)}
@@ -595,7 +595,7 @@ function StatsCard({
         <Icon className={cn("w-4.5 h-4.5", color)} />
       </div>
       <div>
-        <p className="text-xs text-gray-600 mb-0.5">{label}</p>
+        <p className="text-xs text-slate-400 mb-0.5">{label}</p>
         <p className={cn("text-lg font-bold", highlight ? "text-red-400" : "text-white")}>{value}</p>
       </div>
     </div>
@@ -672,7 +672,7 @@ function CommRow({
       {/* Direction indicator */}
       <div className="shrink-0">
         {isMissed ? (
-          <PhoneMissed className="w-4 h-4 text-red-400" />
+          <PhoneMissed className="w-4 h-4 text-red-700" />
         ) : (
           <DirectionIcon direction={comm.direction} className="w-4 h-4" />
         )}
@@ -682,7 +682,7 @@ function CommRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <TypeBadge type={comm.type} />
-          <span className={cn("text-sm font-medium truncate", isMissed ? "text-red-300" : "text-white")}>
+          <span className={cn("text-sm font-medium truncate", isMissed ? "text-red-300" : "text-[#0A2540]")}>
             {getOtherPartyNumber(comm)}
           </span>
         </div>
@@ -710,7 +710,7 @@ function CommRow({
           </span>
         )}
         {comm.metadata?.recordingUrl && (
-          <Mic className="w-3 h-3 text-[#C5A572]" />
+          <Mic className="w-3 h-3 text-[#BA7517]" />
         )}
       </div>
     </button>
@@ -742,7 +742,7 @@ function DetailsTab({ comm }: { comm: OpenPhoneComm }) {
       {isSmsType(comm.type) && comm.body && (
         <div className="mt-4">
           <span className="text-xs text-slate-500 uppercase tracking-wide block mb-2">Message</span>
-          <div className="p-3 bg-white/[0.03] rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+          <div className="p-3 bg-white/[0.03] rounded-lg text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">
             {comm.body}
           </div>
         </div>
@@ -757,7 +757,7 @@ function TranscriptTab({ comm }: { comm: OpenPhoneComm }) {
   if (!transcript) {
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-500">
-        <FileText className="w-8 h-8 text-slate-600" />
+        <FileText className="w-8 h-8 text-slate-400" />
         <p className="text-sm">No transcript available</p>
       </div>
     );
@@ -771,7 +771,7 @@ function TranscriptTab({ comm }: { comm: OpenPhoneComm }) {
           {comm.metadata?.voicemailTranscript ? "Voicemail Transcript" : "Call Transcript"}
         </span>
       </div>
-      <div className="p-4 bg-white/[0.03] rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+      <div className="p-4 bg-white/[0.03] rounded-lg text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">
         {transcript}
       </div>
     </div>
@@ -784,7 +784,7 @@ function RecordingTab({ comm }: { comm: OpenPhoneComm }) {
   if (!url) {
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-500">
-        <Headphones className="w-8 h-8 text-slate-600" />
+        <Headphones className="w-8 h-8 text-slate-400" />
         <p className="text-sm">No recording available</p>
       </div>
     );
@@ -835,7 +835,7 @@ function SmsThreadTab({
   if (!thread.length) {
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-500">
-        <MessageSquare className="w-8 h-8 text-slate-600" />
+        <MessageSquare className="w-8 h-8 text-slate-400" />
         <p className="text-sm">No SMS messages in this thread</p>
       </div>
     );
@@ -885,9 +885,9 @@ function SmsThreadTab({
 function NotesTab() {
   return (
     <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-500">
-      <StickyNote className="w-8 h-8 text-slate-600" />
+      <StickyNote className="w-8 h-8 text-slate-400" />
       <p className="text-sm">Notes will appear here</p>
-      <p className="text-xs text-slate-600">Add notes from the communications page or CRM</p>
+      <p className="text-xs text-slate-400">Add notes from the communications page or CRM</p>
     </div>
   );
 }
@@ -896,7 +896,7 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full py-20 px-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
-        <Phone className="w-8 h-8 text-slate-600" />
+        <Phone className="w-8 h-8 text-slate-400" />
       </div>
       <h3 className="text-white font-semibold mb-2">No communications yet</h3>
       <p className="text-sm text-slate-500 max-w-sm leading-relaxed">

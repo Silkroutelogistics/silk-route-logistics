@@ -259,7 +259,7 @@ export default function OnboardingPage() {
           {/* Success Header */}
           <div className="bg-white rounded-2xl shadow-sm border p-8 text-center mb-6">
             <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
-              <CheckCircle2 className="w-10 h-10 text-green-500" />
+              <CheckCircle2 className="w-10 h-10 text-green-700" />
             </div>
             <h2 className="text-2xl font-bold mb-2">Application Submitted Successfully</h2>
             <p className="text-slate-500 text-sm">
@@ -272,27 +272,27 @@ export default function OnboardingPage() {
             <h3 className="text-lg font-bold mb-4">Application Summary</h3>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Company</p>
+                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Company</p>
                 <p className="font-medium">{form.company}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Contact</p>
+                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Contact</p>
                 <p className="font-medium">{form.firstName} {form.lastName}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">DOT Number</p>
+                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">DOT Number</p>
                 <p className="font-medium">{form.dotNumber}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">MC Number</p>
+                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">MC Number</p>
                 <p className="font-medium">{form.mcNumber || "—"}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Equipment</p>
+                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Equipment</p>
                 <p className="font-medium">{form.equipmentTypes.join(", ")}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Regions</p>
+                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Regions</p>
                 <p className="font-medium">{form.operatingRegions.join(", ")}</p>
               </div>
             </div>
@@ -309,7 +309,7 @@ export default function OnboardingPage() {
             <h3 className="text-lg font-bold mb-5">What Happens Next</h3>
             <div className="space-y-5">
               <div className="flex gap-4">
-                <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div className="w-8 h-8 bg-green-700 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
                   <p className="font-semibold text-sm">Compliance Verification</p>
                   <p className="text-slate-500 text-sm">Our Compass engine is already verifying your FMCSA authority, insurance, safety record, and OFAC status.</p>
@@ -425,7 +425,7 @@ export default function OnboardingPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">EIN (Federal Tax ID)</label>
                   <input value={form.ein} onChange={(e) => set("ein", e.target.value.replace(/\D/g, "").slice(0, 9))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="XX-XXXXXXX" maxLength={9} />
-                  <p className="text-xs text-slate-400 mt-1">9-digit EIN for business verification</p>
+                  <p className="text-xs text-slate-700 mt-1">9-digit EIN for business verification</p>
                 </div>
               </div>
 
@@ -464,7 +464,7 @@ export default function OnboardingPage() {
 
               {/* Divider */}
               <div className="border-t pt-5">
-                <p className="text-xs text-slate-400 mb-4">{fmcsaResult?.verified ? "Fields below have been auto-populated from FMCSA. You may edit if needed." : "Fill in your company details below."}</p>
+                <p className="text-xs text-slate-700 mb-4">{fmcsaResult?.verified ? "Fields below have been auto-populated from FMCSA. You may edit if needed." : "Fill in your company details below."}</p>
               </div>
 
               {/* Company details — auto-populated from FMCSA */}
@@ -585,7 +585,7 @@ export default function OnboardingPage() {
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-semibold text-slate-700">Auto Liability</span>
-                    <span className="text-[10px] text-slate-400">Required: $1,000,000 minimum</span>
+                    <span className="text-[10px] text-slate-700">Required: $1,000,000 minimum</span>
                     {form.autoLiability.amount && parseFloat(form.autoLiability.amount) < 1000000 && (
                       <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
                     )}
@@ -602,7 +602,7 @@ export default function OnboardingPage() {
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-semibold text-slate-700">Motor Cargo Insurance</span>
-                    <span className="text-[10px] text-slate-400">Required: $100,000 minimum</span>
+                    <span className="text-[10px] text-slate-700">Required: $100,000 minimum</span>
                     {form.cargoInsurance.amount && parseFloat(form.cargoInsurance.amount) < 100000 && (
                       <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
                     )}
@@ -619,7 +619,7 @@ export default function OnboardingPage() {
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-semibold text-slate-700">General Liability</span>
-                    <span className="text-[10px] text-slate-400">Required: $1,000,000 minimum</span>
+                    <span className="text-[10px] text-slate-700">Required: $1,000,000 minimum</span>
                     {form.generalLiability.amount && parseFloat(form.generalLiability.amount) < 1000000 && (
                       <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
                     )}
@@ -636,7 +636,7 @@ export default function OnboardingPage() {
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm font-semibold text-slate-700">Workers&#39; Compensation</span>
-                    <span className="text-[10px] text-slate-400">Required by law</span>
+                    <span className="text-[10px] text-slate-700">Required by law</span>
                   </div>
                   <div className="grid sm:grid-cols-4 gap-3">
                     <input placeholder="Provider Name" value={form.workersComp.provider} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
@@ -701,7 +701,7 @@ export default function OnboardingPage() {
                     )}>
                       <div className="flex items-center gap-3">
                         {docFile ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                          <CheckCircle2 className="w-5 h-5 text-green-700 shrink-0" />
                         ) : (
                           <Upload className="w-5 h-5 text-gold shrink-0" />
                         )}
@@ -710,13 +710,13 @@ export default function OnboardingPage() {
                           {docFile ? (
                             <span className="text-xs text-green-600 truncate block">{docFile.name} ({(docFile.size / 1024).toFixed(0)} KB)</span>
                           ) : (
-                            <span className="text-xs text-slate-400 block">{doc.desc}</span>
+                            <span className="text-xs text-slate-700 block">{doc.desc}</span>
                           )}
                         </div>
                         {docFile && (
                           <button type="button" onClick={(e) => { e.preventDefault(); setFiles(files.filter((f) => (f as any).__docType !== doc.key)); }}
                             className="p-1 hover:bg-red-50 rounded transition shrink-0">
-                            <X className="w-4 h-4 text-red-400" />
+                            <X className="w-4 h-4 text-red-700" />
                           </button>
                         )}
                       </div>
@@ -739,9 +739,9 @@ export default function OnboardingPage() {
                 className="border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer border-slate-200 hover:border-gold/40 hover:bg-gold/5"
                 onClick={() => document.getElementById("extra-file-input")?.click()}
               >
-                <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                <Upload className="w-6 h-6 text-slate-700 mx-auto mb-2" />
                 <p className="text-sm font-medium text-slate-600">Drop additional files here or click to browse</p>
-                <p className="text-xs text-slate-400 mt-1">Any other supporting documents</p>
+                <p className="text-xs text-slate-700 mt-1">Any other supporting documents</p>
                 <input id="extra-file-input" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                   onChange={(e) => {
                     if (!e.target.files) return;
@@ -761,14 +761,14 @@ export default function OnboardingPage() {
                 <ul className="space-y-2">
                   {files.filter((f) => !(f as any).__docType).map((file, i) => (
                     <li key={`${file.name}-${i}`} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                      {file.type === "application/pdf" ? <FileText className="w-5 h-5 text-red-400 shrink-0" /> : <ImageIcon className="w-5 h-5 text-blue-400 shrink-0" />}
+                      {file.type === "application/pdf" ? <FileText className="w-5 h-5 text-red-700 shrink-0" /> : <ImageIcon className="w-5 h-5 text-blue-700 shrink-0" />}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-700 truncate">{file.name}</p>
-                        <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(0)} KB</p>
+                        <p className="text-xs text-slate-700">{(file.size / 1024).toFixed(0)} KB</p>
                       </div>
                       <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== files.indexOf(file)))}
                         className="p-1 hover:bg-red-50 rounded transition">
-                        <X className="w-4 h-4 text-red-400" />
+                        <X className="w-4 h-4 text-red-700" />
                       </button>
                     </li>
                   ))}
@@ -866,7 +866,7 @@ export default function OnboardingPage() {
                   <li>Carrier consents to automated FMCSA compliance monitoring, safety scoring, and OFAC screening.</li>
                 </ul>
 
-                <p className="text-xs text-slate-400 mt-4 italic">Last updated: March 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers.</p>
+                <p className="text-xs text-slate-700 mt-4 italic">Last updated: March 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers.</p>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.agreeTerms}
@@ -926,9 +926,9 @@ export default function OnboardingPage() {
                         <p><span className="font-medium">Workers Comp:</span> {form.workersComp.provider} | {form.workersComp.policy} | ${Number(form.workersComp.amount).toLocaleString()} | Exp: {form.workersComp.expiry}</p>
                       )}
                       <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-600">
-                        {form.additionalInsuredSRL && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> Additional Insured</span>}
-                        {form.waiverOfSubrogation && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> Waiver of Subrogation</span>}
-                        {form.thirtyDayCancellationNotice && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> 30-Day Notice</span>}
+                        {form.additionalInsuredSRL && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-700" /> Additional Insured</span>}
+                        {form.waiverOfSubrogation && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-700" /> Waiver of Subrogation</span>}
+                        {form.thirtyDayCancellationNotice && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-700" /> 30-Day Notice</span>}
                       </div>
                     </div>
                   </div>
@@ -939,13 +939,13 @@ export default function OnboardingPage() {
                     <ul className="text-sm space-y-1">
                       {files.map((f, i) => (
                         <li key={i} className="flex items-center gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-700" />
                           <span>{(f as any).__docType ? `${(f as any).__docType.toUpperCase()}: ` : ""}{f.name}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-slate-400">No documents uploaded yet</p>
+                    <p className="text-sm text-slate-700">No documents uploaded yet</p>
                   )}
                 </div>
               </div>

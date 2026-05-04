@@ -248,7 +248,7 @@ export default function ContractRatesPage() {
                     >
                       <td className="px-4 py-3 text-white text-xs font-medium truncate max-w-[140px]">{r.customerName}</td>
                       <td className="px-4 py-3 text-slate-300 text-xs font-mono whitespace-nowrap">
-                        {r.originState} <ArrowRight className="w-3 h-3 inline text-slate-500" /> {r.destState}
+                        {r.originState} <ArrowRight className="w-3 h-3 inline text-slate-700" /> {r.destState}
                       </td>
                       <td className="px-4 py-3 text-slate-300 text-xs">{r.equipmentType.replace(/_/g, " ")}</td>
                       <td className="px-4 py-3 text-right text-white text-xs">{r.ratePerMile != null ? `$${r.ratePerMile.toFixed(2)}` : "—"}</td>
@@ -276,9 +276,9 @@ export default function ContractRatesPage() {
                 <div className="px-5 pt-5 pb-4 border-b border-white/5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex items-center gap-2 text-lg font-semibold text-white">
+                      <div className="flex items-center gap-2 text-lg font-semibold text-[#0A2540]">
                         <span className="font-mono">{selectedRate.originState}</span>
-                        <ArrowRight className="w-4 h-4 text-[#C5A572]" />
+                        <ArrowRight className="w-4 h-4 text-[#BA7517]" />
                         <span className="font-mono">{selectedRate.destState}</span>
                       </div>
                       <span className={cn("px-2 py-0.5 rounded text-[10px] font-medium shrink-0", statusColor[selectedRate.status] ?? "bg-white/10 text-white")}>
@@ -317,7 +317,7 @@ export default function ContractRatesPage() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1 truncate">{selectedRate.customerName}</p>
+                  <p className="text-xs text-slate-700 mt-1 truncate">{selectedRate.customerName}</p>
 
                   {/* Mini Tabs */}
                   <div className="flex gap-5 mt-4 -mb-4 border-b border-white/5">
@@ -525,9 +525,9 @@ function HistoryTab({ rateId }: { rateId: string }) {
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Clock className="w-8 h-8 text-slate-600 mb-3" />
+        <Clock className="w-8 h-8 text-slate-400 mb-3" />
         <p className="text-sm text-slate-400">No changes recorded yet</p>
-        <p className="text-xs text-slate-600 mt-1">Rate changes, status transitions, and user actions will appear here.</p>
+        <p className="text-xs text-slate-400 mt-1">Rate changes, status transitions, and user actions will appear here.</p>
       </div>
     );
   }
@@ -539,7 +539,7 @@ function HistoryTab({ rateId }: { rateId: string }) {
           <div className="flex-1 min-w-0">
             <p className="text-xs text-white">{e.action} {e.field ? `— ${e.field}` : ""}</p>
             {e.oldValue && <p className="text-[10px] text-slate-500">From: {e.oldValue} → {e.newValue}</p>}
-            <p className="text-[10px] text-slate-600">{new Date(e.performedAt).toLocaleString()} by {e.performedBy?.firstName} {e.performedBy?.lastName}</p>
+            <p className="text-[10px] text-slate-400">{new Date(e.performedAt).toLocaleString()} by {e.performedBy?.firstName} {e.performedBy?.lastName}</p>
           </div>
         </div>
       ))}
@@ -551,9 +551,9 @@ function NotesTab({ notes }: { notes: string | null }) {
   if (!notes) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <FileText className="w-8 h-8 text-slate-600 mb-3" />
+        <FileText className="w-8 h-8 text-slate-400 mb-3" />
         <p className="text-sm text-slate-400">No notes</p>
-        <p className="text-xs text-slate-600 mt-1">Add notes when editing this rate.</p>
+        <p className="text-xs text-slate-400 mt-1">Add notes when editing this rate.</p>
       </div>
     );
   }

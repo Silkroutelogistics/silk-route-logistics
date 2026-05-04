@@ -293,9 +293,9 @@ export default function RoutingGuidePage() {
                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
                       <MapPin className="w-3 h-3" />
                       <span>{g.originCity || g.originState}</span>
-                      <ArrowRight className="w-3 h-3 text-gray-600" />
+                      <ArrowRight className="w-3 h-3 text-slate-400" />
                       <span>{g.destCity || g.destState}</span>
-                      <span className="mx-1 text-gray-600">·</span>
+                      <span className="mx-1 text-slate-400">·</span>
                       <Truck className="w-3 h-3" />
                       <span>{g.equipmentType.replace("_", " ")}</span>
                     </div>
@@ -315,7 +315,7 @@ export default function RoutingGuidePage() {
                     <span className="text-xs text-gray-400 truncate max-w-[100px]">{g.customer.name}</span>
                   )}
 
-                  <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
                 </div>
               ))}
             </div>
@@ -329,8 +329,8 @@ export default function RoutingGuidePage() {
           {/* Panel Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
             <div>
-              <h2 className="text-base font-semibold text-white">{selected.name}</h2>
-              <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+              <h2 className="text-base font-semibold text-[#0A2540]">{selected.name}</h2>
+              <div className="flex items-center gap-2 text-xs text-gray-700 mt-0.5">
                 <MapPin className="w-3 h-3" />
                 {selected.originCity ? `${selected.originCity}, ${selected.originState}` : selected.originState}
                 <ArrowRight className="w-3 h-3 text-gray-600" />
@@ -339,11 +339,11 @@ export default function RoutingGuidePage() {
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => toggleMut.mutate({ id: selected.id, isActive: !selected.isActive })} className="p-1.5 rounded-lg hover:bg-gray-50 transition" title={selected.isActive ? "Deactivate" : "Activate"}>
-                {selected.isActive ? <ToggleRight className="w-5 h-5 text-green-400" /> : <ToggleLeft className="w-5 h-5 text-gray-500" />}
+                {selected.isActive ? <ToggleRight className="w-5 h-5 text-green-700" /> : <ToggleLeft className="w-5 h-5 text-gray-500" />}
               </button>
-              <button onClick={() => openEdit(selected)} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><Edit2 className="w-4 h-4 text-gray-400" /></button>
-              <button onClick={() => { if (confirm("Delete this routing guide?")) deleteMut.mutate(selected.id); }} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><Trash2 className="w-4 h-4 text-gray-400" /></button>
-              <button onClick={() => setSelectedId(null)} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><X className="w-4 h-4 text-gray-400" /></button>
+              <button onClick={() => openEdit(selected)} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><Edit2 className="w-4 h-4 text-gray-700" /></button>
+              <button onClick={() => { if (confirm("Delete this routing guide?")) deleteMut.mutate(selected.id); }} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><Trash2 className="w-4 h-4 text-gray-700" /></button>
+              <button onClick={() => setSelectedId(null)} className="p-1.5 rounded-lg hover:bg-gray-50 transition"><X className="w-4 h-4 text-gray-700" /></button>
             </div>
           </div>
 
@@ -383,7 +383,7 @@ export default function RoutingGuidePage() {
                       <div className="flex items-center gap-1.5 text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                         <item.icon className="w-3 h-3" /> {item.label}
                       </div>
-                      <p className="text-sm text-white">{item.value}</p>
+                      <p className="text-sm text-[#0A2540]">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -391,7 +391,7 @@ export default function RoutingGuidePage() {
                 {selected.notes && (
                   <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
                     <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Notes</p>
-                    <p className="text-sm text-gray-300">{selected.notes}</p>
+                    <p className="text-sm text-gray-700">{selected.notes}</p>
                   </div>
                 )}
               </div>
@@ -400,7 +400,7 @@ export default function RoutingGuidePage() {
             {panelTab === "carriers" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-400">{selected.entries?.length || 0} carriers in priority order</p>
+                  <p className="text-sm text-gray-700">{selected.entries?.length || 0} carriers in priority order</p>
                 </div>
                 {(selected.entries || []).map((entry, i) => (
                   <div key={entry.id} className={cn("bg-white/[0.02] border rounded-lg p-4 transition", entry.isActive ? "border-white/5" : "border-red-500/10 opacity-50")}>
@@ -416,7 +416,7 @@ export default function RoutingGuidePage() {
                       {/* Carrier info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white">{entry.carrier.companyName || "Unknown"}</span>
+                          <span className="text-sm font-medium text-[#0A2540]">{entry.carrier.companyName || "Unknown"}</span>
                           <span className={cn("text-[10px] px-1.5 py-0.5 rounded border", TIER_COLORS[entry.carrier.tier] || "bg-gray-100 text-gray-400 border-gray-200")}>{entry.carrier.tier}</span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
@@ -430,7 +430,7 @@ export default function RoutingGuidePage() {
                       {/* Rate */}
                       {entry.targetRate && (
                         <div className="text-right">
-                          <p className="text-sm font-medium text-white">${entry.targetRate.toLocaleString()}</p>
+                          <p className="text-sm font-medium text-[#0A2540]">${entry.targetRate.toLocaleString()}</p>
                           <p className="text-[10px] text-gray-500">{entry.rateType === "PER_MILE" ? "/mi" : "flat"}</p>
                         </div>
                       )}
@@ -447,7 +447,7 @@ export default function RoutingGuidePage() {
                       ].map((m) => (
                         <div key={m.label} className="text-center">
                           <p className="text-[10px] text-gray-500">{m.label}</p>
-                          <p className="text-xs text-gray-300">{m.value}</p>
+                          <p className="text-xs text-gray-700">{m.value}</p>
                         </div>
                       ))}
                     </div>
@@ -472,14 +472,14 @@ export default function RoutingGuidePage() {
                     { label: "Total Loads", value: selected.entries?.reduce((s, e) => s + e.totalLoads, 0).toString() || "0" },
                   ].map((m) => (
                     <div key={m.label} className="bg-white/[0.02] border border-white/5 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-white">{m.value}</p>
+                      <p className="text-2xl font-bold text-[#0A2540]">{m.value}</p>
                       <p className="text-xs text-gray-500 mt-1">{m.label}</p>
                     </div>
                   ))}
                 </div>
                 <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-3">Carrier Ranking Effectiveness</p>
-                  <p className="text-sm text-gray-400">Performance metrics will auto-populate as loads flow through this routing guide and carriers accept/deliver shipments.</p>
+                  <p className="text-sm text-gray-700">Performance metrics will auto-populate as loads flow through this routing guide and carriers accept/deliver shipments.</p>
                 </div>
               </div>
             )}
@@ -489,7 +489,7 @@ export default function RoutingGuidePage() {
                 <div className="flex items-start gap-3 py-2 border-b border-white/5">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0" />
                   <div>
-                    <p className="text-xs text-white">Created</p>
+                    <p className="text-xs text-[#0A2540]">Created</p>
                     <p className="text-[10px] text-gray-500">
                       {new Date(selected.createdAt).toLocaleString()} by {selected.createdBy?.firstName} {selected.createdBy?.lastName}
                     </p>
@@ -499,7 +499,7 @@ export default function RoutingGuidePage() {
                   <div className="flex items-start gap-3 py-2 border-b border-white/5">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#C5A572] mt-2 shrink-0" />
                     <div>
-                      <p className="text-xs text-white">Last Updated</p>
+                      <p className="text-xs text-[#0A2540]">Last Updated</p>
                       <p className="text-[10px] text-gray-500">{new Date(selected.updatedAt).toLocaleString()}</p>
                     </div>
                   </div>
@@ -515,7 +515,7 @@ export default function RoutingGuidePage() {
             {panelTab === "notes" && (
               <div className="space-y-4">
                 <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4">
-                  <p className="text-sm text-gray-300">{selected.notes || "No notes added"}</p>
+                  <p className="text-sm text-gray-700">{selected.notes || "No notes added"}</p>
                 </div>
               </div>
             )}
@@ -605,7 +605,7 @@ export default function RoutingGuidePage() {
 
           {/* Save */}
           <div className="flex gap-3 pt-2">
-            <button onClick={() => { setDrawerOpen(false); setEditingId(null); }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+            <button onClick={() => { setDrawerOpen(false); setEditingId(null); }} className="flex-1 px-4 py-2.5 border border-gray-200 text-slate-400 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
             <button onClick={handleSave} disabled={saveMut.isPending || !form.name || !form.originState || !form.destState} className="flex-1 px-4 py-2.5 bg-[#C5A572] text-[#0F1117] rounded-lg font-medium text-sm hover:bg-[#d4b65c] transition disabled:opacity-50">
               {saveMut.isPending ? "Saving..." : editingId ? "Update" : "Create"}
             </button>

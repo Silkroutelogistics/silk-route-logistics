@@ -2355,7 +2355,71 @@
 //           ~200 §2.1 token-discipline improvements not in
 //           scanner P0 awareness. Scanner Phase C re-run will
 //           show the exact delta vs 1,211 baseline.
-export const SRL_VERSION = "3.8.gg";
+// v3.8.hh — Sprint 15b per-file context-sensitive Tailwind P0
+//           sweep across 11 dashboard files using per-line edits
+//           with bg-context awareness from scanner v8 file:line
+//           metadata. Replaces unsafe bulk-sed methodology.
+//
+//           Files processed:
+//             - dashboard/loads/page.tsx (45 → ~4 P0 expected)
+//             - onboarding/page.tsx (35 → ~6, includes 5 false
+//               positives where scanner can't see bg-navy
+//               custom Tailwind class)
+//             - dashboard/fuel-tables/page.tsx (33 → ~11)
+//             - dashboard/scorecard/page.tsx (25 → ~7)
+//             - dashboard/routing-guide/page.tsx (25 → ~4)
+//             - dashboard/phone-console/page.tsx (24 → ~8)
+//             - dashboard/contract-rates/page.tsx (19 → ~10)
+//             - dashboard/drivers/page.tsx (18 → ~7)
+//             - dashboard/sops/page.tsx (17 → ~8)
+//             - dashboard/tagging-rules/page.tsx (16 → ~7)
+//             - dashboard/lead-hunter/page.tsx (9 → 0 PURE DARK)
+//
+//           Fix shapes applied per-finding (~197 total swaps):
+//             A — text-{slate|gray}-{500|600|700} on dark →
+//                 text-slate-400 (Sprint 14 collateral retired)
+//             B — text-white on light card surface →
+//                 text-[#0A2540] (canonical SRL navy)
+//             C — text-{slate|gray}-{300|400|500} on light →
+//                 text-{slate|gray}-700
+//             D — text-{color}-{400|500} status badge on light
+//                 → text-{color}-700 (green/red/blue/amber/yellow)
+//             E — text-white/N translucent on dark →
+//                 text-slate-400
+//             gold-residual — text-[#C5A572] on light →
+//                 text-[#BA7517] gold-dark (continues Sprint 15a
+//                 cream-context repair pattern)
+//
+//           Methodology: scanner v8 produces file:line:bg:token
+//           tuples; perl swap-applier reads tuples + line edits
+//           via /(?<![\\w\\-])TOKEN(?![\\w\\-])/ word-boundary
+//           regex on the target line only. NO bulk-sed across
+//           files. NO bulk-sed within file. Each swap is line-
+//           targeted with bg-context confirmed by scanner output.
+//
+//           Bulk-sed rejected after Sprint 15a's gold-on-cream
+//           over-correction class (caught + repaired mid-commit)
+//           proved the risk empirically — same Tailwind token
+//           (e.g. text-gray-600) is correct on light cards and
+//           wrong on dark dashboard wrappers within the same
+//           file, so any bulk approach over-corrects.
+//
+//           Lead Hunter at 9 → 0 P0 (pure-dark file, all 8
+//           text-slate-600 + 1 text-red-400/60 swapped). Closes
+//           the visual cluster the user surfaced via screenshots
+//           that triggered the entire Sprint 14/15a/15b
+//           sequence.
+//
+//           Scanner false positives logged: onboarding nav at
+//           lines 251/362/367/370 uses `bg-navy` custom Tailwind
+//           utility (Tailwind plugin or extends.colors config)
+//           that scanner v8's TAILWIND_PALETTES doesn't
+//           recognize, so finds resolved against next-up
+//           ancestor `bg-[#F8FAFC]` light instead of true dark
+//           navy. Real rendering is correct (text-white on dark
+//           navy nav). Not fixed because changing those would
+//           break correct rendering.
+export const SRL_VERSION = "3.8.hh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
