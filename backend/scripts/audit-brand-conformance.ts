@@ -322,12 +322,82 @@
  *           longer misclassified. Surviving P0s are real
  *           readability issues — input for Sprint 12 fix sweep.
  *
- * v7 candidates deferred from this scope:
- *   - Cross-file React component composition (when a parent
- *     `<Card>` sets bg in its own file, child `<h2 className=
- *     "text-white">` sees crossFileBoundaryCount++ but cannot
- *     resolve the ancestor bg — would require multi-file element
- *     tree merging at component-boundary)
+ *   v7 (2026-05-04) — translucent-ancestor recursion in
+ *           findAncestorBg. Closes the ~729 false-positive class
+ *           identified in Sprint 11 Phase C analysis: text sits
+ *           inside translucent overlay (`bg-white/5`) which
+ *           itself sits inside opaque dark ancestor
+ *           (`bg-[#0f172a]` or `bg-navy` two levels up). v6's
+ *           findAncestorBg returned the FIRST bg-* ancestor
+ *           (which was translucent) and the caller's
+ *           simplification composited that translucent value
+ *           against `#FFFFFF` default → reported white-on-white
+ *           1.00:1 P0. Real rendering composites overlay on
+ *           dark navy → ~14:1 high contrast.
+ *
+ *           v7 makes findAncestorBg recursive: when the first
+ *           bg-* ancestor has α<1, recurse on that ancestor's
+ *           parentIndex to find what it composites against.
+ *           Build stack of overlays as recursion proceeds. When
+ *           opaque ancestor (or fallback `#FFFFFF`) is reached,
+ *           composite stack from innermost outward via
+ *           successive `compositeAlpha()` calls. Return type
+ *           simplified — `alpha?` field dropped (always opaque
+ *           after v7); new fields `stack`, `baseHex`,
+ *           `fellThroughToBody`, `depthExceeded` carry the trail
+ *           data for finding-output transparency.
+ *
+ *           Recursion capped at MAX_ANCESTOR_BG_DEPTH = 5
+ *           (defensive — real JSX rarely exceeds 2-3 levels of
+ *           nested translucency). Falls back to `#FFFFFF` when:
+ *           (a) recursion hits root with no opaque bg-* found in
+ *           lexical chain, OR (b) depth cap exceeded. Both cases
+ *           set `fellThroughToBody = true` and the latter sets
+ *           `depthExceeded = true`.
+ *
+ *           Both pass3Tailwind callers (Case 1 same-element bg+
+ *           text pair, Case 2 orphan text-*) simplify — the v6
+ *           "if anc.alpha < 1, composite against #FFFFFF"
+ *           conditional is gone. Single expression `bg = anc.hex`
+ *           because v7 guarantees opacity.
+ *
+ *           Stack trail format in finding output:
+ *             "ancestor stack: <div> α=0.05 #FFFFFF →
+ *              <div> α=0.40 #000000 → #0F172A composited:
+ *              <final-hex> (depth=2)"
+ *           — outermost (closest to viewer) first, base last.
+ *
+ *           Counters surfaced in summary:
+ *             - tailwindRecursionFiringCount (≥1 stack layer)
+ *             - tailwindRecursionDepthHistogram (depth=1, depth=2, …)
+ *             - tailwindFellThroughToBodyCount (#FFFFFF default base)
+ *             - tailwindDepthExceededCount (cap hit)
+ *
+ *           Tailwind path note: page-context body bg fallback
+ *           (CSS pass v5 feature) is NOT available here because
+ *           .tsx files don't lexically link CSS via
+ *           `<link rel="stylesheet">`. Next.js app-router pages
+ *           inherit body bg from layout.tsx cascade. Resolving
+ *           that requires traversing the app-router layout tree
+ *           per page — v8 candidate alongside cross-file
+ *           component composition.
+ *
+ *           Behavior delta: Sprint 11 baseline 1,627 P0s
+ *           expected to drop sharply (~729 V7-FP retired).
+ *           Surviving P0s are the trusted-baseline real
+ *           readability issues for final CSS + Tailwind sweeps.
+ *
+ * v8 candidates deferred from this scope:
+ *   - Cross-file React component composition (resolve `<Card>`
+ *     ancestor bg from Card's own file when JSX walker hits a
+ *     capitalized-tag boundary without bg-* — would require
+ *     multi-file element tree merging at component-boundary;
+ *     currently scanner just walks past components and increments
+ *     crossFileBoundaryCount)
+ *   - App-router layout.tsx body bg resolution for Tailwind path
+ *     (analog of v5 page-context body bg, but for .tsx files —
+ *     would walk app/layout.tsx + nested layouts to resolve the
+ *     effective body bg per route)
  *   - sm:/md:/lg:/xl:/2xl: responsive variant evaluation
  *   - dark: variant evaluation against the dark-mode body bg
  *   - State-driven conditional className branches (ternary inside
@@ -345,6 +415,9 @@
  *     `tracking.css` is dead code post-v3.8.q routing
  *     consolidation — scanner doesn't yet flag CSS files with
  *     zero HTML/TSX consumers)
+ *   - Memoized cache for findAncestorBg results per element index
+ *     (currently O(N×depth) but N×depth is small in practice; add
+ *     only if smoke shows runtime regression)
  */
 
 import * as fs from "fs";
@@ -1979,15 +2052,50 @@ function buildJsxElementStack(content: string): { elements: JsxStackEntry[]; cro
 //       dark navy parent renders as lifted-navy, NOT white)
 //   (b) supply the bg for orphan text-* elements (no same-element bg-*)
 //
-// Returns null if no bg-* ancestor found within the lexical scope of
-// this file; caller falls back to existing v5 page-context body or
-// #FFFFFF default. Increments crossFileBoundaryCount when walking past
+// v7 — Recurses through translucent ancestors. When the first bg-*
+// ancestor has α<1, walks further up to find what it's composited
+// against. Builds a stack of overlays and resolves the final opaque
+// hex via successive compositing (innermost → outermost). Always
+// returns an opaque hex (alpha collapsed); both callers can drop
+// the alpha conditional.
+//
+// MAX_DEPTH = 5 (defensive — real JSX rarely exceeds 2-3 levels of
+// nested translucency). When cap hit OR no opaque ancestor found,
+// falls back to #FFFFFF (Tailwind path has no equivalent of v5's
+// page-context body bg — that's a v8 candidate alongside cross-file
+// component composition).
+//
+// Returns null only when no bg-* ancestor exists at all in the
+// lexical chain. Increments crossFileBoundaryCount when walking past
 // a React component (capitalized tag) without finding bg-*.
+type AncestorBgResult = {
+  hex: string;                    // final composited opaque hex
+  viaTag: string;                 // outermost ancestor's tag
+  viaLine: number;                // outermost ancestor's line
+  stack?: Array<{                 // overlays from outermost (closest to viewer) to base; populated only when ≥1 translucent layer
+    hex: string;
+    alpha: number;
+    viaTag: string;
+    viaLine: number;
+  }>;
+  baseHex?: string;               // the opaque value the stack composited against (only set when stack present)
+  fellThroughToBody?: boolean;    // base was #FFFFFF default fallback (no opaque ancestor in chain)
+  depthExceeded?: boolean;        // recursion cap hit
+};
+
+const MAX_ANCESTOR_BG_DEPTH = 5;
+
 function findAncestorBg(
   elementIndex: number,
   elements: JsxStackEntry[],
-  counter: { crossFileBoundaryCount: number }
-): { hex: string; alpha?: number; viaTag: string; viaLine: number } | null {
+  counter: { crossFileBoundaryCount: number; depthExceededCount: number },
+  depth: number = 0
+): AncestorBgResult | null {
+  if (depth >= MAX_ANCESTOR_BG_DEPTH) {
+    counter.depthExceededCount++;
+    return null;
+  }
+
   let parentIdx = elements[elementIndex].parentIndex;
   while (parentIdx >= 0) {
     const ancestor = elements[parentIdx];
@@ -1998,12 +2106,56 @@ function findAncestorBg(
         if (/^(dark|sm|md|lg|xl|2xl):/.test(variantStripped)) continue;
         const resolved = resolveTailwindClass(variantStripped);
         if (!resolved || resolved.kind !== "bg") continue;
-        // First bg-* match wins (per v3.8 first-match-wins convention).
+
+        // First bg-* match wins.
+        if (resolved.alpha === undefined || resolved.alpha >= 1) {
+          // Opaque — return directly, recursion terminates here.
+          return {
+            hex: resolved.hex,
+            viaTag: ancestor.tag,
+            viaLine: ancestor.line,
+          };
+        }
+
+        // Translucent — recurse to find the bg this composites against.
+        const inner = findAncestorBg(parentIdx, elements, counter, depth + 1);
+
+        let baseHex: string;
+        let fellThrough = false;
+        let priorStack: AncestorBgResult["stack"] = undefined;
+        let depthExceededFromInner = false;
+
+        if (inner) {
+          baseHex = inner.hex;
+          priorStack = inner.stack;
+          fellThrough = inner.fellThroughToBody ?? false;
+          depthExceededFromInner = inner.depthExceeded ?? false;
+        } else {
+          // No opaque ancestor found OR depth cap hit during recursion —
+          // fall back to white default.
+          baseHex = "#FFFFFF";
+          fellThrough = true;
+        }
+
+        // Composite this overlay against the resolved base.
+        const composited = compositeAlpha(resolved.hex, resolved.alpha, baseHex);
+
+        // Stack ordering: outermost (closest to viewer) first. The
+        // current ancestor is OUTERmost relative to recursion deeper
+        // ancestors — so it goes to the FRONT of the stack.
+        const stack: NonNullable<AncestorBgResult["stack"]> = [
+          { hex: resolved.hex, alpha: resolved.alpha, viaTag: ancestor.tag, viaLine: ancestor.line },
+          ...(priorStack ?? []),
+        ];
+
         return {
-          hex: resolved.hex,
-          alpha: resolved.alpha,
+          hex: composited,
           viaTag: ancestor.tag,
           viaLine: ancestor.line,
+          stack,
+          baseHex,
+          fellThroughToBody: fellThrough,
+          depthExceeded: depthExceededFromInner,
         };
       }
     }
@@ -2021,13 +2173,20 @@ function pass3Tailwind(tsxFiles: string[]): {
   ancestorBgFiringCount: number;
   orphanTextFiringCount: number;
   crossFileBoundaryCount: number;
+  recursionFiringCount: number;
+  recursionDepthHistogram: Record<number, number>;
+  depthExceededCount: number;
+  fellThroughToBodyCount: number;
 } {
   const findings: ContrastFinding[] = [];
   let pairsEvaluated = 0;
   let dynamicSkippedFiles = 0;
   let ancestorBgFiringCount = 0;     // v6: same-element pair used ancestor for alpha compositing
   let orphanTextFiringCount = 0;     // v6: text-only element resolved bg via ancestor walking
-  const counter = { crossFileBoundaryCount: 0 }; // v6: walked past a React component boundary
+  let recursionFiringCount = 0;      // v7: ancestor result included a translucent stack (≥1 overlay)
+  let fellThroughToBodyCount = 0;    // v7: stack base was #FFFFFF default (no opaque ancestor in chain)
+  const recursionDepthHistogram: Record<number, number> = {}; // v7: stack-depth distribution
+  const counter = { crossFileBoundaryCount: 0, depthExceededCount: 0 }; // v6/v7
   const dynamicLogged = new Set<string>();
   const dynamicRe = /className\s*=\s*\{[^}]*`[^`]*\$\{/;
 
@@ -2080,23 +2239,50 @@ function pass3Tailwind(tsxFiles: string[]): {
         return ancestorBg;
       };
 
+      // v7 — Format the recursion stack as a human-readable composition
+      // trail for finding-output transparency.
+      // Format: "ancestor stack: bg-rawTag(α=X.XX) → bg-rawTag(α=X.XX) → <baseHex> composited: <finalHex>"
+      // Outermost layer first (closest to viewer), base last.
+      const formatAncestorStack = (anc: NonNullable<ReturnType<typeof findAncestorBg>>): string => {
+        if (!anc.stack || anc.stack.length === 0) {
+          return ` · ancestor <${anc.viaTag}> bg=${anc.hex} (line ${anc.viaLine})`;
+        }
+        const layerStr = anc.stack
+          .map((l) => `<${l.viaTag}> α=${l.alpha.toFixed(2)} ${l.hex}`)
+          .join(" → ");
+        const baseStr = anc.fellThroughToBody ? `${anc.baseHex} (default fallback)` : anc.baseHex;
+        const depthFlag = anc.depthExceeded ? " [depth-cap-hit]" : "";
+        return ` · ancestor stack: ${layerStr} → ${baseStr} composited: ${anc.hex} (depth=${anc.stack.length})${depthFlag}`;
+      };
+
+      // v7 — Track recursion firing + depth + body fall-through.
+      const accountForRecursion = (anc: NonNullable<ReturnType<typeof findAncestorBg>>) => {
+        if (anc.stack && anc.stack.length > 0) {
+          recursionFiringCount++;
+          recursionDepthHistogram[anc.stack.length] = (recursionDepthHistogram[anc.stack.length] ?? 0) + 1;
+          if (anc.fellThroughToBody) fellThroughToBodyCount++;
+        }
+      };
+
       for (const [variant, group] of Array.from(groups.entries())) {
         // Case 1: same-element bg + text pair (v5 behavior).
         if (group.bg && group.text) {
           pairsEvaluated++;
 
-          // v6 — When same-element bg has α<1, composite against the
-          // JSX ancestor's opaque bg instead of #FFFFFF default.
-          // Closes the bg-white/5 + text-white false-positive class
-          // where the overlay actually sits on a dark navy ancestor.
+          // v6/v7 — When same-element bg has α<1, composite against the
+          // JSX ancestor's opaque bg (resolved via v7 recursion) instead
+          // of #FFFFFF default. Closes the bg-white/5 + text-white false-
+          // positive class where the overlay actually sits on a dark
+          // navy ancestor (possibly through nested translucent layers).
           let parentBgHex = "#FFFFFF";
           let usedAncestor: ReturnType<typeof findAncestorBg> = null;
           if (group.bg.alpha !== undefined && group.bg.alpha < 1) {
             const anc = getAncestor();
             if (anc) {
-              parentBgHex = anc.hex;
+              parentBgHex = anc.hex; // v7: hex is always opaque (recursion collapsed any stack)
               usedAncestor = anc;
               ancestorBgFiringCount++;
+              accountForRecursion(anc);
             }
           }
 
@@ -2114,9 +2300,7 @@ function pass3Tailwind(tsxFiles: string[]): {
           const sev = contrastSeverity(ratio);
           if (sev) {
             const variantLabel = variant === "base" ? "" : `${variant}:`;
-            const ancTrail = usedAncestor
-              ? ` · alpha composited over ancestor <${usedAncestor.viaTag}> bg=${usedAncestor.hex} (line ${usedAncestor.viaLine})`
-              : "";
+            const ancTrail = usedAncestor ? formatAncestorStack(usedAncestor) : "";
             findings.push({
               file,
               selector: `Tailwind <${elem.tag}> ${variantLabel}${group.bg.raw} + ${variantLabel}${group.text.raw}`,
@@ -2131,20 +2315,19 @@ function pass3Tailwind(tsxFiles: string[]): {
         }
 
         // Case 2: orphan text-* on element with no same-element bg-*
-        // (v6 — previously skipped). Walk JSX ancestors to find bg
-        // context; pair text against that.
+        // (v6 — added in v6, recursion in v7). Walk JSX ancestors to
+        // find bg context; pair text against that.
         if (group.text && !group.bg) {
           const anc = getAncestor();
-          if (!anc) continue; // no ancestor bg in scope — defer to v5 page-context which we don't have here
+          if (!anc) continue; // no ancestor bg in scope — defer to v8 layout-tree resolution
           orphanTextFiringCount++;
           pairsEvaluated++;
+          accountForRecursion(anc);
 
-          // If ancestor bg is itself translucent, composite against #FFFFFF
-          // as a v6 simplification. v7 candidate: recurse to grandparent.
+          // v7 — anc.hex is always opaque (recursion collapsed any stack);
+          // the v6 "if anc.alpha < 1, composite against #FFFFFF"
+          // simplification is gone.
           let bg = anc.hex;
-          if (anc.alpha !== undefined && anc.alpha < 1) {
-            bg = compositeAlpha(anc.hex, anc.alpha, "#FFFFFF");
-          }
           let fg = group.text.hex;
           if (group.text.alpha !== undefined && group.text.alpha < 1) {
             fg = compositeAlpha(group.text.hex, group.text.alpha, bg);
@@ -2162,7 +2345,7 @@ function pass3Tailwind(tsxFiles: string[]): {
               foreground: fg,
               ratio: Math.round(ratio * 100) / 100,
               severity: sev,
-              note: `tailwind ${variant} (orphan-text): text=${group.text.raw}→${fg} on ancestor <${anc.viaTag}> bg=${anc.hex}${anc.alpha !== undefined ? ` α=${anc.alpha.toFixed(2)} → ${bg}` : ""} (text line ${elem.line}, ancestor line ${anc.viaLine})`,
+              note: `tailwind ${variant} (orphan-text): text=${group.text.raw}→${fg} (text line ${elem.line})${formatAncestorStack(anc)}`,
             });
           }
         }
@@ -2178,6 +2361,10 @@ function pass3Tailwind(tsxFiles: string[]): {
     ancestorBgFiringCount,
     orphanTextFiringCount,
     crossFileBoundaryCount: counter.crossFileBoundaryCount,
+    recursionFiringCount,
+    recursionDepthHistogram,
+    depthExceededCount: counter.depthExceededCount,
+    fellThroughToBodyCount,
   };
 }
 
@@ -2187,7 +2374,7 @@ function buildReport(
   scopeCounts: { html: number; css: number; tsx: number; ts: number },
   pass1: ColorFinding[],
   pass2: FontFinding[],
-  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number }
+  pass3: { findings: ContrastFinding[]; unresolved: UnresolvedFinding[]; resolved: number; skippedMedia: number; inferredBody: string | null; compositedCount: number; globalMatchCount: number; ambiguousGlobalCount: number; pageContextMatchCount: number; pageContextConflictsCount: number; tailwindFindingsCount: number; tailwindPairsEvaluated: number; tailwindDynamicSkippedFiles: number; tailwindAncestorBgFiringCount: number; tailwindOrphanTextFiringCount: number; tailwindCrossFileBoundaryCount: number; tailwindRecursionFiringCount: number; tailwindRecursionDepthHistogram: Record<number, number>; tailwindDepthExceededCount: number; tailwindFellThroughToBodyCount: number }
 ): string {
   const now = new Date().toISOString();
   const lines: string[] = [];
@@ -2203,7 +2390,7 @@ function buildReport(
 
   lines.push(`# SRL Brand Conformance Audit — Run ${now}`);
   lines.push("");
-  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v6 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking)`);
+  lines.push(`Tool: \`backend/scripts/audit-brand-conformance.ts\` v7 (alpha-overlay + pseudo-class cascade + multi-mode tokens + HTML hints + cross-file bgRules + page-context body-bg + Tailwind .tsx contrast + JSX tree walking + translucent-ancestor recursion)`);
   lines.push("");
   lines.push(`## Scope`);
   lines.push("");
@@ -2235,7 +2422,14 @@ function buildReport(
   lines.push("");
   lines.push(`**Pass 3 Tailwind contrast on .tsx (v5+v6)**: ${pass3.tailwindFindingsCount} finding(s) from ${pass3.tailwindPairsEvaluated} text+bg pairs evaluated across React .tsx components. ${pass3.tailwindDynamicSkippedFiles} file(s) had dynamic className interpolation skipped.`);
   lines.push("");
-  lines.push(`**Pass 3 v6 JSX tree walking**: ${pass3.tailwindAncestorBgFiringCount} ancestor-bg lookups (same-element pairs with translucent bg → composited against opaque ancestor instead of #FFFFFF default). ${pass3.tailwindOrphanTextFiringCount} orphan-text findings (text-* element with no same-element bg-* — paired against ancestor bg). ${pass3.tailwindCrossFileBoundaryCount} React component boundaries walked past (capitalized-tag ancestors without bg-*; can't resolve into the component's own className from here per v7 cross-file deferral).`);
+  lines.push(`**Pass 3 v6 JSX tree walking**: ${pass3.tailwindAncestorBgFiringCount} ancestor-bg lookups (same-element pairs with translucent bg → composited against opaque ancestor instead of #FFFFFF default). ${pass3.tailwindOrphanTextFiringCount} orphan-text findings (text-* element with no same-element bg-* — paired against ancestor bg). ${pass3.tailwindCrossFileBoundaryCount} React component boundaries walked past (capitalized-tag ancestors without bg-*; can't resolve into the component's own className from here per v8 cross-file deferral).`);
+  lines.push("");
+  const histogramStr = Object.keys(pass3.tailwindRecursionDepthHistogram)
+    .map((k) => parseInt(k, 10))
+    .sort((a, b) => a - b)
+    .map((d) => `depth=${d}: ${pass3.tailwindRecursionDepthHistogram[d]}`)
+    .join(", ") || "(no recursion fired)";
+  lines.push(`**Pass 3 v7 translucent-ancestor recursion**: ${pass3.tailwindRecursionFiringCount} ancestor lookups built a translucent stack (≥1 overlay layer composited through to an opaque base). Stack depth distribution: ${histogramStr}. ${pass3.tailwindFellThroughToBodyCount} of those fell through to #FFFFFF default base (no opaque ancestor in lexical chain — v8 candidate: app-router layout.tsx body bg resolution). ${pass3.tailwindDepthExceededCount} recursion(s) hit MAX_DEPTH=5 cap (defensive — real JSX rarely exceeds 2-3 levels). v6's "composite translucent ancestor against #FFFFFF" simplification retired; ancestor hex is always opaque after v7.`);
   lines.push("");
 
   // ── P0 section
@@ -2408,10 +2602,16 @@ function main() {
 
   // v5 — Pass 3 extension: Tailwind contrast pairs on .tsx components.
   // v6 — Now uses JSX tree walker for ancestor-bg resolution.
+  // v7 — findAncestorBg recurses through translucent ancestors.
   console.error("[brand-audit] Pass 3 — Tailwind contrast on .tsx...");
   const pass3tw = pass3Tailwind(tsxFiles);
+  const histStr = Object.keys(pass3tw.recursionDepthHistogram)
+    .map((k) => parseInt(k, 10))
+    .sort((a, b) => a - b)
+    .map((d) => `d${d}=${pass3tw.recursionDepthHistogram[d]}`)
+    .join(",") || "none";
   console.error(
-    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs evaluated, ${pass3tw.dynamicSkippedFiles} files with dynamic className skipped, ${pass3tw.ancestorBgFiringCount} ancestor-bg lookups (v6), ${pass3tw.orphanTextFiringCount} orphan-text findings (v6), ${pass3tw.crossFileBoundaryCount} component boundaries crossed.`
+    `[brand-audit] Pass 3 Tailwind: ${pass3tw.findings.length} findings, ${pass3tw.pairsEvaluated} pairs evaluated, ${pass3tw.dynamicSkippedFiles} files with dynamic className skipped, ${pass3tw.ancestorBgFiringCount} ancestor-bg lookups (v6), ${pass3tw.orphanTextFiringCount} orphan-text findings (v6), ${pass3tw.crossFileBoundaryCount} component boundaries crossed, ${pass3tw.recursionFiringCount} recursive translucent stacks (v7) [${histStr}], ${pass3tw.fellThroughToBodyCount} fell through to body, ${pass3tw.depthExceededCount} hit depth-cap.`
   );
 
   // Merge Tailwind findings into pass3 for unified P0/P1/P2 reporting.
@@ -2424,6 +2624,10 @@ function main() {
     tailwindAncestorBgFiringCount: pass3tw.ancestorBgFiringCount,
     tailwindOrphanTextFiringCount: pass3tw.orphanTextFiringCount,
     tailwindCrossFileBoundaryCount: pass3tw.crossFileBoundaryCount,
+    tailwindRecursionFiringCount: pass3tw.recursionFiringCount,
+    tailwindRecursionDepthHistogram: pass3tw.recursionDepthHistogram,
+    tailwindDepthExceededCount: pass3tw.depthExceededCount,
+    tailwindFellThroughToBodyCount: pass3tw.fellThroughToBodyCount,
   };
 
   const report = buildReport(
