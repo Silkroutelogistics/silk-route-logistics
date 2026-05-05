@@ -2825,7 +2825,36 @@
 //           across the CRM module: only page.tsx:66 and
 //           CustomerDrawer.tsx:53,57 reference it; CrmIconTabs is
 //           a pure presentational component).
-export const SRL_VERSION = "3.8.nn";
+// v3.8.oo — Approve-gate edit-UI completion. Closes the two gaps
+//           from audit f939aa1 that blocked the BKN approval path.
+//           Three atomic commits:
+//           (a) feat(crm): manual credit review sets creditStatus
+//               (d956328) — POST /customers/:id/mark-manually-
+//               reviewed now accepts {creditStatus, notes} body,
+//               persists creditStatus alongside date/source/
+//               result/notes. UI: ProfileTab "Mark as manually
+//               reviewed" opens ManualReviewPopover with status
+//               selector (default CONDITIONAL) + notes textarea.
+//               Handler extracted from inline crmCustomer.ts route
+//               into customerController.markManuallyReviewed
+//               named export so it shares the prisma-mock harness.
+//               6 new tests, 21 total in customerController.test.
+//               Naming: directive said REJECTED, schema enum has
+//               DENIED — used schema-correct DENIED per §18.6.
+//           (b) feat(crm): CUSTOMER_CONTRACT upload cross-writes
+//               customer.contractUrl (67ed42a) — uploadDocuments
+//               wraps Document.create + Customer.update in a
+//               $transaction when docType=CUSTOMER_CONTRACT AND
+//               entityType=CUSTOMER AND entityId present. Non-
+//               CONTRACT uploads stay on the existing Promise.all
+//               path. Latest-wins on multiple uploads; prior
+//               Document rows preserved for audit history.
+//               updateCustomerSchema gains contractUrl (URL
+//               string or null) for admin PATCH override.
+//               9 new tests in new documentController.test.ts.
+//           (c) this version + regression-log entry.
+//           BKN approval is now a 7-click UI workflow with no SQL.
+export const SRL_VERSION = "3.8.oo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
