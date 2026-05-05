@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { MapPin, Plus, X, Star } from "lucide-react";
+import { MapPin, Plus, X, Star, Pencil } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import type { CrmFacility } from "../types";
 
@@ -13,7 +13,11 @@ interface Props {
 }
 
 export function FacilitiesTab({ customerId, onChange }: Props) {
+  // v3.8.uu — addOpen and editingId are mutually exclusive: only one form
+  // visible at a time. Click Add → editingId clears. Click Edit on a row →
+  // addOpen clears. Either close handler resets both.
   const [addOpen, setAddOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const q = useQuery<{ facilities: CrmFacility[] }>({
     queryKey: ["crm-facilities", customerId],
@@ -27,6 +31,8 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
   });
 
   const facilities = q.data?.facilities ?? [];
+  const editing = editingId ? facilities.find((f) => f.id === editingId) ?? null : null;
+  const closeAll = () => { setAddOpen(false); setEditingId(null); };
 
   return (
     <div className="space-y-3 text-sm">
@@ -70,28 +76,49 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
                 </div>
               )}
             </div>
-            <button
-              onClick={() => del.mutate(f.id)}
-              className="text-[10px] text-red-500 hover:underline shrink-0"
-            >
-              Remove
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => { setAddOpen(false); setEditingId(f.id); }}
+                className="inline-flex items-center gap-1 text-[10px] text-[#BA7517] hover:underline"
+                title="Edit facility"
+              >
+                <Pencil className="w-3 h-3" /> Edit
+              </button>
+              <button
+                onClick={() => del.mutate(f.id)}
+                className="text-[10px] text-red-500 hover:underline"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         </div>
       ))}
 
-      {!addOpen ? (
+      {editing && (
+        <FacilityForm
+          customerId={customerId}
+          existing={editing}
+          onClose={closeAll}
+          onSaved={() => { closeAll(); q.refetch(); onChange(); }}
+        />
+      )}
+
+      {!editing && !addOpen && (
         <button
-          onClick={() => setAddOpen(true)}
+          onClick={() => { setEditingId(null); setAddOpen(true); }}
           className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 hover:text-[#BA7517] hover:border-[#BA7517] rounded-lg transition"
         >
           <Plus className="w-4 h-4" /> Add facility
         </button>
-      ) : (
-        <AddFacilityForm
+      )}
+
+      {addOpen && !editing && (
+        <FacilityForm
           customerId={customerId}
-          onClose={() => setAddOpen(false)}
-          onSaved={() => { setAddOpen(false); q.refetch(); onChange(); }}
+          existing={null}
+          onClose={closeAll}
+          onSaved={() => { closeAll(); q.refetch(); onChange(); }}
         />
       )}
 
@@ -102,36 +129,59 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
   );
 }
 
-function AddFacilityForm({
-  customerId, onClose, onSaved,
-}: { customerId: string; onClose: () => void; onSaved: () => void }) {
+// v3.8.uu — Shared Create/Edit form. When `existing` is provided, the form
+// hydrates from that record and submits via PATCH. When `existing` is null,
+// the form starts blank and submits via POST. The submit body is the form
+// state spread directly; backend route handler at crmCustomer.ts strips
+// read-only fields (id, customerId, createdAt, updatedAt) on PATCH.
+// operatingHours is preserved as-is when editing — input UI for it lands
+// in v3.8.vv (closes §13.3 Item 8.2.2).
+function FacilityForm({
+  customerId, existing, onClose, onSaved,
+}: { customerId: string; existing: CrmFacility | null; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
-    name: "", address: "", city: "", state: "", zip: "",
-    facilityType: "both" as "pickup" | "delivery" | "both",
-    isPrimary: false,
-    contactName: "", contactPhone: "", contactEmail: "",
-    loadType: "live" as "live" | "drop",
-    estimatedLoadTimeMinutes: "",
-    appointmentRequired: false,
-    appointmentInstructions: "",
-    dockInfo: "",
-    lumperInfo: "",
-    specialInstructions: "",
+    name: existing?.name ?? "",
+    address: existing?.address ?? "",
+    city: existing?.city ?? "",
+    state: existing?.state ?? "",
+    zip: existing?.zip ?? "",
+    facilityType: (existing?.facilityType ?? "both") as "pickup" | "delivery" | "both",
+    isPrimary: existing?.isPrimary ?? false,
+    contactName: existing?.contactName ?? "",
+    contactPhone: existing?.contactPhone ?? "",
+    contactEmail: existing?.contactEmail ?? "",
+    loadType: (existing?.loadType ?? "live") as "live" | "drop",
+    estimatedLoadTimeMinutes: existing?.estimatedLoadTimeMinutes != null ? String(existing.estimatedLoadTimeMinutes) : "",
+    appointmentRequired: existing?.appointmentRequired ?? false,
+    appointmentInstructions: existing?.appointmentInstructions ?? "",
+    dockInfo: existing?.dockInfo ?? "",
+    lumperInfo: existing?.lumperInfo ?? "",
+    specialInstructions: existing?.specialInstructions ?? "",
   });
 
+  const isEdit = existing !== null;
+
   const save = useMutation({
-    mutationFn: async () =>
-      (await api.post(`/customers/${customerId}/facilities`, {
+    mutationFn: async () => {
+      const body = {
         ...form,
-        estimatedLoadTimeMinutes: form.estimatedLoadTimeMinutes ? parseInt(form.estimatedLoadTimeMinutes) : undefined,
-      })).data,
+        estimatedLoadTimeMinutes: form.estimatedLoadTimeMinutes ? parseInt(form.estimatedLoadTimeMinutes) : null,
+      };
+      if (isEdit) {
+        // Pass operatingHours through unchanged so editing other fields does
+        // not null an existing schedule. v3.8.vv adds the input UI.
+        const patchBody = { ...body, operatingHours: existing.operatingHours };
+        return (await api.patch(`/customers/${customerId}/facilities/${existing.id}`, patchBody)).data;
+      }
+      return (await api.post(`/customers/${customerId}/facilities`, body)).data;
+    },
     onSuccess: onSaved,
   });
 
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium">New facility</h4>
+        <h4 className="font-medium">{isEdit ? "Edit facility" : "New facility"}</h4>
         <button onClick={onClose}><X className="w-4 h-4 text-gray-700" /></button>
       </div>
       <In placeholder="Facility name *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
@@ -205,7 +255,7 @@ function AddFacilityForm({
         onClick={() => save.mutate()}
         className="w-full py-2 bg-[#BA7517] text-white text-sm font-medium rounded disabled:opacity-40"
       >
-        {save.isPending ? "Saving…" : "Save facility"}
+        {save.isPending ? "Saving…" : isEdit ? "Update facility" : "Save facility"}
       </button>
     </div>
   );

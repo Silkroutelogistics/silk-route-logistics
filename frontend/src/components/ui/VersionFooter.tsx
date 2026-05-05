@@ -2938,7 +2938,23 @@
 //           split it lived. Approve now writes both atomically.
 //           Test happy-path assertion updated to expect status
 //           in the update payload. 21 tests pass.
-export const SRL_VERSION = "3.8.tt";
+// v3.8.uu — CRM Facilities tab gets the missing Edit button.
+//           Closes §13.3 Item 8.2.3. AddFacilityForm refactored
+//           to FacilityForm, a shared Create/Edit component that
+//           hydrates from an `existing: CrmFacility | null` prop.
+//           When existing is non-null: state hydrates from it,
+//           header reads "Edit facility", save fires PATCH
+//           /customers/:id/facilities/:facilityId. When null:
+//           same behavior as before (POST). Backend route at
+//           crmCustomer.ts:138-167 was already wired with 404
+//           guard + read-only field strip + activity log; no
+//           backend change. Edit button renders alongside Remove
+//           on each facility row (Pencil icon, gold-dark label).
+//           addOpen + editingId mutually exclusive; closeAll()
+//           resets both. operatingHours preserved unchanged on
+//           edit so this commit doesn't accidentally null it —
+//           input UI for it lands in v3.8.vv per §13.3 8.2.2.
+export const SRL_VERSION = "3.8.uu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
