@@ -464,10 +464,20 @@ export async function approveCustomer(req: AuthRequest, res: Response) {
     return;
   }
 
+  // v3.8.tt — flip BOTH gate markers in one operation. onboardingStatus=APPROVED
+  // is the Phase 6.2 enum-level gate; status="Active" is the architectural marker
+  // that distinguishes a CRM customer from a Lead Hunter pipeline-stage record
+  // (Lead/Contacted/Qualified/Proposal/Won/Not Interested/Prospect). Approving
+  // a customer means transitioning them out of Lead Hunter into CRM, so both
+  // fields must align. Prior implementation only flipped onboardingStatus,
+  // leaving status at the prior Lead Hunter stage value — which meant CRM
+  // visibility worked (?context=crm filter is on onboardingStatus) but the
+  // status field stayed misleading.
   const updated = await prisma.customer.update({
     where: { id: customer.id },
     data: {
       onboardingStatus: "APPROVED",
+      status: "Active",
       approvedAt: new Date(),
       approvedById: req.user!.id,
     },

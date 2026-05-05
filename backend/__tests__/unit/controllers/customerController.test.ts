@@ -113,11 +113,12 @@ describe("customerController.approveCustomer — required-checks gate", () => {
     vi.clearAllMocks();
   });
 
-  it("happy path: fully-qualified PENDING customer flips to APPROVED", async () => {
+  it("happy path: fully-qualified PENDING customer flips to APPROVED + status='Active'", async () => {
     mockPrisma.customer.findFirst.mockResolvedValue(FULLY_QUALIFIED_PENDING as any);
     mockPrisma.customer.update.mockResolvedValue({
       ...FULLY_QUALIFIED_PENDING,
       onboardingStatus: "APPROVED",
+      status: "Active",
       approvedAt: new Date(),
       approvedById: "u-1",
     } as any);
@@ -125,10 +126,15 @@ describe("customerController.approveCustomer — required-checks gate", () => {
     const { req, res } = mockApproveReqRes({ id: "cust-1" });
     await approveCustomer(req, res);
 
+    // v3.8.tt — approve flips BOTH onboardingStatus AND status. status='Active'
+    // is the architectural marker that transitions a record from Lead Hunter
+    // into CRM (Lead Hunter stages: Lead/Contacted/Qualified/Proposal/Won/
+    // Not Interested/Prospect; CRM: Active).
     expect(mockPrisma.customer.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "cust-1" },
       data: expect.objectContaining({
         onboardingStatus: "APPROVED",
+        status: "Active",
         approvedById: "u-1",
         approvedAt: expect.any(Date),
       }),

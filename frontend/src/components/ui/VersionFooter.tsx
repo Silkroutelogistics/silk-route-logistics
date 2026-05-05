@@ -2921,7 +2921,24 @@
 //           previous layout split the date and its corresponding
 //           window across the row, breaking visual alignment with
 //           the origin/destination columns directly above.
-export const SRL_VERSION = "3.8.ss";
+// v3.8.tt — Approve flips BOTH onboardingStatus AND status. Wasi
+//           confirmed 2026-05-05 that clicking Approve in the AE
+//           Console should transition a record from Lead Hunter
+//           into CRM by setting both architectural markers in one
+//           operation: onboardingStatus='APPROVED' (the Phase 6.2
+//           enum gate, what ?context=crm filters on) AND
+//           status='Active' (the marker that distinguishes a CRM
+//           customer from a Lead Hunter pipeline-stage record).
+//           Prior implementation flipped only onboardingStatus,
+//           leaving status at the prior Lead Hunter stage value
+//           (e.g. 'Contacted'). CRM visibility worked because
+//           ?context=crm filters on onboardingStatus, but the
+//           status field stayed misleading and the record was
+//           ambiguous on which side of the Lead Hunter / CRM
+//           split it lived. Approve now writes both atomically.
+//           Test happy-path assertion updated to expect status
+//           in the update payload. 21 tests pass.
+export const SRL_VERSION = "3.8.tt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
