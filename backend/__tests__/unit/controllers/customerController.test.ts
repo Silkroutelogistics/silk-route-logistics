@@ -7,7 +7,7 @@ vi.mock("../../../src/services/customerActivityService", () => ({
 }));
 
 import { prisma } from "../../../src/config/database";
-import { getCustomers, approveCustomer } from "../../../src/controllers/customerController";
+import { getCustomers, approveCustomer, markManuallyReviewed } from "../../../src/controllers/customerController";
 import { logCustomerActivity } from "../../../src/services/customerActivityService";
 
 const mockPrisma = vi.mocked(prisma);
@@ -264,5 +264,88 @@ describe("customerController.approveCustomer — required-checks gate", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(mockPrisma.customer.update).toHaveBeenCalled();
+  });
+});
+
+// v3.8.oo Gap 1 — manual credit review now persists creditStatus alongside
+// the date + notes, closing the private-company gap from audit f939aa1.
+describe("customerController.markManuallyReviewed — Gap 1", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPrisma.customer.findFirst.mockResolvedValue({ id: "cust-1" } as any);
+    mockPrisma.customer.update.mockResolvedValue({ id: "cust-1" } as any);
+  });
+
+  function mockManualReqRes(body: any, params: Record<string, any> = { id: "cust-1" }) {
+    const req: any = { body, params, user: { id: "u-1", email: "ae@srl.test", role: "BROKER" } };
+    const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+    return { req, res };
+  }
+
+  it("creditStatus=APPROVED writes APPROVED + sets creditCheckDate + notes flow through", async () => {
+    const { req, res } = mockManualReqRes({ creditStatus: "APPROVED", notes: "Trade refs verified" });
+    await markManuallyReviewed(req, res);
+
+    expect(mockPrisma.customer.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "cust-1" },
+      data: expect.objectContaining({
+        creditStatus: "APPROVED",
+        creditCheckSource: "manual",
+        creditCheckResult: "approved",
+        creditCheckDate: expect.any(Date),
+        creditCheckNotes: "Trade refs verified",
+      }),
+    }));
+    expect(mockLogActivity).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "credit_check_manual",
+      metadata: expect.objectContaining({ creditStatus: "APPROVED", hasNotes: true }),
+    }));
+  });
+
+  it("creditStatus=CONDITIONAL writes CONDITIONAL (the default UI selection for private companies)", async () => {
+    const { req, res } = mockManualReqRes({ creditStatus: "CONDITIONAL" });
+    await markManuallyReviewed(req, res);
+
+    expect(mockPrisma.customer.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        creditStatus: "CONDITIONAL",
+        creditCheckResult: "approved",
+        creditCheckNotes: "Marked as manually reviewed",
+      }),
+    }));
+  });
+
+  it("creditStatus=DENIED writes DENIED + creditCheckResult flips to 'rejected'", async () => {
+    const { req, res } = mockManualReqRes({ creditStatus: "DENIED", notes: "Multiple late payments on prior loads" });
+    await markManuallyReviewed(req, res);
+
+    expect(mockPrisma.customer.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        creditStatus: "DENIED",
+        creditCheckResult: "rejected",
+      }),
+    }));
+  });
+
+  it("invalid creditStatus enum value throws (zod 422 path)", async () => {
+    const { req, res } = mockManualReqRes({ creditStatus: "REJECTED" });
+    await expect(markManuallyReviewed(req, res)).rejects.toThrow();
+    expect(mockPrisma.customer.update).not.toHaveBeenCalled();
+  });
+
+  it("missing creditStatus body field throws (zod 422 path)", async () => {
+    const { req, res } = mockManualReqRes({ notes: "no status" });
+    await expect(markManuallyReviewed(req, res)).rejects.toThrow();
+    expect(mockPrisma.customer.update).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when customer not found / soft-deleted", async () => {
+    mockPrisma.customer.findFirst.mockResolvedValue(null);
+    const { req, res } = mockManualReqRes({ creditStatus: "CONDITIONAL" }, { id: "missing" });
+    await markManuallyReviewed(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockPrisma.customer.update).not.toHaveBeenCalled();
+    expect(mockLogActivity).not.toHaveBeenCalled();
   });
 });

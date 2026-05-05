@@ -28,6 +28,18 @@ export const updateCustomerSchema = createCustomerSchema.partial().extend({
   status: z.string().optional(),
 });
 
+// v3.8.oo Gap 1 — manual credit review now sets customer.creditStatus
+// alongside creditCheckDate + notes. Status enum is restricted to the
+// three values an AE actually picks during manual review (NOT_CHECKED
+// and PENDING_REVIEW are non-terminal states; an AE wouldn't move a
+// customer INTO them by hand). DENIED is the schema enum value for the
+// "rejected" decision (Prisma enum predates the v3.8.oo directive
+// wording — same intent).
+export const markManualReviewSchema = z.object({
+  creditStatus: z.enum(["APPROVED", "CONDITIONAL", "DENIED"]),
+  notes: z.string().optional(),
+});
+
 export const customerQuerySchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),

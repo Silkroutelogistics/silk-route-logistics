@@ -2,7 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
-import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
+import { createCustomerSchema, updateCustomerSchema, customerQuerySchema, markManualReviewSchema } from "../validators/customer";
 import { sendEmail } from "../services/emailService";
 import { buildEmailSync, GMAIL_SIGNATURE, CEO_NAME, CEO_EMAIL } from "../email/builder";
 import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatus";
@@ -483,6 +483,58 @@ export async function approveCustomer(req: AuthRequest, res: Response) {
   });
 
   res.status(200).json({ customer: updated });
+}
+
+// v3.8.oo Gap 1 — manual credit review now writes creditStatus alongside
+// creditCheckDate, source, result, and notes. Closes the private-company
+// gap surfaced by audit f939aa1: previously this endpoint set the date
+// but left creditStatus untouched, so private-company customers stayed
+// at PENDING_REVIEW forever and the approve gate's credit precondition
+// could never pass via UI. Default selection in the UI is CONDITIONAL
+// (the most common manual-review outcome — vetted but not as rigorous as
+// SEC's APPROVED mapping). AE can override to APPROVED or DENIED.
+export async function markManuallyReviewed(req: AuthRequest, res: Response) {
+  const parsed = markManualReviewSchema.parse(req.body);
+
+  const customer = await prisma.customer.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true },
+  });
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
+  // creditCheckResult mirrors the SEC handler convention: APPROVED/
+  // CONDITIONAL → "approved" (positive outcome), DENIED → "rejected"
+  // (terminal). The gate reads creditStatus, not creditCheckResult, so
+  // the result-string write is descriptive only — kept consistent so
+  // creditCheckSource + result + status always tell one story.
+  const result =
+    parsed.creditStatus === "DENIED" ? "rejected" : "approved";
+
+  const updated = await prisma.customer.update({
+    where: { id: customer.id },
+    data: {
+      creditStatus: parsed.creditStatus,
+      creditCheckSource: "manual",
+      creditCheckResult: result,
+      creditCheckDate: new Date(),
+      creditCheckNotes: parsed.notes ?? "Marked as manually reviewed",
+    },
+  });
+
+  await logCustomerActivity({
+    customerId: customer.id,
+    eventType: "credit_check_manual",
+    description: `Credit marked as manually reviewed (${parsed.creditStatus})`,
+    actorType: "USER",
+    actorId: req.user?.id,
+    actorName: req.user?.email,
+    metadata: { creditStatus: parsed.creditStatus, hasNotes: !!parsed.notes },
+  });
+
+  res.json({ customer: updated });
 }
 
 export async function deleteCustomer(req: AuthRequest, res: Response) {

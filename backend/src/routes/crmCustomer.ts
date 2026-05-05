@@ -11,6 +11,7 @@ import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { logCustomerActivity, getCustomerActivity } from "../services/customerActivityService";
+import { markManuallyReviewed } from "../controllers/customerController";
 import { customerCreditCheck } from "../services/secEdgarService";
 import { CreditStatus } from "@prisma/client";
 import { log } from "../lib/logger";
@@ -433,30 +434,16 @@ router.post(
   }
 );
 
+// v3.8.oo Gap 1 — handler extracted to customerController.markManuallyReviewed
+// so it can be unit-tested with the existing prisma-mock harness used by
+// approveCustomer + getCustomers ?context tests. Behavior diff vs prior
+// inline handler: now accepts + persists creditStatus (APPROVED /
+// CONDITIONAL / DENIED) instead of leaving it unchanged.
 router.post(
   "/:id/mark-manually-reviewed",
   authorize(...CRM_ROLES) as any,
-  async (req: AuthRequest, res: Response) => {
-    const { notes } = req.body as { notes?: string };
-    const customer = await prisma.customer.update({
-      where: { id: req.params.id },
-      data: {
-        creditCheckSource: "manual",
-        creditCheckResult: "approved",
-        creditCheckDate: new Date(),
-        creditCheckNotes: notes ?? "Marked as manually reviewed",
-      },
-    });
-    await logCustomerActivity({
-      customerId: req.params.id,
-      eventType: "credit_check_manual",
-      description: "Credit marked as manually reviewed",
-      actorType: "USER",
-      actorId: req.user?.id,
-      actorName: req.user?.email,
-    });
-    res.json({ customer });
-  }
+  markManuallyReviewed as any
+
 );
 
 export default router;

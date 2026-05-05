@@ -42,11 +42,15 @@ export function ProfileTab({ customer, onChange }: Props) {
     onError: () => setSecError("SEC credit check failed. Try again."),
   });
 
+  // v3.8.oo Gap 1 — manual review now sets creditStatus alongside the date.
+  // Popover collects status (default CONDITIONAL) + optional notes before POST.
+  const [manualOpen, setManualOpen] = useState(false);
   const markManual = useMutation({
-    mutationFn: async () =>
-      (await api.post(`/customers/${customer.id}/mark-manually-reviewed`)).data,
+    mutationFn: async (body: { creditStatus: "APPROVED" | "CONDITIONAL" | "DENIED"; notes?: string }) =>
+      (await api.post(`/customers/${customer.id}/mark-manually-reviewed`, body)).data,
     onSuccess: () => {
       setSecView(null);
+      setManualOpen(false);
       onChange();
     },
   });
@@ -54,7 +58,23 @@ export function ProfileTab({ customer, onChange }: Props) {
   // SEC lookup inline swap — takes over the whole tab content, same
   // pattern as the drawer document preview across Track & Trace.
   if (secView) {
-    return <SecLookupView lookup={secView} onBack={() => setSecView(null)} onMarkManual={() => markManual.mutate()} markPending={markManual.isPending} />;
+    return (
+      <>
+        <SecLookupView
+          lookup={secView}
+          onBack={() => setSecView(null)}
+          onMarkManual={() => setManualOpen(true)}
+          markPending={markManual.isPending}
+        />
+        {manualOpen && (
+          <ManualReviewPopover
+            onCancel={() => setManualOpen(false)}
+            onSubmit={(creditStatus, notes) => markManual.mutate({ creditStatus, notes })}
+            pending={markManual.isPending}
+          />
+        )}
+      </>
+    );
   }
 
   if (editing) {
@@ -381,4 +401,73 @@ function CreditStatusBadge({ status }: { status: string }) {
   : status === "PENDING_REVIEW" ? "bg-blue-100 text-blue-700"
   : "bg-gray-100 text-gray-600";
   return <span className={`px-2 py-0.5 text-[11px] rounded ${cls}`}>{status}</span>;
+}
+
+// v3.8.oo Gap 1 — popover for manual credit review. Status selector defaults
+// to CONDITIONAL (most common manual-review outcome). Notes textarea is
+// optional; backend persists to creditCheckNotes. APPROVED + CONDITIONAL
+// both clear the approve gate's credit precondition; DENIED fails it.
+function ManualReviewPopover({
+  onCancel, onSubmit, pending,
+}: {
+  onCancel: () => void;
+  onSubmit: (creditStatus: "APPROVED" | "CONDITIONAL" | "DENIED", notes: string | undefined) => void;
+  pending: boolean;
+}) {
+  const [creditStatus, setCreditStatus] = useState<"APPROVED" | "CONDITIONAL" | "DENIED">("CONDITIONAL");
+  const [notes, setNotes] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/30" onClick={onCancel} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5 border border-gray-200">
+        <h3 className="text-base font-semibold text-gray-900 mb-3">Mark credit as manually reviewed</h3>
+        <p className="text-xs text-gray-600 mb-4">
+          Sets <code className="px-1 py-0.5 rounded bg-gray-100 text-[11px] font-mono">customer.creditStatus</code> + records the
+          review date and notes. APPROVED and CONDITIONAL both clear the onboarding approve gate; DENIED blocks it.
+        </p>
+
+        <label className="block mb-3">
+          <span className="text-[11px] text-gray-500">Decision</span>
+          <select
+            value={creditStatus}
+            onChange={(e) => setCreditStatus(e.target.value as typeof creditStatus)}
+            className="w-full mt-0.5 px-3 py-1.5 text-sm border border-gray-200 rounded bg-white"
+          >
+            <option value="APPROVED">APPROVED</option>
+            <option value="CONDITIONAL">CONDITIONAL (default)</option>
+            <option value="DENIED">DENIED</option>
+          </select>
+        </label>
+
+        <label className="block mb-4">
+          <span className="text-[11px] text-gray-500">Notes (optional)</span>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Trade references checked, BCA on file, payment history clean…"
+            className="w-full mt-0.5 px-3 py-1.5 text-sm border border-gray-200 rounded bg-white resize-none"
+          />
+        </label>
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            disabled={pending}
+            className="px-3 py-1.5 text-xs border border-gray-200 rounded text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(creditStatus, notes.trim() || undefined)}
+            disabled={pending}
+            className="px-3 py-1.5 text-xs font-medium rounded text-white bg-[#BA7517] hover:bg-[#8f5a11] disabled:opacity-40"
+          >
+            {pending ? "Saving…" : "Save review"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
