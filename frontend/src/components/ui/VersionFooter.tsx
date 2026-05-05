@@ -2807,7 +2807,25 @@
 //
 //           Per §3.1, version bump justified — publicly-visible
 //           changes across 27 dashboard surfaces.
-export const SRL_VERSION = "3.8.mm";
+// v3.8.nn — CRM new-customer drawer tab bar guarded by !isNew.
+//           Pre-existing UX bug from commit 9d0f311 (2026-04-14):
+//           CrmIconTabs at CustomerDrawer.tsx:86 rendered
+//           unconditionally, but the tab content panels at lines
+//           155-167 were gated by `!isNew && customer`. In __new__
+//           mode the tab sidebar was clickable but inert — every
+//           tab click updated state with no panel render, so the
+//           AE perceived all tabs as showing the same New Customer
+//           form. Surfaced after Phase 6.2 (v3.8.ee) forced AEs
+//           into the new-customer flow because the read filter
+//           emptied the CRM list. One-line guard at line 86 hides
+//           the tab bar in __new__ mode; tabs are conceptually
+//           meaningless before the customer record exists. No
+//           sibling component depends on the tab bar rendering
+//           during __new__ mode (verified by grep on "__new__"
+//           across the CRM module: only page.tsx:66 and
+//           CustomerDrawer.tsx:53,57 reference it; CrmIconTabs is
+//           a pure presentational component).
+export const SRL_VERSION = "3.8.nn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
