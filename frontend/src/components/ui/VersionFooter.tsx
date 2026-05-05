@@ -2899,7 +2899,18 @@
 //           Lead Hunter. v3.8.pp's drawer revert (CrmIconTabs
 //           unconditional) is preserved and correct — that
 //           half of v3.8.pp was right.
-export const SRL_VERSION = "3.8.qq";
+// v3.8.rr — Order Builder customer search filters to ?context=crm
+//           (onboardingStatus=APPROVED only). Wasi flagged that
+//           Tiberina Group + Grupo Logico (status=Contacted, Lead
+//           Hunter pipeline stage) were appearing in the customer
+//           selector at /dashboard/orders. Single-line fix at
+//           orders/page.tsx:181 — added context: "crm" to the
+//           api.get params. Order creation is a CRM-side workflow;
+//           you can only build orders for approved customers.
+//           Customer-by-id lookup at orders/page.tsx:223 stays
+//           unfiltered so existing-order edits still resolve their
+//           customer record even if status changes later.
+export const SRL_VERSION = "3.8.rr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

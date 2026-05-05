@@ -175,10 +175,14 @@ export default function OrderBuilderPage() {
   });
 
   // ─── Customer search + selection ───────────────────────────
+  // v3.8.rr — context=crm restricts the search to onboardingStatus=APPROVED
+  // customers, so Lead Hunter prospects (Contacted, Qualified, Proposal,
+  // Won, Not Interested) cannot be selected for order creation. You can
+  // only build orders for fully approved CRM customers.
   const customerQuery = useQuery<{ customers: Customer[] }>({
     queryKey: ["ob-customer-search", customerSearch],
     queryFn: async () =>
-      (await api.get("/customers", { params: { search: customerSearch, limit: 10 } })).data,
+      (await api.get("/customers", { params: { search: customerSearch, context: "crm", limit: 10 } })).data,
     enabled: customerSearch.length >= 2 && !selectedCustomer,
     staleTime: 30_000,
   });
