@@ -2967,7 +2967,29 @@
 //           CrmFacility type extended with optional `closed`
 //           on per-day entries (non-breaking JSON addition).
 //           §13.3 Items 8.2.2 and 8.2.3 both marked CLOSED.
-export const SRL_VERSION = "3.8.vv";
+// v3.8.ww — Order Builder freight class auto-suggest gets a
+//           density-based path. New helper
+//           suggestFreightClassByDensity(L, W, H, weight) at
+//           dashboard/orders/types.ts maps weight/cubic-feet
+//           density to NMFC class via the public density table
+//           (≥50 lb/cu ft → 50, 35-50 → 55, ... <1 → 500). New
+//           getAutoSuggestedClass(item) consolidates: density
+//           takes precedence when L/W/H/weight all positive,
+//           keyword match on description as fallback. Wired
+//           into LineItemsSection so weight + L + W + H +
+//           description onChanges all recompute the suggestion
+//           via applyClassAutoSuggest helper. AE override
+//           preserved — if line already has freightClass set,
+//           auto-suggest skipped. Phase B (NMFC commodity
+//           catalog with NMFC# overrides for the 20% of items
+//           where assigned class diverges from raw density)
+//           scoped separately as a docs deliverable, no code.
+//           Frontend test infrastructure not present in this
+//           repo; the new helper is a pure function and would
+//           benefit from unit tests in a future sprint that
+//           sets up vitest on the frontend side. Logged as
+//           known gap, not blocking.
+export const SRL_VERSION = "3.8.ww";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

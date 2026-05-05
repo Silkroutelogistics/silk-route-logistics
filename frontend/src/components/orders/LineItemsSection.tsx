@@ -5,7 +5,7 @@ import {
   FREIGHT_CLASSES,
   PACKAGE_TYPE_OPTIONS,
   emptyLineItem,
-  suggestFreightClass,
+  getAutoSuggestedClass,
   type LineItemFormData,
   type PackageType,
 } from "@/app/dashboard/orders/types";
@@ -41,6 +41,26 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
   const updateItem = (index: number, patch: Partial<LineItemFormData>) => {
     const next = value.map((item, i) => (i === index ? { ...item, ...patch } : item));
     onChange(next);
+  };
+
+  // v3.8.ww — Apply a field patch + recompute auto-suggested freightClass.
+  // Density auto-suggest takes precedence over keyword match when L/W/H/
+  // weight are all populated (more accurate). AE overrides win: if the
+  // line already has a freightClass, the auto-suggest is skipped (no
+  // stomp). Only fires from inputs that affect the suggestion (description,
+  // weight, dimensions); other fields go through plain updateItem.
+  const applyClassAutoSuggest = (
+    index: number,
+    item: LineItemFormData,
+    patch: Partial<LineItemFormData>,
+  ) => {
+    const merged = { ...item, ...patch };
+    if (item.freightClass) {
+      updateItem(index, patch);
+      return;
+    }
+    const suggested = getAutoSuggestedClass(merged);
+    updateItem(index, suggested ? { ...patch, freightClass: suggested } : patch);
   };
 
   const addItem = () => {
@@ -150,9 +170,7 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
                     min="0"
                     step="any"
                     value={item.dimensionsLength}
-                    onChange={(e) =>
-                      updateItem(idx, { dimensionsLength: e.target.value })
-                    }
+                    onChange={(e) => applyClassAutoSuggest(idx, item, { dimensionsLength: e.target.value })}
                     placeholder="in"
                     className={inpSm}
                   />
@@ -164,9 +182,7 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
                     min="0"
                     step="any"
                     value={item.dimensionsWidth}
-                    onChange={(e) =>
-                      updateItem(idx, { dimensionsWidth: e.target.value })
-                    }
+                    onChange={(e) => applyClassAutoSuggest(idx, item, { dimensionsWidth: e.target.value })}
                     placeholder="in"
                     className={inpSm}
                   />
@@ -178,9 +194,7 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
                     min="0"
                     step="any"
                     value={item.dimensionsHeight}
-                    onChange={(e) =>
-                      updateItem(idx, { dimensionsHeight: e.target.value })
-                    }
+                    onChange={(e) => applyClassAutoSuggest(idx, item, { dimensionsHeight: e.target.value })}
                     placeholder="in"
                     className={inpSm}
                   />
@@ -190,19 +204,7 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
                   <input
                     type="text"
                     value={item.description}
-                    onChange={(e) => {
-                      const nextDescription = e.target.value;
-                      // Per-line commodity → freight-class auto-suggest.
-                      // Fires only when this line's freightClass is empty,
-                      // so user overrides aren't stomped.
-                      const suggested = !item.freightClass
-                        ? suggestFreightClass(nextDescription)
-                        : null;
-                      updateItem(idx, {
-                        description: nextDescription,
-                        ...(suggested ? { freightClass: suggested } : {}),
-                      });
-                    }}
+                    onChange={(e) => applyClassAutoSuggest(idx, item, { description: e.target.value })}
                     className={inpSm}
                     placeholder="e.g. Tires, Electronics, Auto parts"
                     aria-invalid={!!rowErrors.description}
@@ -215,7 +217,7 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
                     min="0"
                     step="any"
                     value={item.weight}
-                    onChange={(e) => updateItem(idx, { weight: e.target.value })}
+                    onChange={(e) => applyClassAutoSuggest(idx, item, { weight: e.target.value })}
                     className={inpSm}
                     aria-invalid={!!rowErrors.weight}
                   />

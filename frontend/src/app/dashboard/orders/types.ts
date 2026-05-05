@@ -293,3 +293,79 @@ export function suggestFreightClass(commodity: string): string | null {
   }
   return null;
 }
+
+/**
+ * Density-based freight-class suggestion (v3.8.ww).
+ *
+ * Public NMFC density table (lb/cu ft → class). When dimensions and
+ * weight are all known, density is more accurate than keyword matching
+ * and should be preferred. Returns null if any input is missing or
+ * non-positive.
+ *
+ * Phase B (NMFC commodity catalog with NMFC# overrides for the 20% of
+ * cases where density and assigned class diverge — e.g. fragile, hazmat,
+ * high-value items where stowability/liability factors override raw
+ * density) is scoped separately under docs/audits/nmfc-catalog-scope-
+ * 2026-05-05.md and not implemented here.
+ *
+ * Volume conversion: L/W/H are in inches; 1 cu ft = 1728 cu in.
+ */
+export function suggestFreightClassByDensity(
+  lengthIn: number,
+  widthIn: number,
+  heightIn: number,
+  weightLb: number,
+): string | null {
+  if (
+    !Number.isFinite(lengthIn) || lengthIn <= 0 ||
+    !Number.isFinite(widthIn)  || widthIn  <= 0 ||
+    !Number.isFinite(heightIn) || heightIn <= 0 ||
+    !Number.isFinite(weightLb) || weightLb <= 0
+  ) {
+    return null;
+  }
+  const cubicFeet = (lengthIn * widthIn * heightIn) / 1728;
+  if (cubicFeet <= 0) return null;
+  const density = weightLb / cubicFeet;
+
+  if (density >= 50)   return "50";
+  if (density >= 35)   return "55";
+  if (density >= 30)   return "60";
+  if (density >= 22.5) return "65";
+  if (density >= 15)   return "70";
+  if (density >= 13.5) return "77.5";
+  if (density >= 12)   return "85";
+  if (density >= 10.5) return "92.5";
+  if (density >= 9)    return "100";
+  if (density >= 8)    return "110";
+  if (density >= 7)    return "125";
+  if (density >= 6)    return "150";
+  if (density >= 5)    return "175";
+  if (density >= 4)    return "200";
+  if (density >= 3)    return "250";
+  if (density >= 2)    return "300";
+  if (density >= 1)    return "400";
+  return "500";
+}
+
+/**
+ * Combined auto-suggest. Density takes precedence when L/W/H/weight are
+ * all populated (more accurate); otherwise falls back to commodity
+ * keyword match on description. Returns null when neither path produces
+ * a suggestion.
+ */
+export function getAutoSuggestedClass(item: {
+  description: string;
+  weight: string;
+  dimensionsLength: string;
+  dimensionsWidth: string;
+  dimensionsHeight: string;
+}): string | null {
+  const L = parseFloat(item.dimensionsLength);
+  const W = parseFloat(item.dimensionsWidth);
+  const H = parseFloat(item.dimensionsHeight);
+  const wt = parseFloat(item.weight);
+  const byDensity = suggestFreightClassByDensity(L, W, H, wt);
+  if (byDensity) return byDensity;
+  return suggestFreightClass(item.description);
+}
