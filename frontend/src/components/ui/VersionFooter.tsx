@@ -2989,7 +2989,27 @@
 //           benefit from unit tests in a future sprint that
 //           sets up vitest on the frontend side. Logged as
 //           known gap, not blocking.
-export const SRL_VERSION = "3.8.ww";
+// v3.8.xx — v3.8.ww follow-up. The override-protection in
+//           applyClassAutoSuggest was too coarse: any non-empty
+//           freightClass blocked re-suggest. That blocked density
+//           from upgrading a keyword-driven class when dimensions
+//           arrived later (Produce: keyword set 55, density
+//           would have upgraded to 50, blocked). v3.8.xx adds
+//           per-line _classSource tracking to LineItemFormData
+//           ("ae" | "auto" | null). Source "ae" (manual dropdown)
+//           locks the class from auto-overrides; "auto" (set by
+//           a prior auto-suggest) is still eligible for upgrade
+//           when better signal arrives; null (never set / cleared
+//           via dropdown→"—") is eligible. Manual dropdown change
+//           sets source to "ae"; clearing dropdown to "—" resets
+//           to null. Unmigrated drafts loaded with existing
+//           freightClass + no _classSource → conservatively
+//           treated as "ae" (assume saved value was deliberate;
+//           AE can clear-and-retrigger to re-enable auto-suggest).
+//           UI-only field, never serialized to backend. Closes
+//           the keyword-blocks-density edge case surfaced during
+//           v3.8.ww screen-state audit on 2026-05-05.
+export const SRL_VERSION = "3.8.xx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -53,6 +53,12 @@ export interface LineItemFormData {
   hazmatPlacardRequired: boolean;
   stackable: boolean;
   turnable: boolean;
+  // v3.8.xx — class-source provenance. UI-only state; never serialized to
+  // the backend. "ae" = manually picked from dropdown (locked, no
+  // auto-overrides). "auto" = filled by auto-suggest (eligible for upgrade
+  // when better signal arrives — e.g. keyword set first, density upgrades
+  // later). null = never been set / cleared (eligible for auto-suggest).
+  _classSource?: "ae" | "auto" | null;
 }
 
 export const emptyLineItem = (): LineItemFormData => ({
@@ -72,6 +78,7 @@ export const emptyLineItem = (): LineItemFormData => ({
   hazmatPlacardRequired: false,
   stackable: true,
   turnable: true,
+  _classSource: null,
 });
 
 export type DispatchMethod = "waterfall" | "loadboard" | "direct_tender" | "dat";

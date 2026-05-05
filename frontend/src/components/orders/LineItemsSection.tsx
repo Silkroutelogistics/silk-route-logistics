@@ -43,24 +43,39 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
     onChange(next);
   };
 
-  // v3.8.ww — Apply a field patch + recompute auto-suggested freightClass.
-  // Density auto-suggest takes precedence over keyword match when L/W/H/
-  // weight are all populated (more accurate). AE overrides win: if the
-  // line already has a freightClass, the auto-suggest is skipped (no
-  // stomp). Only fires from inputs that affect the suggestion (description,
-  // weight, dimensions); other fields go through plain updateItem.
+  // v3.8.xx — Source-aware auto-suggest. Source-tracking lets density
+  // upgrade a class that was previously set by keyword (or by an earlier
+  // auto-suggest with less signal) without stomping a class the AE
+  // manually picked. Three sources:
+  //   "ae"   = AE picked from the dropdown. Locked. Never overridden.
+  //            (Clearing the dropdown to "—" resets source to null,
+  //            which makes the line eligible for auto-suggest again.)
+  //   "auto" = filled by auto-suggest. Eligible for upgrade when better
+  //            signal arrives (e.g. keyword set first → density upgrades
+  //            later when L/W/H/weight all populate).
+  //   null   = never set / cleared. Eligible for auto-suggest.
+  //
+  // For unmigrated drafts loaded with an existing freightClass and no
+  // _classSource recorded, the conservative interpretation is "ae" —
+  // assume the saved value was deliberate. AE can clear-and-retrigger to
+  // re-enable auto-suggest if needed.
   const applyClassAutoSuggest = (
     index: number,
     item: LineItemFormData,
     patch: Partial<LineItemFormData>,
   ) => {
     const merged = { ...item, ...patch };
-    if (item.freightClass) {
+    const source = item._classSource ?? (item.freightClass ? "ae" : null);
+    if (source === "ae") {
       updateItem(index, patch);
       return;
     }
     const suggested = getAutoSuggestedClass(merged);
-    updateItem(index, suggested ? { ...patch, freightClass: suggested } : patch);
+    if (suggested) {
+      updateItem(index, { ...patch, freightClass: suggested, _classSource: "auto" });
+    } else {
+      updateItem(index, patch);
+    }
   };
 
   const addItem = () => {
@@ -227,7 +242,14 @@ export function LineItemsSection({ value, onChange, errors }: Props) {
                   <select
                     value={item.freightClass}
                     onChange={(e) =>
-                      updateItem(idx, { freightClass: e.target.value })
+                      // v3.8.xx — manual dropdown change marks source as "ae"
+                      // (locked from auto-overrides). Clearing to "—" resets
+                      // source to null so the line becomes eligible for
+                      // auto-suggest again on the next density/keyword input.
+                      updateItem(idx, {
+                        freightClass: e.target.value,
+                        _classSource: e.target.value ? "ae" : null,
+                      })
                     }
                     className={inpSm}
                   >
