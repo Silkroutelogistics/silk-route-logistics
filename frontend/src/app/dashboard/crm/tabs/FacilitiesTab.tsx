@@ -134,8 +134,40 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
 // the form starts blank and submits via POST. The submit body is the form
 // state spread directly; backend route handler at crmCustomer.ts strips
 // read-only fields (id, customerId, createdAt, updatedAt) on PATCH.
-// operatingHours is preserved as-is when editing — input UI for it lands
-// in v3.8.vv (closes §13.3 Item 8.2.2).
+// v3.8.vv — operatingHours 7-day grid + contactEmail input added.
+//   Closes §13.3 Item 8.2.2.
+//   Storage shape: { monday: { open, close, closed? }, tuesday: { ... }, ... }
+//   When closed=true, open/close are kept in state but the inputs disable
+//   visually; backend stores the JSON as-is regardless.
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+const DAY_LABELS: Record<typeof DAY_KEYS[number], string> = {
+  monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
+  friday: "Fri", saturday: "Sat", sunday: "Sun",
+};
+type DayKey = typeof DAY_KEYS[number];
+type DaySchedule = { open: string; close: string; closed: boolean };
+type OperatingHours = Record<DayKey, DaySchedule>;
+
+function emptyHours(): OperatingHours {
+  return DAY_KEYS.reduce((acc, k) => ({ ...acc, [k]: { open: "", close: "", closed: false } }), {} as OperatingHours);
+}
+
+function hydrateHours(existing: CrmFacility["operatingHours"]): OperatingHours {
+  const base = emptyHours();
+  if (!existing) return base;
+  for (const k of DAY_KEYS) {
+    const day = existing[k];
+    if (day) {
+      base[k] = {
+        open: day.open ?? "",
+        close: day.close ?? "",
+        closed: day.closed ?? false,
+      };
+    }
+  }
+  return base;
+}
+
 function FacilityForm({
   customerId, existing, onClose, onSaved,
 }: { customerId: string; existing: CrmFacility | null; onClose: () => void; onSaved: () => void }) {
@@ -158,6 +190,10 @@ function FacilityForm({
     lumperInfo: existing?.lumperInfo ?? "",
     specialInstructions: existing?.specialInstructions ?? "",
   });
+  const [hours, setHours] = useState<OperatingHours>(() => hydrateHours(existing?.operatingHours ?? null));
+
+  const setDay = (k: DayKey, patch: Partial<DaySchedule>) =>
+    setHours((h) => ({ ...h, [k]: { ...h[k], ...patch } }));
 
   const isEdit = existing !== null;
 
@@ -166,12 +202,10 @@ function FacilityForm({
       const body = {
         ...form,
         estimatedLoadTimeMinutes: form.estimatedLoadTimeMinutes ? parseInt(form.estimatedLoadTimeMinutes) : null,
+        operatingHours: hours,
       };
       if (isEdit) {
-        // Pass operatingHours through unchanged so editing other fields does
-        // not null an existing schedule. v3.8.vv adds the input UI.
-        const patchBody = { ...body, operatingHours: existing.operatingHours };
-        return (await api.patch(`/customers/${customerId}/facilities/${existing.id}`, patchBody)).data;
+        return (await api.patch(`/customers/${customerId}/facilities/${existing.id}`, body)).data;
       }
       return (await api.post(`/customers/${customerId}/facilities`, body)).data;
     },
@@ -219,8 +253,49 @@ function FacilityForm({
         <In placeholder="Contact name" value={form.contactName} onChange={(v) => setForm({ ...form, contactName: v })} />
         <In placeholder="Contact phone" value={form.contactPhone} onChange={(v) => setForm({ ...form, contactPhone: v })} />
       </div>
+      {/* v3.8.vv — contactEmail input. Field has been in form state since the
+          original component but no input was rendered. Adding it here. */}
+      <In placeholder="Contact email" value={form.contactEmail} onChange={(v) => setForm({ ...form, contactEmail: v })} />
       <In placeholder="Est. load time (min)" value={form.estimatedLoadTimeMinutes} onChange={(v) => setForm({ ...form, estimatedLoadTimeMinutes: v })} />
       <In placeholder="Dock info" value={form.dockInfo} onChange={(v) => setForm({ ...form, dockInfo: v })} />
+
+      {/* v3.8.vv — operatingHours 7-day schedule. Closes §13.3 Item 8.2.2.
+          Each row: weekday label · Closed checkbox · open time · close time.
+          When Closed=true, time inputs disable visually. Backend stores the
+          full JSON regardless (closed=true with stale times is fine; the
+          render layer uses closed as the truth). Order Builder Item 20 will
+          consume this schedule for facility-hours auto-populate when
+          origin/dest facility is picked. */}
+      <div className="border border-gray-200 rounded-lg p-2 bg-white space-y-1">
+        <div className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold mb-1">Operating hours</div>
+        {DAY_KEYS.map((k) => (
+          <div key={k} className="grid grid-cols-[44px_1fr_1fr_72px] gap-2 items-center text-xs">
+            <span className="text-gray-700 font-medium">{DAY_LABELS[k]}</span>
+            <input
+              type="time"
+              value={hours[k].open}
+              disabled={hours[k].closed}
+              onChange={(e) => setDay(k, { open: e.target.value })}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded bg-white disabled:bg-gray-50 disabled:text-gray-400"
+            />
+            <input
+              type="time"
+              value={hours[k].close}
+              disabled={hours[k].closed}
+              onChange={(e) => setDay(k, { close: e.target.value })}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded bg-white disabled:bg-gray-50 disabled:text-gray-400"
+            />
+            <label className="flex items-center gap-1 text-[11px] text-gray-600">
+              <input
+                type="checkbox"
+                checked={hours[k].closed}
+                onChange={(e) => setDay(k, { closed: e.target.checked })}
+              />
+              Closed
+            </label>
+          </div>
+        ))}
+      </div>
       <label className="flex items-center gap-2 text-xs text-gray-600">
         <input type="checkbox" checked={form.isPrimary} onChange={(e) => setForm({ ...form, isPrimary: e.target.checked })} /> Mark as primary
       </label>

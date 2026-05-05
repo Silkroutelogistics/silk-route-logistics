@@ -83,7 +83,7 @@ export interface CrmFacility {
   contactName: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
-  operatingHours: Record<string, { open: string; close: string }> | null;
+  operatingHours: Record<string, { open: string; close: string; closed?: boolean }> | null;
   dockInfo: string | null;
   loadType: "live" | "drop";
   estimatedLoadTimeMinutes: number | null;

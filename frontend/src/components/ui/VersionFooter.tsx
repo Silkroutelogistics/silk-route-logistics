@@ -2954,7 +2954,20 @@
 //           resets both. operatingHours preserved unchanged on
 //           edit so this commit doesn't accidentally null it —
 //           input UI for it lands in v3.8.vv per §13.3 8.2.2.
-export const SRL_VERSION = "3.8.uu";
+// v3.8.vv — Closes §13.3 Item 8.2.2. Adds the operatingHours
+//           7-day grid (Mon–Sun) to FacilityForm: per-day open
+//           time + close time inputs, plus a Closed checkbox
+//           that disables the time inputs visually. Storage
+//           shape Record<DayKey, { open, close, closed }>.
+//           Hydrates from existing JSON on edit; empty default
+//           on new. Plus contactEmail input wired (the field
+//           was in form state since the original component but
+//           had no rendered input — fixing that gap here too
+//           since the same component is being touched).
+//           CrmFacility type extended with optional `closed`
+//           on per-day entries (non-breaking JSON addition).
+//           §13.3 Items 8.2.2 and 8.2.3 both marked CLOSED.
+export const SRL_VERSION = "3.8.vv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
