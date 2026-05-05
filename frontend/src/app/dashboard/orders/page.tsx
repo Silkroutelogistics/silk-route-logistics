@@ -816,19 +816,23 @@ export default function OrderBuilderPage() {
               </div>
             </div>
 
-            {/* Dates & windows */}
+            {/* Dates & windows — v3.8.ss reorder so cols 1-2 align under
+                origin facility column (pickup date + PU window) and cols
+                3-4 align under destination facility column (delivery date
+                + DEL window). Visually the date+window pair stays with
+                its corresponding facility column above. */}
             <div className="grid grid-cols-4 gap-2 mt-3">
               <Field label="Pickup date *">
                 <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))} className={inp} />
-              </Field>
-              <Field label="Delivery date *">
-                <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))} className={inp} />
               </Field>
               <Field label="PU window">
                 <div className="flex gap-1">
                   <input type="time" value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))} className={inpSm} />
                   <input type="time" value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))} className={inpSm} />
                 </div>
+              </Field>
+              <Field label="Delivery date *">
+                <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))} className={inp} />
               </Field>
               <Field label="DEL window">
                 <div className="flex gap-1">

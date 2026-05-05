@@ -2910,7 +2910,18 @@
 //           Customer-by-id lookup at orders/page.tsx:223 stays
 //           unfiltered so existing-order edits still resolve their
 //           customer record even if status changes later.
-export const SRL_VERSION = "3.8.rr";
+// v3.8.ss — Order Builder Route layout: pickup-date and PU-window
+//           now share columns 1-2 (visually under origin facility
+//           column above); delivery-date and DEL-window now share
+//           columns 3-4 (visually under destination facility
+//           column). Was: PU date | DEL date | PU window | DEL
+//           window. Now: PU date | PU window | DEL date | DEL
+//           window. Pure JSX child reorder, same grid-cols-4
+//           parent, no state shape changes. Wasi flagged the
+//           previous layout split the date and its corresponding
+//           window across the row, breaking visual alignment with
+//           the origin/destination columns directly above.
+export const SRL_VERSION = "3.8.ss";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
