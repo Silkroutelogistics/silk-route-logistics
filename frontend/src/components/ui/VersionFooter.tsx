@@ -3009,7 +3009,36 @@
 //           UI-only field, never serialized to backend. Closes
 //           the keyword-blocks-density edge case surfaced during
 //           v3.8.ww screen-state audit on 2026-05-05.
-export const SRL_VERSION = "3.8.xx";
+// v3.8.yy — NMFC commodity catalog (Phase B). Hand-curated entries
+//           scoped to COLDCHAIN + WELLNESS verticals per §18.7
+//           and the scope doc at docs/audits/nmfc-catalog-scope-
+//           2026-05-05.md. Closes the gap where density-only
+//           gives the wrong class for commodities with handling/
+//           fragility/value overrides (yogurt 70 not 50, fragrance
+//           100, color cosmetics 100, aerosols 100 hazmat, etc.).
+//           14 seed entries:
+//             - 2 hazmat (aerosol, lithium-battery device)
+//             - 5 fragility/value (fragrance, color cosmetics,
+//               baby food, premium beverage glass, yogurt)
+//             - 2 refrigerated (yogurt above + pharma)
+//             - 3 wellness mid-tier (skincare, supplements,
+//               cosmetics NOI)
+//             - 3 density-variable (frozen meals, dairy NOI,
+//               frozen seafood) — fall through to density formula
+//           NMFC item numbers intentionally null (Option 1 from
+//           the scope doc): these require authoritative
+//           verification before they go on real BOLs. Class is
+//           rate-impacting; nmfcCode is documentary. AE fills
+//           nmfcCode manually from carrier rate sheets / ops
+//           research. Each entry has inline `basis` rationale.
+//           Lookup integration in getAutoSuggestedClass: catalog
+//           takes precedence over density when fixed class
+//           declared; density-variable entries fall through;
+//           keyword fallback only when catalog has NO match.
+//           Catalog density-variable + missing density signal
+//           returns null (don't downgrade to less-specific
+//           keyword on a partial catalog hit).
+export const SRL_VERSION = "3.8.yy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

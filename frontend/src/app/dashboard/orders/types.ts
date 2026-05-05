@@ -355,11 +355,25 @@ export function suggestFreightClassByDensity(
   return "500";
 }
 
+// v3.8.yy — NMFC commodity catalog import (Phase B). Catalog entries take
+// precedence over density when they declare a fixed class — the catalog is
+// where commodity-specific overrides live (handling/fragility/value-driven
+// classes that diverge from raw density). Density-variable catalog entries
+// fall through to the density formula.
+import { findCatalogEntry } from "./nmfcCatalog";
+
 /**
- * Combined auto-suggest. Density takes precedence when L/W/H/weight are
- * all populated (more accurate); otherwise falls back to commodity
- * keyword match on description. Returns null when neither path produces
- * a suggestion.
+ * Combined auto-suggest with three-tier priority chain:
+ *   1. NMFC catalog match with a fixed class → return that class. This is
+ *      the v3.8.yy override path: catalog entries are commodity-specific
+ *      and capture handling/fragility/value factors that density misses.
+ *   2. Density formula when L/W/H/weight all populate. Used when the
+ *      catalog has no entry, or when the catalog entry is density-variable.
+ *   3. Keyword fallback (legacy COMMODITY_CLASS_MAP) when there's no
+ *      catalog match AND density can't compute. If the catalog DID match
+ *      (density-variable) but density signal is missing, return null
+ *      rather than falling to keyword — catalog is more specific than
+ *      keyword and a partial catalog hit shouldn't get keyword-stomped.
  */
 export function getAutoSuggestedClass(item: {
   description: string;
@@ -368,11 +382,21 @@ export function getAutoSuggestedClass(item: {
   dimensionsWidth: string;
   dimensionsHeight: string;
 }): string | null {
+  // 1. NMFC catalog
+  const catalog = findCatalogEntry(item.description);
+  if (catalog?.freightClass) return catalog.freightClass;
+
+  // 2. Density
   const L = parseFloat(item.dimensionsLength);
   const W = parseFloat(item.dimensionsWidth);
   const H = parseFloat(item.dimensionsHeight);
   const wt = parseFloat(item.weight);
   const byDensity = suggestFreightClassByDensity(L, W, H, wt);
   if (byDensity) return byDensity;
+
+  // 3. Keyword fallback only when catalog had NO match. Density-variable
+  // catalog hit + missing density signal → return null (don't downgrade to
+  // a less-specific keyword answer).
+  if (catalog) return null;
   return suggestFreightClass(item.description);
 }
