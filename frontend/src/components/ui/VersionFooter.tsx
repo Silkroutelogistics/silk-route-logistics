@@ -2881,7 +2881,25 @@
 //           Verification post-backfill: APPROVED count = 26,
 //           Prospects count = 46, dangling non-Prospect non-
 //           APPROVED count = 0 (clean state).
-export const SRL_VERSION = "3.8.pp";
+// v3.8.qq — Corrective undo: v3.8.pp's `status != 'Prospect'`
+//           discriminator was too broad. It captured 22 records
+//           with `status = 'Contacted'` — Lead Hunter pipeline
+//           STAGES, not real CRM customers. Lead Hunter has
+//           independent stage semantics (Lead → Contacted →
+//           Qualified → Proposal → Won → Not Interested) and
+//           those records should never appear in CRM until
+//           manually approved into the "Active" status. The
+//           correct discriminator is `status = 'Active'`
+//           exclusively. Wasi's clarification 2026-05-05:
+//           "Lead Hunter database stays independent from CRM."
+//           Executed UPDATE: reverted onboardingStatus,
+//           approvedAt, approvedById to NULL/PENDING for the
+//           22 wrong records. Final state: 4 APPROVED (all
+//           status='Active'), all Lead Hunter stages back in
+//           Lead Hunter. v3.8.pp's drawer revert (CrmIconTabs
+//           unconditional) is preserved and correct — that
+//           half of v3.8.pp was right.
+export const SRL_VERSION = "3.8.qq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
