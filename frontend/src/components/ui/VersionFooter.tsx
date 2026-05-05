@@ -2854,7 +2854,34 @@
 //               9 new tests in new documentController.test.ts.
 //           (c) this version + regression-log entry.
 //           BKN approval is now a 7-click UI workflow with no SQL.
-export const SRL_VERSION = "3.8.oo";
+// v3.8.pp — Restore the CRM customer drawer + the historical CRM
+//           customer list. Two coordinated actions:
+//           (1) Reverted v3.8.nn's `!isNew` guard on CrmIconTabs
+//               at CustomerDrawer.tsx:86. The tab bar renders
+//               unconditionally again, including in __new__ mode.
+//               Gets the drawer back to the pre-2026-05-04 shape
+//               that was working — which means the original "tabs
+//               all show same form in __new__ mode" symptom
+//               returns, but Wasi has explicitly said that's the
+//               state worth restoring (orientation/structure
+//               visible matters more than that downstream cleanup).
+//               v3.8.nn was an unnecessary fix that solved a
+//               downstream symptom of the empty-CRM problem; the
+//               real fix was always (2) below.
+//           (2) Backfilled `onboardingStatus = APPROVED` +
+//               `approvedAt = NOW()` + `approvedById = <Wasi id>`
+//               for 26 historical CRM customers (status != Prospect
+//               AND deletedAt IS NULL). These were customers Wasi
+//               manually entered before the v3.8.ee approve gate
+//               existed; marking them APPROVED reflects that they
+//               were already trusted, not a gate bypass. The 46
+//               Apollo Lead Hunter prospects (status = Prospect)
+//               remain unflipped — Phase 6.2 separation continues
+//               to work for any new customer added going forward.
+//           Verification post-backfill: APPROVED count = 26,
+//           Prospects count = 46, dangling non-Prospect non-
+//           APPROVED count = 0 (clean state).
+export const SRL_VERSION = "3.8.pp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

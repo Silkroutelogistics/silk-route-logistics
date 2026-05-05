@@ -83,11 +83,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
         aria-modal="true"
         className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex animate-slide-in-right"
       >
-        {/* Tab bar is meaningless in __new__ mode (no customer record yet to view
-            contacts/loads/rates/etc. against). Hide it so clicking tabs is not a
-            no-op. Pre-existing bug from 9d0f311; surfaced after Phase 6.2 forced
-            empty CRM → new-customer-flow exposure. */}
-        {!isNew && <CrmIconTabs active={tab} onChange={setTab} />}
+        <CrmIconTabs active={tab} onChange={setTab} />
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
