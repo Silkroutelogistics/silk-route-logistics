@@ -43,6 +43,45 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
       const key = `documents/${uniqueSuffix}${ext}`;
       const fileUrl = await uploadFile(file.buffer, key, file.mimetype);
 
+      // v3.8.oo Gap 2 — CUSTOMER_CONTRACT uploads cross-write fileUrl
+      // into customer.contractUrl alongside the Document row, so the
+      // v3.8.ee approve gate's contract precondition becomes
+      // satisfiable through the standard upload flow. Convention on
+      // multiple uploads: latest URL wins (overwrite), matching how
+      // the rest of the Document table treats document type slots
+      // (see DocsTab statusPill which renders the most recent doc per
+      // category). Previous Document rows stay in the table for audit
+      // history. Wrapped in $transaction so cross-write and Document
+      // create succeed or fail together.
+      if (
+        docType === "CUSTOMER_CONTRACT" &&
+        entityType === "CUSTOMER" &&
+        entityId
+      ) {
+        return prisma.$transaction(async (tx) => {
+          const doc = await tx.document.create({
+            data: {
+              fileName: file.originalname,
+              fileUrl,
+              fileType: file.mimetype,
+              fileSize: file.size,
+              userId: req.user!.id,
+              loadId: loadId || null,
+              invoiceId: invoiceId || null,
+              entityType,
+              entityId,
+              docType,
+              status: "PENDING",
+            },
+          });
+          await tx.customer.update({
+            where: { id: entityId },
+            data: { contractUrl: fileUrl },
+          });
+          return doc;
+        });
+      }
+
       return prisma.document.create({
         data: {
           fileName: file.originalname,

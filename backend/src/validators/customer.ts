@@ -26,6 +26,12 @@ export const createCustomerSchema = z.object({
 
 export const updateCustomerSchema = createCustomerSchema.partial().extend({
   status: z.string().optional(),
+  // v3.8.oo Gap 2 — contractUrl is admin-overridable via PATCH so an AE
+  // can paste a URL from outside the upload flow if needed. Primary
+  // population path is the CUSTOMER_CONTRACT upload cross-write in
+  // documentController.uploadDocuments. Note: onboardingStatus stays
+  // off this schema — only the dedicated /approve endpoint can flip it.
+  contractUrl: z.string().url().nullable().optional(),
 });
 
 // v3.8.oo Gap 1 — manual credit review now sets customer.creditStatus
