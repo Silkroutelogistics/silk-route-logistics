@@ -7,47 +7,13 @@
 
 ---
 
-## ⛔ BLOCKED — diagnostic 2026-05-05 found Phase 3 migration never landed on prod
+## ✅ UNBLOCKED — migration applied 2026-05-05 via local `prisma migrate deploy`
 
-**DO NOT EXECUTE THIS CHECKLIST UNTIL THE PREREQUISITE BELOW IS RESOLVED.**
-
-Track 1 diagnostic on 2026-05-05 (post v3.8.oo push to `1737565`) ran two read-only SQL queries against Neon:
-
-**Query A** — `customers.approved_at` + `customers.approved_by_id` column existence:
-```sql
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'customers'
-  AND column_name IN ('approved_at', 'approved_by_id');
-```
-Result: `[]` (zero rows). **Columns do not exist.**
-
-**Query B** — `_prisma_migrations` ledger entry for the customer-approval migration:
-```sql
-SELECT migration_name, started_at, finished_at, applied_steps_count
-FROM _prisma_migrations
-WHERE migration_name LIKE '%customer_approval%'
-ORDER BY started_at DESC LIMIT 5;
-```
-Result: `[]` (zero rows). **Ledger has no entry for this migration.**
-
-**Classification: Outcome C.** Phase 3 (v3.8.ee, commit `2fb5279`, 2026-05-04) shipped a migration file at `backend/prisma/migrations/20260504000000_add_customer_approval_fields/migration.sql` and a Prisma model change adding `approvedAt` + `approvedById` fields. Neither the columns nor the ledger entry made it to production despite ~24 hours and multiple Render deploys (v3.8.ff through v3.8.oo) chaining `npx prisma migrate deploy` per CLAUDE.md §2.2's documented `buildCommand`.
-
-**Impact on this checklist:** Step 6 (Approve click) writes `approvedAt: new Date()` + `approvedById: req.user!.id` via [`customerController.approveCustomer:467-474`](../../backend/src/controllers/customerController.ts#L467-L474). With both columns missing in Neon, that `prisma.customer.update` call will return a Prisma `P2009` ("column does not exist") error, which Express surfaces as a 500. The 422 missing-checks path is not the failure mode here — even with all four gate preconditions populated, Approve will 500.
-
-### Prerequisite to unblock
-
-One of the following must complete before executing Steps 1–7:
-
-1. **Apply the migration manually from a trusted host** (recommended): `cd backend && npx prisma migrate deploy` against the prod `DATABASE_URL`. Single one-off run, idempotent, applies any pending migrations + records ledger entries. Reads `prisma/migrations/` and walks unapplied migrations in order. Should land just `20260504000000_add_customer_approval_fields` since prior migrations are presumably applied (untested — diagnostic only checked this specific migration).
-2. **Diagnose Render's deploy chain.** Per the directive's halt instruction, capturing the Render build log for v3.8.oo's deploy is the evidence path. If `migrate deploy` is silently skipped or erroring without failing the chain, that's a Render dashboard `buildCommand` regression and needs the dashboard fix per CLAUDE.md §2.2. Future deploys with schema changes will keep accumulating drift otherwise.
-3. **Audit-only widening.** Run `prisma migrate status` again and the same Query A/B against ALL pending migrations to confirm whether other recent schema changes (v3.8.aa ProspectVertical via `db push`, any v3.8.ff–v3.8.mm field additions) also stalled. The Item 8.10 scope is broader than originally documented.
-
-**After the prerequisite resolves, re-run the Track 1 diagnostic** (Query A + Query B). Outcome must be **A** (columns exist + ledger entry exists) before Steps 1–7 can run.
+Migration `20260504000000_add_customer_approval_fields` applied to Neon at 2026-05-05 17:35:00 UTC. Columns `approved_at` + `approved_by_id` confirmed in `customers` table; `_prisma_migrations` ledger entry recorded with `applied_steps_count = 1`. Wasi may proceed with Steps 1–7 below. Item 8.10 sprint (Render deploy-chain investigation — why `prisma migrate deploy` did not run automatically across the prior ~24h of deploys) tracked separately in CLAUDE.md §13.3.
 
 ---
 
-## Steps 1–7 — execute only after BLOCKED warning resolves
+## Steps 1–7
 
 ### Pre-flight
 
