@@ -11,6 +11,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import type { Invoice } from "@/types/entities";
 import { cn } from "@/lib/utils";
+import { decodeHtmlEntities } from "@/lib/htmlEntities";
 
 /* ── Constants ────────────────────────────────────────────── */
 
@@ -54,12 +55,15 @@ const fmtDateTime = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
 
 function customerName(inv: Invoice): string {
-  return (
+  // Decode legacy HTML-escaped values (pre-v3.8.d.2 sanitizeInput
+  // middleware bug). Customer table not in v3.8.d.2's loads-table
+  // decode script scope; defensive frontend decode applied here.
+  const raw =
     inv.load?.customer?.name ||
     inv.user?.company ||
     `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() ||
-    "—"
-  );
+    "—";
+  return decodeHtmlEntities(raw);
 }
 
 /* ── Main Component ───────────────────────────────────────── */
@@ -187,7 +191,7 @@ export default function InvoicesPage() {
   /* ── Render ──────────────────────────────────────────── */
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0e1a]">
+    <div className="h-full flex flex-col bg-[#0F1117]">
       {/* Header */}
       <div className="px-8 pt-8 pb-0">
         <div className="flex items-center justify-between mb-5">
@@ -271,7 +275,7 @@ export default function InvoicesPage() {
           <div className="bg-white/5 border border-white/5 rounded-xl overflow-hidden flex flex-col min-h-0 flex-1">
             <div className="overflow-y-auto flex-1">
               <table className="w-full">
-                <thead className="sticky top-0 bg-[#0a0e1a] z-10">
+                <thead className="sticky top-0 bg-[#0F1117] z-10">
                   <tr className="border-b border-white/5">
                     <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">
                       Invoice #

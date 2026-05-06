@@ -3038,7 +3038,82 @@
 //           Catalog density-variable + missing density signal
 //           returns null (don't downgrade to less-specific
 //           keyword on a partial catalog hit).
-export const SRL_VERSION = "3.8.yy";
+// v3.8.zz — Sprint 22: surfaced visual bugs from morning walkthrough.
+//           Three fixes in one atomic commit:
+//
+//           (1) /accounting/invoices page wrapper bg cross-mode
+//           rendering correctness. Page used non-canonical
+//           `bg-[#0a0e1a]` literal hex (slightly darker than
+//           canonical `#0F1117`) at the page-level wrapper line 194
+//           AND sticky thead line 278. The non-canonical hex was
+//           NOT in globals.css [data-mode="light"] override list
+//           (which only covers #0F1117/#161921/#080C18/#1C1F2B
+//           etc.) — but text-white/text-slate-400/text-slate-500
+//           ARE in the override list. Net: in light mode, page bg
+//           stayed dark navy while text remapped to dark, producing
+//           dark-on-dark invisibility. Same architectural pattern
+//           as Sprint 14 dashboard layout posture fix — non-
+//           canonical bg literals break cross-mode cascade. Fix:
+//           swap both `bg-[#0a0e1a]` → `bg-[#0F1117]` (canonical,
+//           in override list). Mode toggle works for free via
+//           existing globals.css cascade.
+//
+//           Single-file scope confirmed: pattern check across
+//           /accounting/{aging,credit,disputes,fund,payments,pnl,
+//           quick-pay,quickpay-revenue,reports} confirmed all
+//           use canonical `bg-[#0F1117]` already. Bug isolated to
+//           invoices/page.tsx only.
+//
+//           (2) CommandPalette.tsx (Cmd+K trigger button) light-
+//           mode invisibility. Button at line 224 used
+//           `text-white/50` + `hover:text-white/70` which have NO
+//           [data-mode="light"] override (only `text-white` is
+//           covered at globals.css:162). In light mode,
+//           `bg-white/5` correctly remapped to white card surface
+//           but `text-white/50` stayed at rgba(255,255,255,0.5) =
+//           invisible on white. Fix: `text-white/50` →
+//           `text-slate-400`, `hover:text-white/70` →
+//           `hover:text-white` (both have light-mode overrides).
+//
+//           (3) HTML entity rendering bug ("Gail &amp; Rice" on
+//           customer names). Root cause: pre-v3.8.d.2
+//           `sanitizeInput` middleware HTML-escaped string DB
+//           values. v3.8.d.2 fixed the middleware AND ran a
+//           one-time decode for loads table
+//           (backend/scripts/decode-encoded-load-fields.ts) but
+//           customer table was NOT in that script's scope. React
+//           JSX renders strings as text nodes without entity
+//           decoding, so legacy escaped values print literally.
+//           Fix (Sprint 22 scope = F1 frontend defensive): new
+//           shared util `frontend/src/lib/htmlEntities.ts` mirrors
+//           the existing backend util at `backend/src/utils/
+//           htmlEntities.ts`. Apply in `customerName()` helper
+//           on invoices page.
+//
+//           Backend serializer-layer decode (F2) and customer-
+//           table DB cleanup migration (F3) deferred to separate
+//           sprints with explicit DB-migration authorization.
+//
+//           Memory #11 lesson reinforced for the 5th time:
+//           scanner-driven sweeps optimize for density-per-file
+//           and miss high-visibility low-density bugs (page
+//           headings, single buttons, single data fields).
+//           Human-eye walkthrough is the primary truth-test.
+//
+//           Version letter note: continuous sequence per §3.1.
+//           Picked up from .yy (parallel work landed v3.8.nn–.yy
+//           between Sprint 21 close and Sprint 22 start) → next
+//           available is .zz. Past zz uses double-letters (.aaa,
+//           .aab, ...) per §3.1.
+//
+//           Pre-commit verification: backend tsc clean, frontend
+//           next build clean.
+//
+//           Per §3.1, version bump justified — publicly-visible
+//           changes to AE Console accounting/invoices page +
+//           Cmd+K search button (every authenticated user
+//           encounters both daily).
+export const SRL_VERSION = "3.8.zz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

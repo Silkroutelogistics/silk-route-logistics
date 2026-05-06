@@ -221,7 +221,7 @@ export function CommandPaletteTrigger() {
   return (
     <button
       onClick={() => window.dispatchEvent(new CustomEvent("srl:open-command-palette"))}
-      className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/50 transition-colors hover:bg-white/10 hover:text-white/70"
+      className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
     >
       <Command className="h-3.5 w-3.5" />
       <span>Search</span>
