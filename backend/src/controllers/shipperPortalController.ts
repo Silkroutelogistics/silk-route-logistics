@@ -742,7 +742,7 @@ export async function generateTrackingLink(req: AuthRequest, res: Response) {
       },
     });
 
-    const trackingUrl = `${process.env.FRONTEND_URL || "https://silkroutelogistics.ai"}/tracking/${token}`;
+    const trackingUrl = `${process.env.FRONTEND_URL || "https://silkroutelogistics.ai"}/track/${token}`;
 
     res.json({ token: trackingToken.token, url: trackingUrl, expiresAt: trackingToken.expiresAt });
   } catch (err) {

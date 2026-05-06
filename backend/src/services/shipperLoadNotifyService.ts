@@ -45,7 +45,7 @@ function formatDate(d: Date | null | undefined): string {
 
 function trackingLink(load: any): string {
   if (load.trackingToken) {
-    return `<p style="text-align:center;margin:20px 0"><a href="${PORTAL_BASE}/tracking/${load.trackingToken}" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:600">Track Shipment</a></p>`;
+    return `<p style="text-align:center;margin:20px 0"><a href="${PORTAL_BASE}/track/${load.trackingToken}" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:600">Track Shipment</a></p>`;
   }
   return "";
 }
@@ -313,7 +313,7 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
   const token = load.trackingToken ?? load.shipperCode ?? null;
   if (!token) return { sent: 0, skipped: "no_token" };
 
-  const trackingUrl = `${PORTAL_BASE}/tracking/${token}`;
+  const trackingUrl = `${PORTAL_BASE}/track/${token}`;
   const origin = `${load.originCity}, ${load.originState}`;
   const dest = `${load.destCity}, ${load.destState}`;
   const carrierName = carrierDisplayName(load.carrier);

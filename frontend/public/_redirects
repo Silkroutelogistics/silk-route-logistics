@@ -27,3 +27,14 @@
 /tracking      /track          301
 /login.html    /auth/login     301
 /register.html /auth/register  301
+
+# 2026-05-06 v3.8.aae — BOL QR + email tracking link reliability fix.
+# /tracking/* legacy splat: redirects historical email links to consolidated
+# /track/<token> URL pattern (status 301, browser URL updates).
+# /track/* SPA-rewrite splat: serves /track page for QR/bookmark deep-links;
+# the page's useEffect detects token from window.location.pathname and
+# auto-fetches. Status 200 preserves the URL so customers can bookmark.
+# Closes CLAUDE.md §13.3 Item 31. Order matters — exact-path /tracking 301
+# above MUST come before the /tracking/* splat below.
+/tracking/*    /track/:splat   301
+/track/*       /track          200

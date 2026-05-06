@@ -255,7 +255,7 @@ export async function sendShipperMilestoneEmail(loadId: string, newStatus: strin
   if (!label) return; // Not a trackable milestone
 
   const trackingUrl = load.trackingToken
-    ? `https://silkroutelogistics.ai/tracking/${load.trackingToken}`
+    ? `https://silkroutelogistics.ai/track/${load.trackingToken}`
     : null;
 
   const origin = `${load.originCity}, ${load.originState}`;

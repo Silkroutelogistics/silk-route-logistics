@@ -3517,7 +3517,115 @@
 //            + placeholder ternary + tab inactive className;
 //            SiteFooter.tsx:12 dark-branch base text).
 //            Per §3.1 sequence-continuous rule: v3.8.aac → v3.8.aad.
-export const SRL_VERSION = "3.8.aad";
+// v3.8.aae — Sprint 26: BOL QR + email tracking link reliability fix.
+//            Closes CLAUDE.md §13.3 Item 31 (P0 production reliability)
+//            surfaced during Sprint 25 Phase A audit. Every BOL printed
+//            since v3.8.b had been silently routing scans to a 404; this
+//            ships the missing destination. Critical fix before BKN
+//            first load mid-May.
+//
+//            ROOT CAUSE
+//
+//            qrGenerator.ts:25 encodes URL silkroutelogistics.ai/track/
+//            <12-char-token> on every BOL print. shipperLoadNotifyService
+//            and shipperNotificationService build /tracking/<token> URLs
+//            for email links. Frontend has no /track/[token]/page.tsx
+//            dynamic route, _redirects has no /track/* or /tracking/*
+//            splat rule, and next.config.ts sets output: "export" (static
+//            HTML). Cloudflare Pages 404s every /track/<anything> +
+//            /tracking/<anything>.
+//
+//            STRUCTURAL CONSTRAINT (Phase A discovery)
+//
+//            The directive's recommended U1 (add app/track/[token]/page
+//            .tsx dynamic route) is structurally blocked by output:
+//            "export". Next.js 15 requires generateStaticParams() for all
+//            dynamic routes under static export — for runtime-generated
+//            12-char tokens, that means we'd need to enumerate every
+//            possible token at build time, which isn't feasible. Adding
+//            the route file with empty params would still produce zero
+//            pre-rendered HTML, leaving Cloudflare to 404. Only paths to
+//            unblock U1 are: drop output: "export" + migrate to next-on-
+//            pages or Vercel SSR (major infrastructure change), or pre-
+//            generate every token (impossible).
+//
+//            DECISION — U2 with U1's UX (SPA-rewrite via _redirects)
+//
+//            _redirects already uses status-200 URL rewrite for /carrier/*
+//            (line 22 in the file pre-Sprint-26). Same pattern applies
+//            cleanly to /track/*. Implementation:
+//
+//              public/_redirects (+2 rules, ordering matters):
+//                /tracking/*  /track/:splat  301  (legacy email link
+//                                                   backward-compat)
+//                /track/*     /track          200  (QR/bookmark deep-link
+//                                                   SPA rewrite)
+//
+//              app/track/page.tsx:
+//                - Add tokenFromUrl state + useEffect that reads
+//                  window.location.pathname on mount
+//                - If pathname matches /track/<token>, decode token and
+//                  fire api.get(`/tracking/${token}`) immediately
+//                - Wrap search UI (tabs + input + Track button) in
+//                  {!tokenFromUrl && (...)} — B3 result-only mode hides
+//                  the search UI when token is in URL
+//                - Show Loader2 spinner during fetch
+//                - On error: red error message + "Track another shipment"
+//                  link back to /track
+//                - On success: existing result panel renders unchanged,
+//                  with "Track another shipment →" link added below the
+//                  contact panel for token-mode flow
+//
+//            EMAIL URL CONSOLIDATION (4 sites, not 1)
+//
+//            Sprint 25 Phase A undercount: only flagged shipperLoadNotify
+//            Service.ts:48. Sprint 26 Phase A re-grep found 4 total sites
+//            building /tracking/<token> URLs — all swap to /track/<token>:
+//              - shipperLoadNotifyService.ts:48 (trackingLink helper used
+//                in 6+ email templates)
+//              - shipperLoadNotifyService.ts:316 (sendTrackingLink fn)
+//              - shipperPortalController.ts:745 (generate tracking link
+//                endpoint response)
+//              - shipperNotificationService.ts:258 (milestone notification
+//                emails)
+//            Leaving 3 sites would have created silent inconsistency.
+//
+//            URL PATTERN POST-SPRINT-26
+//
+//              QR codes:                /track/<token>  (unchanged)
+//              Email tracking links:    /track/<token>  (was /tracking/)
+//              Manual customer entry:   /track          (search UI)
+//              Legacy /tracking/*:      301 redirected to /track/<token>
+//
+//            BACKEND ENDPOINT UNCHANGED
+//
+//            GET /api/tracking/:token still owns the lookup logic with
+//            its 5-tier fallback chain (ShipperTrackingToken → Load.
+//            trackingToken → shipperCode → bolNumber → reference/load/
+//            po). The frontend route consolidation does not touch the
+//            backend lookup contract.
+//
+//            EDGE CASES
+//
+//              - Invalid token: backend returns 404 "Shipment not found"
+//                → red error + manual-search fallback link
+//              - Expired token: backend returns 410 "Tracking link has
+//                expired" (per trackingController.ts:42) → message
+//                rendered verbatim
+//              - shipperCode field is dead schema (Sprint 25 finding)
+//                but kept in fallback chain to avoid Sprint 26 scope
+//                creep — separate cleanup sprint per §3.3 atomic-commit
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean, frontend next build clean.
+//            /track is dark-only by design — token-mode UI inherits the
+//            same bg-[#0f172a] wrapper, no cross-mode regression risk.
+//
+//            Net LOC change: ~50 source (track/page.tsx +35, _redirects
+//            +2, 4 backend single-line edits). Sprint 25 Phase A had
+//            estimated 80-130 LOC for U1; U2's lighter shape per A10.
+//            Per §3.1 sequence-continuous rule: v3.8.aad → v3.8.aae.
+export const SRL_VERSION = "3.8.aae";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

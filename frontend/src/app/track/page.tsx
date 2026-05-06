@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { Search, MapPin, Phone, Mail, CheckCircle2, Circle } from "lucide-react";
+import { Search, MapPin, Phone, Mail, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { SiteFooter } from "@/components/shell/SiteFooter";
 
 type SearchKind = "bol" | "reference";
@@ -41,6 +41,24 @@ export default function PublicTrackPage() {
   const [result, setResult] = useState<PublicTrackResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokenFromUrl, setTokenFromUrl] = useState<string | null>(null);
+
+  // QR/email deep-link mode: _redirects rewrites /track/<token> to serve
+  // this page (status 200, browser URL preserved). Detect token from
+  // pathname on mount and auto-fetch so the customer who scanned a BOL
+  // QR sees the result panel directly without typing into the search box.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const match = window.location.pathname.match(/^\/track\/(.+?)\/?$/);
+    if (!match || !match[1]) return;
+    const token = decodeURIComponent(match[1]);
+    setTokenFromUrl(token);
+    setLoading(true);
+    api.get(`/tracking/${encodeURIComponent(token)}`)
+      .then(({ data }) => setResult(data))
+      .catch((err) => setError(err?.response?.data?.error ?? "Shipment not found"))
+      .finally(() => setLoading(false));
+  }, []);
 
   const onSearch = async () => {
     if (!query.trim()) return;
@@ -77,45 +95,65 @@ export default function PublicTrackPage() {
         <h1 className="text-3xl font-semibold mb-2">Track your shipment</h1>
         <p className="text-gray-400 mb-8">Real-time status on every load SRL moves.</p>
 
-        <div className="flex gap-1 justify-center mb-4">
-          {(["bol", "reference"] as SearchKind[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setKind(k)}
-              className={`px-4 py-2 text-sm border-b-2 transition ${
-                kind === k ? "border-[#BA7517] text-white" : "border-transparent text-gray-300 hover:text-white"
-              }`}
-            >
-              {k === "bol" ? "BOL number" : "Reference / PO #"}
-            </button>
-          ))}
-        </div>
+        {!tokenFromUrl && (
+          <>
+            <div className="flex gap-1 justify-center mb-4">
+              {(["bol", "reference"] as SearchKind[]).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setKind(k)}
+                  className={`px-4 py-2 text-sm border-b-2 transition ${
+                    kind === k ? "border-[#BA7517] text-white" : "border-transparent text-gray-300 hover:text-white"
+                  }`}
+                >
+                  {k === "bol" ? "BOL number" : "Reference / PO #"}
+                </button>
+              ))}
+            </div>
 
-        <div className="flex gap-2 max-w-2xl mx-auto">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && onSearch()}
-              placeholder={
-                kind === "bol" ? "e.g. BOL-7734"
-                : "e.g. PO-88421 or load reference"
-              }
-              className="w-full pl-9 pr-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#BA7517]"
-            />
+            <div className="flex gap-2 max-w-2xl mx-auto">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                  placeholder={
+                    kind === "bol" ? "e.g. BOL-7734"
+                    : "e.g. PO-88421 or load reference"
+                  }
+                  className="w-full pl-9 pr-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#BA7517]"
+                />
+              </div>
+              <button
+                onClick={onSearch}
+                disabled={loading}
+                className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-white font-medium rounded-lg disabled:opacity-50"
+              >
+                {loading ? "Searching…" : "Track"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {tokenFromUrl && loading && !result && !error && (
+          <div className="flex items-center justify-center gap-2 text-gray-300">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Loading shipment…</span>
           </div>
-          <button
-            onClick={onSearch}
-            disabled={loading}
-            className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-white font-medium rounded-lg disabled:opacity-50"
-          >
-            {loading ? "Searching…" : "Track"}
-          </button>
-        </div>
+        )}
 
-        {error && <div className="mt-4 text-red-400 text-sm">{error}</div>}
+        {error && (
+          <div className="mt-4 text-sm">
+            <div className="text-red-400">{error}</div>
+            {tokenFromUrl && (
+              <div className="mt-3">
+                <a href="/track" className="text-[#BA7517] hover:underline">Track another shipment</a>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Result */}
@@ -208,6 +246,11 @@ export default function PublicTrackPage() {
               <a href="tel:+12692206760" className="inline-flex items-center gap-1 hover:text-white"><Phone className="w-3 h-3" /> (269) 220-6760</a>
               <a href="mailto:operations@silkroutelogistics.ai" className="inline-flex items-center gap-1 hover:text-white"><Mail className="w-3 h-3" /> operations@silkroutelogistics.ai</a>
             </div>
+            {tokenFromUrl && (
+              <div className="pt-3">
+                <a href="/track" className="hover:text-[#BA7517]">Track another shipment →</a>
+              </div>
+            )}
           </div>
         </section>
       )}
