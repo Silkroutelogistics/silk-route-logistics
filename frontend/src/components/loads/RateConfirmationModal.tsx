@@ -468,6 +468,12 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
   const [section, setSection] = useState<SectionKey>("broker");
   const [form, setForm] = useState<FormState>(() => initForm(null, null));
   const [saving, setSaving] = useState(false);
+  // v3.8.aak — Sprint 32. Surface API failures in-app instead of swallowing
+  // to console.error. Pre-fix: handleSaveDraft / handleGeneratePdf /
+  // handleSendTender all had `catch { console.error(...); }` so failed API
+  // calls produced silent dead-state. Now any failure populates submitError
+  // and renders a red banner above the button row. Closes §13.3 Item 43.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -547,13 +553,26 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
       api.patch(`/loads/${data.loadId}/status`, { status: data.status }),
   });
 
+  // v3.8.aak — extract error message from various error shapes (axios,
+  // native Error, plain string). Used by all 3 handlers below.
+  function extractErrorMessage(err: any, fallback: string): string {
+    return (
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      err?.message ||
+      fallback
+    );
+  }
+
   async function handleSaveDraft() {
     if (!load) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       await createMutation.mutateAsync({ loadId: load.id, formData: buildPayload() });
       onClose();
-    } catch (err) {
+    } catch (err: any) {
+      setSubmitError(extractErrorMessage(err, "Failed to save draft"));
       console.error("Failed to save draft:", err);
     } finally {
       setSaving(false);
@@ -563,6 +582,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
   async function handleGeneratePdf() {
     if (!load) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       const res = await api.post("/rate-confirmations", { loadId: load.id, formData: buildPayload() });
       const pdfRes = await api.get(`/rate-confirmations/${res.data.id}/pdf`, { responseType: "blob" });
@@ -572,7 +592,8 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
       a.download = `RC-${load.referenceNumber}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
+      setSubmitError(extractErrorMessage(err, "Failed to generate PDF"));
       console.error("Failed to generate PDF:", err);
     } finally {
       setSaving(false);
@@ -582,6 +603,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
   async function handleSendTender() {
     if (!load) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       // 1. Create the rate confirmation
       const rcRes = await createMutation.mutateAsync({ loadId: load.id, formData: buildPayload() });
@@ -604,7 +626,8 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
       } else {
         onClose();
       }
-    } catch (err) {
+    } catch (err: any) {
+      setSubmitError(extractErrorMessage(err, "Failed to send tender"));
       console.error("Failed to send tender:", err);
     } finally {
       setSaving(false);
@@ -710,6 +733,16 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
             {section === "terms" && <SectionTerms form={form} set={set} />}
             {section === "instructions" && <SectionInstructions form={form} set={set} />}
           </div>
+
+          {/* v3.8.aak — Sprint 32. API failures surface as a red banner above
+              the button row instead of being swallowed to console.error. The
+              red-50/red-500/red-700 palette is canonical Tailwind error and
+              works on both cream + dark modal contexts. Closes §13.3 Item 43. */}
+          {submitError && (
+            <div className="px-8 py-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
+              <strong>Error:</strong> {submitError}
+            </div>
+          )}
 
           {/* Bottom Buttons */}
           <div className="flex items-center justify-between px-8 py-4 border-t border-white/10 bg-[#0a1025]">
@@ -1517,7 +1550,7 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
 
             {/* Search Results Dropdown */}
             {showSearch && carriers && (
-              <div className="absolute z-20 w-full mt-1 bg-[#1a2340] border border-white/10 rounded-lg shadow-2xl max-h-60 overflow-y-auto">
+              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl max-h-60 overflow-y-auto">
                 {(carriers.carriers || carriers || []).length === 0 ? (
                   <div className="px-4 py-3 text-sm text-slate-500">No carriers found</div>
                 ) : (
@@ -1525,10 +1558,10 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
                     <button
                       key={c.id}
                       onClick={() => selectCarrier(c)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 text-left transition cursor-pointer"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left transition cursor-pointer"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{c.company || c.user?.company || "Unknown"}</p>
+                        <p className="text-sm text-slate-900 truncate">{c.company || c.user?.company || "Unknown"}</p>
                         <p className="text-xs text-slate-500">
                           MC: {c.mcNumber || "N/A"} | DOT: {c.dotNumber || "N/A"}
                           {c.tier && <span className="ml-2">{c.tier}</span>}

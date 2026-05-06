@@ -4084,7 +4084,107 @@
 //            (Items 31, 32, 33, 34-38 same shape).
 //            §13.3 Item 40 logged for future consolidation, not
 //            closed.
-export const SRL_VERSION = "3.8.aaj";
+// v3.8.aak — Sprint 32: RC Modal carrier dropdown cream-bg fix +
+//            silent-error UI surfacing. Closes §13.3 Items 41 + 43.
+//            Item 42 (PDF/Tender root cause) logged OPEN — Sprint 33
+//            closes once error UI surfaces actual failure.
+//
+//            Path β chosen per Sprint 32 directive (vs Path α single
+//            atomic with DevTools artifact bundled): two atomic
+//            commits, cleaner boundaries, error UI ships independent
+//            value beyond just diagnosing this one bug.
+//
+//            (1) FINDING #41 — Carrier dropdown color mismatch
+//
+//            Carrier search dropdown render block at
+//            RateConfirmationModal.tsx:1518-1546 used dark navy
+//            off-canonical bg-[#1a2340] against cream-themed modal
+//            shell. Mixed-context render — text-white on
+//            bg-[#1a2340] worked technically (~17:1 contrast) but
+//            looked discordant against surrounding cream UI.
+//
+//            Fix per Path B (Phase A recommendation):
+//              bg-[#1a2340] border-white/10  →  bg-white border-slate-200
+//              hover:bg-white/5              →  hover:bg-slate-50
+//              text-white (carrier name)     →  text-slate-900
+//
+//            Tier badges (canonical Sprint 24 palette) untouched.
+//            "No carriers found" empty state slate-500 unchanged
+//            (passes AA on white ≈5:1).
+//
+//            Net source change: 3 LOC swap.
+//
+//            (2) FINDING #43 — Silent error swallow on RC handlers
+//
+//            handleSaveDraft / handleGeneratePdf / handleSendTender
+//            all caught errors via bare `console.error("...", err)`
+//            with NO UI feedback. User clicks button, API fails,
+//            user sees nothing — no toast, no alert, no inline
+//            error. Pattern blocked Sprint 32 Phase A from
+//            diagnosing the underlying PDF/Tender failure without
+//            DevTools.
+//
+//            Fix:
+//              - New `submitError: string | null` state at component
+//                root (alongside existing `saving` state)
+//              - Helper `extractErrorMessage(err, fallback)` checks
+//                err.response.data.error → .message → err.message →
+//                fallback (handles axios shape, native Error, plain
+//                string)
+//              - All 3 handlers reset error to null at start, then
+//                set error in catch block on failure
+//              - New JSX banner above button row, conditionally
+//                rendered when submitError is set:
+//                  bg-red-50 border-l-4 border-red-500 text-red-700
+//                  with "Error:" label prefix
+//              - Position: between scroll content area and bottom
+//                button row, so visible without obscuring either
+//
+//            red-50/red-500/red-700 is canonical Tailwind error
+//            palette — works on both cream + dark contexts. Banner
+//            dismisses automatically on next handler attempt
+//            (resets at handler start) so no manual close needed.
+//
+//            Net source change: ~25 LOC (state + helper + 3 handler
+//            edits + JSX banner).
+//
+//            (3) ITEM #42 — PDF/Tender silent-fail root cause
+//                (LOGGED OPEN — Sprint 33 close)
+//
+//            Original symptom — both Generate PDF + Send Tender
+//            buttons did nothing visible. Phase A audit confirmed
+//            handlers are wired correctly, backend routes exist,
+//            but something between client payload and server
+//            validation is rejecting the request silently.
+//
+//            Most likely failure mode (educated guess pending Sprint
+//            33 diagnosis): Zod validator at
+//            backend/src/validators/rateConfirmation.ts:16-200+
+//            rejecting one of ~50 form-state fields spread via
+//            `...form` in buildPayload(). Schema is permissive
+//            (`.optional()` on most) but type mismatches throw.
+//            Could also be auth or backend internal error.
+//
+//            Sprint 33 closes Item 42 once Sprint 32's error UI
+//            surfaces the actual rejection on next click attempt.
+//            Diagnosis depends on first error surfaced — fix
+//            shape varies (1-15 LOC depending on which schema
+//            field rejects).
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Net LOC change: ~30 source (3 dropdown swaps + 25
+//            error-UI lines + 1 carrier-name text-color swap).
+//            Per §3.1 sequence-continuous rule: v3.8.aaj → v3.8.aak.
+//            AE Console RC modal surface — version-bump justified.
+//
+//            §13.3 Items 41 + 43 logged + CLOSED in same commit per
+//            established hotfix-with-immediate-close pattern
+//            (Items 31, 32, 33, 34-38, 39 same shape). Item 42
+//            logged OPEN, Sprint 33 close.
+export const SRL_VERSION = "3.8.aak";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
