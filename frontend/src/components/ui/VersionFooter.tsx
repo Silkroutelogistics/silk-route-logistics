@@ -3727,7 +3727,96 @@
 //            v3.8.aae across consecutive sprints; this is the same
 //            class but the discovery-to-close window is one sprint
 //            shorter because the bug blocked Sprint 26 smoke).
-export const SRL_VERSION = "3.8.aaf";
+// v3.8.aag — Sprint 27: /track public status vocabulary cleanup.
+//            Customer-facing public tracking page leaked broker-
+//            internal pipeline status enum values. User reported
+//            during Sprint 26 Phase C smoke: status pill rendered
+//            "POSTED" (load on our load board awaiting carrier) —
+//            internal-process language the customer shouldn't need
+//            to think about. Phase A audit confirmed one rendering
+//            site: app/track/page.tsx:169-171 status pill rendered
+//            `result.status.replace(/_/g, " ")` directly (raw enum).
+//            Step bar already used pre-mapped friendly labels;
+//            backend response stays canonical (returns full enum).
+//
+//            FIX 1 — PUBLIC_STATUS_LABEL map + helper
+//
+//            Added Record<string, string> mapping all 14 known Load
+//            statuses (DRAFT/POSTED/TENDERED/CONFIRMED/BOOKED/
+//            DISPATCHED/AT_PICKUP/LOADED/PICKED_UP/IN_TRANSIT/
+//            AT_DELIVERY/DELIVERED/POD_RECEIVED/INVOICED/COMPLETED/
+//            TONU/CANCELLED) to 8 customer-meaningful labels:
+//
+//              DRAFT/POSTED/TENDERED/CONFIRMED/BOOKED → "Scheduled"
+//                (pre-dispatch cluster — broker still picking carrier)
+//              DISPATCHED                              → "Dispatched"
+//              AT_PICKUP                               → "At pickup"
+//              LOADED/PICKED_UP                        → "Picked up"
+//              IN_TRANSIT                              → "In transit"
+//              AT_DELIVERY                             → "Arriving"
+//              DELIVERED/POD_RECEIVED/INVOICED/        → "Delivered"
+//                COMPLETED                              (post-delivery
+//                                                       accounting noise
+//                                                       hidden)
+//              TONU/CANCELLED                          → "Cancelled"
+//                (TONU is "Truck Ordered Not Used" billable internal
+//                accounting nuance — customer doesn't need to know)
+//
+//            Helper publicStatusLabel(status) returns mapped label or
+//            falls back to the existing `.replace(/_/g, " ")` behavior
+//            for any unknown status (defensive — future schema additions
+//            won't crash the public page).
+//
+//            Applied at page.tsx:169-171 status pill — one swap, one
+//            line. Backend trackingController.ts:171 still returns
+//            `status: load.status` (canonical enum) unchanged. If a
+//            second public client ever ships (mobile app, embed widget),
+//            promote the mapping to backend `publicStatus` field per
+//            audit S3 path.
+//
+//            FIX 2 — STEP_BAR label revision per Phase A A5
+//
+//            STEP_BAR at lines 31-36 had a confusing label-to-status
+//            mapping where AT_DELIVERY was labeled "In transit" — but
+//            AT_DELIVERY means "at the delivery location waiting to be
+//            unloaded," which is closer to "Arriving" than "in transit."
+//            The literal "In transit" label was misleading. IN_TRANSIT
+//            was labeled "Departed" which is also imprecise (IN_TRANSIT
+//            means moving on the road, not "just departed").
+//
+//            Revised:
+//              LOADED       → "Picked up"     (unchanged)
+//              IN_TRANSIT   → "On the road"   (was "Departed")
+//              AT_DELIVERY  → "Arriving"      (was "In transit")
+//              DELIVERED    → "Delivered"     (unchanged)
+//
+//            Reads as a clearer customer journey: "Picked up → On the
+//            road → Arriving → Delivered." STEP_BAR keys (load status
+//            enum values) unchanged — only the labels customers see.
+//
+//            Bundled with Fix 1 per A5 recommendation: same file, same
+//            render path, same atomic-commit slot. Splitting would have
+//            been two passes through the same component.
+//
+//            ADJACENT NOT CHANGED
+//
+//            - "On time" badge at page.tsx:172 — already public-friendly
+//            - Step bar completion checks (lines 198-218) — uses STEP_BAR
+//              keys for find() boolean only, never renders the keys
+//            - Detail grid (lines 222-228) — no status involved
+//            - Last known location (lines 190-194) — no status involved
+//            - Backend trackingController.ts response shape — unchanged
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Net LOC change: ~35 (PUBLIC_STATUS_LABEL map + helper +
+//            1-line status pill swap + 2 STEP_BAR label edits).
+//            Per §3.1 sequence-continuous rule: v3.8.aaf → v3.8.aag.
+//            Customer-facing surface (every BOL QR scan post-Sprint-26
+//            sees the new labels) — version-bump justified.
+export const SRL_VERSION = "3.8.aag";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

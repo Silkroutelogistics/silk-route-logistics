@@ -30,10 +30,41 @@ interface PublicTrackResponse {
 
 const STEP_BAR = [
   { key: "LOADED",      label: "Picked up" },
-  { key: "IN_TRANSIT",  label: "Departed" },
-  { key: "AT_DELIVERY", label: "In transit" },
+  { key: "IN_TRANSIT",  label: "On the road" },
+  { key: "AT_DELIVERY", label: "Arriving" },
   { key: "DELIVERED",   label: "Delivered" },
 ];
+
+// Public-facing status labels. The backend returns canonical Load enum
+// values (POSTED / TENDERED / BOOKED / DISPATCHED / AT_PICKUP / LOADED /
+// PICKED_UP / IN_TRANSIT / AT_DELIVERY / DELIVERED / POD_RECEIVED /
+// INVOICED / COMPLETED / TONU / CANCELLED / DRAFT) — internal broker-
+// pipeline vocabulary. Customers don't need to see "POSTED" (load is on
+// our load board awaiting a carrier) or "POD_RECEIVED" (accounting
+// internal). Map 14 internal states to 8 customer-meaningful labels.
+const PUBLIC_STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Scheduled",
+  POSTED: "Scheduled",
+  TENDERED: "Scheduled",
+  CONFIRMED: "Scheduled",
+  BOOKED: "Scheduled",
+  DISPATCHED: "Dispatched",
+  AT_PICKUP: "At pickup",
+  LOADED: "Picked up",
+  PICKED_UP: "Picked up",
+  IN_TRANSIT: "In transit",
+  AT_DELIVERY: "Arriving",
+  DELIVERED: "Delivered",
+  POD_RECEIVED: "Delivered",
+  INVOICED: "Delivered",
+  COMPLETED: "Delivered",
+  TONU: "Cancelled",
+  CANCELLED: "Cancelled",
+};
+
+function publicStatusLabel(status: string): string {
+  return PUBLIC_STATUS_LABEL[status] || status.replace(/_/g, " ");
+}
 
 export default function PublicTrackPage() {
   const [kind, setKind] = useState<SearchKind>("bol");
@@ -167,7 +198,7 @@ export default function PublicTrackPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 text-xs rounded-full bg-[#FAEEDA] text-[#854F0B] font-medium">
-                  {result.status.replace(/_/g, " ")}
+                  {publicStatusLabel(result.status)}
                 </span>
                 {result.actualDelivery && <span className="px-3 py-1 text-xs rounded-full bg-green-500/20 text-green-400">On time</span>}
               </div>
