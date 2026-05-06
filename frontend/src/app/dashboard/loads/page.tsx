@@ -1029,9 +1029,17 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         </div>
         {load.accessorials && load.accessorials.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {load.accessorials.map((a) => (
-              <span key={a} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-400">{a}</span>
-            ))}
+            {load.accessorials.map((a: any, i: number) => {
+              const label =
+                typeof a === "string"
+                  ? a
+                  : a && typeof a === "object" && "type" in a
+                  ? `${a.type}${a.amount ? ` ($${a.amount})` : ""}`
+                  : "Accessorial";
+              return (
+                <span key={i} className="px-2 py-0.5 bg-white/10 rounded text-xs text-slate-400">{label}</span>
+              );
+            })}
           </div>
         )}
         {load.specialInstructions && (

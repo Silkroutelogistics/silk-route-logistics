@@ -3625,7 +3625,109 @@
 //            +2, 4 backend single-line edits). Sprint 25 Phase A had
 //            estimated 80-130 LOC for U1; U2's lighter shape per A10.
 //            Per §3.1 sequence-continuous rule: v3.8.aad → v3.8.aae.
-export const SRL_VERSION = "3.8.aae";
+// v3.8.aaf — Sprint 26b: hotfix. Closes /dashboard/loads click-to-
+//            detail React error #31 crash that surfaced during Sprint
+//            26 (v3.8.aae) Phase C smoke and blocked verification.
+//
+//            ROOT CAUSE — JSON column shape mismatch
+//
+//            Order Builder writes Load.accessorials as
+//            Array<{type, amount, payer}> per the Accessorial interface
+//            at frontend/src/app/dashboard/orders/types.ts:90.
+//            Convert-to-load endpoint at backend/src/routes/orders.ts
+//            :455 writes the form's accessorials array verbatim to the
+//            JSON column.
+//
+//            Load Board side panel at frontend/src/app/dashboard/loads/
+//            page.tsx:1030-1036 (pre-fix) iterated load.accessorials
+//            with `key={a}` and rendered `{a}` directly as a React
+//            child, assuming string[] not object[]. React threw
+//            error #31 ("Objects are not valid as a React child")
+//            with the object's keys (type, amount, payer) in the
+//            error args.
+//
+//            Latent since v3.8.c (Order Builder convert flow shipped
+//            ~Apr 28). Pre-commit tsc passed every sprint because
+//            the Zod validator at backend/src/validators/load.ts:113
+//            is `z.array(z.any()).optional()` — anything goes through.
+//            Type-system can't catch JSON-column shape mismatches.
+//
+//            TRIGGER CONDITIONS
+//
+//            Bug fires only when ALL three are true:
+//              (1) Load was created via Order Builder convert flow
+//                  (Load Board "+ New Load" 4-step modal doesn't
+//                  expose accessorial entry, so loads created that
+//                  way don't trigger)
+//              (2) User added at least one accessorial in Order Builder
+//                  before converting
+//              (3) User clicks the load on Load Board to open the
+//                  side panel
+//
+//            Loads without accessorials don't trigger because the
+//            render block is gated on `load.accessorials &&
+//            load.accessorials.length > 0`.
+//
+//            FIX — F2 (per audit recommendation)
+//
+//            Render `accessorial.type` with optional ` ($amount)`
+//            suffix. Defensive type-check covers three input shapes:
+//
+//              - typeof a === "string"
+//                  → render `a` directly (legacy data compat for
+//                    any pre-v3.8.c records that may have stored
+//                    string-only accessorials)
+//              - object with `type` key
+//                  → render `${a.type}${a.amount ? ` ($${a.amount})` : ""}`
+//                    so AE staff actually see the accessorial value
+//                    in the side panel ("Detention ($250)")
+//              - anything else (null, malformed, missing keys)
+//                  → render literal "Accessorial" fallback so render
+//                    doesn't crash even on unexpected data
+//
+//            React `key` switched from `key={a}` (which would also
+//            have collided when accessorials repeat the same type)
+//            to `key={i}` (array index, stable for this purely-
+//            visual list with no reorder).
+//
+//            ADJACENT RISK SWEEP (Phase A confirmed clean)
+//
+//            Load model has 4 JSON columns total: stops (1112),
+//            accessorials (1146 — THIS BUG), additionalRefs (1225),
+//            datPostedFields (1254). Audited Load Board page for
+//            React-child rendering of any of these — only
+//            accessorials is rendered as a child, so this is a
+//            one-finding fix, not a class-wide cleanup.
+//
+//            OUT OF SCOPE
+//
+//              - Tightening backend validator z.array(z.any()) to
+//                a typed Zod schema (z.array(z.object({type,
+//                amount, payer}))) — separate sprint; deferred
+//                because the typed validator alone doesn't prevent
+//                future render-side bugs, just data-side. The render
+//                fix above is what closes the immediate failure.
+//              - Audit other render sites that read JSON columns
+//                across the codebase — broader audit sprint; this
+//                hotfix scoped to Load Board only.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Net LOC change: ~10 (1 file, accessorials block
+//            rewritten with defensive type-check + index keying).
+//            Per §3.1 sequence-continuous rule: v3.8.aae → v3.8.aaf.
+//            Customer-facing AE Console surface — version-bump
+//            justified.
+//
+//            CLAUDE.md §13.3 Item 32 logged + closed in this same
+//            commit per the established hotfix-with-immediate-close
+//            pattern (e.g., Item 31 logged in v3.8.aad / closed in
+//            v3.8.aae across consecutive sprints; this is the same
+//            class but the discovery-to-close window is one sprint
+//            shorter because the bug blocked Sprint 26 smoke).
+export const SRL_VERSION = "3.8.aaf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
