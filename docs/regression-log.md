@@ -13,6 +13,26 @@ so it's searchable and never lost.
 
 ---
 
+## Open — discovered 2026-05-06 (Sprint 24 smoke)
+
+### P1 — `/accounting/analytics` crashes with null-toFixed error
+- Page: [`frontend/src/app/accounting/analytics/page.tsx:160`](frontend/src/app/accounting/analytics/page.tsx#L160)
+- Symptom: Full-page "Something went wrong / Cannot read properties of null (reading 'toFixed')" error boundary. Blocks AE Console analytics view entirely.
+- Root cause: `pct(l.marginPercent)` at line 160 calls `pct` helper (defined line 10 as `(n: number) => string`) which calls `.toFixed(1)` on the input unconditionally. When any load in response has null `marginPercent`, this crashes the page render.
+- Severity: P1 — internal AE Console, full-page crash, blocks financial analysis work
+- Status: Open — logged in CLAUDE.md §13.3 Item 12.1 (paired with 12.2 below for single-sprint fix)
+- Date noted: 2026-05-06 (during v3.8.aab Sprint 24 smoke)
+
+### P1 — `/accounting/pnl` crashes with null-toFixed error
+- Page: [`frontend/src/app/accounting/pnl/page.tsx:145`](frontend/src/app/accounting/pnl/page.tsx#L145)
+- Symptom: Full-page "Something went wrong / Cannot read properties of null (reading 'toFixed')" error boundary. Blocks AE Console Load P&L view entirely.
+- Root cause: Per-row table cell renders `load.marginPercent.toFixed(1)` with no null guard. Same file already null-guards `load.revenuePerMile` at line 148 with em-dash fallback — pattern established but inconsistently applied. KPI cards at lines 74-75 are safe via `(data?.avgMarginPercent || 0).toFixed(1)`.
+- Severity: P1 — same blast radius as `/accounting/analytics`
+- Status: Open — logged in CLAUDE.md §13.3 Item 12.2 (bundles with 12.1, shared root cause: `Load.marginPercent` nullable + UI render assumes non-null)
+- Date noted: 2026-05-06 (during v3.8.aab Sprint 24 smoke)
+
+---
+
 ## Open — discovered 2026-04-22 evening
 
 ### P2 — "Get a Free Quote" information vague
