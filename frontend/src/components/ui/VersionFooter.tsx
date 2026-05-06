@@ -4010,7 +4010,81 @@
 //              Item 36: B28-T1.2-C — dispatch@ → operations@ email
 //              Item 37: B28-T1.2-D — MC#/DOT# format hyphen → `#`
 //              Item 38: adjacent governing-law Texas → Michigan + venue
-export const SRL_VERSION = "3.8.aai";
+// v3.8.aaj — Sprint 31: hotfix. RC Modal Carrier Search 404 silent-fail.
+//            Closes §13.3 Item 39 (B28-T1.3-A re-diagnosed).
+//
+//            ROOT CAUSE — route URL mismatch
+//
+//            RateConfirmationModal.tsx:1422 (pre-fix) called:
+//              api.get("/carriers/all", { params: { search, limit }})
+//
+//            But the canonical handler getAllCarriers is mounted at
+//            `/api/carrier/all` (singular) per backend/src/routes/
+//            carrier.ts:123, NOT `/api/carriers/all` (plural).
+//
+//            The plural route file (routes/carriers.ts) defines
+//              GET /         → getAllCarriers (with carrierQuerySchema)
+//              GET /:id      → getCarrierDetail
+//
+//            Express matched `/api/carriers/all` against the `/:id`
+//            route with `req.params.id = "all"`, called
+//            getCarrierDetail("all") → returned 404 (no carrier with
+//            id "all"). Frontend useQuery silently swallowed the 404,
+//            `data` stayed undefined, dropdown render gated on
+//            `showSearch && carriers && (...)` never fired, AE saw
+//            silent dead-state — input typed, no dropdown, no error,
+//            no autofill.
+//
+//            Re-diagnosis history: B28-T1.3-A was originally walked
+//            and logged as "P1 missing empty state on carrier search."
+//            Phase A audit corrected the diagnosis — the empty state
+//            was never the bug. The bug is the route URL.
+//            Memory #11 audit-first methodology firing: walk surfaces
+//            symptom, audit identifies real cause, correct fix ships.
+//            (Pattern matches Sprint 26 → 26b accessorial walk →
+//            actual root cause discovery.)
+//
+//            FIX
+//
+//            1-character change: `s` removed from `carriers/all`.
+//            New URL: `/carrier/all`. Now resolves to the actual
+//            getAllCarriers handler at backend/src/routes/carrier.ts
+//            :123.
+//
+//            Inline comment added at the call site referencing this
+//            sprint + §13.3 Item 40 (the duplicate-route consolidation
+//            backlog item).
+//
+//            ADJACENT FINDING LOGGED, NOT FIXED (§13.3 Item 40)
+//
+//            Two carrier-route files exist:
+//              backend/src/routes/carrier.ts  (singular) — mounted
+//                at /api/carrier — has /all (no validation)
+//              backend/src/routes/carriers.ts (plural) — mounted at
+//                /api/carriers — has / (with validation) + /:id
+//
+//            Both files call the same getAllCarriers controller.
+//            Validation drift between the two paths. Future cleanup
+//            should consolidate to one file + one URL pattern;
+//            tracked as Item 40 separately. Sprint 31 stays atomic
+//            on the URL fix per §3.3 "no scope creep" rule.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes),
+//            frontend next build clean.
+//
+//            Net LOC change: ~7 (1 URL char swap + 6-line inline
+//            comment block referencing the route-consolidation
+//            backlog item).
+//            Per §3.1 sequence-continuous rule: v3.8.aai → v3.8.aaj.
+//            AE Console surface — version-bump justified.
+//
+//            §13.3 Item 39 logged + closed in this same commit per
+//            the established hotfix-with-immediate-close pattern
+//            (Items 31, 32, 33, 34-38 same shape).
+//            §13.3 Item 40 logged for future consolidation, not
+//            closed.
+export const SRL_VERSION = "3.8.aaj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1419,7 +1419,13 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
   const { data: carriers } = useQuery({
     queryKey: ["carriers-all", carrierSearch],
     queryFn: () =>
-      api.get("/carriers/all", { params: { search: carrierSearch, limit: 10 } }).then((r) => r.data),
+      // v3.8.aaj — was `/carriers/all` (plural), which routed via Express
+      // wildcard to `/api/carriers/:id` with id="all" → 404 silent-fail.
+      // Canonical endpoint is `/carrier/all` (singular) per
+      // backend/src/routes/carrier.ts:123. The duplicate carrier-route
+      // surfaces (singular vs plural) are logged in §13.3 Item 40 for
+      // future consolidation. Closes §13.3 Item 39.
+      api.get("/carrier/all", { params: { search: carrierSearch, limit: 10 } }).then((r) => r.data),
     enabled: showSearch && carrierSearch.length >= 2,
   });
 
