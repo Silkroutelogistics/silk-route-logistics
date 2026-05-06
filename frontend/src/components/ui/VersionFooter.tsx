@@ -3113,7 +3113,135 @@
 //           changes to AE Console accounting/invoices page +
 //           Cmd+K search button (every authenticated user
 //           encounters both daily).
-export const SRL_VERSION = "3.8.zz";
+// v3.8.aaa — Sprint 23: Quick Pay tier reconciliation. AE Accounting
+//            Console Quick Pay Queue + Carrier Payments UI updated
+//            from legacy 5-tier PaymentTier display (Flash/Express/
+//            Priority/Partner/Elite) to canonical Caravan Partner
+//            Program 3-tier structure (Silver/Gold/Platinum) per
+//            memory #7 + CLAUDE.md §8 + frontend/public/carriers.html.
+//
+//            Resolves operational risk surfaced 2026-05-04: AE
+//            Accounting Console showed different tier nomenclature
+//            than carrier-facing silkroutelogistics.ai/carriers,
+//            creating cognitive load + error risk during BKN first
+//            load processing (mid-May).
+//
+//            STRUCTURAL MISMATCH (not a rename):
+//            The legacy PaymentTier enum (FLASH/EXPRESS/PRIORITY/
+//            PARTNER/ELITE/STANDARD at schema.prisma:171) encoded
+//            payment SPEED only. Canonical Caravan Partner Program
+//            (CarrierTier enum SILVER/GOLD/PLATINUM/GUEST/NONE at
+//            schema.prisma:66) encodes carrier loyalty TIER ×
+//            payment SPEED orthogonally:
+//              Silver:   Net-30 standard, 3% 7-day QP, 5% same-day
+//              Gold:     Net-21 standard, 2% 7-day QP, 4% same-day
+//              Platinum: Net-14 standard, 1% 7-day QP, 3% same-day
+//
+//            PATH 2 SCOPE (per directive Phase A decision #1):
+//            UI displays canonical CarrierTier badge from
+//            CarrierProfile.tier + speed-bucket label derived from
+//            legacy PaymentTier + actual fee% from quickPayFeePercent
+//            field on CarrierPay. Visible truth on UI, honors legacy
+//            data. Single atomic commit, ~85-100 LOC.
+//
+//            Path 1 (UI cosmetic only with translation table)
+//            rejected — too cosmetic, still confuses on row-level.
+//            Path 3 (full data model refactor splitting paymentTier
+//            into paymentSpeed + tierAtTimeOfPay + Prisma migration
+//            + DB backfill) explicitly OUT OF SCOPE — multi-sprint
+//            with explicit DB-migration authorization required.
+//
+//            Backend (1 file, ~10 LOC):
+//              accountingController.ts:643 (getPayments) +
+//              accountingController.ts:1245 (getPaymentQueue):
+//              extend carrier.select to include
+//              `carrierProfile: { select: { tier: true } }` so the
+//              UI can render Silver/Gold/Platinum badge from the
+//              authoritative CarrierProfile.tier source.
+//
+//            Backend SLA hours UNCHANGED (per directive decision #4):
+//            FLASH=2h, EXPRESS=24h, PRIORITY=48h, PARTNER=72h,
+//            ELITE=120h, STANDARD=168h preserved as operational
+//            deadline encoding. UI relabels speed bucket only.
+//            SLA hour reconciliation requires SLA-policy review
+//            and is a separate sprint scope.
+//
+//            Frontend (2 files, ~85 LOC):
+//
+//            accounting/quick-pay/page.tsx:
+//              - Replaced TIER_INFO (legacy 5-tier with custom
+//                per-tier color palette) with two new constants:
+//                CARAVAN_TIER_BADGE (Silver/Gold/Platinum/Guest/
+//                None — same palette as carrier/dashboard/page.tsx
+//                per directive decision #7) and SPEED_LABEL
+//                (legacy PaymentTier → Same-Day / 7-Day Quick Pay /
+//                Standard).
+//              - Added CARAVAN_RATE_MATRIX constant referencing
+//                memory #7 canonical structure for the legend bar.
+//              - Replaced "Payment Tiers:" legend bar with full
+//                3-tier × 3-speed rate matrix (canonical source of
+//                truth for AE staff resolving carrier disputes).
+//              - Added "Speed" column to queue table; Tier column
+//                now shows canonical CarrierTier badge.
+//              - Fee column now shows actual fee% (from
+//                quickPayFeePercent or derived) alongside dollar
+//                amount.
+//              - feePercentLabel() helper for fallback when
+//                quickPayFeePercent is null on legacy records.
+//              - QuickPayRequest interface extended with
+//                carrier.carrierProfile?.tier (matches backend
+//                include).
+//
+//            accounting/payments/page.tsx:
+//              - Replaced TIER_COLORS (legacy 5-tier palette) with
+//                CARAVAN_TIER_BADGE + SPEED_LABEL same as quick-pay
+//                page.
+//              - Added "Speed" column to payments table; Tier
+//                column now shows canonical CarrierTier badge.
+//              - CarrierPayment interface extended with
+//                carrier.carrierProfile?.tier.
+//
+//            STANDARD tier handling (per directive decision #3):
+//            Display as "Standard" speed label + carrier's
+//            canonical tier badge. Quick-pay queue filters out
+//            STANDARD (line 1237 in accountingController), so the
+//            badge fallback applies only on the broader payments
+//            page.
+//
+//            v3.7.a tierMap pattern reuse: the existing translation
+//            map at accountingController.ts:3911-3918
+//            (FLASH/EXPRESS → SILVER, PRIORITY/PARTNER → GOLD,
+//            ELITE → PLATINUM) was added v3.7.a for analytics
+//            aggregation. Sprint 23 extends the same translation
+//            philosophy to UI display layer — show canonical truth
+//            without rewriting the legacy enum data.
+//
+//            Path 3 backlog: full data model refactor remains as
+//            separate sprint candidate when SLA-policy review
+//            happens. Sprint 23 closes the immediate operational
+//            risk for BKN first load processing without committing
+//            to the data model split.
+//
+//            Visual consistency: Silver/Gold/Platinum badge palette
+//            (slate-300/yellow-300/purple-300 on respective tinted
+//            bg) matches the same TIER_COLORS at
+//            carrier/dashboard/page.tsx:23-27. Speed labels use
+//            neutral slate (no per-speed color since same-day vs
+//            7-day is informational, not severity).
+//
+//            Pre-commit verification: backend tsc --noEmit clean,
+//            frontend next build clean.
+//
+//            Per §3.1 sequence-continuous rule: v3.8.zz → v3.8.aaa
+//            (first double-letter post-zz overflow per §3.1 "never
+//            roll the minor at z" rule). Future post-aaa: aab,
+//            aac, ..., azz, baa, ...
+//
+//            Per §3.1 version bump justified — publicly-visible
+//            changes to AE Accounting Console Quick Pay Queue +
+//            Carrier Payments pages, both daily-use surfaces for
+//            AE staff processing carrier payments.
+export const SRL_VERSION = "3.8.aaa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Zap, Search, Clock, DollarSign, ChevronLeft, ChevronRight, CheckCircle2, X, AlertTriangle } from "lucide-react";
@@ -12,6 +12,7 @@ interface QuickPayRequest {
   loadId: string;
   amount: number;
   quickPayFeeAmount: number;
+  quickPayFeePercent?: number | null;
   netAmount: number;
   paymentTier: string;
   status: string;
@@ -21,16 +22,66 @@ interface QuickPayRequest {
   hoursRemaining: number;
   isOverdue: boolean;
   load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string };
-  carrier: { id: string; company: string | null; firstName: string; lastName: string };
+  carrier: {
+    id: string;
+    company: string | null;
+    firstName: string;
+    lastName: string;
+    // v3.8.aaa Sprint 23: canonical Caravan Partner Program tier
+    // (Silver/Gold/Platinum) per memory #7. Resolved from
+    // CarrierProfile.tier on the backend include.
+    carrierProfile?: { tier: string } | null;
+  };
 }
 
-const TIER_INFO: Record<string, { label: string; fee: string; days: string; color: string }> = {
-  FLASH: { label: "Flash", fee: "5%", days: "Same Day", color: "text-red-400" },
-  EXPRESS: { label: "Express", fee: "3.5%", days: "+3 Days", color: "text-orange-400" },
-  PRIORITY: { label: "Priority", fee: "2%", days: "+7 Days", color: "text-yellow-400" },
-  PARTNER: { label: "Partner", fee: "1.5%", days: "+7 Days", color: "text-blue-400" },
-  ELITE: { label: "Elite", fee: "0%", days: "+14 Days", color: "text-purple-400" },
+// v3.8.aaa Sprint 23: canonical Caravan Partner Program tier display.
+// Same palette as carrier/dashboard/page.tsx:23-27 for visual consistency
+// across AE Console + carrier-facing surfaces. Per directive decision #7.
+const CARAVAN_TIER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
+  SILVER:   { label: "Silver",   bg: "bg-slate-500/20",  text: "text-slate-300"  },
+  GOLD:     { label: "Gold",     bg: "bg-yellow-500/20", text: "text-yellow-300" },
+  PLATINUM: { label: "Platinum", bg: "bg-purple-500/20", text: "text-purple-300" },
+  GUEST:    { label: "Guest",    bg: "bg-slate-600/20",  text: "text-slate-400"  },
+  NONE:     { label: "—",        bg: "bg-white/5",       text: "text-slate-500"  },
 };
+
+// v3.8.aaa Sprint 23: legacy PaymentTier enum → canonical payment-speed
+// label. The legacy 5-tier encoded payment SPEED only; canonical Caravan
+// Partner Program model encodes tier × speed orthogonally. This map shows
+// the speed dimension of legacy records on the AE Console UI without
+// touching the underlying PaymentTier enum (data model split deferred to
+// separate sprint per directive decision #5). Backend SLA hours stay
+// legacy-encoded per directive decision #4 — operational deadlines
+// preserved for AE workflow.
+const SPEED_LABEL: Record<string, { label: string; color: string }> = {
+  FLASH:    { label: "Same-Day",      color: "text-slate-300" },
+  EXPRESS:  { label: "Same-Day",      color: "text-slate-300" },
+  PRIORITY: { label: "7-Day Quick Pay", color: "text-slate-400" },
+  PARTNER:  { label: "7-Day Quick Pay", color: "text-slate-400" },
+  ELITE:    { label: "7-Day Quick Pay", color: "text-slate-400" },
+  STANDARD: { label: "Standard",      color: "text-slate-500" },
+};
+
+// Canonical Caravan Partner Program rate matrix per memory #7 + CLAUDE.md
+// §8 + frontend/public/carriers.html line 217-649. Reference for the
+// legend bar at the top of the QP queue page.
+const CARAVAN_RATE_MATRIX: Array<{ tier: string; standard: string; sevenDay: string; sameDay: string }> = [
+  { tier: "Silver",   standard: "Net-30", sevenDay: "3%", sameDay: "5%" },
+  { tier: "Gold",     standard: "Net-21", sevenDay: "2%", sameDay: "4%" },
+  { tier: "Platinum", standard: "Net-14", sevenDay: "1%", sameDay: "3%" },
+];
+
+function feePercentLabel(req: QuickPayRequest): string {
+  if (typeof req.quickPayFeePercent === "number" && req.quickPayFeePercent > 0) {
+    return `${req.quickPayFeePercent}%`;
+  }
+  // Fallback: derive from fee amount over gross when API omits the field
+  if (req.amount > 0 && req.quickPayFeeAmount >= 0) {
+    const pct = (req.quickPayFeeAmount / req.amount) * 100;
+    return `${pct.toFixed(1)}%`;
+  }
+  return "—";
+}
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
@@ -67,15 +118,31 @@ export default function QuickPayQueuePage() {
         )}
       </div>
 
-      {/* Tier Legend */}
-      <div className="flex items-center gap-4 mb-6 bg-white/5 border border-white/5 rounded-xl px-5 py-3">
-        <span className="text-xs text-slate-500">Payment Tiers:</span>
-        {Object.entries(TIER_INFO).map(([key, info]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <span className={`text-xs font-bold ${info.color}`}>{info.label}</span>
-            <span className="text-[10px] text-slate-500">{info.fee} / {info.days}</span>
-          </div>
-        ))}
+      {/* Caravan Partner Program rate matrix (canonical per memory #7) */}
+      <div className="mb-6 bg-white/5 border border-white/5 rounded-xl px-5 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-white">Caravan Partner Program</span>
+          <span className="text-[10px] text-slate-500">Tier × Speed rate matrix</span>
+        </div>
+        <div className="grid grid-cols-4 gap-3 text-xs">
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Tier</div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Standard</div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">7-Day QP</div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Same-Day</div>
+          {CARAVAN_RATE_MATRIX.map((r) => {
+            const badge = CARAVAN_TIER_BADGE[r.tier.toUpperCase()];
+            return (
+              <React.Fragment key={r.tier}>
+                <div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${badge.bg} ${badge.text}`}>{r.tier}</span>
+                </div>
+                <div className="text-slate-300">{r.standard}</div>
+                <div className="text-slate-300">{r.sevenDay}</div>
+                <div className="text-slate-300">{r.sameDay}</div>
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
 
       {/* Queue Table */}
@@ -87,6 +154,7 @@ export default function QuickPayQueuePage() {
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Load</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Carrier</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Tier</th>
+              <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Speed</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Gross</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Fee</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Net</th>
@@ -97,10 +165,15 @@ export default function QuickPayQueuePage() {
           </thead>
           <tbody className="divide-y divide-white/5">
             {isLoading ? (
-              [...Array(5)].map((_, i) => <tr key={i}><td colSpan={10} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
+              [...Array(5)].map((_, i) => <tr key={i}><td colSpan={11} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>)
             ) : data?.queue?.length ? (
               data.queue.map(req => {
-                const tierInfo = TIER_INFO[req.paymentTier] || TIER_INFO.FLASH;
+                // v3.8.aaa Sprint 23: canonical Caravan Partner Program tier
+                // (Silver/Gold/Platinum) from CarrierProfile.tier; speed label
+                // derived from legacy PaymentTier enum.
+                const caravanTier = req.carrier.carrierProfile?.tier || "NONE";
+                const tierBadge = CARAVAN_TIER_BADGE[caravanTier] || CARAVAN_TIER_BADGE.NONE;
+                const speed = SPEED_LABEL[req.paymentTier] || SPEED_LABEL.STANDARD;
                 return (
                   <tr key={req.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{req.paymentNumber}</td>
@@ -108,9 +181,14 @@ export default function QuickPayQueuePage() {
                     <td className="px-5 py-3">
                       <p className="text-sm text-slate-300">{req.carrier.company || `${req.carrier.firstName} ${req.carrier.lastName}`}</p>
                     </td>
-                    <td className="px-5 py-3"><span className={`text-xs font-bold ${tierInfo.color}`}>{tierInfo.label}</span></td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${tierBadge.bg} ${tierBadge.text}`}>{tierBadge.label}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`text-xs ${speed.color}`}>{speed.label}</span>
+                    </td>
                     <td className="px-5 py-3 text-sm text-white">{fmt(req.amount)}</td>
-                    <td className="px-5 py-3 text-sm text-yellow-400">-{fmt(req.quickPayFeeAmount)}</td>
+                    <td className="px-5 py-3 text-sm text-yellow-400">-{fmt(req.quickPayFeeAmount)} <span className="text-[10px] text-slate-500">({feePercentLabel(req)})</span></td>
                     <td className="px-5 py-3 text-sm text-green-400 font-medium">{fmt(req.netAmount)}</td>
                     <td className="px-5 py-3">
                       {req.isOverdue ? (
@@ -137,7 +215,7 @@ export default function QuickPayQueuePage() {
                 );
               })
             ) : (
-              <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-slate-500">No quick pay requests in queue</td></tr>
+              <tr><td colSpan={11} className="px-5 py-12 text-center text-sm text-slate-500">No quick pay requests in queue</td></tr>
             )}
           </tbody>
         </table>

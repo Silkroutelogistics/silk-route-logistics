@@ -640,7 +640,19 @@ export async function getPayments(req: AuthRequest, res: Response) {
       prisma.carrierPay.findMany({
         where,
         include: {
-          carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
+          // v3.8.aaa Sprint 23: include carrierProfile.tier so AE Console
+          // can render canonical Caravan Partner Program tier badge
+          // (Silver/Gold/Platinum) alongside legacy PaymentTier speed
+          // bucket. Reconciles UI with memory #7 canonical structure.
+          carrier: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              company: true,
+              carrierProfile: { select: { tier: true } },
+            },
+          },
           load: {
             select: {
               referenceNumber: true,
@@ -1242,7 +1254,17 @@ export async function getPaymentQueue(req: AuthRequest, res: Response) {
       prisma.carrierPay.findMany({
         where,
         include: {
-          carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
+          // v3.8.aaa Sprint 23: include carrierProfile.tier — see
+          // getPayments above for full reconciliation rationale.
+          carrier: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              company: true,
+              carrierProfile: { select: { tier: true } },
+            },
+          },
           load: {
             select: {
               referenceNumber: true,

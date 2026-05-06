@@ -29,7 +29,16 @@ interface CarrierPayment {
     destCity: string;
     destState: string;
   };
-  carrier: { id: string; company: string | null; firstName: string; lastName: string };
+  carrier: {
+    id: string;
+    company: string | null;
+    firstName: string;
+    lastName: string;
+    // v3.8.aaa Sprint 23: canonical Caravan Partner Program tier
+    // (Silver/Gold/Platinum) per memory #7. Pulled from
+    // CarrierProfile.tier on the backend include.
+    carrierProfile?: { tier: string } | null;
+  };
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -41,13 +50,27 @@ const STATUS_COLORS: Record<string, string> = {
   ON_HOLD: "bg-orange-500/20 text-orange-400",
 };
 
-const TIER_COLORS: Record<string, string> = {
-  FLASH: "text-red-400",
-  EXPRESS: "text-orange-400",
-  PRIORITY: "text-yellow-400",
-  PARTNER: "text-blue-400",
-  ELITE: "text-purple-400",
-  STANDARD: "text-slate-400",
+// v3.8.aaa Sprint 23: canonical Caravan Partner Program tier badge.
+// Same palette as carrier/dashboard/page.tsx + accounting/quick-pay/page.tsx
+// for visual consistency.
+const CARAVAN_TIER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
+  SILVER:   { label: "Silver",   bg: "bg-slate-500/20",  text: "text-slate-300"  },
+  GOLD:     { label: "Gold",     bg: "bg-yellow-500/20", text: "text-yellow-300" },
+  PLATINUM: { label: "Platinum", bg: "bg-purple-500/20", text: "text-purple-300" },
+  GUEST:    { label: "Guest",    bg: "bg-slate-600/20",  text: "text-slate-400"  },
+  NONE:     { label: "—",        bg: "bg-white/5",       text: "text-slate-500"  },
+};
+
+// v3.8.aaa Sprint 23: legacy PaymentTier enum → canonical payment-speed
+// label. See accounting/quick-pay/page.tsx for full reconciliation
+// rationale. Backend SLA hours stay legacy-encoded.
+const SPEED_LABEL: Record<string, { label: string; color: string }> = {
+  FLASH:    { label: "Same-Day",        color: "text-slate-300" },
+  EXPRESS:  { label: "Same-Day",        color: "text-slate-300" },
+  PRIORITY: { label: "7-Day Quick Pay", color: "text-slate-400" },
+  PARTNER:  { label: "7-Day Quick Pay", color: "text-slate-400" },
+  ELITE:    { label: "7-Day Quick Pay", color: "text-slate-400" },
+  STANDARD: { label: "Standard",        color: "text-slate-500" },
 };
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -123,6 +146,7 @@ export default function CarrierPaymentsPage() {
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Carrier</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Amount</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Tier</th>
+              <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Speed</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Status</th>
               <th className="text-right text-xs text-slate-500 font-medium px-5 py-3">Actions</th>
             </tr>
@@ -130,10 +154,16 @@ export default function CarrierPaymentsPage() {
           <tbody className="divide-y divide-white/5">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
-                <tr key={i}><td colSpan={7} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={8} className="px-5 py-3"><div className="h-5 bg-white/5 rounded animate-pulse" /></td></tr>
               ))
             ) : data?.payments?.length ? (
               data.payments.map((pay) => {
+                // v3.8.aaa Sprint 23: canonical Caravan Partner Program tier
+                // (Silver/Gold/Platinum) from CarrierProfile.tier + speed
+                // label derived from legacy PaymentTier enum.
+                const caravanTier = pay.carrier.carrierProfile?.tier || "NONE";
+                const tierBadge = CARAVAN_TIER_BADGE[caravanTier] || CARAVAN_TIER_BADGE.NONE;
+                const speed = SPEED_LABEL[pay.paymentTier || "STANDARD"] || SPEED_LABEL.STANDARD;
                 return (
                   <tr key={pay.id} className="hover:bg-[#0F1117] cursor-pointer" onClick={() => setSelected(pay)}>
                     <td className="px-5 py-3 text-sm text-white font-medium">{pay.paymentNumber}</td>
@@ -144,9 +174,10 @@ export default function CarrierPaymentsPage() {
                       {pay.quickPayFeeAmount ? <p className="text-[10px] text-yellow-400">-{fmt(pay.quickPayFeeAmount)} fee</p> : null}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`text-xs font-medium ${TIER_COLORS[pay.paymentTier || "STANDARD"]}`}>
-                        {pay.paymentTier || "STANDARD"}
-                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${tierBadge.bg} ${tierBadge.text}`}>{tierBadge.label}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`text-xs ${speed.color}`}>{speed.label}</span>
                     </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[pay.status]}`}>{pay.status}</span>
@@ -166,7 +197,7 @@ export default function CarrierPaymentsPage() {
                 );
               })
             ) : (
-              <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-500">No carrier payments found</td></tr>
+              <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-slate-500">No carrier payments found</td></tr>
             )}
           </tbody>
         </table>
