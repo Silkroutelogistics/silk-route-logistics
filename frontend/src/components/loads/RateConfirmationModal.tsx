@@ -415,7 +415,27 @@ function initForm(load: any, user: any): FormState {
     fuelSurcharge: load?.fuelSurcharge ? String(load.fuelSurcharge) : "0",
     fuelSurchargeType: load?.fuelSurchargeType || "FLAT",
     accessorials: load?.accessorials && Array.isArray(load.accessorials)
-      ? load.accessorials.map((a: any) => ({ id: generateId(), description: a.description || a, amount: a.amount ? String(a.amount) : "0" }))
+      ? load.accessorials.map((a: any) => {
+          // Three input shapes supported:
+          //   - string (legacy data)
+          //   - { description, amount }              (RC modal's own saved shape)
+          //   - { type, amount, payer }              (Order Builder shape per orders/types.ts:90)
+          // Order Builder writes `type`, not `description`. Pre-fix the code
+          // fell through `a.description || a` to the whole object when neither
+          // applied, which then crashed at line 500's .filter((a) => a.description.trim())
+          // — same root-cause class as Sprint 26b Load Board accessorial render.
+          const description =
+            typeof a === "string"
+              ? a
+              : a && typeof a === "object"
+              ? a.description || a.type || ""
+              : "";
+          return {
+            id: generateId(),
+            description,
+            amount: a?.amount ? String(a.amount) : "0",
+          };
+        })
       : [],
     totalCarrierPay: load?.totalCarrierPay ? String(load.totalCarrierPay) : "",
 

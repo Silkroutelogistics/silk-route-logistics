@@ -3816,7 +3816,87 @@
 //            Per §3.1 sequence-continuous rule: v3.8.aaf → v3.8.aag.
 //            Customer-facing surface (every BOL QR scan post-Sprint-26
 //            sees the new labels) — version-bump justified.
-export const SRL_VERSION = "3.8.aag";
+// v3.8.aah — Sprint 29: hotfix. Closes Sprint 28 Phase A finding A28-1
+//            (P0 RateConfirmation modal accessorial shape mismatch).
+//            Same root-cause class as Sprint 26b's Load Board crash —
+//            Order Builder writes Array<{type, amount, payer}> per the
+//            Accessorial interface (orders/types.ts:90) but the RC
+//            modal hydrator at RateConfirmationModal.tsx:418 (pre-fix)
+//            assumed RC's own internal shape `{description, amount}`.
+//
+//            ROOT CAUSE — JSON column shape mismatch (re-emerged)
+//
+//            Pre-fix code:
+//              load.accessorials.map((a: any) => ({
+//                id: generateId(),
+//                description: a.description || a,  // BUG
+//                amount: a.amount ? String(a.amount) : "0",
+//              }))
+//
+//            For Order Builder accessorials `{type: "Detention", amount: 0,
+//            payer: "Customer"}`, `a.description` is undefined → the
+//            `|| a` fallback set `description` to the WHOLE object.
+//            Form state then carried the object through to:
+//              - Line 500: form.accessorials.filter((a) =>
+//                  a.description.trim()) — crashes with TypeError
+//                  ("a.description.trim is not a function") because the
+//                  object doesn't have .trim()
+//              - Line 1716-1717: <Input value={acc.description} ... />
+//                — React error #31 again because rendering object
+//
+//            Crashes when: AE opens RateConfirmation modal for any load
+//            created via Order Builder convert flow with at least one
+//            accessorial. Same trigger conditions as Sprint 26b Load
+//            Board crash but a different surface.
+//
+//            FIX — defensive type-check (pattern matches Sprint 26b)
+//
+//            Three input shapes supported:
+//              - string (legacy)                    → description = a
+//              - { description, amount } (RC own)   → description = a.description
+//              - { type, amount, payer } (Order Builder) → description = a.type
+//
+//            Code:
+//              const description =
+//                typeof a === "string" ? a
+//                : a && typeof a === "object" ? a.description || a.type || ""
+//                : "";
+//              return { id: generateId(), description,
+//                       amount: a?.amount ? String(a.amount) : "0" };
+//
+//            Now Order Builder accessorial `{type: "Detention", amount:
+//            0}` hydrates as RC modal accessorial `{id: ..., description:
+//            "Detention", amount: "0"}` — clean shape, no downstream
+//            crash, displays "Detention" in the description field.
+//
+//            ROOT-CAUSE LOOPHOLE STILL OPEN (Sprint 31 candidate)
+//
+//            Phase A A28-2 flagged validators/load.ts:113 `accessorials:
+//            z.array(z.any()).optional()` — the Zod validator accepts any
+//            shape, no API-layer enforcement. Sprint 26b + Sprint 29
+//            both cosmetic-patched the consumer side; the producer side
+//            (Order Builder write path) still emits its own shape, and
+//            the RC modal save path emits ITS own shape. Multiple shapes
+//            coexist in DB. Sprint 31 will tighten the validator + add a
+//            data migration to coerce all shapes to one canonical
+//            representation. Sprint 29 leaves the DB as-is and handles
+//            both shapes defensively at read time.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes), frontend
+//            next build clean.
+//
+//            Net LOC change: ~15 (RateConfirmationModal.tsx accessorial
+//            hydrator block expanded from 1 line to ~17 with defensive
+//            type-check + comment block explaining the three input
+//            shapes).
+//            Per §3.1 sequence-continuous rule: v3.8.aag → v3.8.aah.
+//            AE Console surface — version-bump justified.
+//
+//            Sprint 28 Phase A §13.3 Item 33 logged + closed in this
+//            same commit per the established hotfix-with-immediate-close
+//            pattern (Items 31, 32 same shape).
+export const SRL_VERSION = "3.8.aah";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
