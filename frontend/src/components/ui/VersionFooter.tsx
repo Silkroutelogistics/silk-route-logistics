@@ -3896,7 +3896,121 @@
 //            Sprint 28 Phase A §13.3 Item 33 logged + closed in this
 //            same commit per the established hotfix-with-immediate-close
 //            pattern (Items 31, 32 same shape).
-export const SRL_VERSION = "3.8.aah";
+// v3.8.aai — Sprint 30: hotfix. Closes 5 findings from Sprint 28 Phase
+//            B Tier 1.2 walk (B28-T1.2-A through D + adjacent
+//            governing-law fix). RC Modal Broker Info section displayed
+//            template values from a Texas-based shipping company that
+//            had never been updated for SRL. Wrong address (Houston
+//            vs Galesburg MI), wrong email (dispatch@ vs operations@),
+//            non-canonical MC#/DOT# format (hyphen vs `#` per voice.md
+//            :98), wrong governing-law clause (Texas vs Michigan per
+//            §14). P0 BKN-blocking — BKN ships in days; RC PDFs go to
+//            BKN's carriers and reference SRL's company info.
+//
+//            ROOT CAUSE — Texas-based shipper template provenance
+//
+//            All 5 wrong values trace to a single boilerplate import
+//            in the same module:
+//
+//              RateConfirmationModal.tsx:270 governing law: "State
+//                of Texas"
+//              RateConfirmationModal.tsx:274 mc: "MC-1794414"
+//              RateConfirmationModal.tsx:275 dot: "DOT-4526880"
+//              RateConfirmationModal.tsx:276 address: "8950 Westheimer
+//                Rd, Suite 200, Houston, TX 77063"
+//              RateConfirmationModal.tsx:278 email: "dispatch@
+//                silkroutelogistics.ai"
+//
+//            The Houston address + Texas governing law + dispatch@
+//            email pattern is consistent with a Texas-based broker
+//            template that was imported for the RC modal scaffolding
+//            and never had values swapped to SRL canonical. Phase A
+//            grep across frontend/src + backend/src returned this
+//            exact module as the only source of all 5 wrong values
+//            — single-file blast radius confirmed.
+//
+//            CANONICAL DATA APPLIED
+//
+//              Company:    Silk Route Logistics Inc. (unchanged)
+//              MC#:        MC# 1794414      (was "MC-1794414")
+//              DOT#:       DOT# 4526880     (was "DOT-4526880")
+//              Address:    2317 S 35th St, Galesburg, MI 49053
+//                          (was "8950 Westheimer Rd, Suite 200,
+//                          Houston, TX 77063")
+//              Phone:      (269) 220-6760   (unchanged)
+//              Email:      operations@silkroutelogistics.ai
+//                          (was "dispatch@silkroutelogistics.ai" —
+//                          dispatch@ is not in CLAUDE.md §1 canonical
+//                          alias list; operations@ is the explicit
+//                          canonical for "BOL, Rate Confirmation,
+//                          Invoice, and other shipper/carrier-facing
+//                          documents" per §1 + §3.10)
+//              Gov law:    Michigan + Kalamazoo County venue
+//                          (was Texas, no venue)
+//
+//            Sources of truth:
+//              - CLAUDE.md §1 — address, phone, MC#/DOT# numeric
+//              - .claude/skills/srl-brand-design/references/voice.md
+//                :98 — `MC# 1794414, DOT# 4526880` format convention
+//                (with `#` symbol, no hyphen, no leading zero)
+//              - CLAUDE.md §14 — Michigan governing law, Kalamazoo
+//                County venue
+//              - CLAUDE.md §3.10 — operations@ canonical alias for
+//                customer-facing shipping documents
+//
+//            FORMAT NOTES
+//
+//              - § symbol replaces "Section" word per legal convention
+//              - "MC# 1794414" with single space after `#` symbol
+//                matches voice.md SOT and existing BOL v2.9 production
+//                output
+//              - Address format follows USPS-canonical "Street, City,
+//                ST ZIP" comma-separated convention
+//
+//            SCOPE BOUNDED — single-file fix
+//
+//            Phase A grep sweep confirmed all wrong SRL data is
+//            contained in RateConfirmationModal.tsx. backend/src/
+//            services/eldService.ts:52 has "Houston, TX" but that's
+//            an ELD geocoding city lookup table (real city), not SRL
+//            company identity — unrelated, leave as-is.
+//
+//            OUT OF SCOPE (deferred to existing backlog items)
+//
+//              - frontend/src/lib/site-chrome.json has its own drift
+//                (mcNumber `01794414` leading-zero typo per §13.3
+//                Item 8.8, email `sales@` undocumented alias per
+//                §13.3 Item 8.2.1) — different surface (marketing
+//                page footers), separate sprint candidates
+//              - BOL/Invoice template authority blocks — §13.3 Item
+//                8.9 architectural sprint. Those templates use their
+//                own data sources via different code paths
+//              - Central authority module
+//                (frontend/src/lib/srl-info.ts) consolidating all
+//                customer-facing surfaces — Path 2 alternative,
+//                explicitly deferred to §13.3 Item 8.9 per Phase A
+//                A5-alt
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Net LOC change: ~7 source (6 inline value swaps + 1
+//            governing-law clause swap, all in one module). Smallest
+//            hotfix yet by source-LOC measure.
+//            Per §3.1 sequence-continuous rule: v3.8.aah → v3.8.aai.
+//            Customer-facing AE Console + RC PDF surface — version-
+//            bump justified.
+//
+//            §13.3 Items 34-38 logged + closed in this same commit
+//            per the established hotfix-with-immediate-close pattern
+//            (Items 31, 32, 33 same shape):
+//              Item 34: B28-T1.2-A — RC Broker Info placeholders
+//              Item 35: B28-T1.2-B — Houston → Galesburg address
+//              Item 36: B28-T1.2-C — dispatch@ → operations@ email
+//              Item 37: B28-T1.2-D — MC#/DOT# format hyphen → `#`
+//              Item 38: adjacent governing-law Texas → Michigan + venue
+export const SRL_VERSION = "3.8.aai";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

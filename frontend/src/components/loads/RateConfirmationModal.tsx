@@ -267,15 +267,15 @@ const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
 
 11. CONFIDENTIALITY: Carrier shall not contact Broker's customer(s) directly or disclose any rate, financial, or business information to any third party.
 
-12. GOVERNING LAW: This agreement shall be governed by the laws of the State of Texas and applicable federal transportation law (49 U.S.C. Section 14101(b)).`;
+12. GOVERNING LAW: This agreement shall be governed by the laws of the State of Michigan, with venue in Kalamazoo County, and applicable federal transportation law (49 U.S.C. § 14101(b)).`;
 
 const SRL_INFO = {
   company: "Silk Route Logistics Inc.",
-  mc: "MC-1794414",
-  dot: "DOT-4526880",
-  address: "8950 Westheimer Rd, Suite 200, Houston, TX 77063",
+  mc: "MC# 1794414",
+  dot: "DOT# 4526880",
+  address: "2317 S 35th St, Galesburg, MI 49053",
   phone: "(269) 220-6760",
-  email: "dispatch@silkroutelogistics.ai",
+  email: "operations@silkroutelogistics.ai",
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
