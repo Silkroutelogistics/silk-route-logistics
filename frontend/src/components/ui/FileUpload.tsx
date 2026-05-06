@@ -117,7 +117,7 @@ export function FileUpload({ files, onChange, maxFiles = 5 }: FileUploadProps) {
                 <p className="text-xs text-white/40">{(file.size / 1024).toFixed(0)} KB</p>
               </div>
               <button onClick={() => remove(i)} className="p-1 hover:bg-white/10 rounded transition">
-                <X className="w-4 h-4 text-white/50" />
+                <X className="w-4 h-4 text-slate-500" />
               </button>
             </li>
           ))}

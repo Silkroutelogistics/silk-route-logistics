@@ -52,7 +52,7 @@ export function CreateSettlementModal({ onClose }: Props) {
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">Create Settlement</h2>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded transition">
-            <X className="w-5 h-5 text-white/60" />
+            <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
 

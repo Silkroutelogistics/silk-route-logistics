@@ -3368,7 +3368,77 @@
 //            Net LOC change: ~240 (mostly removal — 5 theme blocks
 //            + ThemePanel 6-theme grid + bronze CSS rules deleted;
 //            tier palette swaps are 1-to-1 token replacements).
-export const SRL_VERSION = "3.8.aab";
+// v3.8.aac — Sprint 24a: 4-file brand-token follow-up commit.
+//            Closes drift surfaced during Sprint 24 (v3.8.aab) Phase
+//            C verification. Per §3.3 atomic-commit + "no scope
+//            creep" rule, these 4 working-tree edits from a prior
+//            session were NOT bundled into v3.8.aab — committing
+//            separately as v3.8.aac follow-up.
+//
+//            Two swap classes across 4 files:
+//
+//            (1) Cross-mode legibility per memory #11
+//                (text-white/X → text-slate-500):
+//                - components/accounting/CreateSettlementModal.tsx
+//                  line 55, X close icon (text-white/60)
+//                - components/ui/FileUpload.tsx
+//                  line 120, X remove icon (text-white/50)
+//
+//                Translucent white renders as ghost text on light
+//                surface in light mode; text-slate-500 with the
+//                global [data-mode="light"] override (CLAUDE.md
+//                §13.3 Item 10) lifts to navy on cream and stays
+//                readable on dark navy in dark mode.
+//
+//            (2) Non-canonical gold → canonical gold-dark per skill
+//                tokens.md (#C9A84C → #BA7517):
+//                - components/shipper/ShipmentDetailDrawer.tsx
+//                  lines 125, 131 (Download POD + Message Rep
+//                  hover state, two occurrences)
+//                - components/shipper/ShipperChatbot.tsx
+//                  line 126 (action chip text)
+//
+//                Palette canonicalization: #C9A84C is olive-gold,
+//                not in canonical token set; #BA7517 is canonical
+//                --gold-dark per CLAUDE.md §2.1.
+//
+//            DIRECTIVE-DESCRIPTION CORRECTION
+//            Sprint 24a directive paired ShipmentDetailDrawer with
+//            CreateSettlementModal (predicting both did the cross-
+//            mode swap) and ShipperChatbot with FileUpload (both
+//            gold). Phase A audit caught the mis-pairing — actual
+//            split is CreateSettlementModal + FileUpload do cross-
+//            mode; ShipmentDetailDrawer + ShipperChatbot do gold.
+//            Diffs themselves are clean drift cleanup; the directive
+//            description had files swapped between the two classes.
+//            Same audit-first discipline as 5 prior catches (per
+//            memory #11) — Phase A surfaces reality, scope corrects
+//            before commit.
+//
+//            RESIDUAL #C9A84C REFERENCES (logged not fixed)
+//            Two of the 4 files have non-canonical gold #C9A84C
+//            refs in border / hover-bg classes that were NOT swapped
+//            in the surfaced drift:
+//              - ShipmentDetailDrawer.tsx line 125:
+//                  hover:border-[#C9A84C] retained (only text-color
+//                  swapped to canonical)
+//              - ShipperChatbot.tsx line 126:
+//                  border-[#C9A84C]/40 + hover:bg-[#C9A84C]/10
+//                  retained (only text-color swapped to canonical)
+//
+//            Per §3.3 "no scope creep" — Sprint 24a closes SURFACED
+//            drift, doesn't expand into full canonicalization audit.
+//            Residuals logged in CLAUDE.md §13.3 (Brand-token
+//            canonicalization residual) for future per-finding
+//            triage.
+//
+//            Pre-commit verification: backend tsc clean, frontend
+//            next build clean.
+//
+//            Net LOC change: ~10 (4 files × 1-line surgical swap;
+//            ShipmentDetailDrawer has 2 swaps on adjacent lines).
+//            Per §3.1 sequence-continuous rule: v3.8.aab → v3.8.aac.
+export const SRL_VERSION = "3.8.aac";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

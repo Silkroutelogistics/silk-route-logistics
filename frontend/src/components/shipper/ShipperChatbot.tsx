@@ -123,7 +123,7 @@ export function ShipperChatbot() {
                     <button
                       key={action}
                       onClick={() => sendMessage(action)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-full border border-[#C9A84C]/40 text-[#C9A84C] hover:bg-[#C9A84C]/10 transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium rounded-full border border-[#C9A84C]/40 text-[#BA7517] hover:bg-[#C9A84C]/10 transition-colors"
                     >
                       {action}
                     </button>

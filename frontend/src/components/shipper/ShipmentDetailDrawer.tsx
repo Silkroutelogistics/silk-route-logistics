@@ -122,13 +122,13 @@ export function ShipmentDetailDrawer({
         <button
           onClick={handleDownloadPod}
           disabled={podLoading}
-          className="inline-flex items-center gap-1.5 px-4 py-2 border border-white/20 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#C9A84C] hover:border-[#C9A84C] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2 border border-white/20 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#BA7517] hover:border-[#C9A84C] disabled:opacity-50"
         >
           {podLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download POD
         </button>
         <button
           onClick={handleMessageRep}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#C9A84C]"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#BA7517]"
         >
           <MessageSquare size={14} /> Message Rep
         </button>

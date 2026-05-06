@@ -636,6 +636,10 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 29. **CI regression assertion on auth store usage** — unit test asserting `useAuthStore.token` and `useCarrierAuth.token` are never used as auth guards in dashboard layouts (grep-based lint). Would have caught the 172d6f3b regression at commit time.
 
+**Brand-token canonicalization residual (surfaced 2026-05-06 during Sprint 24a Phase A):**
+
+30. **Residual `#C9A84C` (non-canonical olive-gold) refs in shipper components.** Surfaced 2026-05-06 during Sprint 24a (v3.8.aac) Phase A audit. Two component files had partial brand-token swaps in working tree — text-color was canonicalized to `#BA7517` (`--gold-dark` per §2.1) but adjacent border / hover-bg classes still reference non-canonical olive-gold `#C9A84C`. Per §3.3 "no scope creep" rule, Sprint 24a closed only the surfaced text-color drift; border/bg residuals deferred for per-finding triage. **Specific residuals:** [`components/shipper/ShipmentDetailDrawer.tsx:125`](frontend/src/components/shipper/ShipmentDetailDrawer.tsx#L125) — Download POD button retains `hover:border-[#C9A84C]` (only `hover:text-` was swapped to `#BA7517`); [`components/shipper/ShipperChatbot.tsx:126`](frontend/src/components/shipper/ShipperChatbot.tsx#L126) — action chip retains `border-[#C9A84C]/40` + `hover:bg-[#C9A84C]/10` (only `text-` was swapped). **Sprint shape:** small per-finding fix (~4 surgical edits across 2 files), or roll into a broader brand-token canonicalization audit sprint that grep-sweeps remaining `#C9A84C` references across the codebase. **Audit-first prerequisite:** before fixing, grep all remaining `#C9A84C` references across `frontend/src/` to surface scope. There may be other components with the same partial-swap pattern not yet visited. Pairs naturally with §13.3 Item 10 (theme system root fix) since both are visual-polish items in the brand-discipline cluster, but distinct scope. **Verification per memory #11:** when extending the swap, verify cross-mode contrast — `#BA7517` border on dark navy ≈ 4.5:1 (PASS); on cream in light mode ≈ 4.7:1 (PASS).
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS
