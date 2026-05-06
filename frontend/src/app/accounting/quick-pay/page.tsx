@@ -34,15 +34,18 @@ interface QuickPayRequest {
   };
 }
 
-// v3.8.aaa Sprint 23: canonical Caravan Partner Program tier display.
-// Same palette as carrier/dashboard/page.tsx:23-27 for visual consistency
-// across AE Console + carrier-facing surfaces. Per directive decision #7.
+// v3.8.aab Sprint 24: canonical SRL palette per skill tokens.md.
+// Sprint 23 shipped this constant with Tailwind slate/yellow/purple —
+// structurally correct (canonical tier names) but visually off-brand.
+// Sprint 24 swaps to canonical SRL tokens (navy-300 silver, --gold,
+// --gold-dark, --navy). Coherent progression: Sprint 23 = right NAMES,
+// Sprint 24 = right COLORS.
 const CARAVAN_TIER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
-  SILVER:   { label: "Silver",   bg: "bg-slate-500/20",  text: "text-slate-300"  },
-  GOLD:     { label: "Gold",     bg: "bg-yellow-500/20", text: "text-yellow-300" },
-  PLATINUM: { label: "Platinum", bg: "bg-purple-500/20", text: "text-purple-300" },
-  GUEST:    { label: "Guest",    bg: "bg-slate-600/20",  text: "text-slate-400"  },
-  NONE:     { label: "—",        bg: "bg-white/5",       text: "text-slate-500"  },
+  SILVER:   { label: "Silver",   bg: "bg-[#8AA5C0]/15", text: "text-[#5B7EA3]" },
+  GOLD:     { label: "Gold",     bg: "bg-[#C5A572]/15", text: "text-[#BA7517]" },
+  PLATINUM: { label: "Platinum", bg: "bg-[#0A2540]",     text: "text-[#C5A572]" },
+  GUEST:    { label: "Guest",    bg: "bg-slate-600/20",  text: "text-slate-400" },
+  NONE:     { label: "—",        bg: "bg-white/5",       text: "text-slate-500" },
 };
 
 // v3.8.aaa Sprint 23: legacy PaymentTier enum → canonical payment-speed

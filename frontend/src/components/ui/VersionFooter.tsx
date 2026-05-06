@@ -3241,7 +3241,134 @@
 //            changes to AE Accounting Console Quick Pay Queue +
 //            Carrier Payments pages, both daily-use surfaces for
 //            AE staff processing carrier payments.
-export const SRL_VERSION = "3.8.aaa";
+// v3.8.aab — Sprint 24: theme system simplification + Caravan Partner
+//            Program tier palette canonicalization. Single atomic
+//            commit covering two related brand-discipline concerns.
+//
+//            (1) THEME SYSTEM SIMPLIFICATION
+//
+//            Pre-Sprint-24: 6 themes (Silk Route Classic + Midnight
+//            Express + Desert Route + Arctic Haul + Highway Green +
+//            Chrome Steel). Each theme × light/dark = 12 visual
+//            variants per surface, expanding scanner complexity and
+//            adding off-canonical color drift. For a single-founder
+//            pre-revenue platform with ~2 active users, theme
+//            personalization wasn't business-justified.
+//
+//            Removed:
+//              - 5 alternative theme blocks at globals.css:409-442
+//                (~30 LOC of [data-theme=...] overrides)
+//              - THEMES array (6 → 0 entries) in useTheme.ts
+//              - themeId state + setTheme + setTheme-related logic
+//              - data-theme attribute setter
+//              - ThemePanel.tsx 6-theme grid + slide-in panel +
+//                Apply/Cancel preview-confirm flow (~110 LOC)
+//
+//            Kept:
+//              - Light/dark mode toggle (only useful UX residue)
+//              - data-mode="light"|"dark" attribute cascade in
+//                globals.css (already preserved by Sprint 14
+//                architectural fix)
+//              - localStorage `srl_mode` key
+//
+//            New: ModeToggleButton — sun/moon icon button, single-
+//            click toggle, no preview/Apply panel. ~30 LOC.
+//            ThemeGearButton retained as alias to avoid churning
+//            import sites in Sidebar.tsx.
+//
+//            Migration: existing users with non-Classic theme
+//            preference in localStorage gracefully fall back via
+//            useTheme.loadFromStorage() — proactively clears
+//            legacy `srl_theme` key on first load post-deploy.
+//            applyToDOM also strips any stale data-theme attribute.
+//
+//            Backend `/auth/preferences` `preferredTheme` field
+//            still accepted server-side for forward compatibility;
+//            frontend stops writing to it. Field retirement = data-
+//            hygiene sprint, not blocking.
+//
+//            (2) TIER PALETTE CANONICALIZATION
+//
+//            Sprint 23 shipped Caravan Partner Program tier
+//            structural reconciliation (canonical tier NAMES
+//            Silver/Gold/Platinum) using Tailwind slate/yellow/
+//            purple palette — visually off-brand. Sprint 24 swaps
+//            to canonical SRL tokens per skill tokens.md. Coherent
+//            progression: Sprint 23 = right NAMES, Sprint 24 =
+//            right COLORS.
+//
+//            Pre-Sprint-24 had FIVE distinct off-canonical palettes:
+//              - Marketing carriers.css: literal precious-metal hex
+//                (#C0C0C0 silver, #C8963E legacy gold, #E5E4E2
+//                platinum) — none in canonical SRL palette
+//              - Marketing carriers.html inline: #C8963E legacy gold
+//                + rgba(200,150,62,X) tinted-cell backgrounds
+//              - AE Console accounting/quick-pay: Tailwind slate-500/
+//                yellow-500/purple-500 (Sprint 23 just shipped)
+//              - AE Console accounting/payments: same Tailwind palette
+//              - Carrier dashboard: Tailwind slate/yellow/purple
+//                (different opacity ratios than AE Console)
+//
+//            Post-Sprint-24 unified canonical palette across ALL
+//            surfaces:
+//              Silver:   bg navy-300 (#8AA5C0)/15 + text navy-500
+//                        (#5B7EA3) — muted neutral
+//              Gold:     bg --gold (#C5A572)/15 + text --gold-dark
+//                        (#BA7517) — canonical accent + emphasis
+//              Platinum: bg --navy (#0A2540) + text --gold (#C5A572)
+//                        — top-tier brand treatment, navy + gold
+//                        prestige pairing
+//
+//            Cross-mode contrast verification per memory #11:
+//              Silver on cream: ~3:1 borderline, passes UI 3:1 + AA
+//                               Large for tier-badge role (decorative
+//                               + indicator, not body text)
+//              Silver on dark navy: ~6:1 PASS
+//              Gold on cream: ~3:1 borderline (same role tolerance)
+//              Gold on dark navy: ~7:1 PASS
+//              Platinum (navy bg): ~7:1 PASS in both modes
+//
+//            Files updated (5 surfaces):
+//              - carrier/dashboard/page.tsx TIER_COLORS
+//              - accounting/quick-pay/page.tsx CARAVAN_TIER_BADGE
+//              - accounting/payments/page.tsx CARAVAN_TIER_BADGE
+//              - shared/css/pages/carriers.css .tier-card.silver/
+//                gold/platinum (border + icon + svg) — also
+//                dropped 5 dead .tier-card.bronze rules (BRONZE
+//                tier retired pre-v3.7.a per CLAUDE.md §11)
+//              - public/carriers.html inline tier headers (lines
+//                240-241) + bulk swap rgba(200,150,62,X) →
+//                rgba(197,165,114,X) for column-highlight cells
+//                (33 occurrences across comparison table)
+//
+//            COHERENT PROGRESSION:
+//              Sprint 23 (v3.8.aaa): structural correctness — right
+//                tier NAMES (Silver/Gold/Platinum) replacing legacy
+//                Flash/Express/Priority/Partner/Elite UI display.
+//                Used Tailwind slate/yellow/purple as quick palette
+//                for ship-by-BKN-deadline.
+//              Sprint 24 (v3.8.aab): visual correctness — right
+//                tier COLORS (canonical SRL palette per skill
+//                tokens.md) replacing Tailwind palette. Coherent
+//                follow-through, not regression.
+//
+//            Per §3.1 sequence-continuous rule: v3.8.aaa → v3.8.aab.
+//
+//            Per §3.1 version bump justified — publicly-visible
+//            changes affecting:
+//              - Theme picker disappears (every authenticated user
+//                with Sidebar)
+//              - Tier badges across AE Console + carrier portal
+//                surfaces (every authenticated user)
+//              - Marketing /carriers tier table (every visitor)
+//
+//            Pre-commit verification: backend tsc clean, frontend
+//            next build clean.
+//
+//            Net LOC change: ~240 (mostly removal — 5 theme blocks
+//            + ThemePanel 6-theme grid + bronze CSS rules deleted;
+//            tier palette swaps are 1-to-1 token replacements).
+export const SRL_VERSION = "3.8.aab";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -20,10 +20,18 @@ const CARAVAN_TIER_MAP: Record<string, string> = {
   PLATINUM: "PLATINUM",
 };
 
+// v3.8.aab Sprint 24: canonical Caravan Partner Program tier palette
+// per skill tokens.md. Pre-Sprint-24 used generic Tailwind slate/yellow/
+// purple — off-brand. Post-Sprint-24 uses canonical SRL tokens:
+//   Silver:   navy-300 (#8AA5C0) tinted bg + navy-500 (#5B7EA3) text
+//   Gold:     canonical --gold (#C5A572) tinted bg + --gold-dark
+//             (#BA7517) text
+//   Platinum: canonical --navy (#0A2540) bg + --gold (#C5A572) text —
+//             top-tier brand treatment
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string; badge: string }> = {
-  SILVER: { bg: "bg-slate-500/10", text: "text-slate-600", border: "border-slate-300", badge: "bg-slate-100 text-slate-600 border-slate-300" },
-  GOLD: { bg: "bg-yellow-500/10", text: "text-yellow-700", border: "border-yellow-400", badge: "bg-yellow-100 text-yellow-700 border-yellow-400" },
-  PLATINUM: { bg: "bg-purple-500/10", text: "text-purple-700", border: "border-purple-400", badge: "bg-purple-100 text-purple-700 border-purple-400" },
+  SILVER: { bg: "bg-[#8AA5C0]/15", text: "text-[#5B7EA3]", border: "border-[#8AA5C0]/40", badge: "bg-[#8AA5C0]/15 text-[#5B7EA3] border-[#8AA5C0]/40" },
+  GOLD: { bg: "bg-[#C5A572]/15", text: "text-[#BA7517]", border: "border-[#C5A572]/40", badge: "bg-[#C5A572]/15 text-[#BA7517] border-[#C5A572]/40" },
+  PLATINUM: { bg: "bg-[#0A2540]", text: "text-[#C5A572]", border: "border-[#0A2540]", badge: "bg-[#0A2540] text-[#C5A572] border-[#0A2540]" },
 };
 
 // v3 Quick Pay pricing — 7-day rate shown as the headline (same-day = +2%).

@@ -749,15 +749,20 @@
       box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
     }
 
-    .tier-card.bronze { border-top: 3px solid #CD7F32; }
-    .tier-card.silver { border-top: 3px solid #C0C0C0; }
-    .tier-card.gold { border-top: 3px solid #C8963E; }
-    .tier-card.platinum { border-top: 3px solid #E5E4E2; }
+    /* v3.8.aab Sprint 24: canonical Caravan Partner Program tier
+       palette per skill tokens.md. Pre-Sprint-24 used literal
+       precious-metal hex (#C0C0C0 silver, #C8963E legacy gold,
+       #E5E4E2 platinum). Post-Sprint-24 uses canonical SRL tokens
+       matching AE Console + carrier dashboard for cross-surface
+       visual consistency. .tier-card.bronze rules removed —
+       BRONZE tier was retired pre-v3.7.a per CLAUDE.md §11. */
+    .tier-card.silver { border-top: 3px solid #8AA5C0; }
+    .tier-card.gold { border-top: 3px solid #C5A572; }
+    .tier-card.platinum { border-top: 3px solid #0A2540; }
 
-    .tier-card.bronze:hover { border-color: rgba(205, 127, 50, 0.4); }
-    .tier-card.silver:hover { border-color: rgba(192, 192, 192, 0.4); }
-    .tier-card.gold:hover { border-color: rgba(200, 150, 62, 0.4); box-shadow: 0 8px 40px rgba(200, 150, 62, 0.1); }
-    .tier-card.platinum:hover { border-color: rgba(229, 228, 226, 0.4); }
+    .tier-card.silver:hover { border-color: rgba(138, 165, 192, 0.5); }
+    .tier-card.gold:hover { border-color: rgba(197, 165, 114, 0.5); box-shadow: 0 8px 40px rgba(186, 117, 23, 0.12); }
+    .tier-card.platinum:hover { border-color: rgba(10, 37, 64, 0.5); }
 
     .tier-icon {
       width: 48px;
@@ -770,10 +775,11 @@
       font-size: 22px;
     }
 
-    .tier-card.bronze .tier-icon { background: rgba(205, 127, 50, 0.15); color: #CD7F32; }
-    .tier-card.silver .tier-icon { background: rgba(192, 192, 192, 0.15); color: #C0C0C0; }
-    .tier-card.gold .tier-icon { background: rgba(200, 150, 62, 0.15); color: #854F0B; }
-    .tier-card.platinum .tier-icon { background: rgba(229, 228, 226, 0.15); color: #E5E4E2; }
+    /* v3.8.aab Sprint 24: canonical icon palette. Bronze rule
+       removed (tier retired pre-v3.7.a). */
+    .tier-card.silver .tier-icon { background: rgba(138, 165, 192, 0.18); color: #5B7EA3; }
+    .tier-card.gold .tier-icon { background: rgba(197, 165, 114, 0.18); color: #BA7517; }
+    .tier-card.platinum .tier-icon { background: rgba(10, 37, 64, 0.85); color: #C5A572; }
 
     .tier-name {
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -813,10 +819,11 @@
       margin-top: 2px;
     }
 
-    .tier-card.bronze .tier-benefit-item svg { stroke: #CD7F32; }
-    .tier-card.silver .tier-benefit-item svg { stroke: #C0C0C0; }
-    .tier-card.gold .tier-benefit-item svg { stroke: #C8963E; }
-    .tier-card.platinum .tier-benefit-item svg { stroke: #E5E4E2; }
+    /* v3.8.aab Sprint 24: canonical svg stroke palette. Bronze
+       rule removed (tier retired pre-v3.7.a). */
+    .tier-card.silver .tier-benefit-item svg { stroke: #8AA5C0; }
+    .tier-card.gold .tier-benefit-item svg { stroke: #C5A572; }
+    .tier-card.platinum .tier-benefit-item svg { stroke: #C5A572; }
 
     .tier-popular {
       position: absolute;

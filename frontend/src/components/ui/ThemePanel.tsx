@@ -1,139 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { createPortal } from "react-dom";
-import { Settings, X, Sun, Moon, Check } from "lucide-react";
-import { useTheme, THEMES } from "@/hooks/useTheme";
+/**
+ * v3.8.aab Sprint 24: theme system simplification.
+ *
+ * Pre-Sprint-24: 6-theme picker (Silk Route Classic / Midnight Express
+ * / Desert Route / Arctic Haul / Highway Green / Chrome Steel) with
+ * slide-in panel + Apply Theme button + Dark Mode toggle. ~139 LOC.
+ *
+ * Post-Sprint-24: simple sun/moon icon button that flips dark mode on
+ * click. ~30 LOC. Theme variants retired; canonical Silk Route Classic
+ * is the only supported theme. Mode toggle remains useful for AE staff
+ * working long hours.
+ *
+ * Component name `ThemeGearButton` retained as alias to avoid churning
+ * import sites in Sidebar.tsx + any other consumers. New canonical name
+ * is `ModeToggleButton`. Both export the same component.
+ */
 
-export function ThemeGearButton() {
-  const [open, setOpen] = useState(false);
+import { Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 w-full transition"
-        title="Theme Settings"
-      >
-        <Settings className="w-4 h-4" /> Theme
-      </button>
+export function ModeToggleButton() {
+  const { darkMode, setDarkMode, applyAndSync } = useTheme();
 
-      {open && typeof document !== "undefined" && createPortal(
-        <ThemePanel onClose={() => setOpen(false)} />,
-        document.body
-      )}
-    </>
-  );
-}
-
-function ThemePanel({ onClose }: { onClose: () => void }) {
-  const { themeId, darkMode, setTheme, setDarkMode, applyAndSync } = useTheme();
-  const [previewTheme, setPreviewTheme] = useState(themeId);
-  const [previewDark, setPreviewDark] = useState(darkMode);
-
-  const handleThemeClick = (id: string) => {
-    setPreviewTheme(id);
-    setTheme(id); // Live preview
-  };
-
-  const handleDarkToggle = () => {
-    const newDark = !previewDark;
-    setPreviewDark(newDark);
-    setDarkMode(newDark); // Live preview
-  };
-
-  const handleApply = () => {
-    applyAndSync(); // Persist to localStorage + backend
-    onClose();
-  };
-
-  const handleCancel = () => {
-    // Revert to saved
-    const saved = localStorage.getItem("srl_theme") || "silk-route-classic";
-    const savedDark = localStorage.getItem("srl_mode") === "dark";
-    setTheme(saved);
-    setDarkMode(savedDark);
-    onClose();
+  const handleToggle = () => {
+    setDarkMode(!darkMode);
+    // Persist immediately (no separate Apply step like the legacy
+    // ThemePanel). One-click toggle — preview-and-confirm flow was
+    // overkill for a binary state.
+    setTimeout(() => applyAndSync(), 0);
   };
 
   return (
-    <>
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={handleCancel} />
-
-      {/* Panel */}
-      <div className="fixed top-0 right-0 w-80 h-full border-l shadow-2xl z-[9999] flex flex-col animate-slide-in-right" style={{ background: 'var(--srl-bg-surface)', borderColor: 'var(--srl-border)' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--srl-border)' }}>
-          <h3 className="text-base font-semibold" style={{ color: 'var(--srl-text)' }}>Theme Settings</h3>
-          <button onClick={handleCancel} className="p-1 rounded transition" style={{ color: 'var(--srl-text-muted)' }}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Dark mode toggle */}
-        <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--srl-border)' }}>
-          <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--srl-text-muted)' }}>Appearance</p>
-          <button
-            onClick={handleDarkToggle}
-            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition" style={{ background: 'var(--srl-bg-elevated)' }}
-          >
-            <span className="text-sm font-medium" style={{ color: 'var(--srl-text)' }}>Dark Mode</span>
-            <div className="flex items-center gap-2">
-              {previewDark ? <Moon className="w-4 h-4 text-gold" /> : <Sun className="w-4 h-4 text-yellow-400" />}
-              <div className={`w-10 h-5 rounded-full transition relative ${previewDark ? "bg-gold" : ""}`} style={!previewDark ? { background: 'var(--srl-border-strong)' } : {}}>
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${previewDark ? "left-5" : "left-0.5"}`} />
-              </div>
-            </div>
-          </button>
-        </div>
-
-        {/* Theme grid */}
-        <div className="px-5 py-4 flex-1 overflow-y-auto">
-          <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--srl-text-muted)' }}>Theme</p>
-          <div className="grid grid-cols-2 gap-3">
-            {THEMES.map((t) => {
-              const active = t.id === previewTheme;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => handleThemeClick(t.id)}
-                  className={`relative rounded-xl border-2 p-3 text-center transition hover:-translate-y-0.5 ${
-                    active ? "border-gold shadow-lg shadow-gold/10" : "hover:border-gold/30"
-                  }`}
-                  style={{ borderColor: active ? undefined : 'var(--srl-border)' }}
-                >
-                  {/* Color swatch */}
-                  <div className="flex gap-1 h-6 rounded-lg overflow-hidden mb-2">
-                    <span className="flex-1" style={{ background: t.sidebar }} />
-                    <span className="flex-1" style={{ background: t.primary }} />
-                    <span className="flex-1" style={{ background: t.accent }} />
-                  </div>
-                  <p className="text-[11px] font-semibold" style={{ color: 'var(--srl-text)' }}>{t.name}</p>
-
-                  {/* Active check */}
-                  {active && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
-                      <Check className="w-3 h-3 text-navy" strokeWidth={3} />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Apply button */}
-        <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--srl-border)' }}>
-          <button
-            onClick={handleApply}
-            className="w-full py-3 rounded-lg font-semibold text-sm transition"
-            style={{ background: `var(--theme-primary, #C8963E)`, color: "#0F1117" }}
-          >
-            Apply Theme
-          </button>
-        </div>
-      </div>
-    </>
+    <button
+      onClick={handleToggle}
+      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 w-full transition"
+      title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {darkMode ? <Moon className="w-4 h-4 text-[#C5A572]" /> : <Sun className="w-4 h-4 text-yellow-400" />}
+      <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
+    </button>
   );
 }
+
+// Alias retained for back-compat with existing import sites.
+export const ThemeGearButton = ModeToggleButton;

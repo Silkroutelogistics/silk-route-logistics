@@ -50,15 +50,14 @@ const STATUS_COLORS: Record<string, string> = {
   ON_HOLD: "bg-orange-500/20 text-orange-400",
 };
 
-// v3.8.aaa Sprint 23: canonical Caravan Partner Program tier badge.
-// Same palette as carrier/dashboard/page.tsx + accounting/quick-pay/page.tsx
-// for visual consistency.
+// v3.8.aab Sprint 24: canonical SRL palette per skill tokens.md.
+// See accounting/quick-pay/page.tsx for full reconciliation rationale.
 const CARAVAN_TIER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
-  SILVER:   { label: "Silver",   bg: "bg-slate-500/20",  text: "text-slate-300"  },
-  GOLD:     { label: "Gold",     bg: "bg-yellow-500/20", text: "text-yellow-300" },
-  PLATINUM: { label: "Platinum", bg: "bg-purple-500/20", text: "text-purple-300" },
-  GUEST:    { label: "Guest",    bg: "bg-slate-600/20",  text: "text-slate-400"  },
-  NONE:     { label: "—",        bg: "bg-white/5",       text: "text-slate-500"  },
+  SILVER:   { label: "Silver",   bg: "bg-[#8AA5C0]/15", text: "text-[#5B7EA3]" },
+  GOLD:     { label: "Gold",     bg: "bg-[#C5A572]/15", text: "text-[#BA7517]" },
+  PLATINUM: { label: "Platinum", bg: "bg-[#0A2540]",     text: "text-[#C5A572]" },
+  GUEST:    { label: "Guest",    bg: "bg-slate-600/20",  text: "text-slate-400" },
+  NONE:     { label: "—",        bg: "bg-white/5",       text: "text-slate-500" },
 };
 
 // v3.8.aaa Sprint 23: legacy PaymentTier enum → canonical payment-speed
