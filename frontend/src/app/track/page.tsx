@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { Search, MapPin, Phone, Mail, CheckCircle2, Circle } from "lucide-react";
 import { SiteFooter } from "@/components/shell/SiteFooter";
 
-type SearchKind = "bol" | "code" | "reference";
+type SearchKind = "bol" | "reference";
 
 interface PublicTrackResponse {
   referenceNumber: string;
@@ -78,15 +78,15 @@ export default function PublicTrackPage() {
         <p className="text-gray-400 mb-8">Real-time status on every load SRL moves.</p>
 
         <div className="flex gap-1 justify-center mb-4">
-          {(["bol", "code", "reference"] as SearchKind[]).map((k) => (
+          {(["bol", "reference"] as SearchKind[]).map((k) => (
             <button
               key={k}
               onClick={() => setKind(k)}
               className={`px-4 py-2 text-sm border-b-2 transition ${
-                kind === k ? "border-[#BA7517] text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+                kind === k ? "border-[#BA7517] text-white" : "border-transparent text-gray-300 hover:text-white"
               }`}
             >
-              {k === "bol" ? "BOL number" : k === "code" ? "Tracking code" : "Reference / PO #"}
+              {k === "bol" ? "BOL number" : "Reference / PO #"}
             </button>
           ))}
         </div>
@@ -101,8 +101,7 @@ export default function PublicTrackPage() {
               onKeyDown={(e) => e.key === "Enter" && onSearch()}
               placeholder={
                 kind === "bol" ? "e.g. BOL-7734"
-                : kind === "code" ? "e.g. aB3xK9"
-                : "e.g. PO-88421"
+                : "e.g. PO-88421 or load reference"
               }
               className="w-full pl-9 pr-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#BA7517]"
             />

@@ -3438,7 +3438,86 @@
 //            Net LOC change: ~10 (4 files × 1-line surgical swap;
 //            ShipmentDetailDrawer has 2 swaps on adjacent lines).
 //            Per §3.1 sequence-continuous rule: v3.8.aab → v3.8.aac.
-export const SRL_VERSION = "3.8.aac";
+// v3.8.aad — Sprint 25: /track page contrast fix + tab structure
+//            reconciliation. Customer-facing public tracking page
+//            (BOL QR scan target).
+//
+//            CONTRAST FIXES (Phase A audit per Sprint 15b/22 method)
+//
+//            Fix #1 — Tab inactive label readability:
+//              app/track/page.tsx:86
+//              text-gray-500 hover:text-gray-300 (~3.9:1, fails AA)
+//              → text-gray-300 hover:text-white (~10.5:1, PASS AA)
+//
+//            Fix #2 — Compact footer ghost-text:
+//              components/shell/SiteFooter.tsx:12
+//              isDark branch: text-white/45 (~3.4:1, FAILS AA)
+//              → text-white/70 (~9.4:1, PASS AA)
+//              Same memory #11 ghost-text class as Sprint 24a
+//              text-white/X swaps. Light-mode branch unchanged.
+//              Component is shared with marketing site dark-themed
+//              footer surfaces — lift improves contrast across all
+//              dark surfaces, no regression risk (light branch
+//              untouched, dark improvement is monotonic).
+//
+//            TAB STRUCTURE (T2 — drop "Tracking code" tab)
+//
+//            /track UI offered 3 lookup tabs (BOL number / Tracking
+//            code / Reference / PO #) but Phase A data-model parity
+//            audit found:
+//
+//              (a) Backend endpoint runs a 5-tier fallback chain
+//                  (ShipperTrackingToken → trackingToken →
+//                  shipperCode → bolNumber → reference/load/po)
+//                  regardless of which tab the user picks. The
+//                  `kind` state was purely cosmetic — only changed
+//                  the placeholder text, never the API call.
+//
+//              (b) The "Tracking code" identifier class is the
+//                  12-char alphanumeric ShipperTrackingToken
+//                  embedded in the BOL QR. Customers reach those
+//                  tokens only via QR scan — they never type them.
+//                  The 6-char shipperCode field on Load is dead
+//                  schema (defined, queried, never written by any
+//                  code path).
+//
+//            UI reduced from 3 tabs to 2 tabs:
+//              - "BOL number"        e.g. BOL-7734
+//              - "Reference / PO #"  e.g. PO-88421 or load reference
+//
+//            Backend endpoint UNCHANGED — 5-tier fallback chain
+//            still accepts any value a customer might paste,
+//            including legacy uuid trackingTokens for compatibility.
+//            shipperCode dead-schema cleanup deferred per §3.3
+//            atomic-commit + "no scope creep" rule.
+//
+//            ADJACENT FINDING LOGGED (NOT FIXED — separate sprint)
+//
+//            BOL QR currently 404s on production. utils/qrGenerator
+//            .ts:25 encodes URL https://silkroutelogistics.ai/track/
+//            <token> but frontend has NO /track/[token]/page.tsx
+//            dynamic route, _redirects has no /track/* splat rule,
+//            and next.config.ts sets output: "export" (static HTML).
+//            Email tracking links use /tracking/<token> with same
+//            issue — /tracking exact path 308s to /track but
+//            /tracking/<anything> 404s. Logged in CLAUDE.md §13.3
+//            Item 31 (P0 production reliability) for dedicated
+//            sprint to fix — needs dynamic route + auto-fill +
+//            auto-search OR _redirects splat. Recommended to jump
+//            queue ahead of remaining brand work since every BOL
+//            printed routes to a 404 page right now.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean, frontend next build
+//            clean. /track is dark-only by design (no [data-mode]
+//            cascade hooks); both fixes are dark-mode-only so no
+//            cross-mode regression risk.
+//
+//            Net LOC change: ~10 (track/page.tsx tab union + array
+//            + placeholder ternary + tab inactive className;
+//            SiteFooter.tsx:12 dark-branch base text).
+//            Per §3.1 sequence-continuous rule: v3.8.aac → v3.8.aad.
+export const SRL_VERSION = "3.8.aad";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

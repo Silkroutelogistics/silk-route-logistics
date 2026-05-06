@@ -9,7 +9,7 @@ interface SiteFooterProps {
 
 export function SiteFooter({ compact = false, showLegalColumn = true, theme = "dark" }: SiteFooterProps) {
   const isDark = theme === "dark";
-  const baseText = isDark ? "text-white/45" : "text-slate-600";
+  const baseText = isDark ? "text-white/70" : "text-slate-600";
   const headingText = isDark ? "text-white" : "text-slate-900";
   const linkText = isDark ? "text-white/70 hover:text-white" : "text-slate-600 hover:text-slate-900";
   const bg = isDark ? "bg-[#0F1117] border-t border-[#C9A84C]/15" : "bg-white border-t border-slate-200";
