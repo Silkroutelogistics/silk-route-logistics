@@ -165,6 +165,11 @@ interface FormState {
   carrierContact: string;
   carrierPhone: string;
   carrierEmail: string;
+  // v3.8.aal — Sprint 33 Item 44. Caravan tier auto-derived from selected
+  // carrier (carrierProfile.tier). Drives Section 8 fee derivation per
+  // CLAUDE.md §8 tier × speed structure. Empty string = no carrier picked
+  // (defaults treat as Silver, the lowest tier).
+  carrierTier: string;
   driverName: string;
   driverPhone: string;
   truckNumber: string;
@@ -223,7 +228,50 @@ const EQUIPMENT_TYPES = [
 const LOADING_TYPES = ["Live Load", "Drop Trailer", "Driver Assist"];
 const UNLOADING_TYPES = ["Live Unload", "Drop Trailer", "Driver Assist"];
 
-const PAYMENT_TIERS: Record<string, { label: string; days: string; fee: number }> = {
+// v3.8.aal — Sprint 33 Item 44. Caravan tier reconciliation per CLAUDE.md
+// §8. RC Modal was missed in Sprint 23 scope (which reconciled
+// /accounting/quick-pay + /accounting/payments to canonical 3-tier).
+// UI presents 3 SPEED choices (AE picks the speed for THIS load); fee
+// is dynamically derived from the linked carrier's tier × the chosen
+// speed per §8 structure.
+//
+// Backend PaymentTier enum (FLASH/EXPRESS/PRIORITY/PARTNER/ELITE/
+// STANDARD) preserved per Sprint 23 stay-canonical decision — UI
+// selection maps to legacy enum on save: STANDARD→STANDARD,
+// QP_7DAY→PRIORITY, QP_SAMEDAY→FLASH. EXPRESS/PARTNER/ELITE remain
+// in DB for analytics + legacy load display via LEGACY_PAYMENT_TIERS
+// fallback below; AE-unselectable from new RC Modal surface.
+const PAYMENT_SPEEDS = [
+  { uiKey: "STANDARD", enumValue: "STANDARD", label: "Standard" },
+  { uiKey: "QP_7DAY", enumValue: "PRIORITY", label: "7-Day Quick Pay" },
+  { uiKey: "QP_SAMEDAY", enumValue: "FLASH", label: "Same-Day Quick Pay" },
+] as const;
+
+// Tier × speed fee % per CLAUDE.md §8. Same-day is universal +2% on
+// 7-day fee (universal premium, not tier-gated).
+function feePctForSpeed(speedUiKey: string, tier: string): number {
+  const sevenDay = tier === "PLATINUM" ? 1 : tier === "GOLD" ? 2 : 3; // Silver default
+  if (speedUiKey === "QP_7DAY") return sevenDay;
+  if (speedUiKey === "QP_SAMEDAY") return sevenDay + 2;
+  return 0; // STANDARD = no fee
+}
+
+// Tier-derived Net days for STANDARD speed display.
+function standardNetByTier(tier: string): string {
+  return tier === "PLATINUM" ? "Net-14" : tier === "GOLD" ? "Net-21" : "Net-30";
+}
+
+// Reverse map: backend enum value → UI speed key (handles legacy
+// EXPRESS/PARTNER/ELITE values for existing-load display).
+function uiKeyFromEnum(enumValue: string): string {
+  if (enumValue === "FLASH" || enumValue === "EXPRESS") return "QP_SAMEDAY";
+  if (enumValue === "PRIORITY" || enumValue === "PARTNER") return "QP_7DAY";
+  return "STANDARD"; // ELITE + STANDARD + unknown
+}
+
+// Legacy enum lookup for backward-compat display on existing loads
+// that pre-date Sprint 33. Used by financials calc fallback only.
+const LEGACY_PAYMENT_TIERS: Record<string, { label: string; days: string; fee: number }> = {
   FLASH: { label: "Flash Pay", days: "Same Day", fee: 5 },
   EXPRESS: { label: "Express Pay", days: "2 Business Days", fee: 3.5 },
   PRIORITY: { label: "Priority Pay", days: "7 Business Days", fee: 2 },
@@ -404,6 +452,10 @@ function initForm(load: any, user: any): FormState {
     carrierContact: load?.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}` : "",
     carrierPhone: load?.carrier?.phone || "",
     carrierEmail: load?.carrier?.email || "",
+    // v3.8.aal — Sprint 33 Item 44. Tier derived from CarrierProfile relation
+    // (Sprint 23 added include path on AE-Console queries). Empty = no carrier
+    // picked yet; SectionPayment defaults to Silver tier rate display.
+    carrierTier: load?.carrier?.carrierProfile?.tier || "",
     driverName: load?.driverName || "",
     driverPhone: load?.driverPhone || "",
     truckNumber: load?.truckNumber || "",
@@ -497,13 +549,19 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
     const totalCarrier = lineHaul + fuel + accTotal;
     const margin = customerRate - totalCarrier;
     const marginPct = customerRate > 0 ? (margin / customerRate) * 100 : 0;
-    const tierInfo = PAYMENT_TIERS[form.paymentTier] || PAYMENT_TIERS.STANDARD;
-    const feePercent = form.paymentTier !== "STANDARD" ? tierInfo.fee : 0;
+    // v3.8.aal — Sprint 33 Item 44. Fee derives from carrier's Caravan
+    // tier × selected speed per CLAUDE.md §8, not from legacy enum lookup.
+    // form.paymentTier holds the legacy enum value (STANDARD/PRIORITY/
+    // FLASH for new loads; EXPRESS/PARTNER/ELITE possible for legacy
+    // loads pre-Sprint-33). Convert to UI speed key, then derive fee.
+    const speedUiKey = uiKeyFromEnum(form.paymentTier);
+    const feePercent = feePctForSpeed(speedUiKey, form.carrierTier);
+    const tierInfo = LEGACY_PAYMENT_TIERS[form.paymentTier] || LEGACY_PAYMENT_TIERS.STANDARD;
     const feeAmount = totalCarrier * (feePercent / 100);
     const netPay = totalCarrier - feeAmount;
 
     return { customerRate, lineHaul, fuel, accTotal, totalCarrier, margin, marginPct, tierInfo, feePercent, feeAmount, netPay };
-  }, [form.customerRate, form.carrierLineHaul, form.fuelSurcharge, form.accessorials, form.paymentTier]);
+  }, [form.customerRate, form.carrierLineHaul, form.fuelSurcharge, form.accessorials, form.paymentTier, form.carrierTier]);
 
   // Auto-update total carrier pay
   useEffect(() => {
@@ -553,15 +611,24 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
       api.patch(`/loads/${data.loadId}/status`, { status: data.status }),
   });
 
-  // v3.8.aak — extract error message from various error shapes (axios,
-  // native Error, plain string). Used by all 3 handlers below.
+  // v3.8.aal — Sprint 33 Item 42 widening. Backend Zod errors return:
+  //   { error: "Validation error", details: [{field, message}, ...] }
+  // per middleware/errorHandler.ts:66-76. Sprint 32's narrower extractor
+  // only checked top-level `error` / `message` so the user banner showed
+  // the generic "Validation error" without the field-level diagnostic.
+  // Iterating `details[]` surfaces the specific Zod rejection — e.g.,
+  // "Validation error — formData.fuelSurcharge: Expected number, ...".
+  // Item 42 stays OPEN until Sprint 34 closes with the targeted field
+  // fix once the surfaced rejection identifies what to fix.
   function extractErrorMessage(err: any, fallback: string): string {
-    return (
-      err?.response?.data?.error ||
-      err?.response?.data?.message ||
-      err?.message ||
-      fallback
-    );
+    const data = err?.response?.data;
+    if (Array.isArray(data?.details) && data.details.length > 0) {
+      const issues = data.details
+        .map((d: any) => `${d.field || "?"}: ${d.message || "invalid"}`)
+        .join("; ");
+      return `${data.error || "Validation error"} — ${issues}`;
+    }
+    return data?.error || data?.message || err?.message || fallback;
   }
 
   async function handleSaveDraft() {
@@ -1470,6 +1537,9 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
     set("carrierContact", carrier.user ? `${carrier.user.firstName} ${carrier.user.lastName}` : "");
     set("carrierPhone", carrier.user?.phone || carrier.phone || "");
     set("carrierEmail", carrier.user?.email || carrier.email || "");
+    // v3.8.aal — Sprint 33 Item 44. Write Caravan tier from carrier record;
+    // SectionPayment uses this for tier-derived fee display + tier badge.
+    set("carrierTier", carrier.tier || "");
     set("recipientEmail", carrier.user?.email || carrier.email || "");
     set("recipientName", carrier.user ? `${carrier.user.firstName} ${carrier.user.lastName}` : carrier.company || "");
     setShowSearch(false);
@@ -1879,37 +1949,59 @@ function SectionPayment({
     );
   };
 
+  // v3.8.aal — Sprint 33 Item 44. Speed selection state derives from
+  // form.paymentTier (legacy enum). UI selection writes back to enum.
+  const selectedSpeedUiKey = uiKeyFromEnum(form.paymentTier);
+  const tierForDisplay = form.carrierTier || "SILVER"; // default Silver if no carrier picked
+
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Payment Tier Selection */}
+      {/* Payment Speed Selection (replaces legacy 6-tier per Sprint 33 Item 44) */}
       <div className={sectionCardCls}>
-        <h4 className={sectionTitleCls}>
-          <CreditCard className="w-4 h-4" />
-          Payment Tier
-        </h4>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className={`${sectionTitleCls} mb-0`}>
+            <CreditCard className="w-4 h-4" />
+            Payment Terms
+          </h4>
+          {form.carrierTier && (
+            <InfoBadge variant={form.carrierTier === "PLATINUM" || form.carrierTier === "GOLD" ? "gold" : "default"}>
+              {form.carrierTier}
+            </InfoBadge>
+          )}
+        </div>
         <div className="grid grid-cols-3 gap-3">
-          {Object.entries(PAYMENT_TIERS).map(([key, tier]) => (
-            <button
-              key={key}
-              onClick={() => set("paymentTier", key)}
-              className={`relative p-4 rounded-xl border text-left transition cursor-pointer ${
-                form.paymentTier === key
-                  ? "bg-[#C8963E]/10 border-[#C8963E]/40"
-                  : "bg-[#0F1117] border-white/10 hover:border-white/20"
-              }`}
-            >
-              {form.paymentTier === key && (
-                <CheckCircle2 className="absolute top-3 right-3 w-4 h-4 text-[#C8963E]" />
-              )}
-              <p className={`text-sm font-semibold ${form.paymentTier === key ? "text-[#C8963E]" : "text-white"}`}>
-                {tier.label}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">{tier.days}</p>
-              <p className={`text-xs mt-2 font-medium ${tier.fee > 0 ? "text-amber-400" : "text-emerald-400"}`}>
-                {tier.fee > 0 ? `${tier.fee}% fee` : "No fee"}
-              </p>
-            </button>
-          ))}
+          {PAYMENT_SPEEDS.map((speed) => {
+            const isSelected = selectedSpeedUiKey === speed.uiKey;
+            const fee = feePctForSpeed(speed.uiKey, tierForDisplay);
+            const subText =
+              speed.uiKey === "STANDARD"
+                ? standardNetByTier(tierForDisplay)
+                : `${fee}% fee`;
+            return (
+              <button
+                key={speed.uiKey}
+                onClick={() => set("paymentTier", speed.enumValue)}
+                className={`relative p-4 rounded-xl border text-left transition cursor-pointer ${
+                  isSelected
+                    ? "bg-[#C8963E]/10 border-[#C8963E]/40"
+                    : "bg-[#0F1117] border-white/10 hover:border-white/20"
+                }`}
+              >
+                {isSelected && (
+                  <CheckCircle2 className="absolute top-3 right-3 w-4 h-4 text-[#C8963E]" />
+                )}
+                <p className={`text-sm font-semibold ${isSelected ? "text-[#C8963E]" : "text-white"}`}>
+                  {speed.label}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {form.carrierTier ? `for ${form.carrierTier}` : "Silver default"}
+                </p>
+                <p className={`text-xs mt-2 font-medium ${fee > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                  {subText}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 

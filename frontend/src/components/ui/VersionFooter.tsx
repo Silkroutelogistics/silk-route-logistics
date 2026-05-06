@@ -4184,7 +4184,125 @@
 //            established hotfix-with-immediate-close pattern
 //            (Items 31, 32, 33, 34-38, 39 same shape). Item 42
 //            logged OPEN, Sprint 33 close.
-export const SRL_VERSION = "3.8.aak";
+// v3.8.aal — Sprint 33 Path A: bundle Items 42 + 44 RC Modal P0 fixes.
+//            Item 41 stays CLOSED (Sprint 32 fix verified at code level
+//            — user-side persistence is browser bundle cache, hard
+//            refresh resolves; no code change needed). Item 42 stays
+//            OPEN (extractor widening ships diagnostic surface; Sprint
+//            34 closes with targeted field fix once next click surfaces
+//            specific Zod rejection). Item 44 logged + closed.
+//
+//            (1) ITEM 42 — Zod error extractor widening
+//
+//            Backend errorHandler at backend/src/middleware/errorHandler
+//            .ts:66-76 returns Zod errors as
+//              { error: "Validation error", details: [{field, message}, ...] }
+//            Sprint 32 v3.8.aak shipped error UI but the extractor only
+//            checked top-level `error` / `message`, surfacing only the
+//            generic "Validation error" string. Sprint 33 widens
+//            extractErrorMessage helper to iterate `details[]` array
+//            when present:
+//              "Validation error — formData.fieldName: <message>; ..."
+//            Wired into all 3 RC handler catch blocks (Generate PDF +
+//            Send Tender + Save Draft).
+//
+//            Path β methodology continued: observability ships first,
+//            targeted fix ships subsequent atomic commit. Sprint 34
+//            closes Item 42 with the specific field fix once the
+//            widened extractor surfaces what's rejecting.
+//
+//            (2) ITEM 44 — Caravan tier reconciliation (P0 BKN-blocking)
+//
+//            Sprint 23 reconciled /accounting/quick-pay + /accounting/
+//            payments to canonical Caravan 3-tier (Silver/Gold/Platinum
+//            per CLAUDE.md §8). RC Modal Section 8 (Payment Terms) was
+//            missed in Sprint 23 scope — still rendered legacy 6-tier
+//            card grid: Flash/Express/Priority/Partner/Elite/Standard
+//            with PaymentTier enum-encoded SLA hours.
+//
+//            P0 BKN-blocking: RC PDFs to BKN's carriers reference
+//            payment terms that don't exist in customer-facing Caravan
+//            Partner Program. Same credibility class as Sprint 30
+//            Houston-address fix.
+//
+//            REPLACED:
+//              PAYMENT_TIERS Record<string, {label, days, fee}>
+//              6-card legacy grid driven by enum keys
+//
+//            WITH:
+//              PAYMENT_SPEEDS array [STANDARD, QP_7DAY, QP_SAMEDAY]
+//              feePctForSpeed(speedUiKey, tier) tier × speed helper
+//              standardNetByTier(tier) Silver/Gold/Platinum Net days
+//              uiKeyFromEnum(enumValue) reverse map for legacy display
+//              LEGACY_PAYMENT_TIERS preserved for fallback display on
+//                existing loads pre-Sprint-33 (EXPRESS/PARTNER/ELITE
+//                values still readable; AE-unselectable from new RC)
+//
+//            UI structure:
+//              3-card SPEED selector replaces 6-card tier grid
+//              Caravan tier badge in section header (auto-derived
+//                from selected carrier's CarrierProfile.tier)
+//              Each card sub-text shows tier-derived value:
+//                Standard: tier-derived Net days (30/21/14)
+//                QP_7DAY:  3% / 2% / 1% fee per Silver/Gold/Platinum
+//                QP_SAMEDAY: 5% / 4% / 3% fee per universal +2% rule
+//
+//            Backend PaymentTier enum preserved per Sprint 23 stay-
+//            canonical decision. UI selection maps to enum on save:
+//              STANDARD UI → STANDARD enum (168h SLA)
+//              QP_7DAY UI → PRIORITY enum (48h SLA, closest to 7-day
+//                mental model)
+//              QP_SAMEDAY UI → FLASH enum (2h SLA)
+//
+//            EXPRESS/PARTNER/ELITE legacy enum values become AE-
+//            unselectable from new RC Modal but persist in DB for
+//            analytics + legacy load display. Existing loads with these
+//            values render the closest UI speed via uiKeyFromEnum
+//            (EXPRESS→QP_SAMEDAY, PARTNER→QP_7DAY, ELITE→STANDARD)
+//            and can re-save into the new 3-bucket scheme.
+//
+//            FormState gained `carrierTier: string` field (defaults
+//            empty; reads from load.carrier.carrierProfile.tier on
+//            initForm; selectCarrier writes carrier.tier on selection).
+//            financials.feePercent calc rebased from legacy enum lookup
+//            to tier × speed derivation via feePctForSpeed helper.
+//
+//            (3) ITEM 41 — Carrier dropdown color (NO CODE CHANGE)
+//
+//            Phase A audit verified Sprint 32 commit 6d6655a contained
+//            the bg-[#1a2340] → bg-white swap. Project-wide grep
+//            confirmed zero remaining matches. globals.css theme
+//            cascade audit confirmed `#1a2340` is NOT in the catch-all
+//            override list (lines 124-132) — but post-Sprint-32 the
+//            dropdown uses `bg-white` which renders white in BOTH
+//            light + dark modes regardless of theme override. Code
+//            is correct.
+//
+//            User-reported persistence after v3.8.aak deploy traces
+//            to browser bundle cache. Next.js code-splits per route;
+//            RC Modal chunk has its own content-hashed bundle. If
+//            Cloudflare cached the HTML referencing OLD chunk hashes,
+//            user's browser loads OLD modal bundle alongside fresh
+//            VersionFooter chunk — explains why footer reads aak
+//            but modal still appears pre-aak. Hard refresh
+//            (Ctrl+Shift+R) resolves.
+//
+//            Item 41 stays CLOSED. Sprint 32 close stands.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Net source change: ~80 LOC across 1 file
+//            (RateConfirmationModal.tsx). Per §3.1 sequence-continuous
+//            rule: v3.8.aak → v3.8.aal. AE Console + customer-facing
+//            RC PDF surface — version-bump justified.
+//
+//            §13.3:
+//              - Item 41 keeps CLOSED (Sprint 32)
+//              - Item 42 keeps OPEN (Sprint 34 close)
+//              - Item 44 logged + CLOSED in this commit
+export const SRL_VERSION = "3.8.aal";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
