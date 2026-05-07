@@ -107,10 +107,15 @@ jobs:
           npm ci
           npm install --no-save serve
 
-      - name: Apply migrations + seed (with E2E fixtures)
+      - name: Apply schema + seed (with E2E fixtures)
         working-directory: backend
+        # Matches Neon prod pattern per CLAUDE.md §2: schema pushed
+        # via `prisma db push`, migration history has drift, avoid
+        # `prisma migrate dev/deploy`. Migration `20260219000000_
+        # add_customer_userid` fails on fresh DB because it tries to
+        # alter `customers` before earlier migrations create it.
         run: |
-          npx prisma migrate deploy
+          npx prisma db push --skip-generate
           npx prisma db seed
 
       - name: Build frontend (static export)
