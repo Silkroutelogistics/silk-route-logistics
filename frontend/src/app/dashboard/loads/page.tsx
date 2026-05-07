@@ -164,12 +164,20 @@ export default function LoadsPage() {
     queryKey: ["loads", filters, page],
     queryFn: () =>
       api.get<{ loads: Load[]; total: number; totalPages: number }>(`/loads?${query.toString()}`).then((r) => r.data),
+    // v3.8.aao — Sprint 36 Item 50 (A0.3-G1). Auto-refresh on 30s
+    // interval so AE Console reflects carrier-side tender accept
+    // without manual refresh. Backend SSE infrastructure exists at
+    // /api/track-trace/stream but has zero frontend consumers — wiring
+    // is post-BKN architectural priority. 30s polling is the
+    // pre-BKN-volume acceptable trade-off.
+    refetchInterval: 30_000,
   });
 
   const { data: loadDetail } = useQuery({
     queryKey: ["load", selectedLoadId],
     queryFn: () => api.get<Load>(`/loads/${selectedLoadId}`).then((r) => r.data),
     enabled: !!selectedLoadId,
+    refetchInterval: 30_000, // v3.8.aao — Sprint 36 Item 50 (A0.3-G1)
   });
 
   // v3.4.u — legacy /carrier-match/:loadId retired. Consolidated into
@@ -1549,23 +1557,144 @@ function TenderForm({
 }) {
   const inputCls =
     "w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20";
+
+  // v3.8.aao — Sprint 36 Item 49 (Y1). Replaces static <select> bound
+  // to waterfall-scored subset (which returned 0 matches for a brand-
+  // new platform with no historical lane data, blocking AE from
+  // tendering to the only available carrier — BKN).
+  //
+  // Pattern matches RC Modal Section 6 (Sprint 31 + 32 carrier picker):
+  // search input → /api/carrier/all → dropdown of all approved carriers.
+  // Waterfall scoring info preserved as advisory "Matched" tag — not
+  // gate. AE picks ANY approved carrier; compliance check still fires
+  // post-selection per existing safety.
+  const [carrierSearch, setCarrierSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [selectedCarrier, setSelectedCarrier] = useState<{
+    id: string;
+    company: string;
+    tier: string;
+    mcNumber: string | null;
+    dotNumber: string | null;
+  } | null>(null);
+
+  const { data: carriers } = useQuery({
+    queryKey: ["tender-carrier-search", carrierSearch],
+    queryFn: () =>
+      api.get("/carrier/all", { params: { search: carrierSearch, limit: 10 } }).then((r) => r.data),
+    enabled: showSearch && carrierSearch.length >= 2,
+  });
+
+  // Set of carrier IDs surfaced by waterfall scoring — used to render
+  // the advisory "Matched" tag on rows the engine flagged for this lane.
+  const matchedCarrierIds = new Set(
+    (suggestedCarriers?.carriers ?? []).map((c) => c.carrierId)
+  );
+
+  const pickCarrier = (c: any) => {
+    const carrierUserId = c.userId || c.id;
+    setTenderCarrierId(carrierUserId);
+    setSelectedCarrier({
+      id: carrierUserId,
+      company: c.company || c.user?.company || "Unknown",
+      tier: c.tier || "GUEST",
+      mcNumber: c.mcNumber || null,
+      dotNumber: c.dotNumber || null,
+    });
+    setShowSearch(false);
+    setCarrierSearch("");
+  };
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-400">
         {load.referenceNumber} &mdash; {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
       </p>
-      <div>
+      <div className="relative">
         <label className="block text-xs text-gray-500 mb-1">Select Carrier</label>
-        <select value={tenderCarrierId} onChange={(e) => setTenderCarrierId(e.target.value)} className={inputCls}>
-          <option value="">Choose a carrier...</option>
-          {suggestedCarriers?.carriers
-            ?.filter((c) => c.complianceStatus !== "red")
-            .map((c) => (
-              <option key={c.carrierId} value={c.carrierId}>
-                {c.company} ({c.tier}){c.complianceStatus === "amber" ? " - Expiring" : ""}
-              </option>
-            ))}
-        </select>
+        {selectedCarrier ? (
+          <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-slate-900 truncate">{selectedCarrier.company}</p>
+                <span className={`px-2 py-0.5 text-[10px] rounded font-medium ${
+                  selectedCarrier.tier === "PLATINUM" || selectedCarrier.tier === "GOLD"
+                    ? "bg-[#C5A572]/15 text-[#BA7517]"
+                    : "bg-slate-100 text-slate-600"
+                }`}>
+                  {selectedCarrier.tier}
+                </span>
+                {matchedCarrierIds.has(selectedCarrier.id) && (
+                  <span className="px-2 py-0.5 text-[10px] rounded bg-green-100 text-green-700 font-medium">
+                    Matched
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                MC: {selectedCarrier.mcNumber || "N/A"} | DOT: {selectedCarrier.dotNumber || "N/A"}
+              </p>
+            </div>
+            <button
+              onClick={() => { setSelectedCarrier(null); setTenderCarrierId(""); }}
+              className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1"
+            >
+              Change
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              value={carrierSearch}
+              onChange={(e) => { setCarrierSearch(e.target.value); setShowSearch(true); }}
+              onFocus={() => setShowSearch(true)}
+              placeholder="Search by company name, MC#, or DOT#..."
+              className={`${inputCls} pl-10`}
+            />
+            {showSearch && carriers && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl max-h-60 overflow-y-auto">
+                {(carriers.carriers || carriers || []).length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-slate-500">No carriers found</div>
+                ) : (
+                  (carriers.carriers || carriers || []).map((c: any) => {
+                    const carrierUserId = c.userId || c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => pickCarrier(c)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-left transition cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-slate-900 truncate">{c.company || c.user?.company || "Unknown"}</p>
+                            {matchedCarrierIds.has(carrierUserId) && (
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-100 text-green-700 font-medium shrink-0">
+                                Matched
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            MC: {c.mcNumber || "N/A"} | DOT: {c.dotNumber || "N/A"}
+                          </p>
+                        </div>
+                        {c.tier && (
+                          <span className={`px-2 py-0.5 text-[10px] rounded font-medium shrink-0 ${
+                            c.tier === "PLATINUM" || c.tier === "GOLD"
+                              ? "bg-[#C5A572]/15 text-[#BA7517]"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {c.tier}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {canSeeMargin ? (
         <div>

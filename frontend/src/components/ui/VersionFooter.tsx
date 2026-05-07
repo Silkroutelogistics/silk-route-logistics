@@ -4535,7 +4535,141 @@
 //              - Item 47 LOGGED OPEN (Stop.type latent, post-BKN)
 //              - Item 48 LOGGED OPEN (RC PDF format reconciliation,
 //                post-BKN architectural sprint)
-export const SRL_VERSION = "3.8.aan";
+// v3.8.aao — Sprint 36 Path β-bundled: Items 49 + 50 closure
+//            (BKN-blocking) + 6 contract gaps (Items 51-56) logged
+//            for sequential post-BKN sprints.
+//
+//            Sprint 36 paused mid-Path B for Phase A0 audit on
+//            tender acceptance contract (carrier accept → AE
+//            Console propagation). A0 surfaced 7 contract gaps;
+//            2 BKN-blocking, 5 architectural cleanup. Path β-bundled
+//            ships Y1 carrier picker + G1 Load Board polling
+//            (atomic ~55 LOC) + logs the rest as §13.3 Items 51-56.
+//
+//            ITEM 49 (Y1) — Tender modal carrier picker rewrite
+//
+//            Sprint 28 Phase B walk Tier 1.3 Step 2 surfaced
+//            empty <select> dropdown on Tender modal. Phase A
+//            audit found loads/page.tsx:1559-1568 static <select>
+//            iterates suggestedCarriers?.carriers — the waterfall-
+//            scored subset. Brand-new platform with zero historical
+//            lane data → waterfall returns 0 matches → dropdown
+//            empty → AE can't tender to BKN despite BKN being
+//            approved + tier-assigned.
+//
+//            Replaced static <select> with search-input picker
+//            matching RC Modal Section 6 pattern (Sprint 31 + 32).
+//            ~50 LOC. New surface:
+//              - useState carrierSearch + showSearch + selectedCarrier
+//              - useQuery /api/carrier/all (Sprint 31 endpoint)
+//              - Search input with placeholder
+//              - Dropdown of all approved carriers (cream bg + dark
+//                text per Sprint 32, tier badge canonical Sprint 24
+//                palette)
+//              - "Matched" tag on waterfall-suggested carriers as
+//                advisory (not gate) — preserves scoring info
+//              - Empty state + selected-carrier display + Change
+//                button
+//              - pickCarrier handler sets tenderCarrierId from
+//                user.id || carrier.id
+//              - Compliance check fires post-selection per existing
+//                safety
+//
+//            ITEM 50 (A0.3-G1) — Load Board polling for tender-
+//            accept propagation
+//
+//            Phase A0 audit revealed Load Board ["loads"] +
+//            ["load", id] TanStack Query keys had NO refetchInterval
+//            and NO staleTime override. When carrier accepts tender
+//            in their portal:
+//              - Carrier-portal mutation onSuccess refetches
+//                ["carrier-tenders"] ✓
+//              - Backend writes Load.status = BOOKED + carrierId set
+//              - Backend has /api/track-trace/stream SSE endpoint
+//                with broadcastSSE handlers, BUT zero frontend
+//                consumers (grep returned no EventSource subscribers
+//                in frontend/src/)
+//              - AE Console Load Board: no refresh path → AE must
+//                manually navigate or refresh
+//
+//            Added refetchInterval: 30_000 to both Load Board
+//            queries. Carrier accepts → 30s window → AE Console
+//            reflects status change. Trade-off: 30s polling adds
+//            modest backend load. Acceptable for pre-BKN single-
+//            tenant volume. SSE consumer wiring is post-BKN
+//            architectural priority (logged as adjacent
+//            observation — backend infrastructure already exists,
+//            frontend dead).
+//
+//            ITEMS 51-56 LOGGED OPEN (not fixed in Sprint 36)
+//
+//            A0 audit surfaced 6 additional contract gaps:
+//              Item 51 (G2): notifyTenderAction dead code —
+//                function exists in notificationService.ts:91 but
+//                never called by any path. Direct accept uses
+//                manual prisma.notification.create with wrong
+//                "LOAD_UPDATE" type instead of "TENDER_ACCEPTED".
+//              Item 52 (G3): Shipper tracking-link not fired —
+//                sendTrackingLinkToCrmContacts called only from
+//                loadBids.ts + orders.ts; tender accept paths
+//                (both direct + waterfall) skip it despite the
+//                comment claiming all three should fire.
+//              Item 53 (G4): Direct accept race condition —
+//                tenderController.acceptTender uses Promise.all
+//                (concurrent, NOT atomic). v3.8.j docs claim
+//                "atomically sets carrierId + status=BOOKED" but
+//                actual code isn't prisma.$transaction.
+//              Item 54 (G5): AE accept-on-behalf has no UI —
+//                backend allows AE to call acceptPosition (waterfall
+//                path); direct path blocks AE via user-id gate.
+//                Either way, zero AE UI exists. Sprint 36 directive
+//                Step 3 "admin override" describes a flow that
+//                doesn't exist. Priority TBD pending walk Step 2.5
+//                BKN time-to-accept measurement.
+//              Item 55 (G6): BOOKED vs DISPATCHED divergence —
+//                direct accept → BOOKED, waterfall accept →
+//                DISPATCHED. Two paths → two outcomes for same
+//                conceptual event.
+//              Item 56 (G7): Waterfall skips compliance re-check —
+//                direct path re-runs complianceCheck at acceptance;
+//                waterfall acceptPosition does NOT.
+//
+//            Sprint 36 strict-atomic per §3.3. Items 51-56 ship in
+//            Sprint 37+ sequence per priority.
+//
+//            WALK STEP 2.5 ADDED (TIER 1.3 MATRIX, GAP-AWARE)
+//
+//            Phase B walk continues post-deploy with gap-aware
+//            Step 2.5 verification:
+//              2.5a Carrier-side accept (BKN portal)
+//              2.5b Load Board reflects within ~30s (post-G1
+//                polling, not instant SSE)
+//              2.5c Waterfall reflects via existing 15s poll
+//              2.5d Cross-surface consistency (note BOOKED vs
+//                DISPATCHED divergence per Item 55)
+//              2.5e AE notification fires on direct path only
+//                (Item 51 G2 noted), shipper notification missing
+//                (Item 52 G3 noted)
+//
+//            Walk timing measures BKN time-to-accept → informs
+//            Item 54 (G5 AE accept-on-behalf) priority decision.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Net source change: ~55 LOC (Y1 picker rewrite ~50 +
+//            G1 polling ~3 + comments).
+//            Per §3.1 sequence-continuous rule: v3.8.aan → v3.8.aao.
+//            Customer-facing AE Console + tender flow — version-
+//            bump justified.
+//
+//            §13.3:
+//              - Item 49 LOGGED + CLOSED (Y1)
+//              - Item 50 LOGGED + CLOSED (G1)
+//              - Items 51-56 LOGGED OPEN for sequential post-BKN
+//                sprints
+export const SRL_VERSION = "3.8.aao";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
