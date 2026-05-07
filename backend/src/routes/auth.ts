@@ -80,6 +80,13 @@ router.post("/e2e-token", async (req, res) => {
     env.JWT_SECRET,
     { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
   );
+  // v3.8.aaq Sprint 37c — auth is cookie-based (httpOnly srl_token per
+  // backend/src/utils/cookies.ts:14, middleware/auth.ts:77 reads from
+  // either Authorization header OR req.cookies.srl_token). Set cookie
+  // here so subsequent page.goto() calls in playwright authenticate
+  // automatically. Token also returned in JSON for explicit-header
+  // callers (direct API requests in test).
+  setTokenCookie(res, token);
   log.warn(`[E2E] /auth/e2e-token issued bypass token for ${email} — env E2E_BYPASS_OTP=true`);
   res.json({ token, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } });
 });

@@ -1,27 +1,31 @@
 /**
- * E2E auth helper — programmatic JWT mint
+ * E2E auth helper — programmatic JWT mint via httpOnly cookie.
  *
  * Production AE Console login requires email + OTP + TOTP. E2E can't
  * receive emails or scan TOTP QRs, so we bypass via a backend-issued
  * JWT mint endpoint gated behind E2E_BYPASS_OTP env var.
  *
- * Backend flow: when E2E_BYPASS_OTP === "true", a dev-only endpoint
- * /api/auth/e2e-token returns a signed JWT for the seeded admin user.
- * We then store it in the page's localStorage under the same key the
- * production auth flow uses (matches useAuthStore zustand persist).
+ * Auth is cookie-based (per backend/src/utils/cookies.ts:14 — httpOnly
+ * `srl_token` cookie). The /auth/e2e-token endpoint sets the cookie via
+ * Set-Cookie header on its response. Playwright's BrowserContext stores
+ * the cookie automatically when we call via page.context().request, so
+ * subsequent page.goto() requests carry the auth.
  *
- * If E2E_BYPASS_OTP is NOT set, this helper throws and the test
- * fails fast — preventing accidental dev-token leakage in prod
- * environments.
+ * We also explicitly addCookies() as belt-and-suspenders in case
+ * cross-origin Set-Cookie is filtered (frontend on :4200, backend on
+ * :3010). Cookies are scoped by hostname (localhost), not port.
+ *
+ * If E2E_BYPASS_OTP is NOT set on backend, the endpoint 404s — test
+ * fails fast, preventing accidental dev-token leakage in prod.
  */
 import type { Page } from "@playwright/test";
 
 const ADMIN_EMAIL = "whaider@silkroutelogistics.ai";
 
-export async function loginAsAdmin(page: Page, baseURL: string, apiURL: string): Promise<void> {
-  // Mint token via backend bypass endpoint (only available when
-  // E2E_BYPASS_OTP=true is set on backend process).
-  const response = await page.request.post(`${apiURL}/auth/e2e-token`, {
+export async function loginAsAdmin(page: Page, _baseURL: string, apiURL: string): Promise<void> {
+  // Mint token via backend bypass endpoint. Backend sets srl_token
+  // cookie via Set-Cookie header — page.context() persists it.
+  const response = await page.context().request.post(`${apiURL}/auth/e2e-token`, {
     data: { email: ADMIN_EMAIL },
   });
 
@@ -32,22 +36,21 @@ export async function loginAsAdmin(page: Page, baseURL: string, apiURL: string):
     );
   }
 
-  const { token, user } = await response.json();
-  if (!token) throw new Error("E2E auth bypass returned no token");
+  const body = await response.json();
+  if (!body?.token) throw new Error("E2E auth bypass returned no token");
 
-  // Set token + user in localStorage matching useAuthStore zustand persist
-  // shape. The store key is "srl-auth" per frontend/src/hooks/useAuthStore.ts.
-  await page.goto(baseURL);
-  await page.evaluate(
-    ({ token, user }) => {
-      localStorage.setItem(
-        "srl-auth",
-        JSON.stringify({
-          state: { token, user, isAuthenticated: true },
-          version: 0,
-        })
-      );
+  // Belt-and-suspenders: explicitly add cookie to context.
+  // Some Playwright versions filter cross-origin Set-Cookie on
+  // page.context().request — direct addCookies guarantees presence.
+  await page.context().addCookies([
+    {
+      name: "srl_token",
+      value: body.token,
+      domain: "localhost",
+      path: "/",
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
     },
-    { token, user }
-  );
+  ]);
 }
