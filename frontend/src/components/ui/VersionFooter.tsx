@@ -4424,7 +4424,118 @@
 //              - Item 42 CLOSED in this commit (Sprint 34)
 //              - Item 44 stays CLOSED (Sprint 33)
 //              - Item 45 LOGGED OPEN (follow-up cleanup)
-export const SRL_VERSION = "3.8.aam";
+// v3.8.aan — Sprint 35: Item 46 close + Items 47/48 logged. Path β
+//            cycle continues — Sprint 34's diagnostic surface (the
+//            extractor widening from Sprint 33) revealed the next
+//            field rejection on next Generate PDF attempt.
+//
+//            ROOT CAUSE — TRIPLE-SOURCE DISAGREEMENT
+//
+//            Frontend FormState (line 182):  "FLAT" | "PER_MILE"   ✗
+//            Frontend SelectField:            PER_MILE option       ✗
+//            Backend Zod validator (line 106): ["FLAT", "PERCENTAGE"] ✓
+//            Backend Prisma enum (schema 446): FLAT/PERCENTAGE       ✓
+//
+//            Frontend's PER_MILE was phantom — backend has no such
+//            enum value. Selecting it stored an invalid string that
+//            failed the validator on Generate PDF/Send Tender/Save.
+//
+//            ORIGIN — DOMAIN CONCEPT CONFLATION
+//
+//            Backend validator at line 104 has rateType: z.enum
+//            (["FLAT", "PER_MILE"]) — different field, different
+//            concept:
+//              - rateType:          load rate is flat $X or per-
+//                                    mile $Y/mi
+//              - fuelSurchargeType: FSC is flat $ or percentage of
+//                                    base
+//
+//            Frontend RC modal copy-pasted PER_MILE from rateType to
+//            fuelSurchargeType. Domain concepts are distinct industry-
+//            standard:
+//              - "Per mile" rates apply to base load rate
+//              - "Percentage" surcharges apply to fuel only
+//
+//            FIX — PATH A (frontend aligns to backend canonical)
+//
+//            Three edits (~5 LOC):
+//              FormState type union: PER_MILE → PERCENTAGE
+//              SelectField onChange cast: PER_MILE → PERCENTAGE
+//              SelectField option: { value: "PER_MILE",
+//                label: "Per Mile" } → { value: "PERCENTAGE",
+//                label: "Percentage" }
+//
+//            Plus initForm defensive normalization (~3 LOC) — coerces
+//            any legacy "PER_MILE" stored value (unlikely but
+//            possible) to "FLAT" default rather than rendering invalid.
+//
+//            PATH B (add PER_MILE to backend enum) REJECTED — would
+//            cement frontend's domain conflation. Backend canonical
+//            FLAT/PERCENTAGE is correct per industry convention.
+//
+//            ITEM 47 LOGGED OPEN — Stop.type "STOP" enum latent risk
+//
+//            Frontend FormState declares Stop.type as "PICKUP" |
+//            "DELIVERY" | "STOP" (line 45). Backend validator allows
+//            only ["PICKUP", "DELIVERY"] (validators/rateConfirmation
+//            .ts:4). Default flow doesn't create STOP-type stops —
+//            not actively firing — but if any future code path creates
+//            STOP-type stop, validator rejects same as Item 46 class.
+//            Post-BKN cleanup. NOT in Sprint 35 scope per §3.3 atomic-
+//            commit rule.
+//
+//            ITEM 48 LOGGED OPEN — RC PDF format reconciliation
+//
+//            User's Sprint 34 smoke screenshot of generated RC PDF
+//            (RC-L7492033667.pdf) revealed format issues vs srl-
+//            brand-design skill canonical (BOL v2.9 reference):
+//              - 6 pages with phantom-blank pages 2/3/5/6 from page-
+//                break logic; content actually fits on 2 pages
+//              - Address duplicated in header chrome ("2317 S 35th
+//                St, Galesburg, MI 49053" then "Galesburg, MI 49053"
+//                on next line)
+//              - No QR code (BOL v2.9 has /track/<token> QR)
+//              - No canonical Compass mark — generic small icon shown
+//              - Carrier Information section renders empty even when
+//                carrier selected post-Sprint-32 dropdown fix (field-
+//                binding gap in pdfService.ts/generateEnhancedRate
+//                Confirmation)
+//              - TOTAL section bare — shows totals but no Caravan
+//                tier breakdown, no QP fee detail, no payment terms
+//                reflection of Sprint 33 Caravan tier reconciliation
+//              - Font/section-header chrome drift from skill canonical
+//
+//            Multi-day architectural sprint post-BKN, scope ~200-400
+//            LOC across pdfService.ts + brand-skill template.
+//            Parallels BOL v2.9 epic shape. NOT BKN-blocking — current
+//            PDF is functional, just doesn't match skill polish.
+//
+//            ITEM A28-2 ELEVATED (REPEAT)
+//
+//            Sprint 32 → 33 → 34 → 35 cycle (and likely more if
+//            additional enum/type fields exist) demonstrates "validator
+//            strict, frontend payload promiscuous" pattern cost.
+//            Item A28-2 architectural sprint (z.preprocess at validator
+//            boundary) would prevent this class entirely — every stale
+//            field on the frontend would coerce or reject at validator
+//            boundary with a clear field-level message. Worth post-BKN
+//            priority bump.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes), frontend
+//            next build clean.
+//
+//            Net source change: ~5 LOC (3 enum-value swaps + 3-line
+//            initForm normalize). Per §3.1 sequence-continuous rule:
+//            v3.8.aam → v3.8.aan. Customer-facing AE Console + RC PDF
+//            surface — version-bump justified.
+//
+//            §13.3:
+//              - Item 46 LOGGED + CLOSED in this commit (Sprint 35)
+//              - Item 47 LOGGED OPEN (Stop.type latent, post-BKN)
+//              - Item 48 LOGGED OPEN (RC PDF format reconciliation,
+//                post-BKN architectural sprint)
+export const SRL_VERSION = "3.8.aan";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

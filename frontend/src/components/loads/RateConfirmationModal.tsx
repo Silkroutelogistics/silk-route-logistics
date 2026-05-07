@@ -179,7 +179,13 @@ interface FormState {
   customerRate: string;
   carrierLineHaul: string;
   fuelSurcharge: string;
-  fuelSurchargeType: "FLAT" | "PER_MILE";
+  // v3.8.aan — Sprint 35 Item 46. Aligned to backend canonical
+  // FuelSurchargeType enum (FLAT | PERCENTAGE) per Prisma
+  // schema.prisma:446 + validator rateConfirmation.ts:106. Pre-fix
+  // had "PER_MILE" (copy-pasted from rateType validator at line 104,
+  // a different field with different concept). Backend rejected
+  // the phantom value with ZodError surfaced via Sprint 33 extractor.
+  fuelSurchargeType: "FLAT" | "PERCENTAGE";
   accessorials: Accessorial[];
   totalCarrierPay: string;
 
@@ -465,7 +471,13 @@ function initForm(load: any, user: any): FormState {
     customerRate: load?.customerRate ? String(load.customerRate) : (load?.rate ? String(load.rate) : ""),
     carrierLineHaul: load?.carrierRate ? String(load.carrierRate) : (load?.rate ? String(load.rate) : ""),
     fuelSurcharge: load?.fuelSurcharge ? String(load.fuelSurcharge) : "0",
-    fuelSurchargeType: load?.fuelSurchargeType || "FLAT",
+    // v3.8.aan — Sprint 35. Normalize legacy values to backend canonical
+    // FLAT | PERCENTAGE. Defensive against any pre-fix records that may
+    // have stored "PER_MILE" (unlikely — backend validator would have
+    // rejected — but harmless safety. Coerces unknown to "FLAT" default.
+    fuelSurchargeType: (load?.fuelSurchargeType === "PERCENTAGE" || load?.fuelSurchargeType === "FLAT")
+      ? load.fuelSurchargeType
+      : "FLAT",
     accessorials: load?.accessorials && Array.isArray(load.accessorials)
       ? load.accessorials.map((a: any) => {
           // Three input shapes supported:
@@ -1822,10 +1834,10 @@ function SectionFinancials({
           <SelectField
             label="FSC Type"
             value={form.fuelSurchargeType}
-            onChange={(v) => set("fuelSurchargeType", v as "FLAT" | "PER_MILE")}
+            onChange={(v) => set("fuelSurchargeType", v as "FLAT" | "PERCENTAGE")}
             options={[
               { value: "FLAT", label: "Flat Amount" },
-              { value: "PER_MILE", label: "Per Mile" },
+              { value: "PERCENTAGE", label: "Percentage" },
             ]}
           />
         </div>
