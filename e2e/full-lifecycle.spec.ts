@@ -40,7 +40,7 @@ import {
 } from "./helpers/pdf";
 
 const BACKEND_API = process.env.E2E_BACKEND_API || "http://localhost:3010/api";
-const FRONTEND_BASE = process.env.E2E_FRONTEND_BASE || "http://localhost:4200";
+const FRONTEND_BASE = process.env.E2E_FRONTEND_BASE || "http://localhost:4000";
 
 test.describe.configure({ mode: "serial" });
 

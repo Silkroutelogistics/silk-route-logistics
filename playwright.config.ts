@@ -21,7 +21,13 @@
 import { defineConfig } from "@playwright/test";
 
 const BACKEND_PORT = 3010;
-const FRONTEND_PORT = 4200;
+// v3.8.aaq Sprint 37d — frontend port aligned to backend's
+// allowedOrigins non-production list (server.ts:96 allows
+// :3000, :5173, :4000 only). Was :4200 → CORS blocked all
+// cross-origin frontend→backend requests in CI, auth cookie
+// never propagated, B4 timed out waiting for load row that
+// never rendered (page redirected to login on auth failure).
+const FRONTEND_PORT = 4000;
 
 export default defineConfig({
   testDir: "./e2e",
