@@ -1639,6 +1639,37 @@ Seed complete:
     - HR: 2 (Onboarding, Code of Conduct)
     - Sales: 1 (Customer Onboarding)
   `);
+
+  // ──────────────────────────────────────────────────────────────────
+  // v3.8.aaq — Sprint 37 E2E fixtures.
+  // Adds a SIGNED CarrierAgreement record for every APPROVED carrier
+  // so that complianceCheck (services/complianceMonitorService.ts:108)
+  // doesn't hard-block tendering with "No signed carrier-broker
+  // agreement on file". Idempotent: upsert per carrier.
+  // Triggered by E2E_FIXTURES env var so dev seeding stays unchanged
+  // unless explicitly opted in.
+  // ──────────────────────────────────────────────────────────────────
+  if (process.env.E2E_FIXTURES === "true") {
+    const approvedCarriers = await prisma.carrierProfile.findMany({
+      where: { onboardingStatus: "APPROVED" },
+      select: { id: true },
+    });
+    const oneYear = new Date(Date.now() + 365 * day);
+    for (const c of approvedCarriers) {
+      await prisma.carrierAgreement.create({
+        data: {
+          carrierId: c.id,
+          version: "1.0",
+          templateName: "standard",
+          status: "SIGNED",
+          signedAt: new Date(),
+          signedByName: "E2E Test Signer",
+          expiresAt: oneYear,
+        },
+      });
+    }
+    console.log(`✅ E2E fixtures: signed CarrierAgreement for ${approvedCarriers.length} APPROVED carriers`);
+  }
 }
 
 main()

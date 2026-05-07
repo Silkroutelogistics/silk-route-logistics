@@ -53,3 +53,82 @@ jobs:
       - run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://api.silkroutelogistics.ai/api
+
+  # v3.8.aaq — Sprint 37 E2E lifecycle smoke + brand-skill regression lock.
+  # Spins up real Postgres + backend + frontend (static export served via
+  # `serve`) and walks one full load lifecycle. PDF assertions catch any
+  # regression of Sprint 30 / Sprint 33 closed fixes.
+  e2e:
+    name: E2E - Full Lifecycle Smoke
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      JWT_SECRET: ci-test-secret
+      JWT_EXPIRES_IN: 24h
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      E2E_BYPASS_OTP: "true"
+      E2E_FIXTURES: "true"
+      NEXT_PUBLIC_API_URL: http://localhost:3010/api
+      PORT: "3010"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root deps (Playwright, pdf-parse)
+        run: npm ci
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend deps + serve
+        working-directory: frontend
+        run: |
+          npm ci
+          npm install --no-save serve
+
+      - name: Apply migrations + seed (with E2E fixtures)
+        working-directory: backend
+        run: |
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - name: Build frontend (static export)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E lifecycle test
+        run: npx playwright test --reporter=list
+        env:
+          CI: "true"
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

@@ -34,6 +34,11 @@ nul
 coverage/
 .nyc_output/
 
+# Playwright E2E (Sprint 37)
+playwright-report/
+test-results/
+/.playwright/
+
 # Misc
 .turbo/
 

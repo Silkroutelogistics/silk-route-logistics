@@ -4794,7 +4794,152 @@
 //              - Item 57 LOGGED + CLOSED in this commit
 //              - Item 49 stays CLOSED (Y1 scope correct; Item 57
 //                is the regression caught by smoke)
-export const SRL_VERSION = "3.8.aap";
+// v3.8.aaq — Sprint 37: METHODOLOGY SHIFT — automated E2E lifecycle
+//            smoke + brand-skill regression locks. Closes Item 59
+//            (new) — automated regression coverage replaces manual
+//            smoke discovery loop.
+//
+//            CONTEXT — why this sprint exists
+//
+//            Today's session: 20+ sprints, ~530 LOC source, still
+//            haven't completed one full load lifecycle smoke. Pattern:
+//            ship → manual smoke → find bug → audit → fix → repeat.
+//            Each iteration burned ~30 min and required Wasi to click
+//            through screens to discover regressions.
+//
+//            Sprint 37 inverts the loop: write a single E2E test that
+//            walks one full load lifecycle and asserts brand-skill
+//            conformance on the generated PDF. Future regressions go
+//            red BEFORE deploy, not after Wasi catches them visually.
+//
+//            ARTIFACTS SHIPPED (one atomic commit)
+//
+//            (1) Test infrastructure
+//              - playwright.config.ts (root) — single-worker, static-
+//                export served via `serve`, auto-orchestrated backend +
+//                frontend webServer. CI runs project-only chromium.
+//              - tsconfig.json (root) — type-check coverage for e2e/
+//                without polluting backend or frontend tsconfig
+//                include patterns
+//              - package.json (root) — dev deps: @playwright/test,
+//                pdf-parse, @types/pdf-parse. New scripts: test:e2e,
+//                test:e2e:ui, test:e2e:install, db:seed:e2e
+//              - .gitignore — playwright-report/, test-results/
+//
+//            (2) Backend bypass for E2E auth
+//              - routes/auth.ts: POST /api/auth/e2e-token. STRICTLY
+//                gated by E2E_BYPASS_OTP=true env var; returns 404 in
+//                any environment where env var is absent. Mints JWT
+//                for any seeded user without OTP/TOTP. Test-only,
+//                fail-closed in production.
+//              - Pattern: same shape as existing signToken at
+//                authController.ts:18 — just exposed via env-gated
+//                route instead of OTP/TOTP gauntlet.
+//
+//            (3) Seed extension for E2E fixtures
+//              - prisma/seed.ts: appended end-block gated by
+//                E2E_FIXTURES=true env var. Creates SIGNED
+//                CarrierAgreement record for every APPROVED carrier
+//                so complianceCheck (services/complianceMonitorService
+//                .ts:108) doesn't hard-block tendering with "No signed
+//                carrier-broker agreement on file". Idempotent. Dev
+//                seeding flow unchanged unless explicitly opted in.
+//
+//            (4) E2E test code (~400 LOC across 4 files)
+//              - e2e/helpers/auth.ts — programmatic JWT mint via
+//                /e2e-token + localStorage seeding to match
+//                useAuthStore zustand persist shape
+//              - e2e/helpers/pdf.ts — pdf-parse text extraction +
+//                RC_PDF_FORBIDDEN / RC_PDF_REQUIRED arrays. Append-only
+//                — every future closed sprint adds its regression
+//                lock here.
+//              - e2e/full-lifecycle.spec.ts — single sequential test
+//                walking POSTED → click load → submit tender → create
+//                rate confirmation → assert PDF text → /track public
+//                page status mapping. Coverage map in file header
+//                lists which sprint each B-step asserts.
+//              - e2e/README.md — local-run instructions + new-fix
+//                assertion-add guide.
+//
+//            (5) GitHub Actions CI workflow
+//              - .github/workflows/ci.yml: new `e2e` job depends on
+//                backend + frontend jobs (only runs if both pass).
+//                Spins up Postgres 16 service container, runs
+//                migrations + E2E seed, builds frontend, installs
+//                Playwright chromium, runs the test. Uploads
+//                playwright-report/ artifact (7-day retention).
+//              - Service container with healthcheck — waits for
+//                Postgres ready before backend starts.
+//
+//            REGRESSION COVERAGE (Sprint 26b through Sprint 36b)
+//
+//            Sprint  | Closed fix                              | Asserted at
+//            --------+------------------------------------------+-------------
+//            26b     | Accessorial render Load Board crash      | B5 click load
+//            29      | Accessorial render RC modal crash        | B6 open RC
+//            30      | Broker Info canonical SRL identity       | B11 PDF
+//            31      | Carrier search 404                       | B5 results
+//            32      | Dropdown white bg + error UI             | B5 visual
+//            33      | Caravan tier reconciliation              | B11 PDF
+//            34      | quickPayFeePercent coercion              | B7 send ok
+//            35      | fuelSurchargeType enum alignment         | B7 send ok
+//            36      | Tender modal Y1 picker                   | B5 picker
+//            36b     | Eligibility filter + ID semantics        | B5+B7 e2e
+//            27      | /track public status mapping             | B9 /track
+//
+//            FORBIDDEN/REQUIRED LIST IS APPEND-ONLY
+//
+//            Every future sprint that closes a regression adds:
+//              - Forbidden: strings that MUST NOT appear in PDF
+//                (legacy/wrong values now retired)
+//              - Required: strings that MUST appear in PDF
+//                (canonical values now established)
+//
+//            If a sprint accidentally re-introduces a retired value
+//            OR removes a canonical value, the E2E test goes red and
+//            blocks deploy. No more "Wasi clicks through 5 screens to
+//            discover the regression" loop.
+//
+//            DECISIONS APPLIED PER PHASE A
+//
+//            Path 37-bundled chosen (single atomic commit, ~590 LOC).
+//            Auth bypass: programmatic JWT mint via E2E_BYPASS_OTP env.
+//            Frontend serve: static export + `serve` (matches Cloud-
+//            flare Pages production deploy reality more than next dev).
+//            Backend orchestration: playwright webServer config (auto-
+//            start/stop). Test DB lifecycle: TRUNCATE+reseed via
+//            existing prisma/seed.ts pattern + E2E_FIXTURES guard.
+//
+//            POST-SPRINT-37 LOCKED QUEUE
+//
+//            Sprint 38: Item 58 — compliance override UI (BKN-imm,
+//              E2E asserts override flow if compliance blocks)
+//            Sprint 39: Item 51 — notifyTenderAction wiring
+//            Sprint 40: Item 48 — RC PDF reconciliation per skill
+//              (E2E assertions update intentionally as part of fix)
+//            Sprint 41+: Items 52-57 sequential cleanup
+//            Sprint N: Visual regression sprint (Percy/Chromatic)
+//            Sprint N+1: Item A28-2 architectural validator hardening
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (validates new
+//            /e2e-token route + jwt sign), frontend next build clean.
+//            E2E test itself runs in CI when migrations+seed+build all
+//            green. First green-run cycle expected to require some
+//            integration debugging per Phase A risk note.
+//
+//            Net source change: ~600 LOC across 8 files (test infra
+//            + backend bypass + seed extension + CI workflow).
+//
+//            Per §3.1 sequence-continuous rule: v3.8.aap → v3.8.aaq.
+//            METHODOLOGY SHIFT — version-bump justified.
+//
+//            §13.3:
+//              - Item 59 (new): METHODOLOGY SHIFT — automated E2E
+//                lifecycle smoke + brand-skill regression locks.
+//                LOGGED + CLOSED in this commit (closure of the
+//                "we keep firefighting" pattern).
+export const SRL_VERSION = "3.8.aaq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

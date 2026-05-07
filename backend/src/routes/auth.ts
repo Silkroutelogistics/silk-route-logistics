@@ -56,6 +56,34 @@ router.post("/resend-otp", loginLimiter, validateBody(resendOtpSchema), handleRe
 router.post("/check-password", validateBody(z.object({ password: z.string() })), checkPasswordStrength);
 router.post("/totp/login-verify", otpVerifyLimiter, validateBody(z.object({ totpToken: z.string().min(1), code: z.string().min(6).max(8) })), handleTotpLoginVerify);
 
+// v3.8.aaq — Sprint 37 E2E bypass. Mints a JWT for an existing seeded
+// user without OTP/TOTP. STRICTLY gated by E2E_BYPASS_OTP=true env var.
+// Returns 404 in any environment where the env var is absent (safe-by-
+// default — production fails-closed). Test-only.
+router.post("/e2e-token", async (req, res) => {
+  if (process.env.E2E_BYPASS_OTP !== "true") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const email = (req.body?.email ?? "").toString().trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: "email required" });
+    return;
+  }
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  const token = jwt.sign(
+    { userId: user.id },
+    env.JWT_SECRET,
+    { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
+  );
+  log.warn(`[E2E] /auth/e2e-token issued bypass token for ${email} — env E2E_BYPASS_OTP=true`);
+  res.json({ token, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } });
+});
+
 // Authenticated routes
 router.post("/force-change-password", authenticate, validateBody(z.object({ newPassword: z.string().min(8) })), forceChangePassword);
 router.get("/me", authenticate, getProfile);
