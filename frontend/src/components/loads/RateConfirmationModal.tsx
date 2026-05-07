@@ -580,6 +580,18 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
       customerRate: financials.customerRate,
       weight: form.weight ? parseFloat(form.weight) : undefined,
       pieces: form.pieces ? parseInt(form.pieces) : undefined,
+      // v3.8.aam — Sprint 34 Item 42 close. quickPayFeePercent stored as
+      // string in FormState (line 188) for input ergonomics; backend Zod
+      // declares z.number().optional() at validators/rateConfirmation.ts:117.
+      // Without explicit coercion, ...form spread carried the string and
+      // tripped the validator. !== "" check preserves null-vs-zero
+      // distinction (Number("") = 0 would mask "no value entered" as 0;
+      // Number("0") = 0 still works correctly for explicit zero-fee
+      // STANDARD tier). Path β cycle complete: Sprint 32 (error UI) →
+      // Sprint 33 (extractor widening) → Sprint 34 (this fix).
+      quickPayFeePercent: form.quickPayFeePercent !== ""
+        ? Number(form.quickPayFeePercent)
+        : undefined,
       accessorials: form.accessorials
         .filter((a) => a.description.trim())
         .map((a) => ({ description: a.description, amount: toNum(a.amount) })),

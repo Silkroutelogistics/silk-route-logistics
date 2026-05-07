@@ -4302,7 +4302,129 @@
 //              - Item 41 keeps CLOSED (Sprint 32)
 //              - Item 42 keeps OPEN (Sprint 34 close)
 //              - Item 44 logged + CLOSED in this commit
-export const SRL_VERSION = "3.8.aal";
+// v3.8.aam — Sprint 34: Item 42 close. Path β methodology cycle
+//            complete (Sprints 32 → 33 → 34) for the RC modal
+//            silent-fail class.
+//
+//            ROOT CAUSE — string-vs-number type mismatch
+//
+//            Sprint 33 widened extractor surfaced:
+//              "Validation error — formData.quickPayFeePercent:
+//               Expected number, received string"
+//
+//            FormState declares quickPayFeePercent: string (line 188)
+//            for input ergonomics. Three write paths all stringify:
+//              - initForm: String(load.quickPayFeePercent) || ""
+//              - useEffect: set("quickPayFeePercent",
+//                              String(financials.feePercent))
+//              - QuickPayOverridePanel callback:
+//                              set("quickPayFeePercent", String(pct))
+//
+//            buildPayload() spreads `...form` which carried the string
+//            unchanged. backend/src/validators/rateConfirmation.ts:117
+//            declares quickPayFeePercent: z.number().optional() —
+//            strict number, rejects string with the surfaced error
+//            message above.
+//
+//            Other numeric fields in payload (weight, pieces,
+//            customerRate, lineHaulRate, fuelSurcharge, totalCharges,
+//            accessorials.amount) all have explicit coercion before
+//            send (parseFloat/parseInt/toNum). quickPayFeePercent was
+//            the lone gap — Phase A sweep confirmed single-field issue,
+//            not bug class.
+//
+//            FIX — Path X1 (surgical buildPayload coercion)
+//
+//            Added explicit Number() coercion with empty-string
+//            preservation:
+//              quickPayFeePercent: form.quickPayFeePercent !== ""
+//                ? Number(form.quickPayFeePercent)
+//                : undefined,
+//
+//            Empty-string check `!== ""` preserves null-vs-zero
+//            distinction:
+//              - empty input → undefined → DB null (correct: "no
+//                value")
+//              - "0"          → Number(0) = 0 → DB 0 (correct: explicit
+//                "no fee" STANDARD selection)
+//              - "1.5"        → Number(1.5) = 1.5 → DB 1.5 (correct)
+//
+//            Alternative `Number(...) || undefined` rejected because
+//            it would mask explicit "0" as undefined → silently break
+//            STANDARD tier no-fee semantics. Phase A caught this —
+//            audit-first methodology earning its keep again.
+//
+//            Net source change: 3 LOC. ~12 with surrounding comment.
+//            Smallest hotfix shape per Path β closing-fix pattern.
+//
+//            PATH X1 vs X3 DECISION
+//
+//            Path X3 (z.coerce.number on validator schema) rejected
+//            per Phase A:
+//              - Changes validator semantics across schema; risks
+//                empty-string-to-zero confusion on other fields
+//              - Belongs in §13.3 Item A28-2 architectural sprint
+//                where z.preprocess can apply principled coercion at
+//                validator boundary
+//              - X1 fits established buildPayload pattern (toNum,
+//                parseFloat, parseInt already used for sibling
+//                numeric fields)
+//
+//            PATH β METHODOLOGY VALIDATION
+//
+//            Sprint 32 (v3.8.aak): error UI exposes silent failure
+//              — added submitError state + red banner above button row
+//            Sprint 33 (v3.8.aal): extractor widening surfaces field
+//              — iterate ZodError details[] array for field-level
+//              messages; banner format "Validation error — field: msg"
+//            Sprint 34 (v3.8.aam): targeted field coercion closes
+//              root cause — single-field surgical fix per Path A1
+//
+//            Total cycle: ~38 LOC across 3 atomic commits.
+//              Sprint 32: ~25 LOC (error UI + state + helper + banner)
+//              Sprint 33: ~10 LOC (extractor widening) + Sprint 33
+//                also bundled Item 44 (~80 LOC Caravan tier)
+//              Sprint 34: ~3 LOC (this fix)
+//
+//            Zero speculation, zero regressions, zero wrong guesses.
+//            Error UI + widened extractor remain as PERMANENT
+//            diagnostic infrastructure for future RC handler API
+//            failures. Pattern propagation candidate for other
+//            modals/forms across the codebase.
+//
+//            ITEM 45 LOGGED (NOT FIXED IN SPRINT 34)
+//
+//            buildPayload() spreads `...form` which includes
+//            totalCarrierPay + netPayAmount. Backend validator doesn't
+//            declare these fields — Zod default `.strip()` silently
+//            drops them. Either remove from payload spread for
+//            clarity OR declare in validator if useful. Architectural
+//            decision, low priority, no current bug. ~5 LOC fix
+//            scheduled for follow-up cleanup. Logged in §13.3 Item 45.
+//
+//            ITEM A28-2 ELEVATED
+//
+//            Today's Path β cycle demonstrates the cost of "validator
+//            strict, frontend payload promiscuous" pattern. Item A28-2
+//            architectural sprint (validator hardening via z.preprocess
+//            shape coercion at validator boundary) would prevent this
+//            class entirely. Worth post-BKN priority bump from
+//            deferred queue.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes;
+//            verifying nothing drifted), frontend next build clean.
+//
+//            Per §3.1 sequence-continuous rule: v3.8.aal → v3.8.aam.
+//            Customer-facing AE Console + RC PDF surface — version-
+//            bump justified.
+//
+//            §13.3:
+//              - Item 41 stays CLOSED (Sprint 32)
+//              - Item 42 CLOSED in this commit (Sprint 34)
+//              - Item 44 stays CLOSED (Sprint 33)
+//              - Item 45 LOGGED OPEN (follow-up cleanup)
+export const SRL_VERSION = "3.8.aam";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
