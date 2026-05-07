@@ -1591,11 +1591,19 @@ function TenderForm({
     (suggestedCarriers?.carriers ?? []).map((c) => c.carrierId)
   );
 
+  // v3.8.aap — Sprint 36b Item 57. Tender backend expects
+  // CarrierProfile.id (LoadTender.carrierId FK references
+  // CarrierProfile.id per schema.prisma:1342, NOT User.id).
+  // /api/carrier/all returns CarrierProfile records where c.id IS
+  // CarrierProfile.id per carrierController.ts:773. Pre-Sprint-36
+  // static <select> used c.carrierId from waterfall service which
+  // was correctly CarrierProfile.id. Sprint 36 Y1 over-corrected
+  // to userId-or-id heuristic that resolved to User.id, causing
+  // tender backend findUnique 404 ("Carrier not found").
   const pickCarrier = (c: any) => {
-    const carrierUserId = c.userId || c.id;
-    setTenderCarrierId(carrierUserId);
+    setTenderCarrierId(c.id); // CarrierProfile.id, not User.id
     setSelectedCarrier({
-      id: carrierUserId,
+      id: c.id,
       company: c.company || c.user?.company || "Unknown",
       tier: c.tier || "GUEST",
       mcNumber: c.mcNumber || null,
@@ -1604,6 +1612,23 @@ function TenderForm({
     setShowSearch(false);
     setCarrierSearch("");
   };
+
+  // v3.8.aap — Sprint 36b Item 57. /api/carrier/all returns ALL
+  // CarrierProfile records (filtered only by deletedAt:null —
+  // see carrierController.ts:743). For tender pickers we need
+  // compliance-eligible carriers only. Pre-Sprint-36 the picker
+  // sourced from /waterfalls/load/:id/carrier-matches which
+  // pre-filtered. Y1 swap to /api/carrier/all dropped that filter.
+  // Client-side filter keeps the fix surgical (no backend change);
+  // ?eligible=true query param consolidation is Item A28-2 post-BKN.
+  function isCarrierEligibleForTender(c: any): boolean {
+    if (c?.onboardingStatus !== "APPROVED") return false;
+    if (c?.insuranceExpiry) {
+      const expiry = new Date(c.insuranceExpiry);
+      if (expiry <= new Date()) return false;
+    }
+    return true;
+  }
 
   return (
     <div className="space-y-4">
@@ -1652,13 +1677,22 @@ function TenderForm({
               placeholder="Search by company name, MC#, or DOT#..."
               className={`${inputCls} pl-10`}
             />
-            {showSearch && carriers && (
+            {showSearch && carriers && (() => {
+              // v3.8.aap — Sprint 36b. Two-pass: hit-count gate (zero
+              // search matches) vs eligibility-filter gate (matches
+              // exist but ineligible). Distinct empty-state messages.
+              const allHits = (carriers.carriers || carriers || []);
+              const eligibleHits = allHits.filter(isCarrierEligibleForTender);
+              return (
               <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl max-h-60 overflow-y-auto">
-                {(carriers.carriers || carriers || []).length === 0 ? (
+                {allHits.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-slate-500">No carriers found</div>
+                ) : eligibleHits.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-slate-500">
+                    No eligible carriers found. Try a broader search.
+                  </div>
                 ) : (
-                  (carriers.carriers || carriers || []).map((c: any) => {
-                    const carrierUserId = c.userId || c.id;
+                  eligibleHits.map((c: any) => {
                     return (
                       <button
                         key={c.id}
@@ -1668,7 +1702,7 @@ function TenderForm({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm text-slate-900 truncate">{c.company || c.user?.company || "Unknown"}</p>
-                            {matchedCarrierIds.has(carrierUserId) && (
+                            {matchedCarrierIds.has(c.id) && (
                               <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-100 text-green-700 font-medium shrink-0">
                                 Matched
                               </span>
@@ -1692,7 +1726,8 @@ function TenderForm({
                   })
                 )}
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>

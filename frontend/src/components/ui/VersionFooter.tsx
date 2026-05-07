@@ -4669,7 +4669,132 @@
 //              - Item 50 LOGGED + CLOSED (G1)
 //              - Items 51-56 LOGGED OPEN for sequential post-BKN
 //                sprints
-export const SRL_VERSION = "3.8.aao";
+// v3.8.aap — Sprint 36b: Item 57 close. Hotfix on Sprint 36 Y1
+//            regression. Two issues caught by post-deploy walk
+//            (Phase A2 audit triggered when AE saw "Carrier Blocked"
+//            red banner on every carrier they tried to pick).
+//
+//            REGRESSION 1 — Permissive carrier list
+//
+//            Sprint 36 Y1 swapped picker source from /waterfalls/
+//            load/:id/carrier-matches (waterfall scoring service,
+//            pre-filtered to compliance-eligible) to /api/carrier/
+//            all (unfiltered, returns ALL CarrierProfile records
+//            regardless of onboardingStatus, insurance, or FMCSA
+//            status — see carrierController.ts:743 only filters
+//            deletedAt:null).
+//
+//            AE searched, picked an ineligible carrier (e.g.,
+//            non-APPROVED status), then saw "Carrier Blocked" red
+//            banner from compliance check. Picker surfaced false
+//            positives.
+//
+//            Fix: client-side eligibility filter on dropdown render
+//            via isCarrierEligibleForTender helper:
+//              c.onboardingStatus === "APPROVED"
+//              AND (no insuranceExpiry OR insuranceExpiry > now)
+//
+//            REGRESSION 2 — ID semantics mismatch
+//
+//            pickCarrier handler used heuristic:
+//              const carrierUserId = c.userId || c.id;
+//              setTenderCarrierId(carrierUserId);
+//
+//            This resolved to c.userId (User.id) since /api/carrier/
+//            all always returns userId. But tender backend expects
+//            CarrierProfile.id — LoadTender.carrierId schema FK
+//            references CarrierProfile.id, NOT User.id, per
+//            schema.prisma:1342. complianceMonitorService.complianceCheck
+//            also calls findUnique on CarrierProfile.id at line 27.
+//
+//            Pre-Sprint-36 select used c.carrierId from
+//            suggestedCarriers (waterfall service) which WAS
+//            CarrierProfile.id. Y1 over-corrected to userId-or-id
+//            heuristic that's wrong for FK-semantics surfaces.
+//
+//            Fix: setTenderCarrierId(c.id) — c.id from /api/carrier/
+//            all IS CarrierProfile.id per controller return shape
+//            (carrierController.ts:773).
+//
+//            Adjacent: matchedCarrierIds.has(carrierUserId) lookup
+//            also broken — set was built from CarrierProfile.id
+//            keys but lookup used User.id. "Matched" tag never
+//            appeared in production. Fix to .has(c.id) works
+//            correctly post-fix.
+//
+//            RC MODAL PARALLEL FIX (BUNDLED)
+//
+//            Sprint 31 RC Modal Section 6 picker uses same
+//            /api/carrier/all source + same userId-or-id heuristic.
+//            Currently silent-broken on metadata-only path
+//            (carrierId stored in formData for PDF render + email
+//            recipient autofill, never used as backend FK).
+//
+//            Bundled in Sprint 36b: same eligibility filter +
+//            c.id ID semantics correction. Prevents future
+//            iteration when downstream consumer uses ID as FK.
+//            RC Modal carrier search now also surfaces only
+//            eligible carriers — stops AE from autofilling RC
+//            with non-tender-eligible carriers (a credibility
+//            hazard for downstream PDF/email consumers).
+//
+//            EMPTY STATE COVERAGE
+//
+//            Distinguishes:
+//              "No carriers found" — zero search hits
+//              "No eligible carriers found. Try a broader
+//                search." — matches exist but excluded by
+//                eligibility filter
+//
+//            ITEM 49 STATUS UNCHANGED
+//
+//            Sprint 36 Item 49 (Y1 picker rewrite) close stands.
+//            Item 49 was scoped to "replace static <select> with
+//            search-input picker" — that ship is correct. Item 57
+//            documents the regression introduced by the broader
+//            implementation. Preserves clean audit trail.
+//
+//            METHODOLOGY LESSON LOGGED
+//
+//            Sprint 36 had Phase A0 contract audit on tender
+//            acceptance (saved Sprint 36b cycle on tender-accept
+//            gaps). But picker data-source contract was NOT audited
+//            — Y1 inherited Sprint 31's data-source assumption
+//            without checking what /api/carrier/all returns or
+//            what ID type the FK consumer expects.
+//
+//            Future picker work: when ID is used as backend FK,
+//            audit must extend to:
+//              - which backend FK that ID resolves against
+//              - what state filters apply at that backend
+//              - what ID type the picker source returns
+//
+//            Picker-as-metadata vs picker-as-FK distinction
+//            determines audit depth. Sprint 31 RC Modal (metadata-
+//            only) inherited Y1's pattern but didn't surface as
+//            bug. Tender modal exposed the inheritance gap.
+//
+//            Two memory #11 fires today on Sprint 36:
+//              Fire 1 — A0 contract audit (saved cycle pre-deploy)
+//              Fire 2 — A2 contract audit (post-deploy, post-symptom)
+//            A2 should have run BEFORE Sprint 36 Y1 shipped.
+//            Methodology refinement noted for future picker work.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean (no backend changes),
+//            frontend next build clean.
+//
+//            Net source change: ~13 LOC across 2 files.
+//            Per §3.1 sequence-continuous rule: v3.8.aao → v3.8.aap.
+//            P0 BKN-blocking — AE cannot tender to any carrier
+//            today without this fix. Hotfix urgency same class as
+//            Sprint 26b/29/30/31/35.
+//
+//            §13.3:
+//              - Item 57 LOGGED + CLOSED in this commit
+//              - Item 49 stays CLOSED (Y1 scope correct; Item 57
+//                is the regression caught by smoke)
+export const SRL_VERSION = "3.8.aap";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

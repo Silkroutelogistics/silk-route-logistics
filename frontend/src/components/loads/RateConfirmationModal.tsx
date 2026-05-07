@@ -1553,8 +1553,14 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
     enabled: showSearch && carrierSearch.length >= 2,
   });
 
+  // v3.8.aap — Sprint 36b Item 57 parallel fix. Aligned ID semantics
+  // to CarrierProfile.id consistently. Currently RC Modal carrierId
+  // is metadata-only (PDF render + email recipient autofill, not
+  // backend FK), so the pre-fix userId-or-id heuristic was harmless
+  // but inconsistent with Tender modal. Aligning to c.id for forward
+  // safety when downstream consumer uses ID as FK.
   const selectCarrier = (carrier: any) => {
-    set("carrierId", carrier.userId || carrier.id);
+    set("carrierId", carrier.id); // CarrierProfile.id consistently
     set("carrierCompany", carrier.company || carrier.user?.company || "");
     set("carrierMC", carrier.mcNumber || "");
     set("carrierDOT", carrier.dotNumber || "");
@@ -1643,12 +1649,28 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
             </div>
 
             {/* Search Results Dropdown */}
-            {showSearch && carriers && (
+            {/* v3.8.aap — Sprint 36b Item 57 parallel fix. Same eligibility
+                filter as Tender modal. RC Modal carrierId is metadata-only
+                today (no backend FK use), but filter prevents AE from
+                autofilling RC with non-tender-eligible carriers — a
+                credibility hazard for downstream PDF/email consumers. */}
+            {showSearch && carriers && (() => {
+              const allHits = (carriers.carriers || carriers || []);
+              const eligibleHits = allHits.filter((c: any) => {
+                if (c?.onboardingStatus !== "APPROVED") return false;
+                if (c?.insuranceExpiry && new Date(c.insuranceExpiry) <= new Date()) return false;
+                return true;
+              });
+              return (
               <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl max-h-60 overflow-y-auto">
-                {(carriers.carriers || carriers || []).length === 0 ? (
+                {allHits.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-slate-500">No carriers found</div>
+                ) : eligibleHits.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-slate-500">
+                    No eligible carriers found. Try a broader search.
+                  </div>
                 ) : (
-                  (carriers.carriers || carriers || []).map((c: any) => (
+                  eligibleHits.map((c: any) => (
                     <button
                       key={c.id}
                       onClick={() => selectCarrier(c)}
@@ -1670,7 +1692,8 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
                   ))
                 )}
               </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Selected carrier fields */}
