@@ -177,6 +177,14 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Methodology Infrastructure (Sprint 39.5, 2026-05-08)
+
+- **CLAUDE.md §19 Methodology Log created.** Cumulative pattern catalog consolidating six patterns surfaced during Sprints 22-39: (1) audit-first, (2) Path β observability→diagnostics→fix cadence, (3) Phase A0 contract audit, (4) Phase A2 picker-FK contract audit, (5) E2E lifecycle gate + local-first discipline, (6) cross-sprint precedent audit. Lives between §18 Lead Hunter and Appendix so the catalog reads as current-active material, not legacy. Quarterly review prunes calcified patterns + promotes hot ones.
+- **Memory feedback entry surfaces the rule + pointer to §19** at `~/.claude/projects/c--Users-Wasi-Haider-dev-silk-route-logistics/memory/feedback_methodology.md` plus index in `MEMORY.md`. Lightweight in memory (rule + pointer); heavy in §19 (cataloged patterns).
+- **Per-sprint commit message convention shifts effective Sprint 40.** Future commits include `Patterns applied:` (§19 entries that fired) + `Patterns emerged:` (new pattern, if any) lines near the close. New patterns ship as separate methodology meta-commits — same shape as Sprint 28 audit-only and Sprint 37 hotfix lock-only — no version bump, no source code change.
+- **No version bump on Sprint 39.5.** Developer-facing context only; per CLAUDE.md §3.1 docs-only commits ship unversioned. v3.8.aas (Sprint 39 cluster close) remains current.
+- **Triggered by Sprint 39 α audit catching Sprint 38-vs-Sprint 39 drift on tracking-link fan-out timing.** Cross-sprint precedent audit (Pattern 6) was the surfacing mechanism for that drift; codifying it as a named pattern is the meta-commit's central contribution. Without §19 catalog, the same drift class would resurface every time a sprint touches a path prior sprints already wired.
+
 ## Phase 6 — Portal Approval Workflow (post-Apollo launch)
 
 - **S-2 (P0 policy)** — Shipper approval gate in backend (`authController.ts handleVerifyOtp`). Currently absent; any registered SHIPPER can log in immediately after OTP. Mirror carrier-auth pattern: check `customer.onboardingStatus !== "APPROVED"` → return 403 with friendly message. See `my-knowledge-base/wiki/` for intended flow (docs sparse — will need to write).

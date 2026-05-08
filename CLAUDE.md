@@ -891,6 +891,65 @@ For manual outreach (founder-drafted in Gmail, not Lead Hunter generated): same 
 
 ---
 
+## §19 METHODOLOGY LOG
+
+Patterns surfaced cumulatively during sprints. **Consult during Phase A audit before any code change.** Updated each session as new patterns emerge. Quarterly review prunes calcified patterns and promotes hot ones.
+
+Each entry: name, sprint of origin (commit hash), trigger conditions, what to do, an example sprint where it caught something.
+
+### Active patterns (as of Sprint 39, 2026-05-08)
+
+#### 1. Audit-first methodology (Sprint 1+, ongoing)
+- **Trigger:** any code change request.
+- **Action:** Phase A audit (read-only) on render path + handlers + cache invalidation BEFORE Phase B implementation.
+- **Caught in:** every session. Memory #11 fired 16x in the Sprint 22-37 session alone — assumed knowledge of code paths is wrong; verify before assuming.
+
+#### 2. Path β methodology (Sprint 32, v3.8.aak)
+- **Trigger:** opaque API failure with silent or generic error.
+- **Action:** 3-sprint cadence:
+  - Sprint N: ship error UI (observability layer)
+  - Sprint N+1: widen extractor (diagnostics layer)
+  - Sprint N+2: targeted root-cause fix
+  - Each sprint atomic per §3.3.
+- **Caught in:** Sprints 32-35 RC modal revival cycle. Sprint 32 added error UI; Sprint 33 widened extractor to surface "formData.X" details; Sprint 34 fixed `quickPayFeePercent` string-vs-number; Sprint 35 fixed `fuelSurchargeType` enum drift.
+
+#### 3. Phase A0 contract audit (Sprint 36, v3.8.aao)
+- **Trigger:** fix touches a feature whose end-to-end behavior crosses multiple surfaces and code paths.
+- **Action:** contract audit before surface audit. Inventory: endpoints, state machine, data model relations, frontend consumption sites, cache invalidation contracts, notification fire matrix, edge cases.
+- **Output:** determines atomic-commit shape (single-surface vs bundled cross-surface vs multi-sprint sequence).
+- **Caught in:** Sprint 36 tender acceptance — surfaced 7 gaps before any single-surface fix shipped. Cluster of 6 (Items 51-56) shipped across Sprints 38+39 as a deliberate sequence rather than firefighting one symptom at a time.
+
+#### 4. Phase A2 picker-FK contract audit (Sprint 36b, v3.8.aap)
+- **Trigger:** UI picker returns an ID that's used as a backend FK.
+- **Action:** audit must include — which backend FK that ID resolves against, what state filters apply at that backend, what ID type the picker source returns, what eligibility predicate downstream consumers enforce. Picker-as-metadata vs picker-as-FK distinction determines audit depth.
+- **Caught in:** Sprint 36b — Tender modal picker had wrong ID semantics (sent `User.id` while backend FK expected `CarrierProfile.id`) AND a permissive carrier list (`/api/carrier/all` returned all approved + non-approved).
+
+#### 5. E2E lifecycle gate + local-first discipline (Sprint 37, v3.8.aaq)
+- **Trigger:** per-sprint audit-first methodology hits a ceiling (Memory #11 firing repeatedly across consecutive sessions).
+- **Action:** ship a single E2E lifecycle test that retires the regression-class structurally. Each subsequent sprint validated by green CI before deploy. **Local-first discipline: run E2E locally (~30s) before push (~5min via CI).**
+- **Caught in:** Sprint 38 seed `mcNumber` false-positive surfaced in <30s locally — would have shipped silently without the smoke. Sprint 39 B6.5a smoke locked Item 54 on-behalf flow before push.
+
+#### 6. Cross-sprint precedent audit (Sprint 39, v3.8.aas)
+- **Trigger:** sprint introduces or modifies behavior on a code path that prior sprints have already touched.
+- **Action:** Phase A audit must explicitly check the prior sprints' wiring on the same path. Inconsistency between adjacent sprints (e.g., Sprint N fires X, Sprint N+1 doesn't fire X on same path) is silent drift unless surfaced explicitly.
+- **Caught in:** Sprint 39 — Sprint 38 fired tracking-link fan-out at BOOKED on direct path; Sprint 39's on-behalf endpoint default would NOT have fired it, codifying drift. Resolved via α decision (on-behalf matches Sprint 38 normal direct, fires fan-out at BOOKED).
+
+### Per-sprint commit message convention (effective Sprint 40+)
+
+Every sprint commit message now includes two lines near the close:
+
+```
+Patterns applied: <comma-separated list of §19 entries that fired>
+Patterns emerged: <new pattern, if any — meta-commit follows to log it>
+```
+
+When new patterns surface, ship them as a separate methodology meta-commit (no version bump, no source code change — same shape as Sprint 28 audit-only and Sprint 37 lock-only). Quarterly review prunes the catalog.
+
+### Pending review (next quarterly)
+- None yet — all six patterns active.
+
+---
+
 ## Appendix: Legacy / Custom Sections
 
 Preserved from the pre-consolidation CLAUDE.md. These are patterns and roadmap items that didn't fit cleanly into §1–§18 but remain valid tracking material. Time-bound metrics have been stripped (e.g. "currently 21 refs", "Plan for Q2", "Install when doing daily SRL sessions").
