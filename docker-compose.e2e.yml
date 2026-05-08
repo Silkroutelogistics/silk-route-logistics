@@ -1,0 +1,21 @@
+services:
+  postgres-e2e:
+    image: postgres:16
+    container_name: srl-postgres-e2e
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: srl
+      POSTGRES_PASSWORD: srl_local_dev
+      POSTGRES_DB: srl_e2e
+    ports:
+      - "5433:5432"
+    volumes:
+      - srl-postgres-e2e-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U srl -d srl_e2e"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  srl-postgres-e2e-data:

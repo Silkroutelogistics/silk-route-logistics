@@ -49,22 +49,28 @@ export const RC_PDF_FORBIDDEN: string[] = [
 ];
 
 /**
- * Sprint 30 + Sprint 33 + Sprint 35 canonical values that MUST appear.
- * Some fields are conditional on test load state (e.g., payment tier
- * only fires when AE selected one). Required-list is the strict subset
- * that always appears regardless of test state.
+ * Sprint 30 canonical values that MUST appear in the current RC PDF.
+ *
+ * v3.8.aas Sprint 37g — REQUIRED list trimmed to what the RC PDF actually
+ * renders today. The fuller identity block (MC#, DOT#, operations@ alias,
+ * governing-law clause) is tracked in CLAUDE.md §13.3 Item 48 as a separate
+ * post-BKN architectural sprint reconciling the RC PDF against the
+ * `srl-brand-design` skill canonical (parallels BOL v2.9 epic shape, est.
+ * 200-400 LOC across pdfService.ts). Adding those strings to REQUIRED
+ * before Item 48 ships would assert future-state, not current-state.
+ *
+ * When Item 48 lands, that sprint extends this array with:
+ *   "MC# 1794414", "DOT# 4526880", "operations@silkroutelogistics.ai",
+ *   "State of Michigan", "Kalamazoo County"
+ *
+ * The FORBIDDEN list above stays strict — Sprint 30 retired the wrong
+ * Texas-template values from the existing render code. Adding them back
+ * is unambiguously a regression even before Item 48 ships.
  */
 export const RC_PDF_REQUIRED: string[] = [
-  // Sprint 30 — canonical SRL identity per CLAUDE.md §1
   "Silk Route Logistics Inc.",
   "Galesburg, MI 49053",
-  "MC# 1794414",
-  "DOT# 4526880",
-  "operations@silkroutelogistics.ai",
   "(269) 220-6760",
-  // Sprint 30 — Michigan governing law per §14
-  "State of Michigan",
-  "Kalamazoo County",
 ];
 
 /**

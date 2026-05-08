@@ -61,7 +61,16 @@ export default defineConfig({
       // Frontend: serve the static export from `out/`. CI runs
       // `npm run build` in frontend/ first; locally, user must
       // also build before running tests.
-      command: `cd frontend && npx serve -s out -l ${FRONTEND_PORT}`,
+      //
+      // v3.8.aar Sprint 37e — DROP `-s` flag. `serve -s` is SPA-fallback
+      // mode (every unknown route → /index.html). Next.js `output: "export"`
+      // emits flat .html files (`dashboard/loads.html`), NOT SPA-style
+      // `dashboard/loads/index.html`. With `-s`, hitting /dashboard/loads
+      // (no extension) falls back to / (homepage), bouncing the test on B4
+      // ("load not visible"). Without `-s`, `serve` uses cleanUrls by
+      // default — maps /dashboard/loads → dashboard/loads.html, matching
+      // Cloudflare Pages prod behavior.
+      command: `cd frontend && npx serve out -l ${FRONTEND_PORT}`,
       port: FRONTEND_PORT,
       env: {
         NEXT_PUBLIC_API_URL: `http://localhost:${BACKEND_PORT}/api`,

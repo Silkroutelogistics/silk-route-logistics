@@ -139,7 +139,11 @@ test.describe("Full Load Lifecycle E2E", () => {
     //      exercised in Sprint 38+; smoke focus is the data-flow
     //      regressions Sprints 31-36b closed)
     // ─────────────────────────────────────────────────────────────────
-    const tenderResp = await request.post(`${BACKEND_API}/loads/${load.id}/tenders`, {
+    // v3.8.aas Sprint 37f — backend route is `POST /loads/:id/tender` (singular,
+    // verb form "issue a tender"), not `/tenders` (plural). Sibling read route
+    // is `GET /loads/:id/tenders` (plural, noun form "list of tenders") which
+    // misled the original spec. Verified via routes/tenders.ts:14.
+    const tenderResp = await request.post(`${BACKEND_API}/loads/${load.id}/tender`, {
       headers: authHeaders,
       data: {
         carrierId: eligibleCarrier.id, // CarrierProfile.id per Sprint 36b fix
@@ -147,7 +151,7 @@ test.describe("Full Load Lifecycle E2E", () => {
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
     });
-    expect(tenderResp.ok(), `POST /loads/:id/tenders must succeed (Sprint 36b ID semantics + compliance gate); got ${tenderResp.status()} ${await tenderResp.text()}`).toBeTruthy();
+    expect(tenderResp.ok(), `POST /loads/:id/tender must succeed (Sprint 36b ID semantics + compliance gate); got ${tenderResp.status()} ${await tenderResp.text()}`).toBeTruthy();
 
     // ─────────────────────────────────────────────────────────────────
     // B7 — Generate Rate Confirmation PDF (Sprint 34 + 35 regression
