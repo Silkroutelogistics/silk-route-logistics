@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createTenderSchema, counterTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
+import { notifyTenderAction } from "../services/notificationService";
 import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 
@@ -77,7 +78,13 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   const load = await prisma.load.findUnique({ where: { id: tender.loadId } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
-  const [updated] = await Promise.all([
+  // Sprint 38 (Item 53) — atomic accept. Was Promise.all (concurrent, NOT
+  // atomic). On partial failure (e.g., load update succeeds, tender update
+  // throws) state diverged: load BOOKED while tender still OFFERED, or
+  // sibling tenders left OFFERED. prisma.$transaction guarantees all-or-
+  // nothing. Three operations: tender→ACCEPTED, load→BOOKED+carrierId,
+  // sibling tenders→DECLINED.
+  const [updated] = await prisma.$transaction([
     prisma.loadTender.update({
       where: { id: tender.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
@@ -86,7 +93,6 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       where: { id: tender.loadId },
       data: { status: "BOOKED", carrierId: tender.carrier.userId },
     }),
-    // Decline other tenders for same load
     prisma.loadTender.updateMany({
       where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
       data: { status: "DECLINED" },
@@ -122,17 +128,23 @@ export async function acceptTender(req: AuthRequest, res: Response) {
     },
   });
 
-  // Notify the broker/poster that tender was accepted
-  if (load.posterId) {
-    await prisma.notification.create({
-      data: {
-        userId: load.posterId,
-        type: "LOAD_UPDATE",
-        title: "Tender Accepted",
-        message: `Carrier accepted tender for load ${load.referenceNumber}. Shipment created for tracking.`,
-        actionUrl: "/dashboard/tracking",
-      },
-    });
+  // Sprint 38 (Item 51) — wire notifyTenderAction. Was manually creating
+  // a notification with type "LOAD_UPDATE" — wrong type for tender events
+  // (poster's notification preferences + UI filtering branch on this).
+  // notifyTenderAction emits the correct "TENDER_ACCEPTED" type and
+  // formats the lane string consistently with offered/declined/countered.
+  await notifyTenderAction(tender.id, "ACCEPTED");
+
+  // Sprint 38 (Item 52) — CRM tracking-link fan-out on direct accept.
+  // Pattern matches waterfallEngineService.ts:485-490 (added v3.4.p for
+  // waterfall path). Direct accept was the only tender accept path that
+  // skipped it. Non-blocking: errors are logged, not thrown — the tender
+  // is already accepted at this point, fan-out is best-effort.
+  try {
+    const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
+    await sendTrackingLinkToCrmContacts(load.id);
+  } catch (err) {
+    log.error({ err }, "[Tender] tracking-link fan-out failed");
   }
 
   res.json(updated);

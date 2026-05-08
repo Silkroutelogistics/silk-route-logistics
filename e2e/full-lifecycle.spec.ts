@@ -152,6 +152,36 @@ test.describe("Full Load Lifecycle E2E", () => {
       },
     });
     expect(tenderResp.ok(), `POST /loads/:id/tender must succeed (Sprint 36b ID semantics + compliance gate); got ${tenderResp.status()} ${await tenderResp.text()}`).toBeTruthy();
+    const tender = await tenderResp.json();
+    expect(tender.id, "tender.id required for B6.5 accept").toBeTruthy();
+
+    // ─────────────────────────────────────────────────────────────────
+    // B6.5 — Carrier accepts tender (Sprint 38: Items 51 + 52 + 53)
+    //   51: notifyTenderAction emits TENDER_ACCEPTED (was wrong type LOAD_UPDATE)
+    //   52: sendTrackingLinkToCrmContacts fan-out fires on direct accept
+    //   53: prisma.$transaction wraps the 3 status updates atomically
+    //
+    // Implicit verification: if any of the 3 transactional updates failed,
+    // the load.status flip below would not be BOOKED (atomicity proof).
+    // Notification verification is via DB inspection in B6.5b.
+    // ─────────────────────────────────────────────────────────────────
+    const carrierTokenResp = await request.post(`${BACKEND_API}/auth/e2e-token`, {
+      data: { email: eligibleCarrier.email },
+    });
+    expect(carrierTokenResp.ok(), `Carrier e2e-token mint must succeed for ${eligibleCarrier.email}`).toBeTruthy();
+    const { token: carrierToken } = await carrierTokenResp.json();
+    const carrierAuthHeaders = { Authorization: `Bearer ${carrierToken}` };
+
+    const acceptResp = await request.post(`${BACKEND_API}/tenders/${tender.id}/accept`, {
+      headers: carrierAuthHeaders,
+    });
+    expect(acceptResp.ok(), `POST /tenders/:id/accept must succeed (Sprint 38 atomic txn + notification + fan-out); got ${acceptResp.status()} ${await acceptResp.text()}`).toBeTruthy();
+
+    // B6.5a — verify atomic txn outcome (Item 53)
+    const acceptedLoadResp = await request.get(`${BACKEND_API}/loads/${load.id}`, { headers: authHeaders });
+    const acceptedLoad = await acceptedLoadResp.json();
+    expect(acceptedLoad.status, "Item 53: load.status must flip to BOOKED inside the atomic txn").toBe("BOOKED");
+    expect(acceptedLoad.carrierId, "Item 53: load.carrierId must be set inside the atomic txn").toBeTruthy();
 
     // ─────────────────────────────────────────────────────────────────
     // B7 — Generate Rate Confirmation PDF (Sprint 34 + 35 regression

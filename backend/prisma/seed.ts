@@ -123,8 +123,15 @@ async function main() {
   const cp1 = await prisma.carrierProfile.create({
     data: {
       userId: carrierUser.id,
-      mcNumber: "MC-1794414",
-      dotNumber: "4526880",
+      // Sprint 38 — fictional test carrier MC#/DOT#. Was set to SRL's
+      // actual MC# 1794414 + DOT# 4526880, which (a) is data-incoherent
+      // (a carrier sharing MC# with the broker is nonsensical) and (b)
+      // falsely tripped the lifecycle smoke's RC_PDF_FORBIDDEN list, which
+      // is meant to catch the Sprint 30 broker-identity regression but
+      // got matched by the carrier section's substring rendering. Any
+      // similarity to a real carrier is coincidental.
+      mcNumber: "MC-998877",
+      dotNumber: "9988776",
       companyName: "SRL Transport LLC",
       contactName: "SRL Carrier",
       contactPhone: "(269) 555-0200",

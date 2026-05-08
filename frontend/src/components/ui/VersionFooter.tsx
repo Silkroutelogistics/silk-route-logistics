@@ -4939,7 +4939,78 @@
 //                lifecycle smoke + brand-skill regression locks.
 //                LOGGED + CLOSED in this commit (closure of the
 //                "we keep firefighting" pattern).
-export const SRL_VERSION = "3.8.aaq";
+//
+// v3.8.aar — Sprint 38: tender accept contract gaps cluster (Items
+//            51 + 52 + 53 bundled per directive). All three fixes in
+//            tenderController.acceptTender. Lifecycle smoke extended
+//            with B6.5 carrier-accept step to lock the wins per
+//            Sprint 37 methodology promise.
+//
+//            ITEM 51 — notifyTenderAction was dead code at
+//            notificationService.ts:91 with full ACCEPTED/DECLINED/
+//            OFFERED/COUNTERED switch logic, never called. Direct
+//            accept manually created notifications with type
+//            "LOAD_UPDATE" — wrong type for tender events (poster's
+//            notification preferences + UI filtering branch on this).
+//            Wired notifyTenderAction(tender.id, "ACCEPTED") into
+//            acceptTender, dropped the manual prisma.notification.create
+//            block. Waterfall accept's separate notification gap is
+//            tracked separately as it pairs with Item 55 status
+//            divergence (BOOKED vs DISPATCHED) in a future sprint.
+//
+//            ITEM 52 — sendTrackingLinkToCrmContacts fan-out at
+//            shipperLoadNotifyService.ts:280 (added v3.4.p) fires on
+//            waterfall accept (waterfallEngineService.ts:485-490) but
+//            was never wired into direct accept. Phase A audit refined
+//            the original §13.3 scope: only direct accept skipped it,
+//            waterfall already correct. Pattern matches waterfall:
+//            dynamic import + try/catch + non-blocking. Tender is
+//            already accepted at this point, fan-out is best-effort.
+//
+//            ITEM 53 — Promise.all([...]) at acceptTender:80-94 was
+//            concurrent, NOT atomic. Three updates: tender→ACCEPTED,
+//            load→BOOKED+carrierId, sibling tenders→DECLINED. Partial
+//            failure could leave inconsistent state (load BOOKED
+//            while tender still OFFERED, or sibling tenders left
+//            OFFERED). Wrapped in prisma.$transaction([...]) — same
+//            three operations, same [updated] destructure, all-or-
+//            nothing semantics.
+//
+//            SMOKE EXTENSION — full-lifecycle.spec.ts gains B6.5:
+//            mints carrier e2e-token via eligibleCarrier.email,
+//            POSTs /tenders/:id/accept as carrier, verifies load
+//            flips to BOOKED + carrierId set (atomic txn proof).
+//            If any of the three transactional updates failed, the
+//            load.status assertion would catch it.
+//
+//            SEED FIX — backend/prisma/seed.ts cp1.mcNumber rotated
+//            from "MC-1794414" (SRL's actual broker MC#) to
+//            "MC-998877" (fictional). Two reasons: (a) data
+//            incoherence — a test carrier sharing MC# with the broker
+//            is nonsensical; (b) RC PDF carrier-info section rendered
+//            "MC#: MC-1794414" which the smoke's RC_PDF_FORBIDDEN
+//            list flagged as a Sprint 30 broker-identity regression
+//            (the substring matched even though the context was
+//            carrier-section, not broker-section). Sprint 38b's
+//            smoke extension surfaced this — lifecycle smoke caught
+//            its first false-positive AND a real seed-data smell in
+//            the same run.
+//
+//            VERIFICATION
+//            Pre-commit: backend tsc clean. Lifecycle smoke green
+//            locally with B6.5 extension exercising acceptTender —
+//            27.2s, all assertions pass including atomic txn proof.
+//
+//            Net source change: ~70 LOC across 4 files (acceptTender
+//            edits + smoke extension + seed rotation + version comment).
+//
+//            Per §3.1 sequence-continuous rule: v3.8.aaq → v3.8.aar.
+//
+//            §13.3 closures:
+//              - Item 51 — CLOSED
+//              - Item 52 — CLOSED (scope refined: direct accept only)
+//              - Item 53 — CLOSED
+export const SRL_VERSION = "3.8.aar";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
