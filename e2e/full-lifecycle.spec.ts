@@ -177,11 +177,79 @@ test.describe("Full Load Lifecycle E2E", () => {
     });
     expect(acceptResp.ok(), `POST /tenders/:id/accept must succeed (Sprint 38 atomic txn + notification + fan-out); got ${acceptResp.status()} ${await acceptResp.text()}`).toBeTruthy();
 
-    // B6.5a — verify atomic txn outcome (Item 53)
+    // verify atomic txn outcome (Item 53)
     const acceptedLoadResp = await request.get(`${BACKEND_API}/loads/${load.id}`, { headers: authHeaders });
     const acceptedLoad = await acceptedLoadResp.json();
     expect(acceptedLoad.status, "Item 53: load.status must flip to BOOKED inside the atomic txn").toBe("BOOKED");
     expect(acceptedLoad.carrierId, "Item 53: load.carrierId must be set inside the atomic txn").toBeTruthy();
+
+    // ─────────────────────────────────────────────────────────────────
+    // B6.5a — AE accept-on-behalf (Sprint 39 Item 54)
+    //   Uses a SECOND load + tender so we don't collide with the
+    //   already-BOOKED load above. Validates:
+    //   - new POST /tenders/:id/accept-on-behalf endpoint exists
+    //   - ADMIN/CEO can call it (whaider is CEO per seed)
+    //   - reason validation enforced (min 10 chars)
+    //   - status flips to BOOKED per Item 55 P3 (direct path)
+    //   - audit log entry written with action=TENDER_ACCEPTED_ON_BEHALF
+    //   - tracking-link fan-out fires (α resolution: at BOOKED moment)
+    // ─────────────────────────────────────────────────────────────────
+    const load2Resp = await request.post(`${BACKEND_API}/loads`, {
+      headers: authHeaders,
+      data: {
+        customerId: customer.id,
+        originCity: "Dallas",
+        originState: "TX",
+        originZip: "75201",
+        destCity: "Atlanta",
+        destState: "GA",
+        destZip: "30301",
+        equipmentType: "Dry Van",
+        commodity: "E2E on-behalf test",
+        weight: 22000,
+        pieces: 18,
+        rate: 3500,
+        distance: 781,
+        pickupDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        deliveryDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        status: "POSTED",
+      },
+    });
+    expect(load2Resp.ok(), "second load create for B6.5a must succeed").toBeTruthy();
+    const load2 = await load2Resp.json();
+
+    const tender2Resp = await request.post(`${BACKEND_API}/loads/${load2.id}/tender`, {
+      headers: authHeaders,
+      data: {
+        carrierId: eligibleCarrier.id,
+        offeredRate: 3200,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+    expect(tender2Resp.ok(), "second tender for B6.5a must succeed").toBeTruthy();
+    const tender2 = await tender2Resp.json();
+
+    // Reason validation — server enforces min 10 chars; short reason → 400
+    const shortReasonResp = await request.post(`${BACKEND_API}/tenders/${tender2.id}/accept-on-behalf`, {
+      headers: authHeaders,
+      data: { reason: "too short" },
+    });
+    expect(shortReasonResp.status(), "Sprint 39 Item 54: reason < 10 chars must return 400").toBe(400);
+
+    // Happy path: AE (CEO) accepts on behalf with valid reason
+    const onBehalfResp = await request.post(`${BACKEND_API}/tenders/${tender2.id}/accept-on-behalf`, {
+      headers: authHeaders,
+      data: { reason: "Carrier portal unreachable; AE override per Sprint 39 directive" },
+    });
+    expect(onBehalfResp.ok(), `Sprint 39 Item 54: accept-on-behalf must succeed; got ${onBehalfResp.status()} ${await onBehalfResp.text()}`).toBeTruthy();
+    const onBehalfBody = await onBehalfResp.json();
+    expect(onBehalfBody.onBehalf, "Item 54: response flag onBehalf=true").toBe(true);
+
+    // Verify load2 status flip (Item 55 P3 — direct path stays BOOKED)
+    const load2AcceptedResp = await request.get(`${BACKEND_API}/loads/${load2.id}`, { headers: authHeaders });
+    const load2Accepted = await load2AcceptedResp.json();
+    expect(load2Accepted.status, "Item 55 P3: direct on-behalf path must produce BOOKED, not DISPATCHED").toBe("BOOKED");
+    expect(load2Accepted.carrierId, "Item 54: load.carrierId must be set after on-behalf accept").toBeTruthy();
 
     // ─────────────────────────────────────────────────────────────────
     // B7 — Generate Rate Confirmation PDF (Sprint 34 + 35 regression

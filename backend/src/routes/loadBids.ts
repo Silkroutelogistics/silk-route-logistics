@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { logWaterfallEvent } from "../services/waterfallEventService";
 import { createCheckCallSchedule } from "../services/checkCallAutomation";
+import { complianceCheck } from "../services/complianceMonitorService";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -178,6 +179,25 @@ router.patch(
       }
 
       if (action === "accept") {
+        // Sprint 39 (Item 56) — compliance re-check at accept time.
+        // Bid.carrierId is User.id per submission convention (line 87
+        // of this file). Translate to CarrierProfile.id for compliance
+        // gate. Returns 409 to caller (no waterfall to advance — AE
+        // re-bids different carrier instead).
+        const carrierProfile = await prisma.carrierProfile.findUnique({
+          where: { userId: bid.carrierId },
+        });
+        if (!carrierProfile) {
+          return res.status(404).json({ error: "Carrier profile not found for bid" });
+        }
+        const compliance = await complianceCheck(carrierProfile.id);
+        if (!compliance.allowed) {
+          return res.status(409).json({
+            error: "Carrier is no longer compliant",
+            blocked_reasons: compliance.blocked_reasons,
+          });
+        }
+
         const now = new Date();
         const updated = await prisma.loadBid.update({
           where: { id: bidId },

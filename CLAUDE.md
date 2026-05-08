@@ -63,6 +63,27 @@ POD_RECEIVED → INVOICED → COMPLETED
 
 Also: `TONU`, `CANCELLED`, `PICKED_UP` (legacy alias).
 
+### Tender accept → status flip: BOOKED vs DISPATCHED is intentional (Sprint 39 P3 decision)
+
+Three accept paths exist; **DIRECT path produces `BOOKED`, both bulk paths produce `DISPATCHED`.** This divergence is deliberate, not a bug. Documented here so future sprints don't try to "fix" it without considering the operational reasoning + analytics dependency.
+
+| Path | Code site | Status flip | `dispatchedAt` |
+|---|---|---|---|
+| Direct tender accept (carrier accepts in portal) | `tenderController.acceptTender` | **BOOKED** | not set |
+| Direct tender accept-on-behalf (AE override) | `tenderController.acceptTenderOnBehalf` | **BOOKED** | not set |
+| Waterfall accept (auto-pilot scoring engine) | `waterfallEngineService.acceptPosition` | DISPATCHED | set |
+| Loadboard bid accept (carrier-bid → AE accepts) | `routes/loadBids.ts` accept handler | DISPATCHED | set |
+
+**Operational philosophy:**
+- **Direct path → BOOKED:** AE-curated path. Broker manually picked the carrier and intends a separate "send dispatch order" step (rate confirm, BOL, carrier readiness verification). The intermediate BOOKED state is a load-bearing checkpoint where AE can review before committing dispatch. Advance to DISPATCHED is explicit via the "Advance status" button.
+- **Bulk paths → DISPATCHED:** Auto-pilot. Waterfall scoring + loadboard bidding are designed for hands-off dispatch where the next operational moment is not a broker decision. Accept = dispatch. Skipping BOOKED matches that semantic.
+
+**Analytics dependency:** `routes/waterfalls.ts:39, 83, 110` queries `dispatchedAt` for "loads dispatched today / last 7 days" dashboards. Aligning all three paths to BOOKED (P1) would silently exclude bulk dispatches from those queries until an explicit advance fires — a real product break, not a theoretical concern.
+
+**Sprint 39 alternatives considered:** P1 (all → BOOKED, breaks analytics + 2-of-3 surfaces touched), P2 (all → DISPATCHED, removes broker checkpoint on direct path), P3 (document divergence, zero code change). Audit-first surfaced the third path (loadbid) and the analytics dependency that flipped the recommendation away from P1. P3 chosen.
+
+**Tracking-link fan-out timing:** `sendTrackingLinkToCrmContacts` fires at the accept moment on all three paths regardless of BOOKED/DISPATCHED status. Operational decision (Sprint 39 α resolution): shipper wants the tracking URL when carrier confirms, not when AE later flips to DISPATCHED on direct path. This ties fan-out to the *event* (accept) rather than the *state* (DISPATCHED).
+
 ### AE Console modules
 
 Served at `/dashboard/*`, `/accounting/*`, `/admin/*` via Next.js app router. Static HTML at `frontend/public/ae/*` is **legacy scaffolding**; React routes are authoritative.

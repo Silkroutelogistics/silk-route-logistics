@@ -5010,7 +5010,88 @@
 //              - Item 51 — CLOSED
 //              - Item 52 — CLOSED (scope refined: direct accept only)
 //              - Item 53 — CLOSED
-export const SRL_VERSION = "3.8.aar";
+//
+// v3.8.aas — Sprint 39: 6-item Sprint 36 A0 cluster fully retired.
+//            Items 54+55+56 close here (Items 51+52+53 closed Sprint 38).
+//
+//            ITEM 54 — AE ACCEPT-ON-BEHALF UI
+//            New POST /api/tenders/:id/accept-on-behalf endpoint,
+//            authorize("ADMIN","CEO") only. Mirrors acceptTender body
+//            but skips the carrier-userId gate (AE is not the carrier)
+//            and writes a distinct audit log action
+//            "TENDER_ACCEPTED_ON_BEHALF" with reason captured. Reason
+//            required (min 10 chars, server-enforced). Compliance
+//            re-check still runs server-side — UI cannot bypass safety.
+//            prisma.$transaction wrapping per Sprint 38 Item 53.
+//            notifyTenderAction call per Sprint 38 Item 51.
+//            sendTrackingLinkToCrmContacts fan-out at BOOKED per
+//            Sprint 39 α resolution (matches Sprint 38 normal direct
+//            accept — no drift).
+//
+//            Frontend: AcceptOnBehalfModal.tsx (~95 LOC) + per-tender
+//            "Accept on Behalf" button in Load Board side panel
+//            Tender History (admin-role gated, OFFERED/COUNTERED only).
+//
+//            ITEM 55 — BOOKED VS DISPATCHED DIVERGENCE (P3 documentation)
+//            Phase A audit revealed direct path is 1-of-3 outlier:
+//              - Direct tender accept → BOOKED
+//              - Waterfall accept → DISPATCHED (Karpathy state machine)
+//              - Loadboard bid accept → DISPATCHED
+//            P1 (all → BOOKED) would silently break analytics queries
+//            on dispatchedAt at routes/waterfalls.ts:39,83,110. P2
+//            (all → DISPATCHED) removes broker checkpoint on direct
+//            path. P3 chosen: document divergence as intentional
+//            operational philosophy. Zero code change. CLAUDE.md §2
+//            documentation block added explaining direct=AE-curated
+//            checkpoint, bulk=auto-pilot semantic.
+//
+//            ITEM 56 — BULK-PATH COMPLIANCE RE-CHECK (SCOPE EXPANDED)
+//            Phase A audit revealed loadbid path also skips compliance
+//            re-check (directive only mentioned waterfall). Sprint 39
+//            patches BOTH bulk paths:
+//              - waterfallEngineService.acceptPosition: skip+advance
+//                pattern (mirrors declinePosition), reuses existing
+//                "position_skipped" event type with "compliance" reason
+//                in metadata
+//              - routes/loadBids.ts accept handler: 409 error pattern
+//                (no waterfall to advance — AE re-bids different
+//                carrier). Translates bid.carrierId (User.id) →
+//                CarrierProfile.id before complianceCheck call.
+//
+//            E2E SMOKE EXTENSION — B6.5a
+//            Direct on-behalf path: creates second load + tender
+//            (separate from B6.5 carrier-accept flow), validates:
+//              - reason < 10 chars rejected (400)
+//              - happy-path accept succeeds with valid reason
+//              - response.onBehalf=true flag
+//              - load.status=BOOKED post-accept (P3 lock)
+//              - load.carrierId set
+//            Bulk-path coverage (waterfall + loadbid) deferred to
+//            Item 60 (logged for E2E seed extension sprint).
+//
+//            VERIFICATION
+//            Backend tsc --noEmit clean. Frontend tsc --noEmit clean.
+//            Lifecycle smoke green locally.
+//
+//            Net source change: ~250 LOC across 7 files (endpoint +
+//            controller + 2 backend service patches + modal + load
+//            board edits + smoke extension + CLAUDE.md §2 doc block).
+//
+//            Per §3.1: v3.8.aar → v3.8.aas.
+//
+//            §13.3 closures:
+//              - Item 54 — CLOSED
+//              - Item 55 — CLOSED (P3 documentation, no code change)
+//              - Item 56 — CLOSED (scope expanded to loadbid)
+//              - Item 60 — LOGGED OPEN (E2E seed extension for
+//                waterfall + loadbid bulk-path regression coverage)
+//
+//            CLUSTER MILESTONE: 6-item Sprint 36 A0 audit cluster
+//            (Items 51-56) FULLY RETIRED. Tender accept lifecycle
+//            now has consistent contract across direct + waterfall
+//            + loadbid surfaces with documented intentional
+//            divergence on the BOOKED-vs-DISPATCHED state choice.
+export const SRL_VERSION = "3.8.aas";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { createTender, acceptTender, counterTender, declineTender, getCarrierTenders, getLoadTenders } from "../controllers/tenderController";
+import { createTender, acceptTender, acceptTenderOnBehalf, counterTender, declineTender, getCarrierTenders, getLoadTenders } from "../controllers/tenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { launchWaterfall, getWaterfallStatus, WaterfallCandidate } from "../services/waterfallTenderService";
 import { launchBroadcast, BroadcastCandidate } from "../services/broadcastTenderService";
@@ -14,6 +14,10 @@ router.use(authenticate);
 router.post("/loads/:id/tender", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), createTender);
 router.get("/loads/:id/tenders", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), getLoadTenders);
 router.post("/tenders/:id/accept", authorize("CARRIER", "BROKER", "ADMIN", "CEO"), acceptTender);
+// Sprint 39 (Item 54) — AE accept-on-behalf, tighter authorize scope.
+// Distinct endpoint so audit log action="TENDER_ACCEPTED_ON_BEHALF" is
+// queryable separately from organic carrier accepts.
+router.post("/tenders/:id/accept-on-behalf", authorize("ADMIN", "CEO"), acceptTenderOnBehalf);
 router.post("/tenders/:id/counter", authorize("CARRIER", "BROKER", "ADMIN", "CEO"), counterTender);
 router.post("/tenders/:id/decline", authorize("CARRIER", "BROKER", "ADMIN", "CEO"), declineTender);
 router.get("/carrier/tenders", authorize("CARRIER", "ADMIN", "CEO"), getCarrierTenders);

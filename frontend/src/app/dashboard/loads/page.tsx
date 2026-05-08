@@ -13,6 +13,7 @@ import {
 
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
+import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
@@ -136,6 +137,10 @@ export default function LoadsPage() {
   const [showRateConf, setShowRateConf] = useState(false);
   const [tenderCarrierId, setTenderCarrierId] = useState("");
   const [tenderRate, setTenderRate] = useState("");
+
+  /* ---- Sprint 39 Item 54 — Accept on Behalf state ---- */
+  const [onBehalfTender, setOnBehalfTender] = useState<{ id: string; carrierName: string } | null>(null);
+  const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
   const [complianceResult, setComplianceResult] = useState<{
     allowed: boolean; blocked_reasons: string[]; warnings: string[];
   } | null>(null);
@@ -391,6 +396,7 @@ export default function LoadsPage() {
             load={load}
             canCreate={canCreate}
             canSeeMargin={canSeeMargin}
+            isAdminOrCeo={isAdminOrCeo}
             suggestedCarriers={suggestedCarriers}
             tenders={load.tenders}
             datResponses={datResponses}
@@ -402,6 +408,10 @@ export default function LoadsPage() {
               setTenderRate(String(load.rate));
               setShowTender(true);
               setComplianceResult(null);
+            }}
+            onAcceptOnBehalf={(t) => {
+              const name = t.carrier?.user?.company || `${t.carrier?.user?.firstName ?? ""} ${t.carrier?.user?.lastName ?? ""}`.trim() || "Carrier";
+              setOnBehalfTender({ id: t.id, carrierName: name });
             }}
           />
         );
@@ -869,6 +879,19 @@ export default function LoadsPage() {
           its own open/closed state via props. */}
       <CreateLoadModal open={showCreate} onClose={() => { setShowCreate(false); setCloneData(null); }} cloneFrom={cloneData} />
 
+      {/* Sprint 39 Item 54 — Accept on Behalf modal */}
+      {onBehalfTender && (
+        <AcceptOnBehalfModal
+          tenderId={onBehalfTender.id}
+          carrierName={onBehalfTender.carrierName}
+          onClose={() => setOnBehalfTender(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["loads"] });
+            queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+          }}
+        />
+      )}
+
       {/* Invoice toast */}
       {invoiceToast && (
         <div className="fixed bottom-6 right-6 z-50 px-5 py-3 bg-green-600 text-white rounded-xl shadow-xl text-sm font-medium flex items-center gap-2 animate-in slide-in-from-bottom">
@@ -1282,6 +1305,7 @@ function PanelCarrier({
   load,
   canCreate,
   canSeeMargin,
+  isAdminOrCeo,
   suggestedCarriers,
   tenders,
   datResponses,
@@ -1289,10 +1313,12 @@ function PanelCarrier({
   datRemoveMutation,
   onAdvancedDat,
   onQuickTender,
+  onAcceptOnBehalf,
 }: {
   load: Load;
   canCreate: boolean;
   canSeeMargin: boolean;
+  isAdminOrCeo: boolean;
   suggestedCarriers?: {
     carriers: {
       carrierId: string; company: string; tier: string;
@@ -1314,6 +1340,7 @@ function PanelCarrier({
   datRemoveMutation: { mutate: (id: string) => void; isPending: boolean };
   onAdvancedDat: () => void;
   onQuickTender: (carrierId: string) => void;
+  onAcceptOnBehalf: (tender: NonNullable<Load["tenders"]>[number]) => void;
 }) {
   return (
     <div className="space-y-5">
@@ -1441,31 +1468,43 @@ function PanelCarrier({
         <section>
           <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Tender History</h3>
           <div className="space-y-2">
-            {tenders.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-lg border border-gray-200">
-                <div className="min-w-0">
-                  <p className="text-sm text-[#0A2540] truncate">
-                    {t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}
-                  </p>
-                  <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</p>
+            {tenders.map((t) => {
+              const canAcceptOnBehalf = isAdminOrCeo && (t.status === "OFFERED" || t.status === "COUNTERED");
+              return (
+                <div key={t.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-lg border border-gray-200">
+                  <div className="min-w-0">
+                    <p className="text-sm text-[#0A2540] truncate">
+                      {t.carrier?.user?.company || `${t.carrier?.user?.firstName} ${t.carrier?.user?.lastName}`}
+                    </p>
+                    <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {canSeeMargin ? (
+                      <div className="text-right">
+                        <p className="text-xs text-[#0A2540]">${t.offeredRate.toLocaleString()}</p>
+                        {t.counterRate && (
+                          <p className="text-xs text-yellow-700">Counter: ${t.counterRate.toLocaleString()}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-600">&mdash;</span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${TENDER_COLORS[t.status] || ""}`}>
+                      {t.status}
+                    </span>
+                    {canAcceptOnBehalf && (
+                      <button
+                        onClick={() => onAcceptOnBehalf(t)}
+                        className="px-2 py-0.5 text-xs bg-[#BA7517] text-white rounded hover:bg-[#854F0B]"
+                        data-testid="accept-on-behalf-btn"
+                      >
+                        Accept on Behalf
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {canSeeMargin ? (
-                    <div className="text-right">
-                      <p className="text-xs text-[#0A2540]">${t.offeredRate.toLocaleString()}</p>
-                      {t.counterRate && (
-                        <p className="text-xs text-yellow-700">Counter: ${t.counterRate.toLocaleString()}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-600">&mdash;</span>
-                  )}
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${TENDER_COLORS[t.status] || ""}`}>
-                    {t.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

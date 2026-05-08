@@ -409,6 +409,40 @@ export async function acceptPosition(positionId: string, actorId?: string | null
   });
   if (!pos || pos.status !== "tendered" || !pos.carrierId) return;
 
+  // Sprint 39 (Item 56) — compliance re-check at accept time.
+  // Carrier may have become non-compliant between waterfall offer time
+  // and accept time (insurance lapses, FMCSA OUT_OF_SERVICE, agreement
+  // expires). Direct path (tenderController.acceptTender:71) re-checks;
+  // bulk paths (waterfall + loadbid) used to skip. Skip+advance pattern
+  // mirrors declinePosition: log event, mark position skipped, move
+  // to next position. Carrier opted in but newly ineligible — next
+  // match runs.
+  const { complianceCheck } = await import("./complianceMonitorService");
+  const compliance = await complianceCheck(pos.carrierId);
+  if (!compliance.allowed) {
+    await prisma.waterfallPosition.update({
+      where: { id: positionId },
+      data: { status: "skipped", respondedAt: new Date() },
+    });
+    await prisma.loadTender.updateMany({
+      where: { waterfallPositionId: positionId, status: "OFFERED" },
+      data: { status: "DECLINED", respondedAt: new Date() },
+    });
+    // Reuse existing "position_skipped" event type (defined in
+    // waterfallEventService union); description prefix carries the
+    // compliance reason for searchability + metadata holds the
+    // structured blocked_reasons.
+    await logWaterfallEvent({
+      loadId: pos.waterfall.loadId,
+      event: "position_skipped",
+      description: `Position #${pos.position} skipped at accept — compliance: ${compliance.blocked_reasons.join(", ")}`,
+      actorType: "SYSTEM",
+      metadata: { positionId, waterfallId: pos.waterfall.id, reason: "compliance", blocked_reasons: compliance.blocked_reasons },
+    });
+    await advanceWaterfall(pos.waterfall.id, pos.position + 1);
+    return;
+  }
+
   const now = new Date();
 
   // Mark position + tender accepted

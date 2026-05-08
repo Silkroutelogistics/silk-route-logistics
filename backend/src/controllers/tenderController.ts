@@ -150,6 +150,132 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   res.json(updated);
 }
 
+/**
+ * Sprint 39 (Item 54) — AE accept-on-behalf endpoint.
+ *
+ * Mirrors acceptTender but skips the carrier-userId gate (AE is not the
+ * carrier) and writes a distinct audit log action so the override is
+ * traceable separately from organic carrier accepts.
+ *
+ * Authorization is enforced at route level (ADMIN/CEO only). Compliance
+ * re-check still runs server-side — UI cannot bypass safety.
+ *
+ * Status flips to BOOKED per Item 55 P3 (direct path stays BOOKED;
+ * waterfall + loadbid auto-pilot to DISPATCHED). Tracking-link fan-out
+ * fires at BOOKED to match Sprint 38 normal direct-accept behavior
+ * (operational decision: shipper gets tracking link as soon as carrier
+ * is confirmed, not on later explicit dispatch advance — α resolution).
+ */
+export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
+  const reasonRaw = (req.body?.reason ?? "").toString().trim();
+  if (reasonRaw.length < 10) {
+    res.status(400).json({ error: "Reason required (min 10 chars)" });
+    return;
+  }
+
+  const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
+  if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
+
+  if (tender.status !== "OFFERED" && tender.status !== "COUNTERED") {
+    res.status(400).json({ error: `Cannot accept tender in status ${tender.status}` });
+    return;
+  }
+
+  if (tender.expiresAt && new Date() > tender.expiresAt) {
+    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    res.status(400).json({ error: "This tender has expired" });
+    return;
+  }
+
+  const compliance = await complianceCheck(tender.carrierId);
+  if (!compliance.allowed) {
+    res.status(403).json({ error: "Carrier is no longer compliant", blocked_reasons: compliance.blocked_reasons });
+    return;
+  }
+
+  const load = await prisma.load.findUnique({ where: { id: tender.loadId } });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  // Atomic txn (Sprint 38 Item 53 pattern). Same three operations as
+  // acceptTender — tender→ACCEPTED, load→BOOKED+carrierId, sibling
+  // tenders→DECLINED.
+  const [updated] = await prisma.$transaction([
+    prisma.loadTender.update({
+      where: { id: tender.id },
+      data: { status: "ACCEPTED", respondedAt: new Date() },
+    }),
+    prisma.load.update({
+      where: { id: tender.loadId },
+      data: { status: "BOOKED", carrierId: tender.carrier.userId },
+    }),
+    prisma.loadTender.updateMany({
+      where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
+      data: { status: "DECLINED" },
+    }),
+  ]);
+
+  // Distinct audit-log action so on-behalf overrides are queryable.
+  await prisma.auditLog.create({
+    data: {
+      userId: req.user!.id,
+      action: "TENDER_ACCEPTED_ON_BEHALF",
+      entity: "LoadTender",
+      entityId: tender.id,
+      changes: JSON.stringify({
+        loadId: load.id,
+        carrierProfileId: tender.carrierId,
+        carrierUserId: tender.carrier.userId,
+        offeredRate: tender.offeredRate,
+        reason: reasonRaw,
+      }),
+    },
+  });
+
+  await hooks.run("PostLoadStateChange", { loadId: load.id, from: load.status, to: "BOOKED", actor: req.user!.id });
+  await hooks.run("PostTenderAccept", { tenderId: tender.id, loadId: load.id, carrierId: tender.carrierId, rate: tender.offeredRate, actor: req.user!.id, onBehalf: true });
+
+  // Auto-create Shipment (mirrors acceptTender).
+  const shipmentNumber = await nextShipmentNumber();
+  await prisma.shipment.create({
+    data: {
+      shipmentNumber,
+      loadId: load.id,
+      status: "BOOKED",
+      originCity: load.originCity,
+      originState: load.originState,
+      originZip: load.originZip,
+      destCity: load.destCity,
+      destState: load.destState,
+      destZip: load.destZip,
+      equipmentType: load.equipmentType,
+      commodity: load.commodity,
+      weight: load.weight,
+      pieces: load.pieces,
+      rate: tender.offeredRate,
+      distance: load.distance,
+      specialInstructions: load.specialInstructions,
+      customerId: load.customerId,
+      pickupDate: load.pickupDate,
+      deliveryDate: load.deliveryDate,
+    },
+  });
+
+  // Notification (Sprint 38 Item 51 pattern).
+  await notifyTenderAction(tender.id, "ACCEPTED");
+
+  // Tracking-link fan-out at BOOKED (Sprint 38 Item 52 pattern, α
+  // resolution: fire on accept regardless of P3 status semantics —
+  // shipper wants tracking link when carrier confirms).
+  try {
+    const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
+    await sendTrackingLinkToCrmContacts(load.id);
+  } catch (err) {
+    log.error({ err }, "[Tender on-behalf] tracking-link fan-out failed");
+  }
+
+  res.json({ ...updated, onBehalf: true });
+}
+
 export async function counterTender(req: AuthRequest, res: Response) {
   const { counterRate } = counterTenderSchema.parse(req.body);
   const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true, load: true } });
