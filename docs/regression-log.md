@@ -177,6 +177,35 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Methodology meta-commit: §19 sub-rules canonical + Pattern 7 promotion + Item 67 close (Sprint 44.5, 2026-05-09, no version bump)
+
+Same shape as Sprint 39.5 + 40c — methodology infrastructure ships unversioned.
+
+**§19 PATTERN 6 SUB-RULES** canonicalized in CLAUDE.md §19 with three named sub-rules under Pattern 6:
+
+- **Sub-rule a — Stability green-light (Sprint 43)** — when canonical references show no drift since last audit, Pattern 6 contributes a fast green-light gate (~30s) rather than detailed per-canonical investigation. Validated Sprint 43 Phase A (5 canonicals stable since Sprint 42).
+- **Sub-rule b — Spatial sub-mode (Sprint 44a)** — Pattern 6 fires across documents at single moment, not just across sprints. Contradictory simultaneous canonical refs are themselves leads. Validated Sprint 44a Track 1 (`render.yaml` + §2.2 vs `ci.yml` comment held simultaneous contradictory claims about canonical schema mutation path).
+- **Sub-rule c — Audits can be wrong / authoritative-source verification (Sprint 44b — three-fire canonical)** — when an audit informs a prod-touching action, verify the broader implication against an authoritative source (DB query, runtime grep, CLI `--help`) before action ships. Three-fire validation in single Sprint 44b session: Phase 1 (ProspectVertical drift scope 1 → actual 81/87), Phase 3 (Item 72 cp src/config catch), Phase 4 (Item 73 Prisma 6 `--exit-code` flag absence).
+
+**§19 PATTERN 7 ALWAYS-FIRE PROMOTION** — Pattern 7 fires every code-shipping sprint post-catalog. Five consecutive prospective fires across CSS/UI, code logic, methodology debt, infrastructure, schema integrity:
+
+- Sprint 41 (marginPercent) — 4 sites where §13.3 documented 2
+- Sprint 42 (drawer enumeration) — atomic P0+P1 bundle
+- Sprint 43 (fixture-class enumeration) — surfaced Item 67 methodology debt
+- Sprint 44a (deploy-pipeline-class enumeration) — surfaced 3 schema mutation paths needing consolidation
+- Sprint 44b (drift scope quantification) — 81 of 87 enums
+
+Cross-domain applicability confirms Pattern 7 is structural, not domain-specific. Promoted from "fires consistently" to "always-fire" status — no longer needs trigger justification per sprint.
+
+**§13.3 ITEM 67 CLOSED** — `e2e/FIXTURES.md` reference document shipped. Documents `E2E_FIXTURES` gate, idempotency Pattern A (upsert) + Pattern B (deleteMany + recreate), naming conventions (`*@srl.invalid` users, `E2E-*-FIXTURE` commodities), full inventory across Sprint 37/38/40/41/43 fixture extensions, checklist for adding new fixtures. Includes Pattern 6 sub-rule c reminder for E2E fixtures that touch production-shape tables.
+
+**Memory updated** — `feedback_methodology.md` reflects the three sub-rules + Pattern 7 always-fire promotion + e2e/FIXTURES.md pointer for cross-session continuity.
+
+**No version bump.** Developer-facing context only — same precedent as Sprint 39.5 + 40c. v3.8.aay (Sprint 44b hotfix) remains current.
+
+- **Patterns applied:** Audit-first (1), Phase A0 contract audit (3, methodology-class enumeration).
+- **Patterns emerged:** None new; this commit canonicalizes patterns that emerged in Sprints 43 + 44a + 44b.
+
 ## Phase 6 — Sprint 44b hotfix: Prisma 6 `--exit-code` flag drop (v3.8.aay, 2026-05-09)
 
 - **§13.3 Item 73 LOGGED + CLOSED.** Render production deploy on v3.8.aax fired the new canonical buildCommand and failed with `unknown or unexpected option: --exit-code` AFTER `prisma migrate deploy` ran clean ("No pending migrations to apply"). Sprint 44b initial directive's preventive gate inherited the flag from a Prisma 5-era convention; Prisma 6.19 doesn't support it.

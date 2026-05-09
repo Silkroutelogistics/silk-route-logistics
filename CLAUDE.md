@@ -779,7 +779,9 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 66-original. **E2E shipper-portal auth fixture + ShipmentDetailDrawer a11y regression lock + T&T navigation regression.** Surfaced 2026-05-09 during Sprint 42 Phase A audit. Sprint 42 source-fixed ShipmentDetailDrawer a11y (P0-1) and 4-drawer browser-back (P1-1), but E2E coverage landed only on CRM CustomerDrawer — shipper-portal E2E requires SHIPPER auth setup not currently in smoke (whaider is CEO), and T&T LoadDetailDrawer requires `/dashboard/track-trace` navigation step the smoke doesn't currently take. **Sprint shape:** add shipper-portal e2e-token mint via existing `wasihaider3089@gmail.com` APPROVED SHIPPER user; add a shipment fixture for that customer; navigate to `/shipper/dashboard/shipments` and click a shipment to open ShipmentDetailDrawer; assert ESC + backdrop click + browser-back close + aria-modal present. T&T coverage: navigate to `/dashboard/track-trace`, click a load row, exercise same close paths on LoadDetailDrawer. ~50-80 LOC test additions. **Pairs with Item 62** (E2E UI walk smoke for compliance-block + override flow — also requires fixture setup) as E2E coverage-extension methodology debt. Sprint 43+ candidate. Currently Sprint 42's source fixes are pattern-symmetric across all 4 drawers; CRM CustomerDrawer E2E proves the canonical, others rely on code-pattern symmetry + manual verify until Item 66 adds explicit coverage.
 
-67. **E2E fixture catalog reference document (`e2e/FIXTURES.md`).** Surfaced 2026-05-09 during Sprint 43 Phase A audit via Pattern 7 fixture-class enumeration. Six fixture extensions across Sprints 37/38/40/41/43 with no central reference: signed `CarrierAgreement` (Sprint 37), carrier `mcNumber` rotation (Sprint 38), `blocked-carrier@srl.invalid` (Sprint 40), compliance override cleanup (Sprint 41), waterfall + loadbid + shipper-portal fixtures (Sprint 43). Each sprint re-derives idempotency, naming convention (`*@srl.invalid` for test users, `E2E-*-FIXTURE` for commodity tags), `E2E_FIXTURES=true` gate, override-cleanup pattern. **Sprint shape:** create `e2e/FIXTURES.md` documenting the gate, idempotency requirements (upsert + deleteMany before recreate when test mutates state), naming convention, current fixture inventory + ownership (which sprint added what). **Pairs with Item 64 (skill expansion)** as documentation-debt class. Prevents per-sprint re-derivation. ~50-100 LOC docs commit. Sprint 44+ candidate. **FIFTH consecutive sprint** where Pattern 7 enumeration surfaced multi-surface methodology debt — pattern is producing reliable signal, worth confirming "always-fire" status at next quarterly §19 review.
+67. ~~**E2E fixture catalog reference document (`e2e/FIXTURES.md`).**~~ **CLOSED 2026-05-09 in Sprint 44.5 methodology meta-commit** (no version bump, same shape as Sprint 39.5 + 40c). `e2e/FIXTURES.md` shipped documenting the `E2E_FIXTURES` gate behavior, idempotency Pattern A (upsert) + Pattern B (deleteMany + recreate), naming conventions (`*@srl.invalid` for users, `E2E-*-FIXTURE` for commodity tags), full inventory across Sprints 37/38/40/41/43, and a checklist for adding new fixtures. Includes Pattern 6 sub-rule c reminder for fixtures that touch production-shape tables. Future sprints reading this doc will see complete inventory + understand whether their new fixture conflicts with an existing one. Original entry preserved below for history.
+
+67-original. **E2E fixture catalog reference document (`e2e/FIXTURES.md`).** Surfaced 2026-05-09 during Sprint 43 Phase A audit via Pattern 7 fixture-class enumeration. Six fixture extensions across Sprints 37/38/40/41/43 with no central reference: signed `CarrierAgreement` (Sprint 37), carrier `mcNumber` rotation (Sprint 38), `blocked-carrier@srl.invalid` (Sprint 40), compliance override cleanup (Sprint 41), waterfall + loadbid + shipper-portal fixtures (Sprint 43). Each sprint re-derives idempotency, naming convention (`*@srl.invalid` for test users, `E2E-*-FIXTURE` for commodity tags), `E2E_FIXTURES=true` gate, override-cleanup pattern. **Sprint shape:** create `e2e/FIXTURES.md` documenting the gate, idempotency requirements (upsert + deleteMany before recreate when test mutates state), naming convention, current fixture inventory + ownership (which sprint added what). **Pairs with Item 64 (skill expansion)** as documentation-debt class. Prevents per-sprint re-derivation. ~50-100 LOC docs commit. Sprint 44+ candidate. **FIFTH consecutive sprint** where Pattern 7 enumeration surfaced multi-surface methodology debt — pattern is producing reliable signal, worth confirming "always-fire" status at next quarterly §19 review.
 
 70. **Neon Launch tier — recurring cost + monitoring concern.** Surfaced 2026-05-09 during Sprint 44b Phase 1 (PITR upgrade pre-baseline-reset). PITR was raised from default to 7-day window before clearing the `_prisma_migrations` ledger + applying the new baseline migration. The 7-day PITR window is a Launch-tier feature — recurring monthly cost increase. **Sprint shape:** confirm Neon billing tier change is intentional (PITR safety vs cost trade-off). Decide canonical retention window post-Sprint-44b — keep at 7 days for ongoing safety on schema operations, or downgrade after a verification window. Document the chosen tier + rationale in CLAUDE.md §2 alongside the existing Neon connection note. Add billing review to monthly cost-monitoring cadence if not already there. **Priority:** low — operational, not blocking. Sprint 45+ candidate. Pairs with Item 64 (skill expansion) only loosely; primarily an infrastructure-hygiene item.
 
@@ -987,7 +989,7 @@ Patterns surfaced cumulatively during sprints. **Consult during Phase A audit be
 
 Each entry: name, sprint of origin (commit hash), trigger conditions, what to do, an example sprint where it caught something.
 
-### Active patterns (as of Sprint 40c, 2026-05-09)
+### Active patterns (as of Sprint 44.5, 2026-05-09)
 
 #### 1. Audit-first methodology (Sprint 1+, ongoing)
 - **Trigger:** any code change request.
@@ -1024,12 +1026,42 @@ Each entry: name, sprint of origin (commit hash), trigger conditions, what to do
 - **Action:** Phase A audit must explicitly check the prior sprints' wiring on the same path. Inconsistency between adjacent sprints (e.g., Sprint N fires X, Sprint N+1 doesn't fire X on same path) is silent drift unless surfaced explicitly.
 - **Caught in:** Sprint 39 — Sprint 38 fired tracking-link fan-out at BOOKED on direct path; Sprint 39's on-behalf endpoint default would NOT have fired it, codifying drift. Resolved via α decision (on-behalf matches Sprint 38 normal direct, fires fan-out at BOOKED). Pattern fired again Sprint 40 (role gate ADMIN vs ADMIN+CEO discrepancy). Two-fire validation, not premature capture.
 
-#### 7. Design-system conformance audit (Sprint 40b/40c, audit-driven catalog)
-- **Trigger:** sprint introduces or modifies a UI element belonging to a multi-surface class (drawers, modals, banners, tab rails, side panels, status badges, action buttons, form inputs, **nullable-data render paths**).
+##### Pattern 6 sub-rules (canonicalized Sprint 44.5)
+
+Pattern 6 has three named sub-rules established through prospective validation:
+
+###### Sub-rule a — Stability green-light (Sprint 43)
+- **When all canonical references show no drift since last audit, Pattern 6 contributes a fast green-light gate** rather than detailed per-canonical investigation. Time-bounded check (~30s) vs exhaustive trace.
+- **Validated:** Sprint 43 Phase A (5 canonicals stable since Sprint 42 — `SlideDrawer` popstate, `ProspectDrawer` trigger-dep variant, Sprint 36b eligibility filter, whaider/Haider seed fixtures, `/auth/e2e-token` Sprint 37 endpoint).
+- **How to apply:** in Phase A, list canonical references the sprint depends on. If a 30-second grep confirms each is unchanged since the last audit, log "Pattern 6 stability green-light" and move to next phase. Save the deep investigation for sprints where a canonical actually moved.
+
+###### Sub-rule b — Spatial sub-mode (Sprint 44a)
+- **Pattern 6 fires not just temporally** (cross-sprint, same code path) **but spatially** (cross-document, same point in time). When canonical reference docs disagree at a single moment, the contradiction itself is a lead.
+- **Validated:** Sprint 44a Track 1 — `render.yaml` + CLAUDE.md §2.2 vs `.github/workflows/ci.yml:112-116` comment held simultaneous contradictory claims about canonical schema mutation path (`migrate deploy` vs `db push`). Only one could be true; resolving which became the central tiebreaker for Sprint 44b's branch selection (X/Y/Z).
+- **How to apply:** when reviewing canonical docs, look for *current-state* contradictions across files in the same domain — not just temporal drift. Two docs that say different things at the same time are evidence that one is wrong; the wrongness is itself the audit finding.
+
+###### Sub-rule c — Audits can be wrong / authoritative-source verification (Sprint 44b — three-fire canonical)
+- **Trigger:** an audit finding will inform a prod-touching action.
+- **Action:** verify the audit's broader implication against an authoritative source (direct DB query, runtime-codepath grep, CLI flag `--help`, etc.) before the action ships. The audit's narrow finding may be correct in isolation but stale or incomplete in its broader inference.
+- **Validated three-fold in single Sprint 44b session** — definitive canonicalization, not premature capture:
+  1. **Phase 1 (Sprint 44a Track 1)** — `ProspectVertical` grep against `backend/prisma/migrations/` correctly returned empty. The narrow finding was right. The broader inference *"this is the only drift"* was wrong. Direct `pg_type` + `information_schema` query (CSV of 87 prod enums) revealed actual scope: 81 of 87 enums drifted via `db push`. Authoritative source = the database itself.
+  2. **Phase 3 (Item 72)** — Sprint 44b directive's draft buildCommand surface-looked complete; the audit said "this is the canonical." Pre-commit grep on `backend/src/` for `__dirname.*config|src/config/` surfaced runtime read at `email/builder.ts:18` loading `config/signatures/whaider.html` — load-bearing for production email signatures. Authoritative source = the runtime codepath, not the directive's surface.
+  3. **Phase 4 (Item 73, hotfix)** — Sprint 44b directive's `--exit-code` flag specification surface-looked complete; flag was inherited from a Prisma 5-era convention. Render production deploy failed with `unknown or unexpected option: --exit-code`. `npx prisma migrate status --help` confirmed v6.19 exposes only `--help / --config / --schema`. Authoritative source = the CLI tool's own help output.
+- **Pattern lineage:** audit findings inform prod-touching actions; the action's success requires authoritative-source verification of the broader implication, not just the audit's narrow finding.
+
+#### 7. Design-system conformance audit (Sprint 40b/40c, ALWAYS-FIRE post-Sprint-44.5)
+- **Trigger:** sprint introduces or modifies a UI element belonging to a multi-surface class (drawers, modals, banners, tab rails, side panels, status badges, action buttons, form inputs, **nullable-data render paths**, **deploy-pipeline classes**, **fixture classes**).
 - **Action:** enumerate all surfaces in the class. Check the modification against canonical reference + skill. Document drift if found.
 - **Distinct from Pattern 6:** Pattern 6 is **temporal** (Sprint N vs Sprint N+1 on a single code path). Pattern 7 is **spatial** (Surface A vs Surface B at the same time across a class).
+- **ALWAYS-FIRE status promoted Sprint 44.5** based on five consecutive prospective fires across multiple domains:
+  - **Sprint 41 (marginPercent)** — surfaced 4 unguarded `.toFixed()` crash sites where §13.3 Items 12.1+12.2 documented 2 of 4. Domain: code logic / nullable-data render paths.
+  - **Sprint 42 (drawer enumeration)** — 6 detail-style surfaces audited; ShipmentDetailDrawer + 4 right-drawers + Load Board side panel got atomic P0+P1 hotfix bundle. Domain: UI/CSS conformance.
+  - **Sprint 43 (fixture-class enumeration)** — 6 fixture extensions across Sprints 37/38/40/41/43 with no central reference; surfaced Item 67 methodology debt. Domain: testing infrastructure.
+  - **Sprint 44a (deploy-pipeline-class enumeration)** — 3 schema-mutation paths existed without canonical (Render automated + manual `db push` + manual `migrate deploy`); surfaced Item 8.10's deeper root cause + drove canonical consolidation. Domain: infrastructure / deploy pipeline.
+  - **Sprint 44b (drift scope quantification)** — continued Sprint 44a; converted "ProspectVertical drift" finding into "81 of 87 enums" via authoritative-source query. Domain: schema integrity.
 - **Caught retroactively in:** Sprint 30 Houston-template drift (5 surfaces shared the wrong Texas-template `SRL_INFO`), Sprint 32 dropdown bg drift (5 modals had 5 different dropdown patterns), Sprint 40b drawer drift (11 findings × 6 surfaces — 1 P0, 3 P1, 3 P2, 4 P3), Sprint 40c marginPercent crash sites (4 surfaces unguarded, §13.3 Items 12.1+12.2 documented only 2 of 4). Same architectural fingerprint: render-path or component-class drift across multiple consumers without a central reference.
 - **Pattern signature is grep-able.** A 30-second `grep "marginPercent.*toFixed"` surfaced all 4 crash sites at once where 2-of-4 manual catch had stood for weeks. When fixing a class member, grep the class signature first; a single-surface fix on a multi-surface defect is a partial close that ages into a backlog item.
+- **Domain breadth:** Pattern 7 has now fired in CSS/UI, code logic, methodology debt, infrastructure, and schema integrity. Cross-domain applicability confirms the pattern is structural, not domain-specific.
 
 ### Per-sprint commit message convention (effective Sprint 40+)
 
@@ -1043,7 +1075,7 @@ Patterns emerged: <new pattern, if any — meta-commit follows to log it>
 When new patterns surface, ship them as a separate methodology meta-commit (no version bump, no source code change — same shape as Sprint 28 audit-only and Sprint 37 lock-only). Quarterly review prunes the catalog.
 
 ### Pending review (next quarterly)
-- None yet — all seven patterns active.
+- None yet — all seven patterns active. Pattern 6 has 3 sub-rules canonicalized (a/b/c). Pattern 7 promoted to ALWAYS-FIRE status.
 
 ---
 
