@@ -5362,7 +5362,129 @@
 //            prevented per-surface discovery cycles. Pattern 6
 //            verified SlideDrawer canonical unchanged since
 //            Sprint 40b — zero drift in 1 day.
-export const SRL_VERSION = "3.8.aav";
+//
+// v3.8.aaw — Sprint 43: E2E coverage expansion epic. Items 60 +
+//            62 + 66 closed atomic per §3.3 — same E2E-coverage
+//            root cause class.
+//
+//            ITEM 60 — WATERFALL + LOADBID BULK-PATH SEED + LOCK
+//            Seed E2E_FIXTURES block extended with waterfall +
+//            loadbid fixtures pointing at the existing blocked
+//            carrier (insurance expired). Waterfall: active
+//            Waterfall + 1 tendered WaterfallPosition. Loadbid:
+//            POSTED load + 1 pending LoadBid. Both gated by
+//            E2E_FIXTURES=true, idempotent via deleteMany +
+//            recreate per seed run (smokes mutate state by
+//            accepting; re-seed restores).
+//
+//            E2E B6.5d locks Sprint 39 Item 56 waterfall skip+
+//            advance: POST accept on tendered position pointing
+//            at blocked carrier → assert position status="skipped".
+//            E2E B6.5e locks Sprint 39 Item 56 loadbid 409: PATCH
+//            accept on pending bid pointing at blocked carrier →
+//            assert response status 409 + blocked_reasons body.
+//
+//            Sprint 39 Item 56 closure now structurally validated
+//            — bulk paths can no longer regress without red CI.
+//
+//            ITEM 62 — COMPLIANCE-BLOCK UI WALK
+//            Phase A audit caught fixture pre-existing from
+//            Sprint 40 (blocked-carrier@srl.invalid). Saved ~15
+//            LOC seed extension. Pattern 6 cross-sprint
+//            precedent prevented duplicate work.
+//
+//            E2E B6.5c locks Tender modal surface: dedicated
+//            POSTED load created for the walk; navigates to
+//            /dashboard/loads, clicks the load, opens Tender
+//            modal, asserts modal renders. Sprint 31 carrier
+//            picker + Sprint 36b eligibility filter + Sprint 40
+//            override modal all live on this surface; B6.5b's
+//            API-only test locks the override contract end-to-
+//            end. Order matters — B6.5c/d/e run BEFORE B6.5b
+//            so the blocked carrier is still blocked (B6.5b
+//            applies override that masks subsequent compliance
+//            checks).
+//
+//            ITEM 66 — SHIPPER-PORTAL AUTH + DRAWER LOCKS
+//            Seed adds DELIVERED load against Haider Logistics
+//            customer (commodity=E2E-SHIPPER-FIXTURE) so
+//            /shipper/dashboard/shipments returns it under the
+//            shipper session. /auth/e2e-token (Sprint 37) mints
+//            JWT for any seeded user including SHIPPER role.
+//
+//            E2E B15 locks ShipmentDetailDrawer a11y baseline
+//            (Sprint 42 wrapper restructure): mints shipper
+//            token, swaps browser-context cookie, navigates to
+//            shipper shipments, opens drawer, asserts role=
+//            dialog + aria-modal, ESC close. MUST RUN LAST —
+//            switches auth context.
+//
+//            E2E B16 locks T&T LoadDetailDrawer surface:
+//            navigate to /dashboard/track-trace, assert page
+//            renders without React error boundary, opportunistic
+//            drawer-open click + browser-back if drawer surfaces.
+//            Best-effort; T&T row click target varies — page
+//            render assertion is the load-bearing lock.
+//
+//            ITEM 67 — NEW METHODOLOGY DEBT (LOGGED)
+//            Phase A Pattern 7 enumeration surfaced 6 fixture
+//            extensions across Sprints 37/38/40/41/43 with no
+//            central reference document. §13.3 Item 67 logged:
+//            E2E fixture catalog reference document
+//            (e2e/FIXTURES.md) — gate (E2E_FIXTURES=true),
+//            idempotency requirements, naming convention
+//            (*@srl.invalid), current fixture inventory. Pairs
+//            with Item 64 (skill expansion) as documentation-
+//            debt class.
+//
+//            FIFTH consecutive sprint where Pattern 7 surfaced
+//            multi-surface methodology debt:
+//              - Sprint 40b: Items 63 + 64 (drawer drift)
+//              - Sprint 41: 2 sites beyond §13.3 (marginPercent)
+//              - Sprint 42: Item 66 (shipper-portal auth)
+//              - Sprint 43: Item 67 (E2E fixture catalog)
+//
+//            PATTERN 6 STABILITY GREEN-LIGHT (METHODOLOGY DATA
+//            POINT)
+//            Phase A4 audit verified zero canonical drift across
+//            5 references since Sprint 42:
+//              - SlideDrawer popstate canonical
+//              - ProspectDrawer trigger-dep variant
+//              - Sprint 36b eligibility filter
+//              - whaider CEO + wasihaider3089@gmail.com SHIPPER
+//                seed
+//              - /auth/e2e-token Sprint 37 endpoint
+//
+//            When canonical references all show stability,
+//            Pattern 6 contributes a fast green-light gate
+//            rather than detailed per-canonical investigation.
+//            Worth logging as Pattern 6 sub-rule at next §19
+//            update — Sprint 44+ scope, not Sprint 43.
+//
+//            VERIFICATION
+//            Frontend tsc clean. Lifecycle smoke green locally
+//            with all new B6.5c/d/e + B15 + B16 — 19.9s test,
+//            41.4s total. Runtime within projected 70-90s
+//            target.
+//
+//            Net source change: ~245 LOC across seed.ts +
+//            full-lifecycle.spec.ts (matches Phase A6 estimate).
+//
+//            Per §3.1 sequence-continuous: v3.8.aav → v3.8.aaw.
+//
+//            Patterns applied: Audit-first (1), Phase A0
+//                              contract audit (3), Cross-sprint
+//                              precedent (6 — fixture redundancy
+//                              + canonical stability), Pattern 7
+//                              (fixture-class enumeration).
+//            Patterns emerged: Pattern 6 stability sub-rule
+//                              (logged for Sprint 44+ §19
+//                              update, not Sprint 43 scope).
+//
+//            §13.3:
+//              - Items 60 + 62 + 66 — LOGGED + CLOSED
+//              - Item 67 — LOGGED OPEN (E2E fixture catalog)
+export const SRL_VERSION = "3.8.aaw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

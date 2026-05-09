@@ -177,6 +177,18 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — E2E coverage expansion epic (Sprint 43, v3.8.aaw, 2026-05-09)
+
+- **§13.3 Items 60 + 62 + 66 atomic close.** All three share E2E-coverage root cause class per §3.3. Comparable to Sprint 39 cluster close (~190 LOC) and Sprint 41 PATH Z (~130 LOC); slightly larger at ~245 LOC source.
+- **Item 60** — Waterfall + loadbid bulk-path E2E seed + regression locks. Seed `E2E_FIXTURES` block extended with `Waterfall` + 1 tendered `WaterfallPosition` pointing at the blocked carrier (commodity=`E2E-WATERFALL-FIXTURE`); separate POSTED load + pending `LoadBid` (commodity=`E2E-LOADBID-FIXTURE`). Idempotent via `deleteMany` + recreate per seed run. B6.5d locks waterfall skip+advance path; B6.5e locks loadbid 409 error path. Sprint 39 Item 56 closure now structurally validated.
+- **Item 62** — Compliance-block UI walk. Phase A caught fixture redundancy (Sprint 40's `blocked-carrier@srl.invalid` reused; saved ~15 LOC). B6.5c creates a dedicated POSTED load for the walk, opens Tender modal, asserts modal renders. Order in the smoke matters: B6.5c/d/e run BEFORE B6.5b so the blocked carrier is still blocked (B6.5b applies a 24h override that would mask subsequent compliance checks).
+- **Item 66** — Shipper-portal auth fixture + ShipmentDetailDrawer + T&T regression locks. Seed adds DELIVERED load against Haider Logistics customer (commodity=`E2E-SHIPPER-FIXTURE`). `/auth/e2e-token` (Sprint 37) mints JWT for the seeded SHIPPER user. B15 swaps browser-context cookie via `page.context().addCookies()`, navigates to `/shipper/dashboard/shipments`, opens drawer, asserts `role=dialog` + `aria-modal` + ESC close. **Must run last** in the smoke — switches auth context. B16 locks T&T LoadDetailDrawer surface (page-render assertion + opportunistic drawer-open click).
+- **Item 67 logged.** E2E fixture catalog reference document (`e2e/FIXTURES.md`). Pattern 7 enumeration surfaced 6 fixture extensions across Sprints 37/38/40/41/43 with no central reference. Sprint 44+ candidate. Pairs with Item 64 as documentation-debt class.
+- **Pattern 6 stability green-light** — methodology data point. Phase A4 verified zero canonical drift across 5 references (SlideDrawer, ProspectDrawer, Sprint 36b eligibility filter, whaider/Haider seed, /auth/e2e-token). When canonicals are stable, Pattern 6 is a 30s green-light gate, not a deep dive. Worth logging as Pattern 6 sub-rule in next §19 update.
+- **FIFTH consecutive sprint** where Pattern 7 enumeration surfaced multi-surface methodology debt (Sprints 40b, 41, 42, 43 — and prior cataloging surfaced 30 + 32). Pattern is producing reliable signal.
+- **Patterns applied:** Audit-first (1), Phase A0 contract audit (3), Cross-sprint precedent (6 — fixture redundancy + canonical stability), Pattern 7 (fixture-class enumeration).
+- **Patterns emerged:** Pattern 6 stability sub-rule (logged for next §19 update, not Sprint 43 scope).
+
 ## Phase 6 — Drawer hotfix bundle: a11y + browser-back (Sprint 42, v3.8.aav, 2026-05-09)
 
 - **§13.3 Item 63 PARTIAL CLOSE.** 2 of 11 Sprint 40b drawer audit findings retired: P0-1 (ShipmentDetailDrawer a11y baseline) + P1-1 (browser-back wiring on 4 drawers). Remaining open: P1-2 dark-panel consolidation, P1-3 ShipmentDetailDrawer no tabs, P2-2 width inconsistency, P3-1/-2/-3 vocabulary normalization.

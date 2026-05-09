@@ -1741,6 +1741,120 @@ Seed complete:
       },
     });
     console.log("✅ E2E fixtures: blocked-carrier@srl.invalid (APPROVED but insurance expired) for compliance-override smoke");
+
+    // Sprint 43 (Items 60 + 62 + 66) — bulk-path E2E fixtures.
+    // Both waterfall + loadbid fixtures point at the BLOCKED carrier so
+    // B6.5d/e exercise Sprint 39 Item 56's compliance-fail paths
+    // (waterfall: skip+advance, loadbid: 409 error). Distinctive
+    // commodity tag lets the smoke find these loads via API filter.
+    const blockedCarrierProfile = await prisma.carrierProfile.findUnique({
+      where: { userId: blockedCarrierUser.id },
+      select: { id: true },
+    });
+    if (!blockedCarrierProfile) throw new Error("E2E_FIXTURES: blocked carrier profile not found post-upsert");
+
+    // Idempotency — clear any prior fixtures on each seed run so smokes
+    // are deterministic. Cascades drop dependent positions/tenders/bids.
+    await prisma.load.deleteMany({
+      where: { commodity: { in: ["E2E-WATERFALL-FIXTURE", "E2E-LOADBID-FIXTURE", "E2E-SHIPPER-FIXTURE"] } },
+    });
+
+    const wfLoad = await prisma.load.create({
+      data: {
+        customerId: cust1.id,
+        posterId: admin.id,
+        originCity: "Boise", originState: "ID", originZip: "83702",
+        destCity: "Salt Lake City", destState: "UT", destZip: "84101",
+        equipmentType: "Dry Van",
+        commodity: "E2E-WATERFALL-FIXTURE",
+        weight: 20000, pieces: 20,
+        rate: 3000, distance: 340,
+        pickupDate: new Date(Date.now() + 1 * day),
+        deliveryDate: new Date(Date.now() + 3 * day),
+        status: "POSTED",
+      },
+    });
+    const wf = await prisma.waterfall.create({
+      data: {
+        loadId: wfLoad.id,
+        mode: "semi_auto",
+        status: "active",
+        startedAt: new Date(),
+        totalPositions: 1,
+        currentPosition: 1,
+      },
+    });
+    await prisma.waterfallPosition.create({
+      data: {
+        waterfallId: wf.id,
+        carrierId: blockedCarrierProfile.id,
+        position: 1,
+        offeredRate: 2700,
+        status: "tendered",
+        tenderSentAt: new Date(),
+        tenderExpiresAt: new Date(Date.now() + day),
+      },
+    });
+    console.log(`✅ E2E fixtures: waterfall ${wf.id} on load ${wfLoad.id} (commodity=E2E-WATERFALL-FIXTURE)`);
+
+    const lbLoad = await prisma.load.create({
+      data: {
+        customerId: cust1.id,
+        posterId: admin.id,
+        originCity: "Phoenix", originState: "AZ", originZip: "85001",
+        destCity: "Albuquerque", destState: "NM", destZip: "87101",
+        equipmentType: "Dry Van",
+        commodity: "E2E-LOADBID-FIXTURE",
+        weight: 18000, pieces: 15,
+        rate: 2500, distance: 421,
+        pickupDate: new Date(Date.now() + 1 * day),
+        deliveryDate: new Date(Date.now() + 3 * day),
+        status: "POSTED",
+        visibility: "open",
+      },
+    });
+    const lb = await prisma.loadBid.create({
+      data: {
+        loadId: lbLoad.id,
+        // LoadBid.carrierId is User.id per submission convention
+        // (loadBids.ts:87 uses req.user!.id at submission time).
+        carrierId: blockedCarrierUser.id,
+        bidRate: 2400,
+        status: "pending",
+      },
+    });
+    console.log(`✅ E2E fixtures: loadBid ${lb.id} on load ${lbLoad.id} (commodity=E2E-LOADBID-FIXTURE)`);
+
+    // Sprint 43 (Item 66) — shipper-portal load fixture for B15 walk.
+    // Belongs to wasihaider3089@gmail.com (Haider Logistics customer)
+    // so /shipper/dashboard/shipments returns it under that user's
+    // session. Status DELIVERED → shipment auto-creation already done
+    // by tender accept logic in production paths; for the fixture we
+    // create the Shipment directly to avoid running the full lifecycle.
+    const haiderCustomer = await prisma.customer.findFirst({
+      where: { email: "wasihaider3089@gmail.com" },
+      select: { id: true },
+    });
+    if (haiderCustomer) {
+      const shipperLoad = await prisma.load.create({
+        data: {
+          customerId: haiderCustomer.id,
+          posterId: admin.id,
+          originCity: "Detroit", originState: "MI", originZip: "48201",
+          destCity: "Chicago", destState: "IL", destZip: "60601",
+          equipmentType: "Dry Van",
+          commodity: "E2E-SHIPPER-FIXTURE",
+          weight: 22000, pieces: 18,
+          rate: 1800, distance: 282,
+          pickupDate: new Date(Date.now() - 2 * day),
+          deliveryDate: new Date(Date.now() - 1 * day),
+          status: "DELIVERED",
+        },
+      });
+      console.log(`✅ E2E fixtures: shipper-portal load ${shipperLoad.id} (commodity=E2E-SHIPPER-FIXTURE) for Haider Logistics`);
+    } else {
+      console.log("⚠ E2E fixtures: Haider Logistics customer not found — B15 shipper walk will skip");
+    }
   }
 }
 
