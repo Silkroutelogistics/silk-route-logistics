@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, FileText, Download, MessageSquare, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -17,6 +17,29 @@ export function ShipmentDetailDrawer({
   const router = useRouter();
   const [bolLoading, setBolLoading] = useState(false);
   const [podLoading, setPodLoading] = useState(false);
+
+  // Sprint 42 (Item 63 P0-1) — baseline accessibility. Was missing ESC,
+  // click-out, aria-modal, role="dialog", popstate. Patterns from
+  // SlideDrawer.tsx:29-58 (ESC + scroll lock) and ProspectDrawer.tsx:49-55
+  // (trigger-dep popstate variant). Width 420px preserved per Sprint 40b
+  // decision — full SlideDrawer migration deferred to Item 64 skill
+  // expansion when canonical drawer pattern is locked.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    window.history.pushState({ shipmentDetailDrawer: true }, "");
+    const onPop = () => onClose();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [onClose]);
 
   const progressBg =
     shipment.status === "At Risk"
@@ -67,10 +90,13 @@ export function ShipmentDetailDrawer({
   };
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] z-[200] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-[200]" role="dialog" aria-modal="true" aria-label={`Shipment ${shipment.id} details`}>
+      {/* Backdrop — click-out close per Sprint 42 a11y fix. */}
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} aria-hidden="true" />
+      <div className="absolute top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] overflow-y-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-serif text-xl text-[#0F1117]">Shipment Details</h2>
-        <button onClick={onClose} className="text-gray-700 hover:text-gray-600">
+        <button onClick={onClose} className="text-gray-700 hover:text-gray-600" aria-label="Close">
           <X size={20} />
         </button>
       </div>
@@ -132,6 +158,7 @@ export function ShipmentDetailDrawer({
         >
           <MessageSquare size={14} /> Message Rep
         </button>
+      </div>
       </div>
     </div>
   );

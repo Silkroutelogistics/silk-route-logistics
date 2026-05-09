@@ -5280,7 +5280,89 @@
 //              - Two NEW surfaces (finance + lane-analytics) rolled
 //                into the same close per Sprint 39 Item 56
 //                expansion precedent — no §13.3 fragmentation.
-export const SRL_VERSION = "3.8.aau";
+//
+// v3.8.aav — Sprint 42: Item 63 PARTIAL CLOSE (P0-1 + P1-1).
+//            PATH X drawer hotfix bundle. Closes 2 of 11 Sprint
+//            40b drawer audit findings.
+//
+//            P0-1 — SHIPMENT DETAIL DRAWER A11Y
+//            Customer-facing drawer shipped without baseline modal
+//            accessibility — no ESC, no click-out, no aria-modal,
+//            no role="dialog", no popstate. Restructured to
+//            wrapper pattern matching SlideDrawer canonical: outer
+//            `fixed inset-0 z-200` with role="dialog" + aria-modal,
+//            backdrop div with onClick close, panel preserves the
+//            420px width per Sprint 40b decision (full SlideDrawer
+//            migration deferred to Item 64 skill expansion).
+//            useEffect handlers for ESC + popstate + scroll-lock
+//            mounted on first render (parent renders conditionally
+//            on `selected` truthy).
+//
+//            P1-1 — BROWSER-BACK ACROSS 4 DRAWERS
+//            Sprint 40b found 4 drawers missing browser-back close
+//            while SlideDrawer + ProspectDrawer canonical wires it.
+//            Trigger-dep popstate variant applied (matches
+//            ProspectDrawer.tsx:49-55) — fires when id-prop becomes
+//            truthy, cleans on unmount/id-change. Custom history-
+//            state key per drawer to avoid collision when multiple
+//            drawer types open across the AE Console session.
+//              - CustomerDrawer.tsx (CRM) — key customerDrawer
+//              - LoadDetailDrawer.tsx (T&T) — key loadDetailDrawer
+//              - WaterfallDrawer.tsx (Waterfall) — key waterfallDrawer
+//              - ShipmentDetailDrawer.tsx (Shipper Portal) — key
+//                shipmentDetailDrawer (bundled with P0-1 fix)
+//
+//            E2E B13 + B14 — CRM CUSTOMER DRAWER REGRESSION LOCK
+//            B13: open drawer, assert role=dialog + aria-modal
+//                 visible; ESC closes; backdrop click closes.
+//            B14: open drawer, browser-back closes.
+//            CRM chosen because reachable with existing whaider
+//            CEO auth + customer fixture from B2. Pattern is
+//            identical across 4 drawers; CRM proves canonical,
+//            others inherit by code-pattern symmetry. Manual
+//            verify on T&T/Waterfall/Shipper before push. Item
+//            66 logs E2E coverage gap on shipper-portal-auth-
+//            requiring surfaces.
+//
+//            FULL SLIDEDRAWER MIGRATION DEFERRED
+//            Per Sprint 40b decision — width changes (420→2xl) +
+//            animation + shadow surface too much visual change
+//            without runtime walk. Belongs to Item 64 skill
+//            expansion when canonical drawer pattern is locked.
+//
+//            VERIFICATION
+//            Frontend tsc --noEmit clean. Lifecycle smoke green
+//            locally with B13 + B14.
+//
+//            Net source change: ~85 LOC across 5 files
+//            (ShipmentDetailDrawer wrapper restructure ~30 +
+//            popstate × 4 drawers ~40 + E2E B13/B14 ~25).
+//
+//            Per §3.1 sequence-continuous: v3.8.aau → v3.8.aav.
+//
+//            Patterns applied: Audit-first (1), Phase A0 contract
+//                              audit (3), Cross-sprint precedent
+//                              (6), Pattern 7 design-system
+//                              conformance (4 drawer surfaces
+//                              enumerated and bundled).
+//            Patterns emerged: None. Catalog ran cleanly.
+//
+//            §13.3:
+//              - Item 63 — PARTIAL CLOSE (P0-1 + P1-1 retired;
+//                P1-2/-3, P2-2, P3-1/-2/-3 remain open)
+//              - Item 65 — LOG OPEN (BCA + agreements workflow
+//                audit, Sprint 40d candidate, end-of-queue per
+//                session-prior decision)
+//              - Item 66 — LOG OPEN (E2E shipper-portal auth
+//                fixture + ShipmentDetailDrawer + T&T navigation
+//                regression lock; pairs with Item 62)
+//
+//            METHODOLOGY VALIDATION
+//            Pattern 7 surfaced 4 surfaces in single grep,
+//            prevented per-surface discovery cycles. Pattern 6
+//            verified SlideDrawer canonical unchanged since
+//            Sprint 40b — zero drift in 1 day.
+export const SRL_VERSION = "3.8.aav";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

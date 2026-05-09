@@ -37,6 +37,15 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
     };
   }, [loadId, handleKey]);
 
+  // Sprint 42 (Item 63 P1-1) — browser-back close. Trigger-dep variant.
+  useEffect(() => {
+    if (!loadId) return;
+    window.history.pushState({ waterfallDrawer: true }, "");
+    const onPop = () => onClose();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [loadId, onClose]);
+
   // v3.4.u — direct lookup via /waterfalls/load/:loadId/current.
   // Previously we round-tripped through the board list to resolve the
   // active waterfall for a load; the new shortcut returns it directly.

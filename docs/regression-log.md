@@ -177,6 +177,17 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Drawer hotfix bundle: a11y + browser-back (Sprint 42, v3.8.aav, 2026-05-09)
+
+- **§13.3 Item 63 PARTIAL CLOSE.** 2 of 11 Sprint 40b drawer audit findings retired: P0-1 (ShipmentDetailDrawer a11y baseline) + P1-1 (browser-back wiring on 4 drawers). Remaining open: P1-2 dark-panel consolidation, P1-3 ShipmentDetailDrawer no tabs, P2-2 width inconsistency, P3-1/-2/-3 vocabulary normalization.
+- **ShipmentDetailDrawer wrapper restructure.** Was single-panel `<div className="fixed top-0 right-0 ...">` with no backdrop, no ESC handler, no aria-modal, no popstate. Restructured to `<div role="dialog" aria-modal="true">` outer wrapper holding backdrop + 420px panel. ESC + popstate + scroll-lock effects mounted on first render (parent renders conditionally on `selected` truthy). Width preserved per Sprint 40b decision; full SlideDrawer migration deferred to Item 64 skill expansion.
+- **Browser-back wiring on 4 drawers.** CustomerDrawer, LoadDetailDrawer, WaterfallDrawer, ShipmentDetailDrawer. Trigger-dep popstate variant per ProspectDrawer.tsx:49-55 precedent. Custom history-state key per drawer (customerDrawer / loadDetailDrawer / waterfallDrawer / shipmentDetailDrawer) avoids collision when multiple drawer types open across an AE Console session. Idempotent wasOpenRef variant from SlideDrawer remains canonical for boolean-toggled surfaces; both variants legitimate per use case (Sprint 43+ §19 update candidate).
+- **E2E B13 + B14** lock CRM CustomerDrawer canonical. CRM chosen because reachable with existing whaider CEO auth + B2 customer fixture; pattern is identical across 4 drawers (CRM proves canonical, others inherit by code-pattern symmetry). B13 asserts role=dialog + aria-modal + ESC close + backdrop click-out close. B14 asserts browser-back close.
+- **§13.3 Item 65 LOG OPEN** — BCA + agreements workflow audit (Sprint 40d candidate, audit-only, end-of-queue per session-prior decision).
+- **§13.3 Item 66 LOG OPEN** — E2E shipper-portal auth fixture + ShipmentDetailDrawer + T&T navigation regression lock. Pairs with Item 62 as E2E coverage-extension methodology debt. Sprint 43+ candidate.
+- **Patterns applied:** Audit-first (1), Phase A0 contract audit (3), Cross-sprint precedent (6 — SlideDrawer canonical re-verified, zero drift in 1 day), Pattern 7 design-system conformance (4 drawer surfaces enumerated and bundled per spatial-class principle).
+- **Patterns emerged:** None. Catalog ran cleanly.
+
 ## Phase 6 — marginPercent null-guard sweep (Sprint 41, v3.8.aau, 2026-05-09)
 
 - **§13.3 Items 12.1+12.2 closed with expanded scope.** Pattern 7 (catalogued Sprint 40c) — first time the pattern fired in code-shipping mode. `grep "marginPercent.*toFixed"` surfaced 4 unguarded crash sites; §13.3 had documented 2. Same architectural fingerprint as Sprint 30 Houston-template drift (5 surfaces) and Sprint 32 dropdown bg drift (5 modals).

@@ -42,6 +42,15 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
     };
   }, [loadId, handleKeyDown]);
 
+  // Sprint 42 (Item 63 P1-1) — browser-back close. Trigger-dep variant.
+  useEffect(() => {
+    if (!loadId) return;
+    window.history.pushState({ loadDetailDrawer: true }, "");
+    const onPop = () => onClose();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [loadId, onClose]);
+
   const query = useQuery<{ load: any }>({
     queryKey: ["tt-load-detail", loadId],
     queryFn: async () => (await api.get(`/track-trace/load/${loadId}`)).data,

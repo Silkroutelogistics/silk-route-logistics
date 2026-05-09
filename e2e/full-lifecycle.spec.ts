@@ -397,5 +397,46 @@ test.describe("Full Load Lifecycle E2E", () => {
       );
       expect(fatalErrors, `Sprint 41: ${path} must not throw toFixed/null-property errors; got ${JSON.stringify(fatalErrors)}`).toEqual([]);
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // B13 + B14 — Sprint 42 (Item 63 P0-1 + P1-1) drawer regression lock.
+    //   B13 — accessibility: aria-modal, role="dialog", ESC close,
+    //         backdrop click-out close.
+    //   B14 — browser-back close.
+    //
+    //   Test target: CRM CustomerDrawer. Reachable with existing whaider
+    //   CEO auth, customer created in B2 already exists. Pattern is
+    //   identical across the 4 drawers patched in Sprint 42 (CRM, T&T,
+    //   Waterfall, Shipper Portal); CRM proves the canonical, others
+    //   inherit by code-pattern symmetry. ShipmentDetailDrawer + T&T
+    //   E2E coverage deferred to Item 66 (shipper-portal auth fixture).
+    // ─────────────────────────────────────────────────────────────────
+    await page.goto(`${FRONTEND_BASE}/dashboard/crm`);
+    await page.waitForLoadState("networkidle");
+
+    // Click the customer row created in B2 to open the drawer.
+    await page.getByText(customer.name).first().click();
+
+    // B13a — assert role="dialog" + aria-modal present
+    const dialog = page.locator('[role="dialog"][aria-modal="true"]').first();
+    await expect(dialog, "Sprint 42 P0-1: CustomerDrawer must have role=dialog + aria-modal").toBeVisible({ timeout: 10_000 });
+
+    // B13b — ESC closes drawer
+    await page.keyboard.press("Escape");
+    await expect(dialog, "Sprint 42 P0-1: ESC must close CustomerDrawer").not.toBeVisible({ timeout: 5_000 });
+
+    // B13c — backdrop click-out closes drawer
+    await page.getByText(customer.name).first().click();
+    await expect(dialog, "B13c: drawer reopens for click-out test").toBeVisible({ timeout: 5_000 });
+    // Backdrop is the bg-black/20 div at top-left of the drawer wrapper.
+    // Click near top-left where backdrop covers (drawer panel is on the right).
+    await page.mouse.click(50, 100);
+    await expect(dialog, "Sprint 42 P0-1: backdrop click must close CustomerDrawer").not.toBeVisible({ timeout: 5_000 });
+
+    // B14 — browser-back closes drawer
+    await page.getByText(customer.name).first().click();
+    await expect(dialog, "B14: drawer reopens for browser-back test").toBeVisible({ timeout: 5_000 });
+    await page.goBack();
+    await expect(dialog, "Sprint 42 P1-1: browser-back must close CustomerDrawer").not.toBeVisible({ timeout: 5_000 });
   });
 });

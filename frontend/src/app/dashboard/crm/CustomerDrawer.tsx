@@ -44,6 +44,17 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
     };
   }, [customerId, handleKey]);
 
+  // Sprint 42 (Item 63 P1-1) — browser-back close. Trigger-dep variant
+  // matching ProspectDrawer.tsx:49-55. Custom history-state key avoids
+  // collision when multiple drawers open across the AE Console session.
+  useEffect(() => {
+    if (!customerId) return;
+    window.history.pushState({ customerDrawer: true }, "");
+    const onPop = () => onClose();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [customerId, onClose]);
+
   // Legacy /customers/:id returns the customer unwrapped (controller does
   // res.json({ ...customer, totalShipments, totalRevenue, ... })), so we
   // type the query against the customer shape directly.
