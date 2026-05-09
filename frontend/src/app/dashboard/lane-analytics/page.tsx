@@ -21,7 +21,9 @@ interface LaneSummary {
   volume: number;
   revenue: number;
   avgRate: number;
-  marginPercent: number;
+  // Sprint 41 — relaxed to nullable to match render path's null-guard.
+  // Backend may emit null when the lane has no loads with computed margins.
+  marginPercent: number | null;
   trend: "UP" | "DOWN" | "FLAT";
 }
 
@@ -124,7 +126,11 @@ function adaptLanesResponse(r: BackendLaneResponse): AdaptedLaneData {
   }));
   const totalRevenue = r.lanes.reduce((s, l) => s + l.revenue, 0);
   const totalMiles = r.lanes.reduce((s, l) => s + l.totalMiles, 0);
-  const avgMargin = lanes.length > 0 ? lanes.reduce((s, l) => s + l.marginPercent, 0) / lanes.length : 0;
+  // Sprint 41 — null-guard. Without it any null marginPercent makes the
+  // sum NaN, which propagates to the rendered stats card. Filter to
+  // computed margins only; if none, avg is 0.
+  const computedMargins = lanes.filter((l) => l.marginPercent != null).map((l) => l.marginPercent as number);
+  const avgMargin = computedMargins.length > 0 ? computedMargins.reduce((s, n) => s + n, 0) / computedMargins.length : 0;
   const topLaneVolume = lanes.length > 0 ? Math.max(...lanes.map((l) => l.volume)) : 0;
   const revenuePerMileAvg = totalMiles > 0 ? totalRevenue / totalMiles : 0;
   return {
@@ -361,9 +367,13 @@ function TopLanesTab({ lanes, onSelect }: { lanes: LaneSummary[]; onSelect: (o: 
               <td className="px-4 py-3 text-right text-slate-300 text-xs">{lane.volume}</td>
               <td className="px-4 py-3 text-right text-white text-xs">${lane.revenue.toLocaleString()}</td>
               <td className="px-4 py-3 text-right text-white text-xs">${lane.avgRate.toFixed(2)}</td>
+              {/* Sprint 41 (Item 12.x) — null-guard. lane.marginPercent
+                  derives from backend marginPct aggregation; null when the
+                  lane has zero loads with computed margins. Em-dash matches
+                  /accounting/pnl revenuePerMile pattern. */}
               <td className={cn("px-4 py-3 text-right text-xs font-bold",
-                lane.marginPercent < 10 ? "text-red-400" : lane.marginPercent < 20 ? "text-yellow-400" : "text-green-400")}>
-                {lane.marginPercent.toFixed(1)}%
+                lane.marginPercent == null ? "text-slate-400" : lane.marginPercent < 10 ? "text-red-400" : lane.marginPercent < 20 ? "text-yellow-400" : "text-green-400")}>
+                {lane.marginPercent != null ? `${lane.marginPercent.toFixed(1)}%` : "—"}
               </td>
               <td className="px-4 py-3 text-center"><TrendIcon trend={lane.trend} /></td>
             </tr>

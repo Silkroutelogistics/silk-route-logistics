@@ -1695,6 +1695,21 @@ Seed complete:
         isActive: true,
       },
     });
+    // Sprint 41 — clear any prior compliance overrides on the blocked
+    // carrier so B6.5b sees a deterministically-blocked state each run.
+    // Without this, the previous run's 24h override (created by B6.5b
+    // itself) lingers and the pre-check assertion fails on subsequent
+    // runs.
+    const priorBlocked = await prisma.carrierProfile.findUnique({
+      where: { userId: blockedCarrierUser.id },
+      select: { id: true },
+    });
+    if (priorBlocked) {
+      await prisma.complianceOverride.deleteMany({
+        where: { carrierId: priorBlocked.id },
+      });
+    }
+
     await prisma.carrierProfile.upsert({
       where: { userId: blockedCarrierUser.id },
       update: {

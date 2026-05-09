@@ -440,10 +440,13 @@ function MarginsTab() {
 
   const loads = margins?.loads || [];
   const marginBuckets = [
-    { label: "<10%", count: loads.filter((l) => l.marginPercent < 10).length, color: "text-red-400" },
-    { label: "10-20%", count: loads.filter((l) => l.marginPercent >= 10 && l.marginPercent < 20).length, color: "text-yellow-400" },
-    { label: "20-30%", count: loads.filter((l) => l.marginPercent >= 20 && l.marginPercent < 30).length, color: "text-green-400" },
-    { label: "30%+", count: loads.filter((l) => l.marginPercent >= 30).length, color: "text-emerald-400" },
+    // Sprint 41 (Item 12.x) — null-guard. Without it, NaN comparisons
+    // silently coerce to false on null margins → bucket counts undercount.
+    // Same root-cause class as the toFixed crashes on the same field.
+    { label: "<10%", count: loads.filter((l) => l.marginPercent != null && l.marginPercent < 10).length, color: "text-red-400" },
+    { label: "10-20%", count: loads.filter((l) => l.marginPercent != null && l.marginPercent >= 10 && l.marginPercent < 20).length, color: "text-yellow-400" },
+    { label: "20-30%", count: loads.filter((l) => l.marginPercent != null && l.marginPercent >= 20 && l.marginPercent < 30).length, color: "text-green-400" },
+    { label: "30%+", count: loads.filter((l) => l.marginPercent != null && l.marginPercent >= 30).length, color: "text-emerald-400" },
   ];
 
   return (
@@ -487,14 +490,17 @@ function MarginsTab() {
               </thead>
               <tbody>
                 {loads.map((l) => (
-                  <tr key={l.loadId} className={cn("border-b border-white/5", l.marginPercent < 10 ? "bg-red-500/5" : "")}>
+                  <tr key={l.loadId} className={cn("border-b border-white/5", l.marginPercent != null && l.marginPercent < 10 ? "bg-red-500/5" : "")}>
                     <td className="px-4 py-3 text-white font-mono text-xs">{l.referenceNumber}</td>
                     <td className="px-4 py-3 text-slate-300 text-xs">{l.originCity}, {l.originState} → {l.destCity}, {l.destState}</td>
                     <td className="px-4 py-3 text-right text-white">${l.customerRate.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-white">${l.carrierCost.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-green-400">${l.grossMargin.toLocaleString()}</td>
-                    <td className={cn("px-4 py-3 text-right font-bold", l.marginPercent < 10 ? "text-red-400" : l.marginPercent < 20 ? "text-yellow-400" : "text-green-400")}>
-                      {l.marginPercent.toFixed(1)}%
+                    {/* Sprint 41 (Item 12.x) — null-guard. marginPercent is
+                        nullable post-DELIVERED if margin pipeline hasn't run.
+                        Em-dash matches /accounting/pnl revenuePerMile pattern. */}
+                    <td className={cn("px-4 py-3 text-right font-bold", l.marginPercent == null ? "text-slate-400" : l.marginPercent < 10 ? "text-red-400" : l.marginPercent < 20 ? "text-yellow-400" : "text-green-400")}>
+                      {l.marginPercent != null ? `${l.marginPercent.toFixed(1)}%` : "—"}
                     </td>
                   </tr>
                 ))}

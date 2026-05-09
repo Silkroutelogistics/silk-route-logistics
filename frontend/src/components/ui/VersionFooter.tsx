@@ -5198,7 +5198,89 @@
 //            gate discrepancy that would have shipped silently
 //            without the cross-sprint check. Catalog earning
 //            its keep.
-export const SRL_VERSION = "3.8.aat";
+//
+// v3.8.aau — Sprint 41: PATH Z expanded — marginPercent null-guard
+//            sweep across 4 surfaces. Closes §13.3 Items 12.1+12.2
+//            with expanded scope mirroring Sprint 39's Item 56
+//            expansion pattern.
+//
+//            CRASH CLASS
+//            `marginPercent` is `Float?` / `Decimal?` per Prisma
+//            schema (lines 1149, 1436) — nullable. Backend null-
+//            guards everywhere (`if (load.marginPercent !== null)`,
+//            `(l.marginPercent ?? 0)`). Four frontend surfaces
+//            ignored the nullability and called `.toFixed(1)`
+//            unguarded → full-page crash on the React error
+//            boundary when any returned load has a null margin.
+//
+//            SURFACES FIXED
+//              - /accounting/analytics:160 (§13.3 Item 12.1)
+//              - /accounting/pnl:145 (§13.3 Item 12.2)
+//              - /dashboard/finance:497 (NEW finding from grep)
+//              - /dashboard/lane-analytics:366 (NEW finding from
+//                grep)
+//
+//            §13.3 Items 12.1+12.2 documented only 2 of 4. Pattern
+//            7 (just catalogued in Sprint 40c) caught all 4 in a
+//            30-second grep on `marginPercent.*toFixed`. Same
+//            fingerprint as Sprint 30 Houston-template drift,
+//            Sprint 32 dropdown bg drift.
+//
+//            FIX SHAPE — em-dash fallback
+//            Decision per audit recommendation: render "—" when
+//            null (matches existing /accounting/pnl:148
+//            revenuePerMile pattern). Rendering "0.0%" was
+//            misleading (could be valid computed zero); em-dash
+//            reads as "not yet computed". Conditional class also
+//            null-guarded — falls through to neutral slate-400
+//            instead of misleading red.
+//
+//            ALSO IN SPRINT 41 — silent NaN comparison fix at
+//            /dashboard/finance:443-446. `loads.filter((l) =>
+//            l.marginPercent < 10)` returned NaN-coerce-false for
+//            null margins, undercounting buckets. Same root-cause
+//            class, ships in same atomic per §3.3.
+//
+//            ALSO IN SPRINT 41 — `lane-analytics:127` reduce sum
+//            propagated NaN through avgMargin stats card. Filtered
+//            to computed margins only; if none, avg is 0.
+//
+//            E2E B12 RENDER-CHECK
+//            New B12 step in full-lifecycle.spec.ts visits all 4
+//            surfaces post-tender, asserts no React error boundary
+//            text + no fatal console errors (filtered to toFixed/
+//            null-property class). Seed builds margins computed,
+//            so test exercises the render path; future regression
+//            that re-introduces an unguarded `.toFixed()` would
+//            crash on a list with a null record and surface in CI.
+//
+//            VERIFICATION
+//            Frontend tsc --noEmit clean. Lifecycle smoke green
+//            locally with B12 extension.
+//
+//            Net source change: ~50 LOC across 4 frontend pages +
+//            type relax on 2 (LaneStat marginPercent, LoadPnl
+//            marginPercent). E2E +30 LOC.
+//
+//            Per §3.1 sequence-continuous: v3.8.aat → v3.8.aau.
+//
+//            Patterns applied: Audit-first (1), Phase A0 contract
+//                              audit (3, render-path scan extended
+//                              to nullable-data class), Cross-
+//                              sprint precedent (6) — Sprint 39
+//                              Item 56 expansion pattern reused,
+//                              Pattern 7 — just catalogued.
+//            Patterns emerged: None — Pattern 7 caught what §13.3
+//                              had documented partially, validating
+//                              the catalog from Sprint 40c.
+//
+//            §13.3 closures:
+//              - Item 12.1 — CLOSED (with expanded scope)
+//              - Item 12.2 — CLOSED (with expanded scope)
+//              - Two NEW surfaces (finance + lane-analytics) rolled
+//                into the same close per Sprint 39 Item 56
+//                expansion precedent — no §13.3 fragmentation.
+export const SRL_VERSION = "3.8.aau";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -7,7 +7,11 @@ import { BarChart3, TrendingUp, DollarSign, Clock, Download, Truck, Users, MapPi
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n);
-const pct = (n: number) => `${n.toFixed(1)}%`;
+// Sprint 41 (Item 12.1) — accept nullable. marginPercent is computed
+// post-delivery; null pre-compute. Em-dash matches /accounting/pnl:148
+// revenuePerMile pattern. Renders "0.0%" was misleading (could be valid
+// computed zero); "—" = "not computed yet".
+const pct = (n: number | null | undefined) => (n != null ? `${n.toFixed(1)}%` : "—");
 
 const PERIODS = ["This Week", "This Month", "This Quarter", "YTD"] as const;
 const TABS = ["Revenue & Margin", "Cash Flow", "AR Analysis", "AP Analysis", "Profitability", "Export"] as const;
@@ -156,7 +160,7 @@ export default function FinancialAnalyticsPage() {
                     <td className="py-2 text-right text-green-400">{fmt(l.totalRevenue)}</td>
                     <td className="py-2 text-right text-red-400">{fmt(l.totalCost)}</td>
                     <td className="py-2 text-right text-gold">{fmt(l.grossMargin)}</td>
-                    <td className={`py-2 text-right ${l.marginPercent >= 15 ? "text-green-400" : l.marginPercent >= 0 ? "text-yellow-400" : "text-red-400"}`}>
+                    <td className={`py-2 text-right ${l.marginPercent == null ? "text-slate-400" : l.marginPercent >= 15 ? "text-green-400" : l.marginPercent >= 0 ? "text-yellow-400" : "text-red-400"}`}>
                       {pct(l.marginPercent)}
                     </td>
                   </tr>

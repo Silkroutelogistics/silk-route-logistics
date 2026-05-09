@@ -177,6 +177,16 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — marginPercent null-guard sweep (Sprint 41, v3.8.aau, 2026-05-09)
+
+- **§13.3 Items 12.1+12.2 closed with expanded scope.** Pattern 7 (catalogued Sprint 40c) — first time the pattern fired in code-shipping mode. `grep "marginPercent.*toFixed"` surfaced 4 unguarded crash sites; §13.3 had documented 2. Same architectural fingerprint as Sprint 30 Houston-template drift (5 surfaces) and Sprint 32 dropdown bg drift (5 modals).
+- **Surfaces fixed:** `/accounting/analytics:160`, `/accounting/pnl:145`, `/dashboard/finance:497` (NEW), `/dashboard/lane-analytics:366` (NEW). Em-dash fallback for null margins (matches existing `/accounting/pnl:148` revenuePerMile pattern). Conditional classes also null-guarded — neutral slate-400 instead of misleading red on null.
+- **Silent NaN bugs bundled.** `dashboard/finance:443-446` filter buckets undercounted on null margins (NaN-coerce-false); `lane-analytics:127` avgMargin reduce propagated NaN through stats card. Same root-cause class, atomic per §3.3. Filter to computed margins only; if none, avg is 0.
+- **E2E B12 regression lock added.** Visits all 4 surfaces post-tender, asserts no React error boundary text + no `toFixed`/null-property fatal console errors. Future regression that re-introduces unguarded `.toFixed()` would crash on a list with a null record and surface in CI before deploy.
+- **Sprint 39 Item 56 expansion precedent applied.** Two NEW surfaces rolled into Item 12.1 close rather than fragmenting into separate §13.3 entries. Cleaner audit trail.
+- **Patterns applied:** Audit-first (1), Phase A0 contract audit (3, render-path scan extended to nullable-data class), Cross-sprint precedent (6, Item 56 expansion pattern), **Pattern 7 (just catalogued in Sprint 40c)**.
+- **Patterns emerged:** None — Pattern 7 caught what §13.3 had partially documented, validating the catalog from Sprint 40c. Pattern 7 has now fired *immediately* on the next code sprint after its catalog. Strong validation, not premature capture.
+
 ## Phase 6 — Drawer Audit + Pattern 7 catalog (Sprint 40b/40c, 2026-05-09, no version bump)
 
 - **Sprint 40b (audit-only).** Eight detail-style surfaces inventoried across the AE Console + shipper portal: 4 right-drawers using shared `IconTabs` (CRM Customer, Track & Trace Load, Waterfall Load, Lead Hunter Prospect) plus shared `SlideDrawer` base used by Load Board tender form; 3 outliers (Load Board side panel as permanent split layout, ShipmentDetailDrawer as half-width font-serif drawer, Contract Rates + Lane Analytics dark-navy panels). 11 findings: **1 P0** (ShipmentDetailDrawer no ESC + no click-out + no aria-modal), **3 P1** (browser-back inconsistent across 4 drawers; three independent dark-navy panel surfaces with no shared component; ShipmentDetailDrawer has no tabs), **3 P2** (residual `#C9A84C` gold extends Item 30 scope; 4 different drawer widths; Load Board icon-only tab rail diverges from shared `IconTabs`), **4 P3** (Profile vs Details, Activity vs History, Docs vs Documents vocabulary normalization). Audit deliverables: drawer matrix, drift findings list, per-drawer functional regression notes (static-analysis only — runtime walk deferred). No commits, no version bump.

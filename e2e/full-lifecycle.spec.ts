@@ -356,5 +356,46 @@ test.describe("Full Load Lifecycle E2E", () => {
       // After tender accept the carrier path may auto-flip to BOOKED;
       // either way Sprint 27 mapping must hide the raw enum string.
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // B12 — Sprint 41 (Items 12.1+12.2 + expanded scope) regression lock.
+    //      Four surfaces share the same crash class — unguarded
+    //      .toFixed() on nullable marginPercent. The seed builds loads
+    //      with margins computed, so the test exercises the *render path*
+    //      (page mounts cleanly, no React error boundary, no console
+    //      errors thrown) — not the null-data branch specifically. Any
+    //      future regression that re-introduces the unguarded call would
+    //      crash the page on a load list that includes a non-margin
+    //      record, but here the lock is "page renders without throwing"
+    //      so a future bug-class repeat surfaces in CI before deploy.
+    // ─────────────────────────────────────────────────────────────────
+    const consoleErrors: string[] = [];
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    const accountingPages = [
+      "/accounting/pnl",
+      "/accounting/analytics",
+      "/dashboard/finance",
+      "/dashboard/lane-analytics",
+    ];
+    for (const path of accountingPages) {
+      consoleErrors.length = 0;
+      await page.goto(`${FRONTEND_BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      const body = await page.locator("body").innerText();
+      // React error-boundary fallback text. Sprint 12.1+12.2 surfaced as
+      // "Something went wrong / Cannot read properties of null".
+      expect(body, `Sprint 41: ${path} must not render the React error boundary`).not.toContain("Something went wrong");
+      // Filter known-noisy non-blocking console errors (Sentry inline-script
+      // CSP violations, hydration warnings) — Sprint 41 lock is on render-
+      // path crashes, not unrelated console chatter.
+      const fatalErrors = consoleErrors.filter((e) =>
+        e.includes("toFixed") || e.includes("Cannot read properties of null"),
+      );
+      expect(fatalErrors, `Sprint 41: ${path} must not throw toFixed/null-property errors; got ${JSON.stringify(fatalErrors)}`).toEqual([]);
+    }
   });
 });

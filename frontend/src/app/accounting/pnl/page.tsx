@@ -19,15 +19,24 @@ interface LoadPnL {
   totalRevenue: number;
   totalCost: number;
   grossMargin: number;
-  marginPercent: number;
+  // Sprint 41 — relaxed to nullable to match backend reality + render path.
+  marginPercent: number | null;
   revenuePerMile: number | null;
   costPerMile: number | null;
   marginPerMile: number | null;
   distance: number | null;
   status: string;
   deliveryDate: string | null;
-  carrier: string;
-  customer: string;
+  // Sprint 41 (in-scope per Pattern 7 — bundled crash class). Backend
+  // (accountingController.getLoadPnl) returns nested objects:
+  //   customer: { id, name }
+  //   carrier: { id, firstName, lastName, company }
+  // Frontend was typed as `string` and rendered the object directly →
+  // React error #31. Type-system wasn't catching the mismatch because
+  // the type was a lie about backend reality. Type and render path both
+  // updated.
+  carrier: { id: string; firstName: string; lastName: string; company: string | null } | null;
+  customer: { id: string; name: string } | null;
 }
 
 interface PnLSummary {
@@ -130,8 +139,8 @@ export default function LoadPnLPage() {
                   <tr key={load.id} className="hover:bg-[#0F1117]">
                     <td className="px-5 py-3 text-sm text-white font-medium">{load.referenceNumber}</td>
                     <td className="px-5 py-3 text-xs text-slate-400">{load.originCity}, {load.originState} → {load.destCity}, {load.destState}</td>
-                    <td className="px-5 py-3 text-sm text-slate-300">{load.customer}</td>
-                    <td className="px-5 py-3 text-sm text-slate-300">{load.carrier}</td>
+                    <td className="px-5 py-3 text-sm text-slate-300">{load.customer?.name ?? "—"}</td>
+                    <td className="px-5 py-3 text-sm text-slate-300">{load.carrier?.company ?? (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}` : "—")}</td>
                     <td className="px-5 py-3 text-sm text-green-400 text-right font-medium">{fmt(load.totalRevenue)}</td>
                     <td className="px-5 py-3 text-sm text-red-400 text-right">{fmt(load.totalCost)}</td>
                     <td className="px-5 py-3 text-right">
@@ -141,8 +150,17 @@ export default function LoadPnLPage() {
                     </td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {isProfit ? <ArrowUpRight className="w-3 h-3 text-green-400" /> : <ArrowDownRight className="w-3 h-3 text-red-400" />}
-                        <span className={`text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>{load.marginPercent.toFixed(1)}%</span>
+                        {/* Sprint 41 (Item 12.2) — null-guard. marginPercent is
+                            computed post-delivery; null pre-compute. Em-dash
+                            matches sibling revenuePerMile pattern at line 148. */}
+                        {load.marginPercent == null ? (
+                          <span className="text-sm text-slate-400">—</span>
+                        ) : (
+                          <>
+                            {isProfit ? <ArrowUpRight className="w-3 h-3 text-green-400" /> : <ArrowDownRight className="w-3 h-3 text-red-400" />}
+                            <span className={`text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>{load.marginPercent.toFixed(1)}%</span>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3 text-sm text-slate-300 text-right">{load.revenuePerMile ? `$${load.revenuePerMile.toFixed(2)}` : "—"}</td>
