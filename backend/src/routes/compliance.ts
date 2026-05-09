@@ -12,6 +12,7 @@ import {
   sendReminder,
   runFmcsaCheck,
   overrideBlock,
+  getOverrideStatus,
   suspendCarrier,
   addNote,
   getNotes,
@@ -46,7 +47,12 @@ router.get("/carrier/:carrierId", authorize("ADMIN", "OPERATIONS", "CEO", "BROKE
 router.post("/alerts/:id/snooze", authorize("ADMIN", "OPERATIONS"), snoozeAlert);
 router.post("/carrier/:carrierId/send-reminder", authorize("ADMIN", "OPERATIONS"), sendReminder);
 router.post("/carrier/:carrierId/run-fmcsa-check", authorize("ADMIN", "OPERATIONS"), runFmcsaCheck);
-router.post("/carrier/:carrierId/override-block", authorize("ADMIN"), overrideBlock);
+// Sprint 40 (Item 58) — role gate widened ADMIN → ADMIN+CEO per Pattern 6
+// (cross-sprint precedent audit) caught Sprint 39 vs Sprint 40 inconsistency:
+// Sprint 39 acceptTenderOnBehalf is ADMIN+CEO. Same operational class
+// (admin override of safety gate), CEO is policy superset of ADMIN.
+router.post("/carrier/:carrierId/override-block", authorize("ADMIN", "CEO"), overrideBlock);
+router.get("/carrier/:carrierId/override-status", authorize("ADMIN", "CEO"), getOverrideStatus);
 router.post("/carrier/:carrierId/suspend", authorize("ADMIN"), suspendCarrier);
 router.post("/carrier/:carrierId/notes", authorize("ADMIN", "OPERATIONS", "BROKER"), addNote);
 router.post("/carrier/:carrierId/check", authorize("ADMIN", "OPERATIONS", "CEO", "BROKER", "DISPATCH"), checkCarrier);

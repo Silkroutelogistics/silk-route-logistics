@@ -14,6 +14,7 @@ import {
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
+import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
@@ -141,6 +142,9 @@ export default function LoadsPage() {
   /* ---- Sprint 39 Item 54 — Accept on Behalf state ---- */
   const [onBehalfTender, setOnBehalfTender] = useState<{ id: string; carrierName: string } | null>(null);
   const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
+
+  /* ---- Sprint 40 Item 58 — Compliance Override state ---- */
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [complianceResult, setComplianceResult] = useState<{
     allowed: boolean; blocked_reasons: string[]; warnings: string[];
   } | null>(null);
@@ -812,6 +816,8 @@ export default function LoadsPage() {
             <TenderForm
               load={load}
               canSeeMargin={canSeeMargin}
+              isAdminOrCeo={isAdminOrCeo}
+              onOverrideClick={() => setShowOverrideModal(true)}
               suggestedCarriers={suggestedCarriers}
               tenderCarrierId={tenderCarrierId}
               setTenderCarrierId={(v) => { setTenderCarrierId(v); setComplianceResult(null); }}
@@ -888,6 +894,30 @@ export default function LoadsPage() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["loads"] });
             queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
+          }}
+        />
+      )}
+
+      {/* Sprint 40 Item 58 — Compliance Override modal */}
+      {showOverrideModal && tenderCarrierId && complianceResult && !complianceResult.allowed && (
+        <OverrideComplianceModal
+          carrierId={tenderCarrierId}
+          carrierName={
+            suggestedCarriers?.carriers.find((c) => c.carrierId === tenderCarrierId)?.company
+            || "Selected carrier"
+          }
+          blockedReasons={complianceResult.blocked_reasons}
+          onClose={() => setShowOverrideModal(false)}
+          onSuccess={async () => {
+            // Re-trigger compliance check — server now sees active override
+            // and returns allowed:true with "Active compliance override in
+            // effect" warning. Existing amber banner renders the post-state.
+            try {
+              const res = await api.post(`/compliance/carrier/${tenderCarrierId}/check`);
+              setComplianceResult(res.data);
+            } catch {
+              setComplianceResult(null);
+            }
           }}
         />
       )}
@@ -1572,6 +1602,8 @@ function CarrierActions({
 function TenderForm({
   load,
   canSeeMargin,
+  isAdminOrCeo,
+  onOverrideClick,
   suggestedCarriers,
   tenderCarrierId,
   setTenderCarrierId,
@@ -1584,6 +1616,8 @@ function TenderForm({
 }: {
   load: Load;
   canSeeMargin: boolean;
+  isAdminOrCeo: boolean;
+  onOverrideClick: () => void;
   suggestedCarriers?: { carriers: { carrierId: string; company: string; tier: string; complianceStatus: string }[] };
   tenderCarrierId: string;
   setTenderCarrierId: (v: string) => void;
@@ -1786,6 +1820,17 @@ function TenderForm({
           {complianceResult.blocked_reasons.map((r, i) => (
             <p key={i} className="text-xs text-red-300">- {r}</p>
           ))}
+          {/* Sprint 40 Item 58 — admin override path. Backend ADMIN/CEO
+              gated; modal owns reason capture + quota check. */}
+          {isAdminOrCeo && (
+            <button
+              onClick={onOverrideClick}
+              className="mt-2 px-3 py-1.5 text-xs bg-[#BA7517] text-white rounded hover:bg-[#854F0B]"
+              data-testid="override-compliance-btn"
+            >
+              Override compliance block
+            </button>
+          )}
         </div>
       )}
       {complianceResult && complianceResult.allowed && complianceResult.warnings.length > 0 && (

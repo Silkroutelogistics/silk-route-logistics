@@ -79,8 +79,12 @@ test.describe("Full Load Lifecycle E2E", () => {
     expect(carriersResp.ok(), "GET /carrier/all must succeed").toBeTruthy();
     const carriersBody = await carriersResp.json();
     const carriers = carriersBody.carriers || carriersBody;
+    // Sprint 40 — exclude the deliberately-blocked compliance fixture
+    // (`blocked-carrier@srl.invalid`, APPROVED but insurance expired,
+    // used by B6.5b). Picking the first APPROVED would otherwise hit
+    // the blocked one and fail at create-tender compliance gate.
     const eligibleCarrier = (Array.isArray(carriers) ? carriers : []).find(
-      (c: any) => c.onboardingStatus === "APPROVED"
+      (c: any) => c.onboardingStatus === "APPROVED" && c.email !== "blocked-carrier@srl.invalid"
     );
     expect(eligibleCarrier, "seed + E2E_FIXTURES must produce at least one APPROVED carrier with signed agreement").toBeTruthy();
 
@@ -250,6 +254,55 @@ test.describe("Full Load Lifecycle E2E", () => {
     const load2Accepted = await load2AcceptedResp.json();
     expect(load2Accepted.status, "Item 55 P3: direct on-behalf path must produce BOOKED, not DISPATCHED").toBe("BOOKED");
     expect(load2Accepted.carrierId, "Item 54: load.carrierId must be set after on-behalf accept").toBeTruthy();
+
+    // ─────────────────────────────────────────────────────────────────
+    // B6.5b — AE compliance override (Sprint 40 Item 58)
+    //   Locks the override contract end-to-end at API layer:
+    //     1. Pre: complianceCheck returns blocked (insurance expired)
+    //     2. Apply override → 200
+    //     3. Post: complianceCheck returns allowed with override warning
+    //     4. Quota status: recentOverrideCount=1, activeOverride defined
+    //   UI walk coverage deferred to Item 62 (seed fixture exists, modal
+    //   walk follows in a later sprint).
+    //
+    //   Test fixture: blocked-carrier@srl.invalid is APPROVED (passes
+    //   Sprint 36b picker filter) but has insurance expired 30d ago
+    //   (trips complianceCheck — exactly the BKN-class scenario).
+    // ─────────────────────────────────────────────────────────────────
+    const blockedCarrier = (Array.isArray(carriers) ? carriers : []).find(
+      (c: any) => c.email === "blocked-carrier@srl.invalid"
+    );
+    expect(blockedCarrier, "Sprint 40 fixture: blocked-carrier@srl.invalid must exist (E2E_FIXTURES seed extension)").toBeTruthy();
+
+    // 1. Pre-condition: complianceCheck returns blocked
+    const preCheck = await request.post(`${BACKEND_API}/compliance/carrier/${blockedCarrier.id}/check`, { headers: authHeaders });
+    expect(preCheck.ok(), "complianceCheck endpoint must respond ok").toBeTruthy();
+    const preBody = await preCheck.json();
+    expect(preBody.allowed, "Item 58 pre: blocked carrier must be blocked").toBe(false);
+    expect(preBody.blocked_reasons.some((r: string) => r.toLowerCase().includes("insurance")), "blocked reason must mention insurance").toBe(true);
+
+    // 2. Apply override (whaider is CEO per seed; Sprint 40 widened gate to ADMIN+CEO)
+    const overrideResp = await request.post(`${BACKEND_API}/compliance/carrier/${blockedCarrier.id}/override-block`, {
+      headers: authHeaders,
+      data: { reason: "BKN load urgency — Sprint 40 smoke verification" },
+    });
+    expect(overrideResp.ok(), `Item 58: POST /override-block must succeed; got ${overrideResp.status()} ${await overrideResp.text()}`).toBeTruthy();
+    const overrideBody = await overrideResp.json();
+    expect(overrideBody.override?.id, "override record must be created").toBeTruthy();
+
+    // 3. Post-condition: complianceCheck returns allowed with override warning
+    const postCheck = await request.post(`${BACKEND_API}/compliance/carrier/${blockedCarrier.id}/check`, { headers: authHeaders });
+    const postBody = await postCheck.json();
+    expect(postBody.allowed, "Item 58 post: override must unblock the carrier").toBe(true);
+    expect(postBody.warnings.some((w: string) => w.toLowerCase().includes("override")), "warning must mention override").toBe(true);
+
+    // 4. Quota status endpoint (Sprint 40 new endpoint)
+    const statusResp = await request.get(`${BACKEND_API}/compliance/carrier/${blockedCarrier.id}/override-status`, { headers: authHeaders });
+    expect(statusResp.ok(), "Item 58: GET /override-status must respond ok").toBeTruthy();
+    const statusBody = await statusResp.json();
+    expect(statusBody.recentOverrideCount, "quota: 1 override applied").toBeGreaterThanOrEqual(1);
+    expect(statusBody.max, "quota max").toBe(2);
+    expect(statusBody.activeOverride, "active override must be returned").toBeTruthy();
 
     // ─────────────────────────────────────────────────────────────────
     // B7 — Generate Rate Confirmation PDF (Sprint 34 + 35 regression

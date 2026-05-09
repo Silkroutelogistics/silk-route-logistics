@@ -177,6 +177,15 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — AE Compliance Override UI (Sprint 40, v3.8.aat, 2026-05-09)
+
+- **§13.3 Item 58 closed.** New `OverrideComplianceModal.tsx` + per-tender "Override compliance block" button in Load Board Tender modal red banner (admin-role gated). Backend `/override-block` endpoint pre-existed; Sprint 40 ships the AE-facing path so override is no longer a curl-only operation. Quota pre-fetched via new `GET /compliance/carrier/:carrierId/override-status` endpoint, display: "X of 2 overrides used this month for this carrier"; 429 on quota exhaustion routes AE to VP of Operations. On success: re-trigger compliance check, existing amber warning banner renders "Active compliance override in effect" automatically — no new UI plumbing.
+- **First sprint with methodology loop active.** §19 catalog earned its keep on the first run: Phase A audit caught Sprint 39 vs Sprint 40 role-gate discrepancy (Sprint 39 `acceptTenderOnBehalf` was ADMIN+CEO; Sprint 40 `overrideBlock` was ADMIN-only). Same operational class, CEO is policy superset of ADMIN. Widened `compliance.ts:49` to `authorize("ADMIN", "CEO")`. ~1 LOC. Pattern 6 (cross-sprint precedent audit) has now fired twice — Sprint 39 fan-out timing + Sprint 40 role gate. Pattern validation, not premature capture.
+- **§13.3 Item 61 logged.** AuditLog vs auditTrail divergence — Sprint 39 uses `prisma.auditLog`, Sprint 40 backend uses `prisma.auditTrail`. Two parallel audit tables coexist. Methodology debt; not a bug today. Post-BKN consolidation candidate.
+- **§13.3 Item 62 logged.** E2E UI walk smoke for compliance-block + override flow. Sprint 40 ships seed fixture (`blocked-carrier@srl.invalid`, APPROVED + insurance expired) + B6.5b API-only smoke. UI walk coverage deferred to Sprint 41+. Pairs with §13.3 Item 60 (waterfall/loadbid bulk-path seed extension) as E2E seed-extension methodology debt.
+- **Patterns applied:** Audit-first (1), Phase A0 contract audit (3), Cross-sprint precedent (6).
+- **Patterns emerged:** None. §19 catalog ran cleanly. Worth noting in next quarterly review: Pattern 6 fired twice in two consecutive sprints — pattern is real.
+
 ## Phase 6 — Methodology Infrastructure (Sprint 39.5, 2026-05-08)
 
 - **CLAUDE.md §19 Methodology Log created.** Cumulative pattern catalog consolidating six patterns surfaced during Sprints 22-39: (1) audit-first, (2) Path β observability→diagnostics→fix cadence, (3) Phase A0 contract audit, (4) Phase A2 picker-FK contract audit, (5) E2E lifecycle gate + local-first discipline, (6) cross-sprint precedent audit. Lives between §18 Lead Hunter and Appendix so the catalog reads as current-active material, not legacy. Quarterly review prunes calcified patterns + promotes hot ones.

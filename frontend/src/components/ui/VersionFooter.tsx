@@ -5091,7 +5091,114 @@
 //            now has consistent contract across direct + waterfall
 //            + loadbid surfaces with documented intentional
 //            divergence on the BOOKED-vs-DISPATCHED state choice.
-export const SRL_VERSION = "3.8.aas";
+//
+// v3.8.aat — Sprint 40: Item 58 close — AE compliance override UI.
+//            FIRST SPRINT WITH METHODOLOGY LOOP ACTIVE per Sprint
+//            39.5 §19 infrastructure.
+//
+//            ITEM 58 — AE COMPLIANCE OVERRIDE UI
+//            Backend infrastructure existed pre-Sprint-40 but had
+//            zero callers — AE could only trigger override via
+//            direct DB or curl with admin JWT. Sprint 40 ships:
+//              - Frontend OverrideComplianceModal.tsx (~80 LOC) with
+//                reason textarea, quota display, role gate, error
+//                handling for 429 quota exhausted
+//              - TenderForm integration: button next to existing
+//                "Carrier Blocked" red banner, only visible for
+//                ADMIN/CEO role
+//              - Pre-fetched quota: "X of 2 overrides used this
+//                month for this carrier"
+//              - On override success: re-trigger compliance check;
+//                existing amber warning banner renders the
+//                post-state automatically (no new UI plumbing)
+//              - Send Tender button enables post-override
+//
+//            ROLE GATE WIDENING (Pattern 6 — Cross-sprint precedent)
+//            Phase A audit caught Sprint 39 vs Sprint 40 role gate
+//            discrepancy:
+//              Sprint 39 acceptTenderOnBehalf = ADMIN + CEO
+//              Sprint 40 overrideBlock (existing) = ADMIN only
+//            Same operational class (admin override of safety gate),
+//            CEO is policy superset of ADMIN. Widened compliance.ts:49
+//            to authorize("ADMIN", "CEO"). ~1 LOC.
+//
+//            Cross-sprint precedent audit (Pattern 6) caught this.
+//            Pattern has now fired TWICE (Sprint 39 fan-out timing
+//            + Sprint 40 role gate) — pattern validation, not
+//            premature capture.
+//
+//            NEW QUOTA ENDPOINT
+//            Added GET /compliance/carrier/:carrierId/override-status
+//            returning { recentOverrideCount, max: 2, activeOverride }.
+//            Cleaner than reusing getCarrierDetail (which returns
+//            heavy payload — alerts, scans, notes, items) just to
+//            render the modal's quota line.
+//
+//            E2E B6.5B SMOKE (API-ONLY)
+//            full-lifecycle.spec.ts B6.5b locks override contract
+//            at API layer:
+//              1. Pre: complianceCheck returns blocked (insurance
+//                 expired)
+//              2. Apply override → 200
+//              3. Post: complianceCheck returns allowed with
+//                 "Active compliance override in effect" warning
+//              4. Quota status: recentOverrideCount=1, max=2,
+//                 activeOverride defined
+//            UI walk coverage deferred to Item 62 — seed fixture
+//            (blocked-carrier@srl.invalid, APPROVED but insurance
+//            expired) shipped today, UI walk follows next.
+//
+//            SEED EXTENSION
+//            E2E_FIXTURES block adds one APPROVED-but-insurance-
+//            expired carrier per directive A7 option (a) +
+//            recommendation. Used by B6.5b smoke and pre-positions
+//            Item 62. ~50 LOC.
+//
+//            AUDIT TABLE DIVERGENCE LOGGED
+//            Phase A surfaced auditLog vs auditTrail divergence:
+//              Sprint 39 uses prisma.auditLog (TENDER_ACCEPTED_ON_
+//              BEHALF action)
+//              Sprint 40 backend uses prisma.auditTrail
+//              (COMPLIANCE_OVERRIDE action)
+//            Two parallel audit infrastructures coexist. Logged as
+//            §13.3 Item 61 — post-BKN consolidation cleanup. Out of
+//            Sprint 40 scope per §3.3.
+//
+//            SIDE EFFECTS — NONE
+//            Pattern 6 cross-sprint check confirmed override flow
+//            fires no notifications. Symmetric with established
+//            pattern: override is admin/audit event, not
+//            operational/customer-facing. Sprint 38
+//            notifyTenderAction + sendTrackingLinkToCrmContacts
+//            don't apply — override doesn't transition a load.
+//
+//            VERIFICATION
+//            Backend tsc --noEmit clean. Frontend tsc --noEmit
+//            clean. Lifecycle smoke green locally with B6.5b.
+//
+//            Net source change: ~270 LOC across 6 files.
+//
+//            Per §3.1: v3.8.aas → v3.8.aat.
+//
+//            Patterns applied: Audit-first (1), Phase A0 contract
+//            audit (3), Cross-sprint precedent (6).
+//            Patterns emerged: None. Catalog ran cleanly.
+//
+//            §13.3 closures:
+//              - Item 58 — CLOSED
+//              - Item 61 — LOGGED OPEN (auditLog vs auditTrail
+//                divergence consolidation)
+//              - Item 62 — LOGGED OPEN (E2E UI walk smoke for
+//                compliance-block flow; seed fixture shipped today,
+//                UI walk follows)
+//
+//            METHODOLOGY VALIDATION
+//            First sprint with §19 catalog active. Pattern 6
+//            fired correctly during Phase A — caught the role
+//            gate discrepancy that would have shipped silently
+//            without the cross-sprint check. Catalog earning
+//            its keep.
+export const SRL_VERSION = "3.8.aat";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

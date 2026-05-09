@@ -420,6 +420,35 @@ export async function runFmcsaCheck(req: AuthRequest, res: Response) {
   }
 }
 
+// GET /compliance/carrier/:carrierId/override-status
+// Sprint 40 (Item 58) — small focused endpoint for the override modal's
+// quota display. Returns recent count + max + active override only —
+// avoids fetching the heavy getCarrierDetail payload (alerts + scans +
+// notes + items) just to render "1 of 2 used this month".
+export async function getOverrideStatus(req: AuthRequest, res: Response) {
+  try {
+    const carrierId = req.params.carrierId;
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    const [recentOverrideCount, activeOverride] = await Promise.all([
+      prisma.complianceOverride.count({
+        where: { carrierId, createdAt: { gte: thirtyDaysAgo } },
+      }),
+      prisma.complianceOverride.findFirst({
+        where: { carrierId, expiresAt: { gt: now } },
+        orderBy: { createdAt: "desc" },
+        include: { admin: { select: { firstName: true, lastName: true, email: true } } },
+      }),
+    ]);
+
+    res.json({ recentOverrideCount, max: 2, activeOverride });
+  } catch (err) {
+    log.error({ err }, "[Compliance] Override status error:");
+    res.status(500).json({ error: "Failed to fetch override status" });
+  }
+}
+
 // POST /compliance/carrier/:carrierId/override-block
 export async function overrideBlock(req: AuthRequest, res: Response) {
   try {

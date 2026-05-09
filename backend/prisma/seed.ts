@@ -1676,6 +1676,56 @@ Seed complete:
       });
     }
     console.log(`✅ E2E fixtures: signed CarrierAgreement for ${approvedCarriers.length} APPROVED carriers`);
+
+    // Sprint 40 (Item 58 + Item 62 prep) — non-compliant carrier fixture
+    // for the compliance-override smoke. APPROVED onboardingStatus passes
+    // Sprint 36b's picker eligibility filter, but expired insurance trips
+    // complianceCheck — exactly the BKN-class scenario the override flow
+    // exists to unblock. Pre-positions Item 62 UI walk too.
+    const blockedCarrierUser = await prisma.user.upsert({
+      where: { email: "blocked-carrier@srl.invalid" },
+      update: {},
+      create: {
+        email: "blocked-carrier@srl.invalid",
+        passwordHash: "x",
+        firstName: "Compliance",
+        lastName: "Blocked",
+        company: "Compliance Blocked Test Carrier",
+        role: "CARRIER",
+        isActive: true,
+      },
+    });
+    await prisma.carrierProfile.upsert({
+      where: { userId: blockedCarrierUser.id },
+      update: {
+        insuranceExpiry: new Date(Date.now() - 30 * day),
+        onboardingStatus: "APPROVED",
+        status: "APPROVED",
+      },
+      create: {
+        userId: blockedCarrierUser.id,
+        mcNumber: "MC-555000",
+        dotNumber: "5550000",
+        companyName: "Compliance Blocked Test Carrier",
+        contactName: "Compliance Blocked",
+        contactPhone: "(269) 555-9999",
+        contactEmail: "blocked-carrier@srl.invalid",
+        tier: "SILVER",
+        cppTier: "SILVER",
+        equipmentTypes: ["Dry Van"],
+        operatingRegions: ["Midwest"],
+        onboardingStatus: "APPROVED",
+        status: "APPROVED",
+        approvedAt: new Date(),
+        // Insurance expired 30 days ago, no grace period — complianceCheck
+        // returns blocked_reasons: ["Insurance has expired"].
+        insuranceExpiry: new Date(Date.now() - 30 * day),
+        w9Uploaded: true,
+        insuranceCertUploaded: true,
+        authorityDocUploaded: true,
+      },
+    });
+    console.log("✅ E2E fixtures: blocked-carrier@srl.invalid (APPROVED but insurance expired) for compliance-override smoke");
   }
 }
 
