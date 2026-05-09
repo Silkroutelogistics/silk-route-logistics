@@ -268,7 +268,19 @@ export default function LoadsPage() {
       // list form). This caller had drifted to plural, producing 404 in
       // production while backend + apiDocs + E2E full-lifecycle.spec all
       // remained on the canonical singular. See e2e/full-lifecycle.spec.ts:146-148.
-      api.post(`/loads/${loadId}/tender`, { carrierId, offeredRate }),
+      //
+      // Sprint 44d (v3.8.aba) Item 78 — `expiresAt` is REQUIRED by
+      // backend/src/validators/tender.ts createTenderSchema (z.string().transform).
+      // Frontend caller had drifted to a 2-field shape, producing 400 in
+      // production once Sprint 44c routed the request to the validator.
+      // Match E2E canonical (full-lifecycle.spec.ts:155): 24h window from now
+      // as the broker-default tender expiry. Item 77 tracks broker-configurable
+      // tender-expiry UX as a future surface — until then 24h hardcoded.
+      api.post(`/loads/${loadId}/tender`, {
+        carrierId,
+        offeredRate,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
       setShowTender(false);

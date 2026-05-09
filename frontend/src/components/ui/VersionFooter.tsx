@@ -5673,7 +5673,66 @@
 //              - Item 75 — LOGGED OPEN (E2E frontend coverage gap)
 //              - Item 76 — LOGGED OPEN (sub-rule c fourth-fire
 //                retrospective)
-export const SRL_VERSION = "3.8.aaz";
+//
+// v3.8.aba — Sprint 44d hotfix. Item 78 LOG + CLOSE.
+//            Sprint 44c routed POST /loads/:id/tender to the
+//            validator; validator immediately rejected with 400
+//            because the frontend mutation at loads/page.tsx:271
+//            was sending a 2-field body (carrierId + offeredRate)
+//            while createTenderSchema at validators/tender.ts
+//            requires THREE fields:
+//              carrierId   z.string()
+//              offeredRate z.number().positive()
+//              expiresAt   z.string().transform(s => new Date(s))
+//
+//            E2E full-lifecycle.spec.ts:150-156 has been the
+//            regression-locked canonical contract since Sprint 37
+//            and explicitly sends expiresAt as a 24h window
+//            (line 155: new Date(Date.now() + 24*60*60*1000)
+//            .toISOString()). Sprint 44c local E2E was green on
+//            this 3-field shape — confirming the canonical works
+//            and the frontend caller was the lone outlier.
+//
+//            Item A28-2 fault line surfaced again: "validator
+//            strict, frontend payload promiscuous" pattern
+//            previously surfaced via Sprint 26b (accessorial),
+//            Sprint 34 (quickPayFeePercent string-vs-number),
+//            Sprint 35 (fuelSurchargeType enum drift). Each
+//            surfaces a different field on the same fault line.
+//            Path α (frontend aligns to backend canonical) per
+//            Sprint 36b precedent — minimum-blast vs Path β
+//            (backend default) which would have changed the
+//            validator semantics + required E2E rewrite.
+//
+//            Why 24h hardcoded: matches E2E pattern verbatim,
+//            broker-industry default for direct tendering. Item
+//            77 LOGGED OPEN tracks broker-configurable tender-
+//            expiry UX as Sprint 46+ candidate; when that ships
+//            the 24h fallback moves into the modal.
+//
+//            PATTERN 6 SUB-RULE C — FIFTH PROSPECTIVE FIRE
+//            Same mechanism as Sprint 44b's three + Sprint 44c's
+//            one: directive's narrow framing ("400 from validator
+//            failure") could have led to guessing which field;
+//            authoritative-source check on validator + E2E
+//            confirmed exactly which field + what value to send.
+//            Pattern is now the most active §19 lens of the
+//            entire methodology library — five fires across two
+//            sessions, two directive authors, four sprints
+//            (44a/44b/44c/44d) within ~24h. Item 79 LOGGED OPEN
+//            banks the methodology observation as Sprint 44.5+
+//            §19 commentary canonical case study.
+//
+//            Per §3.1 sequence-continuous: v3.8.aaz → v3.8.aba.
+//
+//            §13.3:
+//              - Item 78 — LOGGED + CLOSED (frontend tender
+//                mutation missing expiresAt; A28-2 fault line)
+//              - Item 77 — LOGGED OPEN (broker-configurable
+//                tender-expiry UX surface)
+//              - Item 79 — LOGGED OPEN (sub-rule c five-fire
+//                retrospective methodology observation)
+export const SRL_VERSION = "3.8.aba";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
