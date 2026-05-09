@@ -177,6 +177,18 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Sprint 44b hotfix: Prisma 6 `--exit-code` flag drop (v3.8.aay, 2026-05-09)
+
+- **§13.3 Item 73 LOGGED + CLOSED.** Render production deploy on v3.8.aax fired the new canonical buildCommand and failed with `unknown or unexpected option: --exit-code` AFTER `prisma migrate deploy` ran clean ("No pending migrations to apply"). Sprint 44b initial directive's preventive gate inherited the flag from a Prisma 5-era convention; Prisma 6.19 doesn't support it.
+- **Authoritative-source check** via `npx prisma migrate status --help` confirmed v6.19 exposes only `--help / --config / --schema`. PowerShell verification: `$LASTEXITCODE = 0` after clean `migrate status` run; drift produces non-zero. **Gate behavior intact** — Prisma 6 returns non-zero on drift inherently, no flag needed.
+- **Hotfix:** dropped `--exit-code` flag from CLAUDE.md §2.2 + render.yaml + Render dashboard buildCommand. Single-line edit across three canonical references. Note added to §2.2 explaining Prisma 6's inherent behavior so the flag is not re-introduced by a future canonical author.
+- **Pattern 6 sub-rule c THIRD prospective fire.** Three fires in single Sprint 44b session canonicalize the sub-rule definitively:
+  1. **Phase 1 (Sprint 44a Track 1)** — `ProspectVertical` grep audit's narrow conclusion was right; broader inference (drift = 1) was wrong; direct DB query revealed scope = 81 of 87.
+  2. **Phase 3 (Item 72)** — directive's buildCommand looked complete; runtime-codepath grep found `__dirname.*config` read in `builder.ts:18`.
+  3. **Phase 4 (Item 73, this hotfix)** — directive's flag specification looked complete; Prisma `--help` check revealed flag absent.
+- **Pattern:** audit findings inform prod-touching actions; the action's success requires authoritative-source verification of the broader implication, not just the audit's narrow finding.
+- Sub-rule c canonicalized at Sprint 44.5 with three-fire validation lineage.
+
 ## Phase 6 — Render deploy chain + schema mutation path consolidation (Sprint 44a/44b, v3.8.aax, 2026-05-09)
 
 - **§13.3 Item 8.10 CLOSED** — Sprint 44b atomic close after Sprint 44a two-track audit (codebase + Render dashboard + 7 mid-Sprint diagnostic queries against prod). Original Item 8.10 scope was ProspectVertical migration backfill; audit revealed actual drift was 81 of 87 prod enums plus corresponding tables/columns from v3.8.aa-dd `db push` work bypassing migration history.

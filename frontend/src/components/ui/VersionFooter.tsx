@@ -5583,7 +5583,51 @@
 //              - Item 72 — LOGGED + CLOSED (cp src/config
 //                regression averted pre-deploy, sub-rule c
 //                second prospective validation)
-export const SRL_VERSION = "3.8.aax";
+//
+// v3.8.aay — Sprint 44b hotfix. Item 73 LOG + CLOSE. Render
+//            production deploy on v3.8.aax fired the new
+//            canonical buildCommand and failed with
+//            "unknown or unexpected option: --exit-code"
+//            AFTER prisma migrate deploy ran clean. Authoritative-
+//            source check via `npx prisma migrate status --help`
+//            confirmed Prisma 6.19 exposes only --help / --config
+//            / --schema; --exit-code flag absent in v6.x.
+//
+//            Gate behavior intact — Prisma 6 returns non-zero
+//            exit code on drift inherently (verified
+//            $LASTEXITCODE = 0 on clean status). Hotfix drops
+//            flag from §2.2 + render.yaml + Render dashboard.
+//
+//            PATTERN 6 SUB-RULE C — THIRD PROSPECTIVE FIRE
+//            Three prospective fires in single Sprint 44b
+//            session validates sub-rule c definitively:
+//              1. Phase 1 (Sprint 44a Track 1) — ProspectVertical
+//                 grep audit's narrow conclusion was right;
+//                 broader inference (drift = 1) was wrong; direct
+//                 DB query revealed scope = 81 of 87.
+//              2. Phase 3 (Item 72) — directive's buildCommand
+//                 looked complete; runtime-codepath grep found
+//                 __dirname.*config read in builder.ts:18.
+//              3. Phase 4 (Item 73, this hotfix) — directive's
+//                 flag specification looked complete; Prisma
+//                 --help check revealed flag absent.
+//
+//            Pattern: audit findings inform prod-touching
+//            actions; the action's success requires
+//            authoritative-source verification of the broader
+//            implication, not just the audit's narrow finding.
+//
+//            Sub-rule c canonicalized at Sprint 44.5 with
+//            three-fire validation lineage.
+//
+//            Per §3.1 sequence-continuous: v3.8.aax → v3.8.aay.
+//            Hotfix scope justifies small bump.
+//
+//            §13.3:
+//              - Item 73 — LOGGED + CLOSED (Prisma 6 --exit-code
+//                flag absent; gate behavior preserved by
+//                inherent exit-code return on drift)
+export const SRL_VERSION = "3.8.aay";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
