@@ -5627,7 +5627,53 @@
 //              - Item 73 — LOGGED + CLOSED (Prisma 6 --exit-code
 //                flag absent; gate behavior preserved by
 //                inherent exit-code return on drift)
-export const SRL_VERSION = "3.8.aay";
+//
+// v3.8.aaz — Sprint 44c hotfix. Item 74 LOG + CLOSE.
+//            Production tender creation 404'd because frontend
+//            modal at frontend/src/app/dashboard/loads/page.tsx:266
+//            POSTed to /loads/:id/tenders (plural) while the
+//            canonical backend route at tenders.ts:14 is singular
+//            (/loads/:id/tender). Sprint 37f comment at
+//            e2e/full-lifecycle.spec.ts:146-148 documents the
+//            verb/noun split as deliberate design:
+//              POST /loads/:id/tender   = "create a tender" (verb)
+//              GET  /loads/:id/tenders  = "list of tenders" (noun)
+//
+//            E2E full-lifecycle.spec.ts:150, 158, 225 all hit
+//            singular and have been green through Sprint 43+.
+//            Frontend caller was the lone outlier — drift origin
+//            unknown without git blame. Single-line correction
+//            on the frontend caller; backend + apiDocs + E2E
+//            unchanged (Sprint 37f intent preserved).
+//
+//            PATTERN 6 SUB-RULE C — FOURTH PROSPECTIVE FIRE
+//            Same mechanism as Sprint 44b's three: directive
+//            framed scope as "single-line backend fix line 14,"
+//            multi-surface grep across .{ts,tsx,js,jsx} returned
+//            9 hits across 4 files revealing E2E + apiDocs +
+//            Sprint 37f intent the directive missed. Path α
+//            (frontend wins) corrected scope before any code
+//            change. Sub-rule c earned post-Sprint-44b protects
+//            against subsequent agents' incomplete-audit
+//            inferences exactly as designed.
+//
+//            Item 75 LOGGED OPEN — E2E coverage gap on FRONTEND
+//            tender create flow (B6.5 family hits backend API
+//            directly, never exercises modal click → frontend
+//            POST → 404 path).
+//
+//            Item 76 LOGGED OPEN — methodology meta: sub-rule c
+//            retrospective for Sprint 44.5 §19 commentary.
+//
+//            Per §3.1 sequence-continuous: v3.8.aay → v3.8.aaz.
+//
+//            §13.3:
+//              - Item 74 — LOGGED + CLOSED (frontend POST tender
+//                URL drift; canonical singular preserved)
+//              - Item 75 — LOGGED OPEN (E2E frontend coverage gap)
+//              - Item 76 — LOGGED OPEN (sub-rule c fourth-fire
+//                retrospective)
+export const SRL_VERSION = "3.8.aaz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

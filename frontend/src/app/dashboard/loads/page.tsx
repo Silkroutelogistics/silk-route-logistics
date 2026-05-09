@@ -263,7 +263,12 @@ export default function LoadsPage() {
 
   const createTender = useMutation({
     mutationFn: ({ loadId, carrierId, offeredRate }: { loadId: string; carrierId: string; offeredRate: number }) =>
-      api.post(`/loads/${loadId}/tenders`, { carrierId, offeredRate }),
+      // Sprint 44c (v3.8.aaz) Item 74 — Sprint 37f canonical is singular
+      // (POST = "create a tender" verb form; GET /loads/:id/tenders = noun
+      // list form). This caller had drifted to plural, producing 404 in
+      // production while backend + apiDocs + E2E full-lifecycle.spec all
+      // remained on the canonical singular. See e2e/full-lifecycle.spec.ts:146-148.
+      api.post(`/loads/${loadId}/tender`, { carrierId, offeredRate }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
       setShowTender(false);
