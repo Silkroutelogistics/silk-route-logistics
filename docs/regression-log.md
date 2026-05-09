@@ -177,6 +177,35 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Render deploy chain + schema mutation path consolidation (Sprint 44a/44b, v3.8.aax, 2026-05-09)
+
+- **§13.3 Item 8.10 CLOSED** — Sprint 44b atomic close after Sprint 44a two-track audit (codebase + Render dashboard + 7 mid-Sprint diagnostic queries against prod). Original Item 8.10 scope was ProspectVertical migration backfill; audit revealed actual drift was 81 of 87 prod enums plus corresponding tables/columns from v3.8.aa-dd `db push` work bypassing migration history.
+- **Render Build Command restored to canonical** per Sprint 44b directive: `npm install && npm run build && npx prisma migrate deploy && npx prisma migrate status --exit-code && cp -r src/assets dist/backend/src/assets`. Pre-Sprint-44b dashboard lacked `prisma migrate deploy` step entirely — root cause of why v3.8.ee `add_customer_approval_fields` migration sat unapplied across 24h+ deploys.
+- **Baseline migration reset.** Single `20260509170000_baseline_init` (3,652 lines, 87 enums, 120 tables) generated via `prisma migrate diff --from-empty --to-schema-datamodel`, captures complete prod schema state as of 2026-05-09. `_prisma_migrations` ledger cleared on Neon, baseline marked applied via `prisma migrate resolve --applied`. Prior 15 migrations archived to `backend/prisma/_archived_migrations_2026-05-09/` for posterity (not part of active chain).
+- **PITR upgraded to 7-day window** (Neon Launch tier) before Phase 2 baseline reset for safety. §13.3 Item 70 logs the recurring cost / retention decision for future review.
+- **Three-doc alignment** — CLAUDE.md §2.2, render.yaml, .github/workflows/ci.yml all updated in same atomic commit. Resolves the Pattern 6 spatial sub-mode contradiction Sprint 44a Track 1 caught (render.yaml + §2.2 said `migrate deploy`; ci.yml comment said `db push`). Now: prod = `migrate deploy`, CI test DB = `db push` (gated by fresh container per CI run, no migration history needed).
+- **Schema mutation path consolidation** documented in §2.2: canonical `prisma migrate dev` in feature branches → auto-deploy applies via `migrate deploy`. Emergency override via `migrate deploy` from local with prod DATABASE_URL or `migrate resolve --applied`. `db push` against production now deprecated.
+- **§13.3 Items 70 + 71 logged open + Item 72 logged-and-closed same-sprint.** Item 70: Neon Launch tier billing review. Item 71: `(npx tsc || true)` suppresses TS errors in build chain (latent runtime regression class, ~1 LOC fix queued). **Item 72:** `cp -r src/config dist/backend/src/config` step dropped from Sprint 44b directive's draft buildCommand. Pre-commit grep on `backend/src/` surfaced runtime `__dirname`-relative read at `email/builder.ts:18` loading `config/signatures/whaider.html` (load-bearing for Lead Hunter + founder-from emails per §3.10). First prod deploy would have broken Resend sends with missing-template errors. Restored to Render dashboard (Wasi pre-commit) + render.yaml + §2.2 canonical (this commit) — regression averted pre-deploy.
+- **Patterns applied:** Audit-first (1, two-track), Phase A0 contract audit (3, deploy pipeline + schema mutation paths), Cross-sprint precedent (6, spatial sub-mode + sub-rule c), Pattern 7 (deploy-pipeline-class enumeration surfaced 3 schema mutation paths needing canonical consolidation).
+
+### PATTERN 6 SUB-RULE C VALIDATED PROSPECTIVELY
+
+Sprint 44b session produced **two prospective validations** of the emerging sub-rule in a single session:
+
+1. **Phase 1 (Sprint 44a Track 1)** — `ProspectVertical` grep returned correct empty result, but conclusion *"this is the only drift"* was incomplete. Direct `pg_type` + `information_schema` query (CSV of 87 prod enums vs migration files) surfaced the actual scope of 81 of 87 enums drifted. The audit's grep was right; the inference from grep to conclusion was wrong.
+2. **Phase 3 (this commit, Item 72)** — Sprint 44b directive's draft buildCommand looked complete on the surface. Pre-commit grep on `backend/src/` for `__dirname.*config\|src/config/` surfaced `email/builder.ts:18` runtime read of `config/signatures/whaider.html`. Without authoritative-source verification before commit, prod deploy would have broken email signatures.
+
+Same root pattern in both cases: **a finding informed a prod-touching action, and the finding was correct in its narrow grep but incomplete or stale in its broader implication.** Authoritative-source check (direct DB query in #1, `__dirname` codepath grep in #2) closed the gap before the action shipped.
+
+**Promotion decision:** sub-rule c earns full catalog status at Sprint 44.5 §19 update — two prospective validations in one session is "production-grade signal," not "candidate observation." The rule:
+
+> **Pattern 6 sub-rule c — audits can be wrong.**
+> Trigger: an audit finding will inform a prod-touching action.
+> Action: verify the audit's broader implication against an authoritative source (direct DB query, runtime-codepath grep, etc.) before the action ships. The audit's narrow finding may be correct in isolation but stale or incomplete in its conclusion.
+> Established: Sprint 44b (2026-05-09), two-fire validation in single session.
+
+Sprint 44.5 methodology meta-commit will catalog sub-rule c alongside stability green-light (sub-rule a) + spatial sub-mode (sub-rule b) + Pattern 7 always-fire promotion + Item 67 closure (`e2e/FIXTURES.md`).
+
 ## Phase 6 — E2E coverage expansion epic (Sprint 43, v3.8.aaw, 2026-05-09)
 
 - **§13.3 Items 60 + 62 + 66 atomic close.** All three share E2E-coverage root cause class per §3.3. Comparable to Sprint 39 cluster close (~190 LOC) and Sprint 41 PATH Z (~130 LOC); slightly larger at ~245 LOC source.

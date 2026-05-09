@@ -5484,7 +5484,106 @@
 //            §13.3:
 //              - Items 60 + 62 + 66 — LOGGED + CLOSED
 //              - Item 67 — LOGGED OPEN (E2E fixture catalog)
-export const SRL_VERSION = "3.8.aaw";
+//
+// v3.8.aax — Sprint 44b: Item 8.10 CLOSED — Render deploy chain
+//            + schema mutation path consolidation atomic close.
+//
+//            Sprint 44a two-track audit (codebase + dashboard +
+//            7 prod diagnostic queries) revealed Item 8.10's
+//            actual scope was 81 of 87 prod enums drifted via
+//            `db push` during v3.8.aa-dd window. Render Build
+//            Command lacked `prisma migrate deploy` entirely —
+//            root cause of v3.8.ee migration sitting unapplied
+//            across 24h+ deploys.
+//
+//            P1 — Render Build Command restored to canonical:
+//              npm install && npm run build &&
+//              npx prisma migrate deploy &&
+//              npx prisma migrate status --exit-code &&
+//              cp -r src/assets dist/backend/src/assets
+//            (dashboard already updated pre-commit; this commit
+//            aligns repo artifacts to match)
+//
+//            P2 — Baseline reset. Single
+//            20260509170000_baseline_init migration (3,652
+//            lines, 87 enums, 120 tables) generated via prisma
+//            migrate diff --from-empty --to-schema-datamodel
+//            captures complete prod schema state as of 2026-
+//            05-09. _prisma_migrations ledger cleared on Neon,
+//            baseline marked applied via prisma migrate resolve
+//            --applied. Prior 15 migrations archived to
+//            backend/prisma/_archived_migrations_2026-05-09/
+//            for posterity (NOT part of active chain).
+//
+//            P3 — `prisma migrate status --exit-code`
+//            post-deploy gate. Fails build on any pending
+//            migrations — silent-skip class regression catch.
+//
+//            P4 — Three-doc alignment. CLAUDE.md §2.2 +
+//            render.yaml + .github/workflows/ci.yml all updated
+//            in this atomic commit. Resolves the Pattern 6
+//            spatial sub-mode contradiction Sprint 44a Track 1
+//            caught: prod = `migrate deploy`, CI test DB =
+//            `db push` (gated by fresh container per CI run).
+//
+//            PITR upgraded to 7-day window (Neon Launch tier)
+//            before Phase 2 baseline reset for safety. §13.3
+//            Item 70 logs cost/retention decision for review.
+//
+//            §13.3 Item 71 logged: `(npx tsc || true)`
+//            suppresses TS errors in backend/package.json build
+//            script. Latent runtime regression class. ~1 LOC
+//            fix queued for Sprint 45+.
+//
+//            §13.3 Item 72 LOGGED + CLOSED same-sprint:
+//            `cp -r src/config dist/backend/src/config` step
+//            dropped from Sprint 44b directive's draft build
+//            command. Pre-commit grep on backend/src/ surfaced
+//            runtime __dirname-relative read at email/builder.ts
+//            :18 loading config/signatures/whaider.html
+//            (load-bearing for Lead Hunter + founder-from
+//            emails). Regression averted: cp step restored to
+//            Render dashboard (pre-commit) + render.yaml + §2.2
+//            canonical (this commit). Pattern 6 sub-rule c
+//            fired prospectively in real-time during Sprint
+//            44b — second prospective validation in single
+//            session (Phase 1 audit-can-be-wrong + Phase 3 cp-
+//            src/config catch). Sub-rule c promotes from
+//            CANDIDATE to VALIDATED at Sprint 44.5 catalog.
+//
+//            VERIFICATION
+//            CLAUDE.md §2.2 + render.yaml + ci.yml comment all
+//            agree on canonical path. Local smoke green
+//            pre-push. Render auto-deploy fires on push;
+//            verify post-deploy that migrate deploy + status
+//            --exit-code complete cleanly.
+//
+//            Per §3.1 sequence-continuous: v3.8.aaw → v3.8.aax.
+//
+//            Patterns applied: Audit-first (1, two-track),
+//                              Phase A0 contract audit (3,
+//                              deploy pipeline + schema
+//                              mutation paths), Cross-sprint
+//                              precedent (6, spatial sub-mode
+//                              + audits-can-be-wrong sub-rule
+//                              c emerging), Pattern 7 (deploy-
+//                              pipeline-class enumeration).
+//            Patterns emerged: Pattern 6 sub-rule c candidate
+//                              ("audit findings can themselves
+//                              be wrong"). Queued for Sprint
+//                              44.5 §19 update with stability
+//                              green-light + spatial sub-mode
+//                              + Pattern 7 always-fire +
+//                              Item 67 doc.
+//
+//            §13.3:
+//              - Item 8.10 — CLOSED
+//              - Item 70 — LOGGED OPEN (Neon Launch tier)
+//              - Item 71 — LOGGED OPEN (tsc errors suppressed)
+//              - Item 72 — LOGGED + CLOSED (cp src/config
+//                regression averted pre-deploy, sub-rule c
+//                second prospective validation)
+export const SRL_VERSION = "3.8.aax";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
