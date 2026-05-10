@@ -7,6 +7,37 @@ import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
 import { generateBOLQRBuffer } from "../utils/qrGenerator";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
+// Sprint 45-RC (v3.8.abd) — Item 48 close. Skill chrome library imported from
+// backend/src/lib/srl-chrome.ts (mirrored from .claude/skills/srl-brand-design/
+// scripts/srl_chrome.ts at session HEAD; manually sync when skill ships canonical
+// updates). Path β1 per D6 — sets up Sprint 45-RC2 (Invoice) + 45-RC3 (Settlement
+// + ShipperLoadConf) reuse. Other generators in this file (BOL/Invoice/Settlement)
+// keep their inline canonical until their dedicated migration sprint.
+import {
+  drawHeaderFirstPage,
+  drawMetaStrip,
+  drawPartiesBlock,
+  drawShipmentTable,
+  drawRateBreakdown,
+  drawLaneEconomics,
+  drawEquipmentSpec,
+  drawCarrierRequirements,
+  drawRateConTerms,
+  drawSignatureBlock,
+  RATE_CON_SIGNATURE_ROLES,
+  drawFooter,
+  drawContinuationHeader,
+  drawPanel,
+  MARGIN,
+  CONTENT_W,
+  PAGE_H,
+  TOKENS,
+  type Party,
+  type RateBreakdown,
+  type EquipmentSpec,
+  type CarrierRequirements,
+  type RateConTerms,
+} from "../lib/srl-chrome";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -1277,276 +1308,254 @@ function checkPageBreak(doc: PDFDoc, y: number, needed: number): number {
   return y;
 }
 
+/**
+ * Sprint 45-RC (v3.8.abd) — Item 48 close. Path β1 migration: skill chrome
+ * library imported from backend/src/lib/srl-chrome.ts; legacy hand-built
+ * chrome (addHeader/addFooter/sectionTitle/checkPageBreak/labelValue) no
+ * longer called from this generator. Other generators (BOL/Invoice/
+ * Settlement) keep those helpers alive until their dedicated sprints
+ * (45-RC2/3) migrate them.
+ *
+ * 8 findings resolved:
+ *   #1 phantom blanks (was 6 pages) → dynamic flow, drawContinuationHeader
+ *      fires on actual overflow only; canonical 2-page layout per skill RC
+ *      anatomy (pdf-chrome.md)
+ *   #2 address duplicated → BRAND.address single-line from skill lib
+ *   #3 no QR (intentional) → skill canonical SKILL.md:86 confirms RC
+ *      has no scan workflow; includeQr: false explicit
+ *   #4 generic logo → drawCompassMark via PNG fallback (60/120/240/480)
+ *      from src/lib/srl_compass_*.png (Sprint 44b cp -r src/lib step)
+ *   #5 carrier section empty → carrier identity captured in
+ *      RATE_CON_SIGNATURE_ROLES (Carrier Acceptance), not body
+ *   #6 TOTAL bare → drawRateBreakdown (linehaul + FSC + accessorials →
+ *      bold Total Carrier Pay) + drawLaneEconomics (MILES/TRANSIT/
+ *      $/MILE pills) + drawRateConTerms (detention/TONU/layover grid)
+ *   #7 chrome drift → skill canonical Times-Bold + Helvetica + #0A2540
+ *      navy + #C5A572/#BA7517 golds via wrapped builder calls
+ *   #8 rate breakdown on page 4 (Phase A2 pixel verification finding) →
+ *      drawRateBreakdown ON PAGE 1 below parties block per skill anatomy;
+ *      drawContinuationHeader-driven flow eliminates forced page breaks
+ *
+ * Item 8.8 leading-zero MC# inherited from skill BRAND verbatim per D7
+ * carry-forward — dedicated sprint closes across all 14 surfaces.
+ */
 export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
-  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
   const fd = formData || {};
+  const doc = new PDFDocument({ size: "LETTER", margin: 0 });
 
-  // Page 1
-  addHeader(doc, "RATE CONFIRMATION");
+  const refNum = fd.referenceNumber || load.referenceNumber;
+  const docId = `RC-SRL-${refNum}`;
 
-  let y = 155;
+  // ─── PAGE 1 ────────────────────────────────────────────────────
+  // Header (no QR — RC carrier-portal artifact, no scan event per skill)
+  let y = drawHeaderFirstPage(doc, {
+    docTitle: "Rate Confirmation",
+    subtitle: "Carrier-Issued · Binding",
+    loadId: docId,
+    includeQr: false,
+  });
 
-  // Reference & Date
-  labelValue(doc, "Reference Number", fd.referenceNumber || load.referenceNumber, 50, y);
-  labelValue(doc, "Load Number", fd.loadNumber || load.referenceNumber, 250, y);
-  labelValue(doc, "Date", new Date().toLocaleDateString(), 450, y);
+  // Meta strip — 6 fields per skill RC anatomy
+  const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const pickupStr = fd.pickupDate || (load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString() : null) || "—";
+  const deliveryStr = fd.deliveryDate || (load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString() : null) || "—";
+  const equipment = fd.equipmentType || load.equipmentType || "—";
+  const qpTier = fd.carrierPaymentTier || "—";
+  const termsLabel = fd.paymentTerms || "Net-30";
 
-  y += 40;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 10;
+  y = drawMetaStrip(doc, {
+    "DATE ISSUED": dateStr,
+    "LOAD REF": refNum,
+    "PICKUP": pickupStr,
+    "DELIVERY": deliveryStr,
+    "QUICK PAY": qpTier,
+    "TERMS": termsLabel,
+  }, y - 4);
 
-  // Section 2 — Shipper / Origin
-  y = sectionTitle(doc, "SHIPPER / ORIGIN", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(fd.shipperName || load.customer?.name || "—", 50, y);
-  if (fd.shipperAddress || load.customer?.address) doc.text(fd.shipperAddress || load.customer?.address || "", 50, y + 14);
-  const shipperCSZ = fd.shipperCity || load.customer?.city
-    ? `${fd.shipperCity || load.customer?.city || ""}, ${fd.shipperState || load.customer?.state || ""} ${fd.shipperZip || load.customer?.zip || ""}`
+  // Parties block — Shipper + Consignee in cream-2 panels
+  const shipperAddrLines: string[] = [];
+  const shipperStreet = fd.shipperAddress || load.customer?.address;
+  if (shipperStreet) shipperAddrLines.push(shipperStreet);
+  const shipperCSZ = (fd.shipperCity || load.customer?.city)
+    ? `${fd.shipperCity || load.customer?.city || ""}, ${fd.shipperState || load.customer?.state || ""} ${fd.shipperZip || load.customer?.zip || ""}`.replace(/\s+/g, " ").trim()
     : `${load.originCity}, ${load.originState} ${load.originZip}`;
-  doc.text(shipperCSZ, 50, y + 28);
-  if (fd.shipperContact) labelValue(doc, "Contact", fd.shipperContact, 310, y);
-  if (fd.shipperPhone || load.customer?.phone) labelValue(doc, "Phone", fd.shipperPhone || load.customer?.phone || "", 310, y + 20);
-  if (fd.shipperRefNumber) labelValue(doc, "Ref #", fd.shipperRefNumber, 450, y);
+  shipperAddrLines.push(shipperCSZ);
 
-  y += 60;
-
-  // Section 3 — Consignee / Destination
-  y = checkPageBreak(doc, y, 80);
-  y = sectionTitle(doc, "CONSIGNEE / DESTINATION", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(fd.consigneeName || "—", 50, y);
-  if (fd.consigneeAddress) doc.text(fd.consigneeAddress, 50, y + 14);
+  const consigneeAddrLines: string[] = [];
+  if (fd.consigneeAddress) consigneeAddrLines.push(fd.consigneeAddress);
   const consigneeCSZ = fd.consigneeCity
-    ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`
+    ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`.replace(/\s+/g, " ").trim()
     : `${load.destCity}, ${load.destState} ${load.destZip}`;
-  doc.text(consigneeCSZ, 50, y + 28);
-  if (fd.consigneeContact) labelValue(doc, "Contact", fd.consigneeContact, 310, y);
-  if (fd.consigneePhone) labelValue(doc, "Phone", fd.consigneePhone, 310, y + 20);
-  if (fd.consigneeRefNumber) labelValue(doc, "Ref #", fd.consigneeRefNumber, 450, y);
+  consigneeAddrLines.push(consigneeCSZ);
 
-  y += 60;
+  const shipperContactLine = (fd.shipperContact && fd.shipperPhone)
+    ? `${fd.shipperContact} · ${fd.shipperPhone}`
+    : (fd.shipperContact || fd.shipperPhone || (load.customer?.phone ? load.customer.phone : undefined));
+  const consigneeContactLine = (fd.consigneeContact && fd.consigneePhone)
+    ? `${fd.consigneeContact} · ${fd.consigneePhone}`
+    : (fd.consigneeContact || fd.consigneePhone || undefined);
 
-  // Section 4 — Carrier Information
-  y = checkPageBreak(doc, y, 100);
-  y = sectionTitle(doc, "CARRIER INFORMATION", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  const carrierName = fd.carrierName || load.carrier?.company || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}` : "—");
-  doc.text(carrierName, 50, y);
-  if (fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber) {
-    doc.text(`MC#: ${fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber}`, 50, y + 14);
-  }
-  if (fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber) {
-    doc.text(`DOT#: ${fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber}`, 200, y + 14);
-  }
-  if (fd.carrierAddress) doc.text(fd.carrierAddress, 50, y + 28);
-  if (fd.carrierCity) doc.text(`${fd.carrierCity}, ${fd.carrierState || ""} ${fd.carrierZip || ""}`, 50, y + 42);
+  const shipperParty: Party = {
+    name: fd.shipperName || load.customer?.name || "—",
+    addressLines: shipperAddrLines,
+    contact: shipperContactLine,
+    window: pickupStr !== "—"
+      ? `${pickupStr}${fd.pickupTimeWindow ? " · " + fd.pickupTimeWindow : ""}`
+      : undefined,
+  };
+  const consigneeParty: Party = {
+    name: fd.consigneeName || "—",
+    addressLines: consigneeAddrLines,
+    contact: consigneeContactLine,
+    window: deliveryStr !== "—"
+      ? `${deliveryStr}${fd.deliveryTimeWindow ? " · " + fd.deliveryTimeWindow : ""}`
+      : undefined,
+  };
+  y = drawPartiesBlock(doc, shipperParty, consigneeParty, y - 4);
 
-  if (fd.carrierContact || load.carrier?.phone) labelValue(doc, "Contact", fd.carrierContact || "", 310, y);
-  if (fd.carrierPhone || load.carrier?.phone) labelValue(doc, "Phone", fd.carrierPhone || load.carrier?.phone || "", 310, y + 20);
-  if (fd.driverName) labelValue(doc, "Driver", fd.driverName, 310, y + 40);
-  if (fd.truckNumber) labelValue(doc, "Truck #", fd.truckNumber, 450, y + 40);
-  if (fd.trailerNumber) labelValue(doc, "Trailer #", fd.trailerNumber, 450, y + 60);
-
-  y += 85;
-
-  // Multi-Stop Section (if applicable)
-  if (fd.isMultiStop && fd.stops && Array.isArray(fd.stops) && fd.stops.length > 0) {
-    y = checkPageBreak(doc, y, 40 + fd.stops.length * 35);
-    y = sectionTitle(doc, "ADDITIONAL STOPS", y);
-    for (let i = 0; i < fd.stops.length; i++) {
-      const stop = fd.stops[i];
-      y = checkPageBreak(doc, y, 35);
-      doc.fontSize(9).fillColor("#D4A843").text(`Stop ${i + 1} — ${stop.type || "STOP"}`, 50, y);
-      y += 12;
-      doc.fontSize(9).fillColor("#1E1E2F");
-      doc.text(stop.company || "—", 50, y);
-      if (stop.address) doc.text(stop.address, 200, y);
-      if (stop.city) doc.text(`${stop.city}, ${stop.state || ""} ${stop.zip || ""}`, 350, y);
-      y += 14;
-      if (stop.contact) { doc.text(`Contact: ${stop.contact}${stop.phone ? " | " + stop.phone : ""}`, 50, y); y += 12; }
-      if (stop.refNumber) { doc.text(`Ref: ${stop.refNumber}`, 50, y); y += 12; }
-      if (stop.instructions) { doc.text(`Instructions: ${stop.instructions}`, 50, y, { width: 510 }); y += 12; }
-    }
-    if (fd.extraStopPay) {
-      doc.fontSize(9).fillColor("#1E1E2F").text(`Extra Stop Pay: $${Number(fd.extraStopPay).toLocaleString()}`, 50, y);
-      y += 16;
-    }
+  // Lane economics — MILES / TRANSIT / $/MILE pills (only with distance)
+  const linehaul = (fd.lineHaulRate ?? load.rate) as number;
+  const fsc = (fd.fuelSurcharge as number | undefined) ?? 0;
+  const accs = (fd.accessorials as Array<{ description?: string; type?: string; amount: number }> | undefined) ?? [];
+  const accSum = accs.reduce((s, a) => s + Number(a.amount || 0), 0);
+  const totalCarrierPay = (fd.totalCharges as number | undefined) ?? (linehaul + fsc + accSum);
+  const miles = load.distance ?? null;
+  if (miles && miles > 0) {
+    const transitDays = miles / 500;
+    y = drawLaneEconomics(doc, miles, transitDays, totalCarrierPay, y - 4);
   }
 
-  // Section 5 — Equipment & Commodity
-  y = checkPageBreak(doc, y, 60);
-  y = sectionTitle(doc, "EQUIPMENT & COMMODITY", y);
-  labelValue(doc, "Equipment", fd.equipmentType || load.equipmentType, 50, y);
-  labelValue(doc, "Commodity", fd.commodity || load.commodity || "General Freight", 200, y);
-  labelValue(doc, "Weight", load.weight ? `${load.weight.toLocaleString()} lbs` : (fd.weight ? `${fd.weight} lbs` : "—"), 380, y);
-  y += 25;
-  if (fd.pieces || load.pieces) labelValue(doc, "Pieces", String(fd.pieces || load.pieces), 50, y);
-  if (fd.dims) labelValue(doc, "Dimensions", fd.dims, 200, y);
-  if (fd.hazmat) labelValue(doc, "Hazmat", "Yes", 380, y);
-  if (fd.tempRequirements) labelValue(doc, "Temp Req", fd.tempRequirements, 450, y);
-  y += 20;
-  // Distance — mileage-service-aware label
-  if (load.distance) {
-    const mileageSource = fd.mileageSource || "google_estimated";
-    const distLabel = mileageSource === "google_estimated"
-      ? `~${load.distance.toLocaleString()} mi (estimated)`
-      : mileageSource === "pcmiler"
-      ? `${load.distance.toLocaleString()} mi (PC*Miler Practical)`
-      : mileageSource === "milemaker"
-      ? `${load.distance.toLocaleString()} mi (MileMaker Practical)`
-      : `${load.distance.toLocaleString()} mi`;
-    labelValue(doc, "Distance", distLabel, 50, y);
-    if (fd.driveTimeHours) labelValue(doc, "Drive Time", `${fd.driveTimeHours}h`, 300, y);
-    if (fd.tollCost) labelValue(doc, "Est. Tolls", `$${Number(fd.tollCost).toFixed(2)}`, 430, y);
-  }
+  // Equipment spec — type + temp-setpoint if reefer
+  const tempRaw = fd.tempRequirements ? String(fd.tempRequirements) : "";
+  const tempMatch = tempRaw.match(/-?\d+(\.\d+)?/);
+  const equipSpec: EquipmentSpec = {
+    type: equipment,
+    tempSetpointF: tempMatch ? parseFloat(tempMatch[0]) : undefined,
+  };
+  y = drawEquipmentSpec(doc, equipSpec, y);
 
-  y += 25;
+  // Shipment table — single commodity row
+  const wt = (fd.weight as number | undefined) ?? load.weight;
+  const pcs = (fd.pieces as number | undefined) ?? load.pieces;
+  const commodityName = fd.commodity || load.commodity || "General Freight";
+  y = drawShipmentTable(doc, {
+    headers: ["PCS", "DESCRIPTION", "WEIGHT", "DIMS", "HM"],
+    rows: [
+      [
+        pcs ? String(pcs) : "—",
+        String(commodityName),
+        wt ? `${wt.toLocaleString()} lbs` : "—",
+        fd.dims || "—",
+        fd.hazmat ? "Y" : "N",
+      ],
+    ],
+    yTop: y,
+  });
 
-  // Section 6 — Dates & Times
-  y = checkPageBreak(doc, y, 50);
-  y = sectionTitle(doc, "DATES & TIMES", y);
-  labelValue(doc, "Pickup Date", fd.pickupDate || load.pickupDate.toLocaleDateString(), 50, y);
-  labelValue(doc, "Pickup Window", fd.pickupTimeWindow || "—", 200, y);
-  labelValue(doc, "Delivery Date", fd.deliveryDate || load.deliveryDate.toLocaleDateString(), 350, y);
-  labelValue(doc, "Delivery Window", fd.deliveryTimeWindow || "—", 500, y);
+  // Rate breakdown ON PAGE 1 (Sprint 45-RC finding #8 — was on page 4)
+  const rate: RateBreakdown = {
+    linehaul,
+    fuelSurcharge: fsc > 0 ? fsc : undefined,
+    accessorials: accs.length > 0
+      ? accs.map((a) => ({ label: a.description || a.type || "Accessorial", amount: Number(a.amount || 0) }))
+      : undefined,
+  };
+  y = drawRateBreakdown(doc, rate, y - 8);
 
-  y += 35;
+  // Operational terms — detention / TONU / layover / lumper / cancellation / QP
+  const opTerms: RateConTerms = {
+    detentionRatePerHour: fd.detentionRate as number | undefined,
+    quickPayTier: qpTier !== "—" ? qpTier : undefined,
+  };
+  y = drawRateConTerms(doc, opTerms, y - 4);
 
-  // Section 7 — Rates & Charges
-  y = checkPageBreak(doc, y, 120);
-  y = sectionTitle(doc, "RATES & CHARGES", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
+  // Page 1 footer + page break
+  drawFooter(doc, { pageNum: 1, totalPages: 2, docId });
+  doc.addPage();
 
-  const linehaul = fd.lineHaulRate ?? load.rate;
-  doc.text("Line Haul Rate:", 50, y); doc.text(`$${Number(linehaul).toLocaleString()}`, 250, y);
-  y += 16;
+  // ─── PAGE 2 ────────────────────────────────────────────────────
+  y = drawContinuationHeader(doc, "Rate Confirmation", docId);
 
-  if (fd.fuelSurcharge) {
-    doc.text("Fuel Surcharge:", 50, y); doc.text(`$${Number(fd.fuelSurcharge).toLocaleString()}`, 250, y);
-    y += 16;
-  }
+  // Carrier requirements — insurance minimums (skill canonical defaults)
+  const reqs: CarrierRequirements = {
+    cargoInsuranceMin: 100_000,
+    autoLiabilityMin: 1_000_000,
+    generalLiabilityMin: 1_000_000,
+  };
+  y = drawCarrierRequirements(doc, reqs, y);
 
-  if (fd.detentionRate) {
-    doc.text("Detention Rate:", 50, y); doc.text(`$${Number(fd.detentionRate).toLocaleString()}/hr`, 250, y);
-    y += 16;
-  }
-
-  if (fd.accessorials && Array.isArray(fd.accessorials)) {
-    for (const acc of fd.accessorials) {
-      doc.text(`${acc.description}:`, 50, y); doc.text(`$${Number(acc.amount).toLocaleString()}`, 250, y);
-      y += 16;
-    }
-  }
-
-  y += 4;
-  doc.moveTo(50, y).lineTo(350, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 8;
-  const total = fd.totalCharges ?? linehaul;
-  doc.fontSize(13).fillColor("#1E1E2F").text("TOTAL:", 50, y);
-  doc.text(`$${Number(total).toLocaleString()}`, 250, y);
-  y += 20;
-
-  if (fd.paymentTerms) {
-    doc.fontSize(9).fillColor("#888888").text(`Payment Terms: ${fd.paymentTerms}`, 50, y);
-    y += 16;
-  }
-
-  // Section 8 — Special Instructions
+  // Special instructions — render as cream-2 frame with manual wrapped
+  // text (drawPanel itself uses lineBreak: false for single-line bodies;
+  // we want wrapping for multi-line free text, so frame + text manually).
   const instructions = fd.specialInstructions || load.specialInstructions || load.notes;
-  if (instructions || fd.pickupInstructions || fd.deliveryInstructions) {
-    y = checkPageBreak(doc, y, 80);
-    y = sectionTitle(doc, "SPECIAL INSTRUCTIONS", y);
-    doc.fontSize(9).fillColor("#1E1E2F");
-    if (instructions) { doc.text(instructions, 50, y, { width: 510 }); y += doc.heightOfString(instructions, { width: 510 }) + 8; }
-    if (fd.pickupInstructions) { doc.text(`Pickup: ${fd.pickupInstructions}`, 50, y, { width: 510 }); y += 16; }
-    if (fd.deliveryInstructions) { doc.text(`Delivery: ${fd.deliveryInstructions}`, 50, y, { width: 510 }); y += 16; }
-    if (fd.appointmentRequired) { doc.fillColor("#dc2626").text("** APPOINTMENT REQUIRED **", 50, y); y += 16; }
+  if (instructions || fd.pickupInstructions || fd.deliveryInstructions || fd.appointmentRequired) {
+    const instrParts: string[] = [];
+    if (instructions) instrParts.push(String(instructions));
+    if (fd.pickupInstructions) instrParts.push(`Pickup: ${fd.pickupInstructions}`);
+    if (fd.deliveryInstructions) instrParts.push(`Delivery: ${fd.deliveryInstructions}`);
+    if (fd.appointmentRequired) instrParts.push("** APPOINTMENT REQUIRED **");
+    const instrBody = instrParts.join("\n\n");
+
+    const labelY = y;
+    doc.font("Helvetica-Bold", 7).fillColor(TOKENS.goldDark);
+    doc.text("SPECIAL INSTRUCTIONS", MARGIN, labelY, {
+      characterSpacing: 7 * 0.08,
+      lineBreak: false,
+    });
+
+    // Measure body height with wrapping
+    doc.font("Helvetica", 9).fillColor(TOKENS.fg1);
+    const bodyHeight = doc.heightOfString(instrBody, { width: CONTENT_W - 20 });
+    const panelH = bodyHeight + 28;
+
+    // cream-2 frame
+    doc.save()
+      .fillColor(TOKENS.cream2)
+      .strokeColor(TOKENS.border1)
+      .lineWidth(0.5)
+      .roundedRect(MARGIN, labelY + 12, CONTENT_W, panelH, 8)
+      .fillAndStroke()
+      .restore();
+
+    // wrapped body text
+    doc.font("Helvetica", 9).fillColor(TOKENS.fg1);
+    doc.text(instrBody, MARGIN + 10, labelY + 22, { width: CONTENT_W - 20, lineGap: 1 });
+
+    y = labelY + 12 + panelH + 12;
   }
 
-  // Payment Terms
-  if (fd.carrierPaymentTier || fd.paymentTerms || fd.factoringCompany) {
-    y = checkPageBreak(doc, y, 80);
-    y = sectionTitle(doc, "PAYMENT TERMS", y);
-    doc.fontSize(9).fillColor("#1E1E2F");
-    if (fd.carrierPaymentTier) { doc.text(`Payment Tier: ${fd.carrierPaymentTier}`, 50, y); y += 14; }
-    if (fd.quickPayFeePercent) { doc.text(`QuickPay Fee: ${fd.quickPayFeePercent}%`, 50, y); y += 14; }
-    if (fd.paymentTerms) { doc.text(`Terms: ${fd.paymentTerms}`, 50, y); y += 14; }
-    if (fd.factoringCompany) {
-      doc.text(`Factoring Company: ${fd.factoringCompany}`, 50, y); y += 14;
-      if (fd.factoringContact) { doc.text(`Factoring Contact: ${fd.factoringContact}`, 50, y); y += 14; }
-      if (fd.factoringEmail) { doc.text(`Factoring Email: ${fd.factoringEmail}`, 50, y); y += 14; }
-    }
+  // Terms & Conditions — Carmack 49 U.S.C. § 14706 + Michigan/Kalamazoo
+  // venue + BCA v3.1 reference (skill SKILL.md mandate; satisfies E2E
+  // RC_PDF_REQUIRED extensions: "State of Michigan", "Kalamazoo County")
+  doc.font("Helvetica-Bold", 7).fillColor(TOKENS.goldDark);
+  doc.text("TERMS & CONDITIONS", MARGIN, y, {
+    characterSpacing: 7 * 0.08,
+    lineBreak: false,
+  });
+  y += 14;
 
-    // Document Checklist
-    if (fd.docChecklist) {
-      y += 4;
-      doc.fontSize(8).fillColor("#888888").text("Required Documents:", 50, y); y += 12;
-      const checks = fd.docChecklist;
-      const items = [
-        { key: "signedRateCon", label: "Signed Rate Confirmation" },
-        { key: "signedBol", label: "Signed BOL" },
-        { key: "pod", label: "Proof of Delivery" },
-        { key: "carrierInvoice", label: "Carrier Invoice" },
-        { key: "lumperReceipt", label: "Lumper Receipt" },
-        { key: "scaleTicket", label: "Scale Ticket" },
-        { key: "tempLog", label: "Temperature Log" },
-      ];
-      for (const item of items) {
-        if (checks[item.key]) {
-          doc.fontSize(8).fillColor("#1E1E2F").text(`  \u2713 ${item.label}`, 50, y); y += 11;
-        }
-      }
-    }
-    y += 8;
-  }
+  const tcDefault =
+    "Carrier accepts the rate, lane, equipment, and terms set forth above. " +
+    "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability " +
+    "of not less than $1,000,000 combined single limit. Carrier shall comply with all " +
+    "applicable federal, state, and local laws and regulations including Carmack Amendment " +
+    "liability per 49 U.S.C. § 14706. This Rate Confirmation, together with the SRL " +
+    "Broker-Carrier Agreement v3.1 dated February 26, 2026, constitutes the complete " +
+    "agreement for this load. Disputes governed by the laws of the State of Michigan, " +
+    "with venue in Kalamazoo County.";
+  const tcBody = (fd.customTerms as string | undefined) || tcDefault;
 
-  // Section 9 — Terms & Conditions
-  y = checkPageBreak(doc, y, 100);
-  y = sectionTitle(doc, "TERMS & CONDITIONS", y);
-  doc.fontSize(7).fillColor("#666666");
-  const defaultTerms = "Carrier agrees to transport the above-described shipment under the terms and conditions set forth herein. " +
-    "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit. " +
-    "Carrier shall comply with all applicable federal, state, and local laws and regulations. " +
-    "This rate confirmation, when signed by both parties, constitutes a binding contract.";
-  const terms = fd.customTerms || defaultTerms;
-  doc.text(terms, 50, y, { width: 510 });
-  y += doc.heightOfString(terms, { width: 510 }) + 15;
+  doc.font("Helvetica", 7.5).fillColor(TOKENS.fg2);
+  doc.text(tcBody, MARGIN, y, { width: CONTENT_W, lineGap: 1 });
+  y = doc.y + 14;
 
-  // Section 10 — Signatures
-  y = checkPageBreak(doc, y, 100);
-  y = sectionTitle(doc, "SIGNATURES", y);
-  y += 5;
+  // Signature — RATE_CON_SIGNATURE_ROLES (1 block: Carrier Acceptance only,
+  // not the BOL three-block pattern; skill canonical for Rate Cons)
+  drawSignatureBlock(doc, y, { roles: RATE_CON_SIGNATURE_ROLES, height: 180 });
 
-  doc.fontSize(8).fillColor("#888888");
-  doc.text("Authorized by Broker", 50, y);
-  doc.text("Accepted by Carrier", 310, y);
-  y += 15;
+  // Page 2 footer
+  drawFooter(doc, { pageNum: 2, totalPages: 2, docId });
 
-  if (fd.brokerSignature) {
-    doc.fontSize(12).fillColor("#1E1E2F").text(fd.brokerSignature, 50, y);
-  }
-  if (fd.carrierSignature) {
-    doc.fontSize(12).fillColor("#1E1E2F").text(fd.carrierSignature, 310, y);
-  }
-
-  y += 20;
-  doc.moveTo(50, y).lineTo(250, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
-  doc.moveTo(310, y).lineTo(550, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
-  y += 5;
-
-  doc.fontSize(7).fillColor("#888888");
-  doc.text(fd.brokerSignDate || "Date: _______________", 50, y);
-  doc.text(fd.carrierSignDate || "Date: _______________", 310, y);
-
-  // Mileage footnote (only for estimated/Google sources)
-  const mileageNote = getMileageFootnote(fd.mileageSource);
-  if (mileageNote) {
-    y += 25;
-    y = checkPageBreak(doc, y, 20);
-    doc.fontSize(6.5).fillColor("#999999").text(mileageNote, 50, y, { width: 510 });
-  }
-
-  addFooter(doc);
   doc.end();
   return doc;
 }

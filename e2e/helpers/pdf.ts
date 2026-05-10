@@ -52,25 +52,45 @@ export const RC_PDF_FORBIDDEN: string[] = [
  * Sprint 30 canonical values that MUST appear in the current RC PDF.
  *
  * v3.8.aas Sprint 37g — REQUIRED list trimmed to what the RC PDF actually
- * renders today. The fuller identity block (MC#, DOT#, operations@ alias,
- * governing-law clause) is tracked in CLAUDE.md §13.3 Item 48 as a separate
- * post-BKN architectural sprint reconciling the RC PDF against the
- * `srl-brand-design` skill canonical (parallels BOL v2.9 epic shape, est.
- * 200-400 LOC across pdfService.ts). Adding those strings to REQUIRED
- * before Item 48 ships would assert future-state, not current-state.
+ * renders today.
  *
- * When Item 48 lands, that sprint extends this array with:
- *   "MC# 1794414", "DOT# 4526880", "operations@silkroutelogistics.ai",
- *   "State of Michigan", "Kalamazoo County"
+ * Sprint 45-RC (v3.8.abd) — Item 48 close. Path β1 migration to skill
+ * chrome library landed. REQUIRED extended with 4 of the 5 strings the
+ * Sprint 37g comment flagged as "future Item 48":
+ *   - "DOT# 4526880" — rendered by drawHeaderFirstPage company-info block
+ *     and by drawFooter every page footer (skill srl-chrome.ts BRAND.dot)
+ *   - "operations@silkroutelogistics.ai" — rendered by drawHeaderFirstPage
+ *     phone | email | domain line (skill BRAND.email; per CLAUDE.md §1
+ *     this alias is the canonical for shipper/carrier-facing documents)
+ *   - "State of Michigan" — rendered in T&C governing-law clause
+ *   - "Kalamazoo County" — rendered in T&C venue clause
+ *
+ * "MC# 1794414" deliberately excluded per Sprint 45-RC D7 ratification —
+ * the skill BRAND.mc has the leading-zero typo ("01794414") which is a
+ * known Item 8.8 carry-forward. Item 8.8's dedicated sprint will close
+ * that across all 14 surfaces atomically, at which point this REQUIRED
+ * extends to include "MC# 1794414" (no leading zero).
  *
  * The FORBIDDEN list above stays strict — Sprint 30 retired the wrong
  * Texas-template values from the existing render code. Adding them back
  * is unambiguously a regression even before Item 48 ships.
  */
 export const RC_PDF_REQUIRED: string[] = [
-  "Silk Route Logistics Inc.",
+  // Sprint 45-RC (v3.8.abd) — case change: pre-migration legacy chrome
+  // rendered title case "Silk Route Logistics Inc."; post-migration skill
+  // chrome renders BRAND.legalName all-caps in header per skill canonical
+  // (drawHeaderFirstPage at srl-chrome.ts:254 + drawContinuationHeader
+  // at srl-chrome.ts:582). Both are the same legal entity; case is a
+  // typography choice the skill made for header visual hierarchy. Sprint 30
+  // canonical identity preserved via the all-caps form.
+  "SILK ROUTE LOGISTICS INC.",
   "Galesburg, MI 49053",
   "(269) 220-6760",
+  // Sprint 45-RC (v3.8.abd) extensions — Item 48 close
+  "DOT# 4526880",
+  "operations@silkroutelogistics.ai",
+  "State of Michigan",
+  "Kalamazoo County",
 ];
 
 /**

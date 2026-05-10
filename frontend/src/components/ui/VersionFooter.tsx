@@ -5895,7 +5895,112 @@
 //                Sprint 47+ mass-cleanup candidate)
 //              - Items 87 + 89 + 90 — STATUS UNCHANGED (deferred
 //                per Path α scope; not BKN-critical)
-export const SRL_VERSION = "3.8.abc";
+//
+// v3.8.abd — Sprint 45-RC — RC PDF Path β1 migration. Closes
+//            Item 48 (8 findings). Logs Item 93 + 94 OPEN.
+//
+//            ATOMIC 5-SUB-PHASE DELIVERY:
+//
+//            (Sub-phase 1) Skill chrome library imported into
+//            backend codebase: backend/src/lib/srl-chrome.ts
+//            (39,972 bytes, ~1230 LOC mirrored from
+//            .claude/skills/srl-brand-design/scripts/srl_chrome.ts
+//            at session HEAD; manually sync when skill ships
+//            canonical updates). 4 compass PNG fallbacks copied
+//            (60/120/240/480 px, ~143 KB binary). Sets up
+//            Sprint 45-RC2 (Invoice) + 45-RC3 (Settlement +
+//            ShipperLoadConf) reuse per D6 ratification.
+//
+//            (Sub-phase 2) generateEnhancedRateConfirmation
+//            rewritten — 273 LOC of legacy hand-built chrome
+//            replaced with ~250 LOC using skill chrome builders
+//            (drawHeaderFirstPage, drawMetaStrip, drawPartiesBlock,
+//            drawShipmentTable, drawRateBreakdown, drawLaneEconomics,
+//            drawEquipmentSpec, drawCarrierRequirements,
+//            drawRateConTerms, drawSignatureBlock with
+//            RATE_CON_SIGNATURE_ROLES, drawFooter,
+//            drawContinuationHeader). Other generators (BOL,
+//            Invoice, Settlement, ShipperLoadConf, generateBOL
+//            legacy, generateRateConfirmation legacy) untouched
+//            — those migrate in their dedicated sprints.
+//
+//            (Sub-phase 3) Build chain cp -r src/lib step added
+//            to render.yaml + CLAUDE.md §2.2 canonical (Sprint
+//            44b precedent: dashboard is canonical, render.yaml
+//            + CLAUDE.md are documentation mirrors). Pattern 6
+//            sub-rule c CATCH — directive's claim that
+//            package.json build script has cp -r src/assets +
+//            src/config already was wrong (those live in Render
+//            dashboard buildCommand, not package.json). Followed
+//            Sprint 44b precedent: kept package.json minimal,
+//            updated render.yaml + CLAUDE.md §2.2 only. Per D9
+//            deploy sequence: Wasi must update Render dashboard
+//            buildCommand BEFORE push or RC PDF runtime will 500
+//            on missing-PNG.
+//
+//            (Sub-phase 4) E2E RC_PDF_REQUIRED extended with 4
+//            strings per D8 (DOT# 4526880, operations@..., State
+//            of Michigan, Kalamazoo County). MC# excluded per D7
+//            (Item 8.8 leading-zero carry-forward, dedicated
+//            sprint).
+//
+//            8 FINDINGS RESOLVED:
+//              #1 phantom blanks (was 6 pages) → dynamic flow,
+//                 canonical 2-page layout
+//              #2 address duplicated → BRAND.address single-line
+//              #3 no QR → skill canonical confirmed (override
+//                 Item 48 line 7 per Phase A finding)
+//              #4 generic logo → skill compass mark via PNG
+//                 fallback
+//              #5 carrier section empty → moved to
+//                 RATE_CON_SIGNATURE_ROLES signature block
+//              #6 TOTAL bare → drawRateBreakdown +
+//                 drawLaneEconomics + drawRateConTerms
+//              #7 chrome drift → skill canonical Times-Bold +
+//                 Helvetica + #0A2540 navy + #C5A572/#BA7517
+//                 golds
+//              #8 rate-on-page-4 (Phase A2 pixel discovery) →
+//                 drawRateBreakdown ON PAGE 1 below parties
+//
+//            PATTERN 6 SUB-RULE C — TWO PROSPECTIVE FIRES IN
+//            SPRINT 45-RC PHASE B:
+//              (8) Phase A2 pixel verification surfaced finding
+//                  #8 (rate on page 4) that 7-finding code-side
+//                  audit predicted nothing about. New §19
+//                  observation: VISUAL audits require visual
+//                  capture; no shortcut via grep. Item 93 banks
+//                  this for §19 commentary.
+//              (9) Sub-phase 3 directive claim that package.json
+//                  has cp -r src/assets + src/config was wrong;
+//                  authoritative source (actual file) had only
+//                  prisma generate + tsc. Followed Sprint 44b
+//                  precedent: kept package.json minimal, updated
+//                  render.yaml + CLAUDE.md only. Cumulative arc
+//                  sub-rule c fire count rises to 9.
+//
+//            Pre-commit verification:
+//            - backend tsc --noEmit clean (incl. new src/lib/)
+//            - notificationService.test.ts: TBD locally
+//            - E2E full-lifecycle.spec: TBD locally with new
+//              REQUIRED extensions (4 strings)
+//
+//            Per §3.1 sequence-continuous: v3.8.abc → v3.8.abd.
+//
+//            §13.3:
+//              - Item 48 — LOGGED + CLOSED (RC PDF Path β1
+//                migration; 8 findings resolved)
+//              - Item 93 — LOGGED OPEN (Pattern 6 sub-rule c
+//                fire #8 — pixel-verification-as-audit-gate
+//                observation; §19 commentary)
+//              - Item 94 — LOGGED OPEN (drawPanel single-line
+//                limitation surfaced during rewrite — special
+//                instructions wrap manually inside cream-2
+//                frame; skill drawPanel uses lineBreak: false)
+//              - Item 8.8 — STATUS UNCHANGED (RC inherits
+//                leading-zero MC# per D7 carry-forward)
+//              - Items 87 + 89 + 90 + 92 — STATUS UNCHANGED
+//                (deferred per Sprint 45-RC scope discipline)
+export const SRL_VERSION = "3.8.abd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

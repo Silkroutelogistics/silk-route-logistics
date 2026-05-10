@@ -26,7 +26,7 @@ services:
     # catching silent-skip class regressions. See CLAUDE.md §2.2
     # "Production Deployment (Canonical)" for the schema mutation
     # path doc.
-    buildCommand: npm install && npm run build && npx prisma migrate deploy && npx prisma migrate status && cp -r src/assets dist/backend/src/assets && cp -r src/config dist/backend/src/config
+    buildCommand: npm install && npm run build && npx prisma migrate deploy && npx prisma migrate status && cp -r src/assets dist/backend/src/assets && cp -r src/config dist/backend/src/config && cp -r src/lib dist/backend/src/lib
     startCommand: node dist/backend/src/server.js
     healthCheckPath: /api/health
     envVars:
