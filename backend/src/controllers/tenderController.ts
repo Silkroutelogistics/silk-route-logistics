@@ -42,15 +42,14 @@ export async function createTender(req: AuthRequest, res: Response) {
     await hooks.run("PostLoadStateChange", { loadId: load.id, from: "POSTED", to: "TENDERED", actor: req.user!.id });
   }
 
-  await prisma.notification.create({
-    data: {
-      userId: carrier.userId,
-      type: "TENDER",
-      title: "New Load Tender",
-      message: `You have a new load tender: ${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState} at $${offeredRate}`,
-      actionUrl: `/dashboard/loads`,
-    },
-  });
+  // Sprint 45a (v3.8.abb) Item 80 — replaced manual prisma.notification.create
+  // with notifyTenderAction("OFFERED") which now does BOTH the in-app
+  // Notification record AND the carrier email fan-out (with AE CC) per Q1-Q5
+  // ratifications. Action URL was /dashboard/loads (wrong — that's AE-side);
+  // notifyTenderAction sets /carrier/dashboard/tenders correctly. Manual call
+  // also used type "TENDER" which isn't in NotificationType enum;
+  // notifyTenderAction uses canonical "TENDER_RECEIVED".
+  await notifyTenderAction(tender.id, "OFFERED");
 
   res.status(201).json({ ...tender, complianceWarnings: compliance.warnings.length > 0 ? compliance.warnings : undefined });
 }

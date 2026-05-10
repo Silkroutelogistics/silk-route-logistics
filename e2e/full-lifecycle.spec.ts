@@ -176,6 +176,29 @@ test.describe("Full Load Lifecycle E2E", () => {
     const { token: carrierToken } = await carrierTokenResp.json();
     const carrierAuthHeaders = { Authorization: `Bearer ${carrierToken}` };
 
+    // ─────────────────────────────────────────────────────────────────
+    // B6.5g — Sprint 45a (v3.8.abb) Item 80 close. notifyTenderAction
+    // ("OFFERED") fired by createTender must produce TENDER_RECEIVED
+    // in-app notification for the carrier. Email path runs in the
+    // no-API-key logging branch under E2E (RESEND_API_KEY="" in env);
+    // email shape verification lives in the notificationService.test.ts
+    // unit test under backend/__tests__/unit/services/. This assertion
+    // locks the notification record creation as regression-proof.
+    // ─────────────────────────────────────────────────────────────────
+    const notifResp = await request.get(`${BACKEND_API}/notifications`, {
+      headers: carrierAuthHeaders,
+    });
+    expect(notifResp.ok(), `B6.5g: GET /notifications must succeed for carrier`).toBeTruthy();
+    const notifPayload = await notifResp.json();
+    const notifs: any[] = Array.isArray(notifPayload)
+      ? notifPayload
+      : (notifPayload.notifications ?? notifPayload.items ?? notifPayload.data ?? []);
+    const tenderNotif = notifs.find((n: any) => n.type === "TENDER_RECEIVED");
+    expect(
+      tenderNotif,
+      `Sprint 45a Item 80: notifyTenderAction("OFFERED") must create a TENDER_RECEIVED notification for the carrier; saw types: ${notifs.map((n) => n.type).join(", ") || "(none)"}`
+    ).toBeTruthy();
+
     const acceptResp = await request.post(`${BACKEND_API}/tenders/${tender.id}/accept`, {
       headers: carrierAuthHeaders,
     });

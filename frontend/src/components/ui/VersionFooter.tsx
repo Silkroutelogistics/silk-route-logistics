@@ -5732,7 +5732,101 @@
 //                tender-expiry UX surface)
 //              - Item 79 — LOGGED OPEN (sub-rule c five-fire
 //                retrospective methodology observation)
-export const SRL_VERSION = "3.8.aba";
+//
+// v3.8.abb — Sprint 45a — TENDER NOTIFICATION FOUNDATION.
+//            Step 1 of the user's optimal workflow spec
+//            ("anytime tender gets sent out, carrier receives
+//            email"). Closes Item 80 + partially closes Item
+//            75. Logs Items 86 / 87 / 88 / 89 / 90 OPEN.
+//
+//            ATOMIC 4-SUB-PHASE COMMIT:
+//
+//            (Sub-phase 0) brand chrome reconciliation per D3
+//            Option B — emailService.ts wrap() updated to skill
+//            canonical per references/tokens.md (--navy #0A2540,
+//            --navy-700 #15365A, --gold #C5A572, --fg-on-navy-2
+//            #C9D2DE, --navy-100 #E2EAF2). 12 existing
+//            transactional emails silently inherit. Inline body
+//            styles in those 12 functions still drift — Item 88
+//            LOGGED OPEN, Sprint 47+ cleanup.
+//
+//            (Sub-phase 1) sendEmail() options gain cc?: string
+//            | string[]. Backwards compatible — all 12 existing
+//            callers unaffected.
+//
+//            (Sub-phase 2) Four new tender email functions:
+//            sendTenderOfferedEmail (carrier with AE CC, lane
+//            economics: $/mile + transit days per D5),
+//            sendTenderAcceptedEmail (AE-facing),
+//            sendTenderDeclinedEmail (AE-facing, conditional
+//            decline-reason rendering per D4),
+//            sendTenderExpiredEmail (AE-facing, defensive add
+//            for Sprint 45b cron handler). All use replyTo:
+//            operations@silkroutelogistics.ai per Q1 +
+//            --gold-dark #BA7517 CTA buttons per skill emphasis.
+//
+//            (Sub-phase 3) notifyTenderAction extended — EXPIRED
+//            added to action union; OFFERED/ACCEPTED/DECLINED/
+//            EXPIRED each fan out via Resend after the in-app
+//            createNotification() call. Carrier email
+//            resolution: carrierProfile.contactEmail || user
+//            .email (Q3 fallback chain matches 3 prior code
+//            precedents). createTender retires manual
+//            prisma.notification.create in favor of
+//            notifyTenderAction(tender.id, "OFFERED"). Wrong-
+//            type "TENDER" + wrong actionUrl /dashboard/loads
+//            both corrected (now "TENDER_RECEIVED" +
+//            /carrier/dashboard/tenders).
+//
+//            ARCHITECTURAL PATTERN ESTABLISHED — notify*Action()
+//            helpers do BOTH in-app AND email fan-out in one
+//            call. Future sprints retrofit other 14
+//            NotificationType enum values to this pattern (Item
+//            86 LOGGED OPEN, Sprint 50+ multi-day epic).
+//
+//            PATTERN 6 SUB-RULE C SIXTH + SEVENTH PROSPECTIVE
+//            FIRES — Phase A Q3 carrier email source PASS via 3
+//            independent prior code precedents converging on
+//            carrier.contactEmail || user.email (sub-rule a
+//            stability green-light). Phase B tender.declineReason
+//            CATCH — directive's `tender.declineReason ?? undefined`
+//            reference would have failed compile because
+//            LoadTender schema has no declineReason field
+//            (lives on WaterfallPosition + CarrierCallLog only).
+//            Resolved: pass undefined, document as Item 90.
+//
+//            Item 75 (Sprint 44c E2E coverage gap) PARTIALLY
+//            CLOSED — new B6.5g E2E assertion locks Notification
+//            row creation; new unit test (9 cases all green)
+//            locks email shape. Frontend modal Playwright walk
+//            still uncovered (residual Sprint 46+ candidate)
+//            but URL-drift class is now defended by code.
+//
+//            Pre-commit verification:
+//            - backend tsc --noEmit clean
+//            - notificationService.test.ts: 9/9 passed (13.87s)
+//            - E2E full-lifecycle.spec: TBD locally before push
+//
+//            Per §3.1 sequence-continuous: v3.8.aba → v3.8.abb.
+//
+//            §13.3:
+//              - Item 80 — LOGGED + CLOSED (tender notification
+//                fan-out shipped, architectural pattern set)
+//              - Item 75 — PARTIALLY CLOSED (B6.5g + unit test
+//                cover backend chain; frontend Playwright walk
+//                stays Sprint 46+ candidate)
+//              - Item 86 — LOGGED OPEN (notification fan-out
+//                class retrofit, 14 untreated NotificationTypes)
+//              - Item 87 — LOGGED OPEN (templates/emailTemplates
+//                .ts:30 footer reply contradiction with Q1)
+//              - Item 88 — LOGGED OPEN (transactional bodies
+//                inline-hardcode off-skill colors outside wrap)
+//              - Item 89 — LOGGED OPEN (counter-tender email
+//                deferred to Sprint 45b)
+//              - Item 90 — LOGGED OPEN (LoadTender.declineReason
+//                schema gap — schema.prisma + declineTender
+//                controller + carrier portal decline UI extension)
+export const SRL_VERSION = "3.8.abb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

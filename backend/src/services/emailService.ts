@@ -13,7 +13,7 @@ interface EmailAttachment {
   contentType?: string;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[], options?: { replyTo?: string; fromName?: string }): Promise<string | undefined> {
+export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[], options?: { replyTo?: string; fromName?: string; cc?: string | string[] }): Promise<string | undefined> {
   if (resend) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -21,6 +21,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
           from: `${options?.fromName || "Silk Route Logistics"} <${fromEmail}>`,
           replyTo: options?.replyTo || undefined,
           to,
+          cc: options?.cc || undefined,
           subject,
           html,
           headers: {
@@ -58,18 +59,32 @@ export async function sendEmail(to: string, subject: string, html: string, attac
   return undefined;
 }
 
+// Sprint 45a (v3.8.abb) — Brand chrome reconciled to srl-brand-design skill
+// canonical per references/tokens.md (Pattern 6 sub-rule c gated):
+//   --navy      #0A2540 (was #0f172a Tailwind slate-900)
+//   --navy-700  #15365A (was #1e293b Tailwind slate-800)
+//   --gold      #C5A572 (was #d4a574 off-canonical olive — STRUCTURAL role:
+//                        rules, dividers, header brand mark)
+//   --fg-on-navy-2 #C9D2DE (was #94a3b8 Tailwind slate-400 — footer muted on navy)
+//   --navy-100  #E2EAF2 (was #e2e8f0 Tailwind slate-200 — card hairline)
+//   #FFFFFF white card surface preserved per email-rendering best practices
+//   (cream #FBF7F0 renders inconsistently across Outlook/Gmail/Apple Mail).
+//
+// Inline body styles in the 12 transactional functions below still drift
+// (h2 #0f172a, CTA buttons #d4a574, status colors). Documented as §13.3
+// Item 88 LOG OPEN; out of Sprint 45a scope per §3.3 atomic-commit rule.
 const brandHeader = `
-  <div style="background:#0f172a;padding:24px;text-align:center;border-bottom:3px solid #d4a574">
-    <h1 style="color:#d4a574;margin:0;font-family:Georgia,serif">Silk Route Logistics</h1>
+  <div style="background:#0A2540;padding:24px;text-align:center;border-bottom:3px solid #C5A572">
+    <h1 style="color:#C5A572;margin:0;font-family:Georgia,serif">Silk Route Logistics</h1>
   </div>`;
 
 const brandFooter = `
-  <div style="background:#1e293b;padding:16px;text-align:center;color:#94a3b8;font-size:12px">
+  <div style="background:#15365A;padding:16px;text-align:center;color:#C9D2DE;font-size:12px">
     <p style="margin:0">Silk Route Logistics &bull; silkroutelogistics.ai</p>
   </div>`;
 
 export function wrap(body: string) {
-  return `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0">
+  return `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #E2EAF2">
     ${brandHeader}
     <div style="padding:24px">${body}</div>
     ${brandFooter}
@@ -439,4 +454,202 @@ export async function sendPasswordExpiryReminder(email: string, firstName: strin
   `);
 
   await sendEmail(email, `Password expires in ${daysLeft} days — Silk Route Logistics`, html);
+}
+
+// ─── Tender Notification Templates (Sprint 45a, v3.8.abb) ──────────────
+//
+// Carrier and AE-facing tender lifecycle emails. Use skill-canonical chrome
+// via wrap() (Sub-phase 0 reconciled in this commit) + skill-canonical
+// CTA color --gold-dark #BA7517 per references/tokens.md ("EMPHASIS — CTAs,
+// hover, labels"). Reply-To: operations@silkroutelogistics.ai per Q1
+// ratification — carrier replies route to the operations inbox.
+//
+// Subject convention per Q2: "Tender <Action>: {ref} ({origin} → {dest})"
+//
+// Carrier email source per Q3 (Pattern 6 sub-rule c gated): primary
+// carrierProfile.contactEmail, fallback user.email. Resolution happens at
+// the notifyTenderAction call site (notificationService.ts), not here.
+
+export interface TenderOfferedEmailParams {
+  to: string;
+  cc?: string;
+  ref: string;
+  originName: string;   // "San Diego, CA"
+  destName: string;     // "Northlake, TX"
+  rate: number;
+  expiresAt: Date | string;
+  equipment: string;
+  weight?: number | null;
+  milesEstimate?: number | null;
+  transitDays?: number | null;
+  dollarsPerMile?: number | null;
+  dispatchNotes?: string | null;
+}
+
+export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): Promise<string | undefined> {
+  const expiry = typeof params.expiresAt === "string" ? new Date(params.expiresAt) : params.expiresAt;
+  const expiryLabel = expiry.toLocaleString("en-US", {
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    hour12: true, timeZone: "America/New_York",
+  });
+  const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  // D5 — Lane economics: $/mile + transit days (broker industry standard)
+  const economicsRow = params.milesEstimate
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Miles</td><td style="padding:8px;border:1px solid #E2EAF2">${params.milesEstimate.toLocaleString()} mi${params.dollarsPerMile ? ` &middot; $${params.dollarsPerMile.toFixed(2)}/mi` : ""}</td></tr>`
+    : "";
+  const transitRow = params.transitDays
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Transit</td><td style="padding:8px;border:1px solid #E2EAF2">${params.transitDays.toFixed(1)} days</td></tr>`
+    : "";
+  const weightRow = params.weight
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Weight</td><td style="padding:8px;border:1px solid #E2EAF2">${params.weight.toLocaleString()} lbs</td></tr>`
+    : "";
+  const dispatchNotesBlock = params.dispatchNotes
+    ? `<p style="background:#FAEEDA;border-left:3px solid #BA7517;padding:12px;margin:16px 0;font-size:14px"><strong>Dispatch notes:</strong> ${params.dispatchNotes}</p>`
+    : "";
+
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">You've been offered a load</h2>
+    <p>A new tender is available for your fleet. Review the details below and respond before it expires.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #E2EAF2">${params.equipment}</td></tr>
+      ${weightRow}
+      ${economicsRow}
+      ${transitRow}
+      <tr style="background:#FAEEDA"><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;color:#BA7517">Offered Rate</td><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;font-size:16px;color:#0A2540">${rateFmt}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Expires</td><td style="padding:8px;border:1px solid #E2EAF2">${expiryLabel} ET</td></tr>
+    </table>
+    ${dispatchNotesBlock}
+    <p>Log in to your carrier portal to accept or decline. If you have questions, reply to this email and our operations team will respond.</p>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/tenders" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Tender</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Tender Offered: ${params.ref} (${params.originName} → ${params.destName})`,
+    html,
+    undefined,
+    {
+      replyTo: "operations@silkroutelogistics.ai",
+      cc: params.cc,
+    },
+  );
+}
+
+export interface TenderAcceptedEmailParams {
+  to: string;
+  ref: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+  rate: number;
+  dispatchTimeline?: string | null;
+}
+
+export async function sendTenderAcceptedEmail(params: TenderAcceptedEmailParams): Promise<string | undefined> {
+  const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const timelineBlock = params.dispatchTimeline
+    ? `<p style="margin:16px 0"><strong>Dispatch:</strong> ${params.dispatchTimeline}</p>`
+    : "";
+
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">Tender accepted by ${params.carrierName}</h2>
+    <p>The carrier has accepted your tender. The load is now <strong>BOOKED</strong> and ready for dispatch.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Carrier</td><td style="padding:8px;border:1px solid #E2EAF2">${params.carrierName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Rate</td><td style="padding:8px;border:1px solid #E2EAF2">${rateFmt}</td></tr>
+    </table>
+    ${timelineBlock}
+    <p>Track the load in real-time from the Track &amp; Trace tab.</p>
+    <a href="https://silkroutelogistics.ai/dashboard/track-trace" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Track &amp; Trace</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Tender Accepted: ${params.ref} (${params.carrierName})`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
+}
+
+export interface TenderDeclinedEmailParams {
+  to: string;
+  ref: string;
+  loadId: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+  rate: number;
+  declineReason?: string | null;
+}
+
+export async function sendTenderDeclinedEmail(params: TenderDeclinedEmailParams): Promise<string | undefined> {
+  const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  // D4 — Conditional decline reason rendering (only if non-null)
+  const reasonRow = params.declineReason
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reason</td><td style="padding:8px;border:1px solid #E2EAF2;color:#9B2C2C">${params.declineReason}</td></tr>`
+    : "";
+
+  const html = wrap(`
+    <h2 style="color:#9B2C2C;margin:0 0 16px">Tender declined by ${params.carrierName}</h2>
+    <p>The carrier has declined the tender. Re-tender to a different carrier or renegotiate.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Carrier</td><td style="padding:8px;border:1px solid #E2EAF2">${params.carrierName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Offered Rate</td><td style="padding:8px;border:1px solid #E2EAF2">${rateFmt}</td></tr>
+      ${reasonRow}
+    </table>
+    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Re-tender</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Tender Declined: ${params.ref} (${params.carrierName})`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
+}
+
+export interface TenderExpiredEmailParams {
+  to: string;
+  ref: string;
+  loadId: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+  rate: number;
+}
+
+// Defensive add for Sprint 45b cron-driven expiry handler (Item 80d).
+// Sprint 45a wires the email path so 45b only needs to fire the cron tick
+// + flip tender status to EXPIRED + call notifyTenderAction("EXPIRED").
+export async function sendTenderExpiredEmail(params: TenderExpiredEmailParams): Promise<string | undefined> {
+  const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  const html = wrap(`
+    <h2 style="color:#B07A1A;margin:0 0 16px">Tender expired</h2>
+    <p>The tender to <strong>${params.carrierName}</strong> expired without a response. Re-tender to another carrier to keep the load moving.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Carrier (no response)</td><td style="padding:8px;border:1px solid #E2EAF2">${params.carrierName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Offered Rate</td><td style="padding:8px;border:1px solid #E2EAF2">${rateFmt}</td></tr>
+    </table>
+    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Re-tender</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Tender Expired: ${params.ref}`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
 }
