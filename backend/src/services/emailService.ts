@@ -70,9 +70,35 @@ export async function sendEmail(to: string, subject: string, html: string, attac
 //   #FFFFFF white card surface preserved per email-rendering best practices
 //   (cream #FBF7F0 renders inconsistently across Outlook/Gmail/Apple Mail).
 //
-// Inline body styles in the 12 transactional functions below still drift
-// (h2 #0f172a, CTA buttons #d4a574, status colors). Documented as §13.3
-// Item 88 LOG OPEN; out of Sprint 45a scope per §3.3 atomic-commit rule.
+// Sprint 45-RC-PRE (v3.8.abc) — Item 88 close. Body color canonical applied
+// to all 15 legacy email function bodies via three sweeps:
+//   color:#0f172a → color:#0A2540 (h2 + body text — 21 occurrences;
+//     6 caught by the CTA compound sweep below, 15 standalone)
+//   #e2e8f0 → #E2EAF2 (table borders, dividers — 34 occurrences)
+//   background:#d4a574;color:#0f172a → background:#BA7517;color:#FFFFFF
+//     (CTA buttons — 6 occurrences; --gold-dark emphasis per skill canonical)
+// Status colors (#dc2626 / #22c55e / #f59e0b / #3b82f6) DELIBERATELY
+// preserved as Tailwind per Sprint 45-RC-PRE D2 — functional legibility
+// of alert signals beats brand-token consistency on status semantics.
+//
+// Item 91 close — carrier-facing URLs aligned to /carrier/dashboard/* per
+// Sprint 44c precedent (sendPreTracingEmail "Update Status",
+// sendAutoInvoiceEmail "View Invoice", sendRateConfirmationEmail "View in
+// Dashboard"). AE-facing URLs (sendLateAlertEmail tracking,
+// sendRiskAlertEmail / sendFallOffAlertEmail /ae/loads.html) preserved at
+// AE Console paths per audience-routing canonical.
+//
+// Item 92 LOG OPEN — residual off-skill hex codes + URL surfaces outside
+// directive scope, surfaced via Pattern 7 always-fire enumeration:
+//   - #d4a574 standalone border in sendOtpEmail OTP code display
+//   - #94a3b8 muted paragraph text in sendQpVarianceReport +
+//     sendPasswordReset
+//   - #f1f5f9 OTP code background card surface
+//   - /ae/loads.html legacy AE HTML paths in sendRiskAlertEmail +
+//     sendFallOffAlertEmail (separate AE Console URL canonical class)
+//   - sendPasswordExpiryReminder /dashboard/settings — recipient role
+//     unknown; requires per-recipient routing
+// Surface for Sprint 47+ mass-cleanup; not BKN-blocking.
 const brandHeader = `
   <div style="background:#0A2540;padding:24px;text-align:center;border-bottom:3px solid #C5A572">
     <h1 style="color:#C5A572;margin:0;font-family:Georgia,serif">Silk Route Logistics</h1>
@@ -102,16 +128,16 @@ export async function sendPreTracingEmail(
 ) {
   const timeLabel = hoursUntilPickup <= 24 ? "24 hours" : "48 hours";
   const html = wrap(`
-    <h2 style="color:#0f172a">Pre-Tracing Update Required</h2>
+    <h2 style="color:#0A2540">Pre-Tracing Update Required</h2>
     <p>Hi ${carrierName},</p>
     <p>Your pickup for load <strong>${loadRef}</strong> is in approximately <strong>${timeLabel}</strong>.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Origin</td><td style="padding:8px;border:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Destination</td><td style="padding:8px;border:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Pickup Date</td><td style="padding:8px;border:1px solid #e2e8f0">${pickupDate.toLocaleDateString()}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Origin</td><td style="padding:8px;border:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Destination</td><td style="padding:8px;border:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Pickup Date</td><td style="padding:8px;border:1px solid #E2EAF2">${pickupDate.toLocaleDateString()}</td></tr>
     </table>
     <p><strong>Are you on time for pickup?</strong> Please log in to update your status.</p>
-    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Update Status</a>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Update Status</a>
   `);
 
   await sendEmail(carrierEmail, `Pre-Tracing: Load ${loadRef} pickup in ${timeLabel}`, html);
@@ -125,15 +151,15 @@ export async function sendAutoInvoiceEmail(
   amount: number,
 ) {
   const html = wrap(`
-    <h2 style="color:#0f172a">Invoice Auto-Generated</h2>
+    <h2 style="color:#0A2540">Invoice Auto-Generated</h2>
     <p>Hi ${carrierName},</p>
     <p>Load <strong>${loadRef}</strong> has been delivered. An invoice has been automatically generated:</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Invoice #</td><td style="padding:8px;border:1px solid #e2e8f0">${invoiceNumber}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Amount</td><td style="padding:8px;border:1px solid #e2e8f0">$${amount.toLocaleString()}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Due Date</td><td style="padding:8px;border:1px solid #e2e8f0">Net 30</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Invoice #</td><td style="padding:8px;border:1px solid #E2EAF2">${invoiceNumber}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Amount</td><td style="padding:8px;border:1px solid #E2EAF2">$${amount.toLocaleString()}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Due Date</td><td style="padding:8px;border:1px solid #E2EAF2">Net 30</td></tr>
     </table>
-    <a href="https://silkroutelogistics.ai/dashboard/invoices" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Invoice</a>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/invoices" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Invoice</a>
   `);
 
   await sendEmail(carrierEmail, `Invoice ${invoiceNumber} generated for load ${loadRef}`, html);
@@ -152,8 +178,8 @@ export async function sendLateAlertEmail(
     <p>Hi ${brokerName},</p>
     <p>Shipment <strong>${shipmentNumber}</strong> (Load ${loadRef}) has not reported movement in <strong>${Math.round(hoursSinceUpdate)} hours</strong>.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Last Known Location</td><td style="padding:8px;border:1px solid #e2e8f0">${lastLocation || "Unknown"}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Hours Since Update</td><td style="padding:8px;border:1px solid #e2e8f0">${Math.round(hoursSinceUpdate)}h</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Last Known Location</td><td style="padding:8px;border:1px solid #E2EAF2">${lastLocation || "Unknown"}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Hours Since Update</td><td style="padding:8px;border:1px solid #E2EAF2">${Math.round(hoursSinceUpdate)}h</td></tr>
     </table>
     <p>Please contact the carrier immediately to confirm load status.</p>
     <a href="https://silkroutelogistics.ai/dashboard/tracking" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Track & Trace</a>
@@ -164,11 +190,11 @@ export async function sendLateAlertEmail(
 
 export async function sendOtpEmail(email: string, firstName: string, code: string) {
   const html = wrap(`
-    <h2 style="color:#0f172a">Your Verification Code</h2>
+    <h2 style="color:#0A2540">Your Verification Code</h2>
     <p>Hi ${firstName},</p>
     <p>Use the following code to complete your sign-in:</p>
     <div style="text-align:center;margin:24px 0">
-      <div style="display:inline-block;background:#f1f5f9;border:2px solid #d4a574;border-radius:12px;padding:16px 32px;letter-spacing:12px;font-size:36px;font-family:'Courier New',monospace;font-weight:bold;color:#0f172a">${code}</div>
+      <div style="display:inline-block;background:#f1f5f9;border:2px solid #d4a574;border-radius:12px;padding:16px 32px;letter-spacing:12px;font-size:36px;font-family:'Courier New',monospace;font-weight:bold;color:#0A2540">${code}</div>
     </div>
     <p style="color:#64748b;font-size:14px">This code expires in <strong>5 minutes</strong>. If you didn't request this, please ignore this email.</p>
   `);
@@ -203,7 +229,7 @@ export async function sendQpVarianceReport(summary: {
     : "";
 
   const html = wrap(`
-    <h2 style="color:#0f172a">Quick Pay Override Variance — ${periodLabel}</h2>
+    <h2 style="color:#0A2540">Quick Pay Override Variance — ${periodLabel}</h2>
     ${banner}
     <p>Monthly summary of per-load QP fee overrides (${summary.periodStart.toDateString()} → ${summary.periodEnd.toDateString()}).</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
@@ -213,9 +239,9 @@ export async function sendQpVarianceReport(summary: {
       <tr><td style="padding:6px 12px;color:#64748b">Monthly QP revenue</td><td style="padding:6px 12px;text-align:right;font-weight:600">${fmtUsd(summary.monthlyQpRevenueUsd)}</td></tr>
       <tr><td style="padding:6px 12px;color:#64748b">Variance as % of revenue</td><td style="padding:6px 12px;text-align:right;font-weight:600">${fmtPct(summary.variancePctOfRevenue)}</td></tr>
     </table>
-    <h3 style="color:#0f172a;margin-top:24px">Breakdown by reason</h3>
+    <h3 style="color:#0A2540;margin-top:24px">Breakdown by reason</h3>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <tr style="border-bottom:2px solid #e2e8f0"><th style="padding:8px 12px;text-align:left">Reason</th><th style="padding:8px 12px;text-align:right">Count</th></tr>
+      <tr style="border-bottom:2px solid #E2EAF2"><th style="padding:8px 12px;text-align:left">Reason</th><th style="padding:8px 12px;text-align:right">Count</th></tr>
       ${reasonRows}
     </table>
     <p style="color:#94a3b8;font-size:12px;margin-top:24px">Report generated by Silk Route Logistics variance cron. Audit-only — no action required unless the REVIEW SUGGESTED banner is present.</p>
@@ -226,11 +252,11 @@ export async function sendQpVarianceReport(summary: {
 
 export async function sendPasswordResetEmail(email: string, firstName: string, resetUrl: string) {
   const html = wrap(`
-    <h2 style="color:#0f172a">Reset Your Password</h2>
+    <h2 style="color:#0A2540">Reset Your Password</h2>
     <p>Hi ${firstName},</p>
     <p>We received a request to reset your password. Click the button below to choose a new one:</p>
     <div style="text-align:center;margin:24px 0">
-      <a href="${resetUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Reset Password</a>
+      <a href="${resetUrl}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Reset Password</a>
     </div>
     <p style="color:#64748b;font-size:14px">This link expires in <strong>30 minutes</strong>. If you didn't request this, you can safely ignore this email.</p>
     <p style="color:#94a3b8;font-size:12px;margin-top:16px;word-break:break-all">Or copy this link: ${resetUrl}</p>
@@ -247,16 +273,16 @@ export async function sendRateConfirmationEmail(
   customMessage?: string,
 ) {
   const html = wrap(`
-    <h2 style="color:#0f172a">Rate Confirmation — Load ${loadRef}</h2>
+    <h2 style="color:#0A2540">Rate Confirmation — Load ${loadRef}</h2>
     <p>Hi ${carrierName},</p>
     ${customMessage ? `<p>${customMessage}</p>` : ""}
     <p>Please find the attached Rate Confirmation for load <strong>${loadRef}</strong>.</p>
     <p>Review the details and sign the document to confirm acceptance of this load.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Load Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${loadRef}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Load Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${loadRef}</td></tr>
     </table>
     <p>If you have any questions, please contact your dispatcher or reply to this email.</p>
-    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>
   `);
 
   await sendEmail(
@@ -277,7 +303,7 @@ export async function sendRiskAlertEmail(
   risk: { score: number; level: string; factors: { factor: string; points: number; description: string }[] },
 ) {
   const factorRows = risk.factors.map(
-    (f) => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${f.description}</td><td style="padding:8px;border:1px solid #e2e8f0;text-align:center;font-weight:bold;color:#dc2626">+${f.points}</td></tr>`
+    (f) => `<tr><td style="padding:8px;border:1px solid #E2EAF2">${f.description}</td><td style="padding:8px;border:1px solid #E2EAF2;text-align:center;font-weight:bold;color:#dc2626">+${f.points}</td></tr>`
   ).join("");
 
   const html = wrap(`
@@ -285,7 +311,7 @@ export async function sendRiskAlertEmail(
     <p>Hi ${brokerName},</p>
     <p>Load <strong>${loadRef}</strong> has been flagged with a <strong style="color:#dc2626">RED risk level</strong> (score: ${risk.score}).</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr style="background:#fef2f2"><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Risk Factor</th><th style="padding:8px;border:1px solid #e2e8f0;width:60px">Points</th></tr>
+      <tr style="background:#fef2f2"><th style="padding:8px;border:1px solid #E2EAF2;text-align:left">Risk Factor</th><th style="padding:8px;border:1px solid #E2EAF2;width:60px">Points</th></tr>
       ${factorRows}
     </table>
     <p><strong>Immediate action required.</strong> Review the load and take corrective measures.</p>
@@ -311,8 +337,8 @@ export async function sendFallOffAlertEmail(
     <p>Hi ${brokerName},</p>
     <p><strong>${carrierName}</strong> has fallen off load <strong>${loadRef}</strong>.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Status</td><td style="padding:8px;border:1px solid #e2e8f0;color:#dc2626;font-weight:bold">Recovery In Progress</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #E2EAF2">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Status</td><td style="padding:8px;border:1px solid #E2EAF2;color:#dc2626;font-weight:bold">Recovery In Progress</td></tr>
     </table>
     <p>The system is automatically contacting backup carriers. Monitor the load board for updates.</p>
     <a href="https://silkroutelogistics.ai/ae/loads.html" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Load Board</a>
@@ -342,14 +368,14 @@ export async function sendSequenceEmail(
 
 export function shipperPickupHtml(loadRef: string, origin: string, dest: string, carrierName: string, eta: string) {
   return wrap(`
-    <h2 style="color:#0f172a">Shipment Picked Up</h2>
+    <h2 style="color:#0A2540">Shipment Picked Up</h2>
     <p>Your shipment <strong>${loadRef}</strong> has been picked up and is now in transit.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${loadRef}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Origin</td><td style="padding:8px;border:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Destination</td><td style="padding:8px;border:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Carrier</td><td style="padding:8px;border:1px solid #e2e8f0">${carrierName}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">ETA</td><td style="padding:8px;border:1px solid #e2e8f0">${eta}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${loadRef}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Origin</td><td style="padding:8px;border:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Destination</td><td style="padding:8px;border:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Carrier</td><td style="padding:8px;border:1px solid #E2EAF2">${carrierName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">ETA</td><td style="padding:8px;border:1px solid #E2EAF2">${eta}</td></tr>
     </table>
     <p>You will receive regular transit updates throughout the journey.</p>
   `);
@@ -361,28 +387,28 @@ export function shipperTransitHtml(
   checkCalls: { location: string; status: string; createdAt: string }[],
 ) {
   const ccRows = checkCalls.map(
-    (cc) => `<tr><td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:13px">${cc.createdAt}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:13px">${cc.location || "—"}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:13px">${cc.status}</td></tr>`
+    (cc) => `<tr><td style="padding:6px 8px;border:1px solid #E2EAF2;font-size:13px">${cc.createdAt}</td><td style="padding:6px 8px;border:1px solid #E2EAF2;font-size:13px">${cc.location || "—"}</td><td style="padding:6px 8px;border:1px solid #E2EAF2;font-size:13px">${cc.status}</td></tr>`
   ).join("");
 
   const barColor = percentComplete >= 75 ? "#22c55e" : percentComplete >= 40 ? "#f59e0b" : "#3b82f6";
   return wrap(`
-    <h2 style="color:#0f172a">Transit Update — ${loadRef}</h2>
+    <h2 style="color:#0A2540">Transit Update — ${loadRef}</h2>
     <p>Here is the latest tracking update for your shipment.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Current Location</td><td style="padding:8px;border:1px solid #e2e8f0">${lastLocation}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">ETA</td><td style="padding:8px;border:1px solid #e2e8f0">${etaStr}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #E2EAF2">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Current Location</td><td style="padding:8px;border:1px solid #E2EAF2">${lastLocation}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">ETA</td><td style="padding:8px;border:1px solid #E2EAF2">${etaStr}</td></tr>
     </table>
     <div style="margin:16px 0">
       <div style="font-size:13px;font-weight:bold;margin-bottom:4px">Progress: ${percentComplete}%</div>
-      <div style="background:#e2e8f0;border-radius:8px;height:12px;overflow:hidden">
+      <div style="background:#E2EAF2;border-radius:8px;height:12px;overflow:hidden">
         <div style="background:${barColor};height:100%;width:${percentComplete}%;border-radius:8px"></div>
       </div>
     </div>
     ${checkCalls.length > 0 ? `
-    <h3 style="color:#0f172a;font-size:14px;margin-top:20px">Recent Check Calls</h3>
+    <h3 style="color:#0A2540;font-size:14px;margin-top:20px">Recent Check Calls</h3>
     <table style="width:100%;border-collapse:collapse;margin:8px 0">
-      <tr style="background:#f8fafc"><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;font-size:12px">Time</th><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;font-size:12px">Location</th><th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left;font-size:12px">Status</th></tr>
+      <tr style="background:#f8fafc"><th style="padding:6px 8px;border:1px solid #E2EAF2;text-align:left;font-size:12px">Time</th><th style="padding:6px 8px;border:1px solid #E2EAF2;text-align:left;font-size:12px">Location</th><th style="padding:6px 8px;border:1px solid #E2EAF2;text-align:left;font-size:12px">Status</th></tr>
       ${ccRows}
     </table>` : ""}
   `);
@@ -393,9 +419,9 @@ export function shipperDeliveryHtml(loadRef: string, origin: string, dest: strin
     <h2 style="color:#22c55e">Shipment Delivered</h2>
     <p>Your shipment <strong>${loadRef}</strong> has been delivered successfully.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${loadRef}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${origin} → ${dest}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Delivered At</td><td style="padding:8px;border:1px solid #e2e8f0">${deliveredAt}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${loadRef}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #E2EAF2">${origin} → ${dest}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Delivered At</td><td style="padding:8px;border:1px solid #E2EAF2">${deliveredAt}</td></tr>
     </table>
     <p>Proof of Delivery (POD) will be sent to you once it has been validated.</p>
   `);
@@ -403,10 +429,10 @@ export function shipperDeliveryHtml(loadRef: string, origin: string, dest: strin
 
 export function shipperPODHtml(loadRef: string, podUrl: string) {
   return wrap(`
-    <h2 style="color:#0f172a">Proof of Delivery Available — ${loadRef}</h2>
+    <h2 style="color:#0A2540">Proof of Delivery Available — ${loadRef}</h2>
     <p>The Proof of Delivery for shipment <strong>${loadRef}</strong> has been validated and is now available.</p>
     <div style="text-align:center;margin:24px 0">
-      <a href="${podUrl}" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Download POD</a>
+      <a href="${podUrl}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Download POD</a>
     </div>
     <p style="color:#64748b;font-size:13px">If you have any questions about this delivery, please contact your account representative.</p>
   `);
@@ -424,17 +450,17 @@ export async function sendRemittanceEmail(carrierEmail: string, data: {
   estimatedArrival: string;
 }) {
   const html = wrap(`
-    <h2 style="color:#0f172a">Payment Remittance</h2>
+    <h2 style="color:#0A2540">Payment Remittance</h2>
     <p>Hi ${data.carrierName},</p>
     <p>Payment processed for Load <strong>${data.loadRef}</strong> (${data.lane}):</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Gross Amount</td><td style="padding:8px;border:1px solid #e2e8f0">$${data.grossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Quick Pay Fee (${data.qpFeeRate}%)</td><td style="padding:8px;border:1px solid #e2e8f0;color:#dc2626">-$${data.qpFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
-      <tr style="background:#f0fdf4"><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;font-size:16px">Net Payment</td><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold;font-size:16px;color:#22c55e">$${data.netPayment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Gross Amount</td><td style="padding:8px;border:1px solid #E2EAF2">$${data.grossAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Quick Pay Fee (${data.qpFeeRate}%)</td><td style="padding:8px;border:1px solid #E2EAF2;color:#dc2626">-$${data.qpFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr style="background:#f0fdf4"><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold;font-size:16px">Net Payment</td><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold;font-size:16px;color:#22c55e">$${data.netPayment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
     </table>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Payment Method</td><td style="padding:8px;border:1px solid #e2e8f0">${data.paymentMethod}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Estimated Arrival</td><td style="padding:8px;border:1px solid #e2e8f0">${data.estimatedArrival}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Payment Method</td><td style="padding:8px;border:1px solid #E2EAF2">${data.paymentMethod}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Estimated Arrival</td><td style="padding:8px;border:1px solid #E2EAF2">${data.estimatedArrival}</td></tr>
     </table>
     <p style="color:#64748b;font-size:14px">Thank you for hauling with Silk Route Logistics.</p>
   `);
@@ -449,7 +475,7 @@ export async function sendPasswordExpiryReminder(email: string, firstName: strin
     <p>Hi ${firstName},</p>
     <p>Your Silk Route Logistics password will expire in <strong style="color:${urgency}">${daysLeft} day${daysLeft !== 1 ? "s" : ""}</strong>.</p>
     <p>Please update your password before it expires to avoid being locked out.</p>
-    <a href="https://silkroutelogistics.ai/dashboard/settings" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Change Password</a>
+    <a href="https://silkroutelogistics.ai/dashboard/settings" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Change Password</a>
     <p style="color:#64748b;font-size:13px;margin-top:16px">If your password expires, you'll be prompted to create a new one at your next login.</p>
   `);
 

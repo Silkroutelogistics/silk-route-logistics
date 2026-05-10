@@ -5826,7 +5826,76 @@
 //              - Item 90 — LOGGED OPEN (LoadTender.declineReason
 //                schema gap — schema.prisma + declineTender
 //                controller + carrier portal decline UI extension)
-export const SRL_VERSION = "3.8.abb";
+//
+// v3.8.abc — Sprint 45-RC-PRE — Path α email body canonical update
+//            + URL drift fix. Closes Items 88 + 91. Logs Item 92
+//            OPEN.
+//
+//            METHODOLOGY CORRECTION (no sub-rule c regression):
+//            previously framed as Sprint 45a sub-rule c regression;
+//            audit-first methodology corrected — Sprint 45a
+//            explicitly deferred body chrome per §3.3 atomic-commit
+//            rule (Item 88 logged at emailService.ts:73-75 in
+//            commit 165eb1d). Sprint 45-RC-PRE is the deferred
+//            scope picking up. Cumulative session arc sub-rule c
+//            fire count remains 7, NOT 8.
+//
+//            ATOMIC SUB-PHASES:
+//
+//            (Sub-phase 1) Body color canonical sweeps across 15
+//            legacy email bodies in emailService.ts:
+//              color:#0f172a → color:#0A2540  (21 occurrences;
+//                6 caught by CTA compound, 15 standalone — h2 +
+//                body text accent)
+//              #e2e8f0 → #E2EAF2  (34 occurrences — table borders,
+//                dividers)
+//              background:#d4a574;color:#0f172a → background:#BA7517;
+//                color:#FFFFFF  (6 occurrences — CTA buttons,
+//                --gold-dark emphasis per skill canonical)
+//            55 hex transitions total. Status colors (Tailwind
+//            #dc2626 / #22c55e / #f59e0b / #3b82f6) DELIBERATELY
+//            preserved per D2 — functional legibility wins over
+//            brand-token consistency on alert signals.
+//
+//            (Sub-phase 2) Carrier-facing URL drift fix per Sprint
+//            44c precedent + D3 ratification:
+//              sendPreTracingEmail "Update Status"
+//                /dashboard/loads → /carrier/dashboard/loads
+//              sendAutoInvoiceEmail "View Invoice"
+//                /dashboard/invoices → /carrier/dashboard/invoices
+//              sendRateConfirmationEmail "View in Dashboard"
+//                /dashboard/loads → /carrier/dashboard/loads
+//            AE-facing URLs (sendLateAlertEmail tracking,
+//            sendRiskAlertEmail / sendFallOffAlertEmail
+//            /ae/loads.html, Sprint 45a tender 3 AE-facing CTAs)
+//            preserved per audience-routing canonical.
+//
+//            PATTERN 7 ALWAYS-FIRE — URL drift class enumeration
+//            surfaced 5 residual surfaces logged as Item 92 (OTP
+//            border #d4a574, muted text #94a3b8, OTP bg #f1f5f9,
+//            /ae/loads.html legacy paths, sendPasswordExpiryReminder
+//            recipient-role-dependent /dashboard/settings).
+//
+//            Pre-commit verification:
+//            - backend tsc --noEmit clean
+//            - notificationService.test.ts: 9/9 passed (13.95s)
+//            - E2E full-lifecycle.spec: TBD locally before push
+//
+//            Per §3.1 sequence-continuous: v3.8.abb → v3.8.abc.
+//
+//            §13.3:
+//              - Item 88 — LOGGED + CLOSED (15 legacy email body
+//                colors aligned to skill canonical via 55 hex
+//                transitions across 3 sweeps)
+//              - Item 91 — LOGGED + CLOSED (carrier-facing CTA
+//                URLs aligned /carrier/dashboard/* per Sprint 44c
+//                precedent — 3 functions touched)
+//              - Item 92 — LOGGED OPEN (residual non-directive-
+//                scope drift: 3 hex codes + 2 URL surfaces;
+//                Sprint 47+ mass-cleanup candidate)
+//              - Items 87 + 89 + 90 — STATUS UNCHANGED (deferred
+//                per Path α scope; not BKN-critical)
+export const SRL_VERSION = "3.8.abc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
