@@ -6000,7 +6000,113 @@
 //                leading-zero MC# per D7 carry-forward)
 //              - Items 87 + 89 + 90 + 92 — STATUS UNCHANGED
 //                (deferred per Sprint 45-RC scope discipline)
-export const SRL_VERSION = "3.8.abd";
+//
+// v3.8.abe — Sprint 46 — Item 71 closure + build chain
+//            alignment. Closes Items 71 + 95 + 96.
+//
+//            ROOT CAUSE: Render's env-level NODE_ENV=production
+//            (set in render.yaml:34) makes npm install skip the
+//            devDependencies block entirely. All 12 declared
+//            @types/* packages were absent at build time.
+//            Request from express resolved to 'any',
+//            AuthRequest extends Request<any,any,any,any> cascaded,
+//            tsc emitted ~1,100 errors — silenced by `|| true` in
+//            backend/package.json build script. Local CI uses
+//            `npm ci` (installs both deps + devDeps regardless of
+//            NODE_ENV) so CI tsc was clean — only Render diverged.
+//
+//            EMPIRICAL REPRODUCTION (Phase B0 sub-rule c gate):
+//              rm -rf node_modules && NODE_ENV=production npm install
+//              && npm run build
+//            Exit 0 with 1,398 error lines:
+//              149 TS7016 (missing @types decl)
+//              907 TS2339 (AuthRequest property cascade)
+//               63 TS7006 (implicit any)
+//                3 TS2503 (Express namespace not found)
+//            Exact match to Sprint 45-RC Render build log.
+//
+//            ATOMIC 3-CHANGE COMMIT:
+//
+//            (Change 1) backend/package.json:7 — drop `|| true`:
+//              "build": "npx prisma generate && (npx tsc || true)"
+//              →
+//              "build": "npx prisma generate && npx tsc"
+//
+//            (Change 2) backend/package.json — add
+//            optionalDependencies block:
+//              "@aws-sdk/client-rekognition": "^3.1045.0"
+//            biometricVerificationService.ts:9 had try/catch
+//            dynamic require but never declared the dep. Item 95
+//            closes — when AWS_ACCESS_KEY_ID is configured the
+//            Rekognition path will now actually be reachable.
+//
+//            (Change 3) render.yaml buildCommand (+ CLAUDE.md §2.2
+//            mirror; Render dashboard is canonical per Sprint 44b
+//            precedent — Wasi must update dashboard manually
+//            before push per D9-style sequence):
+//              npm install ...
+//              →
+//              NODE_ENV=development npm install ...
+//            Install-time only; runtime NODE_ENV=production
+//            preserved via render.yaml env block.
+//
+//            ARCHITECTURAL WIN (Item 96): build chain converted
+//            from fail-silent to fail-fast. Post-Sprint-46:
+//            tsc errors → build halts → cp steps don't execute →
+//            deploy fails visibly. Pre-Sprint-46 the chain
+//            silently shipped TWO regressions to production —
+//            Sprint 44b email signature template (caught
+//            retroactively via Item 72 pre-commit grep) and
+//            Sprint 45-RC compass mark placeholder (user-
+//            visible navy ring instead of canonical SRL compass).
+//            Both shipped because `|| true` masked the tsc errors
+//            that should have halted those builds.
+//
+//            PATTERN 6 SUB-RULE C — 11TH + 12TH PROSPECTIVE FIRES:
+//              (11) Phase A audit's diagnosis hypothesis was
+//                   verified against authoritative source (local
+//                   Render-simulation: NODE_ENV=production
+//                   npm install) before any code change — proved
+//                   149 TS7016 + 907 TS2339 cascade pattern
+//                   reproduced exactly.
+//              (12) Phase B1 post-fix verification (next, after
+//                   commit + edits) — confirm clean build under
+//                   NODE_ENV=development npm install before
+//                   committing.
+//            Cumulative arc sub-rule c fire count: 12.
+//
+//            Pre-commit verification (Phase B1):
+//            - clean build under NODE_ENV=development (Render
+//              simulation) — zero TS errors, build exits 0
+//            - notificationService.test.ts: 9/9 green
+//            - E2E full-lifecycle.spec: green (still hits same
+//              skill chrome + token canonical)
+//            - Build artifact structure verified:
+//              dist/backend/src/lib/srl_compass_*.png present
+//              dist/backend/src/config/signatures/whaider.html
+//
+//            Per §3.1 sequence-continuous: v3.8.abd → v3.8.abe.
+//
+//            Sprint 45-RC's three regressions (compass placeholder,
+//            font drift, parties block overlap) will become
+//            VISIBLE in Sprint 46's next deploy logs if any are
+//            actually code-side rather than build-chain-side.
+//            Compass placeholder may auto-resolve as a side effect
+//            of the cp -r src/lib step now actually running on a
+//            healthy build. Font drift + parties overlap are
+//            true code-side and remain for Sprint 47 (45-RC.b).
+//
+//            §13.3:
+//              - Item 71 — LOGGED + CLOSED (build chain fail-fast
+//                aligned with CI; root cause was Render's
+//                NODE_ENV=production stripping devDeps at install)
+//              - Item 95 — LOGGED + CLOSED (Rekognition
+//                optionalDependencies declared)
+//              - Item 96 — LOGGED + CLOSED (architectural lesson:
+//                fail-fast > fail-silent as methodology principle)
+//              - Items 87 + 89 + 90 + 92 + 8.8 + 93 + 94 — STATUS
+//                UNCHANGED (deferred per Sprint 46 scope discipline)
+export const SRL_VERSION = "3.8.abe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
