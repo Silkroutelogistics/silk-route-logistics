@@ -41,6 +41,7 @@ import {
   type CarrierRequirements,
   type RateConTerms,
 } from "../lib/srl-chrome";
+import { rcVerifyToken } from "../controllers/verifyController";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -1303,6 +1304,10 @@ export function getMileageFootnote(source?: string): string | null {
 // ─── Enhanced Multi-Page Rate Confirmation ───────────────────
 
 interface EnhancedRCLoadData {
+  // Sprint 51 (Item 129) — id required for RC verification URL token derivation.
+  // Pre-Sprint-51 the generator only needed referenceNumber; the verifier needs
+  // both (id + referenceNumber + salt) to hash-match against stored loads.
+  id?: string;
   referenceNumber: string;
   originCity: string; originState: string; originZip: string;
   destCity: string; destState: string; destZip: string;
@@ -1414,6 +1419,20 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     y += 12;
   }
 
+  // Sprint 51 (Item 129) — RC verification URL anti-fraud header sub-line.
+  // FreightWaves 2026 fake-rate-con pattern: carriers receive thousands of
+  // phishing RCs impersonating legitimate brokers; surfacing the verification
+  // URL lets honest carriers confirm authenticity before committing the load.
+  // Token is deterministic SHA-256 hash of (load.id + refNum + salt) — see
+  // verifyController.rcVerifyToken. Hash-scan-lookup on backend; Item 146
+  // tracks the O(1) schema-field migration when load volume reaches ~10K.
+  if (load.id) {
+    const verifyToken = rcVerifyToken({ id: load.id, referenceNumber: load.referenceNumber });
+    doc.font(FONT_BODY, 7.5).fillColor(TOKENS.goldDark);
+    doc.text(`Verify this RC: silkroutelogistics.ai/verify/${verifyToken}`, MARGIN, y - 2, { lineBreak: false });
+    y += 12;
+  }
+
   // Meta strip — Sprint 49 (Item 117) extended 6 → 8 cells. PICKUP # and PO #
   // render conditionally (empty string passed when null/empty so the cell shows
   // em-dash per drawMetaStrip skill canonical, instead of orphan labels).
@@ -1424,6 +1443,11 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const equipment = fd.equipmentType || load.equipmentType || "—";
   const qpTier = fd.carrierPaymentTier || "—";
   const termsLabel = fd.paymentTerms || "Net-30";
+  // Sprint 51 (Item 134 α) — Quick Pay meta strip cell: render "Standard Net-30"
+  // as a non-em-dash fallback when no Caravan tier is set. Communicates default
+  // payment terms instead of leaving the cell ambiguous. Pairs with Item 134 γ
+  // nudge panel swap on the rate breakdown area.
+  const qpCellValue = qpTier !== "—" ? qpTier : "Standard Net-30";
   const pickupNumStr = fd.pickupNumber || load.pickupNumber || "";
   const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || load.shipperPoNumber || "";
 
@@ -1434,7 +1458,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "DELIVERY": deliveryStr,
     "PICKUP #": pickupNumStr,
     "PO #": poNumStr,
-    "QUICK PAY": qpTier,
+    "QUICK PAY": qpCellValue,
     "TERMS": termsLabel,
   }, y - 4);
 
@@ -1645,22 +1669,27 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     PLATINUM: { netDays: 14, sevenDay: 1, sameDay: 3 },
   };
   const tierData = tierUpper && tierFees[tierUpper] ? tierFees[tierUpper] : null;
+  // Sprint 51 (Item 134 γ) — same y-position panel swap. Tier panel when set;
+  // nudge panel when not. Preserves layout stability across tier-set vs unset
+  // states. Nudge panel surfaces the §8 Caravan Partner Program fee schedule
+  // as a marketing nudge with operational ask (contact operations@srl).
+  const qpLabelY = y;
+  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+  doc.text("QUICK PAY · CARAVAN PARTNER PROGRAM", MARGIN, qpLabelY, {
+    characterSpacing: 7 * 0.08,
+    lineBreak: false,
+  });
+  const qpPanelY = qpLabelY + 12;
+  const qpPanelH = 42;
+  doc.save()
+    .fillColor(TOKENS.cream2)
+    .strokeColor(TOKENS.border1)
+    .lineWidth(0.5)
+    .roundedRect(MARGIN, qpPanelY, CONTENT_W, qpPanelH, 8)
+    .fillAndStroke()
+    .restore();
   if (tierData) {
-    const qpLabelY = y;
-    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-    doc.text("QUICK PAY · CARAVAN PARTNER PROGRAM", MARGIN, qpLabelY, {
-      characterSpacing: 7 * 0.08,
-      lineBreak: false,
-    });
-    const qpPanelY = qpLabelY + 12;
-    const qpPanelH = 42;
-    doc.save()
-      .fillColor(TOKENS.cream2)
-      .strokeColor(TOKENS.border1)
-      .lineWidth(0.5)
-      .roundedRect(MARGIN, qpPanelY, CONTENT_W, qpPanelH, 8)
-      .fillAndStroke()
-      .restore();
+    // Tier-set path — 4-cell grid (TIER / STANDARD / 7-DAY QP / SAME-DAY QP)
     const cellW = CONTENT_W / 4;
     const qpHeaders = ["TIER", "STANDARD", "7-DAY QP", "SAME-DAY QP"];
     const qpValues = [
@@ -1676,8 +1705,17 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.fg1);
       doc.text(qpValues[i], cx, qpPanelY + 22, { width: cellW, align: "center", lineBreak: false });
     }
-    y = qpPanelY + qpPanelH + 12;
+  } else {
+    // No-tier path — marketing nudge with §8 fee schedule + operations@ ask.
+    // Italic 8pt body for marketing-copy register; visually distinct from
+    // the tier grid above.
+    doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
+    const nudgeLine1 = "Quick Pay available — contact operations@silkroutelogistics.ai for tier enrollment.";
+    const nudgeLine2 = "Caravan Partner Program: Silver 3% · Gold 2% · Platinum 1% (7-day standard).";
+    doc.text(nudgeLine1, MARGIN + 12, qpPanelY + 10, { width: CONTENT_W - 24, lineBreak: false });
+    doc.text(nudgeLine2, MARGIN + 12, qpPanelY + 24, { width: CONTENT_W - 24, lineBreak: false });
   }
+  y = qpPanelY + qpPanelH + 12;
 
   // Operational terms — detention / TONU / layover / lumper / cancellation / QP.
   // Sprint 50 (Item 127, Path β belt-and-suspenders) — detentionNotify: true
@@ -1697,11 +1735,15 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // ─── PAGE 2 ────────────────────────────────────────────────────
   y = drawContinuationHeader(doc, "Rate Confirmation", docId);
 
-  // Carrier requirements — insurance minimums (skill canonical defaults)
+  // Carrier requirements — insurance minimums (skill canonical defaults).
+  // Sprint 51 (Item 130) — trackingAcceptance bullet added per sub-pattern 4
+  // application (Phase A correction: tracking is preconditions-tier, not
+  // legal exposure tier — belongs alongside insurance minimums, not in T&C).
   const reqs: CarrierRequirements = {
     cargoInsuranceMin: 100_000,
     autoLiabilityMin: 1_000_000,
     generalLiabilityMin: 1_000_000,
+    trackingAcceptance: true,
   };
   y = drawCarrierRequirements(doc, reqs, y);
 
@@ -1779,18 +1821,53 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // proactive "at least 30 minutes before beginning" + departure), (8)
   // paperwork submission window (Item 128, 24-48hr via accounting@ or
   // carrier portal).
-  const tcsClauses = [
-    "(1) Carrier accepts the rate, lane, equipment, and terms set forth above.",
-    "(2) Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit, with Silk Route Logistics Inc. named as certificate holder.",
-    "(3) Carrier shall comply with all applicable federal, state, and local laws and regulations, including Carmack Amendment liability per 49 U.S.C. § 14706.",
-    "(4) Carrier shall not subcontract, re-broker, co-broker, or assign this load to any third party. Unauthorized transfer shall result in forfeiture of all freight charges and constitutes material breach of the Broker-Carrier Agreement.",
-    "(5) Carrier shall indemnify and hold Broker harmless to the fullest extent permitted by law from all claims, liabilities, damages, and expenses arising from Carrier's performance under this Rate Confirmation, including cargo loss or damage, personal injury, and regulatory non-compliance.",
-    "(6) Accessorial charges not pre-approved by Broker in writing shall not be honored. Requests must be submitted to operations@silkroutelogistics.ai with supporting documentation prior to incurrence.",
-    "(7) Detention: Carrier shall notify Broker via call or text at least 30 minutes before beginning detention and again upon departure. Detention without notification is forfeited.",
-    "(8) Paperwork (signed Rate Confirmation, signed BOL, POD, lumper receipts, scale tickets where applicable) must be submitted within 24-48 hours of delivery via accounting@silkroutelogistics.ai or carrier portal upload.",
-    "(9) This Rate Confirmation, together with the SRL Broker-Carrier Agreement v3.1 dated February 26, 2026, constitutes the complete agreement for this load.",
-    "(10) Disputes governed by the laws of the State of Michigan, with venue in Kalamazoo County.",
+  // Sprint 50 base clauses (1-10). Sprint 51 appends 11 (Item 132, always),
+  // 12 (Item 131, conditional on reefer or food-grade), 13 (Item 133,
+  // conditional on CA origin or destination). Clause numbering shifts when
+  // conditional clauses don't fire — handled via dynamic numbering below.
+  const tcsClausesBase = [
+    "Carrier accepts the rate, lane, equipment, and terms set forth above.",
+    "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit, with Silk Route Logistics Inc. named as certificate holder.",
+    "Carrier shall comply with all applicable federal, state, and local laws and regulations, including Carmack Amendment liability per 49 U.S.C. § 14706.",
+    "Carrier shall not subcontract, re-broker, co-broker, or assign this load to any third party. Unauthorized transfer shall result in forfeiture of all freight charges and constitutes material breach of the Broker-Carrier Agreement.",
+    "Carrier shall indemnify and hold Broker harmless to the fullest extent permitted by law from all claims, liabilities, damages, and expenses arising from Carrier's performance under this Rate Confirmation, including cargo loss or damage, personal injury, and regulatory non-compliance.",
+    "Accessorial charges not pre-approved by Broker in writing shall not be honored. Requests must be submitted to operations@silkroutelogistics.ai with supporting documentation prior to incurrence.",
+    "Detention: Carrier shall notify Broker via call or text at least 30 minutes before beginning detention and again upon departure. Detention without notification is forfeited.",
+    "Paperwork (signed Rate Confirmation, signed BOL, POD, lumper receipts, scale tickets where applicable) must be submitted within 24-48 hours of delivery via accounting@silkroutelogistics.ai or carrier portal upload.",
+    "This Rate Confirmation, together with the SRL Broker-Carrier Agreement v3.1 dated February 26, 2026, constitutes the complete agreement for this load.",
+    "Disputes governed by the laws of the State of Michigan, with venue in Kalamazoo County.",
+    // Sprint 51 (Item 132) — discrepancy escalation clause (always renders).
+    // Flock pattern: carrier reports any RC↔BOL discrepancy and waits for SRL
+    // instructions before proceeding.
+    "Any discrepancy between this Rate Confirmation and the Bill of Lading must be reported to SRL operations immediately. Carrier shall await SRL instructions before proceeding.",
   ];
+
+  // Sprint 51 (Item 131) — trailer seal conditional (reefer OR food-grade
+  // commodity). Echo pattern adapted: seal-applied-at-shipper +
+  // seal-cannot-be-broken-without-written-approval + claim-on-broken-seal.
+  const isReefer = /REEFER|reefer/i.test(String(equipment));
+  const foodGradeCommodity = /food|wellness|consumable|frozen|chilled|dairy|produce|meat|beverage/i.test(String(commodityName || ""));
+  if (isReefer || foodGradeCommodity) {
+    tcsClausesBase.push(
+      "Trailer seal must be applied at shipper with seal number noted on the Bill of Lading. Seal shall not be broken without SRL written approval. Delivery without intact seal results in claim.",
+    );
+  }
+
+  // Sprint 51 (Item 133) — CARB compliance conditional (CA origin OR dest).
+  // Echo pattern: CARB compliance covenant + carrier indemnification for any
+  // loss arising from CARB non-compliance.
+  const originStateCheck = (fd.shipperState as string | undefined) || load.originState;
+  const destStateCheck = (fd.consigneeState as string | undefined) || load.destState;
+  if (originStateCheck === "CA" || destStateCheck === "CA") {
+    tcsClausesBase.push(
+      "Carrier must be CARB compliant when traveling to, from, or through California. Carrier indemnifies SRL for any loss or damage arising from CARB non-compliance.",
+    );
+  }
+
+  // Number clauses (1) through (N) — dynamic to handle conditional clauses
+  // not firing. L7492033667 fires both Items 131 + 133 → 13 clauses total;
+  // a load with no reefer/food-grade and no CA origin/dest renders 11 clauses.
+  const tcsClauses = tcsClausesBase.map((c, i) => `(${i + 1}) ${c}`);
   const tcBody = (fd.customTerms as string | undefined) || tcsClauses.join("\n");
 
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);

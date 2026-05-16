@@ -43,6 +43,7 @@ import carrierPaymentRoutes from "./carrierPayments";
 import datRoutes from "./dat";
 import automationRoutes from "./automation";
 import trackingRoutes from "./tracking";
+import verifyRoutes from "./verify";
 import financialRoutes from "./financials";
 import claimRoutes from "./claims";
 import monitoringRoutes from "./monitoring";
@@ -170,6 +171,7 @@ router.use("/docs", apiDocsRoutes);
 
 // --- Public Routes (no auth) ---
 router.use("/tracking", trackingRoutes);
+router.use("/verify", verifyRoutes); // Sprint 51 Item 129 — RC anti-fraud verification
 router.use("/blog", blogRoutes);
 router.use("/webhooks", webhookRoutes);
 router.use("/webhook-subscriptions", webhookSubscriptionRoutes);

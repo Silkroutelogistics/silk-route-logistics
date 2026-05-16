@@ -1173,6 +1173,12 @@ export interface CarrierRequirements {
   eldRequired?: boolean;
   teamDrivers?: boolean;
   bondRequired?: boolean;
+  // Sprint 51 (Item 130) — tracking acceptance gate as preconditions-tier
+  // bullet (NOT a T&C clause per Phase A sub-pattern 4 reclassification).
+  // Industry pattern (TQL): tracking is a precondition for dispatch, not a
+  // behavior rule like indemnification or governing law. Renders as a 4th
+  // bullet alongside insurance minimums when set.
+  trackingAcceptance?: boolean;
 }
 
 export interface RateConTerms {
@@ -1301,6 +1307,8 @@ export function drawCarrierRequirements(
     items.push(`Auto Liability: $${reqs.autoLiabilityMin.toLocaleString('en-US')} min`);
   if (reqs.generalLiabilityMin !== undefined)
     items.push(`General Liability: $${reqs.generalLiabilityMin.toLocaleString('en-US')} min`);
+  if (reqs.trackingAcceptance)
+    items.push('Tracking via Marco Polo (SMS) or Quo phone tracking accepted before dispatch.');
 
   const endorsements: string[] = [];
   if (reqs.twicRequired) endorsements.push('TWIC');

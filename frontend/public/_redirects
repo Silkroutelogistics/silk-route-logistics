@@ -38,3 +38,10 @@
 # above MUST come before the /tracking/* splat below.
 /tracking/*    /track/:splat   301
 /track/*       /track          200
+
+# 2026-05-16 v3.8.abo — Sprint 51 Item 129 RC verification anti-fraud.
+# Mirror of /track/* SPA-rewrite pattern: /verify/<token> URLs land on
+# the /verify page which detects the token from window.location.pathname
+# and fetches /api/verify/:token. Status 200 preserves the URL so the
+# verification link printed on the RC PDF header remains bookmarkable.
+/verify/*      /verify         200
