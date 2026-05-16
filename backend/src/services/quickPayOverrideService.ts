@@ -20,15 +20,30 @@ import { log } from "../lib/logger";
 
 export type OverrideReasonKey = keyof typeof OverrideReason;
 
-/** Returns the carrier's current tier-default 7-day QP rate (e.g. 0.03 for Silver). */
-export async function getTierDefaultRate(carrierUserId: string): Promise<number> {
+/**
+ * Returns the carrier's current tier-default QP rate per requested speed.
+ *
+ * Sprint 51.c (Item 151) — speed parameter added. Pre-Sprint-51.c the
+ * function returned only the 7-day rate, which masked the same-day case
+ * where the override panel showed "Tier default: 3.00%" while the speed
+ * card and Payment Calculation correctly applied 5%. Sprint 33 Caravan
+ * rebrand introduced SPEED-tiered pricing (Standard / 7-Day / Same-Day)
+ * per CLAUDE.md §8 but this function was never updated, leaving a
+ * three-layer disconnect between speed picker, override panel, and calc.
+ *
+ * Backwards-compat: if speed omitted, returns 7-day (preserves any
+ * legacy caller).
+ */
+export type QuickPaySpeed = "QP_7DAY" | "QP_SAMEDAY";
+
+export async function getTierDefaultRate(carrierUserId: string, speed: QuickPaySpeed = "QP_7DAY"): Promise<number> {
   const profile = await prisma.carrierProfile.findUnique({
     where: { userId: carrierUserId },
     select: { tier: true },
   });
-  if (!profile) return getTierConfig("SILVER").quickPayFee7Day;
-  const tier = getEffectiveTier({ tier: profile.tier });
-  return getTierConfig(tier).quickPayFee7Day;
+  const tier = profile ? getEffectiveTier({ tier: profile.tier }) : "SILVER";
+  const config = getTierConfig(tier);
+  return speed === "QP_SAMEDAY" ? config.quickPayFeeSameDay : config.quickPayFee7Day;
 }
 
 export interface RecordOverrideInput {

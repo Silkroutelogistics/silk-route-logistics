@@ -51,10 +51,14 @@ router.post("/:loadId/compliance-check", authorize("ADMIN", "CEO", "BROKER", "DI
 import { getTierDefaultRate, recordOverride, getOverride } from "../services/quickPayOverrideService";
 
 // Returns the tier default QP rate for a carrier — used by AE Console load
-// creation UI to pre-populate the rate field.
+// creation UI to pre-populate the rate field. Sprint 51.c (Item 151): speed
+// query param accepts "QP_7DAY" | "QP_SAMEDAY"; defaults to QP_7DAY when
+// omitted for backwards-compat with any legacy caller.
 router.get("/quickpay/tier-default/:carrierUserId", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), async (req: AuthRequest, res: Response) => {
-  const rate = await getTierDefaultRate(req.params.carrierUserId);
-  res.json({ carrierUserId: req.params.carrierUserId, tierDefaultRate: rate });
+  const speedParam = String(req.query.speed || "QP_7DAY");
+  const speed: "QP_7DAY" | "QP_SAMEDAY" = speedParam === "QP_SAMEDAY" ? "QP_SAMEDAY" : "QP_7DAY";
+  const rate = await getTierDefaultRate(req.params.carrierUserId, speed);
+  res.json({ carrierUserId: req.params.carrierUserId, speed, tierDefaultRate: rate });
 });
 
 // Creates or updates the per-load QP override audit row.

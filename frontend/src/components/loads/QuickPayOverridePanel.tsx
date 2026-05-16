@@ -16,9 +16,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
+// Sprint 51.c (Items 147.a + 149 + 150 + 151) — SPEED-aware override panel.
+// Speed comes from the parent SectionPayment SPEED card selection. The panel
+// hides entirely when STANDARD (no fee to override), uses speed-aware labels
+// for QP_7DAY vs QP_SAMEDAY, and queries the speed-specific tier default
+// from backend so the displayed default matches the active speed card.
+export type QuickPaySpeed = "STANDARD" | "QP_7DAY" | "QP_SAMEDAY";
+
 interface QuickPayOverridePanelProps {
   loadId: string;
   carrierUserId: string | null;
+  // Sprint 51.c — required for speed-aware tier default + label.
+  speed: QuickPaySpeed;
   // Called when the applied rate changes so the parent rate-con form can
   // keep its own `quickPayFeePercent` field in sync.
   onAppliedRateChange?: (percentRate: number) => void;
@@ -33,14 +42,19 @@ const REASON_LABELS: Record<OverrideReason, string> = {
   OTHER: "Other (note required)",
 };
 
-export function QuickPayOverridePanel({ loadId, carrierUserId, onAppliedRateChange }: QuickPayOverridePanelProps) {
+export function QuickPayOverridePanel({ loadId, carrierUserId, speed, onAppliedRateChange }: QuickPayOverridePanelProps) {
   const queryClient = useQueryClient();
 
-  // Fetch carrier's tier-default QP rate (e.g. 0.03 for Silver).
+  // Fetch carrier's tier-default QP rate for the ACTIVE SPEED. Sprint 51.c —
+  // queryKey includes speed so the cache invalidates when AE toggles SPEED
+  // card; backend route accepts ?speed= per Item 151. When speed === STANDARD
+  // the override panel is hidden so the query is disabled (no point fetching
+  // a default that won't be displayed).
+  const speedForQuery: "QP_7DAY" | "QP_SAMEDAY" = speed === "QP_SAMEDAY" ? "QP_SAMEDAY" : "QP_7DAY";
   const { data: tierData, isLoading: tierLoading } = useQuery({
-    queryKey: ["qp-tier-default", carrierUserId],
-    queryFn: () => api.get<{ tierDefaultRate: number }>(`/loads/quickpay/tier-default/${carrierUserId}`).then((r) => r.data),
-    enabled: !!carrierUserId,
+    queryKey: ["qp-tier-default", carrierUserId, speedForQuery],
+    queryFn: () => api.get<{ tierDefaultRate: number }>(`/loads/quickpay/tier-default/${carrierUserId}?speed=${speedForQuery}`).then((r) => r.data),
+    enabled: !!carrierUserId && speed !== "STANDARD",
   });
 
   // Fetch any existing override row so re-opening the panel shows the saved values.
@@ -126,8 +140,19 @@ export function QuickPayOverridePanel({ loadId, carrierUserId, onAppliedRateChan
     );
   }
 
+  // Sprint 51.c (Item 147.a) — hide panel on STANDARD speed (no fee to
+  // override). Wrap in conditional CSS instead of returning null to
+  // PRESERVE local state (reason, reasonNote) across SPEED toggles.
+  // Returning null would unmount the component → state lost. CSS hide
+  // keeps the component mounted; React state survives toggle cycles.
+  // form.quickPayFeePercent already persists in the parent form state
+  // (via onAppliedRateChange callback), so applied rate is preserved
+  // regardless. The reason + note are panel-local state — those need
+  // the CSS-hide approach.
+  const speedLabel = speed === "QP_SAMEDAY" ? "Same-Day" : "7-day";
+
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0F1117] p-5">
+    <div className={`rounded-xl border border-white/10 bg-[#0F1117] p-5 ${speed === "STANDARD" ? "hidden" : ""}`}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-white">Quick Pay Override (Caravan)</h4>
         {tierLoading ? (
@@ -141,7 +166,7 @@ export function QuickPayOverridePanel({ loadId, carrierUserId, onAppliedRateChan
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="block text-[11px] text-slate-400 mb-1">Applied 7-day QP rate (%)</span>
+          <span className="block text-[11px] text-slate-400 mb-1">Applied {speedLabel} QP rate (%)</span>
           <input
             type="number"
             step="0.01"

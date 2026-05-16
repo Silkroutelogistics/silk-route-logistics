@@ -575,21 +575,41 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
     // form.paymentTier holds the legacy enum value (STANDARD/PRIORITY/
     // FLASH for new loads; EXPRESS/PARTNER/ELITE possible for legacy
     // loads pre-Sprint-33). Convert to UI speed key, then derive fee.
+    //
+    // Sprint 51.c (Item 150) — Override now ACTUALLY applies. Pre-fix the
+    // override wrote to form.quickPayFeePercent but this useMemo ignored
+    // it, then the post-useEffect overwrote the override back to the
+    // tier-default. Override panel was decorative. Now: tierDefault is
+    // the speed × tier rate per §8; if form.quickPayFeePercent has a
+    // valid override value, it WINS over the tier default. Standard
+    // speed has no fee — override is hidden (Item 147.a) and feePercent
+    // resolves to 0 regardless.
     const speedUiKey = uiKeyFromEnum(form.paymentTier);
-    const feePercent = feePctForSpeed(speedUiKey, form.carrierTier);
+    const tierDefault = feePctForSpeed(speedUiKey, form.carrierTier);
+    const overrideRaw = form.quickPayFeePercent !== "" ? parseFloat(form.quickPayFeePercent) : NaN;
+    const overrideValid = !isNaN(overrideRaw) && overrideRaw >= 0;
+    // Override applies only when speed is not Standard (Standard has no
+    // fee). When override is set, it wins over the speed-derived default.
+    const feePercent = speedUiKey === "STANDARD"
+      ? 0
+      : (overrideValid ? overrideRaw : tierDefault);
     const tierInfo = LEGACY_PAYMENT_TIERS[form.paymentTier] || LEGACY_PAYMENT_TIERS.STANDARD;
     const feeAmount = totalCarrier * (feePercent / 100);
     const netPay = totalCarrier - feeAmount;
 
     return { customerRate, lineHaul, fuel, accTotal, totalCarrier, margin, marginPct, tierInfo, feePercent, feeAmount, netPay };
-  }, [form.customerRate, form.carrierLineHaul, form.fuelSurcharge, form.accessorials, form.paymentTier, form.carrierTier]);
+  }, [form.customerRate, form.carrierLineHaul, form.fuelSurcharge, form.accessorials, form.paymentTier, form.carrierTier, form.quickPayFeePercent]);
 
-  // Auto-update total carrier pay
+  // Sprint 51.c (Item 150) — auto-update total carrier pay + net pay only.
+  // Pre-Sprint-51.c this effect ALSO wrote quickPayFeePercent which created
+  // an infinite-loop pattern: Override panel writes → effect overwrites →
+  // Override appears reset. quickPayFeePercent is now the override source of
+  // truth (set by QuickPayOverridePanel.onAppliedRateChange); the financials
+  // useMemo READS it, this effect must NOT write it.
   useEffect(() => {
     set("totalCarrierPay", String(financials.totalCarrier));
     set("netPayAmount", String(financials.netPay));
-    set("quickPayFeePercent", String(financials.feePercent));
-  }, [financials.totalCarrier, financials.netPay, financials.feePercent, set]);
+  }, [financials.totalCarrier, financials.netPay, set]);
 
   // Build API payload from form
   function buildPayload() {
@@ -2067,6 +2087,12 @@ function SectionPayment({
         <QuickPayOverridePanel
           loadId={loadId}
           carrierUserId={form.carrierId}
+          // Sprint 51.c (Items 149 + 151) — speed-aware override panel.
+          // Speed drives the label ("Applied 7-day" vs "Applied Same-Day"),
+          // the backend tier-default query, and the hide-on-Standard
+          // behavior. Cast narrows the broad UI-key string to the panel's
+          // QuickPaySpeed union; uiKeyFromEnum returns one of the three.
+          speed={selectedSpeedUiKey as "STANDARD" | "QP_7DAY" | "QP_SAMEDAY"}
           onAppliedRateChange={(pct) => set("quickPayFeePercent", String(pct))}
         />
       )}
