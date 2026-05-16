@@ -54,17 +54,33 @@ export function QuickPayOverridePanel({ loadId, carrierUserId, onAppliedRateChan
   const [appliedPct, setAppliedPct] = useState<string>("");
   const [reason, setReason] = useState<OverrideReason | "">("");
   const [reasonNote, setReasonNote] = useState<string>("");
+  // Sprint 51.b (Item 147) — single-shot hydration flag. Prevents the effect
+  // below from re-firing on subsequent renders and overwriting user-edited
+  // state (reason / reasonNote / appliedPct). Pre-Sprint-51.b the effect had
+  // appliedPct in its dependency array, causing user keystrokes in the
+  // applied-rate field to trigger re-fire of the `if (existing)` branch,
+  // which reset reason + reasonNote back to the saved override values
+  // mid-edit. User reported "not able to change the QP reason that was
+  // overwritten" — exact symptom of the dep-array overwrite class.
+  const [hydrated, setHydrated] = useState(false);
 
   // Pre-fill from tier default once loaded, or from existing override row.
+  // One-shot hydration: fires on initial mount when either `existing` or
+  // `tierDefaultPct` resolves; never re-fires once hydrated. User edits
+  // are preserved; post-save refetches do not clobber local state because
+  // the local state already reflects what was just saved.
   useEffect(() => {
+    if (hydrated) return;
     if (existing) {
       setAppliedPct((Number(existing.appliedRate) * 100).toFixed(2));
       setReason(existing.reason);
       setReasonNote(existing.reasonNote ?? "");
-    } else if (tierDefaultPct !== null && appliedPct === "") {
+      setHydrated(true);
+    } else if (tierDefaultPct !== null) {
       setAppliedPct(tierDefaultPct.toFixed(2));
+      setHydrated(true);
     }
-  }, [existing, tierDefaultPct, appliedPct]);
+  }, [existing, tierDefaultPct, hydrated]);
 
   const appliedRateNumber = parseFloat(appliedPct);
   const appliedRateFraction = Number.isFinite(appliedRateNumber) ? appliedRateNumber / 100 : null;
