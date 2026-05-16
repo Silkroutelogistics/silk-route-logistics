@@ -155,7 +155,7 @@ export default function VerifyPage() {
             </div>
 
             <div className="bg-[#FAEEDA]/40 border border-[#BA7517]/20 rounded-lg p-4 text-sm text-[#3A4A5F]">
-              <strong className="text-[#0A2540]">If this Rate Confirmation looks different from what you received</strong> — for example, the broker name, MC/DOT, carrier identity, or total rate doesn't match the PDF in your inbox — contact <a className="text-[#BA7517] hover:underline" href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a> immediately. Fraudsters routinely send fake Rate Confirmations impersonating legitimate brokers.
+              <strong className="text-[#0A2540]">If this Rate Confirmation looks different from what you received</strong> — for example, the broker name, MC/DOT, carrier identity, or total rate does not match the PDF in your inbox — contact <a className="text-[#BA7517] hover:underline" href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a> immediately. Fraudsters routinely send fake Rate Confirmations impersonating legitimate brokers.
             </div>
           </div>
         )}
