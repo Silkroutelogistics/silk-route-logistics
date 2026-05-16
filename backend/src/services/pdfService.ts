@@ -1732,7 +1732,19 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
 
   // Signature — RATE_CON_SIGNATURE_ROLES (1 block: Carrier Acceptance only,
   // not the BOL three-block pattern; skill canonical for Rate Cons)
-  drawSignatureBlock(doc, y, { roles: RATE_CON_SIGNATURE_ROLES, height: 180 });
+  // Sprint 48.c (Item 117) — pre-fill CARRIER LEGAL NAME / MC # / DOT # from
+  // the same hybrid sources used by the page-1 CARRIER · ASSIGNED block.
+  // Carrier writes only AUTHORIZED SIGNATORY / TITLE / SIGNATURE / DATE at
+  // signing time. Industry-standard RC pattern (CHR / Coyote / RXO).
+  const sigPrefill: Record<string, string> = {};
+  if (carrierName && carrierName !== "—") sigPrefill["CARRIER LEGAL NAME"] = carrierName;
+  if (carrierMc && carrierMc !== "—") sigPrefill["MC #"] = carrierMc;
+  if (carrierDot && carrierDot !== "—") sigPrefill["DOT #"] = carrierDot;
+  drawSignatureBlock(doc, y, {
+    roles: RATE_CON_SIGNATURE_ROLES,
+    height: 180,
+    prefilledValues: sigPrefill,
+  });
 
   // Page 2 footer
   drawFooter(doc, { pageNum: 2, totalPages: 2, docId });

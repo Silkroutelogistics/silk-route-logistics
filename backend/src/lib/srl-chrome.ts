@@ -623,9 +623,16 @@ export const MASTER_AGREEMENT_SIGNATURE_ROLES: SignatureRole[] = [
 export function drawSignatureBlock(
   doc: PDFDoc,
   yTop: number,
-  options: { roles?: SignatureRole[]; height?: number } = {}
+  options: { roles?: SignatureRole[]; height?: number; prefilledValues?: Record<string, string> } = {}
 ): number {
-  const { roles = BOL_SIGNATURE_ROLES, height = 220 } = options;
+  // Sprint 48.c (v3.8.abj) — added prefilledValues option. Pre-fill SRL-known
+  // carrier identity fields (CARRIER LEGAL NAME / MC # / DOT #) so the carrier
+  // only writes AUTHORIZED SIGNATORY / TITLE / SIGNATURE / DATE at signing
+  // time. Industry-standard RC pattern; matches CHR/Coyote/RXO templates.
+  // When a field is in prefilledValues, the value renders above the underline
+  // in fg1 (primary text), otherwise underline stays bare for handwriting.
+  // Local mirror — propagate to skill canonical srl_chrome.ts at next sync.
+  const { roles = BOL_SIGNATURE_ROLES, height = 220, prefilledValues = {} } = options;
   const n = roles.length;
   const colW = CONTENT_W / n;
 
@@ -648,10 +655,20 @@ export function drawSignatureBlock(
        .text(role.certification, x, yTop + 16, { width: colInnerW, lineGap: 1 });
 
     let fieldY = doc.y + 12;
-    doc.font(FONT_BODY_BOLD, 6.5);
 
     role.fields.forEach(f => {
+      doc.font(FONT_BODY_BOLD, 6.5);
       drawLabel(doc, f, x, fieldY, { color: TOKENS.fg3, size: 6.5 });
+
+      // Pre-filled value (if present) renders above the underline in primary
+      // text color. Caller passes a field-name → value map; bare fields fall
+      // through to underline-only for handwritten entry.
+      const preVal = prefilledValues[f];
+      if (preVal) {
+        doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
+        doc.text(preVal, x, fieldY + 4, { width: colInnerW, lineBreak: false });
+      }
+
       // Underline
       doc.save()
          .strokeColor(TOKENS.borderStrong)
