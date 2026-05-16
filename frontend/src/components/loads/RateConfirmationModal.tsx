@@ -159,9 +159,14 @@ interface FormState {
   // 6 - Carrier / Driver
   assignmentType: "COMPANY_DRIVER" | "PARTNER_CARRIER";
   carrierId: string;
-  carrierCompany: string;
-  carrierMC: string;
-  carrierDOT: string;
+  // Sprint 48.b — keys renamed to backend Zod canonical
+  // (carrierName/carrierMcNumber/carrierDotNumber) so payload survives
+  // Zod .strip() default. Pre-Sprint-48.b the modal wrote
+  // carrierCompany/carrierMC/carrierDOT which Zod silently dropped,
+  // leaving RC PDF body section em-dashes despite picker selection.
+  carrierName: string;
+  carrierMcNumber: string;
+  carrierDotNumber: string;
   carrierContact: string;
   carrierPhone: string;
   carrierEmail: string;
@@ -452,9 +457,9 @@ function initForm(load: any, user: any): FormState {
     // 6 - Carrier / Driver
     assignmentType: load?.assignmentType || "PARTNER_CARRIER",
     carrierId: load?.carrierId || "",
-    carrierCompany: load?.carrier?.company || "",
-    carrierMC: load?.carrier?.carrierProfile?.mcNumber || "",
-    carrierDOT: load?.carrier?.carrierProfile?.dotNumber || "",
+    carrierName: load?.carrier?.company || "",
+    carrierMcNumber: load?.carrier?.carrierProfile?.mcNumber || "",
+    carrierDotNumber: load?.carrier?.carrierProfile?.dotNumber || "",
     carrierContact: load?.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}` : "",
     carrierPhone: load?.carrier?.phone || "",
     carrierEmail: load?.carrier?.email || "",
@@ -711,7 +716,7 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
         await sendMutation.mutateAsync({
           id: rcRes.data.id,
           recipientEmail: form.recipientEmail.trim(),
-          recipientName: form.recipientName || form.carrierCompany,
+          recipientName: form.recipientName || form.carrierName,
           message: form.emailMessage,
         });
       } else {
@@ -1561,9 +1566,9 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
   // safety when downstream consumer uses ID as FK.
   const selectCarrier = (carrier: any) => {
     set("carrierId", carrier.id); // CarrierProfile.id consistently
-    set("carrierCompany", carrier.company || carrier.user?.company || "");
-    set("carrierMC", carrier.mcNumber || "");
-    set("carrierDOT", carrier.dotNumber || "");
+    set("carrierName", carrier.company || carrier.user?.company || "");
+    set("carrierMcNumber", carrier.mcNumber || "");
+    set("carrierDotNumber", carrier.dotNumber || "");
     set("carrierContact", carrier.user ? `${carrier.user.firstName} ${carrier.user.lastName}` : "");
     set("carrierPhone", carrier.user?.phone || carrier.phone || "");
     set("carrierEmail", carrier.user?.email || carrier.email || "");
@@ -1698,9 +1703,9 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
 
           {/* Selected carrier fields */}
           <div className="grid grid-cols-3 gap-4">
-            <Field label="Carrier Company" value={form.carrierCompany} onChange={(v) => set("carrierCompany", v)} />
-            <Field label="MC Number" value={form.carrierMC} onChange={(v) => set("carrierMC", v)} />
-            <Field label="DOT Number" value={form.carrierDOT} onChange={(v) => set("carrierDOT", v)} />
+            <Field label="Carrier Company" value={form.carrierName} onChange={(v) => set("carrierName", v)} />
+            <Field label="MC Number" value={form.carrierMcNumber} onChange={(v) => set("carrierMcNumber", v)} />
+            <Field label="DOT Number" value={form.carrierDotNumber} onChange={(v) => set("carrierDotNumber", v)} />
           </div>
           <div className="grid grid-cols-3 gap-4 mt-4">
             <Field label="Contact Name" value={form.carrierContact} onChange={(v) => set("carrierContact", v)} />
