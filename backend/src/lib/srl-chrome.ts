@@ -592,10 +592,12 @@ export const BOL_SIGNATURE_ROLES: SignatureRole[] = [
 export const RATE_CON_SIGNATURE_ROLES: SignatureRole[] = [
   {
     title: 'CARRIER · ACCEPTANCE',
-    certification:
-      'Carrier accepts the rate, lane, equipment, and terms set forth above. ' +
-      'This Rate Confirmation, together with the Broker-Carrier Agreement v3.1 ' +
-      'dated February 26, 2026, constitutes the complete agreement for this load.',
+    // Sprint 50 (Item 122) — prose paragraph removed. Both sentences were
+    // verbatim duplicates of T&C body clauses (1) and (9). Header label
+    // retained as structural section anchor; drawSignatureBlock guards the
+    // certification render path when empty (yTop+20 field start vs the
+    // post-cert doc.y + 12 path).
+    certification: '',
     fields: ['CARRIER LEGAL NAME', 'MC #', 'DOT #',
              'AUTHORIZED SIGNATORY (PRINT)', 'TITLE',
              'SIGNATURE', 'DATE'],
@@ -650,11 +652,20 @@ export function drawSignatureBlock(
 
     drawLabel(doc, role.title, x, yTop, { color: TOKENS.goldDark, size: 7 });
 
-    // Certification (italic, wraps)
-    doc.font(FONT_BODY_ITALIC, 7.5).fillColor(TOKENS.fg2)
-       .text(role.certification, x, yTop + 16, { width: colInnerW, lineGap: 1 });
-
-    let fieldY = doc.y + 12;
+    // Sprint 50 (Item 122) — certification render guard. When empty, skip
+    // the italic prose render and tighten field-start Y. Without this gate,
+    // PDFKit doc.text('') with empty string still advances doc.y by one
+    // line height (~9pt) leaving phantom whitespace under the header label.
+    // Explicit Y reposition per Item 99 file-landed-at-expected-path gate.
+    let fieldY: number;
+    if (role.certification && role.certification.length > 0) {
+      // Certification (italic, wraps)
+      doc.font(FONT_BODY_ITALIC, 7.5).fillColor(TOKENS.fg2)
+         .text(role.certification, x, yTop + 16, { width: colInnerW, lineGap: 1 });
+      fieldY = doc.y + 12;
+    } else {
+      fieldY = yTop + 20;
+    }
 
     role.fields.forEach(f => {
       // Sprint 49.b (Item 139) — row spacing 22 → 26pt + value Y 4 → 10pt.
@@ -1168,6 +1179,12 @@ export interface RateConTerms {
   detentionFreeHours?: number;
   detentionRatePerHour?: number;
   detentionMaxPerStop?: number;
+  // Sprint 50 (Item 127) — Path β belt-and-suspenders: appends " · notify"
+  // to the DETENTION value in OPERATIONAL TERMS grid. Pairs with T&C clause
+  // (7) which mandates 30-min-before + departure notifications. The cell
+  // suffix surfaces the obligation at the operational glance level; the
+  // clause locks the enforcement language.
+  detentionNotify?: boolean;
   tonuAmount?: number;
   layoverPerDay?: number;
   lumperReimbursement?: boolean;
@@ -1324,6 +1341,7 @@ export function drawRateConTerms(
   const detentionRate = terms.detentionRatePerHour ?? 50;
   let detStr = `$${detentionRate}/hr after ${detentionFree} hrs free`;
   if (terms.detentionMaxPerStop) detStr += `, capped at $${terms.detentionMaxPerStop}/stop`;
+  if (terms.detentionNotify) detStr += ' · notify';
   items.push(['DETENTION', detStr]);
 
   items.push(['TONU', `$${terms.tonuAmount ?? 200} (truck-order-not-used)`]);

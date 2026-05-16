@@ -1679,9 +1679,13 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     y = qpPanelY + qpPanelH + 12;
   }
 
-  // Operational terms — detention / TONU / layover / lumper / cancellation / QP
+  // Operational terms — detention / TONU / layover / lumper / cancellation / QP.
+  // Sprint 50 (Item 127, Path β belt-and-suspenders) — detentionNotify: true
+  // appends " · notify" to the DETENTION cell as a glance-level reminder of
+  // the 30-min-before notification obligation locked in T&C clause (7).
   const opTerms: RateConTerms = {
     detentionRatePerHour: fd.detentionRate as number | undefined,
+    detentionNotify: true,
     quickPayTier: qpTier !== "—" ? qpTier : undefined,
   };
   y = drawRateConTerms(doc, opTerms, y - 4);
@@ -1759,19 +1763,38 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   });
   y += 14;
 
-  const tcDefault =
-    "Carrier accepts the rate, lane, equipment, and terms set forth above. " +
-    "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability " +
-    "of not less than $1,000,000 combined single limit. Carrier shall comply with all " +
-    "applicable federal, state, and local laws and regulations including Carmack Amendment " +
-    "liability per 49 U.S.C. § 14706. This Rate Confirmation, together with the SRL " +
-    "Broker-Carrier Agreement v3.1 dated February 26, 2026, constitutes the complete " +
-    "agreement for this load. Disputes governed by the laws of the State of Michigan, " +
-    "with venue in Kalamazoo County.";
-  const tcBody = (fd.customTerms as string | undefined) || tcDefault;
+  // Sprint 50 (Items 122 + 124 + 125 + 126 + 127 + 128) — RC legal exposure
+  // tier closed. 10-clause numbered enumeration replaces pre-Sprint-50
+  // prose paragraph. Sprint 49 Item 135 Top-Brokers-Pattern-Library audit
+  // surfaced canonical clauses across TQL / Landstar / Echo / CHR / Flock /
+  // RXO/Coyote / JB Hunt / Hub Group / Schneider / Knight. Numbered
+  // enumeration (not bullets, not paragraphs) is the industry-default for
+  // RC T&C bodies — auditable, citable, enforceable.
+  //
+  // New clauses this sprint: (4) re-brokering (Item 124, Landstar pattern
+  // with subcontract/co-broker/assign explicit + payment forfeiture lead),
+  // (5) indemnification (Item 125, TQL pattern with "fullest extent
+  // permitted by law"), (6) accessorial pre-approval (Item 126, TQL
+  // pattern routing to operations@), (7) detention notification (Item 127,
+  // proactive "at least 30 minutes before beginning" + departure), (8)
+  // paperwork submission window (Item 128, 24-48hr via accounting@ or
+  // carrier portal).
+  const tcsClauses = [
+    "(1) Carrier accepts the rate, lane, equipment, and terms set forth above.",
+    "(2) Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit, with Silk Route Logistics Inc. named as certificate holder.",
+    "(3) Carrier shall comply with all applicable federal, state, and local laws and regulations, including Carmack Amendment liability per 49 U.S.C. § 14706.",
+    "(4) Carrier shall not subcontract, re-broker, co-broker, or assign this load to any third party. Unauthorized transfer shall result in forfeiture of all freight charges and constitutes material breach of the Broker-Carrier Agreement.",
+    "(5) Carrier shall indemnify and hold Broker harmless to the fullest extent permitted by law from all claims, liabilities, damages, and expenses arising from Carrier's performance under this Rate Confirmation, including cargo loss or damage, personal injury, and regulatory non-compliance.",
+    "(6) Accessorial charges not pre-approved by Broker in writing shall not be honored. Requests must be submitted to operations@silkroutelogistics.ai with supporting documentation prior to incurrence.",
+    "(7) Detention: Carrier shall notify Broker via call or text at least 30 minutes before beginning detention and again upon departure. Detention without notification is forfeited.",
+    "(8) Paperwork (signed Rate Confirmation, signed BOL, POD, lumper receipts, scale tickets where applicable) must be submitted within 24-48 hours of delivery via accounting@silkroutelogistics.ai or carrier portal upload.",
+    "(9) This Rate Confirmation, together with the SRL Broker-Carrier Agreement v3.1 dated February 26, 2026, constitutes the complete agreement for this load.",
+    "(10) Disputes governed by the laws of the State of Michigan, with venue in Kalamazoo County.",
+  ];
+  const tcBody = (fd.customTerms as string | undefined) || tcsClauses.join("\n");
 
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(tcBody, MARGIN, y, { width: CONTENT_W, lineGap: 1 });
+  doc.text(tcBody, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
   y = doc.y + 14;
 
   // Tender expiration banner (Sprint 48 Item 108) — surfaces tender SLA
