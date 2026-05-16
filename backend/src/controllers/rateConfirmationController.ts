@@ -53,6 +53,14 @@ export async function getRateConfirmationById(req: AuthRequest, res: Response) {
           poster: { select: { firstName: true, lastName: true, company: true, phone: true } },
           carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } } },
           customer: true,
+          // Sprint 48 (Item 108) — tender expiration banner data path.
+          // Latest tender only; banner filters by status + expiry in renderer.
+          tenders: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            where: { status: { in: ["OFFERED", "ACCEPTED"] } },
+            select: { expiresAt: true, status: true },
+          },
         },
       },
       createdBy: { select: { firstName: true, lastName: true } },
@@ -94,6 +102,12 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
         include: {
           carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } } },
           customer: true,
+          tenders: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            where: { status: { in: ["OFFERED", "ACCEPTED"] } },
+            select: { expiresAt: true, status: true },
+          },
         },
       },
     },
@@ -137,6 +151,12 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
         include: {
           carrier: { select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } } },
           customer: true,
+          tenders: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            where: { status: { in: ["OFFERED", "ACCEPTED"] } },
+            select: { expiresAt: true, status: true },
+          },
         },
       },
     },

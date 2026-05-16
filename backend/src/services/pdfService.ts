@@ -1293,6 +1293,11 @@ interface EnhancedRCLoadData {
   notes?: string | null; specialInstructions?: string | null;
   carrier?: { firstName: string; lastName: string; company?: string | null; phone?: string | null; carrierProfile?: { mcNumber?: string | null; dotNumber?: string | null } | null } | null;
   customer?: { name: string; contactName?: string | null; address?: string | null; city?: string | null; state?: string | null; zip?: string | null; phone?: string | null; email?: string | null } | null;
+  // Sprint 48 (Item 108) — tender expiration banner data path. Active tender
+  // is the latest OFFERED|ACCEPTED tender for this load; banner renders only
+  // when expiresAt > now. Optional — older RCs that pre-date the controller
+  // include extension still render cleanly without banner.
+  tenders?: Array<{ expiresAt: Date; status: string }> | null;
 }
 
 function sectionTitle(doc: PDFDoc, title: string, y: number): number {
@@ -1455,6 +1460,67 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   };
   y = drawEquipmentSpec(doc, equipSpec, y);
 
+  // CARRIER · ASSIGNED body section (Sprint 48 Item 106) — Sprint 45-RC
+  // removed this per too-purist skill interpretation; industry-standard RCs
+  // (CHR/Coyote/RXO/Landstar) all surface carrier identity body-section
+  // above commodity. Signature block alone is insufficient for at-a-glance
+  // recognition. formData primary + load.carrier fallback per hybrid pattern
+  // already used for shipper/consignee in this generator.
+  const carrierName = fd.carrierName
+    || load.carrier?.company
+    || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "—");
+  const carrierMc = fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber || "—";
+  const carrierDot = fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber || "—";
+  const carrierPhone = fd.carrierPhone || load.carrier?.phone || "—";
+  const carrierContact = fd.carrierContact
+    || fd.dispatcherName
+    || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "—");
+
+  const carrierLabelY = y;
+  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+  doc.text("CARRIER · ASSIGNED", MARGIN, carrierLabelY, {
+    characterSpacing: 7 * 0.08,
+    lineBreak: false,
+  });
+
+  const carrierPanelY = carrierLabelY + 12;
+  const carrierPanelH = 58;
+  doc.save()
+    .fillColor(TOKENS.cream2)
+    .strokeColor(TOKENS.border1)
+    .lineWidth(0.5)
+    .roundedRect(MARGIN, carrierPanelY, CONTENT_W, carrierPanelH, 8)
+    .fillAndStroke()
+    .restore();
+
+  doc.font(FONT_BODY_BOLD, 11).fillColor(TOKENS.fg1);
+  doc.text(carrierName, MARGIN + 12, carrierPanelY + 9, { lineBreak: false });
+  doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
+  doc.text(`MC# ${carrierMc}    DOT# ${carrierDot}`, MARGIN + 12, carrierPanelY + 26, { lineBreak: false });
+  doc.text(`${carrierContact} · ${carrierPhone}`, MARGIN + 12, carrierPanelY + 41, { lineBreak: false });
+
+  y = carrierPanelY + carrierPanelH + 10;
+
+  // Driver & Equipment mini-row (Sprint 48 Item 107) — renders only when
+  // at least one field populated; driver assignment can post-date RC issue.
+  if (fd.driverName || fd.driverPhone || fd.truckNumber || fd.trailerNumber) {
+    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+    doc.text("DRIVER & EQUIPMENT", MARGIN, y, {
+      characterSpacing: 7 * 0.08,
+      lineBreak: false,
+    });
+    y += 12;
+    const driverParts = [
+      fd.driverName ? `Driver: ${fd.driverName}` : null,
+      fd.driverPhone ? String(fd.driverPhone) : null,
+      fd.truckNumber ? `Tractor #${fd.truckNumber}` : null,
+      fd.trailerNumber ? `Trailer #${fd.trailerNumber}` : null,
+    ].filter(Boolean) as string[];
+    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
+    doc.text(driverParts.join("  ·  "), MARGIN, y, { lineBreak: false });
+    y += 16;
+  }
+
   // Shipment table — single commodity row
   const wt = (fd.weight as number | undefined) ?? load.weight;
   const pcs = (fd.pieces as number | undefined) ?? load.pieces;
@@ -1482,6 +1548,51 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       : undefined,
   };
   y = drawRateBreakdown(doc, rate, y - 8);
+
+  // Quick Pay tier breakdown panel (Sprint 48 Item 109) — surfaces CPP
+  // tier fee structure so carrier sees their effective rate at-a-glance.
+  // Source: fd.carrierPaymentTier; renders only when a CPP tier is set.
+  // Tier fee schedule per CLAUDE.md §8 (locked v3 pricing).
+  const tierUpper = (fd.carrierPaymentTier as string | undefined)?.toUpperCase();
+  const tierFees: Record<string, { netDays: number; sevenDay: number; sameDay: number }> = {
+    SILVER:   { netDays: 30, sevenDay: 3, sameDay: 5 },
+    GOLD:     { netDays: 21, sevenDay: 2, sameDay: 4 },
+    PLATINUM: { netDays: 14, sevenDay: 1, sameDay: 3 },
+  };
+  const tierData = tierUpper && tierFees[tierUpper] ? tierFees[tierUpper] : null;
+  if (tierData) {
+    const qpLabelY = y;
+    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+    doc.text("QUICK PAY · CARAVAN PARTNER PROGRAM", MARGIN, qpLabelY, {
+      characterSpacing: 7 * 0.08,
+      lineBreak: false,
+    });
+    const qpPanelY = qpLabelY + 12;
+    const qpPanelH = 42;
+    doc.save()
+      .fillColor(TOKENS.cream2)
+      .strokeColor(TOKENS.border1)
+      .lineWidth(0.5)
+      .roundedRect(MARGIN, qpPanelY, CONTENT_W, qpPanelH, 8)
+      .fillAndStroke()
+      .restore();
+    const cellW = CONTENT_W / 4;
+    const qpHeaders = ["TIER", "STANDARD", "7-DAY QP", "SAME-DAY QP"];
+    const qpValues = [
+      tierUpper as string,
+      `Net-${tierData.netDays}`,
+      `${tierData.sevenDay}%`,
+      `${tierData.sameDay}%`,
+    ];
+    for (let i = 0; i < 4; i++) {
+      const cx = MARGIN + i * cellW;
+      doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
+      doc.text(qpHeaders[i], cx, qpPanelY + 8, { width: cellW, align: "center", lineBreak: false });
+      doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.fg1);
+      doc.text(qpValues[i], cx, qpPanelY + 22, { width: cellW, align: "center", lineBreak: false });
+    }
+    y = qpPanelY + qpPanelH + 12;
+  }
 
   // Operational terms — detention / TONU / layover / lumper / cancellation / QP
   const opTerms: RateConTerms = {
@@ -1577,6 +1688,47 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(tcBody, MARGIN, y, { width: CONTENT_W, lineGap: 1 });
   y = doc.y + 14;
+
+  // Tender expiration banner (Sprint 48 Item 108) — surfaces tender SLA
+  // deadline above signature block so carrier sees expiry at point of
+  // commitment. Defensive: renders ONLY when active tender exists with
+  // expiresAt > now. <2h until expiry escalates from warning (amber) to
+  // danger (red). Semantic colors per CLAUDE.md §2.1 (no TOKENS export for
+  // these yet — inline hex avoids skill-canonical drift).
+  const activeTender = load.tenders?.find((t) =>
+    (t.status === "OFFERED" || t.status === "ACCEPTED")
+    && new Date(t.expiresAt) > new Date(),
+  );
+  if (activeTender) {
+    const expiresAt = new Date(activeTender.expiresAt);
+    const hoursUntilExpiry = (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
+    const isUrgent = hoursUntilExpiry < 2;
+    const bannerBg = isUrgent ? "#F6E3E3" : "#FBEFD4";
+    const bannerFg = isUrgent ? "#9B2C2C" : "#B07A1A";
+    const bannerH = 28;
+    doc.save()
+      .fillColor(bannerBg)
+      .strokeColor(bannerFg)
+      .lineWidth(1)
+      .roundedRect(MARGIN, y, CONTENT_W, bannerH, 6)
+      .fillAndStroke()
+      .restore();
+    const expiryStr = expiresAt.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    });
+    doc.font(FONT_BODY_BOLD, 9).fillColor(bannerFg);
+    doc.text(
+      `TENDER EXPIRES: ${expiryStr}${isUrgent ? "  ·  URGENT" : ""}`,
+      MARGIN,
+      y + 9,
+      { width: CONTENT_W, align: "center", lineBreak: false },
+    );
+    y += bannerH + 12;
+  }
 
   // Signature — RATE_CON_SIGNATURE_ROLES (1 block: Carrier Acceptance only,
   // not the BOL three-block pattern; skill canonical for Rate Cons)
