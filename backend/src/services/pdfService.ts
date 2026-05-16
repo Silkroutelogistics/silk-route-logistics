@@ -29,6 +29,8 @@ import {
   drawContinuationHeader,
   drawPanel,
   registerSkillFonts,
+  FONT_BODY,
+  FONT_BODY_BOLD,
   MARGIN,
   CONTENT_W,
   PAGE_H,
@@ -1522,8 +1524,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       lineBreak: false,
     });
 
-    // Measure body height with wrapping
-    doc.font("Helvetica", 9).fillColor(TOKENS.fg1);
+    // Sprint 47.b (Item 104) — body height measurement + body render must
+    // use SAME font for heightOfString to match actual text height. Both
+    // swapped from Helvetica (legacy fallback) to FONT_BODY skill canonical
+    // (DMSans-Regular). Safe post-Item-103 monkey-patch which suppresses
+    // fontkit ligature substitution that would otherwise affect DMSans.
+    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
     const bodyHeight = doc.heightOfString(instrBody, { width: CONTENT_W - 20 });
     const panelH = bodyHeight + 28;
 
@@ -1537,7 +1543,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       .restore();
 
     // wrapped body text
-    doc.font("Helvetica", 9).fillColor(TOKENS.fg1);
+    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
     doc.text(instrBody, MARGIN + 10, labelY + 22, { width: CONTENT_W - 20, lineGap: 1 });
 
     y = labelY + 12 + panelH + 12;
@@ -1546,7 +1552,11 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // Terms & Conditions — Carmack 49 U.S.C. § 14706 + Michigan/Kalamazoo
   // venue + BCA v3.1 reference (skill SKILL.md mandate; satisfies E2E
   // RC_PDF_REQUIRED extensions: "State of Michigan", "Kalamazoo County")
-  doc.font("Helvetica-Bold", 7).fillColor(TOKENS.goldDark);
+  // Sprint 47.b (Item 104) — label + body swapped from Helvetica-Bold/
+  // Helvetica (legacy fallback) to FONT_BODY_BOLD/FONT_BODY skill
+  // canonical for typographic consistency with the surrounding skill
+  // chrome. Safe post-Item-103 monkey-patch (ligature suppression).
+  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
   doc.text("TERMS & CONDITIONS", MARGIN, y, {
     characterSpacing: 7 * 0.08,
     lineBreak: false,
@@ -1564,7 +1574,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "with venue in Kalamazoo County.";
   const tcBody = (fd.customTerms as string | undefined) || tcDefault;
 
-  doc.font("Helvetica", 7.5).fillColor(TOKENS.fg2);
+  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(tcBody, MARGIN, y, { width: CONTENT_W, lineGap: 1 });
   y = doc.y + 14;
 

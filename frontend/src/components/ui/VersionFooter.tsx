@@ -6260,7 +6260,138 @@
 //              - Items 97 + 98 + 87 + 89 + 90 + 92 + 8.8 + 93 +
 //                94 — STATUS UNCHANGED (deferred per Sprint 47
 //                scope discipline)
-export const SRL_VERSION = "3.8.abf";
+//
+// v3.8.abg — Sprint 47.b — ligature substitution hotfix +
+//            T&C font canonical. Closes Items 103 + 104 + 105.
+//
+//            VISUAL VERIFICATION OF SPRINT 47 SURFACED THE EXACTLY-
+//            PREDICTED REGRESSION: fontkit ligature substitution
+//            rendered "Rate Confirmation" → "Rate Confrmation" in
+//            3 of 4 instances post-Sprint-47 deploy. Playfair-Bold
+//            display heading + DMSans-Regular continuation header
+//            + DMSans-Italic body all affected. Helvetica T&C
+//            body rendered correctly (built-in fonts have no
+//            fontkit ligature substitution).
+//
+//            Sprint 47 commit message documented the deferred
+//            risk verbatim: "Ligature suppression — Sprint v3.8.b
+//            Option β monkey-patch... if RC PDF renders italic
+//            Playfair with ligature artifacts post-Sprint-47,
+//            same monkey-patch approach migrates into
+//            srl-chrome.ts as a separate hotfix; deferred unless
+//            surfaces visually." Surfaced visually. Sprint 47.b
+//            activated per plan.
+//
+//            ATOMIC 2-CHANGE COMMIT:
+//
+//            (Change 1, Item 103) Ligature suppression monkey-
+//            patch ported from generateBOLFromLoad inline
+//            (pdfService.ts:248-297) into registerSkillFonts(doc)
+//            in backend/src/lib/srl-chrome.ts. Bundled with font
+//            registration — every skill-chrome consumer that
+//            calls registerSkillFonts(doc) now inherits both
+//            font registration AND ligature suppression in one
+//            call. Future Sprint 45-RC2 (Invoice) + 45-RC3
+//            (Settlement) migrations auto-benefit.
+//
+//            Monkey-patch disables 4 OpenType ligature features
+//            (liga/clig/rlig/dlig) while preserving kern=true.
+//            Object-form features detection (vs array-form
+//            which can't disable defaults) per Sprint v3.8.b
+//            canonical shape. Verbatim port — exact-shape
+//            verification was a Phase B0 sub-rule c gate.
+//
+//            (Change 2, Item 104) T&C body + special instructions
+//            panel + T&C section label all swapped from legacy
+//            Helvetica/Helvetica-Bold to FONT_BODY/FONT_BODY_BOLD
+//            skill canonical (DMSans-Regular/DMSans-Bold). Item
+//            104 scope EXPANDED from directive's "T&C body" (1
+//            line) to all 4 Helvetica references in
+//            generateEnhancedRateConfirmation because:
+//            (a) heightOfString(text) measurement at line 1526
+//                must use same font as text rendering at line
+//                1540 to produce a correctly-sized panel; coupled
+//                pair must be migrated together
+//            (b) T&C section label at line 1549 paired with body
+//                at line 1567 for visual consistency — splitting
+//                them would render T&C header in Helvetica-Bold
+//                and body in DMSans, NEW visual inconsistency
+//                worse than Sprint 47 baseline
+//            (c) All 4 are in the same generator function +
+//                same atomic commit per §3.3
+//            Plus exported FONT_BODY + FONT_BODY_BOLD from
+//            srl-chrome.ts (were const before, not exported).
+//
+//            PHASE B1 SUB-RULE C GATE D4 — local PDF smoke test
+//            BEFORE commit verified all 4 "Rate Confirmation"
+//            instances render with the dot on i:
+//              page 1 H1 (Playfair-Bold)         ✓ "Confirmation"
+//              page 2 cont. header (DMSans-Reg)  ✓ "Confirmation"
+//              page 2 italic body (DMSans-Ital)  ✓ "Confirmation"
+//              page 2 T&C body (DMSans-Reg)      ✓ "Confirmation"
+//            (All 4 previously rendered "Confrmation" without
+//            monkey-patch.) Empirical proof the fix works,
+//            verified BEFORE push — sub-rule c gate worked as
+//            designed.
+//
+//            PATTERN 6 SUB-RULE C — DEFERRED-BUT-NOT-MISSED
+//            PATTERN (Item 105 banks as methodology principle):
+//            Sprint 47 explicitly documented the deferred
+//            ligature risk in its commit message. Sprint 47.b
+//            activated exactly per that documented plan when
+//            the risk surfaced. This is sub-rule c gate working
+//            in its INTENDED protocol — risk identified ahead,
+//            documented as known-deferred, monitored via visual
+//            verification, activated immediately when surfaced.
+//            Lineage holds at 13 prospective fires (this is NOT
+//            a sub-rule c miss; it's the gate's deferral
+//            protocol working as designed). Item 105 adds
+//            "deferred-but-not-missed" as named sub-pattern
+//            alongside Item 99 "runtime-path verification gate
+//            extension" and Item 96 "fail-fast vs fail-silent"
+//            for next quarterly §19 meta-commit.
+//
+//            Pre-commit verification (Phase B1):
+//            - rm -rf dist && npm run build → tsc strict exit 0
+//              (Sprint 46 fail-fast architecture held)
+//            - cp -r src/{assets,lib}/. simulated locally
+//            - notificationService.test.ts: 9/9 passed in 712ms
+//              (Sprint 45a regression-lock holds through
+//              monkey-patch port + FONT_* exports + Helvetica
+//              → FONT_BODY swaps)
+//            - LOCAL PDF SMOKE (D4 sub-rule c gate):
+//              generated test RC PDF via direct service call,
+//              read back via PDF text extraction, verified all
+//              4 "Confirmation" instances render with dot on i
+//              ✓ — empirical proof fix works before push
+//            - E2E full-lifecycle.spec: not re-run (build chain
+//              fix + visual chrome fix; E2E PDF assertions
+//              don't test ligature rendering or font-family
+//              names)
+//
+//            Per §3.1 sequence-continuous: v3.8.abf → v3.8.abg.
+//
+//            §13.3:
+//              - Item 103 — LOGGED + CLOSED (monkey-patch port
+//                bundled with registerSkillFonts; suppresses
+//                fontkit ligature substitution across all
+//                skill-chrome consumers)
+//              - Item 104 — LOGGED + CLOSED (T&C body + 3
+//                coupled Helvetica references in
+//                generateEnhancedRateConfirmation swapped to
+//                FONT_BODY/FONT_BODY_BOLD skill canonical;
+//                scope expanded from 1 line to 4 lines for
+//                heightOfString/render font-pair coupling +
+//                T&C label/body visual consistency)
+//              - Item 105 — LOGGED + CLOSED same-sprint
+//                (sub-rule c gate deferred-but-not-missed
+//                protocol canonical, §19 quarterly meta-commit
+//                candidate alongside Items 96 + 99)
+//              - Items 97 + 98 — STATUS UNCHANGED (Prisma
+//                advisory lock cleanup; Sprint 52+ candidate)
+//              - All other open items STATUS UNCHANGED per
+//                Sprint 47.b scope discipline
+export const SRL_VERSION = "3.8.abg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

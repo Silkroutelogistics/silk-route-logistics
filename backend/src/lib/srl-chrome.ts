@@ -86,12 +86,16 @@ export const CONTENT_W = PAGE_W - 2 * MARGIN;
 // or fontkit will throw "Font not found" when chrome functions reference
 // these registered names. See pdfService.ts generateEnhancedRateConfirmation
 // for the canonical pattern.
-const FONT_BODY = 'DMSans-Regular';
-const FONT_BODY_BOLD = 'DMSans-Bold';
-const FONT_BODY_ITALIC = 'DMSans-Italic';
-const FONT_DISPLAY_BOLD = 'Playfair-Bold';
-const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
-const FONT_MONO_BOLD = 'Courier-Bold';
+// Sprint 47.b (Item 104) — exported for direct use by skill-chrome consumers
+// that render text outside the canned drawing functions (e.g., custom T&C
+// blocks, special instruction panels). Callers prefer FONT_BODY over the
+// hardcoded "DMSans-Regular" string for consistency + drift insurance.
+export const FONT_BODY = 'DMSans-Regular';
+export const FONT_BODY_BOLD = 'DMSans-Bold';
+export const FONT_BODY_ITALIC = 'DMSans-Italic';
+export const FONT_DISPLAY_BOLD = 'Playfair-Bold';
+export const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
+export const FONT_MONO_BOLD = 'Courier-Bold';
 
 // ============================================================================
 // FONT REGISTRATION (Sprint 47, Item 101)
@@ -126,6 +130,86 @@ export function registerSkillFonts(doc: PDFKit.PDFDocument): void {
   doc.registerFont('DMSans-Medium', pathLib.join(FONTS_DIR, 'DMSans-Medium.ttf'));
   doc.registerFont('DMSans-SemiBold', pathLib.join(FONTS_DIR, 'DMSans-SemiBold.ttf'));
   doc.registerFont('DMSans-Bold', pathLib.join(FONTS_DIR, 'DMSans-Bold.ttf'));
+
+  // Sprint 47.b (Item 103) — Ligature suppression monkey-patch ported from
+  // Sprint v3.8.b Option β (pdfService.ts:248-297 generateBOLFromLoad
+  // inline). Monkey-patch doc.text to inject an OpenType feature-disable
+  // object into every text invocation's options. fontkit accepts `features`
+  // as either an array (additive — enables listed features on top of script
+  // defaults) or an object (explicit on/off per feature tag). The array form
+  // keeps default `liga` enabled and can't disable it; the object form with
+  // `liga: false` is the authoritative way to suppress ligature
+  // substitution. Disable all four ligature-family features (liga/clig/
+  // rlig/dlig) so Playfair Bold/Italic + DM Sans Regular/Italic don't
+  // substitute `fi` with a glyph that truncates the `i` (the "Confirmation"
+  // → "Confrmation" bug visible post-Sprint-47 on Rate Confirmation PDFs;
+  // same fontkit class as the "classified" → "classifed" bug Sprint v3.8.b
+  // fixed for BOL v2.9). Keep `kern: true` so typography still looks good.
+  // Covers direct doc.text() calls AND fluent-chained .text() calls
+  // (e.g. doc.font(x).fontSize(y).text(str)).
+  //
+  // Tied to font registration: callers invoking registerSkillFonts(doc)
+  // implicitly opt into ligature suppression for the entire doc lifetime.
+  // This is the right bundling because skill canonical fonts (Playfair +
+  // DM Sans) are precisely the fonts that exhibit the ligature
+  // substitution bug; built-in PDFKit fonts (Helvetica/Times-Bold/etc.)
+  // don't have the bug but also don't need the suppression — harmless if
+  // also patched.
+  //
+  // @types/pdfkit declares features as `string[]`, which only covers the
+  // array form. Casting via `as unknown as string[]` is an explicit
+  // concession that we're using the runtime-supported object shape that
+  // the type declaration doesn't model.
+  const _origText = doc.text.bind(doc);
+  (doc as { text: typeof doc.text }).text =
+    function (this: typeof doc, ...args: unknown[]): typeof doc {
+      const last = args[args.length - 1];
+      const isOptionsObj =
+        last !== null &&
+        typeof last === "object" &&
+        !Array.isArray(last) &&
+        !Buffer.isBuffer(last);
+
+      // Base object: disable all ligature-family features, keep kern on.
+      const base: Record<string, boolean> = {
+        liga: false,
+        clig: false,
+        rlig: false,
+        dlig: false,
+        kern: true,
+      };
+
+      if (isOptionsObj) {
+        const opts = last as Record<string, unknown>;
+        const callerFeatures = opts.features;
+        let merged: Record<string, boolean>;
+        if (
+          callerFeatures !== null &&
+          typeof callerFeatures === "object" &&
+          !Array.isArray(callerFeatures)
+        ) {
+          // Object form: preserve caller's intent (e.g. kern preference),
+          // but force the four liga-family flags off.
+          merged = {
+            ...(callerFeatures as Record<string, boolean>),
+            liga: false,
+            clig: false,
+            rlig: false,
+            dlig: false,
+            kern:
+              (callerFeatures as Record<string, boolean>).kern ?? true,
+          };
+        } else {
+          // Array form (additive, can't disable defaults) or missing.
+          // Discard and use our full disable-object.
+          merged = base;
+        }
+        opts.features = merged as unknown as string[];
+      } else {
+        args.push({ features: base as unknown as string[] });
+      }
+      return (_origText as (...a: unknown[]) => typeof doc)(...args);
+    } as typeof doc.text;
 }
 
 // ============================================================================
