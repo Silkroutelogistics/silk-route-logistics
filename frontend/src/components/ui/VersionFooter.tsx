@@ -6106,7 +6106,161 @@
 //                fail-fast > fail-silent as methodology principle)
 //              - Items 87 + 89 + 90 + 92 + 8.8 + 93 + 94 — STATUS
 //                UNCHANGED (deferred per Sprint 46 scope discipline)
-export const SRL_VERSION = "3.8.abe";
+//
+// v3.8.abf — Sprint 47 (Sprint 45-RC.b atomic bundle) — closes
+//            Items 99 + 100 + 101 + 102. Resolves all three
+//            Sprint 45-RC visible regressions + skill canonical
+//            transit unit update.
+//
+//            ROOT CAUSE OF SPRINT 45-RC COMPASS PLACEHOLDER
+//            (Item 99): POSIX `cp -r SRC DEST` when DEST already
+//            exists copies SRC as a CHILD of DEST → produces
+//            DEST/SRC_NAME/files... NOT DEST/files... tsc creates
+//            dist/backend/src/{lib,config,assets}/ directories
+//            first (emitting compiled .js files), so all three cp
+//            destinations pre-exist and the nesting bug fires
+//            silently. Sprint 45-RC compass PNGs went to
+//            dist/backend/src/lib/lib/srl_compass_*.png (nested);
+//            runtime LOGO_DIR=__dirname resolved to
+//            dist/backend/src/lib/ found no PNGs → placeholder
+//            navy ring fallback fired on every RC PDF generation.
+//
+//            SAME BUG retroactively explains Sprint 44b email
+//            signature fallback warning — `cp -r src/config
+//            dist/backend/src/config` produced
+//            dist/backend/src/config/config/signatures/whaider.html
+//            (nested); email/builder.ts:18 reading
+//            dist/backend/src/config/signatures/whaider.html got
+//            "file not found" on every cold start since Sprint
+//            44b. ITEM 72 closed the directive but never verified
+//            the file landed at the expected runtime path.
+//
+//            EMPIRICAL REPRODUCTION (Phase B0 sub-rule c gate):
+//              rm -rf dist && npm run build
+//              cp -r src/lib dist/backend/src/lib
+//              ls dist/backend/src/lib/lib/srl_compass_60.png ✓
+//                (nested — proves bug)
+//              ls dist/backend/src/lib/srl_compass_60.png ✗
+//                (expected runtime path — empty)
+//
+//            FIX VERIFICATION (Phase B0 Step 4):
+//              cp -r src/lib/. dist/backend/src/lib/
+//              ls dist/backend/src/lib/srl_compass_60.png ✓
+//                (flat path — runtime resolves)
+//              ls dist/backend/src/lib/lib/ ✗ no nesting ✓
+//
+//            ATOMIC 4-CHANGE COMMIT:
+//
+//            (Change 1) Trailing-dot cp -r form on all 3 cp
+//            commands in render.yaml + CLAUDE.md §2.2:
+//              cp -r src/lib dist/backend/src/lib
+//              →
+//              cp -r src/lib/. dist/backend/src/lib/
+//            Same for src/assets and src/config. Fixes BOTH
+//            Sprint 45-RC compass + Sprint 44b email signature.
+//            Wasi must update Render dashboard buildCommand
+//            BEFORE push per D5 D9-style sequence.
+//
+//            (Change 2) Transit display hours not days (Item 100):
+//              backend/src/lib/srl-chrome.ts:drawLaneEconomics
+//              new param: transitUnit: "hours" | "days" = "hours"
+//              backend/src/services/pdfService.ts RC generator:
+//              transitDays (miles/500) → transitHours (miles/55)
+//              Display: "24.6 hrs" (broker industry standard
+//              drive-hour metric; carriers think in HOS-relevant
+//              drive hours, not calendar days).
+//
+//            (Change 3) Skill font registration (Item 101):
+//              srl-chrome.ts FONT_* constants updated:
+//                Helvetica → DMSans-Regular
+//                Helvetica-Bold → DMSans-Bold
+//                Helvetica-Oblique → DMSans-Italic
+//                Times-Bold → Playfair-Bold
+//                Times-Italic → Playfair-Italic
+//                Courier-Bold (kept, no DMSans monospace)
+//              New exported registerSkillFonts(doc) function
+//              mirrors generateBOLFromLoad's font registration
+//              pattern at pdfService.ts:317-326. TTFs ship at
+//              backend/src/assets/fonts/bol-v2.9/ (already in
+//              tree from Sprint v3.8.b BOL v2.9 epic) and
+//              propagate to Render prod via cp -r src/assets/.
+//              step. Callers (currently just
+//              generateEnhancedRateConfirmation) must invoke
+//              registerSkillFonts(doc) immediately after
+//              new PDFDocument(). Without it, fontkit throws
+//              "Font not found" on first text() call.
+//
+//            (Change 4) drawPartiesBlock y-coord overlap fix
+//            (Item 102):
+//              pdfService.ts:1414
+//                y = drawPartiesBlock(..., y - 4)
+//                →
+//                y = drawPartiesBlock(..., y + 12)
+//              The drawMetaStrip return value is at the meta
+//              strip's bottom edge; parties block needs its own
+//              PARTIES small-caps label clearance from the meta
+//              strip row above. Sprint 45-RC's `y - 4` rendered
+//              "May 16, 2026PARTIES" overlap visible on every
+//              RC PDF.
+//
+//            PATTERN 6 SUB-RULE C — 13TH PROSPECTIVE FIRE:
+//            Phase A audit caught cp -r nesting bug via local
+//            empirical reproduction BEFORE shipping fix. Sub-rule
+//            c gate extension banks methodology (Item 99 +
+//            §13.3): "command exited 0" is NOT sufficient
+//            verification for file-producing operations. Must
+//            verify file landed at expected runtime path. Sprint
+//            44b Item 72 closure was technically incorrect — the
+//            cp command did run, but the runtime-path
+//            verification was never performed; the failure was
+//            invisible until Sprint 45-RC compass placeholder
+//            surfaced it 6+ days later.
+//
+//            Cumulative arc sub-rule c fire count: 13.
+//
+//            Pre-commit verification (Phase B1):
+//            - rm -rf dist && npm run build → tsc exit 0 ✓
+//            - cp -r src/assets/. dist/backend/src/assets/ ✓
+//            - cp -r src/config/. dist/backend/src/config/ ✓
+//            - cp -r src/lib/. dist/backend/src/lib/ ✓
+//            - dist/backend/src/lib/srl_compass_60.png exists ✓
+//            - dist/backend/src/config/signatures/whaider.html ✓
+//            - dist/backend/src/assets/fonts/bol-v2.9/
+//              PlayfairDisplay-Bold.ttf + DMSans-Regular.ttf ✓
+//            - No nested {lib,config,assets}/ subdirs ✓
+//            - notificationService.test.ts: 9/9 passed (775ms)
+//            - E2E full-lifecycle.spec: not re-run (build chain
+//              fix is orthogonal; E2E uses ts-node-dev runtime)
+//
+//            Per §3.1 sequence-continuous: v3.8.abe → v3.8.abf.
+//
+//            Predicted side-effects post-deploy:
+//              - RC PDF compass mark renders canonically (no
+//                more navy ring placeholder)
+//              - RC PDF body fonts render Playfair + DM Sans
+//                (matches BOL v2.9 visual parity)
+//              - RC PDF parties block doesn't overlap meta strip
+//              - RC PDF transit reads "24.6 hrs" for 1,352 mi
+//                lane (vs prior "2.7 days")
+//              - Runtime log: [EmailBuilder] Signature file not
+//                found warning DISAPPEARS (signature now resolves
+//                from canonical path)
+//
+//            §13.3:
+//              - Item 99 — LOGGED + CLOSED (cp -r POSIX nesting
+//                + sub-rule c gate extension methodology
+//                principle)
+//              - Item 100 — LOGGED + CLOSED (transit display
+//                hours not days, skill canonical update)
+//              - Item 101 — LOGGED + CLOSED (skill font
+//                registration in srl-chrome.ts mirroring BOL
+//                v2.9 pattern)
+//              - Item 102 — LOGGED + CLOSED (drawPartiesBlock
+//                y-coord overlap fix)
+//              - Items 97 + 98 + 87 + 89 + 90 + 92 + 8.8 + 93 +
+//                94 — STATUS UNCHANGED (deferred per Sprint 47
+//                scope discipline)
+export const SRL_VERSION = "3.8.abf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -72,13 +72,61 @@ export const PAGE_H = 792;
 export const MARGIN = 36;
 export const CONTENT_W = PAGE_W - 2 * MARGIN;
 
-// Standard fonts available in PDFKit without registration
-const FONT_BODY = 'Helvetica';
-const FONT_BODY_BOLD = 'Helvetica-Bold';
-const FONT_BODY_ITALIC = 'Helvetica-Oblique';
-const FONT_DISPLAY_BOLD = 'Times-Bold';
-const FONT_DISPLAY_ITALIC = 'Times-Italic';
+// Sprint 47 (v3.8.abf, Item 101) — Skill canonical fonts per tokens.md:
+//   Playfair Display 700 — display headings + tagline italic
+//   DM Sans 400/500/700 — body text + small-caps labels
+//   Courier-Bold — mono (PDFKit built-in; skill spec doesn't include
+//                  a custom mono — kept for reference fields like load
+//                  IDs and TRACK label per pdf-chrome.md)
+// TTFs ship at backend/src/assets/fonts/bol-v2.9/ and propagate to Render
+// prod via the cp -r src/assets/. step in buildCommand (CLAUDE.md §2.2).
+// Mirrors generateBOLFromLoad font registration at pdfService.ts:317-326.
+//
+// Callers MUST invoke registerSkillFonts(doc) right after new PDFDocument()
+// or fontkit will throw "Font not found" when chrome functions reference
+// these registered names. See pdfService.ts generateEnhancedRateConfirmation
+// for the canonical pattern.
+const FONT_BODY = 'DMSans-Regular';
+const FONT_BODY_BOLD = 'DMSans-Bold';
+const FONT_BODY_ITALIC = 'DMSans-Italic';
+const FONT_DISPLAY_BOLD = 'Playfair-Bold';
+const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
 const FONT_MONO_BOLD = 'Courier-Bold';
+
+// ============================================================================
+// FONT REGISTRATION (Sprint 47, Item 101)
+//
+// Skill chrome functions reference registered font names (Playfair-Bold,
+// DMSans-Regular, etc.). PDFKit requires these to be registered on the doc
+// instance BEFORE any text() call references them, or fontkit throws
+// "Font not found". Callers must invoke registerSkillFonts(doc) immediately
+// after `new PDFDocument(...)`.
+//
+// Mirrors generateBOLFromLoad font registration at pdfService.ts:317-326.
+// TTFs ship at backend/src/assets/fonts/bol-v2.9/ and propagate to Render
+// prod via `cp -r src/assets/. dist/backend/src/assets/` step in
+// buildCommand (CLAUDE.md §2.2 canonical).
+//
+// Runtime path resolution: __dirname here is backend/src/lib/ at compile
+// time and dist/backend/src/lib/ at runtime after Sprint 46 fail-fast +
+// Sprint 47 trailing-dot cp fix. From either, `../assets/fonts/bol-v2.9/`
+// resolves correctly.
+// ============================================================================
+
+import * as pathLib from 'path';
+const FONTS_DIR = pathLib.resolve(__dirname, '../assets/fonts/bol-v2.9');
+
+export function registerSkillFonts(doc: PDFKit.PDFDocument): void {
+  doc.registerFont('Playfair-Regular', pathLib.join(FONTS_DIR, 'PlayfairDisplay-Regular.ttf'));
+  doc.registerFont('Playfair-Italic', pathLib.join(FONTS_DIR, 'PlayfairDisplay-Italic.ttf'));
+  doc.registerFont('Playfair-Bold', pathLib.join(FONTS_DIR, 'PlayfairDisplay-Bold.ttf'));
+  doc.registerFont('Playfair-BoldItalic', pathLib.join(FONTS_DIR, 'PlayfairDisplay-BoldItalic.ttf'));
+  doc.registerFont('DMSans-Regular', pathLib.join(FONTS_DIR, 'DMSans-Regular.ttf'));
+  doc.registerFont('DMSans-Italic', pathLib.join(FONTS_DIR, 'DMSans-Italic.ttf'));
+  doc.registerFont('DMSans-Medium', pathLib.join(FONTS_DIR, 'DMSans-Medium.ttf'));
+  doc.registerFont('DMSans-SemiBold', pathLib.join(FONTS_DIR, 'DMSans-SemiBold.ttf'));
+  doc.registerFont('DMSans-Bold', pathLib.join(FONTS_DIR, 'DMSans-Bold.ttf'));
+}
 
 // ============================================================================
 // PRIMITIVES
@@ -1196,15 +1244,29 @@ export function drawRateConTerms(
   return curY + 4;
 }
 
+/**
+ * Sprint 47 (v3.8.abf) — added transitUnit parameter. Default "hours" per
+ * broker industry standard drive-hour metric (carriers think in HOS-relevant
+ * drive hours, not calendar days). Pass `"days"` explicitly when the caller
+ * has already computed calendar transit days (multi-day plan, HOS-strict
+ * pacing, etc.). The transitValue param semantics depend on transitUnit:
+ *   - transitUnit="hours": transitValue = drive hours (typically miles / 55)
+ *   - transitUnit="days":  transitValue = calendar days
+ */
 export function drawLaneEconomics(
-  doc: PDFDoc, miles: number, transitDays: number, totalPay: number, yTop: number
+  doc: PDFDoc, miles: number, transitValue: number, totalPay: number, yTop: number,
+  transitUnit: "hours" | "days" = "hours"
 ): number {
   const boxW = (CONTENT_W - 16) / 3;
   const boxH = 42;
 
+  const transitDisplay = transitUnit === "hours"
+    ? `${transitValue.toFixed(1)} hrs`
+    : `${transitValue.toFixed(1)} days`;
+
   const fields: [string, string, string][] = [
     ['MILES', miles.toLocaleString('en-US'), 'Lane mileage'],
-    ['TRANSIT', `${transitDays.toFixed(1)} days`, 'Standard pace'],
+    ['TRANSIT', transitDisplay, 'Standard pace'],
     ['$/MILE', `$${(totalPay / miles).toFixed(2)}`, 'Carrier rate'],
   ];
 

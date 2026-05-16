@@ -28,6 +28,7 @@ import {
   drawFooter,
   drawContinuationHeader,
   drawPanel,
+  registerSkillFonts,
   MARGIN,
   CONTENT_W,
   PAGE_H,
@@ -1343,6 +1344,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const fd = formData || {};
   const doc = new PDFDocument({ size: "LETTER", margin: 0 });
 
+  // Sprint 47 (v3.8.abf, Item 101) — register skill canonical fonts on this
+  // doc instance. Required for Playfair-Bold / DMSans-* references inside
+  // skill chrome functions to resolve. Without this call, fontkit throws
+  // "Font not found" on first text() invocation. Mirror of BOL v2.9 pattern.
+  registerSkillFonts(doc);
+
   const refNum = fd.referenceNumber || load.referenceNumber;
   const docId = `RC-SRL-${refNum}`;
 
@@ -1373,6 +1380,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   }, y - 4);
 
   // Parties block — Shipper + Consignee in cream-2 panels
+  // Sprint 47 (Item 102) — y-offset bumped from `y - 4` to `y + 12`.
+  // The drawMetaStrip return value y is at the meta strip's bottom edge;
+  // the parties block has its own PARTIES small-caps label that needs
+  // clearance from the meta-strip row above. Sprint 45-RC's `y - 4`
+  // collided the parties label with the meta strip's DATE value row;
+  // user-visible overlap on every RC PDF.
   const shipperAddrLines: string[] = [];
   const shipperStreet = fd.shipperAddress || load.customer?.address;
   if (shipperStreet) shipperAddrLines.push(shipperStreet);
@@ -1411,7 +1424,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       ? `${deliveryStr}${fd.deliveryTimeWindow ? " · " + fd.deliveryTimeWindow : ""}`
       : undefined,
   };
-  y = drawPartiesBlock(doc, shipperParty, consigneeParty, y - 4);
+  y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);
 
   // Lane economics — MILES / TRANSIT / $/MILE pills (only with distance)
   const linehaul = (fd.lineHaulRate ?? load.rate) as number;
@@ -1421,8 +1434,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const totalCarrierPay = (fd.totalCharges as number | undefined) ?? (linehaul + fsc + accSum);
   const miles = load.distance ?? null;
   if (miles && miles > 0) {
-    const transitDays = miles / 500;
-    y = drawLaneEconomics(doc, miles, transitDays, totalCarrierPay, y - 4);
+    // Sprint 47 (Item 100) — transit in drive hours per broker industry
+    // standard (carriers think in HOS-relevant drive hours, not calendar
+    // days). 55 mph industry-standard highway average for solo loaded.
+    // Pre-Sprint-47 was `miles / 500` days which renders "2.7 days" for a
+    // 1,352-mile lane — technically correct under 500 mi/day HOS solo but
+    // UX-poor; carriers convert mentally to drive hours regardless.
+    const transitHours = miles / 55;
+    y = drawLaneEconomics(doc, miles, transitHours, totalCarrierPay, y - 4, "hours");
   }
 
   // Equipment spec — type + temp-setpoint if reefer
