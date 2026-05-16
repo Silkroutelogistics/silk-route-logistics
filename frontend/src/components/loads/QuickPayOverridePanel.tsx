@@ -11,7 +11,7 @@
 // Carrier-facing surfaces (rate-con PDF, carrier dashboard) never see the
 // tier default or the override reason — only the applied rate.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -95,6 +95,63 @@ export function QuickPayOverridePanel({ loadId, carrierUserId, speed, onAppliedR
       setHydrated(true);
     }
   }, [existing, tierDefaultPct, hydrated]);
+
+  // Sprint 51.e (Item 153) — intentional-vs-incidental SPEED-toggle refinement.
+  //
+  // Sprint 51.c shipped Q2 ratification "persist override values across SPEED
+  // toggles" literally — every value persisted regardless of whether it
+  // represented an intentional override (e.g., 2.5% with "Competitive match"
+  // reason) or an incidental tier-default-matching value left in the field
+  // (e.g., 3% on 7-Day because that IS the 7-Day default for Silver/GUEST).
+  // AE complaint: toggling 7-Day (default 3%) → Same-Day (default 5%) kept
+  // Override at 3, firing amber "Δ -2pp vs tier default" and reason-required
+  // validation for an override the AE never intended.
+  //
+  // Sprint 51.e refinement: on SPEED-driven tier-default change, detect whether
+  // the current Override was incidental (matched OLD default AND no reason set)
+  // vs intentional (didn't match OLD default OR has a reason). Auto-sync the
+  // incidental case to the new tier default + clear reason. Preserve the
+  // intentional case (Sprint 51.c behavior intact).
+  //
+  // Sub-pattern 10 (hydration-effect-dep-array-audit) applied: useRef reads
+  // appliedPct + reason WITHOUT putting them in the dep array. Effect fires
+  // ONLY on tierDefaultPct change (which only changes when AE toggles SPEED,
+  // since the tier-default query key includes speed per Sprint 51.c Item 151).
+  // appliedPctRef + reasonRef capture current-render values for read inside
+  // the effect without triggering re-fires.
+  //
+  // Test 6 refinement (Phase B1 surfaced): also gate on reason-empty. If AE
+  // typed a reason on the previous speed, that's an intent signal regardless
+  // of whether the value happened to match the old default — preserve both.
+  const prevTierDefaultRef = useRef<number | null>(null);
+  const appliedPctRef = useRef<string>("");
+  const reasonRef = useRef<OverrideReason | "">("");
+  appliedPctRef.current = appliedPct;
+  reasonRef.current = reason;
+
+  useEffect(() => {
+    if (tierDefaultPct === null) return;
+    const prev = prevTierDefaultRef.current;
+    prevTierDefaultRef.current = tierDefaultPct;
+
+    if (prev === null) return;                          // initial hydration
+    if (Math.abs(prev - tierDefaultPct) < 0.001) return; // same speed, refetch noise
+
+    // SPEED change detected. Check intent signals.
+    const currentPct = parseFloat(appliedPctRef.current);
+    const matchesOldDefault =
+      !isNaN(currentPct) && Math.abs(currentPct - prev) < 0.01;
+    const reasonEmpty = reasonRef.current === "";
+
+    if (matchesOldDefault && reasonEmpty) {
+      // Incidental — auto-sync to new tier default
+      setAppliedPct(tierDefaultPct.toFixed(2));
+      setReason("");
+      setReasonNote("");
+    }
+    // Else: intentional override (value diverges from old default OR
+    // reason was typed) — preserve Sprint 51.c behavior
+  }, [tierDefaultPct]);
 
   const appliedRateNumber = parseFloat(appliedPct);
   const appliedRateFraction = Number.isFinite(appliedRateNumber) ? appliedRateNumber / 100 : null;
