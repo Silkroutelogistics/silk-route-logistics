@@ -125,7 +125,11 @@ interface FormState {
   shipperPhone: string;
   shipperEmail: string;
   shipperReference: string;
-  shipperPO: string;
+  // Sprint 49 (Item 117) — formData key renamed shipperPO → poNumber to
+  // align with backend Zod validator canonical (validators/rateConfirmation.ts:43).
+  // Pre-Sprint-49 the modal wrote shipperPO which Zod silently dropped via
+  // .strip() default. Same Item 116 class as Sprint 48.b carrier-field rename.
+  poNumber: string;
   pickupNumber: string;
   pickupDate: string;
   pickupTimeStart: string;
@@ -423,7 +427,7 @@ function initForm(load: any, user: any): FormState {
     shipperPhone: load?.originContactPhone || load?.contactPhone || "",
     shipperEmail: "",
     shipperReference: load?.shipperReference || "",
-    shipperPO: load?.shipperPoNumber || "",
+    poNumber: load?.shipperPoNumber || (load?.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || "",
     pickupNumber: load?.pickupNumber || "",
     pickupDate: load?.pickupDate ? load.pickupDate.split("T")[0] : "",
     pickupTimeStart: load?.pickupTimeStart || "",
@@ -1248,7 +1252,7 @@ function SectionShipper({ form, set }: { form: FormState; set: <K extends keyof 
         </h4>
         <div className="grid grid-cols-3 gap-4">
           <Field label="Shipper Reference #" value={form.shipperReference} onChange={(v) => set("shipperReference", v)} />
-          <Field label="PO Number" value={form.shipperPO} onChange={(v) => set("shipperPO", v)} />
+          <Field label="PO Number" value={form.poNumber} onChange={(v) => set("poNumber", v)} />
           <Field label="Pickup Number" value={form.pickupNumber} onChange={(v) => set("pickupNumber", v)} />
         </div>
       </div>

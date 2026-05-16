@@ -102,6 +102,8 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
         include: {
           carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } } },
           customer: true,
+          // Sprint 49 (Item 119) — poster relation for AE header sub-line.
+          poster: { select: { firstName: true, lastName: true, phone: true } },
           tenders: {
             orderBy: { createdAt: "desc" },
             take: 1,
@@ -151,6 +153,8 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
         include: {
           carrier: { select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } } },
           customer: true,
+          // Sprint 49 (Item 119) — poster relation for AE header sub-line.
+          poster: { select: { firstName: true, lastName: true, phone: true } },
           tenders: {
             orderBy: { createdAt: "desc" },
             take: 1,

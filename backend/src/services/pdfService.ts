@@ -91,6 +91,25 @@ function addFooter(doc: PDFDoc) {
   doc.text(`${COMPANY.phone} | ${COMPANY.email} | ${COMPANY.website}`, 50, y + 18, { align: "center" });
 }
 
+// Sprint 49 (v3.8.abk, Item 120 + 120.a) — MC# / DOT# render-time strip.
+// Storage shape varies by data source (manual registration writes verbatim
+// via carrierController.ts:58; FMCSA sync, Apollo import, Lead Hunter may
+// each store "MC-XXX", "MC#XXX", "MC XXX", or clean "XXX"). Three existing
+// normalizers in the codebase (carrier.ts:64, carrierOkService.ts:132,
+// fmcsaService.ts:172) use /^MC-?/i — sufficient for narrow URL/lookup
+// input but over-permissive for the arbitrary stored strings we render.
+// Item 120.a precision regex: digit lookahead /^MC[-#\s]*(?=\d)/i ensures
+// we only strip the prefix when an actual MC number digit follows, avoiding
+// over-match on edge cases like a carrier company name starting with "MC".
+function normalizeMcNumber(val: string | null | undefined): string {
+  if (!val) return "";
+  return String(val).replace(/^MC[-#\s]*(?=\d)/i, "").trim();
+}
+function normalizeDotNumber(val: string | null | undefined): string {
+  if (!val) return "";
+  return String(val).replace(/^DOT[-#\s]*(?=\d)/i, "").trim();
+}
+
 function labelValue(doc: PDFDoc, label: string, value: string, x: number, y: number) {
   doc.fontSize(8).fillColor("#888888").text(label, x, y);
   doc.fontSize(10).fillColor("#1E1E2F").text(value || "—", x, y + 12);
@@ -1298,6 +1317,20 @@ interface EnhancedRCLoadData {
   // when expiresAt > now. Optional — older RCs that pre-date the controller
   // include extension still render cleanly without banner.
   tenders?: Array<{ expiresAt: Date; status: string }> | null;
+  // Sprint 49 (Item 119) — AE header sub-line data path. poster is the AE
+  // who created the load (canonical AE relation via Load.posterId → User).
+  // Single-AE pre-Oct-2026 (Wasi); multi-AE deferred to future sprint.
+  poster?: { firstName: string; lastName: string; phone?: string | null } | null;
+  // Sprint 49 (Item 118) — appointment flag suffix on parties block windows.
+  // Load.appointmentRequired (schema:2075). Modal does not currently surface
+  // a toggle — read directly from Load.
+  appointmentRequired?: boolean | null;
+  // Sprint 49 (Item 117) — pickup #/PO # data path for meta strip 8-cell.
+  // Both already exist on Load (pickupNumber:1100, poNumbers:1220 array,
+  // shipperPoNumber:1099). Renderer applies formData primary + Load fallback.
+  pickupNumber?: string | null;
+  poNumbers?: string[] | null;
+  shipperPoNumber?: string | null;
 }
 
 function sectionTitle(doc: PDFDoc, title: string, y: number): number {
@@ -1369,19 +1402,38 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     includeQr: false,
   });
 
-  // Meta strip — 6 fields per skill RC anatomy
+  // Sprint 49 (Item 119) — AE header sub-line. Renders below the subtitle
+  // when poster relation is included on the load. Skips cleanly when null
+  // (older RCs pre-Sprint-49 controller include extension, or system-generated
+  // loads without an explicit AE). Format: "AE: <Name> · <Phone>".
+  if (load.poster) {
+    const aeName = `${load.poster.firstName} ${load.poster.lastName}`.trim();
+    const aePhone = load.poster.phone ? ` · ${load.poster.phone}` : "";
+    doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
+    doc.text(`AE: ${aeName}${aePhone}`, MARGIN, y - 2, { lineBreak: false });
+    y += 12;
+  }
+
+  // Meta strip — Sprint 49 (Item 117) extended 6 → 8 cells. PICKUP # and PO #
+  // render conditionally (empty string passed when null/empty so the cell shows
+  // em-dash per drawMetaStrip skill canonical, instead of orphan labels).
+  // formData primary + Load fallback per Sprint 48 hybrid precedence pattern.
   const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const pickupStr = fd.pickupDate || (load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString() : null) || "—";
   const deliveryStr = fd.deliveryDate || (load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString() : null) || "—";
   const equipment = fd.equipmentType || load.equipmentType || "—";
   const qpTier = fd.carrierPaymentTier || "—";
   const termsLabel = fd.paymentTerms || "Net-30";
+  const pickupNumStr = fd.pickupNumber || load.pickupNumber || "";
+  const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || load.shipperPoNumber || "";
 
   y = drawMetaStrip(doc, {
     "DATE ISSUED": dateStr,
     "LOAD REF": refNum,
     "PICKUP": pickupStr,
     "DELIVERY": deliveryStr,
+    "PICKUP #": pickupNumStr,
+    "PO #": poNumStr,
     "QUICK PAY": qpTier,
     "TERMS": termsLabel,
   }, y - 4);
@@ -1415,20 +1467,33 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     ? `${fd.consigneeContact} · ${fd.consigneePhone}`
     : (fd.consigneeContact || fd.consigneePhone || undefined);
 
+  // Sprint 49 (Item 118) — appointment flag suffix on parties block windows.
+  // Reads fd.appointmentRequired (RC modal future toggle, not yet wired) OR
+  // load.appointmentRequired (canonical schema field today). Suffix " · APPT"
+  // surfaces the appointment requirement at the point a carrier eyes the
+  // window — industry-standard convention.
+  const apptFlag = (fd.appointmentRequired === true || load.appointmentRequired === true)
+    ? " · APPT"
+    : "";
+  // Sprint 49 (Item 121) — consignee name fallback changed from em-dash to
+  // "Consignee TBD" so the field communicates intent (data missing, fill in)
+  // rather than ambiguous em-dash that could read as "no consignee."
+  // Shipper retains 2-tier fallback (formData → load.customer → em-dash)
+  // because customer is usually populated; em-dash there is rare.
   const shipperParty: Party = {
     name: fd.shipperName || load.customer?.name || "—",
     addressLines: shipperAddrLines,
     contact: shipperContactLine,
     window: pickupStr !== "—"
-      ? `${pickupStr}${fd.pickupTimeWindow ? " · " + fd.pickupTimeWindow : ""}`
+      ? `${pickupStr}${fd.pickupTimeWindow ? " · " + fd.pickupTimeWindow : ""}${apptFlag}`
       : undefined,
   };
   const consigneeParty: Party = {
-    name: fd.consigneeName || "—",
+    name: fd.consigneeName || "Consignee TBD",
     addressLines: consigneeAddrLines,
     contact: consigneeContactLine,
     window: deliveryStr !== "—"
-      ? `${deliveryStr}${fd.deliveryTimeWindow ? " · " + fd.deliveryTimeWindow : ""}`
+      ? `${deliveryStr}${fd.deliveryTimeWindow ? " · " + fd.deliveryTimeWindow : ""}${apptFlag}`
       : undefined,
   };
   y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);
@@ -1469,8 +1534,15 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const carrierName = fd.carrierName
     || load.carrier?.company
     || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "—");
-  const carrierMc = fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber || "—";
-  const carrierDot = fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber || "—";
+  // Sprint 49 (Items 120 + 120.a) — render-time strip via precise regex
+  // /^MC[-#\s]*(?=\d)/i + /^DOT[-#\s]*(?=\d)/i. Storage shape varies by
+  // data source; the digit lookahead ensures we only strip the prefix
+  // when an MC/DOT number digit follows, avoiding over-match on edge
+  // cases like a carrier company name starting with "MC".
+  const rawMc = fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber;
+  const rawDot = fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber;
+  const carrierMc = normalizeMcNumber(rawMc) || "—";
+  const carrierDot = normalizeDotNumber(rawDot) || "—";
   const carrierPhone = fd.carrierPhone || load.carrier?.phone || "—";
   const carrierContact = fd.carrierContact
     || fd.dispatcherName
