@@ -1443,11 +1443,21 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const equipment = fd.equipmentType || load.equipmentType || "—";
   const qpTier = fd.carrierPaymentTier || "—";
   const termsLabel = fd.paymentTerms || "Net-30";
-  // Sprint 51 (Item 134 α) — Quick Pay meta strip cell: render "Standard Net-30"
-  // as a non-em-dash fallback when no Caravan tier is set. Communicates default
-  // payment terms instead of leaving the cell ambiguous. Pairs with Item 134 γ
-  // nudge panel swap on the rate breakdown area.
-  const qpCellValue = qpTier !== "—" ? qpTier : "Standard Net-30";
+  // Sprint 51 (Item 134 α) — Quick Pay meta strip cell: non-em-dash fallback
+  // when no Caravan tier is set. Communicates default payment terms instead
+  // of leaving the cell ambiguous. Pairs with Item 134 γ nudge panel swap on
+  // the rate breakdown area.
+  //
+  // Sprint 51.d (Item 152) — value shortened "Standard Net-30" → "Standard".
+  // 8-cell meta strip layout (Sprint 49 Item 117) per-cell width is ~67.5pt
+  // at CONTENT_W 540pt / 8 cells. "Standard Net-30" (15 chars at FONT_BODY
+  // 9pt ≈ 75pt) overflowed adjacent TERMS cell on Phase 4 visual verification.
+  // "Standard" (8 chars ≈ 40pt) fits with ~27pt margin. TERMS cell adjacency
+  // provides "Net-30" context unambiguously. Sub-pattern 8.a refinement:
+  // when a conditional changes content of pre-existing element within layout
+  // constraint, verification scope must include element's layout integrity
+  // with the new content — not just "is the value X vs Y" check.
+  const qpCellValue = qpTier !== "—" ? qpTier : "Standard";
   const pickupNumStr = fd.pickupNumber || load.pickupNumber || "";
   const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || load.shipperPoNumber || "";
 
