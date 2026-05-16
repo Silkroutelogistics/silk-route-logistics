@@ -657,27 +657,34 @@ export function drawSignatureBlock(
     let fieldY = doc.y + 12;
 
     role.fields.forEach(f => {
+      // Sprint 49.b (Item 139) — row spacing 22 → 26pt + value Y 4 → 10pt.
+      // Sprint 48.c placed pre-filled value at fieldY+4 while label sits at
+      // fieldY; 6.5pt label extends ~6.5pt down and 8.5pt value starting
+      // at +4 produced ~2.5pt visible overlap on every pre-filled row.
+      // 26pt row + value at fieldY+10 gives clean separation: label fieldY
+      // to ~+7, gap +7-10, value +10 to ~+19, underline at +20. Callers
+      // passing fixed block height must allow ~28pt × N fields headroom.
       doc.font(FONT_BODY_BOLD, 6.5);
       drawLabel(doc, f, x, fieldY, { color: TOKENS.fg3, size: 6.5 });
 
-      // Pre-filled value (if present) renders above the underline in primary
-      // text color. Caller passes a field-name → value map; bare fields fall
-      // through to underline-only for handwritten entry.
+      // Pre-filled value (if present) renders just above the underline in
+      // primary text color. Caller passes a field-name → value map; bare
+      // fields fall through to underline-only for handwritten entry.
       const preVal = prefilledValues[f];
       if (preVal) {
         doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
-        doc.text(preVal, x, fieldY + 4, { width: colInnerW, lineBreak: false });
+        doc.text(preVal, x, fieldY + 10, { width: colInnerW, lineBreak: false });
       }
 
       // Underline
       doc.save()
          .strokeColor(TOKENS.borderStrong)
          .lineWidth(0.5)
-         .moveTo(x, fieldY + 14)
-         .lineTo(x + colInnerW, fieldY + 14)
+         .moveTo(x, fieldY + 20)
+         .lineTo(x + colInnerW, fieldY + 20)
          .stroke()
          .restore();
-      fieldY += 22;
+      fieldY += 26;
     });
   });
 

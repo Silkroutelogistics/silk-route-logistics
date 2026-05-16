@@ -1569,7 +1569,20 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.text(carrierName, MARGIN + 12, carrierPanelY + 9, { lineBreak: false });
   doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
   doc.text(`MC# ${carrierMc}    DOT# ${carrierDot}`, MARGIN + 12, carrierPanelY + 26, { lineBreak: false });
-  doc.text(`${carrierContact} · ${carrierPhone}`, MARGIN + 12, carrierPanelY + 41, { lineBreak: false });
+
+  // Sprint 49.b (Item 138) — contact + phone line empty-suppression. When
+  // both values fall through to em-dash sentinel (profile-only carriers
+  // without linked User record, no phone), render no line at all instead
+  // of "— · —" which reads as broken. Same defensive class as Sprint 48
+  // DRIVER & EQUIPMENT row gating.
+  const hasCarrierContact = carrierContact && carrierContact !== "—";
+  const hasCarrierPhone = carrierPhone && carrierPhone !== "—";
+  if (hasCarrierContact || hasCarrierPhone) {
+    const contactParts: string[] = [];
+    if (hasCarrierContact) contactParts.push(carrierContact);
+    if (hasCarrierPhone) contactParts.push(carrierPhone);
+    doc.text(contactParts.join(" · "), MARGIN + 12, carrierPanelY + 41, { lineBreak: false });
+  }
 
   y = carrierPanelY + carrierPanelH + 10;
 
@@ -1812,9 +1825,11 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   if (carrierName && carrierName !== "—") sigPrefill["CARRIER LEGAL NAME"] = carrierName;
   if (carrierMc && carrierMc !== "—") sigPrefill["MC #"] = carrierMc;
   if (carrierDot && carrierDot !== "—") sigPrefill["DOT #"] = carrierDot;
+  // Sprint 49.b (Item 139) — block height 180 → 210 to accommodate 26pt
+  // row spacing × 7 RC fields = 182pt + certification + label header.
   drawSignatureBlock(doc, y, {
     roles: RATE_CON_SIGNATURE_ROLES,
-    height: 180,
+    height: 210,
     prefilledValues: sigPrefill,
   });
 
