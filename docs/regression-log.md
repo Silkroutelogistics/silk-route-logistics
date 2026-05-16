@@ -193,6 +193,43 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Methodology meta-commit: §19 sub-rule c canonical extension + Sprint 52 epic backlog (§19 meta-50, 2026-05-16, v3.8.abn session arc closure marker)
+
+§19 Pattern 6 sub-rule c extended with 9 named sub-patterns documenting the post-Sprint-44.5 methodology library at maturity. Together with the root authoritative-source-verification principle, sub-rule c surface comprises **10 methodology principles**. Cumulative fire registry table documents 17 prospective fires across Sprint 44a → Sprint 50.
+
+Sub-pattern naming canonicalized (chronological origin order):
+
+  1. Fail-fast-build-chain (Item 96, Sprint 46, f695eac)
+  2. Runtime-path-verification (Item 99, Sprint 47, db077d4)
+  3. Deferred-but-not-missed (Item 105, Sprint 47.b, d0c9155)
+  4. Skill-vs-industry-practice (Item 115, Sprint 48, 22b61a7)
+  5. Audit-both-ends-of-data-flow (Item 116, Sprint 48.b, 10a9999)
+  6. Concurrent-sprint-coordination (Item 136, Sprint 49, 0f6f135)
+  7. Grep-regex-completeness-gate (unbanked methodology, Sprint 49 Phase B0, 0f6f135)
+  8. Conditional-render-visual-verification (Item 139, Sprint 49.b, 723b244)
+  9. Text-extraction-pre-push-smoke (unbanked methodology, Sprint 50 Phase B1, 70cf791)
+
+Path α canonicalization: sub-patterns 7 + 9 banked inline in §19 without §13.3 backlog item registry entries — methodology sub-patterns ARE the canonical; §13.3 is for tracking-actionable backlog items. Items 96/99/105/115/116/136/139 retain their §13.3 entries for audit-trail symmetry; sub-patterns 7 + 9 are documented purely in §19.
+
+Plus: 6 §13.3 items banked for Sprint 52 epic (tender workflow polish):
+
+- Item 141 — Tender expiry cron sweeper (Sprint 52a, ~40 LOC)
+- Item 142 — Magic-link carrier accept-without-login (Sprint 52b, ~80-100 LOC)
+- Item 143 — Counter-tender email handler (Sprint 52c, ~25 LOC)
+- Item 144 — Tiered expiry preset UX 4h/24h/48h (Sprint 52d, ~40 LOC; closes Item 77)
+- Item 87.b — `LoadTender.declineReason` field + capture flow (Sprint 52e, ~80-120 LOC; closes Item 87 schema gap, extends Item 90)
+- Item 145 — Engagement signals + decline taxonomy analytics (Sprint 53+ post-volume, ~150 LOC)
+
+Methodology library at maturity. Future sprints inherit canonical reference from CLAUDE.md §19 rather than session context. VersionFooter v3.8.abn marks session arc closure for the **Sprint 47 → Sprint 50 RC document quality + legal exposure arc** — 29 §13.3 items closed across 9 atomic commits with zero rollbacks (Sprints 47, 47.b, 48, 48.b, 48.c, 49, 49.b, 50, plus §19 meta-50 docs commit).
+
+One-time §3.1 exception: docs-only commits typically ship unversioned, but v3.8.abn bump applied per directive Q4 ratification as session arc closure marker — symbolic, not behavior-changing. Frontend Cloudflare Pages re-deploy triggered for VersionFooter render only.
+
+Patterns applied: Pattern 1 (audit-first §19 state verification — confirmed Pattern 6 sub-rule c already canonicalized at Sprint 44.5, this is extension not creation), Pattern 6 sub-rule c (canonical self-reference — applying the methodology to its own documentation surface), Pattern 7 (10-row fire registry table verifies cross-domain coverage: build chain, file I/O, deferred risk, skill, data flow, sprint coordination, grep, visual, smoke).
+
+Patterns emerged: none new; this is canonical documentation work, not pattern surfacing. Sub-rule c surface is at maturity for the operational contexts encountered through Sprint 50.
+
+---
+
 ## Phase 6 — Methodology meta-commit: §19 sub-rules canonical + Pattern 7 promotion + Item 67 close (Sprint 44.5, 2026-05-09, no version bump)
 
 Same shape as Sprint 39.5 + 40c — methodology infrastructure ships unversioned.
