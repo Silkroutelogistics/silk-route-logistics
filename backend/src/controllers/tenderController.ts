@@ -349,8 +349,19 @@ export async function getCarrierTenders(req: AuthRequest, res: Response) {
   const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
   if (!profile) { res.status(404).json({ error: "Carrier profile not found" }); return; }
 
+  // Sprint 52.hotfix.b — filter to actionable tenders only. Pre-fix this
+  // endpoint returned ALL statuses (accepted/declined/expired/countered
+  // mixed with offered), past-expiry tenders, and soft-deleted rows.
+  // Carrier portal "Tenders" view needs the pending-action set only.
+  // Both direct (waterfallPositionId=null) and cascade-originated
+  // (waterfallPositionId set) tenders surface through this single consumer.
   const tenders = await prisma.loadTender.findMany({
-    where: { carrierId: profile.id },
+    where: {
+      carrierId: profile.id,
+      status: "OFFERED",
+      expiresAt: { gt: new Date() },
+      deletedAt: null,
+    },
     include: {
       load: {
         include: { poster: { select: { id: true, company: true, firstName: true, lastName: true } } },

@@ -4,12 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Package, Truck, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X,
+  Home, Package, Send, Truck, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X,
 } from "lucide-react";
 
+// Sprint 52.hotfix.b — Tenders nav entry added at position 3 between
+// Available Loads and My Loads. Reflects workflow: scout available loads
+// → review pending tenders (action required) → check active booked loads.
+// Page wired to /api/carrier/tenders (LoadTender consumer) per Sprint
+// 52.hotfix.b — see frontend/src/app/carrier/dashboard/tenders/page.tsx.
 const nav = [
   { id: "overview", href: "/carrier/dashboard", icon: Home, label: "Dashboard" },
   { id: "available", href: "/carrier/dashboard/available-loads", icon: Package, label: "Available Loads" },
+  { id: "tenders", href: "/carrier/dashboard/tenders", icon: Send, label: "Tenders" },
   { id: "myloads", href: "/carrier/dashboard/my-loads", icon: Truck, label: "My Loads" },
   { id: "compliance", href: "/carrier/dashboard/compliance", icon: Shield, label: "Compliance" },
   { id: "payments", href: "/carrier/dashboard/payments", icon: DollarSign, label: "Payments" },

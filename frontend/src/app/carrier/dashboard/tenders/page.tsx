@@ -1,7 +1,15 @@
 "use client";
 
+// Sprint 52.hotfix.b — rewired to canonical /api/carrier/tenders consumer.
+// Pre-fix this page called /carrier-tenders/active (WaterfallPosition-only,
+// pre-v3.4.d state field) which never surfaced direct AE-console tenders
+// to the carrier. The right endpoint (GET /api/carrier/tenders, controller
+// getCarrierTenders) returns LoadTender[] for the authed carrier and was
+// unused by any frontend. Sub-pattern 12 (write-read-dataflow-audit) fire
+// #28 — endpoint-selection drift between similar-named parallel endpoints.
+
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Clock, MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
 
@@ -15,30 +23,45 @@ const DECLINE_REASONS = [
   "Other",
 ];
 
+// LoadTender shape returned by GET /api/carrier/tenders (full default
+// Prisma selection on LoadTender + load relation with poster sub-include
+// per getCarrierTenders controller). waterfallPositionId is the
+// discriminator: null = direct AE tender; set = cascade-originated.
 interface ActiveTender {
-  positionId: string;
-  position: number;
+  id: string;
+  loadId: string;
+  carrierId: string;
+  status: string;
   offeredRate: number;
-  tenderExpiresAt: string;
-  waterfallId: string;
+  counterRate: number | null;
+  respondedAt: string | null;
+  expiresAt: string;
+  createdAt: string;
+  waterfallPositionId: string | null;
   load: {
     id: string;
-    loadNumber: string | null;
     referenceNumber: string;
-    originCity: string | null;
-    originState: string | null;
-    destCity: string | null;
-    destState: string | null;
+    originCity: string;
+    originState: string;
+    destCity: string;
+    destState: string;
     equipmentType: string;
+    weight: number | null;
+    commodity: string | null;
     pickupDate: string;
     deliveryDate: string;
     distance: number | null;
-    weight: number | null;
-    commodity: string | null;
+    rate: number;
+    poster: {
+      id: string;
+      company: string | null;
+      firstName: string;
+      lastName: string;
+    } | null;
   };
 }
 
-// Countdown widget shared with the AE drawer
+// Countdown widget — same as pre-fix.
 function Countdown({ expiresAt }: { expiresAt: string }) {
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, new Date(expiresAt).getTime() - Date.now())
@@ -49,74 +72,89 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
     }, 1000);
     return () => clearInterval(id);
   }, [expiresAt]);
-  const m = Math.floor(remaining / 60000);
+  const h = Math.floor(remaining / 3600000);
+  const m = Math.floor((remaining % 3600000) / 60000);
   const s = Math.floor((remaining % 60000) / 1000);
-  const cls = m < 5 ? "text-red-400" : m < 10 ? "text-amber-400" : "text-gold";
-  return (
-    <span className={`font-mono font-semibold tabular-nums text-2xl ${cls}`}>
-      {remaining === 0 ? "Expired" : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`}
-    </span>
-  );
+  const cls = h === 0 && m < 5 ? "text-red-400" : h === 0 && m < 30 ? "text-amber-400" : "text-gold";
+  if (remaining === 0) return <span className="font-mono font-semibold text-2xl text-red-400">Expired</span>;
+  const display = h > 0
+    ? `${h}h ${String(m).padStart(2, "0")}m`
+    : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return <span className={`font-mono font-semibold tabular-nums text-2xl ${cls}`}>{display}</span>;
 }
 
 export default function CarrierTendersPage() {
+  const queryClient = useQueryClient();
   const [declining, setDeclining] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  // Carrier portal poll — the spec is static export so SSE isn't
-  // available. 10s polling is acceptable given the 20-min window.
-  const activeTendersQuery = useQuery<{ tenders: ActiveTender[] }>({
+  // Sprint 52.hotfix.b — consume canonical /api/carrier/tenders.
+  // Backend filters status=OFFERED + expiresAt > now + deletedAt: null
+  // (Sprint 52.hotfix.b getCarrierTenders WHERE-clause hardening). Both
+  // direct + cascade-originated tenders surface together; frontend renders
+  // source badge for cascade rows.
+  const tendersQuery = useQuery<ActiveTender[]>({
     queryKey: ["carrier-tenders"],
-    queryFn: async () => (await api.get("/carrier-tenders/active")).data,
+    queryFn: async () => (await api.get("/carrier/tenders")).data,
     refetchInterval: 10_000,
   });
 
   const accept = useMutation({
-    mutationFn: async (positionId: string) =>
-      (await api.post(`/waterfalls/tenders/${positionId}/accept`)).data,
-    onSuccess: () => activeTendersQuery.refetch(),
-  });
-
-  const decline = useMutation({
-    mutationFn: async ({ positionId, reason }: { positionId: string; reason: string }) =>
-      (await api.post(`/waterfalls/tenders/${positionId}/decline`, { reason })).data,
+    mutationFn: async (tenderId: string) =>
+      (await api.post(`/tenders/${tenderId}/accept`)).data,
     onSuccess: () => {
-      setDeclining(null);
-      setReason("");
-      activeTendersQuery.refetch();
+      // Sprint 38 Item 53 atomic transaction also flips Load → BOOKED +
+      // sets carrierId; invalidate carrier-loads queries so My Loads picks
+      // up the newly booked load without a manual refresh.
+      queryClient.invalidateQueries({ queryKey: ["carrier-tenders"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-loads"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-my-loads"] });
     },
   });
 
-  const tenders = activeTendersQuery.data?.tenders ?? [];
+  const decline = useMutation({
+    mutationFn: async ({ tenderId, reason }: { tenderId: string; reason: string }) =>
+      (await api.post(`/tenders/${tenderId}/decline`, { reason })).data,
+    onSuccess: () => {
+      setDeclining(null);
+      setReason("");
+      queryClient.invalidateQueries({ queryKey: ["carrier-tenders"] });
+    },
+  });
+
+  const tenders = tendersQuery.data ?? [];
 
   return (
     <div className="p-6 space-y-4">
       <div>
         <h1 className="text-2xl font-semibold text-[#0A2540]">Active tenders</h1>
         <p className="text-sm text-slate-700 mt-1">
-          Respond within 20 minutes or the tender will expire and cascade to the next carrier.
+          Accept or decline each tender before its expiration. Accepted tenders book the load immediately.
         </p>
       </div>
 
-      {tenders.length === 0 && !activeTendersQuery.isLoading && (
+      {tenders.length === 0 && !tendersQuery.isLoading && (
         <div className="p-12 text-center text-slate-500 bg-white/5 border border-white/10 rounded-xl">
-          No active tenders right now.
+          No tenders pending — we&apos;ll surface a tender here as soon as one matches your equipment and lanes.
         </div>
       )}
 
       {tenders.map((t) => {
-        const isDeclining = declining === t.positionId;
+        const isDeclining = declining === t.id;
+        const isCascade = t.waterfallPositionId !== null;
         return (
-          <div key={t.positionId} className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div key={t.id} className="bg-white/5 border border-white/10 rounded-xl p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-semibold text-[#0A2540]">
-                    Load {t.load.loadNumber ?? t.load.referenceNumber}
+                    Load {t.load.referenceNumber}
                   </h2>
-                  <span className="px-2 py-0.5 text-xs rounded bg-[#FAEEDA] text-[#854F0B] font-medium">
-                    Position #{t.position}
-                  </span>
+                  {isCascade && (
+                    <span className="px-2 py-0.5 text-xs rounded bg-[#FAEEDA] text-[#854F0B] font-medium">
+                      Cascade Tender
+                    </span>
+                  )}
                 </div>
                 <div className="mt-2 text-sm text-slate-500 flex items-center gap-1">
                   <MapPin className="w-4 h-4 text-gold" />
@@ -124,14 +162,15 @@ export default function CarrierTendersPage() {
                   {t.load.distance && ` · ${Math.round(t.load.distance).toLocaleString()} mi`}
                 </div>
                 <div className="mt-1 text-xs text-slate-700">
-                  {t.load.equipmentType} · {t.load.weight ? `${t.load.weight} lbs` : ""}
+                  {t.load.equipmentType}
+                  {t.load.weight && ` · ${t.load.weight.toLocaleString()} lbs`}
                   {t.load.commodity && ` · ${t.load.commodity}`}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-slate-500 uppercase">Rate</div>
+                <div className="text-[10px] text-slate-500 uppercase">Offered Rate</div>
                 <div className="text-2xl font-semibold text-gold">
-                  ${Number(t.offeredRate).toLocaleString()}
+                  ${Number(t.offeredRate).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
               </div>
             </div>
@@ -147,22 +186,22 @@ export default function CarrierTendersPage() {
               </div>
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Time left</div>
-                <Countdown expiresAt={t.tenderExpiresAt} />
+                <Countdown expiresAt={t.expiresAt} />
               </div>
             </div>
 
             {!isDeclining && (
               <div className="mt-5 flex gap-2">
                 <button
-                  onClick={() => accept.mutate(t.positionId)}
+                  onClick={() => accept.mutate(t.id)}
                   disabled={accept.isPending}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded disabled:opacity-40"
                 >
                   <CheckCircle2 className="w-4 h-4" /> Accept
                 </button>
                 <button
-                  onClick={() => setDeclining(t.positionId)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-slate-200 font-semibold rounded border border-white/10"
+                  onClick={() => setDeclining(t.id)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-slate-700 font-semibold rounded border border-white/10"
                 >
                   <AlertTriangle className="w-4 h-4" /> Decline
                 </button>
@@ -175,14 +214,14 @@ export default function CarrierTendersPage() {
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded text-sm text-white"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-sm text-slate-900"
                 >
                   <option value="">Select a reason…</option>
                   {DECLINE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => decline.mutate({ positionId: t.positionId, reason })}
+                    onClick={() => decline.mutate({ tenderId: t.id, reason })}
                     disabled={!reason || decline.isPending}
                     className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded disabled:opacity-40"
                   >
@@ -190,7 +229,7 @@ export default function CarrierTendersPage() {
                   </button>
                   <button
                     onClick={() => { setDeclining(null); setReason(""); }}
-                    className="flex-1 py-2 bg-white/5 text-slate-300 text-sm font-medium rounded border border-white/10"
+                    className="flex-1 py-2 bg-white/5 text-slate-700 text-sm font-medium rounded border border-slate-300"
                   >
                     Back
                   </button>
