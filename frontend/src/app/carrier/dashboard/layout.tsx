@@ -9,6 +9,7 @@ import { Search, Bell, X, LogOut, Clock } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
+import { AuthRefreshBanner } from "@/components/ui/AuthRefreshBanner";
 import { MarcoPolo } from "@/components/MarcoPolo";
 import type { Notification } from "@/types/entities";
 
@@ -129,6 +130,9 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
             </button>
           </div>
         </header>
+
+        {/* Post-Sprint-53 auth refresh banner (auto-expires 24h post-deploy) */}
+        <AuthRefreshBanner />
 
         {/* Content */}
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>

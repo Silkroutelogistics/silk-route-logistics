@@ -9,6 +9,7 @@ import { Search, Bell, X } from "lucide-react";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
+import { AuthRefreshBanner } from "@/components/ui/AuthRefreshBanner";
 import { ShipperChatbot } from "@/components/shipper/ShipperChatbot";
 import type { Notification } from "@/types/entities";
 
@@ -121,6 +122,9 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
             </div>
           </div>
         </header>
+
+        {/* Post-Sprint-53 auth refresh banner (auto-expires 24h post-deploy) */}
+        <AuthRefreshBanner />
 
         {/* Content */}
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
