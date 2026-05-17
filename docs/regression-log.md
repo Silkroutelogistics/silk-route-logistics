@@ -193,6 +193,61 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Methodology meta-commit: §19 sub-rule c second canonical expansion + ratification layer introduction (§19 meta-51, 2026-05-17, v3.8.abv session arc closure marker)
+
+Sprint 47 → Sprint 51.f RC arc canonical closure. 5 new sub-patterns + 1 refinement promoted to §19. First methodology principle operating at the ratification layer (sub-pattern 13). 8 fires added to cumulative registry (17 → 25). Layer taxonomy introduced — methodology library now spans 2 operational layers.
+
+Canonical promotions:
+
+  Sub-pattern 10 — Hydration-effect-dep-array-audit (execution)
+    Origin: Item 147, Sprint 51.b, commit 6350918
+    Mechanic: useRef captures form/edit-state for in-effect read without dep-array re-fire
+
+  Sub-pattern 11 — CI-parity-verification (execution)
+    Origin: Item 148, CI hotfix commit 013883d
+    Mechanic: local pre-commit gates MUST match CI gates; `next build` for JSX, not just tsc
+
+  Sub-pattern 12 — Write-read-dataflow-audit (execution)
+    Origin: Sprint 51.c, commit 88adebb — methodology bank, no §13.3 item
+    Mechanic: audit BOTH write fires AND receiver reads/acts on written value
+
+  Sub-pattern 8.a — Layout-constraint-verification refinement (execution)
+    Origin: Item 152, Sprint 51.d, commit 4f5ed1e
+    Mechanic: conditional render must verify new content AND pre-existing layout integrity
+
+  Sub-pattern 13 — Literal-vs-intent ratification (RATIFICATION LAYER — new)
+    Origin: Sprint 51.c → 51.e → 51.f three-fire validated canonical
+    Mechanic: workflow-first framing in Phase A ratification, not just technical options
+    Three-fire validation parallel to sub-rule c root's Sprint 44.5 promotion lineage
+
+  Sub-pattern 14 — Diff-disproves-hypothesis halt (execution)
+    Origin: Sprint 51.f Phase A diagnostic
+    Mechanic: when diff analysis disproves regression hypothesis, halt for external evidence
+
+Layer taxonomy: execution layer (Phase A → Phase B via Claude Code; gates applied at execution time) vs ratification layer (Phase A → Q-ratifications that lock Phase B scope, chat-side before directive ships). Sub-pattern 13 is the first ratification-layer entry; future banking requires explicit layer attribution.
+
+Decision-tree reference table added for sprint Phase A audit quick-lookup. Library size (14 + 8.a) reached navigation-aid threshold at meta-51. Table covers 14 sprint scenario → sub-pattern application mappings.
+
+Iterative-refinement-precedent observation banked: when methodology library is at maturity, iterative refinement IS the methodology. Sprint 47 → 51.f delivered 18 atomic commits + 9 hotfix iterations with zero rollbacks. Sprint 51 arc (51.b → 51.f, 5 hotfixes) is the canonical case study for the methodology library generating its own ratification-layer sub-pattern through arc-driven empirical surfacing.
+
+Sprint 47 → 51.f RC arc final tally:
+  18 atomic commits (17 RC arc + 1 §19 meta-51 docs)
+  2 methodology canonicalizations (meta-50 + meta-51)
+  44 §13.3 items closed
+  12+ §13.3 items banked for Sprint 52+ tender epic
+  14 canonical sub-patterns + 8.a refinement
+  25 cumulative sub-rule c fires
+  Zero rollbacks
+  RC PDF audit-complete: industry-parity across visual + operational + legal + anti-fraud + differentiator dimensions
+
+VersionFooter v3.8.abv applied per Q5 ratification — one-time §3.1 exception, session arc closure marker, parallel to meta-50 precedent.
+
+Patterns applied: Pattern 1 (audit-first Phase A verified 5 audit dimensions before drafting), Pattern 6 sub-rule c (canonical self-reference — applying methodology to its own documentation surface), Pattern 7 (cross-domain breadth verification — sub-patterns 10-14 span hydration / CI / dataflow / layout / ratification / diagnostic domains).
+
+Patterns emerged: ratification methodology layer canonicalized as new operational dimension. Future sub-pattern banking must attribute layer explicitly. Decision-tree reference table promoted as canonical artifact alongside fire registry table — both serve as Phase A audit accelerators.
+
+---
+
 ## Phase 6 — Methodology meta-commit: §19 sub-rule c canonical extension + Sprint 52 epic backlog (§19 meta-50, 2026-05-16, v3.8.abn session arc closure marker)
 
 §19 Pattern 6 sub-rule c extended with 9 named sub-patterns documenting the post-Sprint-44.5 methodology library at maturity. Together with the root authoritative-source-verification principle, sub-rule c surface comprises **10 methodology principles**. Cumulative fire registry table documents 17 prospective fires across Sprint 44a → Sprint 50.

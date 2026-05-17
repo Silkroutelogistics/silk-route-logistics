@@ -1184,6 +1184,7 @@ Naming convention: sub-patterns enumerate 1 → 9 below in chronological origin 
 - **Mechanic:** when adding a conditional render path, visual verification with the actual conditional case populated is required. Code-side review can confirm syntax + types but cannot confirm visual layout (overlap, alignment, line wrap, page break interaction). The math may look plausible until rendered output proves otherwise.
 - **Case study:** Sprint 48.c placed pre-filled signature value at `fieldY+4` while label sits at `fieldY`; 6.5pt label extends ~6.5pt down and 8.5pt value starting at +4 produced ~2.5pt visible overlap on every pre-filled row. Pattern only became visible when actual carrier data arrived through Sprint 48.b → Sprint 49 flow. Sprint 49.b ratified 22→26pt row spacing + value Y +4→+10 + underline Y +14→+20 + block height 180→210pt.
 - **Prevention value:** catches visual-layout class regressions invisible to type-system and code review; pairs with Sub-pattern 9 (text-extraction-pre-push-smoke) for pre-deploy assertion coverage.
+- **Refinement:** see Sub-pattern 8.a (Layout-constraint-verification) in meta-51 expansion — addresses the case where new conditional content fits the rendered element but overflows the layout slot allocated to it.
 
 ##### Sub-pattern 9 — Text-extraction-pre-push-smoke
 - **Origin:** Sprint 50 Phase B1 (commit `70cf791`, v3.8.abm) — methodology pattern banked inline; no §13.3 backlog item per Path α canonical promotion.
@@ -1214,6 +1215,150 @@ Naming convention: sub-patterns enumerate 1 → 9 below in chronological origin 
 
 **Total: 17 prospective fires.** Footnote: Sprint 45 arc partitioned conservatively — Sprint 45a counted as 2 fires (sub-rule c gates on Q3 carrier email + `declineReason` schema check), Sprint 45-RC-PRE rolled into the Sprint 45-RC arc (single combined entry), Sprint 45-RC counted as 2 fires (Phase A2 pixel verification + Phase B sub-phase 3 directive correction). Strict per-commit count would total 19; canonical count 17 per Sprint 50 closure documentation reflects the partitioning choice.
 
+###### Sub-rule c second canonical expansion (post-Sprint-51.f, canonicalized §19 meta-51)
+
+Sprint 47 → Sprint 51.f shipped an extended RC PDF + RC modal arc — 17 atomic commits across 9 hotfix iterations, all closing methodology gaps with zero rollbacks. The arc surfaced 5 new sub-patterns + 1 refinement to sub-pattern 8 + the methodology library's first ratification-layer sub-pattern. Sub-rule c surface now spans **14 canonical sub-patterns + 8.a refinement across 2 methodology layers** (execution + ratification), with **25 cumulative prospective fires**. Three methodologically distinct contributions: (a) introduction of the ratification layer (sub-pattern 13), (b) three-fire validation lineage parallel to sub-rule c root's Sprint 44.5 canonical promotion, (c) decision-tree reference table for sprint Phase A quick-lookup.
+
+###### Sub-pattern methodology layers (meta-51 introduces)
+
+Sub-patterns 1-9 + 8.a + 10, 11, 12, 14 operate at the **EXECUTION LAYER** — gates applied by Claude Code during Phase B execution after Phase A audit findings are surfaced. These sub-patterns catch errors at code write time, build time, or pre-push time.
+
+Sub-pattern 13 (literal-vs-intent ratification) is the first methodology principle operating at the **RATIFICATION LAYER** — gates applied chat-side before a Phase B directive ships. The user's Q-ratifications lock Phase B scope; ratification-layer sub-patterns guard the framing of those Q-questions so the locked scope matches the user's actual operational intent (not just one of N technically-valid interpretations).
+
+Layer attribution determines WHEN the sub-pattern fires in the sprint lifecycle:
+- **Execution layer:** between Phase A surface and Phase B push
+- **Ratification layer:** between Phase A surface and directive draft
+
+Future sub-patterns banked into §19 must explicitly attribute layer so the methodology library's operational scope stays well-defined.
+
+##### Sub-pattern 10 — Hydration-effect-dep-array-audit
+- **Origin:** Item 147, Sprint 51.b (commit `6350918`, v3.8.abp)
+- **Layer:** Execution
+- **Trigger:** useEffect that syncs server→local state with form/edit-state values in the dependency array.
+- **Mechanic:** ref-based reads for in-effect access to current state without triggering re-fire. Sub-pattern 10 prescribes: form/edit-state values must NOT be in the dependency array; use `useRef` to capture current value for read-only access inside the effect body. The hydration effect should fire on initial mount or server-state arrival only — not on every user keystroke.
+- **Case study:** Sprint 51.b QP Override reason field overwrite bug. The hydration useEffect at `QuickPayOverridePanel.tsx:86-97` had `appliedPct` in its dependency array; user keystrokes in the applied-rate input triggered the effect to re-fire, and the `if (existing) {...}` branch overwrote user's reason/note edits back to the saved override row values. Fix: single-shot `hydrated` flag prevents re-fire after initial sync.
+- **Prevention value:** catches the entire class of "user edits disappear on next keystroke" bugs in form components hydrating from server state. Particularly common in TanStack Query consumers where `data` reference is stable but the developer-author's mental model assumes one-shot population.
+
+##### Sub-pattern 11 — CI-parity-verification
+- **Origin:** Item 148, CI hotfix (commit `013883d`, v3.8.abq)
+- **Layer:** Execution
+- **Trigger:** local pre-commit gate is a strict subset of CI gates.
+- **Mechanic:** local verification MUST run the same gates CI runs. Frontend changes touching JSX require `npx next build` (which invokes ESLint as part of the build), NOT just `tsc --noEmit` (which only checks types). Backend with eslint/vitest in CI requires equivalent local gates before push.
+- **Case study:** Sprint 51 `verify/page.tsx:158` had `doesn't` (ASCII apostrophe) in JSX text. Next.js default ESLint has `react/no-unescaped-entities` set to `error`. Sprint 51 pre-commit ran `tsc --noEmit` clean on both backend + frontend; tsc passed. CI Lint & Build failed at 26 seconds; E2E job skipped. Required CI hotfix commit `013883d` to swap `doesn't` → `does not`.
+- **Prevention value:** catches "passed tsc, failed CI" bugs. Local verify cost: ~30-45s per sprint. CI hotfix cycle cost: ~5 min wall-clock + E2E job re-run. Net wall-clock savings compound across sprints.
+
+##### Sub-pattern 12 — Write-read-dataflow-audit
+- **Origin:** Sprint 51.c, commit `88adebb`, v3.8.abr — methodology pattern banked inline; no §13.3 backlog item per Path α canonical promotion.
+- **Layer:** Execution
+- **Trigger:** component writes via callback prop; receiver may not read what was written; refactor scenarios where dataflow consumers drift from producer changes.
+- **Mechanic:** when verifying write/read flows, audit BOTH that the write fires AND that the receiver reads and acts on the written value. Three-layer audit pattern: write fires → state updates → receiver consumes. Not just "does the write succeed" — but "does the consumer's code path actually read what the producer wrote."
+- **Case study:** Sprint 33 → 51.c (17-sprint window). QP Override panel wrote `form.quickPayFeePercent` via the `onAppliedRateChange` callback. The financials `useMemo` at `RateConfirmationModal.tsx:578-585` computed `feePercent = feePctForSpeed(speedUiKey, carrierTier)` — IGNORING `form.quickPayFeePercent`. A useEffect at line 588-592 then OVERWROTE `form.quickPayFeePercent` back to the speed-derived default. The Override panel was decorative for 17 sprints — UI looked like AE could override, but Payment Calculation never reflected the override. Sprint 51.c Item 150 fixed by rewriting the useMemo to consume the override, and removing the overwriting useEffect.
+- **Prevention value:** catches "silent ignore" bugs where writes succeed but receiver path breaks. Particularly valuable in refactor scenarios where dataflow consumers drift from producer changes — the producer code keeps writing correctly, but the consumer no longer reads.
+
+##### Sub-pattern 8.a — Layout-constraint-verification (refinement of #8)
+- **Origin:** Item 152, Sprint 51.d (commit `4f5ed1e`, v3.8.abs)
+- **Layer:** Execution (refinement to sub-pattern 8 conditional-render-visual-verification)
+- **Trigger:** conditional render CHANGES content of a pre-existing layout element within a fixed-width constraint.
+- **Mechanic:** visual verification scope must include BOTH the new conditional rendering AND the pre-existing element's layout integrity with the new content. Sub-pattern 8 verifies that the new element renders correctly; 8.a verifies that the pre-existing layout doesn't break under the new content. The distinction matters when the conditional fills a slot whose original content fit a width budget but the new content doesn't.
+- **Case study:** Sprint 51 Item 134 α QP cell value `"Standard Net-30"` (15 chars at FONT_BODY 9pt ≈ 75pt) overflowed the meta strip cell width budget (~67.5pt at CONTENT_W 540pt / 8 cells); collided with the adjacent TERMS cell. Sub-pattern 8 (visual verification) would have shown the new value rendering, but the layout-overflow into the adjacent cell only became visible in side-by-side cell rendering. Sprint 51.d shortened to `"Standard"` (8 chars ≈ 40pt) — fits with 27pt margin.
+- **Prevention value:** catches layout-overflow regressions that text-extraction smoke (sub-pattern 9) cannot detect. Text-extraction confirms "the content is present"; layout-constraint verifies "the content fits the slot allocated to it."
+
+##### Sub-pattern 13 — Literal-vs-intent ratification (three-fire validated canonical)
+- **Origin:** Sprint 51.c → Sprint 51.e → Sprint 51.f three-fire validated lineage
+- **Layer:** **Ratification (NEW LAYER — first methodology principle operating above execution)**
+
+**Three-fire validation lineage:**
+
+1. **Fire 1 — Sprint 51.c Q2 ratification** (commit `88adebb`, v3.8.abr). Phase A Q-question: "should override values persist across SPEED toggles, or auto-sync to new tier default?" Answer ratified: persist. Sprint 51.c shipped literal persistence — override values stayed across speed toggles regardless of context. Result: AE toggling 7-Day (default 3%) with Override=3 to Same-Day (default 5%) kept Override at 3, surfacing as "-2pp delta vs tier default" with reason-required validation. Felt wrong to AE.
+
+2. **Fire 2 — Sprint 51.e Phase A refinement** (commit `38a1d6b`, v3.8.abt). Phase A Q-question: "should the persist behavior distinguish intentional overrides (typed reason or value ≠ old default) from incidental ones (matched old default, no reason)?" Answer ratified: yes, refine to intentional-vs-incidental detection. Sprint 51.e shipped: auto-sync when Override matched OLD tier default AND reason empty; preserve when value differs OR reason set. Closer to user mental model. Still missing.
+
+3. **Fire 3 — Sprint 51.f reality** (commit `f5552b9`, v3.8.abu). User clarified actual workflow: SPEED card IS the primary control; Override is a per-load-per-speed-instance adjustment; speed toggle = context reset. Sprint 51.f shipped always-reset on speed change. Three iterations of Phase A framing each refined one level closer; the third iteration matched the user's operational model.
+
+**Mechanic:**
+
+When ratifying behavior of a UI control whose mental model the ratifier hasn't operated, the ratification MUST be informed by user's actual workflow pattern, NOT just technical behavior options.
+
+*Technical question framing:* "should values persist or auto-sync, with what conditions?"
+- Optimizes for state-preservation invariants.
+- Generates multiple valid behavioral options.
+- Each is internally consistent with its own ratification.
+- None necessarily match user intent.
+
+*Workflow question framing:* "what does the user DO when they toggle this control? Is the new state a context reset or a context refinement?"
+- Optimizes for user mental model match.
+- Anchors ratification in operational workflow.
+- Surfaces simpler answers when the user's model is simpler than refinement implied.
+
+Sub-pattern 13 prescribes workflow-first framing in Phase A ratification drafting. Three iterations of technical-first framing (Sprint 51.c, 51.e) walked closer but kept overshooting the simpler workflow answer (Sprint 51.f).
+
+**Prevention value:**
+
+Catches the entire class of "shipped correctly per ratification but doesn't match user intent" bugs. Saves iteration cycles when user's mental model is simpler than technical refinement implied. Three-fire validation parallel to sub-rule c root's Sprint 44.5 canonical promotion lineage — both principles required three independent operational fires to canonicalize because the underlying methodology gap was subtle until repeated empirical surfacing made it canonical.
+
+This is the methodology library's first principle that operates at the ratification layer (chat-side, before directive ships) rather than the execution layer (Claude Code, during Phase B). The layer distinction is methodologically significant — future sub-pattern banking must explicitly attribute which layer the principle operates at.
+
+##### Sub-pattern 14 — Diff-disproves-hypothesis halt
+- **Origin:** Sprint 51.f Phase A diagnostic
+- **Layer:** Execution
+- **Trigger:** regression hypothesis can be disproven by code-side audit (diff analysis, conditional render trace).
+- **Mechanic:** when diff analysis or conditional render trace mathematically demonstrates that the hypothesized cause cannot produce the observed behavior, HALT for external evidence (browser state, network logs, scenario confirmation) rather than ship a speculative fix. The hypothesis itself is wrong — speculating at "fixes" wastes cycles and risks introducing real regressions.
+- **Case study:** Sprint 51.f original report: "Override panel absent." Claude Code Phase A diff analysis showed Sprint 51.e changes between commit `88adebb` and `38a1d6b` were purely additive — 3 useRef declarations + 1 useEffect with `[tierDefaultPct]` dep. No conditional render gates touched, no JSX restructure, no early-return additions. Diff was mathematically incapable of removing the panel from the DOM. Halted for external evidence; user-side DevTools verification confirmed v3.8.abt was live; the real issue was Sprint 51.e's intent-detection behavior didn't match user's mental model (Sprint 51.f sub-pattern 13 territory), NOT a phantom regression.
+- **Prevention value:** prevents phantom-regression fixes that address non-existent bugs. Saves rollback risk + verification cycle when actual root cause is elsewhere (user mental model, environment state, scenario confusion). Especially important after refactor sprints — the temptation to attribute next-sprint user reports to the refactor must be checked against actual diff capability.
+
+###### Cumulative fire registry extension (meta-51)
+
+8 new fires (post-meta-50) extend the existing registry from 17 → 25:
+
+| Sprint | Fire # | Origin | Mechanic | Sub-pattern |
+|---|---|---|---|---|
+| 51.b | 18 | Item 147 | useEffect dep array overwrite on user keystroke | #10 |
+| CI hotfix `013883d` | 19 | Item 148 | tsc passes locally, ESLint fails at CI in 26s | #11 |
+| 51.c Phase A | 20 | Sprint 51.c | 3-layer architectural disconnect traced (label + endpoint + dataflow) | #12 |
+| 51.c version-letter | 21 | Sprint 51.c | abq consumed by CI hotfix; Phase B0 caught directive's `abp → abq` drift | #6 retrospective |
+| 51.d | 22 | Item 152 | QP cell `"Standard Net-30"` overflowed 8-cell meta strip width budget | #8.a |
+| 51.e Phase A | 23 | Sprint 51.e | Sub-pattern 10 ref-based read pattern applied to new useEffect | #10 application |
+| 51.f Phase A | 24 | Sprint 51.f diagnostic | Diff analysis disproved regression hypothesis | #14 |
+| 51.f reality | 25 | Sprint 51.f | Three-fire confirmed canonical promotion | #13 third-fire |
+
+**Total post-meta-51: 25 prospective fires.** Footnote: Sprint 51 arc partitioning rule — Sprint 51.c version-letter counted as #6 retrospective (concurrent-sprint-coordination application, not new sub-pattern fire), Sprint 51.e Phase A counted as #10 application (ref-based read pattern reused, not fresh fire). Same conservative convention as meta-50's Sprint 45 arc partitioning. Strict per-commit count across the Sprint 47 → 51.f arc would land at 27-28; canonical 25 reflects the partitioning choice.
+
+###### Decision-tree reference: when to fire which sub-pattern
+
+Quick-lookup operational artifact for sprint Phase A audits. Library size (14 + 8.a) reached the navigation-aid threshold at meta-51 — this table reduces Phase A audit cognitive cost.
+
+| Sprint scenario | Sub-patterns to apply |
+|---|---|
+| New conditional render path | #8 (new content renders) + #8.a (pre-existing layout integrity) |
+| useEffect syncing server → local form state | #10 (ref-based read, NO form values in deps) |
+| Frontend touching JSX or new pages | #11 (run `next build` locally, NOT just `tsc`) |
+| Component writes via callback prop | #12 (audit BOTH write fires AND receiver reads) |
+| Phase 4 user reports regression | #14 (diff analysis first; halt if hypothesis disproven) |
+| Ratifying UI control behavior | #13 (workflow-first framing, NOT technical options) |
+| Renderer-only sprint (PDF, image, doc) | #9 (text-extraction smoke) + #8.a (layout integrity) |
+| Schema/code audit via grep | #7 (multiple naming variants; read verbatim if regex empty) |
+| Concurrent sprints in same epoch | #6 (re-verify scope against latest production state) |
+| File-producing build operation | #1 (fail-fast build chain) + #2 (runtime path verification) |
+| Sprint identifies downstream risk | #3 (deferred-but-not-missed protocol) |
+| Skill canonical vs industry practice | #4 (reconcile when conflicts surface) |
+| Hybrid data flow (formData primary, DB fallback) | #5 (audit both ends — write side + read side) |
+| Authoritative source available | Root sub-rule c (verify before prod-touching action) |
+
+###### Iterative refinement at methodology library maturity (observation)
+
+Sprint 47 → Sprint 51.f shipped 18 atomic commits across 9 hotfix iterations (Sprint 47.b, 48.b, 48.c, 49.b, 51.b, 51.c, 51.d, 51.e, 51.f) with zero rollbacks. Each hotfix closed a methodology gap discovered via Phase 4 user verification or post-deploy user usage — NOT a regression introduced by the prior sprint.
+
+When the methodology library is at maturity, iterative refinement IS the methodology. Hotfix cadence is not a sign of failure but the expected operational rhythm: Phase 4 user verification surfaces methodology gaps that Phase B verification gates couldn't catch in-environment (because the gap lives in user mental model, browser state, or production behavior rather than code or content).
+
+Sprint 51 arc (51.b → 51.f, 5 hotfixes) is the canonical case study. Each iteration closed a distinct methodology gap:
+- **51.b** — hydration-effect-dep-array (Sub-pattern 10)
+- **51.c** — write-read-dataflow disconnect (Sub-pattern 12)
+- **51.d** — layout-constraint overflow (Sub-pattern 8.a)
+- **51.e** — intent-detection refinement (Sub-pattern 13 second fire)
+- **51.f** — always-reset operational model (Sub-pattern 13 third-fire canonical promotion)
+
+The hotfix arc itself produced Sub-pattern 13's three-fire validation lineage — the methodology library generated its first ratification-layer sub-pattern by operating at maturity on a single user-facing surface (QP Override panel) across five iterations.
+
 #### 7. Design-system conformance audit (Sprint 40b/40c, ALWAYS-FIRE post-Sprint-44.5)
 - **Trigger:** sprint introduces or modifies a UI element belonging to a multi-surface class (drawers, modals, banners, tab rails, side panels, status badges, action buttons, form inputs, **nullable-data render paths**, **deploy-pipeline classes**, **fixture classes**).
 - **Action:** enumerate all surfaces in the class. Check the modification against canonical reference + skill. Document drift if found.
@@ -1240,9 +1385,10 @@ Patterns emerged: <new pattern, if any — meta-commit follows to log it>
 When new patterns surface, ship them as a separate methodology meta-commit (no version bump, no source code change — same shape as Sprint 28 audit-only and Sprint 37 lock-only). Quarterly review prunes the catalog.
 
 ### Pending review (next quarterly)
-- Pattern 6 sub-rule c: 9 named sub-patterns canonicalized at §19 meta-50 (post-Sprint-50, v3.8.abn). Together with the root authoritative-source-verification principle, sub-rule c surface comprises **10 methodology principles** at maturity. Cumulative fire registry shows 17 prospective fires across Sprint 44a → Sprint 50.
-- Next §19 quarterly review trigger: accumulation of 3+ new sub-patterns under any active Pattern (1-7), OR a Pattern 1-5/7 sub-rule canonicalization comparable to Pattern 6's a/b/c. Current sub-rule c surface is at maturity for the operational contexts encountered through Sprint 50.
-- Patterns 1-5 + 7 active; no pending sub-rule canonicalizations observed.
+- Pattern 6 sub-rule c: **14 named sub-patterns + 8.a refinement** canonicalized across §19 meta-50 (9 sub-patterns, post-Sprint-50, v3.8.abn) + §19 meta-51 (5 new sub-patterns + 1 refinement, post-Sprint-51.f, v3.8.abv). Surface now spans **2 methodology layers**: execution (sub-patterns 1-12 + 8.a + 14) and ratification (sub-pattern 13). Cumulative fire registry shows **25 prospective fires** across Sprint 44a → Sprint 51.f.
+- Next §19 quarterly review trigger: 3+ new sub-patterns banked under any active Pattern (1-7), OR a new methodology layer discovered, OR Pattern 1-5/7 sub-rule canonicalization comparable to Pattern 6's a/b/c. Current sub-rule c surface is at second-canonical-expansion maturity for the operational contexts encountered through Sprint 51.f.
+- Patterns 1-5 + 7 active; no pending sub-rule canonicalizations observed outside the sub-rule c surface.
+- Methodology library now produces self-documenting outputs at maturity — Sprint 47 → 51.f arc generated meta-51 organically through iterative refinement. Future arcs of comparable depth (10+ atomic commits with 5+ hotfix iterations on a single user-facing surface) likely to produce further canonical promotions; quarterly cadence may shift to triggered-by-arc-completion rather than calendar-based.
 
 ---
 
