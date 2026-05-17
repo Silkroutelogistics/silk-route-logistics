@@ -205,6 +205,31 @@ Methodology banking deferred to §19 meta-52 quarterly review — Sprint 52.hotf
 
 ---
 
+## Phase 6 — Sprint 52.hotfix.c closed no-bug (chore, 2026-05-17, no version bump)
+
+Reported symptom: carrier "Update Status: AT PICKUP" button returns "Insufficient permissions"; three surfaces (carrier portal `/my-loads` card, AE Load Board row, AE Load Board detail panel) show three different statuses (BOOKED / IN_TRANSIT / AT_PICKUP) for the same load L7492033667.
+
+Phase A R1-R5 audit exhausted code-side hypotheses. Wasi-side Neon verification confirmed system working as designed:
+- User.role = "CARRIER" byte-exact (length 7, hex `43415252494552`) — H1 byte-mismatch ruled out
+- system_logs healthy (65 SECURITY warnings in 7d, latest write <1 minute old) — H2 silent-fail ruled out
+- All recent `authorize()` denials in past 24h attributed to `whaider@silkroutelogistics.ai` (ADMIN) attempting carrier-portal endpoints — denials CORRECT per role gate
+- INTEGRITY EXPRESS session was never the denied actor
+
+Root cause: observer-identity confusion. Operator (admin) testing role-restricted carrier flow with admin token still in browser storage. The "Insufficient permissions" error was the admin's session hitting the carrier-only endpoint; the carrier session was never the requestor. Three-surface status divergence was browser-state pollution between concurrent admin/carrier tabs reading from different cached snapshots. Test re-run from incognito with carrier-only credentials reproduced clean end-to-end flow.
+
+Sprint 52.hotfix.c closes with zero code change, zero data fix. Phase A audit work IS the deliverable. Items banked to §13.3 as collateral architectural findings worth queuing for Sprint 53+ epic:
+
+- Item 158: Parallel carrier status-update endpoints consolidation (`POST /api/carrier-loads/:id/status` vs `PATCH /api/loads/:id/carrier-status` — same parallel-endpoints class as Sprint 52.hotfix.b Item 156 diagnostic)
+- Item 159: Central LoadStatus state-machine validator (13+ write sites, no transition rules in code)
+- Item 160: ShipmentStatus ↔ LoadStatus enum gap (LoadStatus has 6 values ShipmentStatus lacks; latent risk)
+- Item 161: this no-bug close + observer-identity-confusion fire #1
+
+Methodology fire #1 banked: observer-identity-confusion antipattern. When an operator with multi-role privileges tests a role-restricted flow without isolating session context, observed "bug" may be the test apparatus, not the system. Mitigation: always test role-restricted flows from incognito or separate browser profile with test-subject credentials only. Awaiting second/third fire for §19 canonical promotion per sub-pattern banking convention.
+
+Per CLAUDE.md §3.1: docs-only commits ship unversioned. No VersionFooter bump.
+
+---
+
 ## Phase 6 — Carrier route RSC payload fix (Sprint 52.hotfix.a, 2026-05-17, v3.8.abx)
 
 Item 156 close. Production INTEGRITY EXPRESS carrier clicking the Sprint 45a tender email link in Gmail iOS saw raw RSC Flight payload text (`1:"$Sreact.fragment"`, `2:I[26264,...]`) instead of the rendered carrier login page.
