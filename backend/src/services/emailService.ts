@@ -159,8 +159,12 @@ export async function sendAutoInvoiceEmail(
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Amount</td><td style="padding:8px;border:1px solid #E2EAF2">$${amount.toLocaleString()}</td></tr>
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Due Date</td><td style="padding:8px;border:1px solid #E2EAF2">Net 30</td></tr>
     </table>
-    <a href="https://silkroutelogistics.ai/carrier/dashboard/invoices" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Invoice</a>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/payments" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Payment Status</a>
   `);
+  // Sprint 54 (v3.8.acc) Item 11b — URL was canonicalized to
+  // /carrier/dashboard/invoices in Sprint 45-RC-PRE (§13.3 Item 91) but the
+  // page was never built. Carrier-side payment viewing lives at
+  // /carrier/dashboard/payments. Label updated to match destination.
 
   await sendEmail(carrierEmail, `Invoice ${invoiceNumber} generated for load ${loadRef}`, html);
 }
@@ -566,6 +570,7 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
 
 export interface TenderAcceptedEmailParams {
   to: string;
+  cc?: string | string[];
   ref: string;
   originName: string;
   destName: string;
@@ -597,6 +602,56 @@ export async function sendTenderAcceptedEmail(params: TenderAcceptedEmailParams)
   return sendEmail(
     params.to,
     `Tender Accepted: ${params.ref} (${params.carrierName})`,
+    html,
+    undefined,
+    {
+      replyTo: "operations@silkroutelogistics.ai",
+      cc: params.cc,
+    },
+  );
+}
+
+// Sprint 54 (v3.8.acc) Item 7 — Carrier-facing confirmation email when their
+// tender is accepted. Pre-Sprint-54 notifyTenderAction("ACCEPTED") only
+// emailed the AE poster. Carriers got no confirmation that their accept
+// click actually took, just an in-app notification on next portal visit.
+export interface TenderAcceptedConfirmationEmailParams {
+  to: string;
+  ref: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+  rate: number;
+  pickupDate?: string | null;
+  deliveryDate?: string | null;
+}
+
+export async function sendTenderAcceptedConfirmationEmail(params: TenderAcceptedConfirmationEmailParams): Promise<string | undefined> {
+  const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const pickupRow = params.pickupDate
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Pickup</td><td style="padding:8px;border:1px solid #E2EAF2">${params.pickupDate}</td></tr>`
+    : "";
+  const deliveryRow = params.deliveryDate
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Delivery</td><td style="padding:8px;border:1px solid #E2EAF2">${params.deliveryDate}</td></tr>`
+    : "";
+
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">Tender accepted &mdash; you're booked</h2>
+    <p>Thanks ${params.carrierName}. Your acceptance is recorded and the load is now <strong>BOOKED</strong> in your name. Watch your inbox for the Rate Confirmation and dispatch instructions.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      ${pickupRow}
+      ${deliveryRow}
+      <tr style="background:#FAEEDA"><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;color:#BA7517">Rate</td><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;font-size:16px;color:#0A2540">${rateFmt}</td></tr>
+    </table>
+    <p>Questions before pickup? Reply to this email and our operations team will respond.</p>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View My Loads</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Booked: ${params.ref} (${params.originName} → ${params.destName})`,
     html,
     undefined,
     { replyTo: "operations@silkroutelogistics.ai" },

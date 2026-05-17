@@ -3,9 +3,15 @@ import { log } from "../lib/logger";
 import {
   sendTenderOfferedEmail,
   sendTenderAcceptedEmail,
+  sendTenderAcceptedConfirmationEmail,
   sendTenderDeclinedEmail,
   sendTenderExpiredEmail,
 } from "./emailService";
+
+// Sprint 54 (v3.8.acc) Item 7 — operations@ alias is CC'd on every
+// AE-facing tender-accept email so the team has a shared audit trail
+// of bookings without depending on AE staff to forward individually.
+const OPERATIONS_CC = "operations@silkroutelogistics.ai";
 
 // Notification types aligned with application events
 export type NotificationType =
@@ -137,6 +143,8 @@ export async function notifyTenderAction(
           equipmentType: true,
           weight: true,
           distance: true,
+          pickupDate: true,
+          deliveryDate: true,
           poster: {
             select: { email: true, firstName: true },
           },
@@ -222,10 +230,16 @@ export async function notifyTenderAction(
         `Your tender for load ${ref} (${lane}) has been accepted at $${tender.offeredRate.toLocaleString()}.`,
         { actionUrl: "/dashboard/track-trace" }
       );
+      // Sprint 54 (v3.8.acc) Item 7 — fan out BOTH emails: AE-facing
+      // (cc operations@) for audit trail + carrier-facing confirmation
+      // so the accept click produces tangible feedback. Pre-Sprint-54
+      // only AE got the email; carriers had to poll the portal to see
+      // their accept took.
       if (aeEmail) {
         try {
           await sendTenderAcceptedEmail({
             to: aeEmail,
+            cc: OPERATIONS_CC,
             ref,
             originName,
             destName,
@@ -235,6 +249,24 @@ export async function notifyTenderAction(
         } catch (err) {
           log.error({ err, tenderId, aeEmail }, "[NotificationService] sendTenderAcceptedEmail failed");
         }
+      }
+      if (carrierEmail) {
+        try {
+          await sendTenderAcceptedConfirmationEmail({
+            to: carrierEmail,
+            ref,
+            originName,
+            destName,
+            carrierName,
+            rate: tender.offeredRate,
+            pickupDate: tender.load.pickupDate ? new Date(tender.load.pickupDate).toLocaleDateString() : null,
+            deliveryDate: tender.load.deliveryDate ? new Date(tender.load.deliveryDate).toLocaleDateString() : null,
+          });
+        } catch (err) {
+          log.error({ err, tenderId, carrierEmail }, "[NotificationService] sendTenderAcceptedConfirmationEmail failed");
+        }
+      } else {
+        log.warn({ tenderId, carrierUserId }, "[NotificationService] ACCEPTED: no carrier email available; in-app only");
       }
       break;
 

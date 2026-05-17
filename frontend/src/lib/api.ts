@@ -33,11 +33,25 @@ api.interceptors.response.use(
       },
     });
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      // Check if this is a session timeout
+      // Sprint 54 (v3.8.acc) Item 6 — portal-aware redirect. Pre-Sprint-54
+      // the interceptor hardcoded /auth/login regardless of origin portal,
+      // so a logged-out carrier clicking "View Tender" in their email and
+      // landing on /carrier/dashboard/tenders got bounced to the AE login
+      // page (wrong portal). Now we read window.location.pathname to pick
+      // the matching portal's login surface. Sub-pattern banked: HTTP
+      // interceptors that make routing decisions on responses must read
+      // request context (URL path / expected portal) before deciding the
+      // target — hardcoded fallbacks erase user origin.
       const code = error.response?.data?.code;
-      const isLoginPage = window.location.pathname.includes("/login") || window.location.pathname.includes("/auth/");
+      const path = window.location.pathname;
+      const isLoginPage = path.includes("/login") || path.includes("/auth/");
       if (!isLoginPage) {
-        window.location.href = code === "SESSION_TIMEOUT" ? "/auth/login?reason=timeout" : "/auth/login";
+        const portalLogin = path.startsWith("/carrier/")
+          ? "/carrier/login"
+          : path.startsWith("/shipper/")
+            ? "/shipper/login"
+            : "/auth/login";
+        window.location.href = code === "SESSION_TIMEOUT" ? `${portalLogin}?reason=timeout` : portalLogin;
       }
     }
     return Promise.reject(error);
