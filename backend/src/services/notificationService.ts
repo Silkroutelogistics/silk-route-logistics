@@ -126,7 +126,8 @@ export async function notifyLoadStatusChange(loadId: string, newStatus: string) 
  */
 export async function notifyTenderAction(
   tenderId: string,
-  action: "OFFERED" | "ACCEPTED" | "DECLINED" | "COUNTERED" | "EXPIRED"
+  action: "OFFERED" | "ACCEPTED" | "DECLINED" | "COUNTERED" | "EXPIRED",
+  options?: { rcId?: string },
 ) {
   const tender = await prisma.loadTender.findUnique({
     where: { id: tenderId },
@@ -223,12 +224,17 @@ export async function notifyTenderAction(
       break;
 
     case "ACCEPTED":
+      // Sprint Phase 2 (v3.8.acd) — deep-link to auto-draft RC review
+      // surface when rcId is provided by the caller. Falls back to the
+      // generic Track & Trace deep-link when no auto-RC was generated
+      // (e.g., auto-RC throw → AE still gets the notification, just
+      // without the RC anchor).
       await createNotification(
         posterId,
         "TENDER_ACCEPTED",
         "Tender Accepted",
         `Your tender for load ${ref} (${lane}) has been accepted at $${tender.offeredRate.toLocaleString()}.`,
-        { actionUrl: "/dashboard/track-trace" }
+        { actionUrl: options?.rcId ? `/dashboard/rate-confirmations/${options.rcId}` : "/dashboard/track-trace" }
       );
       // Sprint 54 (v3.8.acc) Item 7 — fan out BOTH emails: AE-facing
       // (cc operations@) for audit trail + carrier-facing confirmation

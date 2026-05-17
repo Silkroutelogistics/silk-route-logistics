@@ -5,6 +5,7 @@ import { createTenderSchema, counterTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { notifyTenderAction } from "../services/notificationService";
+import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
 import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 
@@ -127,12 +128,27 @@ export async function acceptTender(req: AuthRequest, res: Response) {
     },
   });
 
+  // Sprint Phase 2 (v3.8.acd) — auto-RC generation. Non-blocking:
+  // tender accept must succeed even if RC generation fails (AE can
+  // still create RC manually via POST /api/rate-confirmations/). Fires
+  // BEFORE notifyTenderAction so the AE's in-app notification can
+  // deep-link to the auto-draft RC for review.
+  let autoRcId: string | undefined;
+  try {
+    const rc = await autoGenerateRateConfirmation(load.id, tender.id, load.posterId);
+    autoRcId = rc?.id;
+  } catch (err) {
+    log.error({ err, tenderId: tender.id, loadId: load.id }, "[Tender] auto-RC generation failed");
+  }
+
   // Sprint 38 (Item 51) — wire notifyTenderAction. Was manually creating
   // a notification with type "LOAD_UPDATE" — wrong type for tender events
   // (poster's notification preferences + UI filtering branch on this).
   // notifyTenderAction emits the correct "TENDER_ACCEPTED" type and
   // formats the lane string consistently with offered/declined/countered.
-  await notifyTenderAction(tender.id, "ACCEPTED");
+  // Sprint Phase 2 — rcId option deep-links AE notification to the
+  // auto-draft RC review surface when auto-generation succeeded.
+  await notifyTenderAction(tender.id, "ACCEPTED", { rcId: autoRcId });
 
   // Sprint 38 (Item 52) — CRM tracking-link fan-out on direct accept.
   // Pattern matches waterfallEngineService.ts:485-490 (added v3.4.p for
@@ -259,8 +275,18 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     },
   });
 
-  // Notification (Sprint 38 Item 51 pattern).
-  await notifyTenderAction(tender.id, "ACCEPTED");
+  // Sprint Phase 2 (v3.8.acd) — auto-RC generation on AE accept-on-behalf.
+  // Mirrors acceptTender wiring. Non-blocking try/catch.
+  let autoRcId: string | undefined;
+  try {
+    const rc = await autoGenerateRateConfirmation(load.id, tender.id, load.posterId);
+    autoRcId = rc?.id;
+  } catch (err) {
+    log.error({ err, tenderId: tender.id, loadId: load.id }, "[Tender] auto-RC generation failed (on-behalf)");
+  }
+
+  // Notification (Sprint 38 Item 51 pattern + Sprint Phase 2 rcId deep-link).
+  await notifyTenderAction(tender.id, "ACCEPTED", { rcId: autoRcId });
 
   // Tracking-link fan-out at BOOKED (Sprint 38 Item 52 pattern, α
   // resolution: fire on accept regardless of P3 status semantics —
