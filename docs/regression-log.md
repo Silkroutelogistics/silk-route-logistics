@@ -193,6 +193,18 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Carrier _redirects rollback (Sprint 52.hotfix.a.b, 2026-05-17, v3.8.aby)
+
+Item 157 close. Sprint 52.hotfix.a's explicit `.html` rewrites resolved the Gmail iOS RSC payload issue but surfaced a latent redirect loop on `/carrier/dashboard` (ERR_TOO_MANY_REDIRECTS post-login). INTEGRITY EXPRESS carrier could log in successfully then immediately got stuck in the loop, blocking access to Available Loads and the entire carrier dashboard surface — strictly worse than the original Gmail iOS issue which only affected one in-app browser context.
+
+Rollback was the right call. Production blocker takes priority over the original Gmail iOS regression; reverting `_redirects` line 22 back to `/carrier/* /carrier/:splat 200` restores known-working `/carrier/dashboard` access. The Gmail iOS RSC payload regression returns temporarily — acceptable trade because (a) the original issue only affects carriers clicking tender email links in Gmail iOS in-app browser specifically, not desktop or other mobile, and (b) the Sprint 52.hotfix.c combined-fix diagnostic can now investigate both root causes together without compounding rollback risk.
+
+Item 156 (carrier route RSC payload) re-opened pending Sprint 52.hotfix.c combined Phase A diagnostic.
+
+Methodology banking deferred to §19 meta-52 quarterly review — Sprint 52.hotfix.a→a.b rollback arc is a candidate sub-pattern: **latent-regression-on-deterministic-fix** (a fix that's structurally sound for the original bug class can surface unrelated latent regressions; rollback-and-diagnose-together pattern may bank as new methodology principle if it fires again in a future arc).
+
+---
+
 ## Phase 6 — Carrier route RSC payload fix (Sprint 52.hotfix.a, 2026-05-17, v3.8.abx)
 
 Item 156 close. Production INTEGRITY EXPRESS carrier clicking the Sprint 45a tender email link in Gmail iOS saw raw RSC Flight payload text (`1:"$Sreact.fragment"`, `2:I[26264,...]`) instead of the rendered carrier login page.
