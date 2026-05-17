@@ -82,6 +82,26 @@ export function initCronJobs() {
     }
   }));
 
+  // ─── Hourly at :30 — Tender expiry sweeper (Sprint 52a, Item 141) ─
+  // Sweeps OFFERED/COUNTERED LoadTender rows past their expiresAt → flips
+  // to EXPIRED, fans out sendTenderExpiredEmail via notifyTenderAction,
+  // reverts any load whose tenders all expired back to POSTED.
+  // processExpiredTenders has lived in tenderController.ts since an earlier
+  // sprint; the cron wiring (this entry) is what activates the producer.
+  // Sub-pattern 12 (write-read-dataflow-audit) prospective application —
+  // orphaned producer caught at Phase A audit time and wired before
+  // post-deploy surfacing.
+  cron.schedule("30 * * * *", () => withGuard("tender-expiry-sweep", async () => {
+    try {
+      log.info("[TenderExpiry] Starting hourly sweep");
+      const { processExpiredTenders } = require("../controllers/tenderController");
+      const result = await processExpiredTenders();
+      log.info(`[TenderExpiry] Sweep complete: ${result.expired} tenders expired, ${result.loadsReverted} loads reverted`);
+    } catch (err) {
+      log.error({ err }, "[TenderExpiry] Sweep failed:");
+    }
+  }));
+
   // ─── Hourly: Invoice aging & overdue detection ───────────────
   cron.schedule("0 * * * *", () => withGuard("invoice-aging", async () => {
     try {

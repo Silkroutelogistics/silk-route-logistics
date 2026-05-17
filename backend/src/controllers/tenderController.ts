@@ -404,6 +404,26 @@ export async function processExpiredTenders() {
     data: { status: "EXPIRED", respondedAt: now },
   });
 
+  // Sprint 52a (Item 141) — fan-out EXPIRED email notification per tender
+  // AFTER status flip, BEFORE load revert. Each call wrapped in try/catch
+  // so a single email transport error doesn't break the batch sweep.
+  // Sub-pattern 12 (write-read-dataflow-audit) gate: producer (updateMany
+  // flip to EXPIRED) → consumer (notifyTenderAction reads tender by id,
+  // resolves carrier + AE recipients, fires sendTenderExpiredEmail).
+  // Pre-Sprint-52a this wiring was missing — processExpiredTenders was
+  // an orphaned producer never invoked by any cron schedule, and even
+  // when invoked manually it did not fire the EXPIRED email (the email
+  // template existed in emailService.ts:659 since Sprint 45a, comment
+  // block explicitly labeled "Defensive add for Sprint 45b cron-driven
+  // expiry handler"). Sprint 52a IS the Sprint 45b that never shipped.
+  for (const tender of expired) {
+    try {
+      await notifyTenderAction(tender.id, "EXPIRED");
+    } catch (err) {
+      log.error({ err, tenderId: tender.id }, `[TenderExpiry] notifyTenderAction failed for tender`);
+    }
+  }
+
   // For each affected load, check if any active tenders remain
   const affectedLoadIds = [...new Set(expired.map((t) => t.loadId))];
   let loadsReverted = 0;
