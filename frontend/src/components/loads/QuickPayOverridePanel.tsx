@@ -96,61 +96,51 @@ export function QuickPayOverridePanel({ loadId, carrierUserId, speed, onAppliedR
     }
   }, [existing, tierDefaultPct, hydrated]);
 
-  // Sprint 51.e (Item 153) — intentional-vs-incidental SPEED-toggle refinement.
+  // Sprint 51.f (Item 154) — ALWAYS-RESET on SPEED change.
   //
-  // Sprint 51.c shipped Q2 ratification "persist override values across SPEED
-  // toggles" literally — every value persisted regardless of whether it
-  // represented an intentional override (e.g., 2.5% with "Competitive match"
-  // reason) or an incidental tier-default-matching value left in the field
-  // (e.g., 3% on 7-Day because that IS the 7-Day default for Silver/GUEST).
-  // AE complaint: toggling 7-Day (default 3%) → Same-Day (default 5%) kept
-  // Override at 3, firing amber "Δ -2pp vs tier default" and reason-required
-  // validation for an override the AE never intended.
+  // Methodology lineage on this surface:
+  //   Sprint 51.c (Q2 literal): persist override values across SPEED toggles.
+  //   Sprint 51.e (Item 153): refined to "persist intentional, auto-sync
+  //     incidental" (matched-old-default + no-reason = incidental).
+  //   Sprint 51.f (Item 154): user clarified actual mental model — SPEED
+  //     card IS the primary control; Override is a per-load-per-speed-
+  //     instance adjustment, NOT a persistent value carried across SPEED
+  //     context switches. Operational pattern: AE switching speed almost
+  //     always means they want fresh tier-default context for the new
+  //     speed. Sub-pattern 13 (literal-vs-intent ratification) third-fire
+  //     validated and canonicalized — the user's mental model is simpler
+  //     than the three rounds of Phase A framing assumed.
   //
-  // Sprint 51.e refinement: on SPEED-driven tier-default change, detect whether
-  // the current Override was incidental (matched OLD default AND no reason set)
-  // vs intentional (didn't match OLD default OR has a reason). Auto-sync the
-  // incidental case to the new tier default + clear reason. Preserve the
-  // intentional case (Sprint 51.c behavior intact).
+  // Behavior:
+  //   On every SPEED-driven tier-default change → reset Override to the new
+  //   tier default + clear reason + clear note. No intent-detection
+  //   heuristics; no preserve-across-toggles. The DB override row is NOT
+  //   deleted (recordOverride only writes on Update override click), so any
+  //   intentional override the AE saved persists at the DB layer for
+  //   audit/variance reporting; the UI just resets to current-speed default
+  //   on every toggle. If AE wants the same override on the new speed,
+  //   they re-enter (~3 keystrokes) and re-click Update override.
   //
-  // Sub-pattern 10 (hydration-effect-dep-array-audit) applied: useRef reads
-  // appliedPct + reason WITHOUT putting them in the dep array. Effect fires
-  // ONLY on tierDefaultPct change (which only changes when AE toggles SPEED,
-  // since the tier-default query key includes speed per Sprint 51.c Item 151).
-  // appliedPctRef + reasonRef capture current-render values for read inside
-  // the effect without triggering re-fires.
-  //
-  // Test 6 refinement (Phase B1 surfaced): also gate on reason-empty. If AE
-  // typed a reason on the previous speed, that's an intent signal regardless
-  // of whether the value happened to match the old default — preserve both.
+  // Sub-pattern 10 (hydration-effect-dep-array-audit) applied: prevTierDefaultRef
+  // captures previous-render tier default for speed-change detection without
+  // putting it in the dep array. Effect fires ONLY on tierDefaultPct change.
+  // The appliedPctRef + reasonRef from Sprint 51.e are no longer needed
+  // (Option A doesn't read previous state) — dropped to keep the surface
+  // minimal.
   const prevTierDefaultRef = useRef<number | null>(null);
-  const appliedPctRef = useRef<string>("");
-  const reasonRef = useRef<OverrideReason | "">("");
-  appliedPctRef.current = appliedPct;
-  reasonRef.current = reason;
 
   useEffect(() => {
     if (tierDefaultPct === null) return;
     const prev = prevTierDefaultRef.current;
     prevTierDefaultRef.current = tierDefaultPct;
 
-    if (prev === null) return;                          // initial hydration
-    if (Math.abs(prev - tierDefaultPct) < 0.001) return; // same speed, refetch noise
+    if (prev === null) return;                           // initial hydration
+    if (Math.abs(prev - tierDefaultPct) < 0.001) return;  // same speed, refetch noise
 
-    // SPEED change detected. Check intent signals.
-    const currentPct = parseFloat(appliedPctRef.current);
-    const matchesOldDefault =
-      !isNaN(currentPct) && Math.abs(currentPct - prev) < 0.01;
-    const reasonEmpty = reasonRef.current === "";
-
-    if (matchesOldDefault && reasonEmpty) {
-      // Incidental — auto-sync to new tier default
-      setAppliedPct(tierDefaultPct.toFixed(2));
-      setReason("");
-      setReasonNote("");
-    }
-    // Else: intentional override (value diverges from old default OR
-    // reason was typed) — preserve Sprint 51.c behavior
+    // SPEED change → always reset to new tier default
+    setAppliedPct(tierDefaultPct.toFixed(2));
+    setReason("");
+    setReasonNote("");
   }, [tierDefaultPct]);
 
   const appliedRateNumber = parseFloat(appliedPct);
