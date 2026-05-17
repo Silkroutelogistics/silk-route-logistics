@@ -16,9 +16,14 @@ import { log } from "../lib/logger";
 
 const router = Router();
 
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { error: "Too many login attempts. Please try again in 15 minutes." } });
-const otpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, message: { error: "Too many verification attempts. Please wait 15 minutes." } });
-const passwordChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { error: "Too many password change attempts. Please try again later." } });
+// Sprint 53 (v3.8.aca) — Item 14: pre-Sprint-53 max:5 was tight enough to
+// lock out legitimate testing across a single load-lifecycle smoke. Bumped
+// to 20/15min — still bot-defensive (5 attempts/3min) while giving room
+// for retry + OTP-resend + reset flows during a manual test cycle. The
+// global authLimiter at server.ts caps cumulative /api/auth traffic.
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: "Too many login attempts. Please try again in 15 minutes." } });
+const otpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: "Too many verification attempts. Please wait 15 minutes." } });
+const passwordChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { error: "Too many password change attempts. Please try again later." } });
 
 const otpSchema = z.object({ email: z.string().email(), code: z.string().length(8) });
 const resendOtpSchema = z.object({ email: z.string().email() });
@@ -86,7 +91,7 @@ router.post("/e2e-token", async (req, res) => {
   // here so subsequent page.goto() calls in playwright authenticate
   // automatically. Token also returned in JSON for explicit-header
   // callers (direct API requests in test).
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, user.role);
   log.warn(`[E2E] /auth/e2e-token issued bypass token for ${email} — env E2E_BYPASS_OTP=true`);
   res.json({ token, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } });
 });
@@ -195,7 +200,7 @@ router.post("/totp/force-enable", validateBody(z.object({ setupToken: z.string()
     });
     const token = jwt.sign({ userId: payload.userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: "24h" } as jwt.SignOptions);
     if (user) registerSession(user.id, token, user.role);
-    setTokenCookie(res, token);
+    setTokenCookie(res, token, user?.role || "ADMIN");
     res.json({
       message: "Two-factor authentication enabled successfully",
       user,

@@ -16,9 +16,11 @@ import { log } from "../lib/logger";
 
 const router = Router();
 
+// Sprint 53 (v3.8.aca) — Item 14: bumped 5→20 in parallel with routes/auth.ts
+// after a manual lifecycle smoke locked out testing across legitimate retries.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 20,
   message: { error: "Too many login attempts. Please try again in 15 minutes." },
 });
 
@@ -52,7 +54,7 @@ const carrierResendOtpSchema = z.object({
 
 const otpVerifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 8,
+  max: 20,
   message: { error: "Too many verification attempts. Please try again later." },
 });
 
@@ -200,7 +202,7 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
   const mustChangePassword = !user.passwordChangedAt;
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, "CARRIER");
 
   await prisma.auditLog.create({
     data: {
@@ -271,7 +273,7 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
   const mustChangePassword = !user.passwordChangedAt;
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, "CARRIER");
 
   await prisma.auditLog.create({
     data: {
@@ -346,7 +348,7 @@ router.post("/change-password", authenticate, validateBody(changePasswordSchema)
 
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, "CARRIER");
 
   res.json({ success: true, token });
 });
@@ -374,7 +376,7 @@ router.post("/force-change-password", authenticate, validateBody(forceChangePass
 
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, "CARRIER");
 
   res.json({ success: true, token });
 });
@@ -385,7 +387,7 @@ router.post("/logout", authenticate, async (req: AuthRequest, res: Response) => 
     removeSession(req.user!.id, req.token);
     await blacklistToken(req.token, req.user!.id, "logout").catch(() => {});
   }
-  clearTokenCookie(res);
+  clearTokenCookie(res, "CARRIER");
   res.json({ success: true });
 });
 

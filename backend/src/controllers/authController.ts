@@ -138,7 +138,7 @@ export async function register(req: Request, res: Response) {
 
   const token = signToken(user.id);
   registerSession(user.id, token, user.role);
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, user.role);
   res.status(201).json({ user, token });
 }
 
@@ -318,7 +318,7 @@ export async function handleVerifyOtp(req: Request, res: Response) {
   });
 
   registerSession(user.id, token, user.role);
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, user.role);
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     token,
@@ -403,7 +403,7 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
 
-  setTokenCookie(res, fullToken);
+  setTokenCookie(res, fullToken, user?.role || req.user!.role);
   res.json({ user, token: fullToken });
 }
 
@@ -473,7 +473,7 @@ export async function refreshToken(req: AuthRequest, res: Response) {
 
   const token = signToken(req.user!.id);
   registerSession(req.user!.id, token, req.user!.role);
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, req.user!.role);
   res.json({ token });
 }
 
@@ -495,7 +495,7 @@ export async function logout(req: AuthRequest, res: Response) {
     },
   }).catch(() => {});
 
-  clearTokenCookie(res);
+  clearTokenCookie(res, req.user!.role);
   res.json({ message: "Logged out successfully" });
 }
 
@@ -530,7 +530,7 @@ export async function changePassword(req: AuthRequest, res: Response) {
 
   // Issue a fresh token so the user stays logged in on this session
   const newToken = signToken(req.user!.id);
-  setTokenCookie(res, newToken);
+  setTokenCookie(res, newToken, user.role);
   res.json({ message: "Password updated successfully", token: newToken });
 }
 
@@ -700,7 +700,7 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
   });
 
   registerSession(user.id, token, user.role);
-  setTokenCookie(res, token);
+  setTokenCookie(res, token, user.role);
   res.json({
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     token,

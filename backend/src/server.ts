@@ -127,10 +127,14 @@ const apiLimiter = rateLimit({
   message: { error: "Too many requests, please try again later" },
 });
 
-// 5. Strict auth rate limiter: 30 requests per 15 min on /api/auth/
+// 5. Strict auth rate limiter: 100 requests per 15 min on /api/auth/
+// Sprint 53 (v3.8.aca) — Item 14: bumped 30→100 alongside loginLimiter
+// (5→20) in routes/auth.ts + routes/carrierAuth.ts. Per-route limiters
+// are the immediate blocker; this global cap is the cumulative ceiling
+// across all /api/auth and /api/carrier-auth traffic.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many authentication attempts, please try again later" },

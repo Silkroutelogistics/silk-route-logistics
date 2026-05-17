@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/node";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
 import { isTokenBlacklisted } from "../utils/tokenBlacklist";
+import { LEGACY_COOKIE_NAME } from "../utils/cookies";
 import { log } from "../lib/logger";
 
 export interface AuthRequest extends Request<any, any, any, any> {
@@ -71,10 +72,48 @@ export function getSessionTimeout(role: string): number {
   return SESSION_TIMEOUT_EMPLOYEE;
 }
 
+/**
+ * Sprint 53 (v3.8.aca) — Resolve the right portal-scoped JWT cookie for
+ * this request. Pre-Sprint-53 a single `srl_token` cookie served all
+ * portals and collided when one browser held AE + carrier sessions
+ * concurrently. Now we set srl_token_ae / srl_token_carrier /
+ * srl_token_shipper at mint time and pick by req.baseUrl prefix here.
+ *
+ * Preference chain: route-prefix match → other portal cookies → legacy
+ * `srl_token` (pre-Sprint-53 sessions, grace-period only). Role gating
+ * still enforced by authorize() downstream, so a wrong-portal token will
+ * fail there even if it slips through here.
+ */
+function resolveCookieToken(req: AuthRequest): string | undefined {
+  const cookies = req.cookies || {};
+  const baseUrl = (req.baseUrl || "").toLowerCase();
+  const isCarrierRoute = baseUrl.includes("/carrier");
+  const isShipperRoute = baseUrl.includes("/shipper");
+
+  let preferred: string | undefined;
+  let fallbacks: (string | undefined)[];
+
+  if (isCarrierRoute) {
+    preferred = cookies.srl_token_carrier;
+    fallbacks = [cookies.srl_token_ae, cookies.srl_token_shipper];
+  } else if (isShipperRoute) {
+    preferred = cookies.srl_token_shipper;
+    fallbacks = [cookies.srl_token_ae, cookies.srl_token_carrier];
+  } else {
+    preferred = cookies.srl_token_ae;
+    fallbacks = [cookies.srl_token_carrier, cookies.srl_token_shipper];
+  }
+
+  // Legacy single-cookie name read as final fallback so pre-Sprint-53
+  // sessions don't bounce mid-deploy. Removed once all browsers have
+  // rotated through a fresh login (clearTokenCookie also wipes it).
+  return preferred || fallbacks.find(Boolean) || cookies[LEGACY_COOKIE_NAME];
+}
+
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
-  // Check Authorization header first, then fall back to httpOnly cookie
+  // Check Authorization header first, then fall back to portal-scoped cookie
   const header = req.headers.authorization;
-  const token = header?.startsWith("Bearer ") ? header.split(" ")[1] : req.cookies?.srl_token;
+  const token = header?.startsWith("Bearer ") ? header.split(" ")[1] : resolveCookieToken(req);
 
   if (!token) {
     res.status(401).json({ error: "No token provided" });
