@@ -77,18 +77,50 @@ export function getSessionTimeout(role: string): number {
  * this request. Pre-Sprint-53 a single `srl_token` cookie served all
  * portals and collided when one browser held AE + carrier sessions
  * concurrently. Now we set srl_token_ae / srl_token_carrier /
- * srl_token_shipper at mint time and pick by req.baseUrl prefix here.
+ * srl_token_shipper at mint time and pick by req.baseUrl here.
  *
- * Preference chain: route-prefix match → other portal cookies → legacy
+ * Sprint 53.a (v3.8.acb) — Replaced substring `.includes("/carrier")`
+ * with explicit allow-lists below. The substring match wrongly routed
+ * AE-side endpoints like /api/carriers (plural), /api/carrier-pay, and
+ * /api/carrier-calls to the carrier cookie, producing 403 on AE Console
+ * when both portals were logged in the same browser (CARRIER token
+ * failing authorize("ADMIN", ...) downstream). Allow-list is explicit
+ * + audit-stable; new carrier-portal mounts must be added here.
+ *
+ * Known limitation (per §13.3 Item 161 V2 audit + Sprint 53.a decision):
+ * /api/carrier (singular mixed mount, audience-split per carrier.ts) is
+ * EXCLUDED from CARRIER_PORTAL_MOUNTS. Its 6 carrier-facing endpoints
+ * (dashboard, scorecard, revenue, bonuses, onboarding-status, documents)
+ * return AE-scoped data when both portals are logged in the same
+ * browser. Real-world users hold one role per browser so the fallback
+ * chain rescues. Architectural fix (split mount or X-Portal header)
+ * tracked as Sprint 54+ candidate.
+ *
+ * Preference chain: portal-mount match → other portal cookies → legacy
  * `srl_token` (pre-Sprint-53 sessions, grace-period only). Role gating
  * still enforced by authorize() downstream, so a wrong-portal token will
  * fail there even if it slips through here.
  */
+const CARRIER_PORTAL_MOUNTS = [
+  "/api/carrier-auth",
+  "/api/carrier-loads",
+  "/api/carrier-compliance",
+  "/api/carrier-payments",
+  "/api/carrier-tenders",
+];
+const SHIPPER_PORTAL_MOUNTS = [
+  "/api/shipper-portal",
+];
+
+function matchesPortalMount(baseUrl: string, mounts: string[]): boolean {
+  return mounts.some((p) => baseUrl === p || baseUrl.startsWith(p + "/"));
+}
+
 function resolveCookieToken(req: AuthRequest): string | undefined {
   const cookies = req.cookies || {};
   const baseUrl = (req.baseUrl || "").toLowerCase();
-  const isCarrierRoute = baseUrl.includes("/carrier");
-  const isShipperRoute = baseUrl.includes("/shipper");
+  const isCarrierRoute = matchesPortalMount(baseUrl, CARRIER_PORTAL_MOUNTS);
+  const isShipperRoute = matchesPortalMount(baseUrl, SHIPPER_PORTAL_MOUNTS);
 
   let preferred: string | undefined;
   let fallbacks: (string | undefined)[];
