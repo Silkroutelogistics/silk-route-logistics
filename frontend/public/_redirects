@@ -19,7 +19,25 @@
 /ae/accounting/* /accounting 301
 /ae/* /dashboard/overview 301
 
-/carrier/* /carrier/:splat 200
+# Sprint 52.hotfix.a (2026-05-17, Item 156) — explicit .html rewrites for
+# Next.js carrier routes. Pre-fix `/carrier/* /carrier/:splat 200` echoed
+# :splat as identity rewrite target; Cloudflare Pages then resolved the
+# extensionless path ambiguously between out/carrier/<name>.html and
+# out/carrier/<name>.txt (Next.js static export generates BOTH siblings —
+# .html for browser navigation, .txt for client-side RSC streaming).
+# Gmail iOS WebView Accept-header content negotiation landed on the .txt
+# RSC payload, displaying raw "1:$Sreact.fragment" Flight payload instead
+# of the rendered carrier login page. Fix: enumerate Next.js routes with
+# explicit .html rewrites; deterministic resolution; matches /verify/* +
+# /track/* single-target precedent intent. Legacy static HTML in
+# public/carrier/ (analytics, help, loads, register, tools, etc.) resolves
+# via Cloudflare default extension fallback — no rule needed because no
+# .txt sibling exists for those files.
+/carrier/login            /carrier/login.html             200
+/carrier/forgot-password  /carrier/forgot-password.html   200
+/carrier/reset-password   /carrier/reset-password.html    200
+/carrier/dashboard        /carrier/dashboard.html         200
+/carrier/dashboard/*      /carrier/dashboard/:splat.html  200
 
 # 2026-05-03 v3.8.q routing consolidation
 /shipper       /shippers.html  301

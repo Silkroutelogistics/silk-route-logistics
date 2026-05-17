@@ -193,6 +193,18 @@ so it's searchable and never lost.
 
 ---
 
+## Phase 6 — Carrier route RSC payload fix (Sprint 52.hotfix.a, 2026-05-17, v3.8.abx)
+
+Item 156 close. Production INTEGRITY EXPRESS carrier clicking the Sprint 45a tender email link in Gmail iOS saw raw RSC Flight payload text (`1:"$Sreact.fragment"`, `2:I[26264,...]`) instead of the rendered carrier login page.
+
+Root cause: `frontend/public/_redirects` line 22 — `/carrier/* /carrier/:splat 200` — echoed `:splat` as the identity rewrite target. Cloudflare Pages then resolved the extensionless `/carrier/login` ambiguously between the two static export siblings: `out/carrier/login.html` (browser-renderable HTML) and `out/carrier/login.txt` (Next.js RSC Flight payload). Gmail iOS WebView Accept-header content negotiation landed on the `.txt` variant.
+
+Fix: replaced the ambiguous catch-all with explicit `.html` rewrites for 4 top-level Next.js carrier routes + 1 wildcard for 11 dashboard sub-routes. Deterministic resolution; matches `/verify/*` (Sprint 51) and `/track/*` (Sprint 26 Item 31) single-target precedent. Legacy static HTML files in `public/carrier/` (`analytics`, `help`, `loads`, `register`, `tools`) resolve via Cloudflare default extension fallback — no rule needed because no `.txt` sibling exists for those.
+
+Methodology banking deferred to §19 meta-52 quarterly review.
+
+---
+
 ## Phase 6 — Methodology meta-commit: §19 sub-rule c second canonical expansion + ratification layer introduction (§19 meta-51, 2026-05-17, v3.8.abv session arc closure marker)
 
 Sprint 47 → Sprint 51.f RC arc canonical closure. 5 new sub-patterns + 1 refinement promoted to §19. First methodology principle operating at the ratification layer (sub-pattern 13). 8 fires added to cumulative registry (17 → 25). Layer taxonomy introduced — methodology library now spans 2 operational layers.
