@@ -114,7 +114,10 @@ export default function PublicTrackPage() {
           + gold-accent span matches "Ship Smarter. Ship Further." pattern. */}
       <section className="bg-[#0A2540] px-6 py-20 md:py-24">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="font-serif text-4xl md:text-5xl text-[#FDFBF7] mb-4 leading-tight">
+          <h1
+            className="text-4xl md:text-5xl text-[#FDFBF7] mb-4 leading-tight"
+            style={{ fontFamily: "var(--font-playfair), 'Playfair Display', Georgia, serif" }}
+          >
             Track your <span className="text-[#C5A572]">shipment.</span>
           </h1>
           <p className="text-[#C9D2DE] text-base md:text-lg mb-10">

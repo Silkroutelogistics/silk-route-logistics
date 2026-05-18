@@ -31,8 +31,11 @@ export function SiteNav({ theme = "dark" }: SiteNavProps) {
   // (§13.3 Item 10). Opaque (no /90 alpha + no backdrop-blur) for parity
   // with static-HTML public pages which use opaque navy strips.
   const navBg = isDark ? "bg-[#0A2540] border-b border-[#C9A84C]/15" : "bg-white border-b border-slate-200";
-  const linkText = isDark ? "text-white/70 hover:text-[#FBF7F0]" : "text-slate-700 hover:text-slate-900";
-  const primaryBtn = "bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0A2540] shadow-[0_2px_8px_rgba(201,168,76,0.25)]";
+  const linkText = isDark ? "text-[#FBF7F0]/90 hover:text-[#FBF7F0]" : "text-slate-700 hover:text-slate-900";
+  // Sign In button — matches static-HTML "Request a Quote" canonical:
+  // solid --gold-dark (#BA7517) bg with cream text, no gradient.
+  // Skill --gold-dark per CLAUDE.md §2.1 is the CTA/emphasis role.
+  const primaryBtn = "bg-[#BA7517] hover:bg-[#8f5a11] text-[#FDFBF7] shadow-[0_2px_8px_rgba(186,117,23,0.25)] transition-colors";
 
   return (
     <nav className={`${navBg} sticky top-0 z-40`}>
@@ -63,7 +66,7 @@ export function SiteNav({ theme = "dark" }: SiteNavProps) {
                     href={item.href}
                     role="menuitem"
                     onClick={() => setLoginOpen(false)}
-                    className="block px-4 py-2 text-[13px] text-slate-700 hover:bg-slate-50"
+                    className="block px-4 py-2 text-[13px] text-[#0A2540] hover:bg-[#FDFBF7] hover:text-[#BA7517] transition-colors"
                   >
                     {item.label}
                   </Link>
