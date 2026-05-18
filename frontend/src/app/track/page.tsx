@@ -106,7 +106,7 @@ export default function PublicTrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBF7F0] flex flex-col">
+    <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
       <SiteNav theme="dark" />
 
       {/* Hero — dark navy band mirrors static-HTML public pages (shippers.html
@@ -114,7 +114,7 @@ export default function PublicTrackPage() {
           + gold-accent span matches "Ship Smarter. Ship Further." pattern. */}
       <section className="bg-[#0A2540] px-6 py-20 md:py-24">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="font-serif text-4xl md:text-5xl text-[#FBF7F0] mb-4 leading-tight">
+          <h1 className="font-serif text-4xl md:text-5xl text-[#FDFBF7] mb-4 leading-tight">
             Track your <span className="text-[#C9A84C]">shipment.</span>
           </h1>
           <p className="text-[#C9D2DE] text-base md:text-lg mb-10">
@@ -130,8 +130,8 @@ export default function PublicTrackPage() {
                     onClick={() => setKind(k)}
                     className={`px-4 py-2 text-sm border-b-2 transition ${
                       kind === k
-                        ? "border-[#C9A84C] text-[#FBF7F0]"
-                        : "border-transparent text-[#C9D2DE] hover:text-[#FBF7F0]"
+                        ? "border-[#C9A84C] text-[#FDFBF7]"
+                        : "border-transparent text-[#C9D2DE] hover:text-[#FDFBF7]"
                     }`}
                   >
                     {k === "bol" ? "BOL number" : "Reference / PO #"}
@@ -151,13 +151,13 @@ export default function PublicTrackPage() {
                       kind === "bol" ? "e.g. BOL-7734"
                       : "e.g. PO-88421 or load reference"
                     }
-                    className="w-full pl-9 pr-3 py-3 bg-[#FBF7F0] border border-transparent rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                    className="w-full pl-9 pr-3 py-3 bg-[#FDFBF7] border border-transparent rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                   />
                 </div>
                 <button
                   onClick={onSearch}
                   disabled={loading}
-                  className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FBF7F0] font-medium rounded-lg disabled:opacity-50"
+                  className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FDFBF7] font-medium rounded-lg disabled:opacity-50"
                 >
                   {loading ? "Searching…" : "Track"}
                 </button>
@@ -263,7 +263,7 @@ export default function PublicTrackPage() {
               <div className="mt-6 pt-6 border-t border-[#0A2540]/10">
                 <a
                   href={result.podUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FBF7F0] text-sm rounded-lg"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FDFBF7] text-sm rounded-lg"
                 >
                   Download POD
                 </a>

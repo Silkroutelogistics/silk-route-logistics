@@ -2,7 +2,7 @@
   "$schema": "https://design-tokens.github.io/community-group/format/",
   "_meta": {
     "name": "Silk Route Logistics — Design Tokens",
-    "version": "3.7.n",
+    "version": "3.8.acq",
     "source": "project/colors_and_type.css designer handoff (2026-04-22), pixel-verified against project/screenshots/v29-full.png and BOL v2.9 production output (BOL-L6894191249)",
     "surface_mode": {
       "web":   { "page": "cream",  "panel": "cream-2", "elevation": "white" },
@@ -34,7 +34,7 @@
       }
     },
     "cream": {
-      "DEFAULT": "#FBF7F0",
+      "DEFAULT": "#FDFBF7",
       "2":       "#F5EEE0",
       "3":       "#EFE6D3"
     },
@@ -47,11 +47,11 @@
       "2":         "#3A4A5F",
       "3":         "#6B7685",
       "disabled":  "#A7AEB8",
-      "on-navy":   "#FBF7F0",
+      "on-navy":   "#FDFBF7",
       "on-navy-2": "#C9D2DE"
     },
     "bg": {
-      "page-web":   "#FBF7F0",
+      "page-web":   "#FDFBF7",
       "page-print": "#FFFFFF",
       "surface":    "#FFFFFF",
       "surface-2":  "#F5EEE0",

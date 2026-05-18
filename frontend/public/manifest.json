@@ -4,7 +4,7 @@
   "description": "Michigan property broker. USDOT 4526880, MC 1794414. Where Trust Travels.",
   "start_url": "/",
   "display": "browser",
-  "background_color": "#FBF7F0",
+  "background_color": "#FDFBF7",
   "theme_color": "#0A2540",
   "icons": [
     {

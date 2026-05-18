@@ -40,7 +40,7 @@
   /* ============================================================
    * CREAM / SURFACE
    * ============================================================ */
-  --cream:    #FBF7F0;   /* WEB page canvas only */
+  --cream:    #FDFBF7;   /* WEB page canvas only */
   --cream-2:  #F5EEE0;   /* accent panels (parties cards, alt rows, sunken regions) */
   --cream-3:  #EFE6D3;
   --white:    #FFFFFF;   /* print canvas + web card elevation */
@@ -52,10 +52,10 @@
   --fg-2:         #3A4A5F;
   --fg-3:         #6B7685;
   --fg-disabled:  #A7AEB8;
-  --fg-on-navy:   #FBF7F0;
+  --fg-on-navy:   #FDFBF7;
   --fg-on-navy-2: #C9D2DE;
 
-  --bg-page-web:    #FBF7F0;
+  --bg-page-web:    #FDFBF7;
   --bg-page-print:  #FFFFFF;
   --bg-surface:     #FFFFFF;
   --bg-surface-2:   #F5EEE0;

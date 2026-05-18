@@ -20,7 +20,7 @@
     body {
       font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: #0A2540;
-      background: #FDFBF7; /* CREAM TONE TEST (v3.8.acp) — lighter than canonical #FBF7F0 */
+      background: #FDFBF7;
       overflow-x: hidden;
       line-height: 1.6;
     }
@@ -48,7 +48,7 @@
       --dark-text: #0A2540;      /* skill canonical --fg-1 (text on cream) */
       --text-muted: #6B7685;     /* skill canonical --fg-3 */
       --fg-2: #3A4A5F;           /* skill canonical secondary fg */
-      --cream: #FDFBF7;          /* CREAM TONE TEST (v3.8.acp) — lighter variant vs skill canonical #FBF7F0; revert in one line if rejected */
+      --cream: #FDFBF7;          /* canonical web canvas (v3.8.acq — updated from skill #FBF7F0 per user design call) */
       --cream-2: #F5EEE0;        /* skill canonical alt panel */
       --font-headline: 'Playfair Display', Georgia, serif;
       --font-body: 'DM Sans', sans-serif;
