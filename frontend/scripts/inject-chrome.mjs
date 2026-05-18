@@ -31,6 +31,50 @@ const chromeJsonPath = path.join(root, "src/lib/site-chrome.json");
 
 const chrome = JSON.parse(await readFile(chromeJsonPath, "utf8"));
 
+// Sprint A-Foundation (v3.8.ach): page-level Google Fonts link pattern.
+// Matches any <link> to fonts.googleapis.com/css2 loading any of the four
+// font families seen across the marketing pages (DM Serif + Plus Jakarta
+// pre-canonical; Playfair + DM Sans canonical but page-by-page weight
+// variation). Used by the design-system bootstrap below to swap whichever
+// page-local fonts declaration exists with the canonical full-weight set
+// loaded alongside srl-tokens.css. Order-agnostic on attribute order
+// (some pages have href= first, others rel= first).
+const OLD_FONTS_RE = /<link[^>]*fonts\.googleapis\.com\/css2\?[^"]*(?:DM\+Serif\+Display|Plus\+Jakarta\+Sans|Playfair\+Display|DM\+Sans)[^"]*"[^>]*>/g;
+
+// Canonical design-system head block per srl-brand-design skill
+// (.claude/skills/srl-brand-design/scripts/srl_tokens.css). Loaded
+// BEFORE per-page stylesheets so existing page CSS can still cascade
+// during the migration period. Per-page CSS migration to canonical
+// tokens follows in subsequent atomic sprints (one per page).
+function renderDesignSystem() {
+  return `<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/shared/css/srl-tokens.css">`;
+}
+
+// Replace or bootstrap the design-system marker block, idempotently:
+//   1. Marker already present → replace content within marker
+//   2. Page fonts link present → swap link for marker block at same
+//      position (first-run bootstrap; integrity-neutral because
+//      hashOutsideMarkers strips both forms to the same placeholder)
+//   3. Neither present → skip (page is orphan or non-marketing surface;
+//      a no-fonts-link page falls outside the design-system migration
+//      scope because there's no integrity-safe insertion anchor).
+//      §13.3 Item 25 orphans (login.html, register.html, tracking.html)
+//      are queued for deletion; they intentionally don't get migrated.
+function replaceDesignSystem(html, content) {
+  const block = `<!-- INCLUDE:design-system -->\n  ${content}\n  <!-- END INCLUDE:design-system -->`;
+  const markerRe = /<!-- INCLUDE:design-system(?:\s+[^>]*?)?\s*-->[\s\S]*?<!-- END INCLUDE:design-system -->/g;
+  if (markerRe.test(html)) {
+    return { html: html.replace(markerRe, block), touched: true };
+  }
+  if (OLD_FONTS_RE.test(html)) {
+    return { html: html.replace(OLD_FONTS_RE, block), touched: true };
+  }
+  return { html, touched: false };
+}
+
 // Penguin SVG copied verbatim from the pre-Phase-2 index.html
 // (commit 36e5636, frontend/public/index.html lines 47-56). Animated via
 // srl-logo.css (@keyframes penguin-north + waddle) which is already loaded
@@ -131,10 +175,10 @@ ${col.links.map((l) => `          <a href="${l.href}">${escape(l.label)}</a>`).j
         <div class="footer-brand">
           <div class="footer-logo">
             <a href="/" aria-label="${escape(chrome.company)} home" style="display:inline-block;line-height:0;">
-              <img src="/logo.png" alt="SRL" style="height:44px;width:auto;border-radius:6px;">
+              <img src="/logo.png" alt="SRL" style="height:36px;width:auto;border-radius:6px;">
             </a>
           </div>
-          <p>${escape(chrome.tagline)}</p>
+          <p class="srl-tagline">${escape(chrome.tagline)}</p>
           <p style="margin-top:12px">
             ${escape(chrome.addressCity)}, ${escape(chrome.addressState)}<br>
             <a href="tel:${escape(chrome.phoneTel)}">${escape(chrome.phone)}</a><br>
@@ -163,12 +207,24 @@ function escape(s) {
 
 // Hash everything EXCEPT the region between INCLUDE/END markers. Any change
 // to the hash means a write modified content we don't own — refuse to save.
+//
+// Sprint A-Foundation extends this: the design-system region accepts EITHER
+// the marker form OR the legacy DM Serif/Plus Jakarta Google Fonts link
+// and strips both to the SAME placeholder. This makes the first-run
+// bootstrap (link → marker) integrity-neutral while preserving the guard
+// for all other content.
 function hashOutsideMarkers(html) {
   let stripped = html;
   for (const tag of ["nav", "footer"]) {
     const re = new RegExp(`<!-- INCLUDE:${tag}(?:\\s+[^>]*?)?\\s*-->[\\s\\S]*?<!-- END INCLUDE:${tag} -->`, "g");
     stripped = stripped.replace(re, `__CHROME_${tag.toUpperCase()}__`);
   }
+  const DS_PLACEHOLDER = `__CHROME_DESIGN_SYSTEM__`;
+  stripped = stripped.replace(
+    /<!-- INCLUDE:design-system(?:\s+[^>]*?)?\s*-->[\s\S]*?<!-- END INCLUDE:design-system -->/g,
+    DS_PLACEHOLDER,
+  );
+  stripped = stripped.replace(OLD_FONTS_RE, DS_PLACEHOLDER);
   return createHash("sha256").update(stripped).digest("hex");
 }
 
@@ -231,7 +287,8 @@ for (const f of files) {
 
   const n = replaceMarked(before, "nav", navRenderer);
   const fr = replaceMarked(n.html, "footer", footerRenderer);
-  const after = fr.html;
+  const ds = replaceDesignSystem(fr.html, renderDesignSystem());
+  const after = ds.html;
 
   if (after === before) continue;
 

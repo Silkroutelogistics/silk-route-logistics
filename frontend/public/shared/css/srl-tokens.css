@@ -1,0 +1,208 @@
+/*
+ * Silk Route Logistics — Design Tokens (v3.7.n CANONICAL)
+ * Source: project/colors_and_type.css designer handoff (2026-04-22)
+ *         pixel-verified against project/screenshots/v29-full.png
+ *         and BOL v2.9 production output (BOL-L6894191249)
+ *
+ * Usage: import this file at the top of any SRL web artifact
+ *        e.g.  <link rel="stylesheet" href="/skills/srl-brand-design/scripts/srl_tokens.css">
+ *
+ * Surface-mode rules:
+ *   Web/UI:    page canvas = --cream;  accent panels = --cream-2;  card elevation = --white
+ *   Print/PDF: page canvas = --white;  accent panels = --cream-2;  no card elevation
+ */
+
+:root {
+  /* ============================================================
+   * NAVY SCALE (10-stop)
+   * ============================================================ */
+  --navy:     #0A2540;   /* primary structural — alias of --navy-800 */
+  --navy-900: #061629;
+  --navy-800: #0A2540;
+  --navy-700: #15365A;
+  --navy-600: #234A73;
+  --navy-500: #355E8A;
+  --navy-400: #5B7EA3;
+  --navy-300: #8AA5C0;
+  --navy-200: #BECEDE;
+  --navy-100: #E2EAF2;
+
+  /* ============================================================
+   * GOLD SCALE — role split is mandatory
+   *   --gold      → STRUCTURAL: rules, dividers, frames, QR border
+   *   --gold-dark → EMPHASIS: CTAs, hover, labels, tagline, vertical rules
+   * ============================================================ */
+  --gold:       #C5A572;
+  --gold-dark:  #BA7517;
+  --gold-light: #DAC39C;
+  --gold-tint:  #FAEEDA;
+
+  /* ============================================================
+   * CREAM / SURFACE
+   * ============================================================ */
+  --cream:    #FBF7F0;   /* WEB page canvas only */
+  --cream-2:  #F5EEE0;   /* accent panels (parties cards, alt rows, sunken regions) */
+  --cream-3:  #EFE6D3;
+  --white:    #FFFFFF;   /* print canvas + web card elevation */
+
+  /* ============================================================
+   * SEMANTIC TOKENS — foreground / background / borders / focus
+   * ============================================================ */
+  --fg-1:         #0A2540;
+  --fg-2:         #3A4A5F;
+  --fg-3:         #6B7685;
+  --fg-disabled:  #A7AEB8;
+  --fg-on-navy:   #FBF7F0;
+  --fg-on-navy-2: #C9D2DE;
+
+  --bg-page-web:    #FBF7F0;
+  --bg-page-print:  #FFFFFF;
+  --bg-surface:     #FFFFFF;
+  --bg-surface-2:   #F5EEE0;
+  --bg-navy:        #0A2540;
+  --bg-navy-2:      #15365A;
+
+  --border-1:       rgba(10, 37, 64, 0.10);
+  --border-2:       rgba(10, 37, 64, 0.16);
+  --border-strong:  rgba(10, 37, 64, 0.32);
+  --border-on-navy: rgba(251, 247, 240, 0.14);
+  --focus-ring:     0 0 0 3px rgba(197, 165, 114, 0.40);
+
+  /* ============================================================
+   * STATUS — text + background pairs (use together)
+   * ============================================================ */
+  --success:    #2F7A4F;   --success-bg: #E6F0E9;
+  --warning:    #B07A1A;   --warning-bg: #FBEFD4;
+  --danger:     #9B2C2C;   --danger-bg:  #F6E3E3;
+  --info:       #2A5B8B;   --info-bg:    #E2EAF2;
+
+  /* ============================================================
+   * TYPOGRAPHY
+   * ============================================================ */
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-body:    'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-tagline: Georgia, 'Times New Roman', serif;
+  --font-mono:    'SF Mono', Menlo, Consolas, monospace;
+
+  /* ============================================================
+   * SPACING — 8px grid (4px allowed only for tight inline)
+   * ============================================================ */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* ============================================================
+   * RADII
+   * ============================================================ */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* ============================================================
+   * SHADOWS — navy-tinted, never pure black
+   * ============================================================ */
+  --shadow-1: 0 1px 2px rgba(10, 37, 64, 0.06);
+  --shadow-2: 0 2px 8px rgba(10, 37, 64, 0.08);
+  --shadow-3: 0 6px 16px rgba(10, 37, 64, 0.10);
+  --shadow-4: 0 12px 32px rgba(10, 37, 64, 0.14);
+
+  /* ============================================================
+   * MOTION
+   * ============================================================ */
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+  --ease-out:     cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out:  cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==============================================================
+ * Base reset for SRL web artifacts — opt-in via .srl-page class
+ * ============================================================== */
+.srl-page {
+  background: var(--bg-page-web);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.srl-heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--fg-1);
+}
+
+.srl-tagline {
+  font-family: var(--font-tagline);
+  font-style: italic;
+  color: var(--gold-dark);
+  letter-spacing: 0.02em;
+}
+
+.srl-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.srl-label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--gold-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Primary button */
+.srl-btn-primary {
+  background: var(--gold-dark);
+  color: var(--cream);
+  font: 500 14px/1 var(--font-body);
+  letter-spacing: 0.02em;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-sm);
+  border: 0;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.srl-btn-primary:hover    { background: var(--gold); }
+.srl-btn-primary:focus    { outline: none; box-shadow: var(--focus-ring); }
+
+/* Card on cream canvas */
+.srl-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-2);
+}
+.srl-card.is-emphasized { border-top: 2px solid var(--gold); }
+
+/* Cream-2 panel (parties cards, sunken regions) */
+.srl-panel {
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+/* Section divider */
+.srl-divider {
+  border: 0;
+  border-top: 1px solid var(--gold);
+  margin: var(--space-12) 0;
+}
+
+/* Tabular figures */
+.srl-figures { font-variant-numeric: tabular-nums; }
