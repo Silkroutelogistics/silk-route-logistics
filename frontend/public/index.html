@@ -149,15 +149,20 @@
   <!-- ============================================
        SECTION 1 — HERO
        ============================================ -->
-  <!-- Hero — ultra-minimalist single-sentence pattern. No badge, no subhead,
-       no decorative animation. Cream canvas + Playfair H1 + two CTAs +
-       generous whitespace. Reference: Vercel.com, Anthropic.com homepage,
-       Anduril homepage. Confidence over noise. -->
+  <!-- Hero — single-sentence ultra-minimalist pattern + Package β brand
+       moments. Compass mark settles to true north on page load
+       (pendulum dampening, 3.5s, plays once). Gold underline traces
+       under the accent phrase 1s later (2s trace, plays once). After
+       4.5s, hero is permanently static. Reference: Anduril / Vercel
+       minimalism + Apple compass-mark brand discipline. -->
   <section class="hero" id="hero">
     <div class="hero-content">
+      <div class="hero-compass" aria-hidden="true">
+        <img src="/logo.png" alt="" width="140" height="140">
+      </div>
       <h1>
         Freight brokerage built for the<br>
-        <span class="gold-line">carrier's side of the bill.</span>
+        <span class="gold-line">carrier's side of the bill.<svg class="gold-underline" viewBox="0 0 600 14" preserveAspectRatio="none" aria-hidden="true"><path d="M 6,10 Q 300,2 594,10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>
       </h1>
       <div class="hero-btns">
         <a href="/carriers.html" class="btn btn-gold">Join the Caravan Partner Program</a>

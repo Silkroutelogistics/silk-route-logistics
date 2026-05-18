@@ -407,10 +407,79 @@
       padding-top: 72px; /* clear fixed nav */
     }
 
-    /* v3.8.act ultra-minimalist hero — no ::before radial gradients,
-       no animation, no parallax dots. Cream canvas + Playfair H1 +
-       two CTAs only. Confidence over noise. Reference: Vercel,
-       Anthropic, Anduril homepage. */
+    /* v3.8.acu Package β brand moments — compass settling to north
+       + gold underline trace. Both play ONCE on page load, then
+       hero is permanently static. Per skill canonical: one signature
+       motion per page, trust > spectacle. */
+
+    /* Hero compass — settles like a magnetic compass needle finding
+       true north. Pendulum dampening: starts at -22deg, swings to +14,
+       -7, +3, settles at 0. 3.5s total. */
+    .hero-compass {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 36px;
+      perspective: 600px;
+    }
+
+    .hero-compass img {
+      width: 140px;
+      height: 140px;
+      animation: compass-settle 3.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
+      transform-origin: center;
+      opacity: 0;
+    }
+
+    @keyframes compass-settle {
+      0%   { transform: rotateZ(-22deg); opacity: 0; }
+      8%   { opacity: 1; }
+      32%  { transform: rotateZ(14deg); }
+      55%  { transform: rotateZ(-7deg); }
+      75%  { transform: rotateZ(3deg); }
+      90%  { transform: rotateZ(-1deg); }
+      100% { transform: rotateZ(0deg); opacity: 1; }
+    }
+
+    /* Gold underline trace — editorial gesture under the accent phrase.
+       Fires 3s after page load (after compass settles). 2s draw. */
+    .gold-line {
+      position: relative;
+      display: inline-block;
+    }
+
+    .gold-underline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -10px;
+      width: 100%;
+      height: 14px;
+      color: var(--gold-dark);
+      pointer-events: none;
+    }
+
+    .gold-underline path {
+      stroke-dasharray: 700;
+      stroke-dashoffset: 700;
+      animation: gold-underline-trace 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) 3s forwards;
+    }
+
+    @keyframes gold-underline-trace {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Accessibility — show end state without animation */
+    @media (prefers-reduced-motion: reduce) {
+      .hero-compass img {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+      .gold-underline path {
+        animation: none;
+        stroke-dashoffset: 0;
+      }
+    }
 
     .hero-content {
       position: relative;
