@@ -28,8 +28,18 @@
  * accept must succeed even if RC auto-generation throws (RC can be created
  * manually via the existing AE flow).
  */
+import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+
+// Sprint 59 (v3.8.acj) Item 176 — transaction-aware Prisma client. New
+// POST /api/loads/with-tender atomic endpoint passes its transaction
+// client so the RC.create row commits/rolls back with the Load + Tender
+// rows. Existing callers (acceptTender + acceptTenderOnBehalf) pass
+// nothing and use the global prisma client. Reads at lines 70-87 stay
+// on global prisma per Risk 4 resolution (pure reads, no benefit from
+// transaction enrolment).
+type PrismaTxClient = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
 
 const PAYMENT_TERMS_BY_TIER: Record<string, string> = {
   PLATINUM: "Net-14",
@@ -66,6 +76,7 @@ export async function autoGenerateRateConfirmation(
   loadId: string,
   tenderId: string,
   createdByUserId: string,
+  prismaClient?: PrismaTxClient,
 ) {
   const [load, tender] = await Promise.all([
     prisma.load.findUnique({
@@ -212,7 +223,11 @@ export async function autoGenerateRateConfirmation(
     termsAccepted: false,
   };
 
-  const rc = await prisma.rateConfirmation.create({
+  // Sprint 59 (v3.8.acj) — use prismaClient param when provided (transaction-
+  // enrolled write from POST /api/loads/with-tender). Default to global
+  // prisma for acceptTender + acceptTenderOnBehalf callers.
+  const rcWriter = prismaClient ?? prisma;
+  const rc = await rcWriter.rateConfirmation.create({
     data: {
       loadId,
       formData: formData as unknown as object,

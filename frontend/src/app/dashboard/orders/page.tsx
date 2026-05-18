@@ -9,7 +9,7 @@ import {
   Plus, X, Send, Save, Flame, FileText,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
-import { DirectTenderPicker } from "@/components/ui/DirectTenderPicker";
+import { CarrierEngagementDrawer } from "@/components/drawer/CarrierEngagementDrawer";
 import { OrderSidebar } from "./OrderSidebar";
 import { FacilityPicker, type Facility } from "./FacilityPicker";
 import { LineItemsSection } from "@/components/orders/LineItemsSection";
@@ -403,38 +403,13 @@ export default function OrderBuilderPage() {
     },
   });
 
-  // ─── Create load ──────────────────────────────────────────
-  const [createResult, setCreateResult] = useState<{ loadNumber: string; dispatchMethod: string } | null>(null);
-  const createLoad = useMutation({
-    mutationFn: async () => {
-      // v3.8.c LAYER 1 — Force synchronous draft save BEFORE convert-to-load.
-      // The autosave timer fires at most every 30s; if user edits line items
-      // and clicks Create Load within the same window, the persisted draft is
-      // stale and the backend's convert-to-load reads outdated formData. By
-      // unconditionally awaiting saveDraft.mutateAsync() here, the latest
-      // form state (including all current line items) lands in the DB before
-      // we trigger the conversion read.
-      const saveRes = await saveDraft.mutateAsync();
-      const targetId = orderId ?? saveRes?.order?.id ?? null;
-      if (!targetId) throw new Error("Could not create order");
-      return (await api.post(`/orders/${targetId}/convert-to-load`)).data;
-    },
-    onSuccess: (data) => {
-      const load = data?.load;
-      setCreateResult({
-        loadNumber: load?.loadNumber ?? load?.referenceNumber ?? "—",
-        dispatchMethod: load?.dispatchMethod ?? form.dispatchMethod,
-      });
-      // Route to the appropriate board based on dispatch method
-      setTimeout(() => {
-        if (form.dispatchMethod === "waterfall" || form.dispatchMethod === "loadboard" || form.dispatchMethod === "dat") {
-          router.push("/dashboard/waterfall");
-        } else if (form.dispatchMethod === "direct_tender") {
-          router.push("/dashboard/waterfall");
-        }
-      }, 1500);
-    },
-  });
+  // Sprint 59 (v3.8.acj) Item 176 — createLoad mutation DELETED. The
+  // broken `/orders/:id/convert-to-load` path (Item 167 silent failure
+  // — captured directTenderCarrierId but never fired createTender)
+  // replaced by the Carrier Engagement Drawer which submits to
+  // `/loads/with-tender` atomically. Drawer flushes the draft via
+  // its own mutation; saveDraft autosave still runs in the background.
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // ─── Validation ───────────────────────────────────────────
   const requiredMissing = useMemo(() => {
@@ -476,21 +451,10 @@ export default function OrderBuilderPage() {
 
   const isValid = requiredMissing.length === 0;
 
-  // ─── Success screen after create ──────────────────────────
-  if (createResult) {
-    return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="bg-white/5 border border-green-500/30 rounded-2xl p-8 text-center space-y-4">
-          <CheckCircle className="w-12 h-12 text-green-400 mx-auto" />
-          <h2 className="text-xl font-bold text-white">Load Created</h2>
-          <p className="text-slate-300">
-            Load <strong className="text-gold">{createResult.loadNumber}</strong> dispatched via <strong>{createResult.dispatchMethod}</strong>.
-          </p>
-          <p className="text-sm text-slate-400">Redirecting to Waterfall Dispatch…</p>
-        </div>
-      </div>
-    );
-  }
+  // Sprint 59 (v3.8.acj) Item 176 — Success screen DELETED. Drawer's
+  // own onSubmitSuccess handler navigates to /dashboard/loads?selected=
+  // <load.id> directly after atomic creation. No transient "Redirecting…"
+  // state needed since the drawer's submit is synchronous and atomic.
 
   return (
     <div className="p-3 lg:h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto">
@@ -522,11 +486,15 @@ export default function OrderBuilderPage() {
             <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (!isValid) { setShowErrors(true); return; }
-              createLoad.mutate();
+              // Flush the latest draft state (v3.8.c LAYER 1 pattern preserved
+              // — autosave can be up to 30s stale) so the drawer reads current
+              // form data via initialFormData seed.
+              await saveDraft.mutateAsync();
+              setDrawerOpen(true);
             }}
-            disabled={createLoad.isPending || !isValid || !!convertedLoadId}
+            disabled={saveDraft.isPending || !isValid || !!convertedLoadId}
             title={
               convertedLoadId
                 ? "This order has already been converted to a load"
@@ -537,7 +505,7 @@ export default function OrderBuilderPage() {
             className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "#FFFFFF" }}
           >
-            {createLoad.isPending ? "Creating…" : "Create load"}
+            {saveDraft.isPending ? "Saving…" : "Tender to carrier →"}
           </button>
         </div>
       </div>
@@ -575,24 +543,9 @@ export default function OrderBuilderPage() {
           <AlertTriangle className="w-3 h-3" /> Missing: {requiredMissing.join(", ")}
         </div>
       )}
-      {createLoad.isError && (
-        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
-          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-          <div>
-            <div className="font-semibold">Create load failed</div>
-            <div className="mt-0.5 opacity-90">
-              {(() => {
-                const err = createLoad.error as { response?: { data?: { error?: string; message?: string } }; message?: string } | null;
-                const apiData = err?.response?.data;
-                if (apiData?.error === "INVALID_LOAD_NO_FREIGHT") {
-                  return apiData.message ?? "No shipment line items provided. Add at least one line item with pieces, weight, and description.";
-                }
-                return apiData?.message ?? apiData?.error ?? err?.message ?? "Unknown error. Check browser console + backend logs.";
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sprint 59 (v3.8.acj) Item 176 — createLoad error block DELETED.
+          Drawer's own submitError surface displays POST /loads/with-tender
+          errors inline in its footer per drawer Layer α. */}
       {saveDraft.isError && (
         <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
@@ -1077,110 +1030,6 @@ export default function OrderBuilderPage() {
           </Section>
 
           {/* SECTION 5 — Dispatch & Tracking */}
-          <Section number={5} title="Dispatch &amp; tracking">
-            <Label>Dispatch method</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <DispatchCard
-                active={form.dispatchMethod === "waterfall"}
-                onClick={() => setForm((f) => ({ ...f, dispatchMethod: "waterfall" }))}
-                title="Waterfall (auto-tender)"
-                desc="System ranks carriers and auto-tenders in priority sequence. 20-min acceptance window per carrier."
-              />
-              <DispatchCard
-                active={form.dispatchMethod === "loadboard"}
-                onClick={() => setForm((f) => ({ ...f, dispatchMethod: "loadboard" }))}
-                title="Load board (The Caravan)"
-                desc="Post to SRL internal load board. Approved carriers see and bid."
-              />
-              <DispatchCard
-                active={form.dispatchMethod === "direct_tender"}
-                onClick={() => setForm((f) => ({ ...f, dispatchMethod: "direct_tender" }))}
-                title="Direct tender"
-                desc="Tender to one specific carrier through The Caravan."
-              />
-              <DispatchCard
-                active={form.dispatchMethod === "dat"}
-                onClick={() => setForm((f) => ({ ...f, dispatchMethod: "dat" }))}
-                title="DAT load board"
-                desc="Post to DAT open market. Any carrier can see it."
-              />
-            </div>
-
-            {form.dispatchMethod === "waterfall" && (
-              <div className="mt-2 flex gap-1 items-center text-[10px] text-slate-400">
-                Mode:
-                {(["manual", "semi_auto", "full_auto"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, waterfallMode: m }))}
-                    className={`px-2 py-1 rounded ${form.waterfallMode === m ? "bg-[#C5A572] text-[#0F1117]" : "bg-white/5 text-slate-400"}`}
-                  >
-                    {m === "full_auto" ? "Full auto" : m === "semi_auto" ? "Semi-auto" : "Manual"}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {form.dispatchMethod === "direct_tender" && (
-              <div className="mt-2">
-                <Label>Carrier</Label>
-                <DirectTenderPicker
-                  value={form.directTenderCarrierId}
-                  onChange={(id) => setForm((f) => ({ ...f, directTenderCarrierId: id }))}
-                />
-              </div>
-            )}
-
-            {/* Priority + check call */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <Label>Shipment priority</Label>
-                <div className="flex gap-1">
-                  <TogglePill active={form.shipmentPriority === "standard"} onClick={() => setForm((f) => ({ ...f, shipmentPriority: "standard" }))} label="Standard" />
-                  <TogglePill
-                    active={form.shipmentPriority === "hot"}
-                    onClick={() => setForm((f) => ({ ...f, shipmentPriority: "hot", checkCallProtocol: "expedited" }))}
-                    label={<span className="flex items-center gap-1"><Flame className="w-3 h-3" /> Hot</span>}
-                    activeCls="bg-red-500 text-white"
-                  />
-                </div>
-                {form.shipmentPriority === "hot" && (
-                  <div className="mt-1 text-[10px] text-red-400">
-                    Expedited alerts · red HOT badge across all boards
-                  </div>
-                )}
-              </div>
-              <div>
-                <Label>Check call protocol</Label>
-                <div className="flex gap-1">
-                  <TogglePill active={form.checkCallProtocol === "standard"} onClick={() => setForm((f) => ({ ...f, checkCallProtocol: "standard" }))} label="Standard (4h)" />
-                  <TogglePill active={form.checkCallProtocol === "expedited"} onClick={() => setForm((f) => ({ ...f, checkCallProtocol: "expedited" }))} label="Expedited (2h)" />
-                </div>
-              </div>
-            </div>
-
-            {/* Info callout — theme-aware gold tint (readable in both light + dark) */}
-            <div
-              className="mt-3 p-2 rounded-lg border text-[11px]"
-              style={{
-                background: "var(--srl-gold-muted)",
-                borderColor: "rgba(186,117,23,0.4)",
-                color: "var(--srl-gold-text)",
-              }}
-            >
-              Waterfall starts automatically. Eligible carriers matched for {form.originState || "—"} → {form.destState || "—"} ({form.equipmentType}).
-            </div>
-
-            {/* Tracking notifications */}
-            <div className="mt-3">
-              <Check
-                label="Auto-send tracking link to shipper contacts"
-                checked={form.trackingLinkAutoSend}
-                onChange={(v) => setForm((f) => ({ ...f, trackingLinkAutoSend: v }))}
-              />
-            </div>
-          </Section>
 
           <div className="h-6" />
         </div>
@@ -1210,6 +1059,56 @@ export default function OrderBuilderPage() {
           customerRateSource={customerRateSource}
         />
       </div>
+
+      {/* Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer mount.
+          Replaces the dispatch-method radios + DirectTenderPicker that used
+          to live in Section 5 of this page. Drawer takes ALL drawer-flow
+          state from the draft Order via initialFormData + orderId, then
+          submits atomically to POST /api/loads/with-tender. */}
+      <CarrierEngagementDrawer
+        open={drawerOpen}
+        mode="build-and-tender"
+        orderId={orderId ?? undefined}
+        initialCustomer={selectedCustomer ? {
+          id: selectedCustomer.id,
+          name: selectedCustomer.name,
+          email: selectedCustomer.email,
+          phone: selectedCustomer.phone,
+          contactName: selectedCustomer.contactName,
+          status: selectedCustomer.status,
+          industry: selectedCustomer.industry,
+          city: selectedCustomer.city,
+          state: selectedCustomer.state,
+          creditLimit: selectedCustomer.creditLimit,
+          creditStatus: selectedCustomer.creditStatus,
+          paymentTerms: selectedCustomer.paymentTerms,
+          _count: selectedCustomer._count,
+        } : null}
+        initialFormData={{
+          originCity: form.originCity,
+          originState: form.originState,
+          originZip: form.originZip,
+          originAddress: form.originAddress ?? "",
+          originCompany: form.originCompany ?? "",
+          originContactName: form.originContactName ?? "",
+          originContactPhone: form.originContactPhone ?? "",
+          destCity: form.destCity,
+          destState: form.destState,
+          destZip: form.destZip,
+          destAddress: form.destAddress ?? "",
+          destCompany: form.destCompany ?? "",
+          destContactName: form.destContactName ?? "",
+          destContactPhone: form.destContactPhone ?? "",
+          distance: form.distance,
+          equipmentType: form.equipmentType,
+          pickupDate: form.pickupDate,
+          deliveryDate: form.deliveryDate,
+          customerRate: form.customerRate,
+          offeredRate: form.targetCost,
+          specialInstructions: form.specialInstructions ?? "",
+        }}
+        onClose={() => setDrawerOpen(false)}
+      />
     </div>
   );
 }

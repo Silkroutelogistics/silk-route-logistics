@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, carrierUpdateStatus, getDistance, getLoadAudit } from "../controllers/loadController";
+import { createLoadWithTender } from "../controllers/withTenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -31,6 +32,13 @@ router.get("/next-bol", async (_req: AuthRequest, res: Response) => {
 });
 
 router.get("/distance", getDistance);
+
+// Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer Mode 1
+// atomic endpoint. Validation lives inside the controller (custom
+// shape, not createLoadSchema). Auth gated to AE Console roles —
+// SHIPPER cannot self-tender via this path (they use /shipper-portal).
+router.post("/with-tender", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("CREATE", "Load"), createLoadWithTender);
+
 router.post("/", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), validateBody(createLoadSchema), auditLog("CREATE", "Load"), createLoad);
 router.get("/", validateQuery(loadQuerySchema), getLoads);
 router.get("/:id", getLoadById);
