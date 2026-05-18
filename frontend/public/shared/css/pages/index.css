@@ -1,6 +1,8 @@
 
     /* ======================================
        RESET & BASE
+       Phase 2 (v3.8.acl): cream canvas + canonical typography
+       per srl-brand-design skill canonical tokens.
        ====================================== */
     *, *::before, *::after {
       margin: 0;
@@ -16,9 +18,9 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: #1A1A2E;
-      background: #FFFFFF;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #0A2540;
+      background: #FBF7F0;
       overflow-x: hidden;
       line-height: 1.6;
     }
@@ -29,26 +31,32 @@
     button { cursor: pointer; border: none; font-family: inherit; }
 
     /* ======================================
-       CSS VARIABLES
+       CSS VARIABLES — local aliases to canonical
+       tokens (see /shared/css/srl-tokens.css for SOT).
+       Existing var() refs across the file inherit
+       canonical values via this rebinding.
        ====================================== */
     :root {
-      --navy: #0D1B2A;
-      --navy-mid: #1B2838;
-      --navy-deep: #0A1628;
-      --gold: #C8963E;
-      --gold-light: #D4A84E;
-      --gold-dark: #BA7517;
-      --white: #FFFFFF;
-      --light-gray: #F5F5F5;
-      --dark-text: #1A1A2E;
-      --text-muted: #6B7280;
-      --font-headline: 'DM Serif Display', Georgia, serif;
-      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --navy: #0A2540;           /* skill canonical --navy / --navy-800 */
+      --navy-mid: #15365A;       /* skill canonical --navy-700 */
+      --navy-deep: #061629;      /* skill canonical --navy-900 */
+      --gold: #C5A572;           /* skill canonical structural gold */
+      --gold-light: #DAC39C;     /* skill canonical --gold-light */
+      --gold-dark: #BA7517;      /* skill canonical emphasis gold */
+      --white: #FFFFFF;          /* card elevation only */
+      --light-gray: #F5EEE0;     /* skill canonical --cream-2 (alt sections) */
+      --dark-text: #0A2540;      /* skill canonical --fg-1 (text on cream) */
+      --text-muted: #6B7685;     /* skill canonical --fg-3 */
+      --fg-2: #3A4A5F;           /* skill canonical secondary fg */
+      --cream: #FBF7F0;          /* skill canonical web canvas */
+      --cream-2: #F5EEE0;        /* skill canonical alt panel */
+      --font-headline: 'Playfair Display', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
       --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-      --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
-      --shadow-lg: 0 12px 40px rgba(0,0,0,0.15);
-      --shadow-xl: 0 20px 60px rgba(0,0,0,0.2);
+      --shadow-sm: 0 1px 2px rgba(10, 37, 64, 0.06);
+      --shadow-md: 0 2px 8px rgba(10, 37, 64, 0.08);
+      --shadow-lg: 0 6px 16px rgba(10, 37, 64, 0.10);
+      --shadow-xl: 0 12px 32px rgba(10, 37, 64, 0.14);
       --radius: 12px;
       --radius-sm: 8px;
       --container: 1200px;
@@ -77,7 +85,7 @@
     .headline-md { font-size: clamp(1.75rem, 4vw, 2.5rem); }
     .headline-sm { font-size: clamp(1.25rem, 3vw, 1.75rem); }
 
-    .text-gold { color: var(--gold); }
+    .text-gold { color: var(--gold-dark); }
     .text-white { color: var(--white); }
     .text-navy { color: var(--navy); }
     .text-center { text-align: center; }
@@ -96,13 +104,13 @@
     }
 
     .btn-gold {
-      background: var(--gold);
-      color: var(--navy);
+      background: var(--gold-dark);
+      color: var(--cream);
     }
     .btn-gold:hover {
-      background: var(--gold-light);
+      background: var(--gold);
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(200, 150, 62, 0.35);
+      box-shadow: 0 8px 24px rgba(186, 117, 23, 0.25);
     }
 
     .btn-outline-white {
@@ -118,12 +126,12 @@
 
     .btn-outline-gold {
       background: transparent;
-      color: var(--gold);
-      border: 2px solid var(--gold);
+      color: var(--gold-dark);
+      border: 2px solid var(--gold-dark);
     }
     .btn-outline-gold:hover {
-      background: var(--gold);
-      color: var(--navy);
+      background: var(--gold-dark);
+      color: var(--cream);
       transform: translateY(-2px);
     }
 
@@ -134,7 +142,7 @@
     }
     .btn-outline-navy:hover {
       background: var(--navy);
-      color: var(--white);
+      color: var(--cream);
       transform: translateY(-2px);
     }
 
@@ -157,26 +165,9 @@
     .reveal-delay-5 { transition-delay: 0.5s; }
     .reveal-delay-6 { transition-delay: 0.6s; }
 
-    /* ======================================
-       HERO GRADIENT ANIMATION
-       ====================================== */
-    @keyframes silkGradient {
-      0% {
-        background-position: 0% 50%;
-      }
-      25% {
-        background-position: 50% 100%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-      75% {
-        background-position: 50% 0%;
-      }
-      100% {
-        background-position: 0% 50%;
-      }
-    }
+    /* Phase 2: silkGradient keyframe removed — was driving the dark navy
+       animated hero. Replaced with static cream hero per Option A surface
+       mode. Designed RouteMapHero component will anchor the hero in Phase 4. */
 
     @keyframes fadeInUp {
       from {
@@ -214,6 +205,9 @@
 
     /* ======================================
        NAVIGATION
+       Chrome strip — stays navy per skill canonical
+       (chrome strips are the only sanctioned navy on
+       public marketing pages).
        ====================================== */
     .nav {
       position: fixed;
@@ -227,11 +221,11 @@
     }
 
     .nav.scrolled {
-      background: rgba(13, 27, 42, 0.97);
+      background: rgba(10, 37, 64, 0.97);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 2px 20px rgba(0,0,0,0.3);
-      color: var(--fg-on-navy);
+      box-shadow: 0 2px 20px rgba(10, 37, 64, 0.3);
+      color: var(--cream);
     }
 
     .nav-inner {
@@ -326,7 +320,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      color: var(--fg-on-navy);
+      color: var(--cream);
     }
 
     .mobile-menu.open {
@@ -337,10 +331,9 @@
       color: rgba(255,255,255,0.85);
       font-size: 1.05rem;
       font-weight: 500;
-      padding: 14px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       transition: var(--transition);
-      display: block;
     }
 
     .mobile-menu a:hover {
@@ -348,40 +341,33 @@
       padding-left: 8px;
     }
 
-    .mobile-menu .mobile-login-section {
+    .mobile-menu .mobile-cta {
       margin-top: 24px;
-      padding-top: 24px;
-      border-top: 1px solid rgba(255,255,255,0.15);
-    }
-
-    .mobile-menu .mobile-login-section .label {
-      color: var(--gold);
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 12px;
+      background: var(--gold);
+      color: var(--navy);
+      text-align: center;
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      border: none;
     }
 
     .mobile-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(0,0,0,0.5);
       z-index: 998;
       opacity: 0;
       visibility: hidden;
-      transition: var(--transition);
+      transition: opacity 0.3s ease, visibility 0.3s;
     }
 
-    .mobile-overlay.visible {
+    .mobile-overlay.open {
       opacity: 1;
       visibility: visible;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 768px) {
       .nav-links { display: none; }
       .nav-login-wrap { display: none; }
       .hamburger { display: flex; }
@@ -389,6 +375,10 @@
 
     /* ======================================
        SECTION 1 — HERO
+       Phase 2 (v3.8.acl): converted from dark navy animated gradient
+       to cream canvas with navy Playfair H1 + gold-accent span per
+       skill canonical surface mode. Designed RouteMapHero anchor
+       component arrives in Phase 4.
        ====================================== */
     .hero {
       position: relative;
@@ -397,18 +387,8 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      background: linear-gradient(
-        135deg,
-        #0D1B2A 0%,
-        #1B2838 20%,
-        #0A1628 40%,
-        rgba(200, 150, 62, 0.08) 50%,
-        #0D1B2A 60%,
-        #1B2838 80%,
-        #0A1628 100%
-      );
-      background-size: 400% 400%;
-      animation: silkGradient 18s ease infinite;
+      background: var(--cream);
+      padding-top: 72px; /* clear fixed nav */
     }
 
     .hero::before {
@@ -416,17 +396,9 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse 600px 400px at 20% 60%, rgba(200,150,62,0.06) 0%, transparent 70%),
-        radial-gradient(ellipse 500px 500px at 80% 30%, rgba(200,150,62,0.04) 0%, transparent 70%);
+        radial-gradient(ellipse 600px 400px at 20% 60%, rgba(197, 165, 114, 0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 500px at 80% 30%, rgba(197, 165, 114, 0.06) 0%, transparent 70%);
       pointer-events: none;
-    }
-
-    .hero::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(200,150,62,0.3), transparent);
     }
 
     .hero-content {
@@ -441,13 +413,13 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(200, 150, 62, 0.12);
-      border: 1px solid rgba(200, 150, 62, 0.25);
+      background: rgba(186, 117, 23, 0.08);
+      border: 1px solid rgba(186, 117, 23, 0.25);
       padding: 8px 20px;
       border-radius: 50px;
       font-size: 0.8rem;
       font-weight: 600;
-      color: var(--gold);
+      color: var(--gold-dark);
       letter-spacing: 0.08em;
       text-transform: uppercase;
       margin-bottom: 32px;
@@ -457,7 +429,7 @@
     .hero-badge .badge-dot {
       width: 6px;
       height: 6px;
-      background: #50C878;
+      background: #2F7A4F;
       border-radius: 50%;
       animation: pulse 2s ease infinite;
       position: relative;
@@ -466,8 +438,8 @@
     .hero h1 {
       font-family: var(--font-headline);
       font-size: clamp(2.5rem, 6.5vw, 4.5rem);
-      font-weight: 400;
-      color: var(--white);
+      font-weight: 700;
+      color: var(--navy);
       line-height: 1.15;
       margin-bottom: 24px;
       animation: fadeInUp 0.8s ease 0.15s forwards;
@@ -475,12 +447,12 @@
     }
 
     .hero h1 .gold-line {
-      color: var(--gold);
+      color: var(--gold-dark);
     }
 
     .hero-sub {
       font-size: clamp(1rem, 2vw, 1.2rem);
-      color: rgba(255,255,255,0.7);
+      color: var(--fg-2);
       max-width: 620px;
       margin: 0 auto 44px;
       font-weight: 400;
@@ -518,19 +490,20 @@
     .scroll-indicator svg {
       width: 28px;
       height: 28px;
-      stroke: rgba(255,255,255,0.4);
+      stroke: rgba(10, 37, 64, 0.4);
       stroke-width: 2;
       fill: none;
     }
 
     /* ======================================
        SECTION 2 — TRUST BAR
+       Phase 2: navy-deep → cream-2 alternating section
        ====================================== */
     .trust-bar {
-      background: var(--navy-deep);
+      background: var(--cream-2);
       padding: 56px 0;
-      border-top: 1px solid rgba(200,150,62,0.1);
-      border-bottom: 1px solid rgba(200,150,62,0.1);
+      border-top: 1px solid rgba(186, 117, 23, 0.15);
+      border-bottom: 1px solid rgba(186, 117, 23, 0.15);
     }
 
     .trust-bar-grid {
@@ -552,20 +525,21 @@
       transform: translateY(-50%);
       width: 1px;
       height: 40px;
-      background: rgba(255,255,255,0.1);
+      background: rgba(10, 37, 64, 0.10);
     }
 
     .trust-stat .number {
       font-family: var(--font-headline);
+      font-weight: 700;
       font-size: clamp(1.75rem, 3.5vw, 2.75rem);
-      color: var(--gold);
+      color: var(--gold-dark);
       margin-bottom: 6px;
       line-height: 1;
     }
 
     .trust-stat .label {
       font-size: 0.85rem;
-      color: rgba(255,255,255,0.6);
+      color: var(--fg-2);
       font-weight: 500;
       letter-spacing: 0.03em;
     }
@@ -582,9 +556,10 @@
 
     /* ======================================
        SECTION 3 — DUAL PERSONA SPLIT
+       Phase 2: full-white → cream (matches body canvas)
        ====================================== */
     .dual-persona {
-      background: var(--white);
+      background: var(--cream);
     }
 
     .dual-grid {
@@ -597,7 +572,7 @@
       background: var(--white);
       border-radius: var(--radius);
       padding: 48px 40px;
-      border: 1px solid #E5E7EB;
+      border: 1px solid rgba(10, 37, 64, 0.10);
       transition: var(--transition);
       position: relative;
       overflow: hidden;
@@ -613,7 +588,7 @@
     }
 
     .persona-card.shipper::before {
-      background: var(--gold);
+      background: var(--gold-dark);
     }
 
     .persona-card.carrier::before {
@@ -648,8 +623,9 @@
 
     .persona-card h3 {
       font-family: var(--font-headline);
+      font-weight: 700;
       font-size: 1.65rem;
-      color: var(--dark-text);
+      color: var(--navy);
       margin-bottom: 8px;
     }
 
@@ -670,7 +646,7 @@
       gap: 12px;
       padding: 10px 0;
       font-size: 0.925rem;
-      color: #374151;
+      color: var(--fg-2);
       line-height: 1.5;
     }
 
@@ -687,12 +663,12 @@
     }
 
     .persona-card.shipper .check {
-      background: rgba(200,150,62,0.12);
-      color: var(--gold);
+      background: rgba(186, 117, 23, 0.12);
+      color: var(--gold-dark);
     }
 
     .persona-card.carrier .check {
-      background: rgba(13,27,42,0.08);
+      background: rgba(10, 37, 64, 0.08);
       color: var(--navy);
     }
 
@@ -707,9 +683,10 @@
 
     /* ======================================
        SECTION 4 — SERVICES
+       Phase 2: light-gray → cream-2 (alt section)
        ====================================== */
     .services {
-      background: var(--light-gray);
+      background: var(--cream-2);
     }
 
     .services-header {
@@ -719,6 +696,7 @@
 
     .services-header h2 {
       margin-bottom: 16px;
+      color: var(--navy);
     }
 
     .services-header p {
@@ -738,7 +716,7 @@
       background: var(--white);
       border-radius: var(--radius);
       padding: 36px 32px;
-      border: 1px solid #E5E7EB;
+      border: 1px solid rgba(10, 37, 64, 0.10);
       transition: var(--transition);
     }
 
@@ -770,8 +748,9 @@
 
     .service-card h4 {
       font-family: var(--font-headline);
+      font-weight: 700;
       font-size: 1.2rem;
-      color: var(--dark-text);
+      color: var(--navy);
       margin-bottom: 10px;
     }
 
@@ -787,9 +766,14 @@
 
     /* ======================================
        SECTION 5 — COVERAGE MAP
+       Phase 2: navy → cream (matches body canvas).
+       Network map canvas color palette is in /js/networkMap.js
+       and renders independently of CSS; visual mismatch with
+       cream canvas resolves in Phase 4 (animation prune +
+       designed RouteMapHero SVG replaces 30fps Canvas).
        ====================================== */
     .coverage {
-      background: var(--navy);
+      background: var(--cream);
       overflow: hidden;
     }
 
@@ -799,12 +783,12 @@
     }
 
     .coverage-header h2 {
-      color: var(--white);
+      color: var(--navy);
       margin-bottom: 16px;
     }
 
     .coverage-header p {
-      color: rgba(255,255,255,0.6);
+      color: var(--text-muted);
       font-size: 1rem;
       max-width: 580px;
       margin: 0 auto;
@@ -829,7 +813,7 @@
     .coverage-caption {
       text-align: center;
       margin-top: 48px;
-      color: rgba(255,255,255,0.5);
+      color: var(--text-muted);
       font-size: 0.875rem;
       max-width: 720px;
       margin-left: auto;
@@ -839,9 +823,10 @@
 
     /* ======================================
        SECTION 6 — THE CARAVAN
+       Phase 2: full-white → cream-2 (alt section)
        ====================================== */
     .caravan {
-      background: var(--white);
+      background: var(--cream-2);
     }
 
     .caravan-header {
@@ -851,6 +836,7 @@
 
     .caravan-header h2 {
       margin-bottom: 12px;
+      color: var(--navy);
     }
 
     .caravan-header p {
@@ -866,9 +852,11 @@
 
     /* ======================================
        SECTION 7 — TECHNOLOGY
+       Phase 2: navy → cream (matches body canvas)
+       Tech cards: white-on-cream elevation pattern.
        ====================================== */
     .technology {
-      background: var(--navy);
+      background: var(--cream);
       position: relative;
       overflow: hidden;
     }
@@ -878,8 +866,8 @@
       position: absolute;
       inset: 0;
       background-image:
-        linear-gradient(rgba(200,150,62,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(200,150,62,0.03) 1px, transparent 1px);
+        linear-gradient(rgba(186, 117, 23, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(186, 117, 23, 0.04) 1px, transparent 1px);
       background-size: 60px 60px;
       pointer-events: none;
     }
@@ -892,12 +880,12 @@
     }
 
     .technology-header h2 {
-      color: var(--white);
+      color: var(--navy);
       margin-bottom: 16px;
     }
 
     .technology-header p {
-      color: rgba(255,255,255,0.6);
+      color: var(--text-muted);
       font-size: 1rem;
       max-width: 520px;
       margin: 0 auto;
@@ -912,17 +900,16 @@
     }
 
     .tech-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--white);
+      border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: var(--radius);
       padding: 40px 32px;
-      backdrop-filter: blur(8px);
       transition: var(--transition);
     }
 
     .tech-card:hover {
-      background: rgba(255,255,255,0.07);
-      border-color: rgba(200,150,62,0.25);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(186, 117, 23, 0.25);
       transform: translateY(-4px);
     }
 
@@ -943,13 +930,14 @@
 
     .tech-card h4 {
       font-family: var(--font-headline);
+      font-weight: 700;
       font-size: 1.25rem;
-      color: var(--white);
+      color: var(--navy);
       margin-bottom: 12px;
     }
 
     .tech-card p {
-      color: rgba(255,255,255,0.6);
+      color: var(--text-muted);
       font-size: 0.9rem;
       line-height: 1.7;
     }
@@ -960,9 +948,13 @@
 
     /* ======================================
        SECTION 8 — TESTIMONIALS
+       Phase 2: light-gray → cream-2 (alt section).
+       Per CLAUDE.md §5 fabricated testimonials are forbidden
+       on public marketing — if any testimonial cards still
+       render on this page, Phase 3 voice scrub will address.
        ====================================== */
     .testimonials {
-      background: var(--light-gray);
+      background: var(--cream-2);
     }
 
     .testimonials-header {
@@ -972,6 +964,7 @@
 
     .testimonials-header h2 {
       margin-bottom: 12px;
+      color: var(--navy);
     }
 
     .testimonials-header p {
@@ -989,7 +982,7 @@
       background: var(--white);
       border-radius: var(--radius);
       padding: 36px 32px 32px;
-      border: 1px solid #E5E7EB;
+      border: 1px solid rgba(10, 37, 64, 0.10);
       transition: var(--transition);
       position: relative;
     }
@@ -1002,7 +995,7 @@
     .testimonial-card .quote-mark {
       font-family: Georgia, serif;
       font-size: 4rem;
-      color: rgba(200,150,62,0.2);
+      color: rgba(186, 117, 23, 0.2);
       line-height: 1;
       height: 40px;
       display: block;
@@ -1011,7 +1004,7 @@
 
     .testimonial-card .quote-text {
       font-size: 0.95rem;
-      color: #374151;
+      color: var(--fg-2);
       line-height: 1.7;
       margin-bottom: 24px;
       font-style: italic;
@@ -1040,7 +1033,7 @@
     .testimonial-card .author-info .name {
       font-weight: 600;
       font-size: 0.9rem;
-      color: var(--dark-text);
+      color: var(--navy);
     }
 
     .testimonial-card .author-info .role {
@@ -1055,19 +1048,23 @@
 
     /* ======================================
        SECTION 11 — CTA BANNER
+       Phase 2: navy gradient → cream-2 with gold-dark CTA.
+       Final-section emphasis comes from typography hierarchy,
+       not color blocking.
        ====================================== */
     .cta-banner {
-      background: linear-gradient(135deg, var(--navy) 0%, #162233 50%, var(--navy) 100%);
+      background: var(--cream-2);
       position: relative;
       overflow: hidden;
       padding: 80px 0;
+      border-top: 1px solid rgba(186, 117, 23, 0.15);
     }
 
     .cta-banner::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse 50% 80% at 50% 50%, rgba(200,150,62,0.08) 0%, transparent 70%);
+      background: radial-gradient(ellipse 50% 80% at 50% 50%, rgba(186, 117, 23, 0.06) 0%, transparent 70%);
       pointer-events: none;
     }
 
@@ -1079,13 +1076,14 @@
 
     .cta-banner h2 {
       font-family: var(--font-headline);
+      font-weight: 700;
       font-size: clamp(2rem, 5vw, 3.25rem);
-      color: var(--white);
+      color: var(--navy);
       margin-bottom: 12px;
     }
 
     .cta-banner .cta-sub {
-      color: rgba(255,255,255,0.65);
+      color: var(--fg-2);
       font-size: 1.05rem;
       margin-bottom: 36px;
     }
@@ -1105,26 +1103,30 @@
 
     .btn-phone {
       background: transparent;
-      color: var(--white);
-      border: 2px solid rgba(255,255,255,0.4);
+      color: var(--navy);
+      border: 2px solid rgba(10, 37, 64, 0.4);
       display: inline-flex;
       align-items: center;
       gap: 8px;
     }
 
     .btn-phone:hover {
-      border-color: var(--white);
-      background: rgba(255,255,255,0.05);
+      border-color: var(--navy);
+      background: rgba(10, 37, 64, 0.05);
     }
 
     /* ======================================
        SECTION 11 — FOOTER
+       Chrome strip — stays navy per skill canonical.
+       Canonical chrome footer is injected by inject-chrome.mjs
+       and renders with class="footer". These rules apply to
+       that injected markup.
        ====================================== */
     .footer {
       background: var(--navy);
       padding: 72px 0 0;
-      border-top: 1px solid rgba(200,150,62,0.15);
-      color: var(--fg-on-navy);
+      border-top: 1px solid rgba(186, 117, 23, 0.15);
+      color: var(--cream);
     }
 
     .footer-grid {
@@ -1154,7 +1156,7 @@
     }
 
     .footer-brand p {
-      color: rgba(255,255,255,0.5);
+      color: rgba(251, 247, 240, 0.6);
       font-size: 0.85rem;
       line-height: 1.7;
       margin-bottom: 20px;
@@ -1189,7 +1191,7 @@
 
     .footer-col a {
       display: block;
-      color: rgba(255,255,255,0.5);
+      color: rgba(251, 247, 240, 0.6);
       font-size: 0.875rem;
       padding: 6px 0;
       transition: var(--transition);
@@ -1211,7 +1213,7 @@
     }
 
     .footer-bottom p {
-      color: rgba(255,255,255,0.35);
+      color: rgba(251, 247, 240, 0.5);
       font-size: 0.8rem;
     }
 
@@ -1221,7 +1223,7 @@
     }
 
     .footer-bottom-links a {
-      color: rgba(255,255,255,0.35);
+      color: rgba(251, 247, 240, 0.5);
       font-size: 0.8rem;
       transition: var(--transition);
     }
@@ -1251,4 +1253,3 @@
         text-align: center;
       }
     }
-  
