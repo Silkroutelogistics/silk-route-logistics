@@ -53,6 +53,115 @@ function renderDesignSystem() {
   <link rel="stylesheet" href="/shared/css/srl-tokens.css">`;
 }
 
+// Sprint Phase-1 Infrastructure: page-level meta injection (favicon, theme,
+// canonical, OG, Twitter card, JSON-LD Organization on home). Bootstrap
+// anchors on the existing <meta name="description"> line — every marketing
+// page has one. The meta marker block CONTAINS the description meta so it
+// lives inside the canonical region. Integrity-neutral via the same pattern
+// as design-system: hashOutsideMarkers recognizes both forms.
+const OLD_DESCRIPTION_RE = /<meta[^>]*\bname="description"[^>]*>/;
+
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function extractTitle(html) {
+  const m = html.match(/<title>([^<]+)<\/title>/);
+  return m ? m[1].trim() : "Silk Route Logistics";
+}
+
+function extractDescription(html) {
+  const m = html.match(/<meta[^>]*\bname="description"[^>]*\bcontent="([^"]*)"[^>]*>/);
+  if (m) return m[1];
+  const m2 = html.match(/<meta[^>]*\bcontent="([^"]*)"[^>]*\bname="description"[^>]*>/);
+  return m2 ? m2[1] : "Michigan property broker. USDOT 4526880, Broker MC 1794414. Where Trust Travels.";
+}
+
+function pathToCanonical(filename) {
+  if (filename === "index.html") return "https://silkroutelogistics.ai/";
+  return `https://silkroutelogistics.ai/${filename}`;
+}
+
+// JSON-LD Organization schema — home page only. Uses ONLY facts in CLAUDE.md
+// §1 / skill metadata. No EIN (not in canonical sources), no founder name
+// (per §5 — Wasi name not on public marketing pages), no founding date
+// (not in canonical sources), no fabricated capability claims.
+function organizationSchema() {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Silk Route Logistics Inc.",
+    url: "https://silkroutelogistics.ai",
+    logo: "https://silkroutelogistics.ai/logo.png",
+    telephone: "+1-269-220-6760",
+    email: "operations@silkroutelogistics.ai",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "2317 S 35th St",
+      addressLocality: "Galesburg",
+      addressRegion: "MI",
+      postalCode: "49053",
+      addressCountry: "US",
+    },
+    description: "Michigan property broker. USDOT 4526880, Broker MC 1794414. BMC-84 bonded.",
+    knowsAbout: ["Freight brokerage", "Cold chain logistics", "Cross-border freight"],
+  }, null, 2);
+}
+
+function renderMeta(html, filename) {
+  const title = extractTitle(html);
+  const description = extractDescription(html);
+  const canonical = pathToCanonical(filename);
+  const isHome = filename === "index.html";
+
+  const lines = [
+    `<meta name="description" content="${escapeAttr(description)}">`,
+    `<link rel="canonical" href="${canonical}">`,
+    `<meta name="theme-color" content="#0A2540">`,
+    `<link rel="icon" type="image/svg+xml" href="/favicon.svg">`,
+    `<link rel="icon" type="image/x-icon" href="/favicon.ico">`,
+    `<link rel="apple-touch-icon" href="/apple-touch-icon.png">`,
+    `<link rel="manifest" href="/manifest.json">`,
+    ``,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:url" content="${canonical}">`,
+    `<meta property="og:title" content="${escapeAttr(title)}">`,
+    `<meta property="og:description" content="${escapeAttr(description)}">`,
+    `<meta property="og:image" content="https://silkroutelogistics.ai/logo.png">`,
+    `<meta property="og:site_name" content="Silk Route Logistics">`,
+    ``,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${escapeAttr(title)}">`,
+    `<meta name="twitter:description" content="${escapeAttr(description)}">`,
+    `<meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">`,
+  ];
+
+  if (isHome) {
+    lines.push(``);
+    lines.push(`<script type="application/ld+json">`);
+    lines.push(organizationSchema());
+    lines.push(`</script>`);
+  }
+
+  return lines.join("\n  ");
+}
+
+function replaceMeta(html, filename) {
+  const block = `<!-- INCLUDE:meta -->\n  ${renderMeta(html, filename)}\n  <!-- END INCLUDE:meta -->`;
+  const markerRe = /<!-- INCLUDE:meta(?:\s+[^>]*?)?\s*-->[\s\S]*?<!-- END INCLUDE:meta -->/g;
+  if (markerRe.test(html)) {
+    return { html: html.replace(markerRe, block), touched: true };
+  }
+  if (OLD_DESCRIPTION_RE.test(html)) {
+    return { html: html.replace(OLD_DESCRIPTION_RE, block), touched: true };
+  }
+  return { html, touched: false };
+}
+
 // Replace or bootstrap the design-system marker block, idempotently:
 //   1. Marker already present → replace content within marker
 //   2. Page fonts link present → swap link for marker block at same
@@ -225,6 +334,17 @@ function hashOutsideMarkers(html) {
     DS_PLACEHOLDER,
   );
   stripped = stripped.replace(OLD_FONTS_RE, DS_PLACEHOLDER);
+  // Phase 1 Infrastructure: meta marker block OR legacy description meta
+  // → same placeholder. The marker block contains the description meta
+  // so first-run bootstrap is integrity-neutral. Strip the marker FIRST
+  // (removes its inner description meta as part of the block), then strip
+  // any remaining standalone description.
+  const META_PLACEHOLDER = `__CHROME_META__`;
+  stripped = stripped.replace(
+    /<!-- INCLUDE:meta(?:\s+[^>]*?)?\s*-->[\s\S]*?<!-- END INCLUDE:meta -->/g,
+    META_PLACEHOLDER,
+  );
+  stripped = stripped.replace(OLD_DESCRIPTION_RE, META_PLACEHOLDER);
   return createHash("sha256").update(stripped).digest("hex");
 }
 
@@ -285,10 +405,12 @@ for (const f of files) {
   const before = await readFile(f, "utf8");
   const preHash = hashOutsideMarkers(before);
 
+  const filename = path.basename(f);
   const n = replaceMarked(before, "nav", navRenderer);
   const fr = replaceMarked(n.html, "footer", footerRenderer);
   const ds = replaceDesignSystem(fr.html, renderDesignSystem());
-  const after = ds.html;
+  const m = replaceMeta(ds.html, filename);
+  const after = m.html;
 
   if (after === before) continue;
 

@@ -62,19 +62,19 @@ var MarcoPolo = (function () {
   /* ─── Welcome Messages ────────────────────────────────────── */
   var _welcomeMessages = {
     ae: function (name) {
-      var n = name ? "Hi " + escapeHtml(name) + "!" : "Hi there!";
-      return n + " I'm Marco Polo, your SRL assistant. I can help with loads, carriers, analytics, compliance \u2014 just ask! What can I help you with?";
+      var n = name ? "Hi " + escapeHtml(name) + "." : "Hi there.";
+      return n + " I'm Marco Polo, your SRL assistant. I can help with loads, carriers, analytics, compliance. What do you need?";
     },
     carrier: function (name) {
-      var n = name ? "Welcome back, " + escapeHtml(name) + "!" : "Welcome back!";
-      return n + " I'm Marco Polo. I can help you find loads, check payments, review your CPP score, and navigate the carrier portal. What do you need?";
+      var n = name ? "Welcome back, " + escapeHtml(name) + "." : "Welcome back.";
+      return n + " I'm Marco Polo. I can help you find loads, check payments, review your Compass score, and navigate the carrier portal. What do you need?";
     },
     accounting: function (name) {
-      var n = name ? "Good day, " + escapeHtml(name) + "!" : "Good day!";
+      var n = name ? "Good day, " + escapeHtml(name) + "." : "Good day.";
       return n + " I'm Marco Polo, your accounting assistant. I can pull up financial reports, check AR/AP status, review fund balances, and help with accounting operations. How can I assist?";
     },
     public: function () {
-      return "Welcome to Silk Route Logistics! I'm Marco Polo. I can help you learn about our services, get a freight quote, or guide you through carrier registration. How can I help?";
+      return "I am Marco Polo, SRL's load assistant. Ask me about a shipment, a quote, or the Caravan Partner Program. For double-brokering reports or compliance escalation, type compliance and I will route you direct.";
     }
   };
 
@@ -82,16 +82,16 @@ var MarcoPolo = (function () {
   var _proactiveMessages = {
     ae: function () {
       var hour = new Date().getHours();
-      var greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-      return greeting + "! I can help you manage your loads today.";
+      var greeting = hour < 12 ? "Good morning." : hour < 17 ? "Good afternoon." : "Good evening.";
+      return greeting + " I can help you manage your loads today.";
     },
     carrier: function () {
-      return "Welcome back! Check your loads and payments.";
+      return "Welcome back. Check your loads and payments.";
     },
     accounting: function () {
       var hour = new Date().getHours();
-      var greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-      return greeting + "! Need a fund status overview or payment review?";
+      var greeting = hour < 12 ? "Good morning." : hour < 17 ? "Good afternoon." : "Good evening.";
+      return greeting + " Need a fund status overview or payment review?";
     },
     public: function () {
       return "Need a freight quote or want to learn about our services?";
