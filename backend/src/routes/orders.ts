@@ -129,6 +129,14 @@ router.patch("/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res
     if (body.deliveryDate !== undefined)   data.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null;
     if (body.dispatchMethod !== undefined) data.dispatchMethod = body.dispatchMethod;
     if (body.status !== undefined)         data.status = body.status;
+    // Sprint 59.b (v3.8.act) Item 176 — loadId whitelist for the 3 non-
+    // tender dispatch paths (Waterfall / Load Board / DAT) restored in
+    // the Order Builder footer. Those paths POST /api/loads and need
+    // to back-link loadId onto the source Order draft. Tender path uses
+    // POST /api/loads/with-tender which sets loadId atomically inside
+    // its own transaction (withTenderController:223) and does NOT go
+    // through this PATCH whitelist.
+    if (body.loadId !== undefined)         data.loadId = body.loadId;
 
     const order = await prisma.order.update({ where: { id: req.params.id }, data });
     res.json({ order });

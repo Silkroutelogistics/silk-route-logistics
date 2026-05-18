@@ -403,13 +403,161 @@ export default function OrderBuilderPage() {
     },
   });
 
-  // Sprint 59 (v3.8.acj) Item 176 — createLoad mutation DELETED. The
-  // broken `/orders/:id/convert-to-load` path (Item 167 silent failure
-  // — captured directTenderCarrierId but never fired createTender)
-  // replaced by the Carrier Engagement Drawer which submits to
-  // `/loads/with-tender` atomically. Drawer flushes the draft via
-  // its own mutation; saveDraft autosave still runs in the background.
+  // Sprint 59 (v3.8.acj) Item 176 — Tender path uses the Carrier
+  // Engagement Drawer which submits atomically to `/loads/with-tender`.
+  // Drawer flushes the draft via its own mutation; saveDraft autosave
+  // still runs in the background.
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Sprint 59.b (v3.8.act) Item 176 — Non-tender dispatch paths
+  // restored (Waterfall / Load Board / DAT). Each orchestrates from
+  // the frontend using existing backend endpoints:
+  //   POST /api/loads               — creates the Load row
+  //   POST /api/waterfalls          — builds waterfall (waterfall path)
+  //   POST /api/waterfalls/:id/start — starts waterfall (waterfall path)
+  //   POST /api/dat/post-load        — posts to DAT (dat path)
+  //   PATCH /api/orders/:id          — marks Order draft converted
+  // Tender path stays on the Sprint 59 atomic /loads/with-tender;
+  // the 3 non-tender paths are orchestrated client-side because they
+  // have distinct downstream side effects and aren't worth 3 new
+  // atomic backend endpoints for Sprint 59.b scope.
+  const buildLoadPayload = (dispatchMethod: "waterfall" | "loadboard" | "dat") => {
+    const isHot = form.shipmentPriority === "hot";
+    const visibility = dispatchMethod === "waterfall" ? "waterfall" : "open";
+    return {
+      customerId: form.customerId,
+      // Lane
+      originCity: form.originCity, originState: form.originState, originZip: form.originZip,
+      originAddress: form.originAddress || null,
+      originCompany: form.originCompany || null,
+      originContactName: form.originContactName || null,
+      originContactPhone: form.originContactPhone || null,
+      destCity: form.destCity, destState: form.destState, destZip: form.destZip,
+      destAddress: form.destAddress || null,
+      destCompany: form.destCompany || null,
+      destContactName: form.destContactName || null,
+      destContactPhone: form.destContactPhone || null,
+      distance: form.distance ? parseFloat(form.distance) : null,
+      // Equipment & freight
+      equipmentType: form.equipmentType,
+      commodity: form.lineItems[0]?.description || null,
+      weight: form.lineItems[0]?.weight ? parseFloat(form.lineItems[0].weight) : null,
+      pieces: form.lineItems[0]?.pieces ? parseInt(form.lineItems[0].pieces, 10) : null,
+      hazmat: form.lineItems.some((l) => l.hazmat),
+      temperatureControlled: form.temperatureControlled,
+      tempMin: form.tempMin ? parseFloat(form.tempMin) : undefined,
+      tempMax: form.tempMax ? parseFloat(form.tempMax) : undefined,
+      // Schedule
+      pickupDate: form.pickupDate,
+      pickupWindowOpen: form.pickupTimeStart || null,
+      pickupWindowClose: form.pickupTimeEnd || null,
+      deliveryDate: form.deliveryDate,
+      deliveryWindowOpen: form.deliveryTimeStart || null,
+      deliveryWindowClose: form.deliveryTimeEnd || null,
+      // Refs
+      poNumbers: form.poNumbers,
+      appointmentNumber: form.appointmentNumber || null,
+      // Pricing
+      customerRate: form.customerRate ? parseFloat(form.customerRate) : null,
+      carrierRate: form.targetCost ? parseFloat(form.targetCost) : null,
+      rate: form.targetCost ? parseFloat(form.targetCost) : null,
+      accessorials: form.accessorials,
+      // Instructions
+      specialInstructions: form.specialInstructions || null,
+      driverInstructions: form.driverInstructions || null,
+      // Line items (full multi-line for BOL)
+      lineItems: form.lineItems
+        .filter((l) => (parseInt(l.pieces, 10) || 0) > 0 && (parseFloat(l.weight) || 0) > 0)
+        .map((l, i) => ({
+          lineNumber: i + 1,
+          pieces: parseInt(l.pieces, 10),
+          packageType: l.packageType,
+          description: l.description,
+          weight: parseFloat(l.weight),
+          dimensionsLength: l.dimensionsLength ? parseFloat(l.dimensionsLength) : null,
+          dimensionsWidth: l.dimensionsWidth ? parseFloat(l.dimensionsWidth) : null,
+          dimensionsHeight: l.dimensionsHeight ? parseFloat(l.dimensionsHeight) : null,
+          freightClass: l.freightClass || null,
+          nmfcCode: l.nmfcCode || null,
+          hazmat: l.hazmat,
+          hazmatUnNumber: l.hazmatUnNumber || null,
+          hazmatClass: l.hazmatClass || null,
+          stackable: l.stackable,
+          turnable: l.turnable,
+        })),
+      // Dispatch
+      dispatchMethod,
+      visibility,
+      shipmentPriority: form.shipmentPriority,
+      isHotLoad: isHot,
+      checkCallProtocol: form.checkCallProtocol,
+      trackingLinkAutoSend: form.trackingLinkAutoSend,
+      status: "POSTED" as const,
+    };
+  };
+
+  const markOrderConverted = async (loadId: string) => {
+    if (!orderId) return;
+    try {
+      await api.patch(`/orders/${orderId}`, { status: "load_created", loadId });
+    } catch (err) {
+      // Order back-link is best-effort. Load is created; AE can manually
+      // archive the draft if it lingers.
+    }
+  };
+
+  const dispatchWaterfall = useMutation({
+    mutationFn: async () => {
+      if (!isValid) throw new Error(`Missing: ${requiredMissing.join(", ")}`);
+      await saveDraft.mutateAsync();
+      const loadRes = await api.post("/loads", buildLoadPayload("waterfall"));
+      const loadId = loadRes.data?.id;
+      if (!loadId) throw new Error("Load create returned no id");
+      await markOrderConverted(loadId);
+      const wfRes = await api.post("/waterfalls", { loadId, mode: form.waterfallMode || "full_auto" });
+      const wfId = wfRes.data?.waterfall?.id;
+      if (wfId) await api.post(`/waterfalls/${wfId}/start`);
+      return loadId;
+    },
+    onSuccess: () => router.push("/dashboard/waterfall"),
+  });
+
+  const dispatchLoadboard = useMutation({
+    mutationFn: async () => {
+      if (!isValid) throw new Error(`Missing: ${requiredMissing.join(", ")}`);
+      await saveDraft.mutateAsync();
+      const loadRes = await api.post("/loads", buildLoadPayload("loadboard"));
+      const loadId = loadRes.data?.id;
+      if (!loadId) throw new Error("Load create returned no id");
+      await markOrderConverted(loadId);
+      return loadId;
+    },
+    onSuccess: (loadId) => router.push(`/dashboard/loads?selected=${loadId}`),
+  });
+
+  const dispatchDat = useMutation({
+    mutationFn: async () => {
+      if (!isValid) throw new Error(`Missing: ${requiredMissing.join(", ")}`);
+      await saveDraft.mutateAsync();
+      const loadRes = await api.post("/loads", buildLoadPayload("dat"));
+      const loadId = loadRes.data?.id;
+      if (!loadId) throw new Error("Load create returned no id");
+      await markOrderConverted(loadId);
+      // DAT post — gracefully falls back to mock mode when DAT_API_KEY
+      // is not configured (backend routes/dat.ts:14,64). No need to
+      // disable button on env state; failure here doesn't roll back
+      // the Load (carrier-side visibility is still on via dispatchMethod).
+      try {
+        await api.post("/dat/post-load", { loadId });
+      } catch (err) {
+        // Surface but don't block — load exists, DAT post can be retried.
+      }
+      return loadId;
+    },
+    onSuccess: (loadId) => router.push(`/dashboard/loads?selected=${loadId}`),
+  });
+
+  const dispatchPending = dispatchWaterfall.isPending || dispatchLoadboard.isPending || dispatchDat.isPending;
 
   // ─── Validation ───────────────────────────────────────────
   const requiredMissing = useMemo(() => {
@@ -485,6 +633,15 @@ export default function OrderBuilderPage() {
           >
             <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
           </button>
+          {/* Sprint 59.b (v3.8.act) Item 176 — 4-button dispatch picker.
+              Restores the pre-Sprint-59 dispatch-method choice that
+              Sprint 59 Decision C moved to a Load Board action menu —
+              AE wants to pick dispatch strategy BEFORE leaving Order
+              Builder. Primary: Tender (opens drawer). Secondary 3:
+              Waterfall / Load Board / DAT (orchestrated client-side
+              against existing POST /api/loads + downstream endpoints).
+              DAT graceful-mock at backend routes/dat.ts:14,64 means
+              button stays enabled even without DAT_API_KEY. */}
           <button
             onClick={async () => {
               if (!isValid) { setShowErrors(true); return; }
@@ -494,7 +651,7 @@ export default function OrderBuilderPage() {
               await saveDraft.mutateAsync();
               setDrawerOpen(true);
             }}
-            disabled={saveDraft.isPending || !isValid || !!convertedLoadId}
+            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
             title={
               convertedLoadId
                 ? "This order has already been converted to a load"
@@ -507,8 +664,54 @@ export default function OrderBuilderPage() {
           >
             {saveDraft.isPending ? "Saving…" : "Tender to carrier →"}
           </button>
+          <button
+            onClick={() => dispatchWaterfall.mutate()}
+            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+            title={isValid ? "Build a waterfall and let the scoring engine offer to carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ color: "var(--srl-text-secondary)" }}
+          >
+            {dispatchWaterfall.isPending ? "Building…" : "Waterfall"}
+          </button>
+          <button
+            onClick={() => dispatchLoadboard.mutate()}
+            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+            title={isValid ? "Post to internal Load Board for all approved carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ color: "var(--srl-text-secondary)" }}
+          >
+            {dispatchLoadboard.isPending ? "Posting…" : "Load Board"}
+          </button>
+          <button
+            onClick={() => dispatchDat.mutate()}
+            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+            title={isValid ? "Post to DAT loadboard (mock mode when DAT API not configured)" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ color: "var(--srl-text-secondary)" }}
+          >
+            {dispatchDat.isPending ? "Posting…" : "DAT"}
+          </button>
         </div>
       </div>
+
+      {/* Sprint 59.b (v3.8.act) Item 176 — dispatch-mutation error banner.
+          Covers the 3 non-tender paths (Tender errors render inline in
+          the drawer footer). */}
+      {(dispatchWaterfall.isError || dispatchLoadboard.isError || dispatchDat.isError) && (
+        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <div>
+            <div className="font-semibold">Dispatch failed</div>
+            <div className="mt-0.5 opacity-90">
+              {(() => {
+                const err = (dispatchWaterfall.error ?? dispatchLoadboard.error ?? dispatchDat.error) as { response?: { data?: { error?: string; message?: string } }; message?: string } | null;
+                const apiData = err?.response?.data;
+                return apiData?.message ?? apiData?.error ?? err?.message ?? "Unknown error.";
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* v3.8.d.3 — Already-converted gate. Resumed drafts whose order
           already has a loadId surface a banner with a deep-link to the
@@ -1085,6 +1288,7 @@ export default function OrderBuilderPage() {
           _count: selectedCustomer._count,
         } : null}
         initialFormData={{
+          // Lane
           originCity: form.originCity,
           originState: form.originState,
           originZip: form.originZip,
@@ -1100,13 +1304,48 @@ export default function OrderBuilderPage() {
           destContactName: form.destContactName ?? "",
           destContactPhone: form.destContactPhone ?? "",
           distance: form.distance,
-          equipmentType: form.equipmentType,
+          // Schedule (Sprint 59.b v3.8.acr — time windows added)
           pickupDate: form.pickupDate,
+          pickupTimeStart: form.pickupTimeStart ?? "",
+          pickupTimeEnd: form.pickupTimeEnd ?? "",
           deliveryDate: form.deliveryDate,
+          deliveryTimeStart: form.deliveryTimeStart ?? "",
+          deliveryTimeEnd: form.deliveryTimeEnd ?? "",
+          // Equipment & freight (Sprint 59.b — primary line + temp fields)
+          equipmentType: form.equipmentType,
+          commodity: form.lineItems[0]?.description ?? "",
+          pieces: form.lineItems[0]?.pieces ?? "",
+          packageType: form.lineItems[0]?.packageType ?? "PLT",
+          weight: form.lineItems[0]?.weight ?? "",
+          description: form.lineItems[0]?.description ?? "",
+          hazmat: !!form.lineItems[0]?.hazmat,
+          temperatureControlled: form.temperatureControlled,
+          tempMin: form.tempMin ?? "",
+          tempMax: form.tempMax ?? "",
+          // Refs (Sprint 59.b — PO + appointment)
+          poNumbersText: (form.poNumbers ?? []).join(", "),
+          appointmentNumber: form.appointmentNumber ?? "",
+          // Financials
           customerRate: form.customerRate,
           offeredRate: form.targetCost,
+          // Instructions
           specialInstructions: form.specialInstructions ?? "",
         }}
+        // Sprint 59.b (v3.8.act) Item 176 — multi-line freight passthrough.
+        // Primary line hydrates into the drawer form fields above; lines
+        // 2..N pass through here untouched and merge back into lineItems[]
+        // on drawer submit. Multi-line edit UI deferred to Sprint 60+.
+        lineItemsRest={form.lineItems.slice(1).map((l) => ({
+          pieces: parseInt(l.pieces, 10) || 0,
+          packageType: l.packageType,
+          description: l.description,
+          weight: parseFloat(l.weight) || 0,
+          freightClass: l.freightClass || null,
+          nmfcCode: l.nmfcCode || null,
+          hazmat: l.hazmat,
+          hazmatUnNumber: l.hazmatUnNumber || null,
+          hazmatClass: l.hazmatClass || null,
+        }))}
         onClose={() => setDrawerOpen(false)}
       />
     </div>

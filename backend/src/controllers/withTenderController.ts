@@ -143,11 +143,12 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
           shipperReference: loadFields.shipperReference ?? null,
           deliveryReference: loadFields.deliveryReference ?? null,
 
-          // Financials
+          // Financials — fuelSurcharge dropped from drawer scope at
+          // Sprint 59.b per Item 176; RC generation hardcodes 0 and AE
+          // adjusts on the RC PDF surface post-acceptance.
           rate: tender.offeredRate,
           customerRate: loadFields.customerRate ?? null,
           carrierRate: tender.offeredRate,
-          fuelSurcharge: loadFields.fuelSurcharge,
           accessorials: loadFields.accessorials ?? undefined,
 
           // Instructions

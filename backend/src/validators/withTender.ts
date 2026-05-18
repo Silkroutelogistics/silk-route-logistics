@@ -92,11 +92,13 @@ export const createLoadWithTenderSchema = z.object({
   // Tender (drawer Section 5)
   tender: tenderSchema,
 
-  // Financials (drawer Section 6) — Load row keeps customerRate /
-  // carrierRate / fuel / accessorials. RC seed reads from these via
-  // autoGenerateRateConfirmation mapping.
+  // Financials (drawer Section 6) — Load row keeps customerRate +
+  // carrierRate + accessorials. Sprint 59.b (v3.8.act) Item 176
+  // dropped fuelSurcharge from drawer scope: FSC is an RC-generation
+  // concern, not a tender-creation one. autoRateConfirmationService
+  // hardcodes fuelSurcharge=0 on the seed RC; AE adjusts on the RC
+  // PDF surface post-acceptance.
   customerRate: z.number().nonnegative().optional().nullable(),
-  fuelSurcharge: z.number().nonnegative().default(0),
   accessorials: z.any().optional().nullable(),
 
   // Instructions (drawer Section 7)

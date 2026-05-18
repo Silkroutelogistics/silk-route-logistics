@@ -102,16 +102,42 @@ interface DrawerFormState {
   // Carrier
   carrierId: string;
 
-  // Financials
+  // Financials. Sprint 59.b (v3.8.act) Item 176 dropped fuelSurcharge
+  // from drawer scope: FSC is an RC-PDF-generation concern, not a
+  // tender-creation one. autoRateConfirmationService hardcodes 0 on
+  // the seed RC; AE adjusts on the RC PDF surface post-acceptance.
   customerRate: string;
   offeredRate: string; // → tender.offeredRate
-  fuelSurcharge: string;
   expiresAtHours: string; // tender window in hours from now
 
   // Instructions
   specialInstructions: string;
   pickupInstructions: string;
   deliveryInstructions: string;
+}
+
+/**
+ * Sprint 59.b (v3.8.act) Item 176 — Multi-line freight passthrough.
+ *
+ * Order Builder's lineItems[] is a per-row LineItemFormData[] (NOT a
+ * JSON blob — maps 1:1 to backend LoadLineItem rows). Drawer's
+ * freight UI is single-line for Sprint 59 scope, so the primary line
+ * goes into the form's pieces/packageType/weight/description fields
+ * via initialFormData. Lines 2..N pass through this separate prop so
+ * they round-trip through the drawer without loss. On submit, the
+ * mutation builds the final lineItems[] = [editedPrimary, ...lineItemsRest].
+ * Multi-line edit UI is Item 178 / Sprint 60+ scope.
+ */
+export interface DrawerLineItemRest {
+  pieces: number;
+  packageType: string;
+  description: string;
+  weight: number;
+  freightClass?: string | null;
+  nmfcCode?: string | null;
+  hazmat?: boolean;
+  hazmatUnNumber?: string | null;
+  hazmatClass?: string | null;
 }
 
 export interface CarrierEngagementDrawerProps {
@@ -125,6 +151,9 @@ export interface CarrierEngagementDrawerProps {
   loadId?: string;
   /** Seed values for form state (drawer launched from Order Builder draft) */
   initialFormData?: Partial<DrawerFormState>;
+  /** Extra freight lines beyond the primary (lines 2..N). Pass-through only;
+   *  drawer renders "+N more lines" chip and forwards on submit. */
+  lineItemsRest?: DrawerLineItemRest[];
   onClose: () => void;
   onSubmitSuccess?: (result: { loadId: string; tenderId: string; rcId: string | null }) => void;
 }
@@ -156,12 +185,12 @@ const EMPTY_FORM: DrawerFormState = {
   deliveryDate: "", deliveryTimeStart: "", deliveryTimeEnd: "",
   poNumbersText: "", shipperReference: "", deliveryReference: "", appointmentNumber: "",
   carrierId: "",
-  customerRate: "", offeredRate: "", fuelSurcharge: "0", expiresAtHours: "24",
+  customerRate: "", offeredRate: "", expiresAtHours: "24",
   specialInstructions: "", pickupInstructions: "", deliveryInstructions: "",
 };
 
 export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
-  const { open, mode, initialCustomer, orderId, loadId, initialFormData, onClose, onSubmitSuccess } = props;
+  const { open, mode, initialCustomer, orderId, loadId, initialFormData, lineItemsRest, onClose, onSubmitSuccess } = props;
 
   // Risk 5 — runtime throw guards for un-implemented modes
   if (mode === "review")    throw new Error("CarrierEngagementDrawer Mode 'review' — implementation deferred to Sprint 60");
@@ -243,13 +272,32 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
         commodity: data.commodity || null,
         weight: data.weight ? Number(data.weight) : null,
         pieces: data.pieces ? parseInt(data.pieces, 10) : null,
-        lineItems: [{
-          lineNumber: 1,
-          pieces: parseInt(data.pieces, 10) || 1,
-          packageType: data.packageType || "PLT",
-          description: data.description || "General Freight",
-          weight: Number(data.weight) || 0,
-        }],
+        // Sprint 59.b (v3.8.act) Item 176 — combine primary line (from
+        // form fields) with pass-through extra lines so multi-line BOL
+        // round-trips through the drawer without loss. lineItemsRest is
+        // typically populated when drawer is launched from an Order
+        // Builder draft with form.lineItems.length > 1.
+        lineItems: [
+          {
+            lineNumber: 1,
+            pieces: parseInt(data.pieces, 10) || 1,
+            packageType: data.packageType || "PLT",
+            description: data.description || "General Freight",
+            weight: Number(data.weight) || 0,
+          },
+          ...(lineItemsRest ?? []).map((li, i) => ({
+            lineNumber: i + 2,
+            pieces: li.pieces,
+            packageType: li.packageType || "PLT",
+            description: li.description,
+            weight: li.weight,
+            freightClass: li.freightClass ?? null,
+            nmfcCode: li.nmfcCode ?? null,
+            hazmat: li.hazmat ?? false,
+            hazmatUnNumber: li.hazmatUnNumber ?? null,
+            hazmatClass: li.hazmatClass ?? null,
+          })),
+        ],
         hazmat: data.hazmat,
         temperatureControlled: data.temperatureControlled,
         tempMin: data.tempMin ? Number(data.tempMin) : null,
@@ -271,7 +319,6 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
           expiresAt,
         },
         customerRate: data.customerRate ? Number(data.customerRate) : null,
-        fuelSurcharge: data.fuelSurcharge ? Number(data.fuelSurcharge) : 0,
         specialInstructions: data.specialInstructions || null,
         pickupInstructions: data.pickupInstructions || null,
         deliveryInstructions: data.deliveryInstructions || null,
@@ -383,9 +430,21 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                     <Input placeholder="e.g. Wellness Wands" {...register("commodity")} />
                   </div>
                 </div>
-                <div className="text-[11px] text-slate-500 italic">
-                  Sprint 59 ships single-line freight. Multi-line items + NMFC + density-based class auto-suggest expand in Sprint 60+.
-                </div>
+                {/* Sprint 59.b (v3.8.act) Item 176 — multi-line chip.
+                    When Order Builder draft has >1 line item, primary is
+                    editable in the form; extras pass through on submit. */}
+                {lineItemsRest && lineItemsRest.length > 0 ? (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#FAEEDA]/40 border border-[#BA7517]/30">
+                    <div className="text-[11px] text-slate-700">
+                      Primary freight line shown below. <strong>+{lineItemsRest.length} more line{lineItemsRest.length === 1 ? "" : "s"}</strong> from the order draft will be included on the BOL.
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#BA7517] text-white font-medium">+{lineItemsRest.length}</span>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-500 italic">
+                    Single-line freight. Multi-line edit UI is Sprint 60+.
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-2">
                   <div>
                     <Label>Pieces</Label>
@@ -477,13 +536,14 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
             )}
 
             {/* ── FINANCIALS ── */}
-            {/* Sprint 59.a (v3.8.acn) Bug #4 fix — customerRate dropped from
-                drawer Financials. Customer rate is order-level pricing set
-                on the customer relationship (lives in OrderSidebar/Pricing
-                card on the right of Order Builder). Drawer captures only
-                carrier-facing values: offered rate, fuel surcharge, tender
-                expiry. Customer rate flows through initialFormData →
-                buildPayload → backend Load.customerRate unchanged. */}
+            {/* Sprint 59.b (v3.8.act) Item 176 — fuelSurcharge input
+                removed. FSC is an RC-PDF-generation concern, not a
+                tender-creation one. AE sets FSC on the RC modal post-
+                acceptance; autoRateConfirmationService seeds the RC
+                with fuelSurcharge=0 at tender creation. Drawer only
+                captures carrier-facing values: offered rate + tender
+                expiry. Customer rate flows from Order Builder via
+                initialFormData → buildPayload → Load.customerRate. */}
             {section === "financials" && (
               <div className="space-y-3">
                 {watch("customerRate") && (
@@ -500,10 +560,6 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                     <Label>Tender expiry (hours)</Label>
                     <Input type="number" {...register("expiresAtHours")} />
                   </div>
-                  <div className="col-span-2">
-                    <Label>Fuel surcharge ($)</Label>
-                    <Input type="number" step="0.01" {...register("fuelSurcharge")} />
-                  </div>
                 </div>
                 {customer && watch("offeredRate") && watch("customerRate") && (
                   <div className="text-[11px] p-2 rounded bg-slate-50 border border-slate-200 text-slate-600">
@@ -511,6 +567,9 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                     {((1 - Number(watch("offeredRate")) / Number(watch("customerRate"))) * 100).toFixed(1)}%
                   </div>
                 )}
+                <div className="text-[11px] text-slate-500 italic pt-1">
+                  Fuel surcharge is set on the Rate Confirmation PDF surface after the carrier accepts. Not collected here.
+                </div>
               </div>
             )}
 
