@@ -26,7 +26,7 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       background: var(--white);
       color: var(--dark-text);
       min-height: 100vh;
@@ -37,7 +37,7 @@
     }
 
     h1, h2, h3, h4 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       line-height: 1.2;
     }
 
@@ -65,7 +65,7 @@
     }
 
     .section-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -143,7 +143,7 @@
     }
 
     .navbar-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
       color: #FFFFFF;
       letter-spacing: 1.5px;
@@ -152,7 +152,7 @@
 
     .navbar-logo-text span {
       display: block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 10px;
       color: #BA7517;
       letter-spacing: 3px;
@@ -313,7 +313,7 @@
       padding: 180px 0 80px;
       overflow: hidden;
       text-align: center;
-      background: var(--navy);
+      background: var(--cream, #FDFBF7);
     }
 
     .hero-bg {
@@ -353,7 +353,7 @@
     }
 
     .hero-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -364,7 +364,7 @@
 
     .hero h1 {
       font-size: clamp(40px, 6vw, 64px);
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 24px;
       line-height: 1.1;
     }
@@ -500,14 +500,14 @@
     }
 
     .footer-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 16px;
       color: #FFFFFF;
       letter-spacing: 1px;
     }
 
     .footer-col h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;

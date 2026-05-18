@@ -20,7 +20,7 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       background: var(--white);
       color: var(--dark-text);
       min-height: 100vh;
@@ -31,7 +31,7 @@
     }
 
     h1, h2, h3, h4 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       line-height: 1.2;
     }
 
@@ -46,7 +46,7 @@
     }
 
     .section-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -119,7 +119,7 @@
     }
 
     .navbar-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
       color: #FFFFFF;
       letter-spacing: 1.5px;
@@ -128,7 +128,7 @@
 
     .navbar-logo-text span {
       display: block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 10px;
       color: #BA7517;
       letter-spacing: 3px;
@@ -252,13 +252,14 @@
       font-size: 16px;
     }
 
-    /* HERO — KEEP DARK */
+    /* HERO — cream canvas per Phase 3 (v3.8.acx) — stale "KEEP DARK"
+       comment removed; canvas is canonical cream */
     .hero {
       position: relative;
       padding: 180px 0 80px;
       overflow: hidden;
       text-align: center;
-      background: var(--navy);
+      background: var(--cream, #FDFBF7);
     }
 
     .hero-bg {
@@ -294,7 +295,7 @@
     }
 
     .hero-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -305,19 +306,19 @@
 
     .hero h1 {
       font-size: clamp(40px, 6vw, 64px);
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 24px;
       line-height: 1.1;
     }
 
     .hero h1 em {
       font-style: italic;
-      color: #BA7517;
+      color: var(--gold-dark, #BA7517);
     }
 
     .hero-text {
       font-size: 18px;
-      color: #8899AA;
+      color: var(--body-text, #3A4A5F);
       line-height: 1.8;
       max-width: 620px;
       margin: 0 auto;
@@ -382,7 +383,7 @@
       background: none;
       border: none;
       color: var(--dark-text);
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 16px;
       font-weight: 600;
       text-align: left;
@@ -486,7 +487,7 @@
       flex-shrink: 0;
       padding: 10px 22px;
       border-radius: 100px;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -516,22 +517,21 @@
       opacity: 0.7;
     }
 
-    /* CTA — KEEP DARK */
+    /* CTA — cream-2 alt section per Phase 3 (v3.8.acx) */
     .cta-section {
       padding: 0 0 100px;
       text-align: center;
-      background: var(--navy);
+      background: var(--light-gray, #F5EEE0);
     }
 
     .cta-box {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: var(--white, #FFFFFF);
+      border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: 24px;
       padding: 60px 40px;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 6px 16px rgba(10, 37, 64, 0.10);
     }
 
     .cta-box::before {
@@ -540,14 +540,14 @@
       top: -100px; left: 50%;
       transform: translateX(-50%);
       width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(197,165,114, 0.06) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(186, 117, 23, 0.06) 0%, transparent 70%);
       border-radius: 50%;
       pointer-events: none;
     }
 
     .cta-box h2 {
       font-size: clamp(28px, 4vw, 36px);
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 16px;
       position: relative;
       z-index: 1;
@@ -555,7 +555,7 @@
 
     .cta-box p {
       font-size: 17px;
-      color: #8899AA;
+      color: var(--body-text, #3A4A5F);
       margin-bottom: 32px;
       position: relative;
       z-index: 1;
@@ -568,7 +568,7 @@
       padding: 14px 32px;
       background: #C5A572;
       color: #0A2540;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
       border-radius: 10px;
@@ -622,14 +622,14 @@
     }
 
     .footer-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 16px;
       color: #FFFFFF;
       letter-spacing: 1px;
     }
 
     .footer-col h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;

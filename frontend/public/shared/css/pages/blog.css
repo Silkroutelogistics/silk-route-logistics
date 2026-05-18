@@ -21,8 +21,8 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #FFFFFF;
+      font-family: 'DM Sans', sans-serif;
+      background: #FDFBF7;
       color: #0A2540;
       min-height: 100vh;
       line-height: 1.6;
@@ -32,7 +32,7 @@
     }
 
     h1, h2, h3, h4 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       line-height: 1.2;
     }
 
@@ -47,7 +47,7 @@
     }
 
     .section-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -121,7 +121,7 @@
     }
 
     .navbar-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
       color: #FFFFFF;
       letter-spacing: 1.5px;
@@ -130,7 +130,7 @@
 
     .navbar-logo-text span {
       display: block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 10px;
       color: #BA7517;
       letter-spacing: 3px;
@@ -254,9 +254,9 @@
       font-size: 16px;
     }
 
-    /* ── HERO ── */
+    /* ── HERO — Phase 3 cream migration (v3.8.acx) ── */
     .hero {
-      background: var(--navy);
+      background: var(--cream, #FDFBF7);
       position: relative;
       padding: 160px 0 60px;
       overflow: hidden;
@@ -296,7 +296,7 @@
     }
 
     .hero-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -307,7 +307,7 @@
 
     .hero h1 {
       font-size: clamp(40px, 6vw, 64px);
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 24px;
       line-height: 1.1;
     }
@@ -335,18 +335,18 @@
     .search-input {
       width: 100%;
       padding: 16px 52px 16px 24px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(197,165,114, 0.4);
+      background: var(--white, #FFFFFF);
+      border: 1px solid rgba(186, 117, 23, 0.4);
       border-radius: 12px;
-      color: #FFFFFF;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--navy);
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       outline: none;
       transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .search-input::placeholder {
-      color: #667788;
+      color: var(--text-muted, #6B7685);
     }
 
     .search-input:focus {
@@ -398,7 +398,7 @@
       flex-shrink: 0;
       padding: 10px 22px;
       border-radius: 100px;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -476,7 +476,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
       color: rgba(255, 255, 255, 0.6);
       letter-spacing: 1px;
@@ -599,7 +599,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 14px;
       color: rgba(255, 255, 255, 0.4);
       letter-spacing: 0.5px;
@@ -679,7 +679,7 @@
       border: 1px solid var(--gold);
       border-radius: 10px;
       color: #BA7517;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
@@ -835,14 +835,14 @@
     }
 
     .footer-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 16px;
       color: #FFFFFF;
       letter-spacing: 1px;
     }
 
     .footer-col h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;

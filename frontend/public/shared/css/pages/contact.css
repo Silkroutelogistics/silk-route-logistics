@@ -2,8 +2,8 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; font-size: 16px; -webkit-font-smoothing: antialiased; }
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: #0A2540; background: #FFFFFF; overflow-x: hidden; line-height: 1.6;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #0A2540; background: #FDFBF7; overflow-x: hidden; line-height: 1.6;
     }
     img { max-width: 100%; display: block; }
     a { text-decoration: none; color: inherit; }
@@ -21,8 +21,8 @@
       --light-gray: #F5EEE0;
       --dark-text: #0A2540;
       --text-muted: #6B7685;
-      --font-headline: 'DM Serif Display', Georgia, serif;
-      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-headline: 'Playfair Display', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
       --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
       --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
@@ -107,21 +107,21 @@
        HERO
        ====================================== */
     .hero {
-      background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 40%, var(--navy-mid) 100%);
+      background: var(--cream, #FDFBF7);
       padding: 160px 0 100px; text-align: center; position: relative; overflow: hidden;
     }
     .hero::before {
       content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(197,165,114,0.08) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(186,117,23,0.05) 0%, transparent 70%);
       border-radius: 50%;
     }
     .hero h1 {
       font-family: var(--font-headline); font-size: clamp(2.2rem, 5vw, 3.5rem);
-      color: var(--white); margin-bottom: 16px; position: relative;
+      color: var(--navy); margin-bottom: 16px; position: relative;
     }
-    .hero h1 .gold-line { color: var(--gold); }
+    .hero h1 .gold-line { color: var(--gold-dark); }
     .hero p {
-      color: rgba(255,255,255,0.7); font-size: 1.15rem; max-width: 600px;
+      color: var(--body-text, #3A4A5F); font-size: 1.15rem; max-width: 600px;
       margin: 0 auto; position: relative;
     }
 

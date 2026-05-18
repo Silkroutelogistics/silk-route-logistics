@@ -24,8 +24,8 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #FFFFFF;
+      font-family: 'DM Sans', sans-serif;
+      background: #FDFBF7;
       color: #0A2540;
       min-height: 100vh;
       line-height: 1.6;
@@ -35,7 +35,7 @@
     }
 
     h1, h2, h3, h4 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       line-height: 1.2;
     }
 
@@ -63,7 +63,7 @@
     }
 
     .section-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -152,7 +152,7 @@
     }
 
     .navbar-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
       color: #FFFFFF;
       letter-spacing: 1.5px;
@@ -161,7 +161,7 @@
 
     .navbar-logo-text span {
       display: block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 10px;
       color: #BA7517;
       letter-spacing: 3px;
@@ -322,7 +322,7 @@
       padding: 180px 0 120px;
       overflow: hidden;
       text-align: center;
-      background: var(--navy);
+      background: var(--cream, #FDFBF7);
     }
 
     .hero-bg {
@@ -362,7 +362,7 @@
     }
 
     .hero-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
@@ -373,7 +373,7 @@
 
     .hero h1 {
       font-size: clamp(40px, 6vw, 64px);
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 24px;
       line-height: 1.1;
     }
@@ -523,11 +523,11 @@
     .stats-section {
       padding: 100px 0;
       position: relative;
-      background: var(--navy);
+      background: var(--light-gray, #F5EEE0);
     }
 
     .stats-section .section-title {
-      color: #FFFFFF;
+      color: var(--navy);
     }
 
     .stats-section .section-subtitle {
@@ -563,7 +563,7 @@
     }
 
     .stat-number {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: clamp(36px, 4vw, 48px);
       color: #BA7517;
       line-height: 1;
@@ -689,7 +689,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 28px;
       color: #FFFFFF;
       margin: 0 auto 20px;
@@ -723,7 +723,7 @@
     }
 
     .leader-title {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       color: #BA7517;
@@ -745,11 +745,11 @@
       padding: 100px 0;
       position: relative;
       text-align: center;
-      background: var(--navy);
+      background: var(--light-gray, #F5EEE0);
     }
 
     .cta-section .section-title {
-      color: #FFFFFF;
+      color: var(--navy);
     }
 
     .cta-box {
@@ -778,7 +778,7 @@
 
     .cta-box h2 {
       font-size: clamp(32px, 4vw, 44px);
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 16px;
       position: relative;
       z-index: 1;
@@ -808,7 +808,7 @@
       padding: 14px 32px;
       background: #C5A572;
       color: #0A2540;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
       border-radius: 10px;
@@ -835,7 +835,7 @@
       padding: 14px 32px;
       background: transparent;
       color: #BA7517;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
       border-radius: 10px;
@@ -895,14 +895,14 @@
     }
 
     .footer-logo-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 16px;
       color: #FFFFFF;
       letter-spacing: 1px;
     }
 
     .footer-col h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
