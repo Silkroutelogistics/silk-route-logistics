@@ -149,13 +149,26 @@
    the canonical .srl-tagline (0,1,0), forcing the tagline to inherit
    container colors instead of canonical gold-dark italic. Adding the
    container-scoped variants (0,2,0) elevates srl-tagline above any
-   page-level <p>-targeting rules. */
-.srl-tagline,
-.footer .srl-tagline,
-.footer-brand .srl-tagline {
+   page-level <p>-targeting rules.
+
+   Phase 2 hotfix (v3.8.aco): on-cream surfaces use --gold-dark per skill
+   canonical (sufficient contrast on cream). On-navy surfaces (footer
+   chrome) bump to --gold-light for bright "glitter" feel — contrast
+   --gold-dark on --navy is 4.1:1 (muted), --gold-light on --navy is
+   8.3:1 (premium high-contrast gold). */
+.srl-tagline {
   font-family: var(--font-tagline);
   font-style: italic;
   color: var(--gold-dark);
+  letter-spacing: 0.02em;
+}
+
+.footer .srl-tagline,
+.footer-brand .srl-tagline,
+.bg-navy .srl-tagline {
+  color: var(--gold-light);
+  font-family: var(--font-tagline);
+  font-style: italic;
   letter-spacing: 0.02em;
 }
 

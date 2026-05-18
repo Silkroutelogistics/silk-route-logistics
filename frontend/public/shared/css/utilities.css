@@ -30,9 +30,13 @@
       position: relative;
     }
 
+    /* Phase 2 hotfix (v3.8.aco): Sign In button uses --gold-dark for CTA
+       emphasis match with .btn-gold ("Request a Quote", "Join the Caravan
+       Partner Program"). Per skill canonical gold split — all CTAs use
+       --gold-dark, structural --gold is reserved for rules/dividers/frames. */
     .nav-login-btn {
-      background: var(--gold);
-      color: var(--navy);
+      background: var(--gold-dark);
+      color: var(--cream);
       padding: 9px 22px;
       border-radius: 6px;
       font-size: 0.875rem;
@@ -42,7 +46,7 @@
     }
 
     .nav-login-btn:hover {
-      background: var(--gold-light);
+      background: var(--gold);
     }
 
     .nav-login-dropdown {
@@ -89,9 +93,13 @@
       border-bottom: none;
     }
 
+    /* Phase 2 hotfix (v3.8.aco): hover state contrast bump. Previous
+       --gold (#C5A572) text on --light-gray (#F5EEE0 cream-2) was 2.4:1
+       contrast — fails WCAG AA and renders "blank looking" on user
+       screenshot. Now --gold-dark on --cream is 4.5:1 — passes AA. */
     .nav-login-wrap .nav-login-dropdown a:hover {
-      background: var(--light-gray);
-      color: var(--gold);
+      background: var(--cream);
+      color: var(--gold-dark);
     }
 
     .nav-login-dropdown a .dropdown-icon {
