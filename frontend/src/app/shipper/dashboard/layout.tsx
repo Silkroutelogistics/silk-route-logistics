@@ -46,6 +46,21 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
+    // Sprint 174 (v3.8.acf) Layer α — defense-in-depth role gate. AE
+    // dashboard layout uses AuthGuard for this (bounces non-AE roles
+    // to their portals); shipper portal needed the same check. A user
+    // whose role !== "SHIPPER" landing here means Layers β + γ both
+    // failed — log out to clear cookie + state, then bounce.
+    const bounceIfWrongRole = (u: { role?: string } | null) => {
+      if (u && u.role !== "SHIPPER") {
+        api.post("/auth/logout").catch(() => {});
+        useAuthStore.getState().clearAuth();
+        router.replace("/shipper/login");
+        return true;
+      }
+      return false;
+    };
+
     if (!user) {
       loadUser().then(() => {
         const currentUser = useAuthStore.getState().user;
@@ -53,9 +68,11 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
           router.replace("/shipper/login");
           return;
         }
+        if (bounceIfWrongRole(currentUser)) return;
         setChecking(false);
       });
     } else {
+      if (bounceIfWrongRole(user)) return;
       setChecking(false);
     }
   }, [user, loadUser, router]);

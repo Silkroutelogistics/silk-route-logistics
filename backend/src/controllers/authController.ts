@@ -19,6 +19,21 @@ function signToken(userId: string): string {
   return jwt.sign({ userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
+// Sprint 174 (v3.8.acf) — Portal-boundary role gate. /api/auth/login +
+// /api/auth/verify-otp are shared between AE Console and Shipper Portal
+// because the carrier portal has its dedicated /api/carrier-auth/* path
+// (carrierAuth.ts:70, 153 — already role-gated to CARRIER). Without an
+// expectedRole gate here, a CARRIER user could complete /shipper/login
+// → OTP → /shipper/dashboard, producing a portal-boundary violation
+// (Item 174). The optional expectedRole param identifies which portal
+// initiated the request; mismatch returns 401 ROLE_MISMATCH.
+const AE_ROLES = new Set(["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"]);
+function rolesMatch(userRole: string, expectedRole: "AE" | "SHIPPER"): boolean {
+  if (expectedRole === "AE") return AE_ROLES.has(userRole);
+  if (expectedRole === "SHIPPER") return userRole === "SHIPPER";
+  return false;
+}
+
 /**
  * v3.8.e.1 — SHIPPER approval gate. Mirrors the carrier-auth pattern at
  * routes/carrierAuth.ts:170-186 but lives here because AE Console + Shipper
@@ -146,7 +161,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function login(req: Request, res: Response) {
-  const { email, password } = loginSchema.parse(req.body);
+  const { email, password, expectedRole } = loginSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     res.status(401).json({ error: "Invalid credentials" });
@@ -155,6 +170,17 @@ export async function login(req: Request, res: Response) {
 
   if (!user.isActive) {
     res.status(403).json({ error: "Account has been deactivated" });
+    return;
+  }
+
+  // Sprint 174 (v3.8.acf) Item 174 — portal-boundary role gate.
+  // Rejects cross-portal credential entry (e.g., CARRIER creds on
+  // /shipper/login). Same 401 status as invalid-creds path; code
+  // field disambiguates client-side. Mirrors carrierAuth.ts:70 +
+  // 153 pattern. Skipped when expectedRole isn't provided (backward
+  // compat for any caller not yet updated).
+  if (expectedRole && !rolesMatch(user.role, expectedRole)) {
+    res.status(401).json({ error: "Invalid credentials for this portal.", code: "ROLE_MISMATCH" });
     return;
   }
 
@@ -218,7 +244,7 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function handleVerifyOtp(req: Request, res: Response) {
-  const { email, code } = req.body;
+  const { email, code, expectedRole } = req.body as { email?: string; code?: string; expectedRole?: "AE" | "SHIPPER" };
   if (!email || !code) {
     res.status(400).json({ error: "Email and code are required" });
     return;
@@ -227,6 +253,16 @@ export async function handleVerifyOtp(req: Request, res: Response) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  // Sprint 174 (v3.8.acf) Item 174 — defense-in-depth role gate.
+  // /login should have already rejected mismatched roles, but the
+  // cookie isn't issued until /verify-otp passes — so a second gate
+  // here closes any path that skipped /login (direct API call, stale
+  // pending-OTP state, etc.).
+  if (expectedRole && !rolesMatch(user.role, expectedRole)) {
+    res.status(401).json({ error: "Invalid credentials for this portal.", code: "ROLE_MISMATCH" });
     return;
   }
 

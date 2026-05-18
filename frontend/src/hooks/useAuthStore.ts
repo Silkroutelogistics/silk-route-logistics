@@ -16,8 +16,13 @@ interface AuthState {
   tempToken: string | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<{ pendingOtp: true; email: string } | false>;
-  verifyOtp: (email: string, code: string) => Promise<{ success: true; passwordExpired?: boolean } | false>;
+  // Sprint 174 (v3.8.acf) — optional expectedRole tags the call with the
+  // initiating portal ("AE" or "SHIPPER"). Backend role gate rejects
+  // mismatched roles. Caller pages pass the appropriate value
+  // (/auth/login → "AE", /shipper/login → "SHIPPER"). Carrier portal is
+  // unaffected — it uses /api/carrier-auth/* via useCarrierAuth.
+  login: (email: string, password: string, expectedRole?: "AE" | "SHIPPER") => Promise<{ pendingOtp: true; email: string } | false>;
+  verifyOtp: (email: string, code: string, expectedRole?: "AE" | "SHIPPER") => Promise<{ success: true; passwordExpired?: boolean } | false>;
   resendOtp: (email: string) => Promise<boolean>;
   forceChangePassword: (newPassword: string) => Promise<boolean>;
   registerUser: (data: Record<string, unknown>) => Promise<void>;
@@ -36,10 +41,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  login: async (email, password) => {
+  login: async (email, password, expectedRole) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post("/auth/login", { email, password });
+      const body: Record<string, unknown> = { email, password };
+      if (expectedRole) body.expectedRole = expectedRole;
+      const { data } = await api.post("/auth/login", body);
       if (data.pendingOtp) {
         set({ isLoading: false });
         return { pendingOtp: true as const, email: data.email };
@@ -57,10 +64,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  verifyOtp: async (email, code) => {
+  verifyOtp: async (email, code, expectedRole) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post("/auth/verify-otp", { email, code });
+      const body: Record<string, unknown> = { email, code };
+      if (expectedRole) body.expectedRole = expectedRole;
+      const { data } = await api.post("/auth/verify-otp", body);
 
       if (data.passwordExpired) {
         set({ tempToken: data.tempToken, isLoading: false });

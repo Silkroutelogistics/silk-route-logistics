@@ -84,10 +84,14 @@ export default function EmployeeLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
+      // Sprint 174 (v3.8.acf) Item 174 — expectedRole="AE" identifies
+      // this as Employee Login. Backend rejects CARRIER/SHIPPER creds
+      // entered here with 401 ROLE_MISMATCH. AE dashboard layout also
+      // role-gates via AuthGuard as defense-in-depth.
       const res = await fetch(`${BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, expectedRole: "AE" }),
         ...fetchOpts,
       });
       const data = await res.json();
@@ -115,10 +119,11 @@ export default function EmployeeLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
+      // Sprint 174 (v3.8.acf) — defense-in-depth role gate at verify-otp.
       const res = await fetch(`${BASE}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: pendingEmail, code: otp }),
+        body: JSON.stringify({ email: pendingEmail, code: otp, expectedRole: "AE" }),
         ...fetchOpts,
       });
       const data = await res.json();

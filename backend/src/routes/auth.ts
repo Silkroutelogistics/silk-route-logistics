@@ -25,7 +25,11 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { e
 const otpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: "Too many verification attempts. Please wait 15 minutes." } });
 const passwordChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { error: "Too many password change attempts. Please try again later." } });
 
-const otpSchema = z.object({ email: z.string().email(), code: z.string().length(8) });
+// Sprint 174 (v3.8.acf) — expectedRole mirrors loginSchema for the
+// verify-otp step. Defense-in-depth in case the /login gate is somehow
+// bypassed (e.g., direct API call) — the cookie isn't issued until
+// /verify-otp passes its own gate.
+const otpSchema = z.object({ email: z.string().email(), code: z.string().length(8), expectedRole: z.enum(["AE", "SHIPPER"]).optional() });
 const resendOtpSchema = z.object({ email: z.string().email() });
 const resetPasswordSchema = z.object({ token: z.string().min(1), email: z.string().email(), newPassword: z.string().min(8) });
 const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });

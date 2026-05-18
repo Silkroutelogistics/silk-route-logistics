@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/Logo";
 import { VersionFooter } from "@/components/ui/VersionFooter";
 import { loginSchema, otpSchema } from "@/lib/schemas";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { api } from "@/lib/api";
 
 const FEATURE_PILLS = [
   { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", label: "Live Tracking" },
@@ -68,7 +69,9 @@ export default function ShipperLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
-      const result = await login(email, password);
+      // Sprint 174 (v3.8.acf) Item 174 — pass expectedRole="SHIPPER" so
+      // backend role gate rejects non-SHIPPER creds entered here.
+      const result = await login(email, password, "SHIPPER");
       if (result && typeof result === "object" && "pendingOtp" in result && result.pendingOtp) {
         setPendingEmail(result.email || email);
         setOtpStep(true);
@@ -94,10 +97,28 @@ export default function ShipperLoginPage() {
     setLocalError("");
     setLocalLoading(true);
     try {
-      const result = await verifyOtp(pendingEmail, otp);
+      // Sprint 174 (v3.8.acf) Item 174 — pass expectedRole="SHIPPER" so
+      // backend defense-in-depth gate rejects mismatch at verify-otp step.
+      const result = await verifyOtp(pendingEmail, otp, "SHIPPER");
       if (result && typeof result === "object" && "passwordExpired" in result && result.passwordExpired) {
         if (tempToken) sessionStorage.setItem("srl_temp_token", tempToken);
         window.location.href = "/auth/force-password-change";
+        return;
+      }
+      // Sprint 174 Layer β — frontend defense-in-depth role check.
+      // Backend Layer γ should have already rejected mismatched roles
+      // (returning 401 ROLE_MISMATCH which the try/catch surfaces),
+      // but verify the response shape here in case a future API change
+      // silently drops the gate. Logout server-side to clear cookie +
+      // local state so the user has to re-authenticate cleanly.
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser && currentUser.role !== "SHIPPER") {
+        await api.post("/auth/logout").catch(() => {});
+        useAuthStore.getState().clearAuth();
+        setLocalError("This account is not a shipper account. Carriers use the Carrier Login. Employees use the Employee Login.");
+        setOtpStep(false);
+        setSuccessMsg("");
+        setLocalLoading(false);
         return;
       }
       window.location.href = "/shipper/dashboard";
