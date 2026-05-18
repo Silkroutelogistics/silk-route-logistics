@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { Search, MapPin, Phone, Mail, CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { SiteNav } from "@/components/shell/SiteNav";
 import { SiteFooter } from "@/components/shell/SiteFooter";
 
 type SearchKind = "bol" | "reference";
@@ -105,26 +106,13 @@ export default function PublicTrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-[#0f172a]">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div>
-            <div className="text-xl font-bold text-[#BA7517]">Silk Route Logistics</div>
-            <div className="text-xs text-gray-400">Where Trust Travels.</div>
-          </div>
-          <nav className="flex gap-6 text-sm text-gray-300">
-            <a href="/" className="hover:text-white">Home</a>
-            <a href="/track" className="text-[#BA7517]">Track shipment</a>
-            <a href="/contact" className="hover:text-white">Contact</a>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#FBF7F0] flex flex-col">
+      <SiteNav theme="dark" />
 
       {/* Search */}
-      <section className="max-w-3xl mx-auto px-6 py-16 text-center">
-        <h1 className="text-3xl font-semibold mb-2">Track your shipment</h1>
-        <p className="text-gray-400 mb-8">Real-time status on every load SRL moves.</p>
+      <section className="max-w-3xl mx-auto px-6 py-16 text-center w-full">
+        <h1 className="text-3xl font-semibold mb-2 text-[#0A2540]">Track your shipment</h1>
+        <p className="text-[#3A4A5F] mb-8">Real-time status on every load SRL moves.</p>
 
         {!tokenFromUrl && (
           <>
@@ -134,7 +122,9 @@ export default function PublicTrackPage() {
                   key={k}
                   onClick={() => setKind(k)}
                   className={`px-4 py-2 text-sm border-b-2 transition ${
-                    kind === k ? "border-[#BA7517] text-white" : "border-transparent text-gray-300 hover:text-white"
+                    kind === k
+                      ? "border-[#BA7517] text-[#0A2540]"
+                      : "border-transparent text-[#6B7685] hover:text-[#0A2540]"
                   }`}
                 >
                   {k === "bol" ? "BOL number" : "Reference / PO #"}
@@ -144,7 +134,7 @@ export default function PublicTrackPage() {
 
             <div className="flex gap-2 max-w-2xl mx-auto">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7685]" />
                 <input
                   type="text"
                   value={query}
@@ -154,7 +144,7 @@ export default function PublicTrackPage() {
                     kind === "bol" ? "e.g. BOL-7734"
                     : "e.g. PO-88421 or load reference"
                   }
-                  className="w-full pl-9 pr-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#BA7517]"
+                  className="w-full pl-9 pr-3 py-3 bg-white border border-[#0A2540]/10 rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#BA7517] focus:border-transparent"
                 />
               </div>
               <button
@@ -169,7 +159,7 @@ export default function PublicTrackPage() {
         )}
 
         {tokenFromUrl && loading && !result && !error && (
-          <div className="flex items-center justify-center gap-2 text-gray-300">
+          <div className="flex items-center justify-center gap-2 text-[#3A4A5F]">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Loading shipment…</span>
           </div>
@@ -177,7 +167,7 @@ export default function PublicTrackPage() {
 
         {error && (
           <div className="mt-4 text-sm">
-            <div className="text-red-400">{error}</div>
+            <div className="text-[#9B2C2C]">{error}</div>
             {tokenFromUrl && (
               <div className="mt-3">
                 <a href="/track" className="text-[#BA7517] hover:underline">Track another shipment</a>
@@ -189,28 +179,28 @@ export default function PublicTrackPage() {
 
       {/* Result */}
       {result && (
-        <section className="max-w-4xl mx-auto px-6 pb-16">
-          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8">
+        <section className="max-w-4xl mx-auto px-6 pb-16 w-full">
+          <div className="bg-white border border-[#0A2540]/10 rounded-2xl p-8 shadow-sm">
             <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
               <div>
-                <div className="text-xs text-gray-400">BOL / reference</div>
-                <div className="text-xl font-semibold">{result.referenceNumber}</div>
+                <div className="text-xs text-[#6B7685]">BOL / reference</div>
+                <div className="text-xl font-semibold text-[#0A2540]">{result.referenceNumber}</div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 text-xs rounded-full bg-[#FAEEDA] text-[#854F0B] font-medium">
                   {publicStatusLabel(result.status)}
                 </span>
-                {result.actualDelivery && <span className="px-3 py-1 text-xs rounded-full bg-green-500/20 text-green-400">On time</span>}
+                {result.actualDelivery && <span className="px-3 py-1 text-xs rounded-full bg-[#E6F0E9] text-[#2F7A4F] font-medium">On time</span>}
               </div>
             </div>
 
             {/* Route + position */}
             <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
+              <div className="flex justify-between text-sm mb-2 text-[#0A2540]">
                 <span>{result.origin.city}, {result.origin.state}</span>
                 <span>{result.destination.city}, {result.destination.state}</span>
               </div>
-              <div className="relative h-1 bg-white/10 rounded">
+              <div className="relative h-1 bg-[#0A2540]/10 rounded">
                 <div className="absolute inset-y-0 left-0 bg-[#BA7517] rounded" style={{ width: `${result.progressPct}%` }} />
                 <div
                   className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#BA7517] border-2 border-white shadow"
@@ -218,7 +208,7 @@ export default function PublicTrackPage() {
                 />
               </div>
               {result.lastLocation && (
-                <div className="mt-3 text-xs text-gray-400 flex items-center gap-1">
+                <div className="mt-3 text-xs text-[#6B7685] flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   Last known: {result.lastLocation.city}, {result.lastLocation.state} · {new Date(result.lastLocation.updatedAt).toLocaleString()}
                 </div>
@@ -234,23 +224,23 @@ export default function PublicTrackPage() {
                     {i > 0 && (
                       <div
                         className={`absolute top-3 right-1/2 left-0 h-[2px] ${
-                          done ? "bg-[#BA7517]" : "bg-white/10"
+                          done ? "bg-[#BA7517]" : "bg-[#0A2540]/10"
                         }`}
                       />
                     )}
                     <div className="relative">
                       {done
                         ? <CheckCircle2 className="w-6 h-6 text-[#BA7517]" fill="#BA7517" strokeWidth={0} />
-                        : <Circle className="w-6 h-6 text-slate-400" />}
+                        : <Circle className="w-6 h-6 text-[#A7AEB8]" />}
                     </div>
-                    <div className="text-[11px] mt-1 text-gray-400">{s.label}</div>
+                    <div className="text-[11px] mt-1 text-[#3A4A5F]">{s.label}</div>
                   </div>
                 );
               })}
             </div>
 
             {/* Detail grid */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm border-t border-white/10 pt-6">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm border-t border-[#0A2540]/10 pt-6">
               <Detail label="Shipper"          value={result.shipperName} />
               <Detail label="Equipment"        value={result.equipment} />
               <Detail label="Commodity"        value={result.commodity} />
@@ -260,7 +250,7 @@ export default function PublicTrackPage() {
             </div>
 
             {result.podUrl && (
-              <div className="mt-6 pt-6 border-t border-white/10">
+              <div className="mt-6 pt-6 border-t border-[#0A2540]/10">
                 <a
                   href={result.podUrl} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm rounded-lg"
@@ -272,21 +262,21 @@ export default function PublicTrackPage() {
           </div>
 
           {/* Contact */}
-          <div className="mt-6 text-center text-sm text-gray-400 space-y-1">
+          <div className="mt-6 text-center text-sm text-[#3A4A5F] space-y-1">
             <div className="flex items-center justify-center gap-4">
-              <a href="tel:+12692206760" className="inline-flex items-center gap-1 hover:text-white"><Phone className="w-3 h-3" /> (269) 220-6760</a>
-              <a href="mailto:operations@silkroutelogistics.ai" className="inline-flex items-center gap-1 hover:text-white"><Mail className="w-3 h-3" /> operations@silkroutelogistics.ai</a>
+              <a href="tel:+12692206760" className="inline-flex items-center gap-1 hover:text-[#0A2540]"><Phone className="w-3 h-3" /> (269) 220-6760</a>
+              <a href="mailto:operations@silkroutelogistics.ai" className="inline-flex items-center gap-1 hover:text-[#0A2540]"><Mail className="w-3 h-3" /> operations@silkroutelogistics.ai</a>
             </div>
             {tokenFromUrl && (
               <div className="pt-3">
-                <a href="/track" className="hover:text-[#BA7517]">Track another shipment →</a>
+                <a href="/track" className="text-[#BA7517] hover:underline">Track another shipment →</a>
               </div>
             )}
           </div>
         </section>
       )}
 
-      <SiteFooter compact theme="dark" />
+      <SiteFooter theme="dark" />
     </div>
   );
 }
@@ -294,8 +284,8 @@ export default function PublicTrackPage() {
 function Detail({ label, value }: { label: string; value: any }) {
   return (
     <div>
-      <div className="text-[11px] uppercase text-gray-500">{label}</div>
-      <div className="text-white">{value ?? "—"}</div>
+      <div className="text-[11px] uppercase text-[#6B7685]">{label}</div>
+      <div className="text-[#0A2540]">{value ?? "—"}</div>
     </div>
   );
 }
