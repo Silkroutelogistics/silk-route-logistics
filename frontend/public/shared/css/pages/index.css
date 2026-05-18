@@ -262,8 +262,12 @@
       gap: 32px;
     }
 
+    /* Phase 2 (v3.8.acn) state-aware nav link colors. At rest the nav
+       is transparent over the cream hero — links must be navy to read.
+       When .nav.scrolled fires the nav gets a dark navy backdrop — links
+       flip to cream/white to read against that. */
     .nav-links a {
-      color: rgba(255,255,255,0.8);
+      color: var(--navy);
       font-size: 0.875rem;
       font-weight: 500;
       transition: var(--transition);
@@ -271,6 +275,14 @@
     }
 
     .nav-links a:hover {
+      color: var(--gold-dark);
+    }
+
+    .nav.scrolled .nav-links a {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .nav.scrolled .nav-links a:hover {
       color: var(--gold);
     }
 
@@ -292,9 +304,13 @@
       display: block;
       width: 24px;
       height: 2px;
-      background: var(--white);
+      background: var(--navy);
       transition: var(--transition);
       border-radius: 2px;
+    }
+
+    .nav.scrolled .hamburger span {
+      background: var(--cream);
     }
 
     .hamburger.active span:nth-child(1) {
