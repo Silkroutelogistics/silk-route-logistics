@@ -9,10 +9,16 @@ interface SiteFooterProps {
 
 export function SiteFooter({ compact = false, showLegalColumn = true, theme = "dark" }: SiteFooterProps) {
   const isDark = theme === "dark";
+  // Dark variant: #0A2540 (skill designer canonical navy per CLAUDE.md §2.1).
+  // Avoids globals.css `[data-mode="light"] .bg-[#0F1117]` !important override
+  // hijacking the footer to cream on light-mode body (§13.3 Item 10).
+  // headingText uses #FBF7F0 (skill --cream / --fg-on-navy) instead of
+  // text-white because globals.css also overrides `.text-white` to dark text
+  // in light mode — would render headings invisible on dark navy footer.
   const baseText = isDark ? "text-white/70" : "text-slate-600";
-  const headingText = isDark ? "text-white" : "text-slate-900";
-  const linkText = isDark ? "text-white/70 hover:text-white" : "text-slate-600 hover:text-slate-900";
-  const bg = isDark ? "bg-[#0F1117] border-t border-[#C9A84C]/15" : "bg-white border-t border-slate-200";
+  const headingText = isDark ? "text-[#FBF7F0]" : "text-slate-900";
+  const linkText = isDark ? "text-white/70 hover:text-[#FBF7F0]" : "text-slate-600 hover:text-slate-900";
+  const bg = isDark ? "bg-[#0A2540] border-t border-[#C9A84C]/15" : "bg-white border-t border-slate-200";
 
   if (compact) {
     return (
@@ -61,7 +67,7 @@ export function SiteFooter({ compact = false, showLegalColumn = true, theme = "d
           ))}
         </div>
 
-        <div className={`mt-10 pt-6 border-t ${isDark ? "border-white/10" : "border-slate-200"} flex flex-wrap items-center justify-between gap-3`}>
+        <div className={`mt-10 pt-6 border-t ${isDark ? "border-[#C9A84C]/15" : "border-slate-200"} flex flex-wrap items-center justify-between gap-3`}>
           <p className={`text-[11px] ${baseText}`}>
             © {siteChrome.copyrightYear} {siteChrome.company} · MC# {siteChrome.mcNumber} · DOT# {siteChrome.dotNumber}
           </p>

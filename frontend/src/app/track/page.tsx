@@ -109,77 +109,87 @@ export default function PublicTrackPage() {
     <div className="min-h-screen bg-[#FBF7F0] flex flex-col">
       <SiteNav theme="dark" />
 
-      {/* Search */}
-      <section className="max-w-3xl mx-auto px-6 py-16 text-center w-full">
-        <h1 className="text-3xl font-semibold mb-2 text-[#0A2540]">Track your shipment</h1>
-        <p className="text-[#3A4A5F] mb-8">Real-time status on every load SRL moves.</p>
+      {/* Hero — dark navy band mirrors static-HTML public pages (shippers.html
+          .hero, carriers.html .hero, index.html .hero). Playfair display H1
+          + gold-accent span matches "Ship Smarter. Ship Further." pattern. */}
+      <section className="bg-[#0A2540] px-6 py-20 md:py-24">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="font-serif text-4xl md:text-5xl text-[#FBF7F0] mb-4 leading-tight">
+            Track your <span className="text-[#C9A84C]">shipment.</span>
+          </h1>
+          <p className="text-[#C9D2DE] text-base md:text-lg mb-10">
+            Real-time status on every load SRL moves.
+          </p>
 
-        {!tokenFromUrl && (
-          <>
-            <div className="flex gap-1 justify-center mb-4">
-              {(["bol", "reference"] as SearchKind[]).map((k) => (
+          {!tokenFromUrl && (
+            <>
+              <div className="flex gap-1 justify-center mb-4">
+                {(["bol", "reference"] as SearchKind[]).map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => setKind(k)}
+                    className={`px-4 py-2 text-sm border-b-2 transition ${
+                      kind === k
+                        ? "border-[#C9A84C] text-[#FBF7F0]"
+                        : "border-transparent text-[#C9D2DE] hover:text-[#FBF7F0]"
+                    }`}
+                  >
+                    {k === "bol" ? "BOL number" : "Reference / PO #"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2 max-w-2xl mx-auto">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7685] pointer-events-none" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                    placeholder={
+                      kind === "bol" ? "e.g. BOL-7734"
+                      : "e.g. PO-88421 or load reference"
+                    }
+                    className="w-full pl-9 pr-3 py-3 bg-[#FBF7F0] border border-transparent rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  />
+                </div>
                 <button
-                  key={k}
-                  onClick={() => setKind(k)}
-                  className={`px-4 py-2 text-sm border-b-2 transition ${
-                    kind === k
-                      ? "border-[#BA7517] text-[#0A2540]"
-                      : "border-transparent text-[#6B7685] hover:text-[#0A2540]"
-                  }`}
+                  onClick={onSearch}
+                  disabled={loading}
+                  className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FBF7F0] font-medium rounded-lg disabled:opacity-50"
                 >
-                  {k === "bol" ? "BOL number" : "Reference / PO #"}
+                  {loading ? "Searching…" : "Track"}
                 </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2 max-w-2xl mx-auto">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7685]" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && onSearch()}
-                  placeholder={
-                    kind === "bol" ? "e.g. BOL-7734"
-                    : "e.g. PO-88421 or load reference"
-                  }
-                  className="w-full pl-9 pr-3 py-3 bg-white border border-[#0A2540]/10 rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#BA7517] focus:border-transparent"
-                />
               </div>
-              <button
-                onClick={onSearch}
-                disabled={loading}
-                className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-white font-medium rounded-lg disabled:opacity-50"
-              >
-                {loading ? "Searching…" : "Track"}
-              </button>
+            </>
+          )}
+
+          {tokenFromUrl && loading && !result && !error && (
+            <div className="flex items-center justify-center gap-2 text-[#C9D2DE]">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading shipment…</span>
             </div>
-          </>
-        )}
+          )}
 
-        {tokenFromUrl && loading && !result && !error && (
-          <div className="flex items-center justify-center gap-2 text-[#3A4A5F]">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Loading shipment…</span>
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-4 text-sm">
-            <div className="text-[#9B2C2C]">{error}</div>
-            {tokenFromUrl && (
-              <div className="mt-3">
-                <a href="/track" className="text-[#BA7517] hover:underline">Track another shipment</a>
-              </div>
-            )}
-          </div>
-        )}
+          {error && (
+            <div className="mt-4 text-sm">
+              <div className="text-[#F87171]">{error}</div>
+              {tokenFromUrl && (
+                <div className="mt-3">
+                  <a href="/track" className="text-[#C9A84C] hover:underline">Track another shipment</a>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* Result */}
+      {/* Result — cream content band, only when result is loaded. White surface
+          card on cream body matches shippers/carriers content-section pattern
+          (e.g. "Our Shipping Solutions" cards). */}
       {result && (
-        <section className="max-w-4xl mx-auto px-6 pb-16 w-full">
+        <section className="max-w-4xl mx-auto px-6 py-12 w-full">
           <div className="bg-white border border-[#0A2540]/10 rounded-2xl p-8 shadow-sm">
             <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
               <div>
@@ -187,7 +197,7 @@ export default function PublicTrackPage() {
                 <div className="text-xl font-semibold text-[#0A2540]">{result.referenceNumber}</div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 text-xs rounded-full bg-[#FAEEDA] text-[#854F0B] font-medium">
+                <span className="px-3 py-1 text-xs rounded-full bg-[#FAEEDA] text-[#BA7517] font-medium">
                   {publicStatusLabel(result.status)}
                 </span>
                 {result.actualDelivery && <span className="px-3 py-1 text-xs rounded-full bg-[#E6F0E9] text-[#2F7A4F] font-medium">On time</span>}
@@ -253,7 +263,7 @@ export default function PublicTrackPage() {
               <div className="mt-6 pt-6 border-t border-[#0A2540]/10">
                 <a
                   href={result.podUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm rounded-lg"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FBF7F0] text-sm rounded-lg"
                 >
                   Download POD
                 </a>
@@ -275,6 +285,10 @@ export default function PublicTrackPage() {
           </div>
         </section>
       )}
+
+      {/* Spacer pushes footer to viewport bottom when content is short
+          (no-result state on tall viewports). */}
+      <div className="flex-1" />
 
       <SiteFooter theme="dark" />
     </div>

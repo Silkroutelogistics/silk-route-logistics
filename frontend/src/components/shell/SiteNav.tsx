@@ -24,9 +24,15 @@ export function SiteNav({ theme = "dark" }: SiteNavProps) {
   }, []);
 
   const isDark = theme === "dark";
-  const navBg = isDark ? "bg-[#0F1117]/90 backdrop-blur border-b border-white/5" : "bg-white border-b border-slate-200";
-  const linkText = isDark ? "text-white/70 hover:text-white" : "text-slate-700 hover:text-slate-900";
-  const primaryBtn = "bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_2px_8px_rgba(201,168,76,0.25)]";
+  // Dark variant uses #0A2540 (skill designer canonical navy per CLAUDE.md
+  // §2.1) instead of #0F1117 (AE Console dark surface). The hex swap
+  // sidesteps the globals.css `[data-mode="light"] .bg-[#0F1117]` !important
+  // override that hijacks public React pages to cream on light-mode body
+  // (§13.3 Item 10). Opaque (no /90 alpha + no backdrop-blur) for parity
+  // with static-HTML public pages which use opaque navy strips.
+  const navBg = isDark ? "bg-[#0A2540] border-b border-[#C9A84C]/15" : "bg-white border-b border-slate-200";
+  const linkText = isDark ? "text-white/70 hover:text-[#FBF7F0]" : "text-slate-700 hover:text-slate-900";
+  const primaryBtn = "bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0A2540] shadow-[0_2px_8px_rgba(201,168,76,0.25)]";
 
   return (
     <nav className={`${navBg} sticky top-0 z-40`}>
@@ -81,11 +87,11 @@ export function SiteNav({ theme = "dark" }: SiteNavProps) {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/5 px-6 py-4 space-y-2">
+        <div className="md:hidden border-t border-[#C9A84C]/15 px-6 py-4 space-y-2">
           {siteChrome.navItems.map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={`block py-2 text-[14px] ${linkText}`}>{item.label}</Link>
           ))}
-          <div className="pt-3 mt-3 border-t border-white/5">
+          <div className="pt-3 mt-3 border-t border-[#C9A84C]/15">
             <p className={`text-[11px] uppercase tracking-wider mb-2 ${isDark ? "text-white/40" : "text-slate-400"}`}>Sign in</p>
             {siteChrome.loginDropdown.map((item) => (
               <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={`block py-2 text-[14px] ${linkText}`}>{item.label}</Link>
