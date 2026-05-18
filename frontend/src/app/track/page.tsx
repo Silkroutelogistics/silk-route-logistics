@@ -115,7 +115,7 @@ export default function PublicTrackPage() {
       <section className="bg-[#0A2540] px-6 py-20 md:py-24">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="font-serif text-4xl md:text-5xl text-[#FDFBF7] mb-4 leading-tight">
-            Track your <span className="text-[#C9A84C]">shipment.</span>
+            Track your <span className="text-[#C5A572]">shipment.</span>
           </h1>
           <p className="text-[#C9D2DE] text-base md:text-lg mb-10">
             Real-time status on every load SRL moves.
@@ -130,7 +130,7 @@ export default function PublicTrackPage() {
                     onClick={() => setKind(k)}
                     className={`px-4 py-2 text-sm border-b-2 transition ${
                       kind === k
-                        ? "border-[#C9A84C] text-[#FDFBF7]"
+                        ? "border-[#C5A572] text-[#FDFBF7]"
                         : "border-transparent text-[#C9D2DE] hover:text-[#FDFBF7]"
                     }`}
                   >
@@ -151,7 +151,7 @@ export default function PublicTrackPage() {
                       kind === "bol" ? "e.g. BOL-7734"
                       : "e.g. PO-88421 or load reference"
                     }
-                    className="w-full pl-9 pr-3 py-3 bg-[#FDFBF7] border border-transparent rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                    className="w-full pl-9 pr-3 py-3 bg-[#FDFBF7] border border-transparent rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#C5A572]"
                   />
                 </div>
                 <button
@@ -177,7 +177,7 @@ export default function PublicTrackPage() {
               <div className="text-[#F87171]">{error}</div>
               {tokenFromUrl && (
                 <div className="mt-3">
-                  <a href="/track" className="text-[#C9A84C] hover:underline">Track another shipment</a>
+                  <a href="/track" className="text-[#C5A572] hover:underline">Track another shipment</a>
                 </div>
               )}
             </div>

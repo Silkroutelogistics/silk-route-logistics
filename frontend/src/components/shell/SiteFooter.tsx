@@ -15,9 +15,9 @@ export function SiteFooter({ compact = false, showLegalColumn = true, theme = "d
   // headingText uses #FBF7F0 (skill --cream / --fg-on-navy) instead of
   // text-white because globals.css also overrides `.text-white` to dark text
   // in light mode — would render headings invisible on dark navy footer.
-  const baseText = isDark ? "text-white/70" : "text-slate-600";
+  const baseText = isDark ? "text-[#FBF7F0]/90" : "text-slate-600";
   const headingText = isDark ? "text-[#FBF7F0]" : "text-slate-900";
-  const linkText = isDark ? "text-white/70 hover:text-[#FBF7F0]" : "text-slate-600 hover:text-slate-900";
+  const linkText = isDark ? "text-[#FBF7F0]/85 hover:text-[#FBF7F0]" : "text-slate-600 hover:text-slate-900";
   const bg = isDark ? "bg-[#0A2540] border-t border-[#C9A84C]/15" : "bg-white border-t border-slate-200";
 
   if (compact) {

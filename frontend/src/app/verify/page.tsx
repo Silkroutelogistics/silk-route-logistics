@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { SiteNav } from "@/components/shell/SiteNav";
 import { SiteFooter } from "@/components/shell/SiteFooter";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 
@@ -69,6 +70,7 @@ export default function VerifyPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
+      <SiteNav theme="dark" />
       <main className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
         <div className="mb-8">
           <a href="/" className="text-sm text-[#BA7517] hover:underline">← silkroutelogistics.ai</a>
@@ -92,7 +94,7 @@ export default function VerifyPage() {
             </div>
             <div className="mt-6 pt-6 border-t border-[#0A2540]/10 text-sm text-[#3A4A5F]">
               <p className="mb-2"><strong className="text-[#0A2540]">Suspect a fraudulent Rate Confirmation?</strong></p>
-              <p>Email <a className="text-[#BA7517] hover:underline" href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a> with the PDF and details. Silk Route Logistics Inc. — MC# 01794414 · DOT# 4526880.</p>
+              <p>Email <a className="text-[#BA7517] hover:underline" href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a> with the PDF and details. Silk Route Logistics Inc. — MC# 1794414 · DOT# 4526880.</p>
             </div>
           </div>
         )}

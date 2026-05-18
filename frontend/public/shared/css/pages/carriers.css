@@ -664,19 +664,20 @@
       padding: 0 28px 28px;
     }
 
-    /* ===== CARAVAN CARRIER PROGRAM ===== */
+    /* ===== CARAVAN CARRIER PROGRAM (Phase 3 cream migration v3.8.acz) ===== */
     .caravan {
       position: relative;
-      background: #0A2540;
+      background: var(--light-gray, #F5EEE0);
     }
 
     .caravan-inner {
       position: relative;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(200, 150, 62, 0.15);
+      background: var(--white, #FFFFFF);
+      border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: 24px;
       padding: 60px;
       overflow: hidden;
+      box-shadow: 0 6px 16px rgba(10, 37, 64, 0.10);
     }
 
     .caravan-inner::before {
@@ -725,7 +726,7 @@
 
     .caravan-header h2 {
       font-size: 40px;
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 16px;
     }
 
@@ -747,8 +748,8 @@
     }
 
     .tier-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--light-gray, #F5EEE0);
+      border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: 16px;
       padding: 32px 24px;
       text-align: center;
@@ -759,7 +760,7 @@
 
     .tier-card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 8px 40px rgba(10, 37, 64, 0.14);
     }
 
     /* v3.8.aab Sprint 24: canonical Caravan Partner Program tier
@@ -798,7 +799,7 @@
       font-family: 'DM Sans', sans-serif;
       font-size: 20px;
       font-weight: 700;
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 8px;
     }
 
@@ -1084,9 +1085,9 @@
       line-height: 1.5;
     }
 
-    /* ===== CTA BANNER SECTION ===== */
+    /* ===== CTA BANNER SECTION (Phase 3 cream migration v3.8.acz) ===== */
     .cta-banner {
-      background: linear-gradient(135deg, var(--navy) 0%, #162233 50%, var(--navy) 100%);
+      background: var(--light-gray, #F5EEE0);
       position: relative;
       overflow: hidden;
       padding: 80px 0;
@@ -1096,7 +1097,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse 50% 80% at 50% 50%, rgba(200,150,62,0.08) 0%, transparent 70%);
+      background: radial-gradient(ellipse 50% 80% at 50% 50%, rgba(186, 117, 23, 0.06) 0%, transparent 70%);
       pointer-events: none;
     }
 
