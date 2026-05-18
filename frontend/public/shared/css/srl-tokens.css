@@ -144,7 +144,15 @@
   color: var(--fg-1);
 }
 
-.srl-tagline {
+/* Phase 2 specificity bump (v3.8.acm): per-page CSS rules like
+   .footer-brand p (specificity 0,1,1) were winning the cascade over
+   the canonical .srl-tagline (0,1,0), forcing the tagline to inherit
+   container colors instead of canonical gold-dark italic. Adding the
+   container-scoped variants (0,2,0) elevates srl-tagline above any
+   page-level <p>-targeting rules. */
+.srl-tagline,
+.footer .srl-tagline,
+.footer-brand .srl-tagline {
   font-family: var(--font-tagline);
   font-style: italic;
   color: var(--gold-dark);
