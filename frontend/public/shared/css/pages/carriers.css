@@ -12,24 +12,24 @@
     }
 
     :root {
-      --navy: #0D1B2A;
-      --navy-mid: #1B2838;
-      --navy-deep: #0A1628;
-      --gold: #C8963E;
-      --gold-light: #D4A84E;
+      --navy: #0A2540;
+      --navy-mid: #15365A;
+      --navy-deep: #061629;
+      --gold: #C5A572;
+      --gold-light: #DAC39C;
       --gold-dark: #BA7517;
       --white: #FFFFFF;
-      --light-gray: #F5F5F5;
-      --dark-text: #1A1A2E;
-      --text-muted: #6B7280;
-      --font-headline: 'DM Serif Display', Georgia, serif;
-      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --light-gray: #F5EEE0;
+      --dark-text: #0A2540;
+      --text-muted: #6B7685;
+      --font-headline: 'Playfair Display', Georgia, serif;
+      --font-body: 'DM Sans', sans-serif;
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #FFFFFF;
-      color: #1A1A2E;
+      font-family: 'DM Sans', sans-serif;
+      background: #FDFBF7;
+      color: #0A2540;
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
@@ -38,7 +38,7 @@
     }
 
     h1, h2, h3, h4, h5, h6 {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       line-height: 1.2;
     }
 
@@ -57,7 +57,7 @@
     }
 
     button {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       cursor: pointer;
       border: none;
       outline: none;
@@ -79,11 +79,11 @@
     }
 
     .text-gold {
-      color: #854F0B;
+      color: #BA7517;
     }
 
     .text-muted {
-      color: #8A9BB5;
+      color: #3A4A5F;
     }
 
     .text-center {
@@ -127,23 +127,23 @@
     .brand-accent-bar {
       width: 3px;
       height: 36px;
-      background: linear-gradient(180deg, #C8963E, #A67A2E);
+      background: linear-gradient(180deg, #C5A572, #A67A2E);
       border-radius: 2px;
     }
 
     .brand-text {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
-      color: #E0E7EE;
+      color: #FDFBF7;
       letter-spacing: 2px;
       line-height: 1.1;
     }
 
     .brand-text span {
       display: block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 10px;
-      color: #854F0B;
+      color: #BA7517;
       letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 600;
@@ -156,30 +156,42 @@
       gap: 8px;
     }
 
+    /* Nav text colors — navy at rest on cream canvas, white when
+       .nav.scrolled fires its dark backdrop (cream-canvas migration
+       lesson from homepage hotfix #2). */
     .nav-links a {
       padding: 8px 16px;
       font-size: 14px;
       font-weight: 500;
-      color: #8A9BB5;
+      color: var(--navy);
       border-radius: 8px;
       transition: color 0.2s ease, background 0.2s ease;
       letter-spacing: 0.2px;
     }
 
     .nav-links a:hover {
-      color: #E0E7EE;
-      background: rgba(255, 255, 255, 0.04);
+      color: var(--gold-dark);
+      background: rgba(186, 117, 23, 0.06);
     }
 
     .nav-links a.active {
-      color: #854F0B;
-      background: rgba(200, 150, 62, 0.08);
+      color: var(--gold-dark);
+      background: rgba(186, 117, 23, 0.10);
+    }
+
+    .nav.scrolled .nav-links a {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .nav.scrolled .nav-links a:hover {
+      color: var(--gold);
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .nav-cta {
       margin-left: 12px;
       padding: 10px 22px !important;
-      background: #C8963E !important;
+      background: #C5A572 !important;
       color: #fff !important;
       border-radius: 8px !important;
       font-weight: 600 !important;
@@ -189,7 +201,7 @@
     }
 
     .nav-cta:hover {
-      background: #B8862E !important;
+      background: #BA7517 !important;
       transform: translateY(-1px);
     }
 
@@ -202,8 +214,8 @@
       align-items: center;
       gap: 6px;
       padding: 10px 22px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       border: none;
       border-radius: 8px;
       font-weight: 600;
@@ -212,7 +224,7 @@
       cursor: pointer;
       transition: background 0.2s ease, transform 0.2s ease;
     }
-    .login-dropdown-btn:hover { background: #B8862E; transform: translateY(-1px); }
+    .login-dropdown-btn:hover { background: #BA7517; transform: translateY(-1px); }
     .login-dropdown-btn svg { width: 14px; height: 14px; }
     .login-dropdown-menu {
       display: none;
@@ -230,14 +242,14 @@
     .login-dropdown-menu a {
       display: block;
       padding: 10px 14px;
-      color: #E0E7EE;
+      color: #FDFBF7;
       font-size: 13px;
       font-weight: 500;
       border-radius: 6px;
       text-decoration: none;
       transition: background 0.15s;
     }
-    .login-dropdown-menu a:hover { background: rgba(200,150,62,0.12); color: #854F0B; }
+    .login-dropdown-menu a:hover { background: rgba(200,150,62,0.12); color: #BA7517; }
     .login-dropdown.open .login-dropdown-menu { display: block; }
 
     /* Hamburger */
@@ -254,9 +266,13 @@
       display: block;
       width: 24px;
       height: 2px;
-      background: #E0E7EE;
+      background: var(--navy);
       border-radius: 2px;
       transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .nav.scrolled .hamburger span {
+      background: var(--cream, #FDFBF7);
     }
 
     .hamburger.open span:nth-child(1) {
@@ -298,22 +314,22 @@
       padding: 16px 20px;
       font-size: 16px;
       font-weight: 500;
-      color: #8A9BB5;
+      color: #3A4A5F;
       border-radius: 10px;
       transition: all 0.2s ease;
     }
 
     .mobile-menu a:hover,
     .mobile-menu a.active {
-      color: #854F0B;
+      color: #BA7517;
       background: rgba(200, 150, 62, 0.08);
     }
 
     .mobile-menu .mobile-cta {
       margin-top: 16px;
       padding: 16px 24px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       border-radius: 10px;
       font-weight: 600;
       text-align: center;
@@ -321,7 +337,7 @@
     }
 
     .mobile-menu .mobile-cta:hover {
-      background: #B8862E;
+      background: #BA7517;
     }
 
     @media (max-width: 900px) {
@@ -354,10 +370,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 70% 40%, rgba(200, 150, 62, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 20% 70%, rgba(200, 150, 62, 0.04) 0%, transparent 50%),
-        linear-gradient(180deg, #0D1B2A 0%, #0F2035 50%, #0D1B2A 100%);
+      background: var(--cream, #FDFBF7);
     }
 
     /* Abstract road/route lines */
@@ -409,7 +422,7 @@
       right: 0;
       width: 200px;
       height: 80px;
-      background: #C8963E;
+      background: #C5A572;
       border-radius: 4px 4px 0 0;
     }
 
@@ -420,7 +433,7 @@
       right: 200px;
       width: 80px;
       height: 60px;
-      background: #C8963E;
+      background: #C5A572;
       border-radius: 8px 0 0 0;
     }
 
@@ -440,7 +453,7 @@
       border-radius: 100px;
       font-size: 13px;
       font-weight: 600;
-      color: #854F0B;
+      color: #BA7517;
       margin-bottom: 28px;
       letter-spacing: 0.5px;
     }
@@ -448,12 +461,12 @@
     .hero-badge svg {
       width: 16px;
       height: 16px;
-      fill: #C8963E;
+      fill: #C5A572;
     }
 
     .hero h1 {
       font-size: 56px;
-      color: #FFFFFF;
+      color: var(--navy);
       margin-bottom: 24px;
       letter-spacing: -0.5px;
       line-height: 1.1;
@@ -461,12 +474,12 @@
 
     .hero h1 em {
       font-style: normal;
-      color: #854F0B;
+      color: var(--gold-dark);
     }
 
     .hero-sub {
       font-size: 19px;
-      color: #8A9BB5;
+      color: #3A4A5F;
       line-height: 1.7;
       margin-bottom: 40px;
       max-width: 560px;
@@ -484,8 +497,8 @@
       align-items: center;
       gap: 8px;
       padding: 16px 32px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       font-size: 15px;
       font-weight: 600;
       border-radius: 10px;
@@ -494,13 +507,13 @@
     }
 
     .btn-primary:hover {
-      background: #B8862E;
+      background: #BA7517;
       transform: translateY(-2px);
       box-shadow: 0 8px 30px rgba(200, 150, 62, 0.25);
     }
 
     .btn-primary:focus-visible {
-      outline: 2px solid #C8963E;
+      outline: 2px solid #C5A572;
       outline-offset: 3px;
     }
 
@@ -516,7 +529,7 @@
       padding: 16px 32px;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #E0E7EE;
+      color: #FDFBF7;
       font-size: 15px;
       font-weight: 600;
       border-radius: 10px;
@@ -531,7 +544,7 @@
     }
 
     .btn-secondary:focus-visible {
-      outline: 2px solid #C8963E;
+      outline: 2px solid #C5A572;
       outline-offset: 3px;
     }
 
@@ -548,16 +561,16 @@
     }
 
     .hero-stat-number {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 36px;
-      color: #854F0B;
+      color: #BA7517;
       line-height: 1;
       margin-bottom: 6px;
     }
 
     .hero-stat-label {
       font-size: 13px;
-      color: #8A9BB5;
+      color: #3A4A5F;
       font-weight: 500;
     }
 
@@ -573,7 +586,7 @@
 
     .section-label {
       display: inline-block;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 12px;
       font-weight: 700;
       color: var(--gold);
@@ -636,7 +649,7 @@
     }
 
     .benefit-card h3 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 18px;
       font-weight: 700;
       color: var(--dark-text);
@@ -654,7 +667,7 @@
     /* ===== CARAVAN CARRIER PROGRAM ===== */
     .caravan {
       position: relative;
-      background: #0D1B2A;
+      background: #0A2540;
     }
 
     .caravan-inner {
@@ -673,7 +686,7 @@
       left: 60px;
       right: 60px;
       height: 2px;
-      background: linear-gradient(90deg, transparent, #C8963E, transparent);
+      background: linear-gradient(90deg, transparent, #C5A572, transparent);
     }
 
     .caravan-glow {
@@ -704,7 +717,7 @@
       border-radius: 100px;
       font-size: 11px;
       font-weight: 700;
-      color: #854F0B;
+      color: #BA7517;
       letter-spacing: 2px;
       text-transform: uppercase;
       margin-bottom: 20px;
@@ -718,7 +731,7 @@
 
     .caravan-header p {
       font-size: 17px;
-      color: #8A9BB5;
+      color: #3A4A5F;
       max-width: 640px;
       margin: 0 auto;
       line-height: 1.7;
@@ -751,7 +764,7 @@
 
     /* v3.8.aab Sprint 24: canonical Caravan Partner Program tier
        palette per skill tokens.md. Pre-Sprint-24 used literal
-       precious-metal hex (#C0C0C0 silver, #C8963E legacy gold,
+       precious-metal hex (#C0C0C0 silver, #C5A572 legacy gold,
        #E5E4E2 platinum). Post-Sprint-24 uses canonical SRL tokens
        matching AE Console + carrier dashboard for cross-surface
        visual consistency. .tier-card.bronze rules removed —
@@ -782,7 +795,7 @@
     .tier-card.platinum .tier-icon { background: rgba(10, 37, 64, 0.85); color: #C5A572; }
 
     .tier-name {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 20px;
       font-weight: 700;
       color: #FFFFFF;
@@ -791,7 +804,7 @@
 
     .tier-req {
       font-size: 12px;
-      color: #8A9BB5;
+      color: #3A4A5F;
       margin-bottom: 24px;
       padding-bottom: 20px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -829,8 +842,8 @@
       position: absolute;
       top: 16px;
       right: -30px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
@@ -886,7 +899,7 @@
     }
 
     .coverage-stat-num {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 32px;
       color: var(--gold);
       line-height: 1;
@@ -1012,7 +1025,7 @@
 
     .req-note p {
       font-size: 14px;
-      color: #374151;
+      color: #3A4A5F;
       line-height: 1.6;
     }
 
@@ -1058,7 +1071,7 @@
     }
 
     .req-item-text h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       font-weight: 600;
       color: var(--dark-text);
@@ -1095,12 +1108,12 @@
 
     .cta-banner h2 {
       font-size: clamp(2rem, 5vw, 3.25rem);
-      color: var(--white);
+      color: var(--navy);
       margin-bottom: 12px;
     }
 
     .cta-banner .cta-sub {
-      color: rgba(255,255,255,0.65);
+      color: var(--fg-2, #3A4A5F);
       font-size: 1.05rem;
       margin-bottom: 36px;
       max-width: 600px;
@@ -1141,9 +1154,9 @@
     }
 
     .footer-brand .brand-text-footer {
-      font-family: 'DM Serif Display', serif;
+      font-family: 'Playfair Display', serif;
       font-size: 18px;
-      color: #E0E7EE;
+      color: #FDFBF7;
       letter-spacing: 1.5px;
       margin-bottom: 16px;
     }
@@ -1180,7 +1193,7 @@
     .footer-social a svg {
       width: 18px;
       height: 18px;
-      stroke: #8A9BB5;
+      stroke: #3A4A5F;
       fill: none;
       stroke-width: 1.5;
     }
@@ -1190,10 +1203,10 @@
     }
 
     .footer-col h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 700;
-      color: #E0E7EE;
+      color: #FDFBF7;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       margin-bottom: 20px;
@@ -1243,7 +1256,7 @@
     }
 
     .footer-legal a:hover {
-      color: #854F0B;
+      color: #BA7517;
     }
 
     /* ===== RESPONSIVE ===== */
@@ -1432,7 +1445,7 @@
 
     /* ===== FOCUS / ACCESSIBILITY ===== */
     :focus-visible {
-      outline: 2px solid #C8963E;
+      outline: 2px solid #C5A572;
       outline-offset: 2px;
     }
 
@@ -1453,8 +1466,8 @@
       position: absolute;
       top: -100%;
       left: 16px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;
