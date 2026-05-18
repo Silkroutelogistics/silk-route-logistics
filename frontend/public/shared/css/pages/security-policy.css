@@ -5,7 +5,7 @@
 
     body{
       font-family:'DM Sans',sans-serif;
-      background:#FBF7F0;color:#1A1A2E;
+      background:#FBF7F0;color:#0A2540;
       line-height:1.8;font-size:15px;
     }
 
@@ -29,8 +29,8 @@
 
     .nav-bar{
       position:sticky;top:0;z-index:100;
-      background:rgba(10,22,40,0.95);backdrop-filter:blur(10px);
-      border-bottom:1px solid rgba(200,150,62,0.15);
+      background:rgba(6,22,41,0.95);backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(197,165,114,0.15);
       padding:14px 40px;display:flex;align-items:center;justify-content:space-between;
     }
     .nav-bar a{color:#c8a951;text-decoration:none;font-size:14px;font-weight:500}
@@ -43,8 +43,8 @@
 
     .doc-header{
       text-align:center;padding:50px 40px;margin-bottom:40px;
-      background:linear-gradient(135deg,#0D1B2A 0%,#1a2d45 100%);
-      border:1px solid rgba(200,150,62,0.2);border-radius:16px;
+      background:linear-gradient(135deg,#0A2540 0%,#1a2d45 100%);
+      border:1px solid rgba(197,165,114,0.2);border-radius:16px;
     }
     .doc-header h1{font-family:'Playfair Display',serif;font-weight:600;font-size:32px;color:#f0f4f8;margin-bottom:8px}
     .doc-header .gold{color:#c8a951}
@@ -55,47 +55,47 @@
     .download-bar{text-align:center;margin-bottom:40px}
     .download-bar button{
       padding:10px 24px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;
-      background:linear-gradient(135deg,#c8a951,#b8963e);color:#0D1B2A;
+      background:linear-gradient(135deg,#c8a951,#b8963e);color:#0A2540;
       border:none;border-radius:8px;cursor:pointer;transition:all .25s;
     }
-    .download-bar button:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(200,150,62,0.25)}
+    .download-bar button:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(197,165,114,0.25)}
 
     /* TOC */
     .toc{
       background:#FFFFFF;border:1px solid #E5E7EB;
       border-radius:12px;padding:28px 32px;margin-bottom:40px;
     }
-    .toc h2{font-size:16px;color:#1A1A2E;margin-bottom:16px;border:none;padding:0;font-weight:700}
+    .toc h2{font-size:16px;color:#0A2540;margin-bottom:16px;border:none;padding:0;font-weight:700}
     .toc ol{padding-left:20px;counter-reset:toc}
-    .toc li{margin-bottom:8px;font-size:14px;color:#374151}
-    .toc a{color:#854F0B;text-decoration:none;transition:color .2s}
+    .toc li{margin-bottom:8px;font-size:14px;color:#3A4A5F}
+    .toc a{color:#BA7517;text-decoration:none;transition:color .2s}
     .toc a:hover{color:#b8862e}
 
     h2{
-      font-family:'DM Sans',sans-serif;font-weight:600;font-size:22px;color:#1A1A2E;
+      font-family:'DM Sans',sans-serif;font-weight:600;font-size:22px;color:#0A2540;
       margin:48px 0 20px;padding-bottom:10px;
       border-bottom:1px solid #E5E7EB;
     }
-    h3{font-size:16px;color:#1A1A2E;margin:24px 0 12px;font-weight:600}
+    h3{font-size:16px;color:#0A2540;margin:24px 0 12px;font-weight:600}
 
     .section{
       background:#FFFFFF;border:1px solid #E5E7EB;
       border-radius:12px;padding:28px 32px;margin-bottom:24px;
     }
 
-    p{margin-bottom:14px;color:#374151}
+    p{margin-bottom:14px;color:#3A4A5F}
     ul,ol{margin:0 0 16px 20px}
-    li{margin-bottom:6px;color:#374151}
+    li{margin-bottom:6px;color:#3A4A5F}
 
     .highlight-box{
       background:#FFFBEB;border-left:3px solid #c8a951;
       padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;
-      font-size:14px;color:#1A1A2E;
+      font-size:14px;color:#0A2540;
     }
 
     table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
-    th{background:#F9FAFB;color:#1A1A2E;text-align:left;padding:10px 14px;font-weight:600;border:1px solid #E5E7EB}
-    td{padding:10px 14px;border:1px solid #E5E7EB;color:#374151}
+    th{background:#F9FAFB;color:#0A2540;text-align:left;padding:10px 14px;font-weight:600;border:1px solid #E5E7EB}
+    td{padding:10px 14px;border:1px solid #E5E7EB;color:#3A4A5F}
 
     .back-link{text-align:center;margin-top:40px}
     .back-link a{color:#c8a951;text-decoration:none;font-size:14px;font-weight:500}

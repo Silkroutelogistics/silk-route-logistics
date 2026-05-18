@@ -11,19 +11,19 @@
     }
 
     :root {
-      --navy: #0D1B2A;
-      --gold: #C8963E;
-      --gold-light: #D4A84E;
+      --navy: #0A2540;
+      --gold: #C5A572;
+      --gold-light: #DAC39C;
       --white: #FFFFFF;
-      --light-gray: #F5F5F5;
-      --dark-text: #1A1A2E;
-      --text-muted: #6B7280;
+      --light-gray: #F5EEE0;
+      --dark-text: #0A2540;
+      --text-muted: #6B7685;
     }
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background: #FFFFFF;
-      color: #1A1A2E;
+      color: #0A2540;
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
@@ -52,7 +52,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 2.5px;
-      color: #854F0B;
+      color: #BA7517;
       margin-bottom: 16px;
     }
 
@@ -83,7 +83,7 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 1000;
-      background: rgba(13, 27, 42, 0.85);
+      background: rgba(10,37,64, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -92,7 +92,7 @@
     }
 
     .navbar.scrolled {
-      background: rgba(13, 27, 42, 0.95);
+      background: rgba(10,37,64, 0.95);
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
       color: var(--fg-on-navy);
     }
@@ -116,7 +116,7 @@
 
     .navbar-logo-bar {
       width: 3px; height: 36px;
-      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      background: linear-gradient(180deg, #C5A572, #E8B85E);
       border-radius: 2px;
     }
 
@@ -132,7 +132,7 @@
       display: block;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 10px;
-      color: #854F0B;
+      color: #BA7517;
       letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 500;
@@ -158,7 +158,7 @@
       position: absolute;
       bottom: -4px; left: 0;
       width: 0; height: 2px;
-      background: #C8963E;
+      background: #C5A572;
       transition: width 0.3s ease;
     }
 
@@ -169,7 +169,7 @@
     .navbar-links a.active::after { width: 100%; }
 
     .navbar-links a:focus-visible {
-      outline: 2px solid #C8963E;
+      outline: 2px solid #C5A572;
       outline-offset: 4px;
       border-radius: 2px;
     }
@@ -179,8 +179,8 @@
       align-items: center;
       gap: 8px;
       padding: 10px 24px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       font-size: 14px;
       font-weight: 600;
       border-radius: 8px;
@@ -190,7 +190,7 @@
     }
 
     .navbar-cta:hover {
-      background: #B8862E;
+      background: #BA7517;
       transform: translateY(-1px);
     }
 
@@ -221,7 +221,7 @@
       display: none;
       position: fixed;
       top: 72px; left: 0; right: 0; bottom: 0;
-      background: rgba(13, 27, 42, 0.98);
+      background: rgba(10,37,64, 0.98);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       z-index: 999;
@@ -274,7 +274,7 @@
       position: absolute;
       top: -200px; right: -200px;
       width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(200, 150, 62, 0.08) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(197,165,114, 0.08) 0%, transparent 70%);
       border-radius: 50%;
     }
 
@@ -283,7 +283,7 @@
       position: absolute;
       bottom: -100px; left: -100px;
       width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(200, 150, 62, 0.05) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(197,165,114, 0.05) 0%, transparent 70%);
       border-radius: 50%;
     }
 
@@ -301,7 +301,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 3px;
-      color: #854F0B;
+      color: #BA7517;
       margin-bottom: 24px;
     }
 
@@ -314,7 +314,7 @@
 
     .hero h1 em {
       font-style: italic;
-      color: #854F0B;
+      color: #BA7517;
     }
 
     .hero-text {
@@ -336,7 +336,7 @@
       width: 100%;
       padding: 16px 52px 16px 24px;
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(200, 150, 62, 0.4);
+      border: 1px solid rgba(197,165,114, 0.4);
       border-radius: 12px;
       color: #FFFFFF;
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -350,8 +350,8 @@
     }
 
     .search-input:focus {
-      border-color: #854F0B;
-      box-shadow: 0 0 0 3px rgba(200, 150, 62, 0.15);
+      border-color: #BA7517;
+      box-shadow: 0 0 0 3px rgba(197,165,114, 0.15);
     }
 
     .search-icon {
@@ -359,7 +359,7 @@
       right: 18px;
       top: 50%;
       transform: translateY(-50%);
-      color: #854F0B;
+      color: #BA7517;
       pointer-events: none;
     }
 
@@ -377,7 +377,7 @@
       overflow-x: auto;
       padding: 4px 0 12px;
       scrollbar-width: thin;
-      scrollbar-color: rgba(200, 150, 62, 0.3) transparent;
+      scrollbar-color: rgba(197,165,114, 0.3) transparent;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -390,7 +390,7 @@
     }
 
     .category-pills::-webkit-scrollbar-thumb {
-      background: rgba(200, 150, 62, 0.3);
+      background: rgba(197,165,114, 0.3);
       border-radius: 2px;
     }
 
@@ -415,9 +415,9 @@
     }
 
     .category-pill.active {
-      background: #C8963E;
-      border-color: #854F0B;
-      color: #0D1B2A;
+      background: #C5A572;
+      border-color: #BA7517;
+      color: #0A2540;
     }
 
     .category-pill .pill-count {
@@ -503,9 +503,9 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background: rgba(200, 150, 62, 0.12);
-      color: #854F0B;
-      border: 1px solid rgba(200, 150, 62, 0.2);
+      background: rgba(197,165,114, 0.12);
+      color: #BA7517;
+      border: 1px solid rgba(197,165,114, 0.2);
       margin-bottom: 14px;
     }
 
@@ -659,9 +659,9 @@
       letter-spacing: 0.5px;
       padding: 3px 10px;
       border-radius: 100px;
-      background: rgba(200, 150, 62, 0.08);
-      color: #854F0B;
-      border: 1px solid rgba(200, 150, 62, 0.15);
+      background: rgba(197,165,114, 0.08);
+      color: #BA7517;
+      border: 1px solid rgba(197,165,114, 0.15);
     }
 
     /* ── LOAD MORE ── */
@@ -678,7 +678,7 @@
       background: var(--white);
       border: 1px solid var(--gold);
       border-radius: 10px;
-      color: #854F0B;
+      color: #BA7517;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 14px;
       font-weight: 600;
@@ -687,8 +687,8 @@
     }
 
     .load-more-btn:hover {
-      background: rgba(200, 150, 62, 0.1);
-      border-color: #854F0B;
+      background: rgba(197,165,114, 0.1);
+      border-color: #BA7517;
       transform: translateY(-1px);
     }
 
@@ -719,8 +719,8 @@
     .empty-state .spinner-large {
       width: 48px;
       height: 48px;
-      border: 3px solid rgba(200, 150, 62, 0.2);
-      border-top-color: #854F0B;
+      border: 3px solid rgba(197,165,114, 0.2);
+      border-top-color: #BA7517;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 24px;
@@ -748,8 +748,8 @@
     .spinner {
       width: 18px;
       height: 18px;
-      border: 2px solid rgba(200, 150, 62, 0.3);
-      border-top-color: #854F0B;
+      border: 2px solid rgba(197,165,114, 0.3);
+      border-top-color: #BA7517;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -830,7 +830,7 @@
 
     .footer-logo-bar {
       width: 3px; height: 30px;
-      background: linear-gradient(180deg, #C8963E, #E8B85E);
+      background: linear-gradient(180deg, #C5A572, #E8B85E);
       border-radius: 2px;
     }
 
@@ -847,7 +847,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: #854F0B;
+      color: #BA7517;
       margin-bottom: 20px;
     }
 
@@ -862,7 +862,7 @@
     .footer-col ul li a:hover { color: #FFFFFF; }
 
     .footer-col ul li a:focus-visible {
-      outline: 2px solid #C8963E;
+      outline: 2px solid #C5A572;
       outline-offset: 2px;
       border-radius: 2px;
     }
@@ -887,7 +887,7 @@
       transition: color 0.3s ease;
     }
 
-    .footer-bottom-links a:hover { color: #854F0B; }
+    .footer-bottom-links a:hover { color: #BA7517; }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 1024px) {
@@ -922,8 +922,8 @@
     .skip-link {
       position: absolute;
       top: -100%; left: 16px;
-      background: #C8963E;
-      color: #0D1B2A;
+      background: #C5A572;
+      color: #0A2540;
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;
