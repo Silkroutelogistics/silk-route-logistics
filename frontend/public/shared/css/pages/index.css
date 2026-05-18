@@ -407,45 +407,10 @@
       padding-top: 72px; /* clear fixed nav */
     }
 
-    .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 600px 400px at 20% 60%, rgba(197, 165, 114, 0.08) 0%, transparent 70%),
-        radial-gradient(ellipse 500px 500px at 80% 30%, rgba(197, 165, 114, 0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    /* Gold-dust mouse-parallax — Stripe / Linear premium SaaS pattern.
-       Each dot has data-depth attribute; the JS handler reads it and
-       applies translation proportional to cursor offset × depth.
-       Replaces the silkGradient animation (v3.8.acl) and the brief
-       silk-route trace experiment (v3.8.acr). */
-    .gold-dust-field {
-      position: absolute;
-      inset: 0;
-      z-index: 1; /* behind hero-content (z 2), above hero::before (default 0) */
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .dust {
-      position: absolute;
-      background: var(--gold-dark);
-      border-radius: 50%;
-      opacity: 0.35;
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      will-change: transform;
-      box-shadow: 0 0 12px rgba(186, 117, 23, 0.25);
-    }
-
-    /* Accessibility — respect user motion preference: keep dots
-       statically positioned, no parallax updates from JS (handler
-       checks the same media query and bails). */
-    @media (prefers-reduced-motion: reduce) {
-      .dust { transition: none; }
-    }
+    /* v3.8.act ultra-minimalist hero — no ::before radial gradients,
+       no animation, no parallax dots. Cream canvas + Playfair H1 +
+       two CTAs only. Confidence over noise. Reference: Vercel,
+       Anthropic, Anduril homepage. */
 
     .hero-content {
       position: relative;
@@ -483,11 +448,12 @@
 
     .hero h1 {
       font-family: var(--font-headline);
-      font-size: clamp(2.5rem, 6.5vw, 4.5rem);
+      font-size: clamp(3rem, 7vw, 5rem);
       font-weight: 700;
       color: var(--navy);
-      line-height: 1.15;
-      margin-bottom: 24px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 48px;
       animation: fadeInUp 0.8s ease 0.15s forwards;
       opacity: 0;
     }
