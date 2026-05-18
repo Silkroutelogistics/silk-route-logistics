@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CustomerPicker, type CustomerSummary } from "@/components/shared/CustomerPicker";
+import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer.
@@ -35,15 +36,23 @@ import { CustomerPicker, type CustomerSummary } from "@/components/shared/Custom
 
 export type DrawerMode = "build-and-tender" | "review" | "finalize" | "recovery";
 
+// Sprint 59.a (v3.8.acn) Bug #3 fix — Carrier search result shape matches
+// /api/carrier/all response (carrierController.ts:772-790). The endpoint
+// maps `c.user.company` to field `company` (NOT `companyName`); Sprint 59
+// originally read `companyName` which was always undefined, falling back
+// to the literal "Carrier" rendering. Same root cause class as Sprint 36
+// Y1's broken picker (Item 49 closure precedent).
 interface CarrierSearchResult {
   id: string;
-  companyName: string | null;
+  company: string | null;
   mcNumber: string | null;
   dotNumber: string | null;
   tier: string | null;
   onboardingStatus: string | null;
   insuranceExpiry: string | null;
-  user?: { firstName?: string; lastName?: string; email?: string; phone?: string };
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }
 
 interface DrawerFormState {
@@ -122,14 +131,19 @@ export interface CarrierEngagementDrawerProps {
 
 type SectionKey = "lane" | "freight" | "schedule" | "stops" | "carrier" | "financials" | "instructions";
 
-const SECTIONS: { key: SectionKey; label: string; Icon: typeof MapPin }[] = [
-  { key: "lane",          label: "Lane",         Icon: MapPin },
-  { key: "freight",       label: "Freight",      Icon: Package },
-  { key: "schedule",      label: "Schedule",     Icon: Calendar },
-  { key: "stops",         label: "Refs",         Icon: FileText },
-  { key: "carrier",       label: "Carrier",      Icon: Truck },
-  { key: "financials",    label: "Financials",   Icon: DollarSign },
-  { key: "instructions",  label: "Instructions", Icon: MessageSquare },
+// Sprint 59.a (v3.8.acn) Bug #1 fix — vertical IconTabs canonical (matches
+// T&T LoadDetailDrawer pattern at frontend/src/app/dashboard/track-trace/
+// LoadDetailDrawer.tsx:108-112). Sprint 59 originally shipped horizontal
+// tabs in the form body; this restructures to match the canonical right-
+// drawer pattern (IconTabs left strip + flex-1 content sibling).
+const SECTIONS: IconTabDef<SectionKey>[] = [
+  { id: "lane",          label: "Lane",         Icon: MapPin },
+  { id: "freight",       label: "Freight",      Icon: Package },
+  { id: "schedule",      label: "Schedule",     Icon: Calendar },
+  { id: "stops",         label: "Refs",         Icon: FileText },
+  { id: "carrier",       label: "Carrier",      Icon: Truck },
+  { id: "financials",    label: "Financials",   Icon: DollarSign },
+  { id: "instructions",  label: "Instructions", Icon: MessageSquare },
 ];
 
 const EMPTY_FORM: DrawerFormState = {
@@ -160,9 +174,23 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierSearchResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { register, handleSubmit, watch, control, formState: { errors } } = useForm<DrawerFormState>({
+  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<DrawerFormState>({
     defaultValues: { ...EMPTY_FORM, ...(initialFormData ?? {}) },
   });
+
+  // Sprint 59.a (v3.8.acn) Bug #2 fix — re-seed form on each `open` flip.
+  // react-hook-form's useForm reads defaultValues only once at mount; the
+  // drawer is rendered every Order Builder render with `open` toggling
+  // visibility, so the initial mount captured EMPTY_FORM and never picked
+  // up subsequent initialFormData from the filled Order Builder draft.
+  // Calling reset() on each open=true hydrates the form from the latest
+  // initialFormData prop. Sub-pattern 10 (hydration-effect-dep-array-audit)
+  // applies: dep array intentionally watches [open] only, NOT
+  // [initialFormData] which would re-fire on every parent render.
+  useEffect(() => {
+    if (open) reset({ ...EMPTY_FORM, ...(initialFormData ?? {}) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // a11y per Sprint 42 canonical
   const handleKeyDown = useCallback((e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }, [onClose]);
@@ -276,41 +304,31 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="carrier-drawer-title"
-        className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex flex-col animate-slide-in-right"
+        className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex animate-slide-in-right"
       >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 shrink-0 flex items-center justify-between gap-3">
-          <div>
-            <h2 id="carrier-drawer-title" className="text-lg font-semibold text-slate-900">
-              Carrier Engagement {mode === "build-and-tender" && <span className="text-xs font-normal text-slate-500 ml-2">Build &amp; Tender</span>}
-            </h2>
-            <div className="text-xs text-slate-500 mt-0.5">
-              {customer ? customer.name : "No customer selected"}
-              {selectedCarrier && customer && " · "}
-              {selectedCarrier && <span className="text-[#BA7517] font-medium">{selectedCarrier.companyName ?? "Carrier"} (MC# {selectedCarrier.mcNumber ?? "—"})</span>}
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition" aria-label="Close">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        {/* Sprint 59.a (v3.8.acn) Bug #1 — vertical IconTabs strip canonical
+            (matches T&T LoadDetailDrawer.tsx:108-112). Replaces Sprint 59's
+            horizontal tab nav which violated the right-drawer canonical
+            pattern. */}
+        <IconTabs tabs={SECTIONS} active={section} onChange={setSection} />
 
-        {/* Section nav (horizontal tabs) */}
-        <div className="px-4 pt-3 border-b border-slate-100 shrink-0 overflow-x-auto">
-          <div className="flex gap-1">
-            {SECTIONS.map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSection(key)}
-                className={`px-3 py-2 text-xs rounded-t-md flex items-center gap-1.5 shrink-0 ${section === key ? "bg-slate-100 text-slate-900 font-semibold" : "text-slate-500 hover:text-slate-700"}`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            ))}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-slate-200 shrink-0 flex items-center justify-between gap-3">
+            <div>
+              <h2 id="carrier-drawer-title" className="text-lg font-semibold text-slate-900">
+                Carrier Engagement {mode === "build-and-tender" && <span className="text-xs font-normal text-slate-500 ml-2">Build &amp; Tender</span>}
+              </h2>
+              <div className="text-xs text-slate-500 mt-0.5">
+                {customer ? customer.name : "No customer selected"}
+                {selectedCarrier && customer && " · "}
+                {selectedCarrier && <span className="text-[#BA7517] font-medium">{selectedCarrier.company ?? "Carrier"} (MC# {selectedCarrier.mcNumber ?? "—"})</span>}
+              </div>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition" aria-label="Close">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        </div>
 
         {/* Form body */}
         <form onSubmit={handleSubmit((d) => submitMutation.mutate(d))} className="flex-1 flex flex-col min-h-0">
@@ -459,24 +477,32 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
             )}
 
             {/* ── FINANCIALS ── */}
+            {/* Sprint 59.a (v3.8.acn) Bug #4 fix — customerRate dropped from
+                drawer Financials. Customer rate is order-level pricing set
+                on the customer relationship (lives in OrderSidebar/Pricing
+                card on the right of Order Builder). Drawer captures only
+                carrier-facing values: offered rate, fuel surcharge, tender
+                expiry. Customer rate flows through initialFormData →
+                buildPayload → backend Load.customerRate unchanged. */}
             {section === "financials" && (
               <div className="space-y-3">
+                {watch("customerRate") && (
+                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                    Customer rate (from order): <strong className="text-slate-900">${Number(watch("customerRate")).toLocaleString()}</strong>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label>Customer rate ($)</Label>
-                    <Input type="number" step="0.01" {...register("customerRate")} />
-                  </div>
-                  <div>
-                    <Label>Offered rate ($)</Label>
+                    <Label>Offered rate to carrier ($)</Label>
                     <Input type="number" step="0.01" {...register("offeredRate", { required: true })} />
-                  </div>
-                  <div>
-                    <Label>Fuel surcharge ($)</Label>
-                    <Input type="number" step="0.01" {...register("fuelSurcharge")} />
                   </div>
                   <div>
                     <Label>Tender expiry (hours)</Label>
                     <Input type="number" {...register("expiresAtHours")} />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Fuel surcharge ($)</Label>
+                    <Input type="number" step="0.01" {...register("fuelSurcharge")} />
                   </div>
                 </div>
                 {customer && watch("offeredRate") && watch("customerRate") && (
@@ -534,6 +560,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
             </div>
           </div>
         </form>
+        </div>{/* close flex-1 main content sibling of IconTabs strip */}
       </div>
     </div>
   );
@@ -582,7 +609,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
         <div className="rounded-lg border border-[#BA7517] bg-[#FAEEDA]/30 p-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900 truncate">{selected.companyName ?? "Carrier"}</span>
+              <span className="text-sm font-semibold text-slate-900 truncate">{selected.company ?? "Carrier"}</span>
               {selected.tier && (
                 <span className={`px-2 py-0.5 text-[10px] rounded font-medium ${selected.tier === "PLATINUM" || selected.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-200 text-slate-700"}`}>
                   {selected.tier}
@@ -591,7 +618,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
             </div>
             <div className="text-[11px] text-slate-600 mt-0.5">
               MC# {selected.mcNumber ?? "—"} · DOT# {selected.dotNumber ?? "—"}
-              {selected.user?.email && ` · ${selected.user.email}`}
+              {selected.email && ` · ${selected.email}`}
             </div>
           </div>
           <button type="button" onClick={() => onSelect(null)} className="text-[11px] text-slate-500 hover:text-slate-900 shrink-0">
@@ -629,7 +656,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-slate-900 truncate">{c.companyName ?? "Carrier"}</div>
+                    <div className="text-sm font-medium text-slate-900 truncate">{c.company ?? "Carrier"}</div>
                     <div className="text-[11px] text-slate-500">MC# {c.mcNumber ?? "—"} · DOT# {c.dotNumber ?? "—"}</div>
                   </div>
                   {c.tier && (
