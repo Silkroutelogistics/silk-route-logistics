@@ -150,15 +150,20 @@
        SECTION 1 — HERO
        ============================================ -->
   <section class="hero" id="hero">
-    <!-- Silk Road trade-route trace — animated decorative SVG behind hero content.
-         Pure CSS animation, respects prefers-reduced-motion. ~12s loop. -->
-    <svg class="silk-route" viewBox="0 0 1400 600" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M -100,460 C 300,380 500,200 700,290 S 1100,240 1500,170"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round" />
-    </svg>
+    <!-- Gold-dust field — mouse-parallax decorative dots scattered around the
+         hero perimeter. Each dot has data-depth controlling parallax strength.
+         JS handler at end of <body> applies transform on mousemove.
+         Respects prefers-reduced-motion (no transform changes). -->
+    <div class="gold-dust-field" aria-hidden="true">
+      <span class="dust" data-depth="0.7" style="left:8%;top:18%;width:10px;height:10px"></span>
+      <span class="dust" data-depth="0.5" style="left:92%;top:22%;width:7px;height:7px"></span>
+      <span class="dust" data-depth="0.8" style="left:15%;top:78%;width:12px;height:12px"></span>
+      <span class="dust" data-depth="0.6" style="left:85%;top:70%;width:9px;height:9px"></span>
+      <span class="dust" data-depth="0.4" style="left:5%;top:55%;width:5px;height:5px"></span>
+      <span class="dust" data-depth="0.45" style="left:95%;top:50%;width:6px;height:6px"></span>
+      <span class="dust" data-depth="0.3" style="left:25%;top:88%;width:4px;height:4px"></span>
+      <span class="dust" data-depth="0.65" style="left:75%;top:12%;width:8px;height:8px"></span>
+    </div>
     <div class="hero-content">
       <div class="hero-badge">
         <span class="badge-dot"></span>
@@ -688,5 +693,37 @@
 <link rel="stylesheet" href="/shared/css/marco-polo.css">
 <script src="/shared/js/marco-polo.js"></script>
 <script src="/js/cookie-consent.js"></script>
+
+<!-- Gold-dust mouse-parallax handler (v3.8.acs) — translates each .dust span
+     proportionally to cursor offset × data-depth. requestAnimationFrame
+     throttled. Respects prefers-reduced-motion. -->
+<script>
+(function () {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var hero = document.querySelector('.hero');
+  var dots = document.querySelectorAll('.dust');
+  if (!hero || !dots.length) return;
+  var pending = null;
+  hero.addEventListener('mousemove', function (e) {
+    if (pending) return;
+    pending = requestAnimationFrame(function () {
+      var r = hero.getBoundingClientRect();
+      var cx = r.width / 2;
+      var cy = r.height / 2;
+      var nx = (e.clientX - r.left - cx) / cx;
+      var ny = (e.clientY - r.top - cy) / cy;
+      var max = 30;
+      dots.forEach(function (d) {
+        var depth = parseFloat(d.dataset.depth) || 0.5;
+        d.style.transform = 'translate3d(' + (nx * max * depth).toFixed(2) + 'px,' + (ny * max * depth).toFixed(2) + 'px,0)';
+      });
+      pending = null;
+    });
+  });
+  hero.addEventListener('mouseleave', function () {
+    dots.forEach(function (d) { d.style.transform = 'translate3d(0,0,0)'; });
+  });
+})();
+</script>
 </body>
 </html>

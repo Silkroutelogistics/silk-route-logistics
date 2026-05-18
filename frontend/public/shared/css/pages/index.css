@@ -417,44 +417,34 @@
       pointer-events: none;
     }
 
-    /* Silk Road trade-route trace — signature motion moment per skill canonical
-       (one motion moment per page). Replaces the v3.8.acl-removed silkGradient
-       navy animation that the prior dark hero had. Visual metaphor: literal
-       trade route arcing across the hero, drawn in left → right, then erased
-       left → right, suggesting freight in motion. ~12s cycle. */
-    .silk-route {
+    /* Gold-dust mouse-parallax — Stripe / Linear premium SaaS pattern.
+       Each dot has data-depth attribute; the JS handler reads it and
+       applies translation proportional to cursor offset × depth.
+       Replaces the silkGradient animation (v3.8.acl) and the brief
+       silk-route trace experiment (v3.8.acr). */
+    .gold-dust-field {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       z-index: 1; /* behind hero-content (z 2), above hero::before (default 0) */
       pointer-events: none;
-      color: var(--gold-dark);
+      overflow: hidden;
     }
 
-    .silk-route path {
-      stroke-dasharray: 1800;
-      stroke-dashoffset: 1800;
-      animation: silk-route-trace 12s ease-in-out infinite;
-      opacity: 0;
+    .dust {
+      position: absolute;
+      background: var(--gold-dark);
+      border-radius: 50%;
+      opacity: 0.35;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+      box-shadow: 0 0 12px rgba(186, 117, 23, 0.25);
     }
 
-    @keyframes silk-route-trace {
-      0%   { stroke-dashoffset: 1800; opacity: 0; }
-      15%  { opacity: 0.45; }
-      45%  { stroke-dashoffset: 0;    opacity: 0.45; }
-      70%  { stroke-dashoffset: 0;    opacity: 0.45; }
-      100% { stroke-dashoffset: -1800; opacity: 0; }
-    }
-
-    /* Accessibility — respect user motion preference */
+    /* Accessibility — respect user motion preference: keep dots
+       statically positioned, no parallax updates from JS (handler
+       checks the same media query and bails). */
     @media (prefers-reduced-motion: reduce) {
-      .silk-route path {
-        animation: none;
-        stroke-dashoffset: 0;
-        opacity: 0.3;
-      }
+      .dust { transition: none; }
     }
 
     .hero-content {
