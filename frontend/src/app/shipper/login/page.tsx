@@ -79,6 +79,18 @@ export default function ShipperLoginPage() {
         setLocalLoading(false);
         return;
       }
+      // Sprint 174.a (v3.8.ach) — useAuthStore.login swallows axios errors
+      // and returns false. Pre-Sprint-174.a, this branch fell through to
+      // window.location.href and produced a "page refresh" symptom on
+      // ROLE_MISMATCH 401. Read the Zustand error state here so the user
+      // sees the actual reason (e.g., "Invalid credentials for this portal.")
+      // instead of silently bouncing.
+      if (result === false) {
+        const err = useAuthStore.getState().error;
+        setLocalError(err || "Invalid credentials. Please try again.");
+        setLocalLoading(false);
+        return;
+      }
       window.location.href = "/shipper/dashboard";
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } }; code?: string };
@@ -103,6 +115,14 @@ export default function ShipperLoginPage() {
       if (result && typeof result === "object" && "passwordExpired" in result && result.passwordExpired) {
         if (tempToken) sessionStorage.setItem("srl_temp_token", tempToken);
         window.location.href = "/auth/force-password-change";
+        return;
+      }
+      // Sprint 174.a (v3.8.ach) — handle silent-fail return path from
+      // useAuthStore.verifyOtp. Same shape as handleLogin above.
+      if (result === false) {
+        const err = useAuthStore.getState().error;
+        setLocalError(err || "Verification failed. Please try again.");
+        setLocalLoading(false);
         return;
       }
       // Sprint 174 Layer β — frontend defense-in-depth role check.
