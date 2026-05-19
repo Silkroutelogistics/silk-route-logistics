@@ -39,7 +39,6 @@
 # Closes CLAUDE.md §13.3 Item 31.
 /tracking/*    /track/:splat   301
 /track/*       /track.html     200
-/track         /track.html     200
 
 # 2026-05-16 v3.8.abo — Sprint 51 Item 129 RC verification anti-fraud.
 # 2026-05-18 v3.8.add — converted to static HTML mirroring /track pattern.
@@ -47,5 +46,12 @@
 # window.location.pathname and fetches /api/verify/:token. Status 200
 # preserves the URL so the verification link printed on the RC PDF
 # header remains bookmarkable.
+#
+# 2026-05-18 v3.8.ade — bare /track and /verify rules removed. Cloudflare
+# Pages natively serves out/track.html at the path /track (and same for
+# verify), so an explicit `/track /track.html 200` rule races with that
+# internal canonicalization → ERR_TOO_MANY_REDIRECTS observed on first
+# v3.8.add deploy. Splat rules below handle the deep-link token case
+# (/track/<token> → /track.html); bare paths fall through to Cloudflare's
+# native .html extension fallback, which is what we want.
 /verify/*      /verify.html    200
-/verify        /verify.html    200
