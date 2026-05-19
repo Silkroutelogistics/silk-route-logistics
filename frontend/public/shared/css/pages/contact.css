@@ -40,13 +40,15 @@
        ====================================== */
     .nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-      background: transparent; transition: var(--transition);
+      background: rgba(10, 37, 64, 0.97);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(197, 165, 114, 0.15);
+      transition: var(--transition);
+      color: var(--fg-on-navy);
     }
     .nav.scrolled {
-      background: rgba(10,37,64, 0.97);
-      backdrop-filter: blur(12px);
       box-shadow: 0 2px 20px rgba(0,0,0,0.3);
-      color: var(--fg-on-navy);
     }
     .nav-inner {
       max-width: var(--container); margin: 0 auto; padding: 0 24px;

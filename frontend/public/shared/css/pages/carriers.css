@@ -156,36 +156,29 @@
       gap: 8px;
     }
 
-    /* Nav text colors — navy at rest on cream canvas, white when
-       .nav.scrolled fires its dark backdrop (cream-canvas migration
-       lesson from homepage hotfix #2). */
+    /* Nav text colors — cream/white at rest because .navbar bg is dark
+       navy rgba(13,27,42,0.92) at all states. The earlier "navy at rest
+       on cream canvas" comment was aspirational from a partial migration
+       that never flipped .navbar to cream; reverting nav-links to cream
+       matches React /track SiteNav theme="dark" + restores legibility. */
     .nav-links a {
       padding: 8px 16px;
       font-size: 14px;
       font-weight: 500;
-      color: var(--navy);
+      color: rgba(251, 247, 240, 0.90);
       border-radius: 8px;
       transition: color 0.2s ease, background 0.2s ease;
       letter-spacing: 0.2px;
     }
 
     .nav-links a:hover {
-      color: var(--gold-dark);
-      background: rgba(186, 117, 23, 0.06);
+      color: var(--gold-light);
+      background: rgba(197, 165, 114, 0.10);
     }
 
     .nav-links a.active {
-      color: var(--gold-dark);
-      background: rgba(186, 117, 23, 0.10);
-    }
-
-    .nav.scrolled .nav-links a {
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    .nav.scrolled .nav-links a:hover {
-      color: var(--gold);
-      background: rgba(255, 255, 255, 0.04);
+      color: var(--gold-light);
+      background: rgba(197, 165, 114, 0.16);
     }
 
     .nav-cta {
