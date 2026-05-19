@@ -106,35 +106,38 @@ export default function PublicTrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
+    <div className="public-page min-h-screen bg-[#FDFBF7] flex flex-col">
       <SiteNav theme="dark" />
 
-      {/* Hero — dark navy band mirrors static-HTML public pages (shippers.html
-          .hero, carriers.html .hero, index.html .hero). Playfair display H1
-          + gold-accent span matches "Ship Smarter. Ship Further." pattern. */}
-      <section className="bg-[#0A2540] px-6 py-20 md:py-24">
+      {/* Hero — cream canvas matches the rest of the public marketing site.
+          Other pages have dark-navy hero strips followed by cream content;
+          /track has no content below the search until a result loads, so the
+          full-viewport navy band looked out of place. Cream hero with a white
+          search card matches the "search-as-hero" pattern in carriers.html
+          + shippers.html lower sections. */}
+      <section className="bg-[#FDFBF7] px-6 py-20 md:py-24">
         <div className="max-w-3xl mx-auto text-center">
-          <h1
-            className="text-4xl md:text-5xl text-[#FDFBF7] mb-4 leading-tight"
-            style={{ fontFamily: "var(--font-playfair), 'Playfair Display', Georgia, serif" }}
-          >
-            Track your <span className="text-[#C5A572]">shipment.</span>
+          <div className="inline-block px-3 py-1 rounded-full bg-[rgba(197,165,114,0.15)] text-[#BA7517] text-[11px] font-bold tracking-wider uppercase mb-5">
+            Track
+          </div>
+          <h1 className="text-4xl md:text-5xl text-[#0A2540] mb-4 leading-tight">
+            Track your <span className="text-[#BA7517]">shipment.</span>
           </h1>
-          <p className="text-[#C9D2DE] text-base md:text-lg mb-10">
+          <p className="text-[#3A4A5F] text-base md:text-lg mb-10">
             Real-time status on every load SRL moves.
           </p>
 
           {!tokenFromUrl && (
-            <>
-              <div className="flex gap-1 justify-center mb-4">
+            <div className="bg-white border border-[#0A2540]/10 rounded-2xl shadow-[0_4px_12px_rgba(10,37,64,0.06)] p-6 md:p-8 max-w-2xl mx-auto">
+              <div className="flex gap-1 justify-center mb-5">
                 {(["bol", "reference"] as SearchKind[]).map((k) => (
                   <button
                     key={k}
                     onClick={() => setKind(k)}
                     className={`px-4 py-2 text-sm border-b-2 transition ${
                       kind === k
-                        ? "border-[#C5A572] text-[#FDFBF7]"
-                        : "border-transparent text-[#C9D2DE] hover:text-[#FDFBF7]"
+                        ? "border-[#BA7517] text-[#0A2540] font-medium"
+                        : "border-transparent text-[#6B7685] hover:text-[#0A2540]"
                     }`}
                   >
                     {k === "bol" ? "BOL number" : "Reference / PO #"}
@@ -142,7 +145,7 @@ export default function PublicTrackPage() {
                 ))}
               </div>
 
-              <div className="flex gap-2 max-w-2xl mx-auto">
+              <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7685] pointer-events-none" />
                   <input
@@ -154,33 +157,33 @@ export default function PublicTrackPage() {
                       kind === "bol" ? "e.g. BOL-7734"
                       : "e.g. PO-88421 or load reference"
                     }
-                    className="w-full pl-9 pr-3 py-3 bg-[#FDFBF7] border border-transparent rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#C5A572]"
+                    className="w-full pl-9 pr-3 py-3 bg-[#FDFBF7] border border-[#0A2540]/15 rounded-lg text-[#0A2540] placeholder-[#6B7685] focus:outline-none focus:ring-2 focus:ring-[#BA7517] focus:border-transparent"
                   />
                 </div>
                 <button
                   onClick={onSearch}
                   disabled={loading}
-                  className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FDFBF7] font-medium rounded-lg disabled:opacity-50"
+                  className="px-6 py-3 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FDFBF7] font-medium rounded-lg disabled:opacity-50 transition-colors"
                 >
                   {loading ? "Searching…" : "Track"}
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           {tokenFromUrl && loading && !result && !error && (
-            <div className="flex items-center justify-center gap-2 text-[#C9D2DE]">
+            <div className="flex items-center justify-center gap-2 text-[#3A4A5F]">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Loading shipment…</span>
             </div>
           )}
 
           {error && (
-            <div className="mt-4 text-sm">
-              <div className="text-[#F87171]">{error}</div>
+            <div className="mt-6 max-w-2xl mx-auto bg-white border border-[#9B2C2C]/30 rounded-lg p-4 text-sm">
+              <div className="text-[#9B2C2C]">{error}</div>
               {tokenFromUrl && (
                 <div className="mt-3">
-                  <a href="/track" className="text-[#C5A572] hover:underline">Track another shipment</a>
+                  <a href="/track" className="text-[#BA7517] hover:underline">Track another shipment</a>
                 </div>
               )}
             </div>

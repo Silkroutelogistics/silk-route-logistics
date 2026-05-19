@@ -69,7 +69,7 @@ export default function VerifyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
+    <div className="public-page min-h-screen bg-[#FDFBF7] flex flex-col">
       <SiteNav theme="dark" />
       <main className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
         <div className="mb-8">

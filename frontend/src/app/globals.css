@@ -75,6 +75,27 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Public-marketing font parity with static HTML pages (carriers.html,
+   shippers.html, index.html, etc.) which set:
+     h1-h6 { font-family: 'Playfair Display', serif }
+     body { font-family: 'DM Sans', ... }
+   Next.js layout.tsx loads both via next/font/google → CSS variables
+   --font-playfair + --font-dm-sans. This block reapplies the same
+   typographic class chain on the React side so /track, /verify, and
+   future React-public-routes match the rest of the marketing site. */
+body {
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'DM Sans', sans-serif;
+}
+.public-page h1,
+.public-page h2,
+.public-page h3,
+.public-page h4,
+.public-page h5,
+.public-page h6 {
+  font-family: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  line-height: 1.2;
+}
+
 /* ═══════════════════════════════════════════════════
    Card & Input base styles
    ═══════════════════════════════════════════════════ */
