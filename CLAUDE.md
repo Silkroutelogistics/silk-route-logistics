@@ -385,7 +385,7 @@ Never trust session memory or prior docs for legal-notice-critical identity fiel
 
 Only these claims may appear on public marketing pages:
 
-1. 100% fuel surcharge pass-through
+1. Tier-graduated fuel surcharge pass-through per §8 (Silver: loaded miles; Gold: loaded + empty miles; Platinum: all miles). **DO NOT** use blanket "100% FSC pass-through" or "Full FSC pass-through" framing — retired 2026-05-19 (v3.8.ads) as overstated; only Platinum qualifies for the blanket version. Tier-graduated is the truthful claim.
 2. Itemized quotes, no post-booking clipping
 3. No factoring contract required to use Quick Pay
 4. Performance-based tier advancement via Milestones M1–M6 (advancement independent of fleet size)
@@ -407,6 +407,8 @@ Only these claims may appear on public marketing pages:
 - "Asset-based" / "our fleet" / "our trucks" / "we own"
 - "Zero dispatch commission" / "$0 Commission" / "Zero Commission" (retired positioning)
 - "Zero factoring fees" (misleading — replaced by no-contract framing)
+- Blanket "100% FSC pass-through" / "Full FSC pass-through" framing (retired 2026-05-19 v3.8.ads — overstated; only Platinum gets all-miles pass-through, Silver is loaded-miles only per §8. Use tier-graduated framing instead.)
+- "Hauling your first load within 48 hours" / specific onboarding hour-count SLAs (retired 2026-05-19 v3.8.ads — no operational SLA wired today. Use "most carriers cleared within a few business days" until a real onboarding SLA is measured and operationally enforced.)
 - "24/7" for human-support contexts (reserved for Marco Polo AI only)
 - "Monthly all-in rate cards" as current offering (roadmap only per /carriers "What's coming")
 - Fuel card program, insurance referrals, equipment financing as current offerings (roadmap only)

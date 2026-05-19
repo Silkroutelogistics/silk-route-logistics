@@ -183,6 +183,29 @@ export function initCronJobs() {
     }
   }));
 
+  // ─── Weekly (Sunday 11 PM): Compass Score full recalc ────────
+  // 7-factor scorecard recalc for every APPROVED carrier per the public
+  // claim on /carriers ("Scores are recalculated weekly from delivered-load
+  // data"). Aligns the persistent CarrierScorecard row with the live KPI
+  // computation in /carrier/dashboard/scorecard. processAllCPPRecalculations
+  // walks every approved carrier and invokes recalculateCarrierCPP() which
+  // computes overall score via tierService.calculateOverallScore (weights:
+  // 20/20/15/15/10/10/10 per §9), writes a new CarrierScorecard row, and
+  // updates CarrierProfile.tier when crossing thresholds (≥95 PLATINUM,
+  // ≥90 GOLD, else SILVER). Off-peak Sunday night so Monday-morning AE
+  // sessions see fresh scores. Wired Sprint 2026-05-19 (v3.8.ads) — the
+  // recalc service has existed since v3.7.a but was on-demand only.
+  cron.schedule("0 23 * * 0", () => withGuard("compass-score-recalc", async () => {
+    try {
+      log.info("[Compass] Starting weekly Compass Score full recalc");
+      const { processAllCPPRecalculations } = require("../services/integrationService");
+      const result = await processAllCPPRecalculations();
+      log.info({ result }, "[Compass] Weekly recalc complete");
+    } catch (err) {
+      log.error({ err }, "[Compass] Weekly recalc error:");
+    }
+  }));
+
   // ─── Weekly (Monday 7 AM): Generate weekly report snapshot ───
   cron.schedule("0 7 * * 1", () => withGuard("weekly-report", async () => {
     try {
