@@ -369,6 +369,157 @@
       max-width: 780px;
     }
 
+    /* v3.8.adp — side-by-side hero with photo on the right.
+       hero-split overrides the centered single-column layout. */
+    .hero.hero-split {
+      min-height: auto;
+      padding: 120px 0 80px;
+      display: block;
+    }
+    .hero-content-split {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 32px;
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 56px;
+      align-items: center;
+      text-align: left;
+    }
+    .hero-text {
+      position: relative;
+      z-index: 2;
+    }
+    .hero-text h1 {
+      font-size: clamp(36px, 5vw, 60px);
+      color: var(--navy);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: -0.5px;
+      margin-bottom: 22px;
+    }
+    .hero-text h1 span {
+      color: var(--gold-dark, #BA7517);
+    }
+    .hero-text p {
+      font-size: clamp(16px, 1.4vw, 19px);
+      color: var(--body-text, #3A4A5F);
+      line-height: 1.65;
+      margin-bottom: 32px;
+      max-width: 520px;
+    }
+    .hero-photo {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(10, 37, 64, 0.18),
+                  0 4px 12px rgba(10, 37, 64, 0.08);
+    }
+    .hero-photo img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 540px;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    /* Operations section — photo + text two-column */
+    .operations-section {
+      padding: 100px 0;
+      background: var(--cream, #FDFBF7);
+    }
+    .operations-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 64px;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .operations-photo {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(10, 37, 64, 0.16),
+                  0 4px 12px rgba(10, 37, 64, 0.06);
+    }
+    .operations-photo img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+    }
+    .operations-text .section-label {
+      display: inline-block;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gold-dark, #BA7517);
+      margin-bottom: 14px;
+    }
+    .operations-text h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(28px, 3.4vw, 40px);
+      font-weight: 500;
+      color: var(--navy);
+      line-height: 1.15;
+      letter-spacing: -0.3px;
+      margin-bottom: 20px;
+    }
+    .operations-text > p {
+      font-size: 16px;
+      color: var(--body-text, #3A4A5F);
+      line-height: 1.7;
+      margin-bottom: 26px;
+    }
+    .operations-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .operations-list li {
+      padding-left: 18px;
+      position: relative;
+      font-size: 14.5px;
+      color: var(--body-text, #3A4A5F);
+      line-height: 1.6;
+    }
+    .operations-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.55em;
+      width: 7px;
+      height: 7px;
+      background: var(--gold-dark, #BA7517);
+      border-radius: 2px;
+    }
+    .operations-list strong {
+      color: var(--navy);
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px) {
+      .hero-content-split {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+      }
+      .hero-text p { margin-left: auto; margin-right: auto; }
+      .hero-photo { max-width: 640px; margin: 0 auto; }
+      .operations-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        text-align: left;
+      }
+    }
+
     .hero-content h1 {
       font-size: clamp(36px, 6vw, 64px);
       color: var(--navy);
