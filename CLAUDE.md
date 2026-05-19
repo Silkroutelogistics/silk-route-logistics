@@ -22,6 +22,7 @@ Last consolidated: Phase 6.2 close (v3.8.ee, sprint span `7c74bb1`–`df3545f`).
   - `compliance@silkroutelogistics.ai` — fraud reports, BMC-84 claims, FMCSA contact
   - `noreply@silkroutelogistics.ai` — system/transactional emails only
   - `operations@silkroutelogistics.ai` — customer-facing operations contact. Used on BOL, Rate Confirmation, Invoice, and other shipper/carrier-facing documents generated via the `srl-brand-design` skill. Routes to `whaider@` until the Pakistan-based AE/Compliance hire (Oct 2026), at which point routing flips to that inbox without requiring document reissue. The forward-looking aliasing avoids a future BOL-template churn when the hire lands.
+  - `sales@silkroutelogistics.ai` — inbound prospect/lead intake. Used as the notification destination on the public quote form at `/shippers.html#quote-form` (POST `/api/leads/website` creates `WebsiteLead` rows and fires sales@ notification + shipper confirmation). Also referenced in `frontend/public/ae/communications.html:71` as the reply target for inbound prospect threads. Routes to `whaider@` until the first AE/Sales hire. Documented 2026-05-19 (v3.8.aej docs catch-up) per §13.3 Item 8.2.1.
 
 ---
 
