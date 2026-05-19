@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- INCLUDE:meta -->
+  <meta name="description" content="Track your Silk Route Logistics shipment in real time. Enter your BOL number or reference to see live status, last known location, and delivery ETA.">
+  <link rel="canonical" href="https://silkroutelogistics.ai/track">
+  <meta name="theme-color" content="#0A2540">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://silkroutelogistics.ai/track">
+  <meta property="og:title" content="Track Your Shipment — Silk Route Logistics">
+  <meta property="og:description" content="Real-time status on every load SRL moves. Enter your BOL number or reference number to track your shipment.">
+  <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
+  <meta property="og:site_name" content="Silk Route Logistics">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Track Your Shipment — Silk Route Logistics">
+  <meta name="twitter:description" content="Real-time status on every load SRL moves.">
+  <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
+  <!-- END INCLUDE:meta -->
+  <meta name="keywords" content="track freight shipment, BOL tracking, shipment status, freight delivery status, Silk Route Logistics tracking">
+  <meta name="author" content="Silk Route Logistics Inc.">
+  <meta name="robots" content="index, follow">
+
+  <title>Track Your Shipment — Silk Route Logistics</title>
+
+  <!-- INCLUDE:design-system -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/shared/css/srl-tokens.css">
+  <!-- END INCLUDE:design-system -->
+  <link rel="stylesheet" href="/shared/css/srl-logo.css">
+
+  <link rel="stylesheet" href="/shared/css/utilities.css">
+  <link rel="stylesheet" href="/shared/css/pages/track.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <!-- INCLUDE:nav -->
+  <nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
+    <div class="nav-inner navbar-inner">
+      <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Inc. Home">
+        <img src="/logo.png" alt="SRL" class="srl-logo-img">
+      </a>
+      <div class="nav-links navbar-links">
+        <a href="/shippers.html" class="nav-link">Shippers</a>
+        <a href="/carriers.html" class="nav-link">Carriers</a>
+        <a href="/about.html" class="nav-link">About</a>
+        <a href="/contact.html" class="nav-link">Contact</a>
+        <a href="/track" class="nav-link active">Track</a>
+        <div class="nav-login-wrap" id="loginWrap">
+          <button type="button" class="nav-login-btn" id="loginBtn" aria-haspopup="true" aria-expanded="false">Sign In</button>
+          <div class="nav-login-dropdown" role="menu">
+            <a href="/auth/login" role="menuitem">AE Login</a>
+            <a href="/carrier/login" role="menuitem">Carrier Login</a>
+            <a href="/shipper/login" role="menuitem">Shipper Login</a>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/shippers.html" class="mobile-nav-link">Shippers</a>
+    <a href="/carriers.html" class="mobile-nav-link">Carriers</a>
+    <a href="/about.html" class="mobile-nav-link">About</a>
+    <a href="/contact.html" class="mobile-nav-link">Contact</a>
+    <a href="/track" class="mobile-nav-link">Track</a>
+    <div class="mobile-login-section">
+      <div class="label">Sign In</div>
+      <a href="/auth/login" class="mobile-nav-link">AE Login</a>
+      <a href="/carrier/login" class="mobile-nav-link">Carrier Login</a>
+      <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
+    </div>
+  </div>
+  <!-- END INCLUDE:nav -->
+
+  <main>
+    <!-- HERO + SEARCH -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-badge">Track</div>
+        <h1>Track your <span class="gold-line">shipment.</span></h1>
+        <p class="hero-sub">Real-time status on every load SRL moves.</p>
+
+        <!-- Search card (shown when no token in URL) -->
+        <div class="search-card" id="searchCard">
+          <div class="search-tabs">
+            <button type="button" class="search-tab active" data-kind="bol" id="tabBol">BOL number</button>
+            <button type="button" class="search-tab" data-kind="reference" id="tabRef">Reference / PO #</button>
+          </div>
+          <form class="search-row" id="searchForm" novalidate>
+            <div class="search-input-wrap">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                class="search-input"
+                id="searchInput"
+                placeholder="e.g. BOL-7734"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+            <button type="submit" class="search-btn" id="searchBtn">Track</button>
+          </form>
+        </div>
+
+        <!-- Loading state (token mode only) -->
+        <div class="loading-msg hidden" id="loadingMsg">
+          <span class="loading-spinner"></span>
+          <span>Loading shipment…</span>
+        </div>
+
+        <!-- Error state -->
+        <div class="error-card hidden" id="errorCard">
+          <div class="error-msg" id="errorMsg"></div>
+          <a href="/track" class="error-link hidden" id="errorLink">Track another shipment</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULT PANEL (populated by JS after fetch) -->
+    <section class="result-section hidden" id="resultSection">
+      <div class="container">
+        <div class="result-card">
+          <div class="result-header">
+            <div>
+              <div class="result-ref-label">BOL / reference</div>
+              <div class="result-ref-value" id="resultRef">—</div>
+            </div>
+            <div class="status-pills">
+              <span class="status-pill primary" id="resultStatus">—</span>
+              <span class="status-pill success hidden" id="resultOntime">On time</span>
+            </div>
+          </div>
+
+          <div class="route-bar">
+            <div class="route-endpoints">
+              <span id="routeOrigin">—</span>
+              <span id="routeDest">—</span>
+            </div>
+            <div class="route-track">
+              <div class="route-fill" id="routeFill" style="width: 0%;"></div>
+              <div class="route-marker" id="routeMarker" style="left: 0%;"></div>
+            </div>
+            <div class="last-known hidden" id="lastKnown">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span id="lastKnownText"></span>
+            </div>
+          </div>
+
+          <div class="step-bar" id="stepBar">
+            <div class="step" data-key="LOADED">
+              <div class="step-line"></div>
+              <div class="step-icon"></div>
+              <div class="step-label">Picked up</div>
+            </div>
+            <div class="step" data-key="IN_TRANSIT">
+              <div class="step-line"></div>
+              <div class="step-icon"></div>
+              <div class="step-label">On the road</div>
+            </div>
+            <div class="step" data-key="AT_DELIVERY">
+              <div class="step-line"></div>
+              <div class="step-icon"></div>
+              <div class="step-label">Arriving</div>
+            </div>
+            <div class="step" data-key="DELIVERED">
+              <div class="step-line"></div>
+              <div class="step-icon"></div>
+              <div class="step-label">Delivered</div>
+            </div>
+          </div>
+
+          <div class="detail-grid">
+            <div>
+              <div class="detail-label">Shipper</div>
+              <div class="detail-value" id="detailShipper">—</div>
+            </div>
+            <div>
+              <div class="detail-label">Equipment</div>
+              <div class="detail-value" id="detailEquipment">—</div>
+            </div>
+            <div>
+              <div class="detail-label">Commodity</div>
+              <div class="detail-value" id="detailCommodity">—</div>
+            </div>
+            <div>
+              <div class="detail-label">Weight</div>
+              <div class="detail-value" id="detailWeight">—</div>
+            </div>
+            <div>
+              <div class="detail-label">Pickup</div>
+              <div class="detail-value" id="detailPickup">—</div>
+            </div>
+            <div>
+              <div class="detail-label">Estimated delivery</div>
+              <div class="detail-value" id="detailEta">—</div>
+            </div>
+          </div>
+
+          <div class="pod-row hidden" id="podRow">
+            <a href="#" class="pod-btn" id="podBtn" target="_blank" rel="noopener noreferrer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download POD
+            </a>
+          </div>
+        </div>
+
+        <!-- Contact strip -->
+        <div class="contact-strip">
+          <div class="contact-strip-row">
+            <a href="tel:+12692206760">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              (269) 220-6760
+            </a>
+            <a href="mailto:operations@silkroutelogistics.ai">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              operations@silkroutelogistics.ai
+            </a>
+          </div>
+          <div class="contact-strip-bottom hidden" id="trackAnotherWrap">
+            <a href="/track">Track another shipment →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="spacer"></div>
+  </main>
+
+  <!-- FOOTER -->
+  <!-- INCLUDE:footer -->
+  <!-- END INCLUDE:footer -->
+
+  <!-- ======================================
+       TRACK PAGE LOGIC (vanilla JS)
+       Mirrors the prior React /track surface:
+       - Detects /track/<token> URL → auto-fetch
+       - Search by BOL or Reference
+       - Renders result panel with progress bar + step bar + details
+       - Status label mapping (internal Load enum → customer-facing)
+       Public endpoint GET /api/tracking/:token, no auth required.
+       ====================================== */
+  -->
+  <script>
+    (function () {
+      'use strict';
+
+      // ── API base — Render-hosted backend ────────────────────────
+      var API_BASE = 'https://api.silkroutelogistics.ai/api';
+
+      // ── DOM refs ────────────────────────────────────────────────
+      var els = {
+        searchCard:   document.getElementById('searchCard'),
+        searchForm:   document.getElementById('searchForm'),
+        searchInput:  document.getElementById('searchInput'),
+        searchBtn:    document.getElementById('searchBtn'),
+        tabBol:       document.getElementById('tabBol'),
+        tabRef:       document.getElementById('tabRef'),
+        loadingMsg:   document.getElementById('loadingMsg'),
+        errorCard:    document.getElementById('errorCard'),
+        errorMsg:     document.getElementById('errorMsg'),
+        errorLink:    document.getElementById('errorLink'),
+        resultSection: document.getElementById('resultSection'),
+        resultRef:    document.getElementById('resultRef'),
+        resultStatus: document.getElementById('resultStatus'),
+        resultOntime: document.getElementById('resultOntime'),
+        routeOrigin:  document.getElementById('routeOrigin'),
+        routeDest:    document.getElementById('routeDest'),
+        routeFill:    document.getElementById('routeFill'),
+        routeMarker:  document.getElementById('routeMarker'),
+        lastKnown:    document.getElementById('lastKnown'),
+        lastKnownText: document.getElementById('lastKnownText'),
+        stepBar:      document.getElementById('stepBar'),
+        detailShipper: document.getElementById('detailShipper'),
+        detailEquipment: document.getElementById('detailEquipment'),
+        detailCommodity: document.getElementById('detailCommodity'),
+        detailWeight: document.getElementById('detailWeight'),
+        detailPickup: document.getElementById('detailPickup'),
+        detailEta:    document.getElementById('detailEta'),
+        podRow:       document.getElementById('podRow'),
+        podBtn:       document.getElementById('podBtn'),
+        trackAnotherWrap: document.getElementById('trackAnotherWrap'),
+      };
+
+      // Public-facing status mapping (mirrors prior PUBLIC_STATUS_LABEL in
+      // page.tsx). Internal Load enum → customer-meaningful label.
+      var STATUS_LABEL = {
+        DRAFT: 'Scheduled', POSTED: 'Scheduled', TENDERED: 'Scheduled',
+        CONFIRMED: 'Scheduled', BOOKED: 'Scheduled', DISPATCHED: 'Dispatched',
+        AT_PICKUP: 'At pickup', LOADED: 'Picked up', PICKED_UP: 'Picked up',
+        IN_TRANSIT: 'In transit', AT_DELIVERY: 'Arriving',
+        DELIVERED: 'Delivered', POD_RECEIVED: 'Delivered',
+        INVOICED: 'Delivered', COMPLETED: 'Delivered',
+        TONU: 'Cancelled', CANCELLED: 'Cancelled',
+      };
+
+      function publicStatusLabel(s) {
+        return STATUS_LABEL[s] || (s || '').replace(/_/g, ' ');
+      }
+
+      function fmtDate(iso) {
+        if (!iso) return null;
+        try {
+          return new Date(iso).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+          });
+        } catch (e) {
+          return iso;
+        }
+      }
+
+      // ── Tabs (BOL vs Reference) — placeholder swap only ─────────
+      var currentKind = 'bol';
+      function setKind(kind) {
+        currentKind = kind;
+        if (kind === 'bol') {
+          els.tabBol.classList.add('active');
+          els.tabRef.classList.remove('active');
+          els.searchInput.placeholder = 'e.g. BOL-7734';
+        } else {
+          els.tabBol.classList.remove('active');
+          els.tabRef.classList.add('active');
+          els.searchInput.placeholder = 'e.g. PO-88421 or load reference';
+        }
+        els.searchInput.focus();
+      }
+      els.tabBol.addEventListener('click', function () { setKind('bol'); });
+      els.tabRef.addEventListener('click', function () { setKind('reference'); });
+
+      // ── Fetch + render ──────────────────────────────────────────
+      function showError(msg, tokenMode) {
+        els.loadingMsg.classList.add('hidden');
+        els.resultSection.classList.add('hidden');
+        els.errorCard.classList.remove('hidden');
+        els.errorMsg.textContent = msg;
+        if (tokenMode) {
+          els.errorLink.classList.remove('hidden');
+        } else {
+          els.errorLink.classList.add('hidden');
+        }
+      }
+
+      function clearError() {
+        els.errorCard.classList.add('hidden');
+        els.errorMsg.textContent = '';
+      }
+
+      function renderResult(data, tokenMode) {
+        clearError();
+        els.loadingMsg.classList.add('hidden');
+        els.resultSection.classList.remove('hidden');
+
+        // Header
+        els.resultRef.textContent = data.referenceNumber || '—';
+        els.resultStatus.textContent = publicStatusLabel(data.status);
+        if (data.actualDelivery) {
+          els.resultOntime.classList.remove('hidden');
+        } else {
+          els.resultOntime.classList.add('hidden');
+        }
+
+        // Route endpoints + progress bar
+        var origin = (data.origin && (data.origin.city || data.origin.state))
+          ? ((data.origin.city || '') + (data.origin.state ? ', ' + data.origin.state : ''))
+          : '—';
+        var dest = (data.destination && (data.destination.city || data.destination.state))
+          ? ((data.destination.city || '') + (data.destination.state ? ', ' + data.destination.state : ''))
+          : '—';
+        els.routeOrigin.textContent = origin;
+        els.routeDest.textContent = dest;
+
+        var pct = Math.max(0, Math.min(100, Number(data.progressPct || 0)));
+        els.routeFill.style.width = pct + '%';
+        els.routeMarker.style.left = pct + '%';
+
+        // Last known location
+        if (data.lastLocation && data.lastLocation.city) {
+          var ll = data.lastLocation;
+          els.lastKnownText.textContent = 'Last known: ' + ll.city +
+            (ll.state ? ', ' + ll.state : '') +
+            (ll.updatedAt ? ' · ' + fmtDate(ll.updatedAt) : '');
+          els.lastKnown.classList.remove('hidden');
+        } else {
+          els.lastKnown.classList.add('hidden');
+        }
+
+        // Step bar — flip .done on milestones whose .completed is true
+        var stepKeys = ['LOADED', 'IN_TRANSIT', 'AT_DELIVERY', 'DELIVERED'];
+        var milestoneMap = {};
+        (data.milestones || []).forEach(function (m) {
+          milestoneMap[m.status] = !!m.completed;
+        });
+        stepKeys.forEach(function (key) {
+          var stepEl = els.stepBar.querySelector('[data-key="' + key + '"]');
+          if (!stepEl) return;
+          if (milestoneMap[key]) stepEl.classList.add('done');
+          else stepEl.classList.remove('done');
+        });
+
+        // Detail grid
+        els.detailShipper.textContent = data.shipperName || '—';
+        els.detailEquipment.textContent = data.equipment || '—';
+        els.detailCommodity.textContent = data.commodity || '—';
+        els.detailWeight.textContent = data.weight ? (data.weight + ' lbs') : '—';
+        els.detailPickup.textContent = fmtDate(data.pickupDate) || '—';
+        els.detailEta.textContent = fmtDate(data.estimatedDelivery) || '—';
+
+        // POD download
+        if (data.podUrl) {
+          els.podBtn.href = data.podUrl;
+          els.podRow.classList.remove('hidden');
+        } else {
+          els.podRow.classList.add('hidden');
+        }
+
+        // "Track another shipment" link — only show in token (deep-link) mode
+        if (tokenMode) {
+          els.trackAnotherWrap.classList.remove('hidden');
+        } else {
+          els.trackAnotherWrap.classList.add('hidden');
+        }
+      }
+
+      function fetchTracking(rawToken, tokenMode) {
+        var token = String(rawToken || '').trim();
+        if (!token) return;
+
+        clearError();
+        els.resultSection.classList.add('hidden');
+        if (tokenMode) {
+          els.loadingMsg.classList.remove('hidden');
+          els.searchCard.classList.add('hidden');
+        } else {
+          els.searchBtn.disabled = true;
+          els.searchBtn.textContent = 'Searching…';
+        }
+
+        fetch(API_BASE + '/tracking/' + encodeURIComponent(token), {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        })
+          .then(function (res) {
+            if (!res.ok) {
+              return res.json().then(
+                function (body) { throw new Error((body && body.error) || 'Shipment not found'); },
+                function () { throw new Error('Shipment not found'); }
+              );
+            }
+            return res.json();
+          })
+          .then(function (data) { renderResult(data, tokenMode); })
+          .catch(function (err) {
+            showError((err && err.message) || 'Shipment not found', tokenMode);
+            if (tokenMode) {
+              // Re-show search card so user can try a different number
+              els.searchCard.classList.remove('hidden');
+            }
+          })
+          .finally(function () {
+            els.loadingMsg.classList.add('hidden');
+            els.searchBtn.disabled = false;
+            els.searchBtn.textContent = 'Track';
+          });
+      }
+
+      // ── Search form submit ──────────────────────────────────────
+      els.searchForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetchTracking(els.searchInput.value, false);
+      });
+
+      // ── Token-mode boot ─────────────────────────────────────────
+      // Cloudflare `_redirects` rewrites /track/<token> → /track.html (200)
+      // preserving the path in window.location. Parse + auto-fetch.
+      (function bootFromUrl() {
+        var match = window.location.pathname.match(/^\/track\/(.+?)\/?$/);
+        if (!match || !match[1]) return;
+        var token = decodeURIComponent(match[1]);
+        fetchTracking(token, true);
+      })();
+    })();
+  </script>
+</body>
+</html>
