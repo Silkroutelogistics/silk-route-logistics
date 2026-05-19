@@ -149,19 +149,19 @@
   <!-- ============================================
        SECTION 1 — HERO
        ============================================ -->
-  <!-- Hero — Silk Road trade-route trace animation (restored from
-       v3.8.acr per user preference). Single SVG curve traces across
-       hero left → right (lower-left to upper-right), holds, then
-       erases. ~12s cycle. Pure CSS animation, respects
-       prefers-reduced-motion. -->
+  <!-- Hero — sourced freight-corridor aerial video (v3.8.adw). H.264
+       1920x1080, 7.97s loop, no audio, 3.15 MB. Replaces the v3.8.acr
+       silk-route SVG trace. Cream-gradient overlay at bottom preserves
+       brand canvas identity and ensures navy H1 readability against
+       daylight video. prefers-reduced-motion fallback: poster only. -->
   <section class="hero" id="hero">
-    <svg class="silk-route" viewBox="0 0 1400 600" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M -100,460 C 300,380 500,200 700,290 S 1100,240 1500,170"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round" />
-    </svg>
+    <video class="hero-video"
+           autoplay muted loop playsinline
+           poster="/media/homepage-hero-poster.jpg"
+           aria-hidden="true">
+      <source src="/media/homepage-hero.mp4" type="video/mp4">
+    </video>
+    <div class="hero-video-overlay" aria-hidden="true"></div>
     <div class="hero-content">
       <h1>
         Freight brokerage built for the<br>
