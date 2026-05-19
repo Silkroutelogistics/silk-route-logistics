@@ -193,12 +193,16 @@
               <path d="M 530 195 Q 600 260, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
             </g>
 
-            <!-- Primary route — Chicago → LA — drawn live via stroke-dashoffset -->
+            <!-- Tour route — Chicago → LA → Dallas → Atlanta → NYC → Seattle → Chicago.
+                 Full network sweep that the truck traverses end-to-end before
+                 looping. Path closes back to Chicago for a seamless loop.
+                 Drawn live over 5s on initial load (stroke-dashoffset); truck
+                 then traces the same path on a 24s repeating loop. -->
             <path id="ntPrimaryRoute"
-                  d="M 530 195 Q 360 220, 250 290 T 110 350"
+                  d="M 530 195 Q 360 220, 250 290 T 110 350 Q 250 380, 440 350 Q 540 360, 660 330 Q 740 290, 780 215 Q 500 100, 130 110 Q 350 140, 530 195"
                   stroke="url(#ntRouteGrad)" stroke-width="3.2" fill="none"
-                  stroke-linecap="round" stroke-dasharray="480" stroke-dashoffset="480">
-              <animate attributeName="stroke-dashoffset" from="480" to="0" dur="2.4s"
+                  stroke-linecap="round" stroke-dasharray="2400" stroke-dashoffset="2400">
+              <animate attributeName="stroke-dashoffset" from="2400" to="0" dur="5s"
                        fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1"/>
             </path>
 
@@ -248,10 +252,16 @@
               </g>
             </g>
 
-            <!-- ANIMATED TRUCK — travels Chicago → LA via animateMotion -->
+            <!-- ANIMATED TRUCK — travels the full Chicago → LA → Dallas →
+                 Atlanta → NYC → Seattle → Chicago tour via animateMotion.
+                 Starts after the path finishes drawing (begin=5s) so the
+                 truck enters on a complete route. 24s loop = ~4s per leg
+                 on average (longer for the NYC→Seattle cross-country arc).
+                 rotate="auto" spins the truck along the path tangent so
+                 it noses into direction of travel through each turn. -->
             <g opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/>
-              <animateMotion dur="12s" begin="2.4s" repeatCount="indefinite" rotate="auto">
+              <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5s" fill="freeze"/>
+              <animateMotion dur="24s" begin="5s" repeatCount="indefinite" rotate="auto">
                 <mpath href="#ntPrimaryRoute"/>
               </animateMotion>
               <g transform="scale(0.85) rotate(0)">

@@ -67,12 +67,13 @@
     <path d="M 530 195 Q 600 260, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
   </g>
 
-  <!-- Primary route — Chicago → LA — drawn live -->
+  <!-- Tour route — Chicago → LA → Dallas → Atlanta → NYC → Seattle → Chicago.
+       Full network sweep, draws over 5s on load, truck loops it for 24s. -->
   <path id="ntPrimaryRoute"
-        d="M 530 195 Q 360 220, 250 290 T 110 350"
+        d="M 530 195 Q 360 220, 250 290 T 110 350 Q 250 380, 440 350 Q 540 360, 660 330 Q 740 290, 780 215 Q 500 100, 130 110 Q 350 140, 530 195"
         stroke="url(#ntRouteGrad)" stroke-width="3.2" fill="none"
-        stroke-linecap="round" stroke-dasharray="480" stroke-dashoffset="480">
-    <animate attributeName="stroke-dashoffset" from="480" to="0" dur="2.4s"
+        stroke-linecap="round" stroke-dasharray="2400" stroke-dashoffset="2400">
+    <animate attributeName="stroke-dashoffset" from="2400" to="0" dur="5s"
              fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1"/>
   </path>
 
@@ -123,14 +124,15 @@
   </g>
 
   <!-- ============================================================
-       ANIMATED TRUCK — travels Chicago → LA via animateMotion
-       Truck side profile, navy + gold, scaled to read at ~36px wide.
-       rotate="auto" makes the truck orient along the path tangent
-       (truck noses into the direction of travel naturally).
+       ANIMATED TRUCK — traces the full network tour
+       Chicago → LA → Dallas → Atlanta → NYC → Seattle → Chicago
+       on a 24s repeating loop. Starts after route drawing finishes
+       (begin=5s). rotate="auto" spins the truck along the path
+       tangent so it noses into direction of travel through each turn.
        ============================================================ -->
   <g opacity="0">
-    <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/>
-    <animateMotion dur="12s" begin="2.4s" repeatCount="indefinite" rotate="auto">
+    <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5s" fill="freeze"/>
+    <animateMotion dur="24s" begin="5s" repeatCount="indefinite" rotate="auto">
       <mpath href="#ntPrimaryRoute"/>
     </animateMotion>
 
