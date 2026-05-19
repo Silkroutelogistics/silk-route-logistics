@@ -108,7 +108,7 @@ function organizationSchema() {
       addressCountry: "US",
     },
     description: "Michigan property broker. USDOT 4526880, Broker MC 1794414. BMC-84 bonded.",
-    knowsAbout: ["Freight brokerage", "Cold chain logistics", "Cross-border freight"],
+    knowsAbout: ["Freight brokerage", "Cold chain logistics", "48-state freight coverage"],
   }, null, 2);
 }
 

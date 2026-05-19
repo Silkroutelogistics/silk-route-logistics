@@ -700,13 +700,13 @@
     .quote-card {
       max-width: 840px;
       margin: 0 auto;
-      background: var(--navy);
-      border: 1px solid rgba(186, 117, 23, 0.20);
+      background: var(--white, #FFFFFF);
+      border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: 16px;
       padding: 48px;
       position: relative;
       z-index: 2;
-      box-shadow: 0 12px 32px rgba(10, 37, 64, 0.14);
+      box-shadow: 0 12px 32px rgba(10, 37, 64, 0.08);
     }
 
     .form-grid {
@@ -727,24 +727,24 @@
     .form-group label {
       font-size: 13px;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--navy, #0A2540);
       margin-bottom: 6px;
       letter-spacing: 0.3px;
     }
 
     .form-group label .required {
-      color: var(--gold);
+      color: var(--gold-dark, #BA7517);
       margin-left: 2px;
     }
 
     .form-group input,
     .form-group select,
     .form-group textarea {
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--cream, #FDFBF7);
+      border: 1px solid rgba(10, 37, 64, 0.15);
       border-radius: 8px;
       padding: 12px 16px;
-      color: var(--white);
+      color: var(--navy, #0A2540);
       font-family: 'DM Sans', sans-serif;
       font-size: 15px;
       transition: border-color 0.2s ease, background 0.2s ease;
@@ -753,27 +753,28 @@
 
     .form-group input::placeholder,
     .form-group textarea::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: rgba(10, 37, 64, 0.4);
     }
 
     .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus {
-      border-color: var(--gold);
-      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--gold-dark, #BA7517);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 3px rgba(186, 117, 23, 0.15);
     }
 
     .form-group select {
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='rgba(255,255,255,0.5)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='rgba(10,37,64,0.5)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 14px center;
       padding-right: 40px;
     }
 
     .form-group select option {
-      background: var(--navy);
-      color: var(--white);
+      background: var(--white, #FFFFFF);
+      color: var(--navy, #0A2540);
     }
 
     .form-group textarea {
@@ -835,12 +836,13 @@
 
     /* ========== CTA BANNER ========== */
     .cta-banner {
-      padding: 60px 0;
-      background: var(--gold);
+      padding: 80px 0;
+      background: var(--light-gray, #F5EEE0);
       text-align: center;
     }
 
     .cta-banner h2 {
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: clamp(24px, 3.5vw, 36px);
       color: var(--navy);
       margin-bottom: 20px;

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     default: "Silk Route Logistics",
     template: "%s | Silk Route Logistics",
   },
-  description: "Silk Route Logistics Inc. is a Michigan property broker (USDOT 4526880, Broker MC 1794414) moving freight across North America. Where Trust Travels.",
+  description: "Silk Route Logistics Inc. is a Michigan property broker (USDOT 4526880, Broker MC 1794414) moving freight across the 48 contiguous United States. Where Trust Travels.",
   applicationName: "Silk Route Logistics",
   manifest: "/manifest.json",
   icons: {
