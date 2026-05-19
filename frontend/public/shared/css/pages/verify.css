@@ -65,6 +65,9 @@
       transition: var(--transition); border-radius: 2px;
     }
 
+    /* Mobile chrome injected by chrome-injector — hidden at desktop. */
+    .mobile-menu, .mobile-overlay { display: none; }
+
     /* ======================================
        MAIN
        ====================================== */

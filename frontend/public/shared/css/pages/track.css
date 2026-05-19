@@ -74,6 +74,13 @@
       transition: var(--transition); border-radius: 2px;
     }
 
+    /* Mobile chrome elements injected by chrome-injector — hidden at
+       desktop widths, shown when hamburger fires .open. Matches the
+       pattern in contact.css / shippers.css / index.css. */
+    .mobile-menu, .mobile-overlay {
+      display: none;
+    }
+
     /* ======================================
        HERO — cream canvas with search card
        ====================================== */

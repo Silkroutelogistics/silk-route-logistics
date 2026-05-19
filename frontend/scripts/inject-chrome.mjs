@@ -377,6 +377,11 @@ const MARKETING_PAGES = new Set([
   "about.html", "blog.html", "careers.html", "carriers.html", "contact.html",
   "faq.html", "index.html", "login.html", "privacy.html", "register.html",
   "security-policy.html", "shippers.html", "terms.html", "tracking.html",
+  // 2026-05-18 v3.8.adf — /track + /verify migrated React → static HTML
+  // (Sprint v3.8.add). Added so the injector expands their INCLUDE:nav and
+  // INCLUDE:footer markers; prior to this they were skipped, leaving the
+  // footer marker as an empty placeholder in the build output.
+  "track.html", "verify.html",
 ]);
 
 async function walkHtml(dir) {
