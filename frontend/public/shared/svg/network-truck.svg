@@ -68,13 +68,22 @@
   </g>
 
   <!-- Tour route — Chicago → LA → Dallas → Atlanta → NYC → Seattle → Chicago.
-       Full network sweep, draws over 5s on load, truck loops it for 24s. -->
+       Two-phase animation:
+         Phase 1 (0-5s): line draws across the full tour.
+         Phase 2 (5s+, 24s loop): line erases from the path start as the
+           truck advances; previous legs fade behind the truck. On loop
+           boundary the line snaps back to fully visible in sync with the
+           truck restart at Chicago. -->
   <path id="ntPrimaryRoute"
         d="M 530 195 Q 360 220, 250 290 T 110 350 Q 250 380, 440 350 Q 540 360, 660 330 Q 740 290, 780 215 Q 500 100, 130 110 Q 350 140, 530 195"
         stroke="url(#ntRouteGrad)" stroke-width="3.2" fill="none"
         stroke-linecap="round" stroke-dasharray="2400" stroke-dashoffset="2400">
     <animate attributeName="stroke-dashoffset" from="2400" to="0" dur="5s"
-             fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1"/>
+             begin="0s" fill="freeze"
+             calcMode="spline" keySplines="0.4 0 0.2 1"/>
+    <animate attributeName="stroke-dashoffset" values="0; -2280"
+             dur="24s" begin="5s" repeatCount="indefinite"
+             calcMode="linear"/>
   </path>
 
   <!-- City nodes -->
@@ -138,21 +147,34 @@
 
     <!-- Truck — drawn at scale, origin at center-rear of trailer.
          Default orientation: pointing right (positive X). animateMotion's
-         rotate="auto" will spin this around the path tangent. -->
-    <g transform="scale(0.85) rotate(0)">
+         rotate="auto" spins this around the path tangent.
+         No rotate(0) in the static transform — that could dampen the
+         visible flip in some browsers. SRL wordmark on trailer + headlight
+         on cab nose give strong directional cues. -->
+    <g transform="scale(0.85)">
       <!-- Trailer body -->
       <rect x="-22" y="-6" width="28" height="12" rx="1" fill="#FDFBF7" stroke="#0A2540" stroke-width="1"/>
-      <!-- Trailer separator lines -->
+      <!-- Trailer panel separators -->
       <line x1="-15" y1="-4" x2="-15" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
       <line x1="-7" y1="-4" x2="-7" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
       <line x1="1" y1="-4" x2="1" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
+      <!-- SRL wordmark on trailer (transparent, visible) -->
+      <text x="-8" y="2.5" text-anchor="middle"
+            font-family="Playfair Display, Georgia, serif"
+            font-size="6.5" font-weight="700"
+            fill="#BA7517" opacity="0.85"
+            letter-spacing="1.2">SRL</text>
       <!-- Cab -->
       <rect x="6" y="-7" width="10" height="13" rx="1" fill="#0A2540"/>
       <!-- Cab window -->
       <rect x="8" y="-5" width="6" height="4" fill="#BA7517" opacity="0.9"/>
       <!-- Hood detail -->
       <rect x="14" y="-1.5" width="2" height="5" fill="#BA7517"/>
-      <!-- Wheels (small) -->
+      <!-- Headlight on cab nose (always at the front of the truck regardless
+           of travel direction — strongest visual cue for direction flip) -->
+      <circle cx="16.2" cy="2" r="0.9" fill="#FDFBF7"/>
+      <circle cx="16.2" cy="2" r="0.4" fill="#C5A572"/>
+      <!-- Wheels -->
       <circle cx="-18" cy="7" r="2.2" fill="#0A2540"/>
       <circle cx="-18" cy="7" r="0.9" fill="#C5A572"/>
       <circle cx="-5" cy="7" r="2.2" fill="#0A2540"/>
