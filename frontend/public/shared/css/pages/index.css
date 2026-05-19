@@ -489,9 +489,13 @@
       text-align: left;
     }
 
+    /* v3.8.aee — bg opacity dropped further so the bottom container rows
+       in the intermodal yard video read clearly through the cards. The
+       blur radius is also eased so the underlying video is less abstract.
+       Hover bumps opacity back up for tactile interaction cue. */
     .hero-card {
       position: relative;
-      background: rgba(255, 255, 255, 0.65);
+      background: rgba(255, 255, 255, 0.55);
       border-radius: 14px;
       padding: 22px 26px 20px;
       border: 1px solid rgba(10, 37, 64, 0.10);
@@ -499,8 +503,8 @@
       transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
       box-shadow: 0 6px 24px rgba(10, 37, 64, 0.14),
                   0 2px 6px rgba(10, 37, 64, 0.06);
-      -webkit-backdrop-filter: blur(8px) saturate(115%);
-      backdrop-filter: blur(8px) saturate(115%);
+      -webkit-backdrop-filter: blur(7px) saturate(115%);
+      backdrop-filter: blur(7px) saturate(115%);
     }
 
     .hero-card::before {
