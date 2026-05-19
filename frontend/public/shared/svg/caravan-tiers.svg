@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  caravan-tiers.svg — supplementary for /carriers + /shippers
+  Communicates: the three Caravan tiers (Silver / Gold / Platinum) with their
+  published Quick Pay fees, free-pay terms, and headline benefits per §8 + §10.
+  Visual elements:
+    · Three stacked tier "ribbons" ascending right
+    · Each tier shows its name + fleet threshold + headline number
+    · Gold trade-route line connecting them as a progression
+    · Visually communicates "tier advancement is earned, not assigned"
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --gold-light #DAC39C
+-->
+<svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Caravan Partner Program — three performance tiers: Silver, Gold, Platinum">
+  <title>Caravan Partner Program tier progression</title>
+
+  <defs>
+    <linearGradient id="silverFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#E2EAF2"/>
+    </linearGradient>
+    <linearGradient id="goldFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FAEEDA"/>
+      <stop offset="100%" stop-color="#DAC39C"/>
+    </linearGradient>
+    <linearGradient id="platinumFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C5A572"/>
+      <stop offset="100%" stop-color="#BA7517"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Progression line connecting the three tiers -->
+  <path d="M 100 250 Q 240 220, 360 200 T 620 130"
+        stroke="#BA7517" stroke-width="2" fill="none" stroke-linecap="round"
+        stroke-dasharray="0" opacity="0.5"/>
+
+  <!-- ========== TIER 1: SILVER ========== -->
+  <g transform="translate(120 250)">
+    <rect x="-70" y="-46" width="140" height="92" rx="6" fill="url(#silverFill)"
+          stroke="#0A2540" stroke-width="1.5"/>
+    <text x="0" y="-22" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="22" font-weight="700" fill="#0A2540">SILVER</text>
+    <line x1="-50" y1="-8" x2="50" y2="-8" stroke="#0A2540" stroke-width="0.6" opacity="0.3"/>
+    <text x="0" y="8" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="1.5">DAY 1 ENTRY</text>
+    <text x="0" y="26" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="18" font-weight="600" fill="#BA7517">3% QP</text>
+    <text x="0" y="40" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="8" fill="#6B7685">Net-30 free</text>
+  </g>
+
+  <!-- ========== TIER 2: GOLD ========== -->
+  <g transform="translate(360 200)">
+    <rect x="-78" y="-52" width="156" height="104" rx="7" fill="url(#goldFill)"
+          stroke="#BA7517" stroke-width="2"/>
+    <text x="0" y="-26" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="24" font-weight="700" fill="#0A2540">GOLD</text>
+    <line x1="-58" y1="-10" x2="58" y2="-10" stroke="#BA7517" stroke-width="0.8" opacity="0.5"/>
+    <text x="0" y="6" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="1.5">M4 OR 5–10 TRUCKS</text>
+    <text x="0" y="26" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="20" font-weight="600" fill="#BA7517">2% QP</text>
+    <text x="0" y="42" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="8" fill="#6B7685">Net-21 free · $150/mo bonus</text>
+  </g>
+
+  <!-- ========== TIER 3: PLATINUM ========== -->
+  <g transform="translate(620 130)">
+    <rect x="-86" y="-58" width="172" height="116" rx="8" fill="url(#platinumFill)"
+          stroke="#BA7517" stroke-width="2.5"/>
+    <text x="0" y="-30" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="26" font-weight="700" fill="#FDFBF7">PLATINUM</text>
+    <line x1="-64" y1="-13" x2="64" y2="-13" stroke="#FDFBF7" stroke-width="0.8" opacity="0.4"/>
+    <text x="0" y="5" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#FDFBF7" letter-spacing="1.5" opacity="0.9">M5 OR 11+ TRUCKS</text>
+    <text x="0" y="28" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="22" font-weight="600" fill="#FDFBF7">1% QP</text>
+    <text x="0" y="44" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="8" fill="#FDFBF7" opacity="0.85">Net-14 free · $300/mo bonus</text>
+  </g>
+
+  <!-- "Tier advancement is earned" tagline -->
+  <text x="360" y="296" text-anchor="middle" font-family="Georgia, serif"
+        font-style="italic" font-size="13" fill="#3A4A5F">Tier advancement is performance-based — fleet size optional.</text>
+</svg>

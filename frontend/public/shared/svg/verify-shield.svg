@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  verify-shield.svg — /verify page illustration
+  Communicates: anti-fraud authentication of a Rate Confirmation. The user
+  arrives here via a QR or verification link from the RC PDF; the shield
+  visually confirms "this RC is real, issued by SRL, not a fake."
+  Visual elements:
+    · Shield outline (navy, cream interior)
+    · Compass quartering inside the shield (SRL brand symbol)
+    · Checkmark stamp overlaid in gold-dark (authenticated)
+    · "VERIFIED" caption stamp at bottom
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --success #2F7A4F
+-->
+<svg viewBox="0 0 300 360" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Silk Route Logistics Rate Confirmation verification shield">
+  <title>Authenticated Rate Confirmation — issued by Silk Route Logistics</title>
+
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#F5EEE0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield outline -->
+  <path d="M 150 30
+           L 250 60
+           L 250 180
+           Q 250 260, 150 320
+           Q 50 260, 50 180
+           L 50 60 Z"
+        fill="url(#shieldGrad)" stroke="#0A2540" stroke-width="3"/>
+
+  <!-- Inner gold border -->
+  <path d="M 150 50
+           L 234 76
+           L 234 178
+           Q 234 246, 150 296
+           Q 66 246, 66 178
+           L 66 76 Z"
+        fill="none" stroke="#BA7517" stroke-width="1.2" opacity="0.55"/>
+
+  <!-- Compass quartering inside shield -->
+  <g transform="translate(150 170)">
+    <circle r="46" fill="none" stroke="#0A2540" stroke-width="1" opacity="0.25"/>
+    <polygon points="0,-38 8,-8 0,0 -8,-8" fill="#BA7517"/>
+    <polygon points="38,0 8,8 0,0 8,-8" fill="#C5A572"/>
+    <polygon points="0,38 8,8 0,0 -8,8" fill="#C5A572"/>
+    <polygon points="-38,0 -8,8 0,0 -8,-8" fill="#C5A572"/>
+    <circle r="3.5" fill="#0A2540"/>
+  </g>
+
+  <!-- Authentication checkmark — large, overlaid on bottom-right of shield -->
+  <g transform="translate(202 222)">
+    <circle r="32" fill="#2F7A4F" opacity="0.96"/>
+    <circle r="28" fill="none" stroke="#FDFBF7" stroke-width="1.2" opacity="0.55"/>
+    <path d="M -14 -2 L -4 10 L 14 -10"
+          stroke="#FDFBF7" stroke-width="4.5" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- VERIFIED ribbon at bottom -->
+  <g transform="translate(150 310)">
+    <rect x="-58" y="-12" width="116" height="22" rx="2" fill="#BA7517"/>
+    <text x="0" y="3" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="11" font-weight="700" fill="#FDFBF7" letter-spacing="3">VERIFIED</text>
+  </g>
+
+  <!-- MC# attribution at top of shield -->
+  <text x="150" y="98" text-anchor="middle" font-family="DM Sans, sans-serif"
+        font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="2">MC# 1794414</text>
+  <text x="150" y="112" text-anchor="middle" font-family="DM Sans, sans-serif"
+        font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="2">DOT# 4526880</text>
+</svg>

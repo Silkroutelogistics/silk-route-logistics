@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  signal-converge.svg — /contact page illustration
+  Communicates: three channels (phone, email, chat) converge on one
+  responsive ops team. "We're here" — the visual answer.
+  Visual elements:
+    · 3 channel glyphs (phone, email, chat bubble) anchored top
+    · Signal lines arcing down to a central compass mark
+    · Animated dots traveling along each line toward the compass
+    · "Operations" plate beneath the compass
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572
+-->
+<svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Three communication channels converging on Silk Route Logistics operations">
+  <title>Phone · email · chat — all routed to operations</title>
+
+  <defs>
+    <radialGradient id="hubGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#F5EEE0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Phone channel — top left -->
+  <g transform="translate(80 80)">
+    <circle r="34" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.8"/>
+    <path d="M -10 -6 Q -10 -12, -4 -12 L 4 -12 Q 10 -12, 10 -6 L 10 6 Q 10 12, 4 12 L -4 12 Q -10 12, -10 6 Z"
+          fill="none" stroke="#BA7517" stroke-width="1.8"/>
+    <line x1="-3" y1="8" x2="3" y2="8" stroke="#BA7517" stroke-width="1.8" stroke-linecap="round"/>
+    <text x="0" y="60" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="2">PHONE</text>
+  </g>
+
+  <!-- Email channel — top center -->
+  <g transform="translate(240 60)">
+    <circle r="34" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.8"/>
+    <rect x="-12" y="-7" width="24" height="14" rx="2" fill="none" stroke="#BA7517" stroke-width="1.8"/>
+    <polyline points="-12,-7 0,3 12,-7" fill="none" stroke="#BA7517" stroke-width="1.8" stroke-linecap="round"/>
+    <text x="0" y="60" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="2">EMAIL</text>
+  </g>
+
+  <!-- Chat channel — top right -->
+  <g transform="translate(400 80)">
+    <circle r="34" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.8"/>
+    <path d="M -12 -5 Q -12 -10, -7 -10 L 7 -10 Q 12 -10, 12 -5 L 12 3 Q 12 8, 7 8 L -3 8 L -8 12 L -8 8 Q -12 8, -12 3 Z"
+          fill="none" stroke="#BA7517" stroke-width="1.8"/>
+    <circle cx="-4" cy="-1" r="1" fill="#BA7517"/>
+    <circle cx="0" cy="-1" r="1" fill="#BA7517"/>
+    <circle cx="4" cy="-1" r="1" fill="#BA7517"/>
+    <text x="0" y="60" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#3A4A5F" letter-spacing="2">CHAT</text>
+  </g>
+
+  <!-- Signal lines — each arcs from a channel down to the hub -->
+  <path id="sigPath1" d="M 80 110 Q 120 200, 240 240" stroke="#C5A572" stroke-width="2"
+        fill="none" stroke-linecap="round" stroke-dasharray="3 6" opacity="0.7"/>
+  <path id="sigPath2" d="M 240 100 Q 240 170, 240 240" stroke="#C5A572" stroke-width="2"
+        fill="none" stroke-linecap="round" stroke-dasharray="3 6" opacity="0.7"/>
+  <path id="sigPath3" d="M 400 110 Q 360 200, 240 240" stroke="#C5A572" stroke-width="2"
+        fill="none" stroke-linecap="round" stroke-dasharray="3 6" opacity="0.7"/>
+
+  <!-- Animated dots traveling along each path toward the hub -->
+  <circle r="3.5" fill="#BA7517">
+    <animateMotion dur="3s" repeatCount="indefinite">
+      <mpath href="#sigPath1"/>
+    </animateMotion>
+  </circle>
+  <circle r="3.5" fill="#BA7517">
+    <animateMotion dur="3s" begin="1s" repeatCount="indefinite">
+      <mpath href="#sigPath2"/>
+    </animateMotion>
+  </circle>
+  <circle r="3.5" fill="#BA7517">
+    <animateMotion dur="3s" begin="2s" repeatCount="indefinite">
+      <mpath href="#sigPath3"/>
+    </animateMotion>
+  </circle>
+
+  <!-- Hub — operations compass -->
+  <g transform="translate(240 240)">
+    <circle r="48" fill="url(#hubGrad)" stroke="#0A2540" stroke-width="2.5"/>
+    <circle r="40" fill="none" stroke="#BA7517" stroke-width="0.8" opacity="0.4"/>
+    <polygon points="0,-32 6,-6 0,0 -6,-6" fill="#BA7517"/>
+    <polygon points="32,0 6,6 0,0 6,-6" fill="#C5A572"/>
+    <polygon points="0,32 6,6 0,0 -6,6" fill="#C5A572"/>
+    <polygon points="-32,0 -6,6 0,0 -6,-6" fill="#C5A572"/>
+    <circle r="3.5" fill="#0A2540"/>
+  </g>
+
+  <!-- "OPERATIONS" plate beneath hub -->
+  <g transform="translate(240 318)">
+    <rect x="-60" y="-13" width="120" height="22" rx="3" fill="#0A2540"/>
+    <text x="0" y="3" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="10" font-weight="700" fill="#FDFBF7" letter-spacing="3">OPERATIONS</text>
+  </g>
+</svg>

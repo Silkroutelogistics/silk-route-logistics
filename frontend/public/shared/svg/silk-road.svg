@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  silk-road.svg — /about page illustration
+  Communicates: SRL's brand origin — the historical Silk Road trade route
+  from East Asia through Central Asia to Europe. Trade as continuity,
+  reliability, the way reputation was built over centuries.
+  Visual elements:
+    · Stylized world abstract — three abstract land-masses (East / Mid / West)
+    · Gold silk-road curve sweeping across, with subtle dashed continuation
+    · 5 waypoint dots along the route (trade cities)
+    · Compass mark in upper-right (the SRL brand origin)
+    · "EST. 2026 · MICHIGAN" tagline (factual, no fabrication)
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --cream-2 #F5EEE0
+-->
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="The Silk Road — gold trade route across continents">
+  <title>Silk Route Logistics — where trade traveled, trust traveled</title>
+
+  <defs>
+    <linearGradient id="silkGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#BA7517" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#BA7517" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#C5A572" stop-opacity="0.5"/>
+    </linearGradient>
+    <radialGradient id="landmassGrad" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#F5EEE0"/>
+      <stop offset="100%" stop-color="#F5EEE0" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Abstract land-masses (simplified shapes suggesting Eurasian continents) -->
+  <!-- East Asia (right side) -->
+  <path d="M 540 180 Q 590 140, 640 160 Q 680 180, 670 220 Q 660 260, 620 270 Q 580 280, 560 250 Q 540 220, 540 180 Z"
+        fill="url(#landmassGrad)" stroke="#0A2540" stroke-width="0.8" stroke-opacity="0.2"/>
+
+  <!-- Central / Middle (Persia / Central Asia abstract) -->
+  <path d="M 340 200 Q 380 170, 420 180 Q 460 195, 470 220 Q 460 245, 420 250 Q 380 255, 350 235 Q 330 220, 340 200 Z"
+        fill="url(#landmassGrad)" stroke="#0A2540" stroke-width="0.8" stroke-opacity="0.2"/>
+
+  <!-- West (Mediterranean / Europe abstract) -->
+  <path d="M 100 170 Q 150 140, 200 155 Q 240 170, 250 195 Q 245 225, 210 240 Q 170 250, 130 230 Q 100 210, 100 170 Z"
+        fill="url(#landmassGrad)" stroke="#0A2540" stroke-width="0.8" stroke-opacity="0.2"/>
+
+  <!-- Silk Road curve — main path -->
+  <path d="M 170 200 Q 270 80, 400 180 Q 540 240, 620 200"
+        stroke="url(#silkGrad)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Dashed continuation to suggest the route extends further both ways -->
+  <path d="M 60 220 Q 110 210, 170 200"
+        stroke="#BA7517" stroke-width="2" fill="none" stroke-dasharray="2 7"
+        stroke-linecap="round" opacity="0.5"/>
+  <path d="M 620 200 Q 670 195, 700 215"
+        stroke="#C5A572" stroke-width="2" fill="none" stroke-dasharray="2 7"
+        stroke-linecap="round" opacity="0.45"/>
+
+  <!-- Waypoint trade cities along the route (5 nodes) -->
+  <g class="silk-waypoint" style="animation-delay: 0s">
+    <circle cx="170" cy="200" r="5" fill="#0A2540"/>
+    <circle cx="170" cy="200" r="2" fill="#BA7517"/>
+  </g>
+  <g class="silk-waypoint" style="animation-delay: 0.1s">
+    <circle cx="270" cy="115" r="5" fill="#0A2540"/>
+    <circle cx="270" cy="115" r="2" fill="#BA7517"/>
+  </g>
+  <g class="silk-waypoint" style="animation-delay: 0.2s">
+    <circle cx="400" cy="180" r="6" fill="#0A2540"/>
+    <circle cx="400" cy="180" r="2.5" fill="#BA7517"/>
+  </g>
+  <g class="silk-waypoint" style="animation-delay: 0.3s">
+    <circle cx="540" cy="240" r="5" fill="#0A2540"/>
+    <circle cx="540" cy="240" r="2" fill="#BA7517"/>
+  </g>
+  <g class="silk-waypoint" style="animation-delay: 0.4s">
+    <circle cx="620" cy="200" r="5" fill="#0A2540"/>
+    <circle cx="620" cy="200" r="2" fill="#BA7517"/>
+  </g>
+
+  <!-- SRL compass mark — upper right, the brand origin point -->
+  <g transform="translate(620 80)">
+    <circle r="28" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
+    <circle r="22" fill="none" stroke="#BA7517" stroke-width="0.8" opacity="0.4"/>
+    <polygon points="0,-18 4,-4 0,0 -4,-4" fill="#BA7517"/>
+    <polygon points="18,0 4,4 0,0 4,-4" fill="#C5A572"/>
+    <polygon points="0,18 4,4 0,0 -4,4" fill="#C5A572"/>
+    <polygon points="-18,0 -4,4 0,0 -4,-4" fill="#C5A572"/>
+    <circle r="2.5" fill="#0A2540"/>
+  </g>
+
+  <!-- "Where Trust Travels." italic tagline -->
+  <text x="360" y="320" text-anchor="middle" font-family="Georgia, serif"
+        font-style="italic" font-size="18" fill="#0A2540" opacity="0.85">Where Trust Travels.</text>
+
+  <!-- Provenance line -->
+  <text x="360" y="340" text-anchor="middle" font-family="DM Sans, sans-serif"
+        font-size="9" font-weight="600" fill="#BA7517" letter-spacing="3">SILK ROUTE LOGISTICS · GALESBURG, MI · MC 1794414</text>
+</svg>

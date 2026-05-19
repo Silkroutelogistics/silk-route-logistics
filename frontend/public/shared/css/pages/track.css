@@ -241,6 +241,97 @@
     .error-link:hover { text-decoration: underline; }
 
     /* ======================================
+       EXPLAINER — illustration + how-it-works steps
+       Shown when no result is loaded; hidden via .hidden once a fetch fires.
+       Same cream canvas as the hero so the page reads as one continuous
+       surface; illustration anchors visual interest, copy provides operational
+       specifics ("BOL number from your shipping document", "last known
+       location ping").
+       ====================================== */
+    .explainer-section {
+      background: var(--cream);
+      padding: 40px 0 80px;
+    }
+    .explainer-container {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+    .explainer-illustration {
+      position: relative;
+    }
+    .explainer-illustration img {
+      width: 100%;
+      height: auto;
+      max-width: 560px;
+      display: block;
+    }
+    .explainer-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--gold-dark);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .explainer-text h2 {
+      font-family: var(--font-headline);
+      font-weight: 400;
+      font-size: clamp(1.7rem, 3.2vw, 2.2rem);
+      color: var(--navy);
+      line-height: 1.25;
+      margin-bottom: 24px;
+      letter-spacing: -0.3px;
+    }
+    .explainer-steps {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .explainer-steps li {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold-dark);
+      color: var(--cream);
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .explainer-steps li > div {
+      font-size: 14px;
+      color: var(--body-text);
+      line-height: 1.7;
+    }
+    .explainer-steps strong {
+      color: var(--navy);
+      font-weight: 600;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .explainer-fineprint {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      padding-top: 16px;
+      border-top: 1px solid rgba(10, 37, 64, 0.08);
+    }
+
+    /* ======================================
        RESULT PANEL
        ====================================== */
     .result-section {
@@ -461,8 +552,78 @@
     main { flex: 1; }
 
     /* ======================================
+       FOOTER — canonical dark-navy chrome
+       (mirrors contact.css / shippers.css / carriers.css patterns)
+       ====================================== */
+    .footer {
+      background: var(--navy);
+      color: rgba(255,255,255,0.7);
+      padding: 60px 0 0;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 0.95rem;
+      color: var(--white); margin-bottom: 16px;
+    }
+    .footer-brand p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .footer-brand .srl-tagline {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      color: var(--gold-light);
+      font-size: 0.95rem;
+    }
+    .footer-brand a {
+      color: rgba(255,255,255,0.7);
+      transition: color 0.2s;
+    }
+    .footer-brand a:hover { color: var(--gold-light); }
+    .footer-col h5 {
+      color: var(--white);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .footer-col a {
+      display: block;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9rem;
+      padding: 4px 0;
+      transition: color 0.2s;
+    }
+    .footer-col a:hover { color: var(--gold-light); }
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 0;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+    }
+    .footer-bottom-links { display: flex; gap: 24px; }
+    .footer-bottom-links a {
+      color: rgba(255,255,255,0.4);
+      transition: color 0.2s;
+    }
+    .footer-bottom-links a:hover { color: var(--gold-light); }
+
+    /* ======================================
        RESPONSIVE
        ====================================== */
+    @media (max-width: 900px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .hamburger { display: flex; }
@@ -470,6 +631,15 @@
       .search-card { padding: 20px; }
       .detail-grid { grid-template-columns: 1fr; gap: 12px; }
       .result-card { padding: 20px; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+      .explainer-container {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        text-align: center;
+      }
+      .explainer-steps { text-align: left; }
+      .explainer-illustration img { margin: 0 auto; }
     }
     @media (max-width: 480px) {
       .container { padding: 0 16px; }

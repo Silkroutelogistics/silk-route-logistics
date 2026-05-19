@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  trust-stamp.svg — /shippers page illustration
+  Communicates: SRL's freight handling is documented, vetted, certified.
+  "Where Trust Travels" — the brand tagline made visual.
+  Visual elements:
+    · BOL document (cream paper with subtle navy lines suggesting line items)
+    · Gold seal/stamp in lower-right corner with compass quartering inside
+    · Ribbon swag suggesting an official document
+    · Subtle navy line items + dollar/lbs columns suggesting freight detail
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --cream-2 #F5EEE0
+-->
+<svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Bill of Lading with Silk Route Logistics trust seal">
+  <title>Documented, vetted, certified freight handling</title>
+
+  <defs>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F5EEE0"/>
+    </linearGradient>
+    <radialGradient id="sealGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C5A572"/>
+      <stop offset="100%" stop-color="#BA7517"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background paper shadow -->
+  <rect x="78" y="48" width="320" height="280" rx="6" fill="#0A2540" opacity="0.08"/>
+
+  <!-- Main BOL document -->
+  <rect x="72" y="42" width="320" height="280" rx="6" fill="url(#paperGrad)" stroke="#0A2540" stroke-width="1" opacity="0.95"/>
+
+  <!-- Document header bar (gold) -->
+  <rect x="72" y="42" width="320" height="38" rx="6" fill="#BA7517"/>
+  <rect x="72" y="70" width="320" height="10" fill="#BA7517"/>
+  <text x="92" y="68" font-family="Playfair Display, Georgia, serif" font-size="16"
+        font-weight="700" fill="#FDFBF7">BILL OF LADING</text>
+  <text x="364" y="68" font-family="DM Sans, sans-serif" font-size="9" font-weight="700"
+        fill="#FDFBF7" text-anchor="end" letter-spacing="2">SRL</text>
+
+  <!-- Shipper / Consignee block -->
+  <text x="92" y="106" font-family="DM Sans, sans-serif" font-size="8" font-weight="700"
+        fill="#BA7517" letter-spacing="1.5">SHIPPER</text>
+  <line x1="92" y1="112" x2="216" y2="112" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="92" y1="120" x2="200" y2="120" stroke="#0A2540" stroke-width="0.6" opacity="0.25"/>
+  <line x1="92" y1="128" x2="210" y2="128" stroke="#0A2540" stroke-width="0.6" opacity="0.25"/>
+
+  <text x="248" y="106" font-family="DM Sans, sans-serif" font-size="8" font-weight="700"
+        fill="#BA7517" letter-spacing="1.5">CONSIGNEE</text>
+  <line x1="248" y1="112" x2="372" y2="112" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="248" y1="120" x2="356" y2="120" stroke="#0A2540" stroke-width="0.6" opacity="0.25"/>
+  <line x1="248" y1="128" x2="365" y2="128" stroke="#0A2540" stroke-width="0.6" opacity="0.25"/>
+
+  <!-- Freight detail table header -->
+  <rect x="92" y="150" width="280" height="18" fill="#0A2540"/>
+  <text x="102" y="163" font-family="DM Sans, sans-serif" font-size="8" font-weight="700" fill="#FDFBF7" letter-spacing="1">DESCRIPTION</text>
+  <text x="244" y="163" font-family="DM Sans, sans-serif" font-size="8" font-weight="700" fill="#FDFBF7" letter-spacing="1">QTY</text>
+  <text x="284" y="163" font-family="DM Sans, sans-serif" font-size="8" font-weight="700" fill="#FDFBF7" letter-spacing="1">LBS</text>
+  <text x="336" y="163" font-family="DM Sans, sans-serif" font-size="8" font-weight="700" fill="#FDFBF7" letter-spacing="1">CLASS</text>
+
+  <!-- Freight detail rows -->
+  <line x1="92" y1="184" x2="236" y2="184" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="244" y1="184" x2="266" y2="184" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="284" y1="184" x2="312" y2="184" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="336" y1="184" x2="358" y2="184" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+
+  <line x1="92" y1="200" x2="220" y2="200" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="244" y1="200" x2="266" y2="200" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="284" y1="200" x2="312" y2="200" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="336" y1="200" x2="358" y2="200" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+
+  <line x1="92" y1="216" x2="232" y2="216" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="244" y1="216" x2="266" y2="216" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="284" y1="216" x2="312" y2="216" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+  <line x1="336" y1="216" x2="358" y2="216" stroke="#0A2540" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- Total bar -->
+  <rect x="92" y="232" width="280" height="20" fill="#F5EEE0" stroke="#0A2540" stroke-width="0.6" opacity="0.7"/>
+  <text x="102" y="246" font-family="DM Sans, sans-serif" font-size="9" font-weight="700" fill="#0A2540" letter-spacing="1">TOTAL FREIGHT</text>
+  <line x1="284" y1="246" x2="312" y2="246" stroke="#BA7517" stroke-width="1"/>
+
+  <!-- Trust Seal — bottom-right corner of document -->
+  <g transform="translate(338 278)">
+    <circle r="44" fill="url(#sealGrad)" stroke="#BA7517" stroke-width="1.5"/>
+    <circle r="36" fill="none" stroke="#FDFBF7" stroke-width="1" opacity="0.6"/>
+    <!-- Compass quartering -->
+    <polygon points="0,-26 6,-6 0,0 -6,-6" fill="#FDFBF7"/>
+    <polygon points="26,0 6,6 0,0 6,-6" fill="#FDFBF7" opacity="0.65"/>
+    <polygon points="0,26 6,6 0,0 -6,6" fill="#FDFBF7" opacity="0.65"/>
+    <polygon points="-26,0 -6,6 0,0 -6,-6" fill="#FDFBF7" opacity="0.65"/>
+    <circle r="3" fill="#FDFBF7"/>
+    <!-- Seal text — curved is complex; use straight lines -->
+    <text x="0" y="-30" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="6.5" font-weight="700" fill="#FDFBF7" letter-spacing="1.5">VERIFIED</text>
+    <text x="0" y="36" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="6" font-weight="700" fill="#FDFBF7" letter-spacing="1.2">MC 1794414</text>
+  </g>
+
+  <!-- "Where Trust Travels" italic tagline floating bottom-left -->
+  <text x="92" y="296" font-family="Georgia, serif" font-style="italic" font-size="13"
+        fill="#BA7517" font-weight="400">Where Trust Travels.</text>
+</svg>

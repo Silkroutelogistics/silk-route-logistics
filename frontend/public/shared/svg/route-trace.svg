@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  route-trace.svg — /track page illustration
+  Communicates: shipment is moving, you can see exactly where on the route.
+  Visual elements:
+    · Origin pin (navy, left) with "ORIGIN" caption
+    · Solid gold route (past — covered miles)
+    · Compass marker at current position (animated pulse)
+    · Dotted gold route (future — remaining miles)
+    · Destination pin (right) with "DESTINATION" caption
+    · 4 waypoint dots along the route (checkpoint suggestions)
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --fg-2 #3A4A5F
+  Animation hook: .marker-pulse CSS animation (defined in page CSS)
+-->
+<svg viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Silk Route Logistics shipment route — origin to destination with current position marker">
+  <title>Live shipment route</title>
+
+  <!-- Background subtle grid suggestion (very faint) -->
+  <defs>
+    <pattern id="dotgrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.6" fill="#0A2540" opacity="0.06"/>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="800" height="220" fill="url(#dotgrid)"/>
+
+  <!-- Solid route (past — covered) -->
+  <path d="M 80 110 Q 200 70, 320 100 T 400 110"
+        stroke="#BA7517" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- Dotted route (future — remaining) -->
+  <path d="M 400 110 Q 520 130, 640 105 T 720 110"
+        stroke="#C5A572" stroke-width="3" fill="none"
+        stroke-dasharray="2 9" stroke-linecap="round" opacity="0.65"/>
+
+  <!-- Waypoint dots along the route -->
+  <circle cx="180" cy="88" r="3" fill="#BA7517" opacity="0.55"/>
+  <circle cx="270" cy="83" r="3" fill="#BA7517" opacity="0.7"/>
+  <circle cx="500" cy="125" r="3" fill="#C5A572" opacity="0.45"/>
+  <circle cx="620" cy="115" r="3" fill="#C5A572" opacity="0.4"/>
+
+  <!-- ORIGIN pin -->
+  <g transform="translate(80, 110)">
+    <circle r="11" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
+    <circle r="4" fill="#0A2540"/>
+    <text x="0" y="-22" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="10" font-weight="700" fill="#3A4A5F" letter-spacing="2">ORIGIN</text>
+  </g>
+
+  <!-- Current-position compass marker (pulses via .route-marker animation) -->
+  <g transform="translate(400, 110)" class="route-marker">
+    <circle r="18" fill="#FDFBF7" stroke="#BA7517" stroke-width="2.5" opacity="0.4">
+      <animate attributeName="r" values="18; 24; 18" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.4; 0; 0.4" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="14" fill="#FDFBF7" stroke="#BA7517" stroke-width="2.5"/>
+    <circle r="6" fill="#BA7517"/>
+    <!-- Compass quartering -->
+    <line x1="0" y1="-11" x2="0" y2="-7.5" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="0" y1="7.5" x2="0" y2="11" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-11" y1="0" x2="-7.5" y2="0" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="7.5" y1="0" x2="11" y2="0" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- DESTINATION pin -->
+  <g transform="translate(720, 110)">
+    <circle r="11" fill="#FDFBF7" stroke="#0A2540" stroke-width="2" opacity="0.55"/>
+    <circle r="4" fill="#C5A572"/>
+    <text x="0" y="-22" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="10" font-weight="700" fill="#3A4A5F" letter-spacing="2">DESTINATION</text>
+  </g>
+</svg>

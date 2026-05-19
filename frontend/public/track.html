@@ -132,6 +132,46 @@
       </div>
     </section>
 
+    <!-- ILLUSTRATION + EXPLAINER (shown when no result loaded) -->
+    <section class="explainer-section" id="explainerSection">
+      <div class="container explainer-container">
+        <div class="explainer-illustration">
+          <img src="/shared/svg/route-trace.svg" alt="Live shipment route from origin to destination" loading="lazy">
+        </div>
+        <div class="explainer-text">
+          <div class="explainer-label">How it works</div>
+          <h2>Every SRL load is tracked the same way.</h2>
+          <ul class="explainer-steps">
+            <li>
+              <span class="step-num">1</span>
+              <div>
+                <strong>Find your reference.</strong>
+                Enter the BOL number from your shipping document, or the PO / load reference from the booking email.
+              </div>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              <div>
+                <strong>See live status.</strong>
+                Picked up, on the road, arriving, delivered — plus the last known location ping from the driver.
+              </div>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              <div>
+                <strong>Download the POD.</strong>
+                Once delivered, the signed proof of delivery is available right on this page.
+              </div>
+            </li>
+          </ul>
+          <p class="explainer-fineprint">
+            Tracking is available to anyone with the BOL or reference number. No login required.
+            For shipper portal access — itemized history, multi-load view, exports — sign in above.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- RESULT PANEL (populated by JS after fetch) -->
     <section class="result-section hidden" id="resultSection">
       <div class="container">
@@ -321,6 +361,7 @@
       // ── DOM refs ────────────────────────────────────────────────
       var els = {
         searchCard:   document.getElementById('searchCard'),
+        explainerSection: document.getElementById('explainerSection'),
         searchForm:   document.getElementById('searchForm'),
         searchInput:  document.getElementById('searchInput'),
         searchBtn:    document.getElementById('searchBtn'),
@@ -498,6 +539,8 @@
 
         clearError();
         els.resultSection.classList.add('hidden');
+        // Hide the explainer once a fetch fires — result panel takes its place
+        if (els.explainerSection) els.explainerSection.classList.add('hidden');
         if (tokenMode) {
           els.loadingMsg.classList.remove('hidden');
           els.searchCard.classList.add('hidden');

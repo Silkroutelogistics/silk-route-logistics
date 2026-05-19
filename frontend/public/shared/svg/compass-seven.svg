@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  compass-seven.svg — /carriers page illustration
+  Communicates: the published 7-factor Compass Score (CLAUDE.md §9).
+  Tier is not assigned — it is earned, transparently, from 7 measurable factors.
+  Visual elements:
+    · Central compass mark (navy ring + gold cardinal star)
+    · 7 radial petals around the compass, each labeled with a Compass factor
+      and its published weight per CLAUDE.md §9 (20/20/15/15/10/10/10)
+    · Larger petals for the 20% factors, smaller for 10%
+  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --fg-2 #3A4A5F
+  Animation hook: petals fade-in on scroll via .compass-petal CSS class
+-->
+<svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Compass Score: seven measurable factors with published weights">
+  <title>Caravan Partner Program Compass Score — 7 measurable factors</title>
+
+  <defs>
+    <!-- Gold-dark to gold linear gradient for petals -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BA7517" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#C5A572" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 7 radial petal slots — 360/7 ≈ 51.43° apart, starting at top -->
+  <!-- Petal 1 — On-time pickup (20%), top -->
+  <g transform="translate(240 240) rotate(0)" class="compass-petal" style="animation-delay: 0s">
+    <path d="M 0 -80 Q 28 -150, 0 -200 Q -28 -150, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#BA7517" stroke-width="1.5" opacity="0.85"/>
+    <text x="0" y="-150" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+          font-size="20" font-weight="600" fill="#0A2540">20%</text>
+    <text x="0" y="-130" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1">ON-TIME PICKUP</text>
+  </g>
+
+  <!-- Petal 2 — On-time delivery (20%) -->
+  <g transform="translate(240 240) rotate(51.43)" class="compass-petal" style="animation-delay: 0.08s">
+    <path d="M 0 -80 Q 28 -150, 0 -200 Q -28 -150, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#BA7517" stroke-width="1.5" opacity="0.85"/>
+    <g transform="rotate(-51.43) translate(165 -38)">
+      <text font-family="Playfair Display, Georgia, serif" font-size="20" font-weight="600" fill="#0A2540" text-anchor="middle">20%</text>
+      <text y="18" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">ON-TIME DELIVERY</text>
+    </g>
+  </g>
+
+  <!-- Petal 3 — GPS compliance (15%) -->
+  <g transform="translate(240 240) rotate(102.86)" class="compass-petal" style="animation-delay: 0.16s">
+    <path d="M 0 -80 Q 26 -145, 0 -185 Q -26 -145, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#C5A572" stroke-width="1.5" opacity="0.7"/>
+    <g transform="rotate(-102.86) translate(132 95)">
+      <text font-family="Playfair Display, Georgia, serif" font-size="18" font-weight="600" fill="#0A2540" text-anchor="middle">15%</text>
+      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">GPS COMPLIANCE</text>
+    </g>
+  </g>
+
+  <!-- Petal 4 — Claims ratio (15%) -->
+  <g transform="translate(240 240) rotate(154.29)" class="compass-petal" style="animation-delay: 0.24s">
+    <path d="M 0 -80 Q 26 -145, 0 -185 Q -26 -145, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#C5A572" stroke-width="1.5" opacity="0.7"/>
+    <g transform="rotate(-154.29) translate(60 170)">
+      <text font-family="Playfair Display, Georgia, serif" font-size="18" font-weight="600" fill="#0A2540" text-anchor="middle">15%</text>
+      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">CLAIMS RATIO</text>
+    </g>
+  </g>
+
+  <!-- Petal 5 — Communication (10%) -->
+  <g transform="translate(240 240) rotate(205.71)" class="compass-petal" style="animation-delay: 0.32s">
+    <path d="M 0 -80 Q 22 -140, 0 -170 Q -22 -140, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#C5A572" stroke-width="1.5" opacity="0.55"/>
+    <g transform="rotate(-205.71) translate(-60 170)">
+      <text font-family="Playfair Display, Georgia, serif" font-size="17" font-weight="600" fill="#0A2540" text-anchor="middle">10%</text>
+      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">COMMUNICATION</text>
+    </g>
+  </g>
+
+  <!-- Petal 6 — Document timeliness (10%) -->
+  <g transform="translate(240 240) rotate(257.14)" class="compass-petal" style="animation-delay: 0.4s">
+    <path d="M 0 -80 Q 22 -140, 0 -170 Q -22 -140, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#C5A572" stroke-width="1.5" opacity="0.55"/>
+    <g transform="rotate(-257.14) translate(-132 95)">
+      <text font-family="Playfair Display, Georgia, serif" font-size="17" font-weight="600" fill="#0A2540" text-anchor="middle">10%</text>
+      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">DOC TIMELINESS</text>
+    </g>
+  </g>
+
+  <!-- Petal 7 — Acceptance rate (10%) -->
+  <g transform="translate(240 240) rotate(308.57)" class="compass-petal" style="animation-delay: 0.48s">
+    <path d="M 0 -80 Q 22 -140, 0 -170 Q -22 -140, 0 -80 Z"
+          fill="url(#goldGrad)" stroke="#C5A572" stroke-width="1.5" opacity="0.55"/>
+    <g transform="rotate(-308.57) translate(-165 -38)">
+      <text font-family="Playfair Display, Georgia, serif" font-size="17" font-weight="600" fill="#0A2540" text-anchor="middle">10%</text>
+      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">ACCEPTANCE</text>
+    </g>
+  </g>
+
+  <!-- Central compass mark -->
+  <g transform="translate(240 240)">
+    <circle r="64" fill="#FDFBF7" stroke="#0A2540" stroke-width="2.5"/>
+    <circle r="56" fill="none" stroke="#BA7517" stroke-width="1" opacity="0.4"/>
+    <!-- Cardinal star points -->
+    <polygon points="0,-50 8,-8 0,0 -8,-8" fill="#BA7517"/>
+    <polygon points="50,0 8,8 0,0 8,-8" fill="#C5A572"/>
+    <polygon points="0,50 8,8 0,0 -8,8" fill="#C5A572"/>
+    <polygon points="-50,0 -8,8 0,0 -8,-8" fill="#C5A572"/>
+    <!-- Center dot -->
+    <circle r="4" fill="#0A2540"/>
+    <!-- Label -->
+    <text x="0" y="-78" text-anchor="middle" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#BA7517" letter-spacing="2">COMPASS SCORE</text>
+  </g>
+</svg>
