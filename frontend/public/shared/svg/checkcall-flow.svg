@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  checkcall-flow.svg — /track page explainer (replaces map illustration).
+  Communicates: HOW an update gets from a carrier driver to the public
+  tracker. Demystifies SRL's check-call → ops-log → public-render pipeline.
+  Reads as a brand-as-transparency statement.
+
+  Three steps:
+    1. DRIVER CHECKS IN (truck + 5 source-of-truth methods)
+    2. SRL OPS LOGS THE EVENT (compass + timestamp + source tag + ETA recompute)
+    3. YOUR SCREEN UPDATES (stylized device + status badge + last-location badge)
+
+  Animation timeline (8s loop):
+    0.0s   step 1 visible, truck pulse rings start
+    1.2s   arrow 1 draws (truck → ops)
+    2.0s   step 2 highlights (compass spins one quarter), ops icons activate
+    3.2s   arrow 2 draws (ops → screen)
+    4.0s   step 3 highlights, status badges appear on screen
+    5.5s   "most updates within 60s" caption fades in
+    8.0s   reset, repeat
+
+  Tokens: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572,
+          --cream-2 #F5EEE0, --fg-2 #3A4A5F, --fg-3 #6B7685,
+          --success #2F7A4F
+  Performance: ~9KB, SMIL animation, no JS
+-->
+<svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg"
+     role="img"
+     aria-label="How tracking updates flow — driver check-in to SRL operations to public tracker">
+  <title>How tracking updates reach your screen</title>
+
+  <defs>
+    <linearGradient id="ccSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#F5EEE0"/>
+    </linearGradient>
+    <pattern id="ccDots" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.6" fill="#0A2540" opacity="0.04"/>
+    </pattern>
+    <linearGradient id="ccArrow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#BA7517" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#BA7517" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Backgrounds -->
+  <rect width="900" height="440" fill="url(#ccSky)"/>
+  <rect width="900" height="440" fill="url(#ccDots)"/>
+
+  <!-- ===========================================================
+       FLOW ARROWS (drawn behind step cards so they tuck under)
+       =========================================================== -->
+  <!-- Arrow 1: step 1 → step 2 -->
+  <path id="ccArrow1" d="M 268 200 L 372 200"
+        stroke="url(#ccArrow)" stroke-width="2.5" fill="none"
+        stroke-linecap="round" stroke-dasharray="120"
+        stroke-dashoffset="120">
+    <animate attributeName="stroke-dashoffset"
+             values="120; 0; 0; 120; 120"
+             keyTimes="0; 0.15; 0.95; 1; 1"
+             dur="8s" begin="0s" repeatCount="indefinite"
+             calcMode="spline"
+             keySplines="0.4 0 0.2 1; 0 0 1 1; 0 0 1 1; 0 0 1 1"/>
+  </path>
+  <!-- Arrowhead 1 -->
+  <polygon points="368,193 380,200 368,207" fill="#BA7517" opacity="0">
+    <animate attributeName="opacity" values="0; 1; 1; 0; 0"
+             keyTimes="0; 0.18; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+  </polygon>
+
+  <!-- Arrow 2: step 2 → step 3 -->
+  <path id="ccArrow2" d="M 568 200 L 672 200"
+        stroke="url(#ccArrow)" stroke-width="2.5" fill="none"
+        stroke-linecap="round" stroke-dasharray="120"
+        stroke-dashoffset="120">
+    <animate attributeName="stroke-dashoffset"
+             values="120; 120; 0; 0; 120; 120"
+             keyTimes="0; 0.4; 0.55; 0.95; 1; 1"
+             dur="8s" begin="0s" repeatCount="indefinite"
+             calcMode="spline"
+             keySplines="0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1; 0 0 1 1"/>
+  </path>
+  <polygon points="668,193 680,200 668,207" fill="#BA7517" opacity="0">
+    <animate attributeName="opacity" values="0; 0; 1; 1; 0; 0"
+             keyTimes="0; 0.55; 0.58; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+  </polygon>
+
+  <!-- ===========================================================
+       STEP 1 — DRIVER CHECKS IN (left card)
+       =========================================================== -->
+  <g transform="translate(140 200)">
+    <!-- Card background -->
+    <rect x="-120" y="-130" width="240" height="260" rx="14"
+          fill="#FFFFFF" stroke="#0A2540" stroke-width="1" opacity="0.95"/>
+    <!-- Step badge -->
+    <circle cx="-90" cy="-100" r="14" fill="#BA7517"/>
+    <text x="-90" y="-95" text-anchor="middle"
+          font-family="Playfair Display, Georgia, serif"
+          font-size="14" font-weight="700" fill="#FDFBF7">1</text>
+
+    <!-- Pulse rings (anchored at truck position 0, -50) -->
+    <circle cx="0" cy="-50" r="22" fill="none" stroke="#BA7517" stroke-width="1.5" opacity="0">
+      <animate attributeName="r" values="22; 52" dur="2s" begin="0s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6; 0" dur="2s" begin="0s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="0" cy="-50" r="22" fill="none" stroke="#C5A572" stroke-width="1.5" opacity="0">
+      <animate attributeName="r" values="22; 52" dur="2s" begin="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.4; 0" dur="2s" begin="0.8s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Truck icon (side profile) -->
+    <g transform="translate(0 -50)">
+      <!-- Trailer -->
+      <rect x="-38" y="-12" width="48" height="22" rx="2" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <!-- Trailer detail lines -->
+      <line x1="-32" y1="-7" x2="-32" y2="6" stroke="#0A2540" stroke-width="0.6" opacity="0.3"/>
+      <line x1="-20" y1="-7" x2="-20" y2="6" stroke="#0A2540" stroke-width="0.6" opacity="0.3"/>
+      <line x1="-8" y1="-7" x2="-8" y2="6" stroke="#0A2540" stroke-width="0.6" opacity="0.3"/>
+      <!-- Cab -->
+      <rect x="10" y="-14" width="16" height="24" rx="2" fill="#0A2540"/>
+      <!-- Cab window -->
+      <rect x="13" y="-11" width="10" height="8" rx="0.5" fill="#BA7517" opacity="0.85"/>
+      <!-- Hood -->
+      <rect x="24" y="-5" width="4" height="9" fill="#BA7517"/>
+      <!-- Wheels -->
+      <circle cx="-30" cy="12" r="4" fill="#0A2540"/>
+      <circle cx="-30" cy="12" r="1.8" fill="#C5A572"/>
+      <circle cx="-8" cy="12" r="4" fill="#0A2540"/>
+      <circle cx="-8" cy="12" r="1.8" fill="#C5A572"/>
+      <circle cx="18" cy="12" r="4" fill="#0A2540"/>
+      <circle cx="18" cy="12" r="1.8" fill="#C5A572"/>
+    </g>
+
+    <!-- Heading -->
+    <text x="0" y="0" text-anchor="middle"
+          font-family="DM Sans, sans-serif" font-size="8" font-weight="700"
+          fill="#BA7517" letter-spacing="2">DRIVER CHECKS IN</text>
+
+    <!-- 5 source-of-truth methods -->
+    <g font-family="DM Sans, sans-serif" font-size="11" fill="#3A4A5F">
+      <text x="-90" y="24"><tspan font-weight="700" fill="#BA7517">·</tspan> Phone to operations</text>
+      <text x="-90" y="44"><tspan font-weight="700" fill="#BA7517">·</tspan> EDI 214 status update</text>
+      <text x="-90" y="64"><tspan font-weight="700" fill="#BA7517">·</tspan> ELD GPS auto-ping</text>
+      <text x="-90" y="84"><tspan font-weight="700" fill="#BA7517">·</tspan> Carrier portal entry</text>
+      <text x="-90" y="104"><tspan font-weight="700" fill="#BA7517">·</tspan> Geofence trigger</text>
+    </g>
+  </g>
+
+  <!-- ===========================================================
+       STEP 2 — SRL OPS LOGS THE EVENT (center card)
+       =========================================================== -->
+  <g transform="translate(470 200)">
+    <!-- Card background — slightly elevated to emphasize the system center -->
+    <rect x="-100" y="-130" width="200" height="260" rx="14"
+          fill="#0A2540" opacity="1"/>
+    <rect x="-100" y="-130" width="200" height="260" rx="14"
+          fill="none" stroke="#BA7517" stroke-width="1.5" opacity="0.6"/>
+    <!-- Step badge -->
+    <circle cx="-72" cy="-100" r="14" fill="#BA7517"/>
+    <text x="-72" y="-95" text-anchor="middle"
+          font-family="Playfair Display, Georgia, serif"
+          font-size="14" font-weight="700" fill="#FDFBF7">2</text>
+
+    <!-- Central compass mark — pulses on activation -->
+    <g transform="translate(0 -50)">
+      <circle r="38" fill="#FDFBF7" stroke="#BA7517" stroke-width="1.5" opacity="0.05">
+        <animate attributeName="r" values="38; 46; 38" dur="2s" begin="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.25; 0; 0.25" dur="2s" begin="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="34" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="28" fill="none" stroke="#BA7517" stroke-width="0.8" opacity="0.4"/>
+      <!-- Cardinal star -->
+      <polygon points="0,-24 5,-5 0,0 -5,-5" fill="#BA7517"/>
+      <polygon points="24,0 5,5 0,0 5,-5" fill="#C5A572"/>
+      <polygon points="0,24 5,5 0,0 -5,5" fill="#C5A572"/>
+      <polygon points="-24,0 -5,5 0,0 -5,-5" fill="#C5A572"/>
+      <circle r="2.5" fill="#0A2540"/>
+    </g>
+
+    <!-- "SRL OPERATIONS" wordmark -->
+    <text x="0" y="0" text-anchor="middle"
+          font-family="DM Sans, sans-serif" font-size="8" font-weight="700"
+          fill="#C5A572" letter-spacing="2">SRL OPS LOGS THE EVENT</text>
+
+    <!-- 4 actions (white on navy) -->
+    <g font-family="DM Sans, sans-serif" font-size="11" fill="#FDFBF7" opacity="0.85">
+      <text x="-80" y="24"><tspan font-weight="700" fill="#C5A572">·</tspan> Source tagged</text>
+      <text x="-80" y="44"><tspan font-weight="700" fill="#C5A572">·</tspan> Timestamped (UTC)</text>
+      <text x="-80" y="64"><tspan font-weight="700" fill="#C5A572">·</tspan> ETA recomputed</text>
+      <text x="-80" y="84"><tspan font-weight="700" fill="#C5A572">·</tspan> Geofence cross check</text>
+      <text x="-80" y="104"><tspan font-weight="700" fill="#C5A572">·</tspan> Exception flagged</text>
+    </g>
+  </g>
+
+  <!-- ===========================================================
+       STEP 3 — YOUR SCREEN UPDATES (right card)
+       =========================================================== -->
+  <g transform="translate(800 200)">
+    <!-- Card background -->
+    <rect x="-120" y="-130" width="240" height="260" rx="14"
+          fill="#FFFFFF" stroke="#0A2540" stroke-width="1" opacity="0.95"/>
+    <!-- Step badge -->
+    <circle cx="-90" cy="-100" r="14" fill="#BA7517"/>
+    <text x="-90" y="-95" text-anchor="middle"
+          font-family="Playfair Display, Georgia, serif"
+          font-size="14" font-weight="700" fill="#FDFBF7">3</text>
+
+    <!-- Stylized phone/laptop screen showing status -->
+    <g transform="translate(0 -50)">
+      <!-- Device outer frame -->
+      <rect x="-58" y="-36" width="116" height="72" rx="6"
+            fill="#0A2540"/>
+      <!-- Screen interior -->
+      <rect x="-54" y="-32" width="108" height="64" rx="3"
+            fill="#FDFBF7"/>
+      <!-- Top bar (status label area) -->
+      <rect x="-50" y="-28" width="40" height="10" rx="2" fill="#F5EEE0"/>
+      <!-- Status pill that "fills" with content via animation -->
+      <rect x="6" y="-28" width="44" height="10" rx="5" fill="#F5EEE0"/>
+      <rect x="6" y="-28" width="0" height="10" rx="5" fill="#BA7517" opacity="0.85">
+        <animate attributeName="width" values="0; 0; 44; 44; 0; 0"
+                 keyTimes="0; 0.5; 0.6; 0.95; 1; 1" dur="8s" begin="0s"
+                 repeatCount="indefinite"
+                 calcMode="spline"
+                 keySplines="0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1; 0 0 1 1"/>
+      </rect>
+      <!-- Route progress bar -->
+      <rect x="-50" y="-14" width="100" height="3" rx="1.5" fill="#F5EEE0"/>
+      <rect x="-50" y="-14" width="0" height="3" rx="1.5" fill="#BA7517">
+        <animate attributeName="width" values="0; 0; 60; 60; 0; 0"
+                 keyTimes="0; 0.5; 0.65; 0.95; 1; 1" dur="8s" begin="0s"
+                 repeatCount="indefinite"
+                 calcMode="spline"
+                 keySplines="0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1; 0 0 1 1"/>
+      </rect>
+      <!-- Marker dot on progress bar -->
+      <circle cx="-50" cy="-12.5" r="3.5" fill="#BA7517" stroke="#FDFBF7" stroke-width="1.2" opacity="0">
+        <animate attributeName="opacity" values="0; 0; 1; 1; 0; 0"
+                 keyTimes="0; 0.5; 0.65; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+        <animate attributeName="cx" values="-50; -50; 10; 10; -50; -50"
+                 keyTimes="0; 0.5; 0.65; 0.95; 1; 1" dur="8s" begin="0s"
+                 repeatCount="indefinite"
+                 calcMode="spline"
+                 keySplines="0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1; 0 0 1 1"/>
+      </circle>
+      <!-- Detail lines -->
+      <rect x="-50" y="-4" width="70" height="3" rx="1.5" fill="#F5EEE0"/>
+      <rect x="-50" y="-4" width="0" height="3" rx="1.5" fill="#0A2540" opacity="0.5">
+        <animate attributeName="width" values="0; 0; 70; 70; 0; 0"
+                 keyTimes="0; 0.5; 0.72; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="-50" y="3" width="56" height="3" rx="1.5" fill="#F5EEE0"/>
+      <rect x="-50" y="3" width="0" height="3" rx="1.5" fill="#0A2540" opacity="0.5">
+        <animate attributeName="width" values="0; 0; 56; 56; 0; 0"
+                 keyTimes="0; 0.5; 0.76; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="-50" y="10" width="40" height="3" rx="1.5" fill="#F5EEE0"/>
+      <rect x="-50" y="10" width="0" height="3" rx="1.5" fill="#0A2540" opacity="0.5">
+        <animate attributeName="width" values="0; 0; 40; 40; 0; 0"
+                 keyTimes="0; 0.5; 0.8; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+      </rect>
+      <!-- "Live" indicator (green dot) -->
+      <circle cx="46" cy="22" r="3" fill="#2F7A4F" opacity="0">
+        <animate attributeName="opacity" values="0; 0; 1; 0.5; 1; 0.5; 1; 0; 0"
+                 keyTimes="0; 0.55; 0.6; 0.7; 0.8; 0.9; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- Heading -->
+    <text x="0" y="0" text-anchor="middle"
+          font-family="DM Sans, sans-serif" font-size="8" font-weight="700"
+          fill="#BA7517" letter-spacing="2">YOUR SCREEN UPDATES</text>
+
+    <!-- 4 fields -->
+    <g font-family="DM Sans, sans-serif" font-size="11" fill="#3A4A5F">
+      <text x="-90" y="24"><tspan font-weight="700" fill="#BA7517">·</tspan> Live status badge</text>
+      <text x="-90" y="44"><tspan font-weight="700" fill="#BA7517">·</tspan> Last known location</text>
+      <text x="-90" y="64"><tspan font-weight="700" fill="#BA7517">·</tspan> Source + timestamp</text>
+      <text x="-90" y="84"><tspan font-weight="700" fill="#BA7517">·</tspan> Updated ETA</text>
+      <text x="-90" y="104"><tspan font-weight="700" fill="#BA7517">·</tspan> Exception alerts</text>
+    </g>
+  </g>
+
+  <!-- ===========================================================
+       BOTTOM CAPTION — "Most updates appear within 60 seconds"
+       =========================================================== -->
+  <g transform="translate(450 410)" opacity="0">
+    <animate attributeName="opacity" values="0; 0; 1; 1; 0; 0"
+             keyTimes="0; 0.65; 0.75; 0.95; 1; 1" dur="8s" begin="0s" repeatCount="indefinite"/>
+    <rect x="-180" y="-13" width="360" height="22" rx="11"
+          fill="#0A2540"/>
+    <text x="0" y="3" text-anchor="middle"
+          font-family="DM Sans, sans-serif" font-size="10" font-weight="600"
+          fill="#FDFBF7" letter-spacing="1">Most updates appear within 60 seconds of the source event</text>
+  </g>
+</svg>

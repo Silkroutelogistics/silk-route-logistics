@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  network-truck.svg — reusable continental-US freight network illustration
+  with animated truck traveling along the primary lane. General-purpose;
+  intended for use on /, /shippers, /carriers, /about, /blog, etc.
+
+  Same compositional bones as route-trace.svg (US silhouette + 6 freight
+  nodes + secondary network lines + primary route) but with an animated
+  TRUCK (side profile, brand-styled) traveling along the primary route
+  instead of a compass marker. The compass marker is reserved for the
+  /track page where "live shipment marker" is the literal meaning;
+  the truck communicates "real freight, real network" for the marketing
+  pages where the meaning is positioning, not status.
+
+  Animation: route draws over 2.4s, then truck travels Chicago → LA on
+  a 12-second loop (slower than the marker loop on /track — gives the
+  illustration room to breathe on a marketing page).
+
+  Tokens: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572,
+          --cream-2 #F5EEE0, --fg-2 #3A4A5F, --fg-3 #6B7685
+  Performance: ~11KB, SMIL animation, no JS
+-->
+<svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg"
+     role="img"
+     aria-label="Silk Route Logistics freight network — coast to coast with an active load in motion">
+  <title>SRL freight network — coast to coast</title>
+
+  <defs>
+    <linearGradient id="ntSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#F5EEE0"/>
+    </linearGradient>
+    <linearGradient id="ntRouteGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#BA7517"/>
+      <stop offset="100%" stop-color="#C5A572"/>
+    </linearGradient>
+    <pattern id="ntDots" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.6" fill="#0A2540" opacity="0.04"/>
+    </pattern>
+  </defs>
+
+  <rect width="900" height="500" fill="url(#ntSky)"/>
+  <rect width="900" height="500" fill="url(#ntDots)"/>
+
+  <!-- US silhouette (stylized) -->
+  <g>
+    <path d="M 78 100 Q 96 72, 190 64 L 360 56 Q 470 60, 540 92 L 670 112 Q 770 108, 830 142 L 868 200 Q 876 268, 854 320 L 830 370 Q 822 402, 808 412 Q 768 405, 720 388 L 595 395 Q 526 415, 466 420 L 376 425 Q 280 423, 198 408 L 130 392 Q 82 358, 78 278 Q 70 198, 78 100 Z"
+          fill="#0A2540" opacity="0.025" transform="translate(2 3)"/>
+    <path d="M 78 100 Q 96 72, 190 64 L 360 56 Q 470 60, 540 92 L 670 112 Q 770 108, 830 142 L 868 200 Q 876 268, 854 320 L 830 370 Q 822 402, 808 412 Q 768 405, 720 388 L 595 395 Q 526 415, 466 420 L 376 425 Q 280 423, 198 408 L 130 392 Q 82 358, 78 278 Q 70 198, 78 100 Z"
+          fill="#FDFBF7" stroke="#0A2540" stroke-width="1.4" opacity="0.85"/>
+    <path d="M 78 220 Q 300 215, 540 210 L 868 220" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 78 300 Q 320 295, 540 295 L 854 300" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 320 56 Q 322 200, 326 420" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 540 92 Q 542 250, 540 420" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 700 110 Q 705 250, 720 388" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+  </g>
+
+  <!-- Secondary network lines -->
+  <g opacity="0.5">
+    <path d="M 130 110 Q 320 130, 530 195" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 130 110 Q 95 220, 110 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 110 350 Q 280 370, 440 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 440 350 Q 540 350, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 660 330 Q 730 280, 780 215" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 530 195 Q 660 200, 780 215" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 530 195 Q 480 270, 440 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <path d="M 530 195 Q 600 260, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Primary route — Chicago → LA — drawn live -->
+  <path id="ntPrimaryRoute"
+        d="M 530 195 Q 360 220, 250 290 T 110 350"
+        stroke="url(#ntRouteGrad)" stroke-width="3.2" fill="none"
+        stroke-linecap="round" stroke-dasharray="480" stroke-dashoffset="480">
+    <animate attributeName="stroke-dashoffset" from="480" to="0" dur="2.4s"
+             fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1"/>
+  </path>
+
+  <!-- City nodes -->
+  <g>
+    <g transform="translate(130 110)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.2s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">SEATTLE</text>
+    </g>
+    <g transform="translate(530 195)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.4s" fill="freeze"/>
+      <circle r="8" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
+      <circle r="3.5" fill="#BA7517"/>
+      <text y="-16" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="10" font-weight="700" fill="#0A2540" letter-spacing="1.5">CHICAGO</text>
+    </g>
+    <g transform="translate(780 215)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.6s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">NEW YORK</text>
+    </g>
+    <g transform="translate(440 350)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.8s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">DALLAS</text>
+    </g>
+    <g transform="translate(660 330)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.0s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">ATLANTA</text>
+    </g>
+    <g transform="translate(110 350)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.2s" fill="freeze"/>
+      <circle r="8" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
+      <circle r="3.5" fill="#C5A572"/>
+      <text y="-16" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="10" font-weight="700" fill="#0A2540" letter-spacing="1.5">LOS ANGELES</text>
+    </g>
+  </g>
+
+  <!-- ============================================================
+       ANIMATED TRUCK — travels Chicago → LA via animateMotion
+       Truck side profile, navy + gold, scaled to read at ~36px wide.
+       rotate="auto" makes the truck orient along the path tangent
+       (truck noses into the direction of travel naturally).
+       ============================================================ -->
+  <g opacity="0">
+    <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/>
+    <animateMotion dur="12s" begin="2.4s" repeatCount="indefinite" rotate="auto">
+      <mpath href="#ntPrimaryRoute"/>
+    </animateMotion>
+
+    <!-- Truck — drawn at scale, origin at center-rear of trailer.
+         Default orientation: pointing right (positive X). animateMotion's
+         rotate="auto" will spin this around the path tangent. -->
+    <g transform="scale(0.85) rotate(0)">
+      <!-- Trailer body -->
+      <rect x="-22" y="-6" width="28" height="12" rx="1" fill="#FDFBF7" stroke="#0A2540" stroke-width="1"/>
+      <!-- Trailer separator lines -->
+      <line x1="-15" y1="-4" x2="-15" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
+      <line x1="-7" y1="-4" x2="-7" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
+      <line x1="1" y1="-4" x2="1" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
+      <!-- Cab -->
+      <rect x="6" y="-7" width="10" height="13" rx="1" fill="#0A2540"/>
+      <!-- Cab window -->
+      <rect x="8" y="-5" width="6" height="4" fill="#BA7517" opacity="0.9"/>
+      <!-- Hood detail -->
+      <rect x="14" y="-1.5" width="2" height="5" fill="#BA7517"/>
+      <!-- Wheels (small) -->
+      <circle cx="-18" cy="7" r="2.2" fill="#0A2540"/>
+      <circle cx="-18" cy="7" r="0.9" fill="#C5A572"/>
+      <circle cx="-5" cy="7" r="2.2" fill="#0A2540"/>
+      <circle cx="-5" cy="7" r="0.9" fill="#C5A572"/>
+      <circle cx="10" cy="7" r="2.2" fill="#0A2540"/>
+      <circle cx="10" cy="7" r="0.9" fill="#C5A572"/>
+    </g>
+  </g>
+
+  <!-- Footer caption (different than /track — no "sample lane" framing,
+       just brand presence) -->
+  <g transform="translate(450 470)">
+    <text text-anchor="middle" font-family="Georgia, serif" font-style="italic"
+          font-size="12" fill="#3A4A5F" opacity="0.85">A continental network. One trust standard.</text>
+  </g>
+</svg>

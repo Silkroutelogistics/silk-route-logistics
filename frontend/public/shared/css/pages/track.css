@@ -331,6 +331,40 @@
       padding-top: 16px;
       border-top: 1px solid rgba(10, 37, 64, 0.08);
     }
+    .explainer-intro {
+      font-size: 14px;
+      color: var(--body-text);
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+    .explainer-sources {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .explainer-sources li {
+      font-size: 13px;
+      color: var(--body-text);
+      line-height: 1.6;
+      padding-left: 14px;
+      position: relative;
+    }
+    .explainer-sources li::before {
+      content: '·';
+      position: absolute;
+      left: 0;
+      top: -2px;
+      color: var(--gold-dark);
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .explainer-sources strong {
+      color: var(--navy);
+      font-weight: 600;
+    }
 
     /* ======================================
        RESULT PANEL
