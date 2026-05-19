@@ -966,33 +966,36 @@
       z-index: 1;
     }
 
+    /* v3.8.aek — tech cards refactored type-forward (same pattern as
+       v3.8.aeh services grid + v3.8.adz dual-persona collapse).
+       Unsplash stock photos stripped, gold-dark 3px ::before top-edge
+       accent strip provides visual rhythm. Padding tightened from
+       40px 32px to 32px 28px 28px now that the 180px image block is
+       gone. */
     .tech-card {
+      position: relative;
       background: var(--white);
       border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: var(--radius);
-      padding: 40px 32px;
+      padding: 32px 28px 28px;
       transition: var(--transition);
+      overflow: hidden;
+    }
+
+    .tech-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gold-dark);
     }
 
     .tech-card:hover {
       box-shadow: var(--shadow-lg);
       border-color: rgba(186, 117, 23, 0.25);
       transform: translateY(-4px);
-    }
-
-    .tech-card .tech-icon {
-      width: 100%;
-      height: 180px;
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-
-    .tech-card .tech-icon img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
     }
 
     .tech-card h4 {
