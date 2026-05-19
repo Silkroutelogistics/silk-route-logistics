@@ -147,13 +147,17 @@
 
 
   <!-- ============================================
-       SECTION 1 — HERO
-       ============================================ -->
-  <!-- Hero — sourced freight-corridor aerial video (v3.8.adw). H.264
-       1920x1080, 7.97s loop, no audio, 3.15 MB. Replaces the v3.8.acr
-       silk-route SVG trace. Cream-gradient overlay at bottom preserves
-       brand canvas identity and ensures navy H1 readability against
-       daylight video. prefers-reduced-motion fallback: poster only. -->
+       SECTION 1 — HERO (v3.8.aeb restructure)
+       Hero is now the single dual-persona moment. Video plays behind,
+       H1 sits at top with text-shadow for legibility (no frosted glass),
+       two persona cards mount below H1 with accent-strip identity. The
+       standalone dual-persona section that sat below the hero was
+       deleted in this version — page now collapses the same two-track
+       shipper/carrier message into one premium block instead of
+       repeating it twice. CTAs wire to operational destinations:
+       /shipper/register (signup → quote) and /onboarding (carrier
+       application). Anchor IDs #shippers and #carriers preserved on
+       the cards so existing nav links continue to work. -->
   <section class="hero" id="hero">
     <video class="hero-video"
            autoplay muted loop playsinline
@@ -162,78 +166,37 @@
       <source src="/media/homepage-hero.mp4" type="video/mp4">
     </video>
     <div class="hero-video-overlay" aria-hidden="true"></div>
+
     <div class="hero-content">
-      <h1>
+      <h1 class="hero-headline">
         Freight brokerage built for the<br>
         <span class="gold-line">carrier's side of the bill.</span>
       </h1>
-      <div class="hero-btns">
-        <a href="/carriers.html" class="btn btn-gold">Join the Caravan Partner Program</a>
-        <a href="/shippers.html" class="btn btn-outline-navy">Ship with SRL</a>
-      </div>
-    </div>
-  </section>
 
-
-  <!-- ============================================
-       SECTION 3 — DUAL PERSONA SPLIT
-       ============================================ -->
-  <section class="dual-persona section-pad" id="shippers">
-    <div class="container">
-      <div class="dual-grid">
-        <!-- Shippers -->
-        <div class="persona-card shipper reveal">
+      <div class="hero-cards">
+        <!-- Shipper card -->
+        <div class="hero-card shipper" id="shippers">
           <h3>Ship With Confidence</h3>
-          <p class="card-sub">Partner with a brokerage built by logistics veterans who understand what's at stake with every load.</p>
-          <ul>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>Dedicated Account Executive</strong> — A single point of contact who knows your lanes, your product, and your deadlines</span>
-            </li>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>Real-Time Tracking</strong> — Live GPS visibility on every shipment from pickup to delivery with automated status updates</span>
-            </li>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>Competitive Market Rates</strong> — Transparent pricing powered by real-time market data and our carrier network</span>
-            </li>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>48-State Coverage</strong> &mdash; Continental US on every equipment type: dry van, reefer, flatbed, power-only, hazmat, and oversize</span>
-            </li>
-          </ul>
-          <a href="/shippers.html" class="btn btn-gold">Get a Quote</a>
+          <p class="hero-card-sub">Dedicated account executive, real-time tracking, transparent pricing across all 48 contiguous United States.</p>
+          <a href="/shipper/register" class="btn btn-gold">Get a Quote</a>
         </div>
 
-        <!-- Carriers -->
-        <div class="persona-card carrier reveal reveal-delay-2" id="carriers">
+        <!-- Carrier card -->
+        <div class="hero-card carrier" id="carriers">
           <h3>The Caravan Partner Program</h3>
-          <p class="card-sub" style="font-size:15px;font-weight:600;color:#C8963E;margin-bottom:4px">Published 7-factor Compass Score. Tier-based standard pay (Net-30/21/14). Quick Pay from Day 1.</p>
-          <p class="card-sub">Three tiers &mdash; SILVER, GOLD, PLATINUM &mdash; that reward reliability with faster pay and real money back.</p>
-          <ul>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>Caravan Partner Program: SILVER &rarr; GOLD &rarr; PLATINUM</strong> — Earn your way up with every load. Better terms, lower QP fees, safety bonuses</span>
-            </li>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>Quick Pay from Day 1</strong> — 7-day pay at 3% (Silver), 2% (Gold), 1% (Platinum). Same-day on any tier for a universal +2% premium. No factoring needed</span>
-            </li>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>Safety Bonuses Up to $300/mo</strong> — Platinum carriers earn monthly safety bonuses plus $75/hr detention rates</span>
-            </li>
-            <li>
-              <span class="check">&#10003;</span>
-              <span><strong>6 Milestones to Climb</strong> — M1 New Partner through M6 Legend. Each milestone unlocks new rewards and privileges</span>
-            </li>
-          </ul>
-          <a href="/carriers.html" class="btn btn-outline-navy">Full Program Details</a>
+          <p class="hero-card-sub">Published 7-factor Compass Score. Tier-based pay (Net-30 / 21 / 14). Quick Pay from Day 1. No factoring contract.</p>
+          <a href="/onboarding" class="btn btn-outline-navy">Join the Caravan Partner Program</a>
         </div>
       </div>
     </div>
   </section>
+
+
+  <!-- v3.8.aeb — standalone dual-persona section deleted. The same
+       two-track shipper/carrier message now lives in the hero cards
+       above (collapsing two redundant blocks into one premium moment).
+       Section anchor IDs #shippers and #carriers preserved on the hero
+       cards so existing nav links continue to resolve correctly. -->
 
 
   <!-- ============================================
