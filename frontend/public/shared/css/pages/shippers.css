@@ -651,22 +651,11 @@
       transform: translateY(-4px);
     }
 
-    .service-icon {
-      width: 56px;
-      height: 56px;
-      background: rgba(197,165,114, 0.08);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
-    .service-icon svg {
-      width: 28px;
-      height: 28px;
-      color: var(--gold);
-    }
+    /* v3.8.aej — .service-icon and .service-icon svg rules retired per
+       §3.7 (delete before you add). Grep confirmed zero callers in
+       shippers.html — orphan CSS from earlier shippers-page refactor
+       that left these stranded. .service-img (with hover-scale rule at
+       line ~635) is still live on shippers.html service cards and stays. */
 
     .service-card h3 {
       font-size: 22px;
