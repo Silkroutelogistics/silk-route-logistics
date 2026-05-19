@@ -1,72 +1,277 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  route-trace.svg — /track page illustration
-  Communicates: shipment is moving, you can see exactly where on the route.
-  Visual elements:
-    · Origin pin (navy, left) with "ORIGIN" caption
-    · Solid gold route (past — covered miles)
-    · Compass marker at current position (animated pulse)
-    · Dotted gold route (future — remaining miles)
-    · Destination pin (right) with "DESTINATION" caption
-    · 4 waypoint dots along the route (checkpoint suggestions)
-  Tokens used: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572, --fg-2 #3A4A5F
-  Animation hook: .marker-pulse CSS animation (defined in page CSS)
--->
-<svg viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg"
-     role="img" aria-label="Silk Route Logistics shipment route — origin to destination with current position marker">
-  <title>Live shipment route</title>
+  route-trace.svg v2 — /track page illustration
+  Communicates: SRL moves freight across the continental US — every load
+  visible at every stage. The primary route (Chicago → LA, an iconic
+  high-volume freight corridor) is drawn live; secondary network lines
+  suggest the broader lane reach behind every load.
 
-  <!-- Background subtle grid suggestion (very faint) -->
+  Visual elements:
+    · Stylized US silhouette (navy-tint, low opacity) as map context
+    · 6 named freight nodes: Seattle, Chicago, NYC, LA, Dallas, Atlanta
+    · Animated primary route: line draws over 2.4s, then pulses
+    · Pulsing radial rings at current position (live ping signal)
+    · Compass marker traveling the route in a 9s loop
+    · Faint secondary network lines (dotted) showing carrier-network reach
+    · Sun-rise gradient sky background (cream → cream-2 vertical wash)
+
+  Tokens: --navy #0A2540, --gold-dark #BA7517, --gold #C5A572,
+          --cream-2 #F5EEE0, --fg-2 #3A4A5F, --fg-3 #6B7685
+  Performance: ~7KB; SMIL animation (no JS); 60fps composited
+-->
+<svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg"
+     role="img"
+     aria-label="Continental US freight network — primary lane drawn live with traveling compass marker, secondary network lines showing carrier reach">
+  <title>SRL freight network — live route tracking</title>
+
   <defs>
-    <pattern id="dotgrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="0.6" fill="#0A2540" opacity="0.06"/>
+    <!-- Subtle sunrise gradient background (vertical) -->
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#F5EEE0"/>
+    </linearGradient>
+
+    <!-- Gold gradient for the primary route -->
+    <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#BA7517"/>
+      <stop offset="100%" stop-color="#C5A572"/>
+    </linearGradient>
+
+    <!-- Glow filter for the active marker -->
+    <radialGradient id="markerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#BA7517" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Subtle dot grid pattern -->
+    <pattern id="dotgrid" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.6" fill="#0A2540" opacity="0.04"/>
     </pattern>
   </defs>
-  <rect x="0" y="0" width="800" height="220" fill="url(#dotgrid)"/>
 
-  <!-- Solid route (past — covered) -->
-  <path d="M 80 110 Q 200 70, 320 100 T 400 110"
-        stroke="#BA7517" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Background sky + dot grid -->
+  <rect width="900" height="500" fill="url(#sky)"/>
+  <rect width="900" height="500" fill="url(#dotgrid)"/>
 
-  <!-- Dotted route (future — remaining) -->
-  <path d="M 400 110 Q 520 130, 640 105 T 720 110"
-        stroke="#C5A572" stroke-width="3" fill="none"
-        stroke-dasharray="2 9" stroke-linecap="round" opacity="0.65"/>
+  <!-- ============================================================
+       STYLIZED US SILHOUETTE — simplified abstract path
+       Not geographically literal. Recognizable shape for context.
+       ============================================================ -->
+  <g id="us-shape">
+    <!-- Subtle drop shadow / depth -->
+    <path d="M 78 100
+             Q 96 72, 190 64
+             L 360 56
+             Q 470 60, 540 92
+             L 670 112
+             Q 770 108, 830 142
+             L 868 200
+             Q 876 268, 854 320
+             L 830 370
+             Q 822 402, 808 412
+             Q 768 405, 720 388
+             L 595 395
+             Q 526 415, 466 420
+             L 376 425
+             Q 280 423, 198 408
+             L 130 392
+             Q 82 358, 78 278
+             Q 70 198, 78 100 Z"
+          fill="#0A2540" opacity="0.025"
+          transform="translate(2 3)"/>
 
-  <!-- Waypoint dots along the route -->
-  <circle cx="180" cy="88" r="3" fill="#BA7517" opacity="0.55"/>
-  <circle cx="270" cy="83" r="3" fill="#BA7517" opacity="0.7"/>
-  <circle cx="500" cy="125" r="3" fill="#C5A572" opacity="0.45"/>
-  <circle cx="620" cy="115" r="3" fill="#C5A572" opacity="0.4"/>
+    <!-- US outline -->
+    <path d="M 78 100
+             Q 96 72, 190 64
+             L 360 56
+             Q 470 60, 540 92
+             L 670 112
+             Q 770 108, 830 142
+             L 868 200
+             Q 876 268, 854 320
+             L 830 370
+             Q 822 402, 808 412
+             Q 768 405, 720 388
+             L 595 395
+             Q 526 415, 466 420
+             L 376 425
+             Q 280 423, 198 408
+             L 130 392
+             Q 82 358, 78 278
+             Q 70 198, 78 100 Z"
+          fill="#FDFBF7"
+          stroke="#0A2540" stroke-width="1.4" opacity="0.85"/>
 
-  <!-- ORIGIN pin -->
-  <g transform="translate(80, 110)">
-    <circle r="11" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
-    <circle r="4" fill="#0A2540"/>
-    <text x="0" y="-22" text-anchor="middle" font-family="DM Sans, sans-serif"
-          font-size="10" font-weight="700" fill="#3A4A5F" letter-spacing="2">ORIGIN</text>
+    <!-- Inner state-suggestion lines (very faint) -->
+    <path d="M 78 220 Q 300 215, 540 210 L 868 220" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 78 300 Q 320 295, 540 295 L 854 300" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 320 56 Q 322 200, 326 420" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 540 92 Q 542 250, 540 420" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+    <path d="M 700 110 Q 705 250, 720 388" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
   </g>
 
-  <!-- Current-position compass marker (pulses via .route-marker animation) -->
-  <g transform="translate(400, 110)" class="route-marker">
-    <circle r="18" fill="#FDFBF7" stroke="#BA7517" stroke-width="2.5" opacity="0.4">
-      <animate attributeName="r" values="18; 24; 18" dur="2.4s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.4; 0; 0.4" dur="2.4s" repeatCount="indefinite"/>
+  <!-- ============================================================
+       SECONDARY NETWORK LINES — faint dotted, suggest carrier reach
+       Drawn before primary route so primary renders on top.
+       ============================================================ -->
+  <g id="network-lines" opacity="0.5">
+    <!-- Seattle ↔ Chicago -->
+    <path d="M 130 110 Q 320 130, 530 195" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- Seattle ↔ LA -->
+    <path d="M 130 110 Q 95 220, 110 350" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- LA ↔ Dallas -->
+    <path d="M 110 350 Q 280 370, 440 350" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- Dallas ↔ Atlanta -->
+    <path d="M 440 350 Q 540 350, 660 330" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- Atlanta ↔ NYC -->
+    <path d="M 660 330 Q 730 280, 780 215" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- Chicago ↔ NYC -->
+    <path d="M 530 195 Q 660 200, 780 215" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- Chicago ↔ Dallas -->
+    <path d="M 530 195 Q 480 270, 440 350" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+    <!-- Chicago ↔ Atlanta -->
+    <path d="M 530 195 Q 600 260, 660 330" stroke="#C5A572" stroke-width="1.2"
+          fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+  </g>
+
+  <!-- ============================================================
+       PRIMARY ROUTE — Chicago → LA (iconic high-volume freight lane)
+       Drawn live via stroke-dashoffset animation.
+       Path length ≈ 480 units; animate dashoffset 480 → 0 over 2.4s.
+       ============================================================ -->
+  <path id="primaryRoute"
+        d="M 530 195 Q 360 220, 250 290 T 110 350"
+        stroke="url(#routeGrad)" stroke-width="3.2" fill="none"
+        stroke-linecap="round" stroke-dasharray="480"
+        stroke-dashoffset="480">
+    <animate attributeName="stroke-dashoffset"
+             from="480" to="0" dur="2.4s" fill="freeze"
+             calcMode="spline" keySplines="0.4 0 0.2 1"/>
+  </path>
+
+  <!-- ============================================================
+       FREIGHT CITY NODES — 6 named major freight hubs
+       Each with a navy outer ring + gold inner dot + label above.
+       Fade-in stagger via begin offsets.
+       ============================================================ -->
+  <g id="cities">
+    <!-- SEATTLE -->
+    <g transform="translate(130 110)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.2s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">SEATTLE</text>
+    </g>
+
+    <!-- CHICAGO (origin of primary route) -->
+    <g transform="translate(530 195)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.4s" fill="freeze"/>
+      <circle r="8" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
+      <circle r="3.5" fill="#BA7517"/>
+      <text y="-16" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="10" font-weight="700" fill="#0A2540" letter-spacing="1.5">CHICAGO</text>
+      <text y="-4" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="7.5" font-weight="700" fill="#BA7517" letter-spacing="1.5">ORIGIN</text>
+    </g>
+
+    <!-- NEW YORK -->
+    <g transform="translate(780 215)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.6s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">NEW YORK</text>
+    </g>
+
+    <!-- DALLAS -->
+    <g transform="translate(440 350)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.8s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">DALLAS</text>
+    </g>
+
+    <!-- ATLANTA -->
+    <g transform="translate(660 330)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.0s" fill="freeze"/>
+      <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
+      <circle r="2.5" fill="#0A2540"/>
+      <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">ATLANTA</text>
+    </g>
+
+    <!-- LOS ANGELES (destination of primary route) -->
+    <g transform="translate(110 350)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.2s" fill="freeze"/>
+      <circle r="8" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
+      <circle r="3.5" fill="#C5A572"/>
+      <text y="-16" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="10" font-weight="700" fill="#0A2540" letter-spacing="1.5">LOS ANGELES</text>
+      <text y="-4" text-anchor="middle" font-family="DM Sans, sans-serif"
+            font-size="7.5" font-weight="700" fill="#C5A572" letter-spacing="1.5">DESTINATION</text>
+    </g>
+  </g>
+
+  <!-- ============================================================
+       TRAVELING COMPASS MARKER
+       <animateMotion> traces the primary route path on a 9s loop,
+       starting after the route has finished drawing (2.4s delay).
+       Marker is a compass mark (navy ring + cardinal star points).
+       Pulsing radial rings communicate "live ping".
+       ============================================================ -->
+  <g id="marker">
+    <!-- Pulse rings (3 staggered) -->
+    <circle r="20" fill="none" stroke="#BA7517" stroke-width="1.5" opacity="0">
+      <animate attributeName="r" values="14; 36" dur="2.4s" begin="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.55; 0" dur="2.4s" begin="2.4s" repeatCount="indefinite"/>
+      <animateMotion dur="9s" begin="2.4s" repeatCount="indefinite" rotate="0">
+        <mpath href="#primaryRoute"/>
+      </animateMotion>
     </circle>
-    <circle r="14" fill="#FDFBF7" stroke="#BA7517" stroke-width="2.5"/>
-    <circle r="6" fill="#BA7517"/>
-    <!-- Compass quartering -->
-    <line x1="0" y1="-11" x2="0" y2="-7.5" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="0" y1="7.5" x2="0" y2="11" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="-11" y1="0" x2="-7.5" y2="0" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="7.5" y1="0" x2="11" y2="0" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+    <circle r="20" fill="none" stroke="#BA7517" stroke-width="1.5" opacity="0">
+      <animate attributeName="r" values="14; 36" dur="2.4s" begin="3.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.4; 0" dur="2.4s" begin="3.2s" repeatCount="indefinite"/>
+      <animateMotion dur="9s" begin="2.4s" repeatCount="indefinite" rotate="0">
+        <mpath href="#primaryRoute"/>
+      </animateMotion>
+    </circle>
+
+    <!-- Solid marker body -->
+    <g opacity="0">
+      <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="2.4s" fill="freeze"/>
+      <animateMotion dur="9s" begin="2.4s" repeatCount="indefinite" rotate="0">
+        <mpath href="#primaryRoute"/>
+      </animateMotion>
+
+      <!-- Outer ring -->
+      <circle r="14" fill="#FDFBF7" stroke="#BA7517" stroke-width="2.5"/>
+      <!-- Inner dot -->
+      <circle r="6" fill="#BA7517"/>
+      <!-- Compass quartering (cardinal star) -->
+      <line x1="0" y1="-11" x2="0" y2="-7.5" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="0" y1="7.5" x2="0" y2="11" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="-11" y1="0" x2="-7.5" y2="0" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="7.5" y1="0" x2="11" y2="0" stroke="#0A2540" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
   </g>
 
-  <!-- DESTINATION pin -->
-  <g transform="translate(720, 110)">
-    <circle r="11" fill="#FDFBF7" stroke="#0A2540" stroke-width="2" opacity="0.55"/>
-    <circle r="4" fill="#C5A572"/>
-    <text x="0" y="-22" text-anchor="middle" font-family="DM Sans, sans-serif"
-          font-size="10" font-weight="700" fill="#3A4A5F" letter-spacing="2">DESTINATION</text>
+  <!-- ============================================================
+       FOOTER STAT BLOCK — overlaid bottom-right
+       Frames the illustration as a data view, not just decoration.
+       ============================================================ -->
+  <g transform="translate(710 462)">
+    <text text-anchor="end" font-family="DM Sans, sans-serif"
+          font-size="9" font-weight="700" fill="#6B7685" letter-spacing="2">SAMPLE LANE</text>
+    <text y="14" text-anchor="end" font-family="DM Sans, sans-serif"
+          font-size="11" font-weight="600" fill="#0A2540">Chicago, IL → Los Angeles, CA · 2,015 mi</text>
   </g>
 </svg>
