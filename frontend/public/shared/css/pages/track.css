@@ -497,25 +497,39 @@
     }
     .detail-value { color: var(--navy); font-size: 14px; }
 
-    /* POD download */
-    .pod-row {
+    /* Delivery-confirmation notice (public surface — POD download is
+       portal-gated for PII / business-sensitivity reasons; see track.html
+       for the architectural note next to this block) */
+    .pod-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
       margin-top: 24px;
-      padding-top: 24px;
-      border-top: 1px solid rgba(10, 37, 64, 0.08);
+      padding: 14px 18px;
+      background: rgba(47, 122, 79, 0.06);
+      border: 1px solid rgba(47, 122, 79, 0.25);
+      border-radius: 10px;
     }
-    .pod-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      background: var(--gold-dark);
-      color: var(--cream);
-      font-size: 14px;
+    .pod-notice-icon {
+      flex-shrink: 0;
+      color: var(--success);
+      margin-top: 2px;
+    }
+    .pod-notice-text {
+      font-size: 13px;
+      color: var(--body-text);
+      line-height: 1.6;
+    }
+    .pod-notice-text strong {
+      color: var(--navy);
+      font-weight: 600;
+      margin-right: 6px;
+    }
+    .pod-notice-text a {
+      color: var(--gold-dark);
       font-weight: 500;
-      border-radius: 8px;
-      transition: var(--transition);
     }
-    .pod-btn:hover { background: #8f5a11; }
+    .pod-notice-text a:hover { text-decoration: underline; }
 
     /* Contact strip */
     .contact-strip {

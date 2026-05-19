@@ -159,14 +159,13 @@
             <li>
               <span class="step-num">3</span>
               <div>
-                <strong>Download the POD.</strong>
-                Once delivered, the signed proof of delivery is available right on this page.
+                <strong>Confirm delivery.</strong>
+                Once delivered, you'll see the timestamp and final location. For a signed Proof of Delivery, sign in to the shipper portal or email <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.
               </div>
             </li>
           </ul>
           <p class="explainer-fineprint">
-            Tracking is available to anyone with the BOL or reference number. No login required.
-            For shipper portal access — itemized history, multi-load view, exports — sign in above.
+            Tracking is available to anyone with the BOL or reference number — no login required. For shipper portal access (itemized history, multi-load view, signed PODs, exports) sign in above.
           </p>
         </div>
       </div>
@@ -254,13 +253,23 @@
             </div>
           </div>
 
-          <div class="pod-row hidden" id="podRow">
-            <a href="#" class="pod-btn" id="podBtn" target="_blank" rel="noopener noreferrer">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          <!-- Delivery-confirmation notice (replaces public POD download).
+               POD is a chain-of-custody document with recipient signature
+               + freight detail + exception notes — not appropriate to expose
+               on a no-auth public page. Shipper + carrier portals retain
+               full POD access; ops@ handles direct requests. -->
+          <div class="pod-notice hidden" id="podNotice">
+            <div class="pod-notice-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
-              Download POD
-            </a>
+            </div>
+            <div class="pod-notice-text">
+              <strong>Delivery confirmed.</strong>
+              For a signed copy of the Proof of Delivery, sign in to the
+              <a href="/shipper/login">shipper portal</a> or email
+              <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.
+            </div>
           </div>
         </div>
 
@@ -388,8 +397,7 @@
         detailWeight: document.getElementById('detailWeight'),
         detailPickup: document.getElementById('detailPickup'),
         detailEta:    document.getElementById('detailEta'),
-        podRow:       document.getElementById('podRow'),
-        podBtn:       document.getElementById('podBtn'),
+        podNotice:    document.getElementById('podNotice'),
         trackAnotherWrap: document.getElementById('trackAnotherWrap'),
       };
 
@@ -517,12 +525,14 @@
         els.detailPickup.textContent = fmtDate(data.pickupDate) || '—';
         els.detailEta.textContent = fmtDate(data.estimatedDelivery) || '—';
 
-        // POD download
-        if (data.podUrl) {
-          els.podBtn.href = data.podUrl;
-          els.podRow.classList.remove('hidden');
+        // Delivery-confirmation notice (POD not exposed on public page;
+        // shown only once status indicates delivery has happened). Shipper
+        // and carrier portals continue to expose the full POD download.
+        var deliveredStatus = ['DELIVERED', 'POD_RECEIVED', 'INVOICED', 'COMPLETED'];
+        if (deliveredStatus.indexOf(data.status) !== -1) {
+          els.podNotice.classList.remove('hidden');
         } else {
-          els.podRow.classList.add('hidden');
+          els.podNotice.classList.add('hidden');
         }
 
         // "Track another shipment" link — only show in token (deep-link) mode
