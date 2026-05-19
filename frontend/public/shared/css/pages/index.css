@@ -631,21 +631,46 @@
       overflow: hidden;
     }
 
+    /* v3.8.adz — top-edge accent strip replaces the prior left-edge accent.
+       Persona color assignment flipped (shipper=navy, carrier=gold-dark)
+       to balance the gold/navy pairing on the CTA buttons below — shipper
+       card now reads navy-accent + gold CTA; carrier reads gold-accent +
+       navy-outline CTA. Each persona gets the contrasting brand color
+       across its two emphasis points. */
     .persona-card::before {
       content: '';
       position: absolute;
-      left: 0;
       top: 0;
-      bottom: 0;
-      width: 4px;
+      left: 0;
+      right: 0;
+      height: 4px;
     }
 
     .persona-card.shipper::before {
-      background: var(--gold-dark);
+      background: var(--navy);
     }
 
     .persona-card.carrier::before {
-      background: var(--navy);
+      background: var(--gold-dark);
+    }
+
+    /* v3.8.adz — SRL compass mark watermark in the top-right corner.
+       Replaces the removed .card-icon imagery with a subtle brand
+       anchor at 12% opacity. Decorative only, pointer-events off so
+       it doesn't intercept clicks. */
+    .persona-card::after {
+      content: '';
+      position: absolute;
+      top: 28px;
+      right: 28px;
+      width: 64px;
+      height: 64px;
+      background-image: url('/logo-compass.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: 0.12;
+      pointer-events: none;
     }
 
     .persona-card:hover {
@@ -654,24 +679,9 @@
       border-color: transparent;
     }
 
-    .persona-card .card-icon {
-      width: 100%;
-      height: 180px;
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-
-    .persona-card .card-icon img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.4s ease;
-    }
-
-    .persona-card:hover .card-icon img {
-      transform: scale(1.05);
+    .persona-card:hover::after {
+      opacity: 0.18;
+      transition: opacity 0.3s ease;
     }
 
     .persona-card h3 {
@@ -680,6 +690,9 @@
       font-size: 1.65rem;
       color: var(--navy);
       margin-bottom: 8px;
+      /* v3.8.adz — right padding clears the compass watermark in the
+         top-right corner (64px width + 28px inset + 16px breathing room). */
+      padding-right: 92px;
     }
 
     .persona-card .card-sub {
