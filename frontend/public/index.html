@@ -369,12 +369,19 @@
               <stop offset="50%" stop-color="#C5A572" stop-opacity="0.3"/>
               <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
             </radialGradient>
-            <radialGradient id="nmPulse">
-              <stop offset="0%" stop-color="#FFE9B8" stop-opacity="1"/>
-              <stop offset="30%" stop-color="#FFD78A" stop-opacity="0.9"/>
-              <stop offset="70%" stop-color="#C5A572" stop-opacity="0.4"/>
+            <!-- v3.8.afx — brand-mark gradients + radar sweep gradient -->
+            <linearGradient id="nmBrandS" gradientUnits="userSpaceOnUse" x1="380" y1="0" x2="535" y2="0">
+              <stop offset="0%" stop-color="#C9A24D"/>
+              <stop offset="12.5%" stop-color="#C9A24D"/>
+              <stop offset="14%" stop-color="#FDFBF7"/>
+              <stop offset="14.5%" stop-color="#0F1A22"/>
+              <stop offset="100%" stop-color="#0F1A22"/>
+            </linearGradient>
+            <linearGradient id="nmSweepBeam" x1="100%" y1="50%" x2="0%" y2="50%">
+              <stop offset="0%" stop-color="#FFE9B8" stop-opacity="0.55"/>
+              <stop offset="35%" stop-color="#C5A572" stop-opacity="0.28"/>
               <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
-            </radialGradient>
+            </linearGradient>
 
             <!-- Route paths defined here for both static rendering + animateMotion mpath references -->
             <path id="nmR1" d="M 530 195 Q 380 230, 250 290 T 110 350"/>
@@ -395,28 +402,59 @@
           <rect width="900" height="500" fill="url(#nmDarkSky)"/>
           <rect width="900" height="500" fill="url(#nmGrid)"/>
 
-          <!-- v3.8.afv — SRL brand-mark watermark, replacing prior simplified
-               compass (user-flagged: "generic compass, rather we should
-               integrate the Brand SRL LOGO"). Inlined directly from
-               /public/logo.svg #icon group: navy compass ring with cardinal
-               star markers + signature gold "S" trade-route curve. Original
-               viewBox coords centered at (400,320) with radius ~145;
-               wrapped with transform that scales to ~0.74 and translates
-               to map center (450,250). Recolored monochromatic gold-tone
-               (#C5A572) for visibility on dark navy at 7% opacity. Same
-               structural identity as the masthead logo + favicon. -->
-          <g transform="translate(450 250) scale(0.74) translate(-400 -320)" opacity="0.07">
-            <!-- Compass ring -->
-            <circle cx="400" cy="320" r="145" fill="none" stroke="#C5A572" stroke-width="26" stroke-linecap="round"/>
-            <!-- Four cardinal triangle markers (N, S, W, E) -->
-            <polygon points="400,137 378,181 422,181" fill="#C5A572"/>
-            <polygon points="400,503 378,459 422,459" fill="#C5A572"/>
-            <polygon points="217,320 261,298 261,342" fill="#C5A572"/>
-            <polygon points="583,320 539,298 539,342" fill="#C5A572"/>
-            <!-- Signature trade-route S-curve through the compass -->
+          <!-- v3.8.afx — SRL brand mark as animated centerpiece (NOT faint
+               watermark). Previous afw version at 7% opacity / monochromatic
+               gold dropped the iconic two-tone S-curve character — user
+               flagged: "logo is out of touch not SRL one". Rebuilt with:
+               (a) brand-authentic colors — gold (#C9A24D) + navy (#0F1A22)
+                   two-tone S-curve via gradient stop at x=400 source-space,
+                   matching the original logo.svg clip-path split point
+               (b) higher opacity (28% for ring/triangles, 38% for S-curve
+                   gold half, 18% for navy half — making the S-curve the
+                   visually dominant element same as in the actual logo)
+               (c) slow rotation animation on the compass ring (60s per
+                   revolution — subtle but visible motion, brand-canonical
+                   "compass spinning" character)
+               (d) cream accent stripe along S-curve (matches the original
+                   white accent at 95% opacity on the actual logo). -->
+          <g transform="translate(450 250) scale(0.74) translate(-400 -320)">
+            <!-- Compass ring (slowly rotating around its own center, 60s/rev) -->
+            <g style="transform-box: fill-box; transform-origin: center;">
+              <animateTransform attributeName="transform" type="rotate"
+                               from="0 400 320" to="360 400 320"
+                               dur="60s" repeatCount="indefinite"/>
+              <circle cx="400" cy="320" r="145" fill="none" stroke="#0F1A22" stroke-width="26" stroke-linecap="round" opacity="0.32"/>
+              <!-- Cardinal triangle markers (N, S, W, E) -->
+              <polygon points="400,137 378,181 422,181" fill="#0F1A22" opacity="0.32"/>
+              <polygon points="400,503 378,459 422,459" fill="#0F1A22" opacity="0.32"/>
+              <polygon points="217,320 261,298 261,342" fill="#0F1A22" opacity="0.32"/>
+              <polygon points="583,320 539,298 539,342" fill="#0F1A22" opacity="0.32"/>
+            </g>
+            <!-- Signature trade-route S-curve with two-tone (gold/navy) gradient
+                 + cream accent stripe — does NOT rotate (the trade route is
+                 the anchor; the compass spins around it). -->
             <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
-                  fill="none" stroke="#C5A572" stroke-width="86"
-                  stroke-linecap="round" stroke-linejoin="round"/>
+                  fill="none" stroke="url(#nmBrandS)" stroke-width="86"
+                  stroke-linecap="round" stroke-linejoin="round"
+                  opacity="0.38"/>
+            <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+                  fill="none" stroke="#FDFBF7" stroke-width="24"
+                  stroke-linecap="round" stroke-linejoin="round"
+                  opacity="0.22"/>
+          </g>
+
+          <!-- Compass radar sweep beam — rotating 30° gold wedge around the
+               brand mark's center. 10s per revolution, brand-canonical
+               "operational scan" aesthetic. Genuinely different from
+               particles-on-lines (the every-broker pattern). -->
+          <g transform="translate(450 250)">
+            <g>
+              <animateTransform attributeName="transform" type="rotate"
+                               from="0" to="360" dur="10s" repeatCount="indefinite"/>
+              <!-- 30° wedge, radius 480, bright tip + fading trail -->
+              <path d="M 0 0 L 463 -124 A 480 480 0 0 1 463 124 Z"
+                    fill="url(#nmSweepBeam)"/>
+            </g>
           </g>
 
           <!-- US silhouette (inverted: gold stroke at low opacity, dark fill blends with bg) -->
@@ -557,70 +595,15 @@
             </g>
           </g>
 
-          <!-- ANIMATED PULSES — 10 lights traveling 10 routes simultaneously,
-               staggered timing for organic flow. Each pulse loops indefinitely. -->
-          <g>
-            <circle r="5" fill="url(#nmPulse)">
-              <animateMotion dur="12s" begin="0s" repeatCount="indefinite">
-                <mpath href="#nmR1"/>
-              </animateMotion>
-            </circle>
-            <circle r="4.5" fill="url(#nmPulse)">
-              <animateMotion dur="8s" begin="1.5s" repeatCount="indefinite">
-                <mpath href="#nmR2"/>
-              </animateMotion>
-            </circle>
-            <circle r="4.5" fill="url(#nmPulse)">
-              <animateMotion dur="9s" begin="2.5s" repeatCount="indefinite">
-                <mpath href="#nmR3"/>
-              </animateMotion>
-            </circle>
-            <circle r="4.5" fill="url(#nmPulse)">
-              <animateMotion dur="8s" begin="0.5s" repeatCount="indefinite">
-                <mpath href="#nmR4"/>
-              </animateMotion>
-            </circle>
-            <circle r="4" fill="url(#nmPulse)">
-              <animateMotion dur="7s" begin="3s" repeatCount="indefinite">
-                <mpath href="#nmR5"/>
-              </animateMotion>
-            </circle>
-            <circle r="4" fill="url(#nmPulse)">
-              <animateMotion dur="5s" begin="1s" repeatCount="indefinite">
-                <mpath href="#nmR6"/>
-              </animateMotion>
-            </circle>
-            <circle r="4.5" fill="url(#nmPulse)">
-              <animateMotion dur="11s" begin="2s" repeatCount="indefinite">
-                <mpath href="#nmR7"/>
-              </animateMotion>
-            </circle>
-            <circle r="4.5" fill="url(#nmPulse)">
-              <animateMotion dur="10s" begin="0.8s" repeatCount="indefinite">
-                <mpath href="#nmR8"/>
-              </animateMotion>
-            </circle>
-            <circle r="4" fill="url(#nmPulse)">
-              <animateMotion dur="9s" begin="3.5s" repeatCount="indefinite">
-                <mpath href="#nmR9"/>
-              </animateMotion>
-            </circle>
-            <circle r="4" fill="url(#nmPulse)">
-              <animateMotion dur="7s" begin="1.8s" repeatCount="indefinite">
-                <mpath href="#nmR10"/>
-              </animateMotion>
-            </circle>
-            <circle r="4" fill="url(#nmPulse)">
-              <animateMotion dur="6s" begin="2.8s" repeatCount="indefinite">
-                <mpath href="#nmR11"/>
-              </animateMotion>
-            </circle>
-            <circle r="4.5" fill="url(#nmPulse)">
-              <animateMotion dur="11s" begin="1.3s" repeatCount="indefinite">
-                <mpath href="#nmR12"/>
-              </animateMotion>
-            </circle>
-          </g>
+          <!-- v3.8.afx — 12-pulse particle system removed. User feedback on
+               v3.8.afw: "didn't like the map animation at all it is very
+               basic". The particle-on-route mechanic is the every-broker
+               pattern (CHR, RXO, Coyote all use it). Replaced with the
+               compass radar sweep + animated brand-mark centerpiece above,
+               leaving the route lines as the static network mesh and the
+               city halos as ambient operational presence. Net effect:
+               brand-mark-centric "operational scan" aesthetic, structurally
+               different from the standard freight-broker template. -->
         </svg>
       </div>
       <p class="coverage-caption reveal">
