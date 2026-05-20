@@ -995,11 +995,17 @@
       overflow: hidden;
     }
 
-    #networkMapCanvas {
+    /* v3.8.afr — #networkMapCanvas retired; Section 5 now renders an
+       inline SVG (.network-map-svg) using the Track page visual
+       language. Same outer container sizing constraints carry through
+       from .network-map-container above. */
+    .network-map-svg {
       width: 100%;
       height: auto;
       display: block;
       border-radius: 12px;
+      max-width: 1100px;
+      margin: 0 auto;
     }
 
     .coverage-caption {
