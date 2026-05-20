@@ -1045,6 +1045,13 @@
       max-width: 108px;
       height: auto;
       display: block;
+      /* v3.8.agb — apply to both <img> (legacy) + inline <svg> mark */
+      aspect-ratio: 1 / 1;
+    }
+    .srl-mark svg, svg.srl-mark {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .srl-wordmark {
@@ -1086,22 +1093,26 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 7px;
+      gap: 9px;
       text-align: center;
-      padding: 8px 6px;
-      transition: opacity 0.55s ease;
+      padding: 10px 6px;
+      transition: opacity 0.25s ease;
     }
 
+    /* v3.8.agb — icon size bumped 22px → 30px per user direction.
+       Larger icon weight balances the wall's tile composition and
+       gives each fact a clearer iconographic anchor. */
     .srl-wall .tile-c svg {
-      width: 22px;
-      height: 22px;
+      width: 30px;
+      height: 30px;
       color: var(--gold-dark);
       stroke: var(--gold-dark);
+      stroke-width: 1.85;
     }
 
     .srl-wall .tile-c span {
       font-family: var(--font-body);
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 600;
       line-height: 1.2;
       color: var(--navy);

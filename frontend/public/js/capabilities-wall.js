@@ -14,6 +14,14 @@
 (function () {
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // v3.8.agb — Fact pool audited against CLAUDE.md §1 (authority), §4
+  // (honest claims whitelist), §5 (prohibited claims), §8 (Quick Pay
+  // structure), §14 (legal). Five facts retired and replaced:
+  //   - "Cross-border lanes"  → "Coast to coast lanes"  (US-only authority)
+  //   - "USMCA documents"     → "Carmack-compliant BOL" (US-only authority)
+  //   - "POD within 24h"      → "Mobile POD upload"     (capability not SLA)
+  //   - "FSC pass-through"    → "Tier-graduated FSC"    (§5 retired blanket)
+  //   - "15-minute quotes"    → "Branded tracking links" (unpublished SLA)
   var facts = [
     { t: 'Cold-chain capable',        i: 'thermometer-snowflake' },
     { t: 'Quick Pay, day one',        i: 'banknote' },
@@ -21,19 +29,19 @@
     { t: '48 contiguous states',      i: 'map' },
     { t: 'BMC-84 bonded',             i: 'badge-check' },
     { t: 'FMCSA broker',              i: 'scroll-text' },
-    { t: 'POD within 24h',            i: 'package-check' },
+    { t: 'Mobile POD upload',         i: 'smartphone' },
     { t: 'No double-brokering',       i: 'lock' },
     { t: 'Net 30 / 21 / 14',          i: 'calendar-clock' },
-    { t: 'Cross-border lanes',        i: 'globe' },
+    { t: 'Coast to coast lanes',      i: 'compass' },
     { t: 'Reefer capable',            i: 'snowflake' },
     { t: 'Marco Polo 24/7',           i: 'bot' },
-    { t: 'FSC pass-through',          i: 'receipt' },
+    { t: 'Tier-graduated FSC',        i: 'trending-up' },
     { t: 'Dedicated AE',              i: 'user-check' },
     { t: 'USDOT 4526880',             i: 'badge' },
     { t: 'MC 1794414',                i: 'shield' },
-    { t: '15-minute quotes',          i: 'zap' },
+    { t: 'Branded tracking links',    i: 'link-2' },
     { t: '2-hour check calls',        i: 'phone-call' },
-    { t: 'USMCA documents',           i: 'file-text' },
+    { t: 'Carmack-compliant BOL',     i: 'gavel' },
     { t: 'Performance pay',           i: 'trophy' },
     { t: 'Itemized rate cons',        i: 'list-checks' },
     { t: 'Continuous temp logs',      i: 'thermometer' },
@@ -87,6 +95,10 @@
       return i;
     }
 
+    // v3.8.agb — cross-fade tightened 560ms → 260ms (CSS transition 0.25s).
+    // The prior 1.1s tile-empty window (fade-out + swap + fade-in) made
+    // tiles look icon-less mid-cycle. The 260ms swap is short enough that
+    // viewers no longer perceive a missing-icon state during the transition.
     tiles.forEach(function (tile) {
       var period = 3600 + Math.random() * 1800;
       setTimeout(function () {
@@ -100,7 +112,7 @@
             paint(tile, nextIdx);
             refreshIcons();
             tile._c.style.opacity = '1';
-          }, 560);
+          }, 260);
         }, period);
       }, Math.random() * period);
     });

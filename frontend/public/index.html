@@ -341,7 +341,34 @@
             <div class="srl-center">
               <div class="srl-ci">
                 <span class="tk tl">+</span><span class="tk tr">+</span><span class="tk bl">+</span><span class="tk br">+</span>
-                <img class="srl-mark" src="/logo-compass.png" alt="" width="104" height="104" />
+                <!-- v3.8.agb — inline SVG of the actual SRL brand mark
+                     (icon-only crop of /logo.svg, viewBox cropped to
+                     200..600 x 120..520). Replaces /logo-compass.png img
+                     which rendered as a small silhouette, not the full
+                     compass + cardinal triangles + two-tone S-curve. -->
+                <svg class="srl-mark" viewBox="200 120 400 400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <clipPath id="srlMarkClipL"><rect x="0" y="0" width="400" height="1000"/></clipPath>
+                    <clipPath id="srlMarkClipR"><rect x="400" y="0" width="400" height="1000"/></clipPath>
+                  </defs>
+                  <!-- Compass ring -->
+                  <circle cx="400" cy="320" r="145" fill="none" stroke="#0F1A22" stroke-width="26" stroke-linecap="round"/>
+                  <!-- Four cardinal triangle markers -->
+                  <polygon points="400,137 378,181 422,181" fill="#0F1A22"/>
+                  <polygon points="400,503 378,459 422,459" fill="#0F1A22"/>
+                  <polygon points="217,320 261,298 261,342" fill="#0F1A22"/>
+                  <polygon points="583,320 539,298 539,342" fill="#0F1A22"/>
+                  <!-- Two-tone S-curve: gold left half + navy right half (clip-paths match logo.svg) -->
+                  <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+                        fill="none" stroke="#C9A24D" stroke-width="86" stroke-linecap="round" stroke-linejoin="round"
+                        clip-path="url(#srlMarkClipL)"/>
+                  <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+                        fill="none" stroke="#0F1A22" stroke-width="86" stroke-linecap="round" stroke-linejoin="round"
+                        clip-path="url(#srlMarkClipR)"/>
+                  <!-- White accent stripe down the middle -->
+                  <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+                        fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+                </svg>
                 <span class="srl-wordmark">Silk Route Logistics</span>
               </div>
             </div>
@@ -351,13 +378,13 @@
             <div class="tile"><div class="tile-c"><i data-lucide="map"></i><span>48 contiguous states</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="badge-check"></i><span>BMC-84 bonded</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="scroll-text"></i><span>FMCSA broker</span></div></div>
-            <div class="tile"><div class="tile-c"><i data-lucide="package-check"></i><span>POD within 24h</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="smartphone"></i><span>Mobile POD upload</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="lock"></i><span>No double-brokering</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="calendar-clock"></i><span>Net 30 / 21 / 14</span></div></div>
-            <div class="tile"><div class="tile-c"><i data-lucide="globe"></i><span>Cross-border lanes</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="compass"></i><span>Coast to coast lanes</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="snowflake"></i><span>Reefer capable</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="bot"></i><span>Marco Polo 24/7</span></div></div>
-            <div class="tile"><div class="tile-c"><i data-lucide="receipt"></i><span>FSC pass-through</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="trending-up"></i><span>Tier-graduated FSC</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="user-check"></i><span>Dedicated AE</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="badge"></i><span>USDOT 4526880</span></div></div>
             <div class="tile"><div class="tile-c"><i data-lucide="shield"></i><span>MC 1794414</span></div></div>
