@@ -6391,7 +6391,7 @@
 //                advisory lock cleanup; Sprint 52+ candidate)
 //              - All other open items STATUS UNCHANGED per
 //                Sprint 47.b scope discipline
-export const SRL_VERSION = "3.8.afd";
+export const SRL_VERSION = "3.8.afe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
