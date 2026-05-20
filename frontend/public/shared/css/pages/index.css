@@ -1099,15 +1099,22 @@
       transition: opacity 0.25s ease;
     }
 
-    /* v3.8.agb — icon size bumped 22px → 30px per user direction.
-       Larger icon weight balances the wall's tile composition and
-       gives each fact a clearer iconographic anchor. */
+    /* v3.8.agb/agc — icon size 30px with stroke-width 1.85. Default
+       stroke = gold-dark (capability/operational tile cluster).
+       data-cat="cool" overrides to navy (authority/identity cluster).
+       Color category drives visual brand rhythm across the wall. */
     .srl-wall .tile-c svg {
       width: 30px;
       height: 30px;
       color: var(--gold-dark);
       stroke: var(--gold-dark);
       stroke-width: 1.85;
+    }
+
+    /* Authority/identity cluster — navy stroke for trust signal */
+    .srl-wall .tile[data-cat="cool"] .tile-c svg {
+      color: var(--navy);
+      stroke: var(--navy);
     }
 
     .srl-wall .tile-c span {

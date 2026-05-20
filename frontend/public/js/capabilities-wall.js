@@ -22,33 +22,36 @@
   //   - "POD within 24h"      → "Mobile POD upload"     (capability not SLA)
   //   - "FSC pass-through"    → "Tier-graduated FSC"    (§5 retired blanket)
   //   - "15-minute quotes"    → "Branded tracking links" (unpublished SLA)
+  // v3.8.agc — `c` field carries icon color category for visual brand
+  // rhythm: "warm" = gold-dark stroke (capability/operational/financial
+  // facts), "cool" = navy stroke (authority/identity/legal/trust facts).
   var facts = [
-    { t: 'Cold-chain capable',        i: 'thermometer-snowflake' },
-    { t: 'Quick Pay, day one',        i: 'banknote' },
-    { t: '35-point vetting',          i: 'shield-check' },
-    { t: '48 contiguous states',      i: 'map' },
-    { t: 'BMC-84 bonded',             i: 'badge-check' },
-    { t: 'FMCSA broker',              i: 'scroll-text' },
-    { t: 'Mobile POD upload',         i: 'smartphone' },
-    { t: 'No double-brokering',       i: 'lock' },
-    { t: 'Net 30 / 21 / 14',          i: 'calendar-clock' },
-    { t: 'Coast to coast lanes',      i: 'compass' },
-    { t: 'Reefer capable',            i: 'snowflake' },
-    { t: 'Marco Polo 24/7',           i: 'bot' },
-    { t: 'Tier-graduated FSC',        i: 'trending-up' },
-    { t: 'Dedicated AE',              i: 'user-check' },
-    { t: 'USDOT 4526880',             i: 'badge' },
-    { t: 'MC 1794414',                i: 'shield' },
-    { t: 'Branded tracking links',    i: 'link-2' },
-    { t: '2-hour check calls',        i: 'phone-call' },
-    { t: 'Carmack-compliant BOL',     i: 'gavel' },
-    { t: 'Performance pay',           i: 'trophy' },
-    { t: 'Itemized rate cons',        i: 'list-checks' },
-    { t: 'Continuous temp logs',      i: 'thermometer' },
-    { t: 'Same-day pay',              i: 'wallet' },
-    { t: 'Caravan partner tiers',     i: 'layers' },
-    { t: 'Backhaul matched',          i: 'route' },
-    { t: 'OTIF / MABD aware',         i: 'warehouse' }
+    { t: 'Cold-chain capable',        i: 'thermometer-snowflake', c: 'warm' },
+    { t: 'Quick Pay, day one',        i: 'banknote',              c: 'warm' },
+    { t: '35-point vetting',          i: 'shield-check',          c: 'cool' },
+    { t: '48 contiguous states',      i: 'map',                   c: 'warm' },
+    { t: 'BMC-84 bonded',             i: 'badge-check',           c: 'cool' },
+    { t: 'FMCSA broker',              i: 'scroll-text',           c: 'cool' },
+    { t: 'Mobile POD upload',         i: 'smartphone',            c: 'warm' },
+    { t: 'No double-brokering',       i: 'lock',                  c: 'cool' },
+    { t: 'Net 30 / 21 / 14',          i: 'calendar-clock',        c: 'warm' },
+    { t: 'Coast to coast lanes',      i: 'compass',               c: 'warm' },
+    { t: 'Reefer capable',            i: 'snowflake',             c: 'warm' },
+    { t: 'Marco Polo 24/7',           i: 'bot',                   c: 'warm' },
+    { t: 'Tier-graduated FSC',        i: 'trending-up',           c: 'warm' },
+    { t: 'Dedicated AE',              i: 'user-check',            c: 'cool' },
+    { t: 'USDOT 4526880',             i: 'badge',                 c: 'cool' },
+    { t: 'MC 1794414',                i: 'shield',                c: 'cool' },
+    { t: 'Branded tracking links',    i: 'link-2',                c: 'warm' },
+    { t: '2-hour check calls',        i: 'phone-call',            c: 'warm' },
+    { t: 'Carmack-compliant BOL',     i: 'gavel',                 c: 'cool' },
+    { t: 'Performance pay',           i: 'trophy',                c: 'warm' },
+    { t: 'Itemized rate cons',        i: 'list-checks',           c: 'cool' },
+    { t: 'Continuous temp logs',      i: 'thermometer',           c: 'warm' },
+    { t: 'Same-day pay',              i: 'wallet',                c: 'warm' },
+    { t: 'Caravan partner tiers',     i: 'layers',                c: 'warm' },
+    { t: 'Backhaul matched',          i: 'route',                 c: 'warm' },
+    { t: 'OTIF / MABD aware',         i: 'warehouse',             c: 'warm' }
   ];
 
   function init() {
@@ -80,6 +83,9 @@
     function paint(tile, idx) {
       var f = facts[idx];
       tile._c.innerHTML = '<i data-lucide="' + f.i + '"></i><span>' + f.t + '</span>';
+      // v3.8.agc — sync the category attribute on the parent tile so
+      // the CSS [data-cat="cool"] selector picks up the new icon color.
+      tile.setAttribute('data-cat', f.c || 'warm');
     }
 
     refreshIcons();
@@ -118,9 +124,15 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
+  // v3.8.agc — switched DOMContentLoaded → window.load. defer scripts
+  // execute right before DOMContentLoaded; if Lucide CDN happens to load
+  // a tick later than capabilities-wall.js in this order, calling
+  // createIcons() at DOMContentLoaded silently misses every tile.
+  // window.load fires only after all defer scripts (including Lucide)
+  // are fully executed, so window.lucide.createIcons is guaranteed.
+  if (document.readyState === 'complete') {
     init();
+  } else {
+    window.addEventListener('load', init);
   }
 })();
