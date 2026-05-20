@@ -387,24 +387,36 @@
             <path id="nmR8" d="M 350 260 Q 240 200, 130 110"/>
             <path id="nmR9" d="M 530 195 Q 440 230, 350 260"/>
             <path id="nmR10" d="M 660 330 Q 690 365, 720 410"/>
+            <!-- v3.8.afv — user-flagged missing edges -->
+            <path id="nmR11" d="M 440 350 Q 455 380, 470 410"/><!-- Dallas → Houston -->
+            <path id="nmR12" d="M 130 110 Q 95 220, 110 350"/><!-- Seattle → LA -->
           </defs>
 
           <rect width="900" height="500" fill="url(#nmDarkSky)"/>
           <rect width="900" height="500" fill="url(#nmGrid)"/>
 
-          <!-- SRL compass-mark watermark, centered at 5% opacity for brand integration -->
-          <g transform="translate(450 250)" opacity="0.06">
-            <circle r="130" fill="none" stroke="#C5A572" stroke-width="2"/>
-            <circle r="108" fill="none" stroke="#C5A572" stroke-width="1"/>
-            <!-- Four cardinal star points -->
-            <path d="M 0 -130 L 8 -10 L 0 0 L -8 -10 Z" fill="#C5A572"/>
-            <path d="M 130 0 L 10 8 L 0 0 L 10 -8 Z" fill="#C5A572"/>
-            <path d="M 0 130 L -8 10 L 0 0 L 8 10 Z" fill="#C5A572"/>
-            <path d="M -130 0 L -10 -8 L 0 0 L -10 8 Z" fill="#C5A572"/>
-            <!-- Center point -->
-            <circle r="5" fill="#BA7517"/>
-            <!-- Trade route arc -->
-            <path d="M -92 -92 A 130 130 0 0 1 92 92" stroke="#BA7517" stroke-width="1.5" fill="none"/>
+          <!-- v3.8.afv — SRL brand-mark watermark, replacing prior simplified
+               compass (user-flagged: "generic compass, rather we should
+               integrate the Brand SRL LOGO"). Inlined directly from
+               /public/logo.svg #icon group: navy compass ring with cardinal
+               star markers + signature gold "S" trade-route curve. Original
+               viewBox coords centered at (400,320) with radius ~145;
+               wrapped with transform that scales to ~0.74 and translates
+               to map center (450,250). Recolored monochromatic gold-tone
+               (#C5A572) for visibility on dark navy at 7% opacity. Same
+               structural identity as the masthead logo + favicon. -->
+          <g transform="translate(450 250) scale(0.74) translate(-400 -320)" opacity="0.07">
+            <!-- Compass ring -->
+            <circle cx="400" cy="320" r="145" fill="none" stroke="#C5A572" stroke-width="26" stroke-linecap="round"/>
+            <!-- Four cardinal triangle markers (N, S, W, E) -->
+            <polygon points="400,137 378,181 422,181" fill="#C5A572"/>
+            <polygon points="400,503 378,459 422,459" fill="#C5A572"/>
+            <polygon points="217,320 261,298 261,342" fill="#C5A572"/>
+            <polygon points="583,320 539,298 539,342" fill="#C5A572"/>
+            <!-- Signature trade-route S-curve through the compass -->
+            <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+                  fill="none" stroke="#C5A572" stroke-width="86"
+                  stroke-linecap="round" stroke-linejoin="round"/>
           </g>
 
           <!-- US silhouette (inverted: gold stroke at low opacity, dark fill blends with bg) -->
@@ -433,6 +445,8 @@
             <use href="#nmR8" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
             <use href="#nmR9" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
             <use href="#nmR10" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR11" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR12" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
           </g>
 
           <!-- City ambient glow halos — each pulses on its own cycle for layered presence -->
@@ -594,6 +608,16 @@
             <circle r="4" fill="url(#nmPulse)">
               <animateMotion dur="7s" begin="1.8s" repeatCount="indefinite">
                 <mpath href="#nmR10"/>
+              </animateMotion>
+            </circle>
+            <circle r="4" fill="url(#nmPulse)">
+              <animateMotion dur="6s" begin="2.8s" repeatCount="indefinite">
+                <mpath href="#nmR11"/>
+              </animateMotion>
+            </circle>
+            <circle r="4.5" fill="url(#nmPulse)">
+              <animateMotion dur="11s" begin="1.3s" repeatCount="indefinite">
+                <mpath href="#nmR12"/>
               </animateMotion>
             </circle>
           </g>
