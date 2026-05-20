@@ -995,17 +995,147 @@
       overflow: hidden;
     }
 
-    /* v3.8.afr — #networkMapCanvas retired; Section 5 now renders an
-       inline SVG (.network-map-svg) using the Track page visual
-       language. Same outer container sizing constraints carry through
-       from .network-map-container above. */
-    .network-map-svg {
-      width: 100%;
-      height: auto;
-      display: block;
-      border-radius: 12px;
+    /* v3.8.aga — Section 5 map (canvas → SVG → dark-navy radar-sweep
+       evolution at v3.8.afm..afx) retired entirely. Replaced with the
+       capabilities-wall tile-cycle. .network-map-svg selector + the
+       prior canvas/svg selectors are gone; wall selectors below. */
+
+    /* Capabilities wall — center card + 16 cycling fact tiles */
+    .srl-wall {
+      background: var(--cream-2);
+      border-radius: 20px;
+      padding: 24px;
       max-width: 1100px;
       margin: 0 auto;
+    }
+
+    .srl-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(4, 86px);
+      gap: 12px;
+      grid-auto-flow: row dense;
+    }
+
+    /* Center brand card — spans cols 3-4, rows 1-4 */
+    .srl-center {
+      grid-column: 3 / 5;
+      grid-row: 1 / 5;
+      border-radius: 22px;
+      padding: 13px;
+      background: linear-gradient(155deg, #22456b 0%, var(--navy) 55%, #a9762a 100%);
+      box-shadow: 0 20px 44px rgba(10, 37, 64, 0.26);
+    }
+
+    .srl-ci {
+      position: relative;
+      height: 100%;
+      background: var(--cream);
+      border-radius: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+    }
+
+    .srl-mark {
+      width: 46%;
+      max-width: 108px;
+      height: auto;
+      display: block;
+    }
+
+    .srl-wordmark {
+      font-family: var(--font-headline);
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      color: var(--navy);
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* Corner registration ticks on the center card */
+    .srl-ci .tk {
+      position: absolute;
+      color: var(--navy);
+      opacity: 0.26;
+      font-size: 13px;
+      line-height: 1;
+      font-family: var(--font-body);
+    }
+    .srl-ci .tk.tl { top: 9px; left: 9px; }
+    .srl-ci .tk.tr { top: 9px; right: 9px; }
+    .srl-ci .tk.bl { bottom: 9px; left: 9px; }
+    .srl-ci .tk.br { bottom: 9px; right: 9px; }
+
+    /* Fact tiles */
+    .srl-wall .tile {
+      background: var(--white);
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(10, 37, 64, 0.07);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .srl-wall .tile-c {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      text-align: center;
+      padding: 8px 6px;
+      transition: opacity 0.55s ease;
+    }
+
+    .srl-wall .tile-c svg {
+      width: 22px;
+      height: 22px;
+      color: var(--gold-dark);
+      stroke: var(--gold-dark);
+    }
+
+    .srl-wall .tile-c span {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--navy);
+    }
+
+    /* Tablet: 4 cols × 5 rows = 20 cells. Center 2×2 = 4 cells.
+       Remaining 16 cells = 16 tiles. */
+    @media (max-width: 900px) {
+      .srl-grid {
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(5, 86px);
+      }
+      .srl-center {
+        grid-column: 2 / 4;
+        grid-row: 1 / 3;
+      }
+    }
+
+    /* Mobile: 2 cols × 9 rows = 18 cells. Center 2×1 = 2 cells.
+       Remaining 16 cells = 16 tiles. */
+    @media (max-width: 600px) {
+      .srl-wall { padding: 16px; }
+      .srl-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: 140px repeat(8, 78px);
+        gap: 10px;
+      }
+      .srl-center {
+        grid-column: 1 / 3;
+        grid-row: 1 / 2;
+        padding: 11px;
+      }
+      .srl-mark { max-width: 80px; }
+      .srl-wordmark { font-size: 11.5px; }
     }
 
     .coverage-caption {

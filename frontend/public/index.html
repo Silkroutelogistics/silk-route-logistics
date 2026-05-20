@@ -328,283 +328,41 @@
         <p>Every carrier scored against the same 7-factor Compass standard. Every lane, every load.</p>
       </div>
       <div class="network-map-container reveal">
-        <!-- v3.8.aft — Section 5 map Path B-3 inverted rebuild. The B-2
-             single-truck-on-route port felt too basic + too similar to the
-             Track page. Redesigned around three sophistication moves:
-             (1) Inverted palette — dark navy gradient background instead
-                 of cream, restoring Section 5's "dark moment" visual
-                 rhythm on the cream-heavy homepage.
-             (2) Multiple simultaneous animated pulses — 10 gold-light
-                 pulses traveling 10 routes on independent loops, reading
-                 as "network alive" instead of "one truck driving a
-                 route". Speeds vary 5-12s for organic flow.
-             (3) Ambient city glow halos — each city has a soft radial
-                 halo pulsing on its own 3.5-4.5s cycle. Creates layered
-                 sense of operational presence without competing with
-                 the route pulses.
-             Plus an SRL compass-mark watermark centered at 5% opacity
-             for brand integration. -->
-        <svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg"
-             role="img"
-             class="network-map-svg"
-             aria-label="Silk Route Logistics freight network — 48 contiguous United States, live operational view">
-          <title>SRL freight network — 48 contiguous United States</title>
-
-          <defs>
-            <linearGradient id="nmDarkSky" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#0F1B30"/>
-              <stop offset="50%" stop-color="#0A2540"/>
-              <stop offset="100%" stop-color="#061629"/>
-            </linearGradient>
-            <pattern id="nmGrid" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="0.5" fill="#C5A572" opacity="0.06"/>
-            </pattern>
-            <radialGradient id="nmCityHalo">
-              <stop offset="0%" stop-color="#C5A572" stop-opacity="0.5"/>
-              <stop offset="60%" stop-color="#BA7517" stop-opacity="0.15"/>
-              <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="nmHubHalo">
-              <stop offset="0%" stop-color="#FFE9B8" stop-opacity="0.65"/>
-              <stop offset="50%" stop-color="#C5A572" stop-opacity="0.3"/>
-              <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
-            </radialGradient>
-            <!-- v3.8.afx — brand-mark gradients + radar sweep gradient -->
-            <linearGradient id="nmBrandS" gradientUnits="userSpaceOnUse" x1="380" y1="0" x2="535" y2="0">
-              <stop offset="0%" stop-color="#C9A24D"/>
-              <stop offset="12.5%" stop-color="#C9A24D"/>
-              <stop offset="14%" stop-color="#FDFBF7"/>
-              <stop offset="14.5%" stop-color="#0F1A22"/>
-              <stop offset="100%" stop-color="#0F1A22"/>
-            </linearGradient>
-            <linearGradient id="nmSweepBeam" x1="100%" y1="50%" x2="0%" y2="50%">
-              <stop offset="0%" stop-color="#FFE9B8" stop-opacity="0.55"/>
-              <stop offset="35%" stop-color="#C5A572" stop-opacity="0.28"/>
-              <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
-            </linearGradient>
-
-            <!-- Route paths defined here for both static rendering + animateMotion mpath references -->
-            <path id="nmR1" d="M 530 195 Q 380 230, 250 290 T 110 350"/>
-            <path id="nmR2" d="M 110 350 Q 270 380, 440 350"/>
-            <path id="nmR3" d="M 440 350 Q 545 360, 660 330"/>
-            <path id="nmR4" d="M 660 330 Q 730 290, 780 215"/>
-            <path id="nmR5" d="M 780 215 Q 700 200, 615 195"/>
-            <path id="nmR6" d="M 615 195 Q 572 192, 530 195"/>
-            <path id="nmR7" d="M 470 410 Q 600 415, 720 410"/>
-            <path id="nmR8" d="M 350 260 Q 240 200, 130 110"/>
-            <path id="nmR9" d="M 530 195 Q 440 230, 350 260"/>
-            <path id="nmR10" d="M 660 330 Q 690 365, 720 410"/>
-            <!-- v3.8.afv — user-flagged missing edges -->
-            <path id="nmR11" d="M 440 350 Q 455 380, 470 410"/><!-- Dallas → Houston -->
-            <path id="nmR12" d="M 130 110 Q 95 220, 110 350"/><!-- Seattle → LA -->
-          </defs>
-
-          <rect width="900" height="500" fill="url(#nmDarkSky)"/>
-          <rect width="900" height="500" fill="url(#nmGrid)"/>
-
-          <!-- v3.8.afx — SRL brand mark as animated centerpiece (NOT faint
-               watermark). Previous afw version at 7% opacity / monochromatic
-               gold dropped the iconic two-tone S-curve character — user
-               flagged: "logo is out of touch not SRL one". Rebuilt with:
-               (a) brand-authentic colors — gold (#C9A24D) + navy (#0F1A22)
-                   two-tone S-curve via gradient stop at x=400 source-space,
-                   matching the original logo.svg clip-path split point
-               (b) higher opacity (28% for ring/triangles, 38% for S-curve
-                   gold half, 18% for navy half — making the S-curve the
-                   visually dominant element same as in the actual logo)
-               (c) slow rotation animation on the compass ring (60s per
-                   revolution — subtle but visible motion, brand-canonical
-                   "compass spinning" character)
-               (d) cream accent stripe along S-curve (matches the original
-                   white accent at 95% opacity on the actual logo). -->
-          <g transform="translate(450 250) scale(0.74) translate(-400 -320)">
-            <!-- Compass ring (slowly rotating around its own center, 60s/rev) -->
-            <g style="transform-box: fill-box; transform-origin: center;">
-              <animateTransform attributeName="transform" type="rotate"
-                               from="0 400 320" to="360 400 320"
-                               dur="60s" repeatCount="indefinite"/>
-              <circle cx="400" cy="320" r="145" fill="none" stroke="#0F1A22" stroke-width="26" stroke-linecap="round" opacity="0.32"/>
-              <!-- Cardinal triangle markers (N, S, W, E) -->
-              <polygon points="400,137 378,181 422,181" fill="#0F1A22" opacity="0.32"/>
-              <polygon points="400,503 378,459 422,459" fill="#0F1A22" opacity="0.32"/>
-              <polygon points="217,320 261,298 261,342" fill="#0F1A22" opacity="0.32"/>
-              <polygon points="583,320 539,298 539,342" fill="#0F1A22" opacity="0.32"/>
-            </g>
-            <!-- Signature trade-route S-curve with two-tone (gold/navy) gradient
-                 + cream accent stripe — does NOT rotate (the trade route is
-                 the anchor; the compass spins around it). -->
-            <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
-                  fill="none" stroke="url(#nmBrandS)" stroke-width="86"
-                  stroke-linecap="round" stroke-linejoin="round"
-                  opacity="0.38"/>
-            <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
-                  fill="none" stroke="#FDFBF7" stroke-width="24"
-                  stroke-linecap="round" stroke-linejoin="round"
-                  opacity="0.22"/>
-          </g>
-
-          <!-- Compass radar sweep beam — rotating 30° gold wedge around the
-               brand mark's center. 10s per revolution, brand-canonical
-               "operational scan" aesthetic. Genuinely different from
-               particles-on-lines (the every-broker pattern). -->
-          <g transform="translate(450 250)">
-            <g>
-              <animateTransform attributeName="transform" type="rotate"
-                               from="0" to="360" dur="10s" repeatCount="indefinite"/>
-              <!-- 30° wedge, radius 480, bright tip + fading trail -->
-              <path d="M 0 0 L 463 -124 A 480 480 0 0 1 463 124 Z"
-                    fill="url(#nmSweepBeam)"/>
-            </g>
-          </g>
-
-          <!-- US silhouette (inverted: gold stroke at low opacity, dark fill blends with bg) -->
-          <g>
-            <path d="M 78 100 Q 96 72, 190 64 L 360 56 Q 470 60, 540 92 L 670 112 Q 770 108, 830 142 L 868 200 Q 876 268, 854 320 L 830 370 Q 822 402, 808 412 Q 768 405, 720 388 L 595 395 Q 526 415, 466 420 L 376 425 Q 280 423, 198 408 L 130 392 Q 82 358, 78 278 Q 70 198, 78 100 Z"
-                  fill="#0A2540" opacity="0.5"/>
-            <path d="M 78 100 Q 96 72, 190 64 L 360 56 Q 470 60, 540 92 L 670 112 Q 770 108, 830 142 L 868 200 Q 876 268, 854 320 L 830 370 Q 822 402, 808 412 Q 768 405, 720 388 L 595 395 Q 526 415, 466 420 L 376 425 Q 280 423, 198 408 L 130 392 Q 82 358, 78 278 Q 70 198, 78 100 Z"
-                  fill="none" stroke="#C5A572" stroke-width="0.8" opacity="0.45"/>
-            <!-- Lat/lon reference lines -->
-            <path d="M 78 220 Q 300 215, 540 210 L 868 220" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 78 300 Q 320 295, 540 295 L 854 300" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 320 56 Q 322 200, 326 420" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 540 92 Q 542 250, 540 420" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 700 110 Q 705 250, 720 388" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
-          </g>
-
-          <!-- Static route lines (the visible "network" - same paths the pulses travel) -->
-          <g opacity="0.35">
-            <use href="#nmR1" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR2" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR3" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR4" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR5" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR6" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR7" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR8" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR9" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR10" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR11" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-            <use href="#nmR12" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-          </g>
-
-          <!-- City ambient glow halos — each pulses on its own cycle for layered presence -->
-          <g>
-            <circle cx="130" cy="110" r="16" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="14;22;14" dur="4.2s" repeatCount="indefinite" begin="0s"/>
-              <animate attributeName="opacity" values="0.7;1;0.7" dur="4.2s" repeatCount="indefinite" begin="0s"/>
-            </circle>
-            <circle cx="530" cy="195" r="22" fill="url(#nmHubHalo)">
-              <animate attributeName="r" values="20;30;20" dur="3.5s" repeatCount="indefinite" begin="0.5s"/>
-              <animate attributeName="opacity" values="0.8;1;0.8" dur="3.5s" repeatCount="indefinite" begin="0.5s"/>
-            </circle>
-            <circle cx="780" cy="215" r="16" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="14;22;14" dur="4.0s" repeatCount="indefinite" begin="1.0s"/>
-              <animate attributeName="opacity" values="0.7;1;0.7" dur="4.0s" repeatCount="indefinite" begin="1.0s"/>
-            </circle>
-            <circle cx="440" cy="350" r="16" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="14;22;14" dur="3.8s" repeatCount="indefinite" begin="1.5s"/>
-              <animate attributeName="opacity" values="0.7;1;0.7" dur="3.8s" repeatCount="indefinite" begin="1.5s"/>
-            </circle>
-            <circle cx="660" cy="330" r="16" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="14;22;14" dur="4.5s" repeatCount="indefinite" begin="0.8s"/>
-              <animate attributeName="opacity" values="0.7;1;0.7" dur="4.5s" repeatCount="indefinite" begin="0.8s"/>
-            </circle>
-            <circle cx="110" cy="350" r="22" fill="url(#nmHubHalo)">
-              <animate attributeName="r" values="20;30;20" dur="3.6s" repeatCount="indefinite" begin="1.2s"/>
-              <animate attributeName="opacity" values="0.8;1;0.8" dur="3.6s" repeatCount="indefinite" begin="1.2s"/>
-            </circle>
-            <circle cx="350" cy="260" r="14" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="12;18;12" dur="3.7s" repeatCount="indefinite" begin="2.0s"/>
-              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3.7s" repeatCount="indefinite" begin="2.0s"/>
-            </circle>
-            <circle cx="615" cy="195" r="14" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="12;18;12" dur="4.1s" repeatCount="indefinite" begin="0.3s"/>
-              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="4.1s" repeatCount="indefinite" begin="0.3s"/>
-            </circle>
-            <circle cx="470" cy="410" r="14" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="12;18;12" dur="3.9s" repeatCount="indefinite" begin="2.5s"/>
-              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3.9s" repeatCount="indefinite" begin="2.5s"/>
-            </circle>
-            <circle cx="720" cy="410" r="14" fill="url(#nmCityHalo)">
-              <animate attributeName="r" values="12;18;12" dur="4.3s" repeatCount="indefinite" begin="1.8s"/>
-              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="4.3s" repeatCount="indefinite" begin="1.8s"/>
-            </circle>
-          </g>
-
-          <!-- City dots + labels (cream on navy palette) -->
-          <g>
-            <g transform="translate(130 110)">
-              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
-              <circle r="1.6" fill="#FDFBF7"/>
-              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">SEATTLE</text>
-            </g>
-            <g transform="translate(530 195)">
-              <circle r="6" fill="#BA7517" stroke="#FDFBF7" stroke-width="1.5"/>
-              <circle r="2.5" fill="#FDFBF7"/>
-              <text y="-15" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="10.5" font-weight="700" fill="#FDFBF7" letter-spacing="1.5">CHICAGO</text>
-            </g>
-            <g transform="translate(780 215)">
-              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
-              <circle r="1.6" fill="#FDFBF7"/>
-              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">NEW YORK</text>
-            </g>
-            <g transform="translate(440 350)">
-              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
-              <circle r="1.6" fill="#FDFBF7"/>
-              <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">DALLAS</text>
-            </g>
-            <g transform="translate(660 330)">
-              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
-              <circle r="1.6" fill="#FDFBF7"/>
-              <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">ATLANTA</text>
-            </g>
-            <g transform="translate(110 350)">
-              <circle r="6" fill="#BA7517" stroke="#FDFBF7" stroke-width="1.5"/>
-              <circle r="2.5" fill="#FDFBF7"/>
-              <text y="-15" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="10.5" font-weight="700" fill="#FDFBF7" letter-spacing="1.5">LOS ANGELES</text>
-            </g>
-            <g transform="translate(350 260)">
-              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
-              <circle r="1.4" fill="#FDFBF7"/>
-              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">DENVER</text>
-            </g>
-            <g transform="translate(615 195)">
-              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
-              <circle r="1.4" fill="#FDFBF7"/>
-              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">DETROIT</text>
-            </g>
-            <g transform="translate(470 410)">
-              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
-              <circle r="1.4" fill="#FDFBF7"/>
-              <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">HOUSTON</text>
-            </g>
-            <g transform="translate(720 410)">
-              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
-              <circle r="1.4" fill="#FDFBF7"/>
-              <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">MIAMI</text>
-            </g>
-          </g>
-
-          <!-- v3.8.afx — 12-pulse particle system removed. User feedback on
-               v3.8.afw: "didn't like the map animation at all it is very
-               basic". The particle-on-route mechanic is the every-broker
-               pattern (CHR, RXO, Coyote all use it). Replaced with the
-               compass radar sweep + animated brand-mark centerpiece above,
-               leaving the route lines as the static network mesh and the
-               city halos as ambient operational presence. Net effect:
-               brand-mark-centric "operational scan" aesthetic, structurally
-               different from the standard freight-broker template. -->
-        </svg>
+        <!-- v3.8.aga — Section 5 map (dark navy network + radar sweep at
+             v3.8.afx) retired entirely. Replaced with a capabilities-wall
+             tile-cycle: SRL brand mark + wordmark as a center card,
+             surrounded by 16 cards that cross-fade brand-canonical facts
+             on staggered 3.6-5.4s cycles. Cream canvas consistent with
+             surrounding sections. The 26-fact pool cycles in continuously
+             so the wall never looks static. Prefers-reduced-motion users
+             get 16 static facts. -->
+        <div class="srl-wall" id="capabilitiesWall">
+          <div class="srl-grid">
+            <div class="srl-center">
+              <div class="srl-ci">
+                <span class="tk tl">+</span><span class="tk tr">+</span><span class="tk bl">+</span><span class="tk br">+</span>
+                <img class="srl-mark" src="/logo-compass.png" alt="" width="104" height="104" />
+                <span class="srl-wordmark">Silk Route Logistics</span>
+              </div>
+            </div>
+            <div class="tile"><div class="tile-c"><i data-lucide="thermometer-snowflake"></i><span>Cold-chain capable</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="banknote"></i><span>Quick Pay, day one</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="shield-check"></i><span>35-point vetting</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="map"></i><span>48 contiguous states</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="badge-check"></i><span>BMC-84 bonded</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="scroll-text"></i><span>FMCSA broker</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="package-check"></i><span>POD within 24h</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="lock"></i><span>No double-brokering</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="calendar-clock"></i><span>Net 30 / 21 / 14</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="globe"></i><span>Cross-border lanes</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="snowflake"></i><span>Reefer capable</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="bot"></i><span>Marco Polo 24/7</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="receipt"></i><span>FSC pass-through</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="user-check"></i><span>Dedicated AE</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="badge"></i><span>USDOT 4526880</span></div></div>
+            <div class="tile"><div class="tile-c"><i data-lucide="shield"></i><span>MC 1794414</span></div></div>
+          </div>
+        </div>
       </div>
       <p class="coverage-caption reveal">
         Federal property broker authority across all 48 contiguous United States. USDOT 4526880. MC# 1794414. BMC-84 bonded $75K through PFA Protects.
@@ -1020,9 +778,12 @@
     })();
   </script>
 
-<!-- v3.8.afr — /js/networkMap.js retired (deleted per §3.7). Section 5
-     now renders an inline SVG using the Track page visual language
-     adapted with 10 US cities. -->
+<!-- v3.8.aga — Section 5 capabilities-wall scripts. Lucide CDN loaded
+     for the 26-icon fact pool; capabilities-wall.js drives the
+     staggered tile-cycle (3.6-5.4s per tile, 550ms cross-fade,
+     prefers-reduced-motion honored). -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+<script src="/js/capabilities-wall.js" defer></script>
 <link rel="stylesheet" href="/shared/css/marco-polo.css">
 <script src="/shared/js/marco-polo.js"></script>
 <script src="/js/cookie-consent.js"></script>
