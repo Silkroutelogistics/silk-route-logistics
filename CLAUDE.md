@@ -1466,9 +1466,9 @@ Every page audit follows this sequence:
 
 Per "one page at a time" user directive (2026-05-19): never audit multiple pages in a single commit. Complete a page (content + graphics + verification) before moving to the next.
 
-### §20.3 — The five audit lenses
+### §20.3 — The audit lenses
 
-Every page is reviewed through five lenses in sequence:
+Every page is reviewed through these lenses in sequence. Lens 1.5 (Architectural Reveal Defense) added 2026-05-20 v3.8.aeu after the live-terminal architectural-leak reversal.
 
 #### Lens 1 — Brand canonical conformance
 
@@ -1480,6 +1480,40 @@ Cross-check against §4 (honest claims whitelist) + §5 (prohibited claims). Com
 - **§5 prohibited blanket "100% FSC pass-through"** / "Full FSC pass-through" — overstated; tier-graduated only. Retired 2026-05-19 v3.8.ads.
 - **§5 prohibited "first load within 48 hours"** / specific onboarding SLAs not operationally enforced. Retired 2026-05-19 v3.8.ads.
 - **Unverifiable superlatives** — "most trusted broker", "world-class", "unmatched service". Pattern hit: /about Mission card (fixed v3.8.aer).
+
+#### Lens 1.5 — Architectural Reveal Defense (banked 2026-05-20 v3.8.aeu)
+
+Banking lesson from v3.8.aet → aeu reversal. Before publishing any content that describes internal operations, ask: *"If a competitor screenshots this single section, what do they learn about how we built our system?"*
+
+The v3.8.aet "live operational terminal" hero on /about was retired one commit later because its event content exposed in one screenshot:
+- Load lifecycle state machine names (AT_PICKUP, LOADED, BOOKED, DISPATCHED, IN_TRANSIT, AT_DELIVERY)
+- Score-to-tier threshold mapping ("Score 94 = GOLD")
+- Tier fee structure with specific math ("2% Gold · $1,127")
+- Internal performance timing ("RC AUTO-GENERATED · 1.2s")
+- Batch operational scale ("5,247 carriers scored")
+- Onboarding workflow sequence ("MC# verified · W-9 received")
+- POD-to-invoice automation trigger language
+- AI query/response pattern with GPS proximity logic
+
+This was the THIRD recurrence of the architectural-leak pattern (after v3.8.adw Section 7 bullets fixed in v3.8.aem, and the /about Section 4 cards). User-flagged: *"Doesn't it give the blueprint of our internal working and system we have built."*
+
+**Banned content classes on public marketing surfaces:**
+- Specific state machine names (AT_PICKUP, LOADED, BOOKED, DISPATCHED, IN_TRANSIT, AT_DELIVERY, etc. — these are §A.1 Appendix internals, not public-surface vocabulary)
+- Specific scoring thresholds tied to tier names (e.g., "Score ≥ 95 = PLATINUM")
+- Specific automation trigger language ("POD upload triggers invoice queue", "Tender accept fires RC generation")
+- Specific internal performance metrics ("RC generated in 1.2s", "P99 latency", "Compass recalc in N ms")
+- Specific batch operational scale that implies system maturity ("5,247 carriers scored", "1,247 loads today")
+- Specific onboarding workflow sequences ("MC# verified · W-9 received · COI confirmed")
+- Specific tier-payment-fee math juxtapositions ("2% Gold · $1,127 cleared")
+- Concept-level architecture reveals (live operational terminals, system diagrams, dashboard screenshots showing real internal data)
+
+**Allowed on public marketing surfaces:**
+- Named systems on §4 honest claims whitelist (Marco Polo AI, Compass Engine, Caravan Partner Program)
+- Brand-canonical commitments (tier-graduated FSC per §8, BMC-84 bonded per §1, 7-factor Compass Score per §9 — these are PUBLISHED operational claims)
+- High-level capability framings ("operational documents archived per load", "branded tracking links", "in-portal dispute resolution")
+- Heritage iconography and brand-anchored metaphors (Silk Road, Caravan, compass)
+
+**Test before publishing:** if a single screenshot of the section would let a competitor reconstruct your operational pipeline, soften the content. The goal is brand positioning + customer-facing benefit framing, not engineering reference documentation.
 
 #### Lens 2 — Voice + §18.9 sweep
 
