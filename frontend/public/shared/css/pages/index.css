@@ -782,34 +782,62 @@
       gap: 28px;
     }
 
-    /* v3.8.aem — service cards gain Lucide-style line-icons + hairline
-       gold divider for premium visual upgrade (per user feedback that
-       the v3.8.aeh type-forward refactor read too plain). Cards stay
-       white on the cream-2 section bg for elevation pop. */
+    /* v3.8.aev — service cards rebuilt tech-forward: full-bleed modern
+       freight photo on top, expandable "How it works" mechanism below.
+       Retires v3.8.aep heritage photo-icons (Lens 1.6 failed: 3 of 4
+       icons did not pass the 4-second scan test) and v3.8.aem Lucide
+       line-icons (legacy). Cards stay white on cream-2 section bg. */
     .service-card {
       position: relative;
       background: var(--white);
       border-radius: var(--radius);
-      padding: 28px 28px 28px;
       border: 1px solid rgba(10, 37, 64, 0.10);
-      transition: var(--transition);
+      transition: transform 280ms cubic-bezier(0.2, 0.6, 0.2, 1),
+                  box-shadow 280ms cubic-bezier(0.2, 0.6, 0.2, 1);
       overflow: hidden;
-    }
-
-    .service-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--navy);
+      display: flex;
+      flex-direction: column;
     }
 
     .service-card:hover {
       transform: translateY(-4px);
       box-shadow: var(--shadow-lg);
-      border-color: transparent;
+    }
+
+    .service-photo-top {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: var(--cream-2);
+    }
+
+    .service-photo-top img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 600ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+
+    .service-card:hover .service-photo-top img {
+      transform: scale(1.04);
+    }
+
+    .service-photo-top::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: var(--navy);
+    }
+
+    .service-card-body {
+      padding: 24px 26px 22px;
+      display: flex;
+      flex-direction: column;
     }
 
     .service-card h4 {
@@ -817,26 +845,7 @@
       font-weight: 700;
       font-size: 1.2rem;
       color: var(--navy);
-      margin-bottom: 4px;
-    }
-
-    /* v3.8.aem (legacy, retained for safety) — Lucide line-icon support.
-       Section 4 service cards now use .service-icon-photo (v3.8.aep)
-       instead of .card-glyph. Keeping the rules in case any future
-       section reverts to line-icons. */
-    .card-glyph {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 38px;
-      height: 38px;
-      margin-bottom: 14px;
-    }
-
-    .card-glyph svg {
-      width: 100%;
-      height: 100%;
-      display: block;
+      margin: 0 0 4px;
     }
 
     .card-divider {
@@ -847,40 +856,104 @@
       margin: 8px 0 14px;
     }
 
-    /* v3.8.aep — service-card heritage photo-icons matching Section 7
-       (.tms-icon-wrap) register. Editorial photo-glyphs replace the
-       prior Lucide line-icons for brand-rhythm consistency across the
-       homepage. Fixed height + auto width preserves each photo's native
-       composition. Soft navy-tinted shadow lifts photos off the white
-       service-card surface. */
-    .service-icon-photo {
-      display: block;
-      margin-bottom: 16px;
-    }
-
-    .service-icon-photo img {
-      display: block;
-      height: 80px;
-      width: auto;
-      border-radius: 6px;
-      box-shadow: 0 2px 10px rgba(10, 37, 64, 0.12),
-                  0 1px 3px rgba(10, 37, 64, 0.06);
-    }
-
-    @media (max-width: 760px) {
-      .service-icon-photo img {
-        height: 64px;
-      }
-    }
-
-    .service-card p {
+    .service-tagline {
       color: var(--text-muted);
-      font-size: 0.9rem;
-      line-height: 1.65;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin: 0 0 16px;
+    }
+
+    .service-expand-btn {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      padding: 8px 0 0;
+      margin: 0;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold-dark);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid rgba(10, 37, 64, 0.08);
+      width: fit-content;
+      transition: color 180ms ease;
+    }
+
+    .service-expand-btn:hover {
+      color: var(--navy);
+    }
+
+    .service-expand-btn:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    .expand-chevron {
+      transition: transform 280ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+
+    .service-expand-btn[aria-expanded="true"] .expand-chevron {
+      transform: rotate(180deg);
+    }
+
+    .service-mechanism {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 360ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+
+    .service-mechanism.is-open {
+      max-height: 360px;
+    }
+
+    .mechanism-steps {
+      list-style: none;
+      margin: 16px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mechanism-steps li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: var(--cream);
+      font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      margin-top: 1px;
+    }
+
+    .step-text {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.55;
     }
 
     @media (max-width: 600px) {
       .services-grid { grid-template-columns: 1fr; }
+      .service-card-body { padding: 20px 22px 20px; }
+      .service-mechanism.is-open { max-height: 460px; }
     }
 
     /* ======================================
