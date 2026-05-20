@@ -341,14 +341,17 @@
             <div class="srl-center">
               <div class="srl-ci">
                 <span class="tk tl">+</span><span class="tk tr">+</span><span class="tk bl">+</span><span class="tk br">+</span>
-                <!-- v3.8.agd — SRL brand mark loaded from /logo-icon-only.svg
-                     (icon-only crop of /logo.svg with the wordmark group
-                     stripped). The previous inline SVG paths produced a
-                     rendering the user said didn't match the OG brand
-                     mark; loading the dedicated asset file guarantees
-                     this is the canonical brand symbol straight from a
-                     file you can open and verify. -->
-                <img class="srl-mark" src="/logo-icon-only.svg" alt="Silk Route Logistics" />
+                <!-- v3.8.age — Canonical SRL brand mark from /favicon.svg.
+                     The file's own internal comment explicitly identifies
+                     it as the source-of-truth: "SRL compass mark — Source:
+                     high-res Canva PNG export (transparent), May 2026.
+                     Embedded as PNG for fidelity; Canva Pro SVG export
+                     will replace this when available."
+                     Previously used /logo.svg + /logo-icon-only.svg (a
+                     simplified hand-drawn version with the same identity
+                     shape but different stroke proportions). The /favicon
+                     .svg base64 PNG IS the Canva-designed master file. -->
+                <img class="srl-mark" src="/favicon.svg" alt="Silk Route Logistics" />
                 <span class="srl-wordmark">Silk Route Logistics</span>
               </div>
             </div>
