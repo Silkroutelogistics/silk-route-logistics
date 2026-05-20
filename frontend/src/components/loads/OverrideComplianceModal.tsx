@@ -82,7 +82,11 @@ export function OverrideComplianceModal({
   const canSubmit = reason.trim().length >= 10 && confirmed && !mutation.isPending && !quotaExhausted;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    // Sprint 65 (v3.8.afm) hotfix — z-[70] so the override modal stacks
+    // above the Carrier Engagement Drawer (bumped to z-[60] same sprint)
+    // when both are mounted (drawer triggers modal via "Override
+    // compliance block" button).
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold text-[#0A2540] mb-1">Override Compliance Block</h2>
         <p className="text-sm text-slate-600 mb-3">Carrier: <span className="font-medium text-[#0A2540]">{carrierName}</span></p>

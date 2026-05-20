@@ -403,7 +403,13 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
     isCarrierBlocked;
 
   return (
-    <div className="fixed inset-0 z-50">
+    // Sprint 65 (v3.8.afm) hotfix — z-[60] so the drawer wrapper stacks
+    // above the Marco Polo chat widget (fixed bottom-6 right-6 z-50).
+    // Pre-hotfix the widget at the same z-50 + later in DOM (mounted at
+    // dashboard layout level) was overlapping the Send Tender button at
+    // bottom-right of the drawer footer; clicks landed on the chat
+    // widget instead of the button.
+    <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div
         role="dialog"
