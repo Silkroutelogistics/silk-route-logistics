@@ -1185,6 +1185,22 @@
       margin-bottom: 4px;
     }
 
+    /* v3.8.afg — TMS card result line. Sits between the card divider
+       and the feature bullets. Italic Playfair-Display register flags
+       it visually as a workflow-time summary distinct from the bullet
+       list below. Bottom hairline separates the result from features. */
+    .tms-result {
+      font-family: var(--font-headline);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--navy);
+      margin: 0 0 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(10, 37, 64, 0.10);
+    }
+
     .tms-features {
       list-style: none;
       padding: 0;
