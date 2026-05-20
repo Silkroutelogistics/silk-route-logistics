@@ -90,13 +90,18 @@
 
   /* ─── Cities ───────────────────────────────────────────────── */
   var MAJOR = 1, SECONDARY = 2, TERTIARY = 3;
+  // v3.8.afo — non-US cities removed (Vancouver, Calgary, Toronto,
+  // Montreal, Mexico City, Monterrey). SRL holds USDOT 4526880 + MC#
+  // 1794414 — both US property broker licenses. The prior city list
+  // showed cross-border North America footprint, implying authority
+  // SRL does not hold. Laredo retained as US border city (southbound
+  // freight to Mexican border is a real US-only lane).
   var cities = [
     { id: "chicago", x: 580, y: 330, label: "CHICAGO", tier: MAJOR, lx: 0, ly: -16 },
     { id: "dallas", x: 480, y: 480, label: "DALLAS", tier: MAJOR, lx: 0, ly: -16 },
     { id: "atlanta", x: 680, y: 460, label: "ATLANTA", tier: MAJOR, lx: 0, ly: 20 },
     { id: "losangeles", x: 200, y: 440, label: "LOS ANGELES", tier: MAJOR, lx: -8, ly: 20 },
     { id: "newyork", x: 820, y: 310, label: "NEW YORK", tier: MAJOR, lx: 14, ly: -6 },
-    { id: "toronto", x: 700, y: 270, label: "TORONTO", tier: MAJOR, lx: 14, ly: -6 },
 
     { id: "seattle", x: 180, y: 200, label: "SEATTLE", tier: SECONDARY, lx: 0, ly: -14 },
     { id: "denver", x: 370, y: 370, label: "DENVER", tier: SECONDARY, lx: 0, ly: 18 },
@@ -106,14 +111,9 @@
     { id: "detroit", x: 660, y: 300, label: "DETROIT", tier: SECONDARY, lx: 12, ly: -8 },
     { id: "boston", x: 850, y: 270, label: "BOSTON", tier: SECONDARY, lx: 12, ly: -4 },
 
-    { id: "vancouver", x: 170, y: 170, label: "VANCOUVER", tier: TERTIARY, lx: 0, ly: -12 },
-    { id: "calgary", x: 260, y: 150, label: "CALGARY", tier: TERTIARY, lx: 0, ly: -12 },
-    { id: "montreal", x: 800, y: 230, label: "MONTREAL", tier: TERTIARY, lx: 12, ly: -4 },
     { id: "sanfrancisco", x: 150, y: 370, label: "SAN FRANCISCO", tier: TERTIARY, lx: -8, ly: 16 },
     { id: "phoenix", x: 280, y: 470, label: "PHOENIX", tier: TERTIARY, lx: 0, ly: 16 },
     { id: "philadelphia", x: 800, y: 330, label: "PHILADELPHIA", tier: TERTIARY, lx: 14, ly: 6 },
-    { id: "mexicocity", x: 440, y: 620, label: "MEXICO CITY", tier: TERTIARY, lx: 0, ly: 16 },
-    { id: "monterrey", x: 420, y: 570, label: "MONTERREY", tier: TERTIARY, lx: -60, ly: 4 },
     { id: "laredo", x: 440, y: 530, label: "LAREDO", tier: TERTIARY, lx: -40, ly: 4 }
   ];
 
@@ -121,6 +121,11 @@
   cities.forEach(function (c) { cityMap[c.id] = c; });
 
   /* ─── Routes ───────────────────────────────────────────────── */
+  // v3.8.afo — routes touching removed non-US cities dropped
+  // (toronto→montreal, toronto→detroit, seattle→vancouver,
+  // vancouver→calgary, calgary→minneapolis, laredo→monterrey,
+  // monterrey→mexicocity, boston→montreal). Remaining routes are
+  // US-internal only, matching SRL's federal property broker authority.
   var routes = [
     // Major corridors
     { from: "chicago", to: "newyork", major: true },
@@ -136,21 +141,13 @@
     { from: "newyork", to: "boston", major: true },
     { from: "newyork", to: "philadelphia", major: true },
     { from: "atlanta", to: "miami", major: true },
-    { from: "toronto", to: "montreal", major: true },
-    { from: "toronto", to: "detroit", major: true },
     // Secondary
-    { from: "seattle", to: "vancouver", major: false },
     { from: "seattle", to: "sanfrancisco", major: false },
-    { from: "vancouver", to: "calgary", major: false },
-    { from: "calgary", to: "minneapolis", major: false },
     { from: "denver", to: "chicago", major: false },
     { from: "denver", to: "losangeles", major: false },
     { from: "denver", to: "dallas", major: false },
     { from: "houston", to: "miami", major: false },
     { from: "houston", to: "laredo", major: false },
-    { from: "laredo", to: "monterrey", major: false },
-    { from: "monterrey", to: "mexicocity", major: false },
-    { from: "boston", to: "montreal", major: false },
     { from: "philadelphia", to: "atlanta", major: false },
     { from: "phoenix", to: "dallas", major: false },
     { from: "minneapolis", to: "detroit", major: false }
